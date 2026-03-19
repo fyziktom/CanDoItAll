@@ -2,12 +2,13 @@
 @* codex-capsule
 kind: page
 name: ProjectStructurePage
-summary: Hosts the project structure canvas, outline, graph authoring commands, and typed artifact actions.
-owns: structure-canvas, node-outline, node-inspector
+summary: Hosts the shared project structure canvas, mirrored inspector, typed graph actions, and supporting outline tools.
+owns: shared-structure-canvas, node-outline, mirrored-inspector
 deps: ProjectWorkbenchService, NavigationManager
-risks: stale-node-selection, invalid-command-routing
+risks: stale-node-selection, invalid-command-routing, overlapping-create-placement
 tests: component:ProjectStructurePageTests, e2e:workbench-structure
 *@
+@using CanDoItAll.ComponentKit.Canvas
 @using CanDoItAll.ComponentKit.Components
 @using CanDoItAll.SharedKernel
 @inject ProjectWorkbenchService ProjectWorkbenchService
@@ -15,7 +16,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
 <PageTitle>Project Structure</PageTitle>
 
-@if (surface is null)
+@if (surface is null || canvasSurface is null)
 {
     <p class="text-sm text-slate-500">Loading project structure...</p>
 }
@@ -24,84 +25,163 @@ else
     <div class="space-y-6">
         <PageHeader Eyebrow="Workbench"
                     Title="@($"{surface.ProjectName} structure")"
-                    Description="Author the project graph, create new work objects directly on the canvas, and open linked artifacts into the internal workspace." />
+                    Description="Operate the project graph from one shared canvas stage, mirrored inspector, and supporting outline surface." />
 
-        <div class="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-            <SectionCard Title="Structure canvas" Description="The JavaScript engine owns rendering, drag, zoom, pan, and context input while .NET keeps graph rules, persistence, and command routing.">
-                <ProjectStructureCanvas Surface="surface"
-                                        SelectedNodeId="selectedNodeId"
-                                        SelectedNodeChanged="HandleSelectedNodeChanged"
-                                        NodeMoved="HandleNodeMovedAsync"
-                                        ContextActionRequested="HandleContextActionAsync"
-                                        OpenNodeRequested="HandleOpenNodeAsync"
-                                        ViewStateChanged="HandleViewStateChangedAsync" />
-            </SectionCard>
-
-            <div class="space-y-4">
-                <SectionCard Title="Outline" Description="The outline mirrors the graph so dense canvases stay navigable and searchable.">
-                    <div class="space-y-2">
-                        @foreach (var node in surface.Nodes.OrderBy(node => node.ObjectType).ThenBy(node => node.Title))
-                        {
-                            <button type="button"
-                                    class="w-full rounded-2xl border px-3 py-3 text-left text-sm @(selectedNodeId == node.Id ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-slate-50 text-slate-700")"
-                                    @onclick="() => selectedNodeId = node.Id">
-                                <span class="block font-semibold">@node.Title</span>
-                                <span class="mt-1 block text-xs @(selectedNodeId == node.Id ? "text-slate-200" : "text-slate-500")">@node.ObjectType · @node.Status</span>
-                            </button>
-                        }
+        <CanvasWorkbenchStage Eyebrow="Structure canvas"
+                              Title="@($"{surface.ProjectName} workbench")"
+                              Description="The shared canvas system now owns the same authoring vocabulary, chrome, quick-create flows, and inspector rhythm used across the canvas upgrades."
+                              Stats="stageStats">
+            <Canvas>
+                <CanvasWorkbench Surface="canvasSurface"
+                                 SelectionChanged="HandleSelectionChangedAsync"
+                                 NodesMoved="HandleNodesMovedAsync"
+                                 ContextActionRequested="HandleContextActionAsync"
+                                 CreateActionInvoked="HandleCreateActionAsync"
+                                 NodeOpened="HandleNodeOpenedAsync"
+                                 StateChanged="HandleCanvasStateChangedAsync" />
+            </Canvas>
+            <Inspector>
+                @if (selectedNodes.Count == 0)
+                {
+                    <div class="cw-empty-state">
+                        <p class="cw-panel-kicker">Inspector</p>
+                        <h3>Select a project object</h3>
+                        <p>Selection drives the mirrored editor surface, typed actions, and adjacent create behavior.</p>
+                        <div class="cw-chip-row">
+                            <span class="cw-node__chip">Alt + drag</span>
+                            <span class="cw-node__chip">Right-click</span>
+                            <span class="cw-node__chip">Double-click</span>
+                        </div>
                     </div>
-                </SectionCard>
+                }
+                else if (selectedNodes.Count > 1)
+                {
+                    <div class="space-y-4">
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Multi-select</p>
+                            <h3 class="cw-panel-title">@($"{selectedNodes.Count} nodes selected")</h3>
+                            <p class="cw-panel-copy">Batch movement is available on the canvas. The inspector stays readable by showing the current selection set and the bulk-safe actions.</p>
+                            <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearSelectionAsync">Clear selection</button>
+                                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => SelectNodeAsync(selectedNodes[0].Id))">Focus first</button>
+                            </div>
+                        </div>
 
-                <SectionCard Title="Inspector" Description="Selected nodes expose one typed action surface no matter where they were opened from.">
-                    @if (selectedNode is null)
-                    {
-                        <p class="text-sm text-slate-500">Select a node to inspect it, create related objects, or open its linked artifact.</p>
-                    }
-                    else
-                    {
-                        <div class="space-y-4">
-                            <div>
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">@selectedNode.ObjectType</p>
-                                    @foreach (var badge in selectedNode.Badges)
-                                    {
-                                        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]" style="@($"background:{selectedNode.VisualProfile.AccentColor}18;color:{selectedNode.VisualProfile.AccentColor}")">@badge</span>
-                                    }
-                                </div>
-                                <p class="mt-2 text-lg font-semibold text-slate-900">@selectedNode.Title</p>
-                                <p class="mt-1 text-sm text-slate-600">@selectedNode.Subtitle</p>
-                                <p class="mt-1 text-xs text-slate-500">@selectedNode.Status</p>
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Selected nodes</p>
+                            <div class="cw-list">
+                                @foreach (var node in selectedNodes)
+                                {
+                                    <button type="button" class="cw-list-item" @onclick="@(() => SelectNodeAsync(node.Id))">
+                                        <strong>@node.Title</strong>
+                                        <span>@node.ObjectType · @node.Status</span>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (selectedNode is not null)
+                {
+                    <div class="space-y-4">
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">@selectedNode.ObjectType</p>
+                            <h3 class="cw-panel-title">@selectedNode.Title</h3>
+                            <p class="cw-panel-copy">@selectedNode.Subtitle</p>
+
+                            <div class="cw-chip-row">
+                                <span class="cw-node__chip tone-accent">@selectedNode.Status</span>
+                                @foreach (var badge in selectedNode.Badges)
+                                {
+                                    <span class="cw-node__chip">@badge</span>
+                                }
                             </div>
 
                             @if (!string.IsNullOrWhiteSpace(linkModeSourceId))
                             {
-                                <div class="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
-                                    Link mode is active. Select another node on the canvas or in the outline to create a dependency link.
+                                <div class="cw-panel-card">
+                                    <p class="cw-panel-kicker">Link mode</p>
+                                    <p class="cw-panel-copy">Select another node on the canvas or in the outline to create a dependency link from the active source.</p>
                                 </div>
                             }
 
-                            <div class="grid grid-cols-3 gap-3">
-                                @foreach (var command in Enum.GetValues<ProjectStructureCommandKind>())
-                                {
-                                    <button type="button"
-                                            class="aspect-square rounded-2xl bg-slate-900 px-2 py-2 text-center text-xs font-semibold text-white [clip-path:polygon(25%_6%,75%_6%,100%_50%,75%_94%,25%_94%,0_50%)]"
-                                            @onclick="() => ExecuteCommandAsync(command)">
-                                        @command
-                                    </button>
-                                }
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-2">
-                                <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700" @onclick="() => CreateRelatedObjectAsync(ProjectObjectType.Note)">Add note</button>
-                                <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700" @onclick="() => CreateRelatedObjectAsync(ProjectObjectType.Decision)">Add decision</button>
-                                <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700" @onclick="() => CreateRelatedObjectAsync(ProjectObjectType.Milestone)">Add milestone</button>
-                                <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700" @onclick="EnableLinkMode">Link selected</button>
+                            <div class="cw-summary-grid">
+                                <div class="cw-summary-tile">
+                                    <span>Artifact</span>
+                                    <strong>@selectedNode.ArtifactKind</strong>
+                                </div>
+                                <div class="cw-summary-tile">
+                                    <span>Kind</span>
+                                    <strong>@selectedNode.VisualProfile.AccentBadge</strong>
+                                </div>
+                                <div class="cw-summary-tile">
+                                    <span>Location</span>
+                                    <strong>@($"{Math.Round(selectedNode.X)}, {Math.Round(selectedNode.Y)}")</strong>
+                                </div>
                             </div>
                         </div>
-                    }
-                </SectionCard>
-            </div>
-        </div>
+
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Node actions</p>
+                            <div class="cw-button-row">
+                                @foreach (var command in Enum.GetValues<ProjectStructureCommandKind>())
+                                {
+                                    <button type="button" class="cw-button" data-tone="primary" @onclick="@(() => ExecuteCommandAsync(command))">@command</button>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Create next to source</p>
+                            <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => CreateRelatedObjectAsync(ProjectObjectType.Note))">Add note</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => CreateRelatedObjectAsync(ProjectObjectType.Decision))">Add decision</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => CreateRelatedObjectAsync(ProjectObjectType.Milestone))">Add milestone</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => CreateRelatedObjectAsync(ProjectObjectType.Repository))">Add repository</button>
+                                <button type="button" class="cw-button" data-tone="warn" @onclick="EnableLinkMode">Link selected</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </Inspector>
+            <Supporting>
+                <div class="cw-panel-card">
+                    <p class="cw-panel-kicker">Outline</p>
+                    <h3 class="cw-panel-title">Project object index</h3>
+                    <div class="cw-list">
+                        @foreach (var node in outlineNodes)
+                        {
+                            <button type="button"
+                                    class="cw-list-item @(selectedNodeIds.Contains(node.Id, StringComparer.Ordinal) ? "is-active" : string.Empty)"
+                                    @onclick="@(() => SelectNodeAsync(node.Id))">
+                                <strong>@node.Title</strong>
+                                <span>@node.ObjectType · @node.Status</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div class="cw-panel-card">
+                    <p class="cw-panel-kicker">Canvas coverage</p>
+                    <h3 class="cw-panel-title">Graph health</h3>
+                    <div class="cw-summary-grid">
+                        <div class="cw-summary-tile">
+                            <span>Total nodes</span>
+                            <strong>@surface.Nodes.Count</strong>
+                        </div>
+                        <div class="cw-summary-tile">
+                            <span>Total links</span>
+                            <strong>@surface.Links.Count</strong>
+                        </div>
+                        <div class="cw-summary-tile">
+                            <span>Selected</span>
+                            <strong>@selectedNodeIds.Count</strong>
+                        </div>
+                    </div>
+                    <p class="cw-panel-copy">Cross-links, typed child creation, and workbench command routing remain intact on the shared canvas substrate.</p>
+                </div>
+            </Supporting>
+        </CanvasWorkbenchStage>
     </div>
 }
 
@@ -110,103 +190,325 @@ else
     public Guid ProjectId { get; set; }
 
     private ProjectStructureSurface? surface;
-    private string? selectedNodeId;
+    private CanvasWorkbenchSurface? canvasSurface;
+    private List<string> selectedNodeIds = [];
     private string? linkModeSourceId;
 
-    private ProjectStructureNode? selectedNode => surface?.Nodes.FirstOrDefault(node => node.Id == selectedNodeId);
+    private IReadOnlyList<CanvasWorkbenchStat> stageStats =>
+    [
+        new() { Label = "Nodes", Value = surface?.Nodes.Count.ToString() ?? "0", Tone = "neutral" },
+        new() { Label = "Links", Value = surface?.Links.Count.ToString() ?? "0", Tone = "accent" },
+        new() { Label = "Selection", Value = selectedNodeIds.Count.ToString(), Tone = "mint" }
+    ];
 
-    protected override async Task OnParametersSetAsync() => await LoadAsync();
+    private IReadOnlyList<ProjectStructureNode> outlineNodes =>
+        surface?.Nodes
+            .OrderBy(node => ResolveOutlineWeight(node.ObjectType))
+            .ThenBy(node => node.Title, StringComparer.OrdinalIgnoreCase)
+            .ToList() ?? [];
 
-    private async Task LoadAsync()
+    private IReadOnlyList<ProjectStructureNode> selectedNodes =>
+        surface?.Nodes.Where(node => selectedNodeIds.Contains(node.Id, StringComparer.Ordinal)).ToList() ?? [];
+
+    private ProjectStructureNode? selectedNode => selectedNodes.FirstOrDefault();
+
+    protected override async Task OnParametersSetAsync()
+        => await ReloadSurfaceAsync();
+
+    private async Task ReloadSurfaceAsync(string? preferredSelectionId = null)
     {
         surface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
-        selectedNodeId ??= TryReadSelectedNodeId(surface.ViewStateJson) ?? surface.Nodes.FirstOrDefault()?.Id;
+        var uiState = CanvasWorkbenchUiState.Parse(surface.ViewStateJson);
+        selectedNodeIds = uiState.SelectedNodeIds.Count > 0
+            ? uiState.SelectedNodeIds.Where(id => surface.Nodes.Any(node => string.Equals(node.Id, id, StringComparison.Ordinal))).ToList()
+            : [];
+
+        if (!string.IsNullOrWhiteSpace(preferredSelectionId) &&
+            surface.Nodes.Any(node => string.Equals(node.Id, preferredSelectionId, StringComparison.Ordinal)))
+        {
+            selectedNodeIds = [preferredSelectionId];
+            uiState.SelectedNodeIds = [preferredSelectionId];
+            surface = surface with { ViewStateJson = uiState.ToJson() };
+        }
+        else if (selectedNodeIds.Count == 0 && surface.Nodes.Count > 0)
+        {
+            selectedNodeIds = [surface.Nodes[0].Id];
+            uiState.SelectedNodeIds = [surface.Nodes[0].Id];
+            surface = surface with { ViewStateJson = uiState.ToJson() };
+        }
+
+        RefreshCanvasSurface();
     }
 
-    private async Task HandleSelectedNodeChanged(string nodeId)
+    private void RefreshCanvasSurface()
+    {
+        if (surface is null)
+        {
+            canvasSurface = null;
+            return;
+        }
+
+        var uiState = CanvasWorkbenchUiState.Parse(surface.ViewStateJson);
+        if (selectedNodeIds.Count > 0)
+        {
+            uiState.SelectedNodeIds = [.. selectedNodeIds];
+        }
+
+        canvasSurface = new CanvasWorkbenchSurface
+        {
+            SurfaceId = $"project-structure:{surface.ProjectId:N}",
+            Mode = "authoring",
+            UiState = uiState,
+            Chrome = new CanvasWorkbenchChrome
+            {
+                HintText = "Click to select, Alt-drag to marquee, drag to move, and right-click for typed project actions.",
+                FocusActionLabel = "Focus root",
+                QuickCreateActions =
+                [
+                    new CanvasWorkbenchAction { ActionId = "add-note", Label = "Note", Icon = "note", Tone = "neutral" },
+                    new CanvasWorkbenchAction { ActionId = "add-decision", Label = "Decision", Icon = "choice", Tone = "accent" },
+                    new CanvasWorkbenchAction { ActionId = "add-milestone", Label = "Milestone", Icon = "date", Tone = "warn" },
+                    new CanvasWorkbenchAction { ActionId = "add-repository", Label = "Repo", Icon = "repo", Tone = "mint" },
+                    new CanvasWorkbenchAction { ActionId = "add-prompt-session", Label = "Prompt", Icon = "flow", Tone = "accent" }
+                ]
+            },
+            Nodes = surface.Nodes.Select(MapCanvasNode).ToList(),
+            Links = surface.Links.Select(link => new CanvasWorkbenchLink
+            {
+                SourceId = link.SourceId,
+                TargetId = link.TargetId,
+                Kind = link.Kind.ToString(),
+                IsUserAuthored = link.IsUserAuthored
+            }).ToList()
+        };
+    }
+
+    private CanvasWorkbenchNode MapCanvasNode(ProjectStructureNode node)
+    {
+        var family = ResolveFamily(node.ObjectType);
+        var hasChildren = surface?.Nodes.Any(candidate => string.Equals(candidate.ParentId, node.Id, StringComparison.Ordinal)) ?? false;
+
+        return new CanvasWorkbenchNode
+        {
+            Id = node.Id,
+            ParentId = node.ParentId,
+            Family = family,
+            Kind = ResolveKindLabel(node.ObjectType),
+            Icon = node.VisualProfile.Icon,
+            Title = node.Title,
+            Subtitle = node.Subtitle,
+            LeadText = BuildLeadText(node),
+            Status = node.Status,
+            BranchLabel = node.ObjectType is ProjectObjectType.Phase or ProjectObjectType.PromptSession ? "Branch" : string.Empty,
+            AccentColor = node.VisualProfile.AccentColor,
+            PaletteKey = ResolvePalette(node.ObjectType),
+            DurationLabel = node.Badges.Contains("Scheduled", StringComparer.Ordinal) ? "Scheduled" : string.Empty,
+            StatusPill = node.Status,
+            IsRequired = node.ObjectType is ProjectObjectType.ProjectRoot or ProjectObjectType.Phase or ProjectObjectType.PromptSession,
+            IsCollapsible = hasChildren && family is "root" or "group",
+            X = node.X,
+            Y = node.Y,
+            Chips = BuildHeaderChips(node),
+            FooterChips = BuildFooterChips(node),
+            ContextActions = BuildContextActions(node)
+        };
+    }
+
+    private static string ResolveFamily(ProjectObjectType objectType) => objectType switch
+    {
+        ProjectObjectType.ProjectRoot => "root",
+        ProjectObjectType.Phase or ProjectObjectType.PromptSession or ProjectObjectType.PromptFlow => "group",
+        ProjectObjectType.ValidationRun or ProjectObjectType.TestPlan or ProjectObjectType.Decision or ProjectObjectType.SecretReference => "special",
+        _ => "item"
+    };
+
+    private static string ResolvePalette(ProjectObjectType objectType) => objectType switch
+    {
+        ProjectObjectType.Repository or ProjectObjectType.File => "sky",
+        ProjectObjectType.Link or ProjectObjectType.Connector => "violet",
+        ProjectObjectType.Milestone or ProjectObjectType.TestPlan => "amber",
+        ProjectObjectType.ValidationRun or ProjectObjectType.Note => "mint",
+        ProjectObjectType.Decision or ProjectObjectType.SecretReference => "rose",
+        _ => "neutral"
+    };
+
+    private static string ResolveKindLabel(ProjectObjectType objectType) => objectType switch
+    {
+        ProjectObjectType.ProjectRoot => "project",
+        ProjectObjectType.Phase => "phase",
+        ProjectObjectType.PromptSession => "prompt session",
+        ProjectObjectType.PromptStep => "prompt step",
+        ProjectObjectType.Repository => "repository",
+        ProjectObjectType.File => "file",
+        ProjectObjectType.Link => "link",
+        ProjectObjectType.ValidationRun => "validation",
+        ProjectObjectType.TestPlan => "test plan",
+        ProjectObjectType.Milestone => "milestone",
+        ProjectObjectType.Decision => "decision",
+        ProjectObjectType.SecretReference => "secret",
+        _ => objectType.ToString()
+    };
+
+    private static string BuildLeadText(ProjectStructureNode node)
+        => string.IsNullOrWhiteSpace(node.Subtitle)
+            ? $"Status: {node.Status}"
+            : node.Subtitle;
+
+    private static List<CanvasWorkbenchChip> BuildHeaderChips(ProjectStructureNode node)
+        => node.Badges.Select(badge => new CanvasWorkbenchChip { Text = badge, Tone = "accent" }).ToList();
+
+    private static List<CanvasWorkbenchChip> BuildFooterChips(ProjectStructureNode node)
+    {
+        var chips = new List<CanvasWorkbenchChip>();
+        if (!string.IsNullOrWhiteSpace(node.Route))
+        {
+            chips.Add(new CanvasWorkbenchChip { Text = "Routed", Tone = "neutral" });
+        }
+
+        if (node.ArtifactId.HasValue)
+        {
+            chips.Add(new CanvasWorkbenchChip { Text = "Artifact", Tone = "success" });
+        }
+
+        return chips;
+    }
+
+    private static List<CanvasWorkbenchAction> BuildContextActions(ProjectStructureNode node)
+    {
+        var actions = new List<CanvasWorkbenchAction>
+        {
+            new() { ActionId = "open", Label = "Open", Icon = "open", Tone = "accent" },
+            new() { ActionId = "link", Label = "Link", Icon = "link", Tone = "neutral" },
+            new() { ActionId = "validate", Label = "Validate", Icon = "qa", Tone = "mint" },
+            new() { ActionId = "test", Label = "Test", Icon = "test", Tone = "warn" }
+        };
+
+        if (node.ObjectType is ProjectObjectType.ProjectRoot or ProjectObjectType.Phase or ProjectObjectType.PromptSession)
+        {
+            actions.AddRange(
+            [
+                new CanvasWorkbenchAction { ActionId = "add-note", Label = "Note", Icon = "note", Tone = "neutral" },
+                new CanvasWorkbenchAction { ActionId = "add-decision", Label = "Decision", Icon = "choice", Tone = "accent" },
+                new CanvasWorkbenchAction { ActionId = "add-milestone", Label = "Milestone", Icon = "date", Tone = "warn" },
+                new CanvasWorkbenchAction { ActionId = "add-repository", Label = "Repo", Icon = "repo", Tone = "mint" }
+            ]);
+        }
+
+        if (node.ObjectType == ProjectObjectType.PromptStep)
+        {
+            actions.AddRange(
+            [
+                new CanvasWorkbenchAction { ActionId = "branch", Label = "Branch", Icon = "fork", Tone = "accent" },
+                new CanvasWorkbenchAction { ActionId = "mark-used", Label = "Used", Icon = "use", Tone = "mint" },
+                new CanvasWorkbenchAction { ActionId = "skip", Label = "Skip", Icon = "skip", Tone = "warn" }
+            ]);
+        }
+
+        return actions;
+    }
+
+    private async Task HandleSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
     {
         if (!string.IsNullOrWhiteSpace(linkModeSourceId) &&
-            !string.Equals(linkModeSourceId, nodeId, StringComparison.Ordinal))
+            !string.IsNullOrWhiteSpace(args.PrimaryNodeId) &&
+            !string.Equals(linkModeSourceId, args.PrimaryNodeId, StringComparison.Ordinal))
         {
-            await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, linkModeSourceId, nodeId, ProjectObjectLinkKind.DependsOn);
+            await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, linkModeSourceId, args.PrimaryNodeId, ProjectObjectLinkKind.DependsOn);
             linkModeSourceId = null;
-            await LoadAsync();
-            selectedNodeId = nodeId;
+            await ReloadSurfaceAsync(args.PrimaryNodeId);
             return;
         }
 
-        selectedNodeId = nodeId;
+        selectedNodeIds = args.SelectedNodeIds.ToList();
     }
 
-    private async Task HandleNodeMovedAsync(ProjectNodeMoveRequest moveRequest)
-        => await ProjectWorkbenchService.MoveObjectAsync(ProjectId, moveRequest.NodeId, moveRequest.X, moveRequest.Y);
-
-    private async Task HandleContextActionAsync(ProjectCanvasContextActionRequest request)
+    private async Task HandleNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
     {
-        switch (request.Action)
+        foreach (var position in args.Positions)
+        {
+            await ProjectWorkbenchService.MoveObjectAsync(ProjectId, position.NodeId, position.X, position.Y);
+        }
+
+        await ReloadSurfaceAsync(selectedNodeIds.FirstOrDefault());
+    }
+
+    private async Task HandleCanvasStateChangedAsync(string stateJson)
+    {
+        if (surface is null)
+        {
+            return;
+        }
+
+        var uiState = CanvasWorkbenchUiState.Parse(stateJson);
+        selectedNodeIds = uiState.SelectedNodeIds.ToList();
+        surface = surface with { ViewStateJson = uiState.ToJson() };
+        RefreshCanvasSurface();
+        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", uiState.ToJson());
+    }
+
+    private Task HandleNodeOpenedAsync(string nodeId)
+        => ExecuteCommandAsync(ProjectStructureCommandKind.Open, nodeId);
+
+    private async Task HandleContextActionAsync(CanvasWorkbenchContextActionRequest request)
+        => await HandleCanvasActionAsync(request.ActionId, request.NodeId, request.X, request.Y);
+
+    private async Task HandleCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
+        => await HandleCanvasActionAsync(request.ActionId, request.SourceNodeId, request.X, request.Y);
+
+    private async Task HandleCanvasActionAsync(string actionId, string? nodeId, double x, double y)
+    {
+        switch (actionId)
         {
             case "add-note":
-                await CreateObjectAsync(ProjectObjectType.Note, request.NodeId, request.X, request.Y);
+                await CreateObjectAsync(ProjectObjectType.Note, nodeId, x, y);
                 break;
             case "add-decision":
-                await CreateObjectAsync(ProjectObjectType.Decision, request.NodeId, request.X, request.Y);
+                await CreateObjectAsync(ProjectObjectType.Decision, nodeId, x, y);
                 break;
             case "add-milestone":
-                await CreateObjectAsync(ProjectObjectType.Milestone, request.NodeId, request.X, request.Y);
+                await CreateObjectAsync(ProjectObjectType.Milestone, nodeId, x, y);
                 break;
             case "add-repository":
-                await CreateObjectAsync(ProjectObjectType.Repository, request.NodeId, request.X, request.Y);
+                await CreateObjectAsync(ProjectObjectType.Repository, nodeId, x, y);
+                break;
+            case "add-prompt-session":
+                await CreateObjectAsync(ProjectObjectType.PromptSession, nodeId, x, y);
                 break;
             case "link":
-                linkModeSourceId = request.NodeId;
+                linkModeSourceId = nodeId;
                 break;
             case "branch":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Branch, request.NodeId);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Branch, nodeId);
                 break;
             case "mark-used":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.MarkUsed, request.NodeId);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.MarkUsed, nodeId);
                 break;
             case "skip":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Skip, request.NodeId);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Skip, nodeId);
                 break;
             case "validate":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Validate, request.NodeId);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Validate, nodeId);
                 break;
             case "test":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Test, request.NodeId);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Test, nodeId);
                 break;
             case "open":
-                await HandleOpenNodeAsync(request.NodeId ?? selectedNodeId ?? string.Empty);
+                await HandleNodeOpenedAsync(nodeId ?? string.Empty);
                 break;
         }
     }
-
-    private async Task HandleOpenNodeAsync(string nodeId)
-    {
-        if (string.IsNullOrWhiteSpace(nodeId))
-        {
-            return;
-        }
-
-        selectedNodeId = nodeId;
-        await ExecuteCommandAsync(ProjectStructureCommandKind.Open, nodeId);
-    }
-
-    private Task HandleViewStateChangedAsync(string stateJson)
-        => ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", stateJson);
 
     private async Task ExecuteCommandAsync(ProjectStructureCommandKind commandKind, string? nodeId = null)
     {
-        var targetNodeId = nodeId ?? selectedNodeId;
+        var targetNodeId = nodeId ?? selectedNode?.Id;
         if (string.IsNullOrWhiteSpace(targetNodeId))
         {
             return;
         }
 
         var artifact = await ProjectWorkbenchService.ExecuteNodeCommandAsync(ProjectId, targetNodeId, commandKind);
-        surface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
-        selectedNodeId = targetNodeId;
         linkModeSourceId = null;
+        await ReloadSurfaceAsync(targetNodeId);
         if (artifact is not null)
         {
             Navigation.NavigateTo(artifact.Route);
@@ -214,51 +516,96 @@ else
     }
 
     private Task CreateRelatedObjectAsync(ProjectObjectType objectType)
-        => CreateObjectAsync(objectType, selectedNodeId, null, null);
+        => CreateObjectAsync(objectType, selectedNode?.Id, null, null);
 
-    private async Task CreateObjectAsync(ProjectObjectType objectType, string? parentNodeKey, double? x, double? y)
+    private async Task CreateObjectAsync(ProjectObjectType objectType, string? sourceNodeId, double? x, double? y)
     {
+        var sourceNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, sourceNodeId, StringComparison.Ordinal));
+        var placement = ResolveCreatePlacement(sourceNode, x, y);
+
         var created = await ProjectWorkbenchService.CreateObjectAsync(
             ProjectId,
             new ProjectObjectCreateRequest(
                 objectType,
-                objectType switch
-                {
-                    ProjectObjectType.Note => "New note",
-                    ProjectObjectType.Decision => "New decision",
-                    ProjectObjectType.Milestone => "New milestone",
-                    ProjectObjectType.Repository => "New repository",
-                    _ => objectType.ToString()
-                },
-                parentNodeKey is null ? "Canvas-created object" : $"Related to {selectedNode?.Title ?? "selection"}",
+                ResolveCreatedTitle(objectType),
+                sourceNode is null ? "Canvas-created object" : $"Related to {sourceNode.Title}",
                 string.Empty,
-                parentNodeKey ?? $"project:{ProjectId}",
-                x,
-                y));
+                sourceNode?.Id ?? $"project:{ProjectId}",
+                placement.X,
+                placement.Y));
 
-        surface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
-        selectedNodeId = created.Id;
+        await ReloadSurfaceAsync(created.Id);
+    }
+
+    private async Task SelectNodeAsync(string nodeId)
+    {
+        if (!string.IsNullOrWhiteSpace(linkModeSourceId) &&
+            !string.Equals(linkModeSourceId, nodeId, StringComparison.Ordinal))
+        {
+            await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, linkModeSourceId, nodeId, ProjectObjectLinkKind.DependsOn);
+            linkModeSourceId = null;
+            await ReloadSurfaceAsync(nodeId);
+            return;
+        }
+
+        selectedNodeIds = [nodeId];
+        await PersistSelectionAsync();
+    }
+
+    private async Task ClearSelectionAsync()
+    {
+        selectedNodeIds.Clear();
+        await PersistSelectionAsync();
+    }
+
+    private async Task PersistSelectionAsync()
+    {
+        if (surface is null)
+        {
+            return;
+        }
+
+        var uiState = CanvasWorkbenchUiState.Parse(surface.ViewStateJson);
+        uiState.SelectedNodeIds = [.. selectedNodeIds];
+        surface = surface with { ViewStateJson = uiState.ToJson() };
+        RefreshCanvasSurface();
+        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", uiState.ToJson());
     }
 
     private void EnableLinkMode()
-        => linkModeSourceId = selectedNodeId;
+        => linkModeSourceId = selectedNode?.Id;
 
-    private static string? TryReadSelectedNodeId(string? viewStateJson)
+    private (double? X, double? Y) ResolveCreatePlacement(ProjectStructureNode? sourceNode, double? x, double? y)
     {
-        if (string.IsNullOrWhiteSpace(viewStateJson))
+        if (sourceNode is null)
         {
-            return null;
+            return (x, y);
         }
 
-        const string marker = "\"selectedNodeId\":\"";
-        var start = viewStateJson.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (start < 0)
-        {
-            return null;
-        }
-
-        start += marker.Length;
-        var end = viewStateJson.IndexOf('"', start);
-        return end > start ? viewStateJson[start..end] : null;
+        var existingChildren = surface?.Nodes.Count(node => string.Equals(node.ParentId, sourceNode.Id, StringComparison.Ordinal)) ?? 0;
+        var column = existingChildren % 3;
+        var row = existingChildren / 3;
+        return (
+            sourceNode.X + 240 + (column * 46),
+            sourceNode.Y - 70 + (row * 118));
     }
+
+    private static string ResolveCreatedTitle(ProjectObjectType objectType) => objectType switch
+    {
+        ProjectObjectType.Note => "New note",
+        ProjectObjectType.Decision => "New decision",
+        ProjectObjectType.Milestone => "New milestone",
+        ProjectObjectType.Repository => "New repository",
+        ProjectObjectType.PromptSession => "Prompt session node",
+        _ => objectType.ToString()
+    };
+
+    private static int ResolveOutlineWeight(ProjectObjectType objectType) => objectType switch
+    {
+        ProjectObjectType.ProjectRoot => 0,
+        ProjectObjectType.Phase => 1,
+        ProjectObjectType.PromptSession => 2,
+        ProjectObjectType.PromptStep => 3,
+        _ => 4
+    };
 }

@@ -54,15 +54,16 @@ public sealed class PromptFactoryService(
 
         var defaults = await GetSeedDefaultsAsync(cancellationToken);
         var settings = await workspaceService.GetSettingsAsync(cancellationToken);
-        return new PromptFactoryEditorModel
-        {
-            SessionName = "Prompt session",
-            BlueprintId = defaults.BlueprintId,
-            FlowTemplateId = defaults.FlowTemplateId,
-            ProviderProfileId = settings.DefaultProviderProfileId,
-            SelectedBlockIds = defaults.BlockIds.ToList(),
-            DraftTitle = "Prompt Factory Draft"
-        };
+return new PromptFactoryEditorModel
+{
+SessionName = "Prompt session",
+BlueprintId = defaults.BlueprintId,
+FlowTemplateId = defaults.FlowTemplateId,
+ProviderProfileId = settings.DefaultProviderProfileId,
+SelectedBlockIds = defaults.BlockIds.ToList(),
+CanvasUiStateJson = "{}",
+DraftTitle = "Prompt Factory Draft"
+};
     }
 
     private async Task<PromptFactoryEditorModel> GetEditorFromSessionAsync(Guid sessionId, CancellationToken cancellationToken)
@@ -90,12 +91,13 @@ public sealed class PromptFactoryService(
             SelectedBlockIds = DeserializeIds(session.SelectedBlockIdsJson).ToList(),
             SelectedResourceIds = DeserializeIds(session.SelectedResourceIdsJson).ToList(),
             GeneratedPrompt = session.GeneratedPrompt,
-            WarningSummary = session.WarningSummary,
-            DraftTitle = BuildDraftTitle(session.Phase),
-            Warnings = SplitWarnings(session.WarningSummary),
-            Nodes = session.PromptRunId.HasValue ? (await LoadRunNodesAsync(session.PromptRunId.Value, cancellationToken)).ToList() : [],
-            HasCustomizedBlocks = session.HasCustomizedBlocks,
-            WizardStepIndex = session.WizardStepIndex,
+WarningSummary = session.WarningSummary,
+DraftTitle = BuildDraftTitle(session.Phase),
+Warnings = SplitWarnings(session.WarningSummary),
+CanvasUiStateJson = string.IsNullOrWhiteSpace(session.CanvasUiStateJson) ? "{}" : session.CanvasUiStateJson,
+Nodes = session.PromptRunId.HasValue ? (await LoadRunNodesAsync(session.PromptRunId.Value, cancellationToken)).ToList() : [],
+HasCustomizedBlocks = session.HasCustomizedBlocks,
+WizardStepIndex = session.WizardStepIndex,
             SelectedNodeId = session.SelectedPromptRunNodeId
         };
     }
@@ -133,14 +135,15 @@ public sealed class PromptFactoryService(
             ProjectId = run.ProjectId,
             Phase = run.Phase,
             FlowTemplateId = run.FlowTemplateId,
-            SelectedBlockIds = nodes
-                .Where(item => item.PromptBlockDefinitionId.HasValue)
-                .Select(item => item.PromptBlockDefinitionId!.Value)
-                .Distinct()
-                .ToList(),
-            Nodes = nodes
-                .Select(MapRunNodeSummary)
-                .ToList()
+SelectedBlockIds = nodes
+.Where(item => item.PromptBlockDefinitionId.HasValue)
+.Select(item => item.PromptBlockDefinitionId!.Value)
+.Distinct()
+.ToList(),
+CanvasUiStateJson = "{}",
+Nodes = nodes
+.Select(MapRunNodeSummary)
+.ToList()
         };
     }
 
@@ -285,17 +288,33 @@ public sealed class PromptFactoryService(
         };
     }
 
-    public async Task<Result<PromptFactoryEditorModel>> SaveSessionStateAsync(PromptFactoryEditorModel model, CancellationToken cancellationToken = default)
-    {
+public async Task<Result<PromptFactoryEditorModel>> SaveSessionStateAsync(PromptFactoryEditorModel model, CancellationToken cancellationToken = default)
+{
         if (!model.ProjectId.HasValue)
         {
             return Result<PromptFactoryEditorModel>.Failure(Error.Validation("Select a project before saving a prompt session."));
         }
 
         await EnsureSeedsAsync(cancellationToken);
-        var sessionId = await UpsertSessionAsync(model, model.GeneratedPrompt, model.Warnings, cancellationToken);
-        return Result<PromptFactoryEditorModel>.Success(await GetEditorAsync(sessionId, cancellationToken));
-    }
+var sessionId = await UpsertSessionAsync(model, model.GeneratedPrompt, model.Warnings, cancellationToken);
+return Result<PromptFactoryEditorModel>.Success(await GetEditorAsync(sessionId, cancellationToken));
+}
+
+public async Task SaveCanvasUiStateAsync(Guid sessionId, string stateJson, Guid? selectedPromptRunNodeId, CancellationToken cancellationToken = default)
+{
+await EnsureSchemaAsync(cancellationToken);
+await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+var session = await dbContext.Set<PromptBuildSession>().FirstOrDefaultAsync(item => item.Id == sessionId, cancellationToken);
+if (session is null)
+{
+return;
+}
+
+session.CanvasUiStateJson = string.IsNullOrWhiteSpace(stateJson) ? "{}" : stateJson;
+session.SelectedPromptRunNodeId = selectedPromptRunNodeId;
+session.UpdatedAtUtc = clock.GetUtcNow();
+await dbContext.SaveChangesAsync(cancellationToken);
+}
 
     public async Task<Result<Guid>> SaveBlockAsync(PromptBlockEditorModel model, CancellationToken cancellationToken = default)
     {
@@ -362,7 +381,7 @@ public sealed class PromptFactoryService(
         return Result<Guid>.Success(entity.Id);
     }
 
-    public async Task<Result<PromptRunNodeSummary>> BranchNodeAsync(Guid promptRunNodeId, string? branchLabel = null, CancellationToken cancellationToken = default)
+public async Task<Result<PromptRunNodeSummary>> BranchNodeAsync(Guid promptRunNodeId, string? branchLabel = null, CancellationToken cancellationToken = default)
     {
         await EnsureSchemaAsync(cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -395,8 +414,39 @@ public sealed class PromptFactoryService(
 
         await dbContext.Set<PromptRunNode>().AddAsync(node, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
-    }
+return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
+}
+
+public async Task<Result<PromptRunNodeSummary>> UpdateNodeAsync(Guid promptRunNodeId, string title, string notes, CancellationToken cancellationToken = default)
+{
+await EnsureSchemaAsync(cancellationToken);
+await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+var node = await dbContext.Set<PromptRunNode>().FirstOrDefaultAsync(item => item.Id == promptRunNodeId, cancellationToken);
+if (node is null)
+{
+return Result<PromptRunNodeSummary>.Failure(Error.Failure("The selected prompt step could not be found."));
+}
+
+node.Title = string.IsNullOrWhiteSpace(title) ? node.Title : title.Trim();
+node.Notes = notes?.Trim() ?? string.Empty;
+await dbContext.SaveChangesAsync(cancellationToken);
+return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
+}
+
+public async Task<Result<PromptRunNodeSummary>> SetNodeStateAsync(Guid promptRunNodeId, PromptRunNodeState state, CancellationToken cancellationToken = default)
+{
+await EnsureSchemaAsync(cancellationToken);
+await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+var node = await dbContext.Set<PromptRunNode>().FirstOrDefaultAsync(item => item.Id == promptRunNodeId, cancellationToken);
+if (node is null)
+{
+return Result<PromptRunNodeSummary>.Failure(Error.Failure("The selected prompt step could not be found."));
+}
+
+node.State = state;
+await dbContext.SaveChangesAsync(cancellationToken);
+return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
+}
 
     public async Task<Result<PromptFactoryEditorModel>> BuildAsync(PromptFactoryEditorModel model, CancellationToken cancellationToken = default)
     {
@@ -821,12 +871,13 @@ public sealed class PromptFactoryService(
         session.BranchName = model.BranchName?.Trim() ?? string.Empty;
         session.CommitSha = model.CommitSha?.Trim() ?? string.Empty;
         session.SelectedBlockIdsJson = SerializeIds(effectiveBlockIds);
-        session.SelectedResourceIdsJson = SerializeIds(model.SelectedResourceIds);
-        session.GeneratedPrompt = generatedPrompt ?? string.Empty;
-        session.WarningSummary = string.Join('\n', warnings);
-        session.WizardStepIndex = model.WizardStepIndex;
-        session.HasCustomizedBlocks = model.HasCustomizedBlocks;
-        session.SelectedPromptRunNodeId = model.SelectedNodeId;
+session.SelectedResourceIdsJson = SerializeIds(model.SelectedResourceIds);
+session.GeneratedPrompt = generatedPrompt ?? string.Empty;
+session.WarningSummary = string.Join('\n', warnings);
+session.CanvasUiStateJson = string.IsNullOrWhiteSpace(model.CanvasUiStateJson) ? "{}" : model.CanvasUiStateJson;
+session.WizardStepIndex = model.WizardStepIndex;
+session.HasCustomizedBlocks = model.HasCustomizedBlocks;
+session.SelectedPromptRunNodeId = model.SelectedNodeId;
         session.UpdatedAtUtc = clock.GetUtcNow();
 
         if (!session.PromptRunId.HasValue)

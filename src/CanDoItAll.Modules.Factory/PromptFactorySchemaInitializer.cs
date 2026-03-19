@@ -94,6 +94,7 @@ public static class PromptFactorySchemaInitializer
                 "SelectedResourceIdsJson" TEXT NOT NULL DEFAULT '[]',
                 "GeneratedPrompt" TEXT NOT NULL DEFAULT '',
                 "WarningSummary" TEXT NOT NULL DEFAULT '',
+                "CanvasUiStateJson" TEXT NOT NULL DEFAULT '{{}}',
                 "WizardStepIndex" INTEGER NOT NULL DEFAULT 0,
                 "HasCustomizedBlocks" INTEGER NOT NULL DEFAULT 0,
                 "UpdatedAtUtc" TEXT NOT NULL DEFAULT '0001-01-01T00:00:00+00:00'
@@ -166,12 +167,13 @@ public static class PromptFactorySchemaInitializer
             new("BranchName", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "BranchName" TEXT NOT NULL DEFAULT '';"""),
             new("CommitSha", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "CommitSha" TEXT NOT NULL DEFAULT '';"""),
             new("SelectedBlockIdsJson", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "SelectedBlockIdsJson" TEXT NOT NULL DEFAULT '[]';"""),
-            new("SelectedResourceIdsJson", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "SelectedResourceIdsJson" TEXT NOT NULL DEFAULT '[]';"""),
-            new("GeneratedPrompt", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "GeneratedPrompt" TEXT NOT NULL DEFAULT '';"""),
-            new("WarningSummary", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "WarningSummary" TEXT NOT NULL DEFAULT '';"""),
-            new("WizardStepIndex", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "WizardStepIndex" INTEGER NOT NULL DEFAULT 0;"""),
-            new("HasCustomizedBlocks", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "HasCustomizedBlocks" INTEGER NOT NULL DEFAULT 0;"""),
-            new("UpdatedAtUtc", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "UpdatedAtUtc" TEXT NOT NULL DEFAULT '0001-01-01T00:00:00+00:00';""")
+new("SelectedResourceIdsJson", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "SelectedResourceIdsJson" TEXT NOT NULL DEFAULT '[]';"""),
+new("GeneratedPrompt", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "GeneratedPrompt" TEXT NOT NULL DEFAULT '';"""),
+new("WarningSummary", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "WarningSummary" TEXT NOT NULL DEFAULT '';"""),
+new("CanvasUiStateJson", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "CanvasUiStateJson" TEXT NOT NULL DEFAULT '{{}}';"""),
+new("WizardStepIndex", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "WizardStepIndex" INTEGER NOT NULL DEFAULT 0;"""),
+new("HasCustomizedBlocks", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "HasCustomizedBlocks" INTEGER NOT NULL DEFAULT 0;"""),
+new("UpdatedAtUtc", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "UpdatedAtUtc" TEXT NOT NULL DEFAULT '0001-01-01T00:00:00+00:00';""")
         ]
     };
 

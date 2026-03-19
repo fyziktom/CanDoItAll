@@ -153,6 +153,8 @@ public sealed class PromptBuildSession
 
     public string WarningSummary { get; set; } = string.Empty;
 
+    public string CanvasUiStateJson { get; set; } = "{}";
+
     public int WizardStepIndex { get; set; }
 
     public bool HasCustomizedBlocks { get; set; }
@@ -240,6 +242,7 @@ internal sealed class PromptBuildSessionConfiguration : IEntityTypeConfiguration
         builder.Property(item => item.SelectedResourceIdsJson).HasColumnType("TEXT");
         builder.Property(item => item.GeneratedPrompt).HasColumnType("TEXT");
         builder.Property(item => item.WarningSummary).HasColumnType("TEXT");
+        builder.Property(item => item.CanvasUiStateJson).HasColumnType("TEXT");
     }
 }
 
@@ -342,6 +345,8 @@ public sealed class PromptFactoryEditorModel
     public string DraftTitle { get; set; } = string.Empty;
 
     public List<string> Warnings { get; set; } = [];
+
+    public string CanvasUiStateJson { get; set; } = "{}";
 
     public List<PromptRunNodeSummary> Nodes { get; set; } = [];
 

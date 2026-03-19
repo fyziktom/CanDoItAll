@@ -1,0 +1,316 @@
+@implements IAsyncDisposable
+@using System.Text.Json
+@using CanDoItAll.ComponentKit.Canvas
+@inject IJSRuntime JsRuntime
+
+<div class="cw-workbench-shell @(isMaximized ? "is-maximized" : string.Empty)">
+    <div class="cw-workbench-frame">
+        <div class="cw-toolbar">
+            <div class="cw-toolbar-group cw-toolbar-group--left">
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--primary"
+                        aria-label="Open quick create actions"
+                        @onclick="ToggleQuickCreateRail">
+                    <span>+</span>
+                </button>
+
+                @if (Surface.Chrome.ShowFocusAction)
+                {
+                    <button type="button"
+                            class="cw-toolbar-action"
+                            aria-label="@Surface.Chrome.FocusActionLabel"
+                            @onclick="FocusPrimaryNodeAsync">
+                        @Surface.Chrome.FocusActionLabel
+                    </button>
+                }
+            </div>
+
+            <div class="cw-toolbar-group">
+                <button type="button" class="cw-toolbar-action" aria-label="Fit canvas" @onclick="FitViewAsync">Fit</button>
+                <button type="button" class="cw-toolbar-action" aria-label="Toggle maximize" @onclick="ToggleMaximizeAsync">@(isMaximized ? "Dock" : "Max")</button>
+                <button type="button" class="cw-toolbar-action" aria-label="Toggle help" @onclick="ToggleHelp">Help</button>
+
+                <div class="cw-zoom-rail">
+                    <button type="button" class="cw-toolbar-action cw-toolbar-action--ghost" aria-label="Zoom out" @onclick="ZoomOutAsync">-</button>
+                    <input class="cw-zoom-slider"
+                           type="range"
+                           min="55"
+                           max="175"
+                           step="5"
+                           value="@zoomPercent"
+                           aria-label="Canvas zoom"
+                           @onchange="HandleZoomChangedAsync" />
+                    <button type="button" class="cw-toolbar-action cw-toolbar-action--ghost" aria-label="Zoom in" @onclick="ZoomInAsync">+</button>
+                    <span class="cw-zoom-pill">@($"{zoomPercent}%")</span>
+                </div>
+            </div>
+        </div>
+
+        @if (showQuickCreateRail && Surface.Chrome.ShowQuickCreateRail && Surface.Chrome.QuickCreateActions.Count > 0)
+        {
+            <div class="cw-create-rail">
+                @foreach (var action in Surface.Chrome.QuickCreateActions)
+                {
+                    <button type="button"
+                            class="cw-create-rail__action"
+                            data-tone="@action.Tone"
+                            aria-label="@action.Label"
+                            @onclick="() => InvokeQuickCreateAsync(action)">
+                        <span>@action.Icon</span>
+                        <strong>@action.Label</strong>
+                    </button>
+                }
+            </div>
+        }
+
+        <div class="cw-stage-surface">
+            <div @ref="host"
+                 class="cw-canvas-host"
+                 tabindex="0"
+                 aria-label="Canvas workbench">
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Surface.Chrome.HintText))
+            {
+                <div class="cw-hint-pill">@Surface.Chrome.HintText</div>
+            }
+        </div>
+
+        @if (helpOpen)
+        {
+            <div class="cw-help-overlay">
+                <div class="cw-help-card" role="dialog" aria-modal="false" aria-label="Canvas shortcuts and gestures">
+                    <div class="cw-help-card__header">
+                        <div>
+                            <p class="cw-help-kicker">Canvas help</p>
+                            <h3>Interaction vocabulary</h3>
+                        </div>
+
+                        <button type="button" class="cw-toolbar-action" aria-label="Close help" @onclick="ToggleHelp">Close</button>
+                    </div>
+
+                    <div class="cw-help-grid">
+                        <p><strong>Click</strong> selects the focused node.</p>
+                        <p><strong>Right-click</strong> opens node-aware actions.</p>
+                        <p><strong>Alt + drag</strong> draws a marquee for multi-selection.</p>
+                        <p><strong>Ctrl/Cmd + drag</strong> moves the current node set.</p>
+                        <p><strong>Drag empty space</strong> pans the scene.</p>
+                        <p><strong>Mouse wheel</strong> zooms under the pointer.</p>
+                        <p><strong>Double-click</strong> collapses groups or opens artifacts.</p>
+                        <p><strong>+, -, 0, ?, h, Escape</strong> control zoom, help, and selection.</p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly JsonSerializerOptions serializerOptions = new(JsonSerializerDefaults.Web);
+    private ElementReference host;
+    private DotNetObjectReference<CanvasWorkbench>? objectReference;
+    private bool initialized;
+    private bool helpOpen;
+    private bool showQuickCreateRail;
+    private bool isMaximized;
+    private int zoomPercent = 100;
+
+    [Parameter, EditorRequired]
+    public CanvasWorkbenchSurface Surface { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<CanvasWorkbenchSelectionChangedEventArgs> SelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<CanvasWorkbenchNodesMovedEventArgs> NodesMoved { get; set; }
+
+    [Parameter]
+    public EventCallback<CanvasWorkbenchContextActionRequest> ContextActionRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<CanvasWorkbenchCreateActionRequest> CreateActionInvoked { get; set; }
+
+    [Parameter]
+    public EventCallback<string> NodeOpened { get; set; }
+
+    [Parameter]
+    public EventCallback<string> StateChanged { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        isMaximized = Surface.UiState.IsMaximized;
+        zoomPercent = ClampZoomPercent(Surface.UiState.Zoom);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        objectReference ??= DotNetObjectReference.Create(this);
+        if (!initialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.create", host, objectReference, Surface);
+            initialized = true;
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.update", host, Surface);
+    }
+
+    [JSInvokable]
+    public async Task OnSelectionChanged(string? primaryNodeId, string selectedNodeIdsJson)
+    {
+        var selectedNodeIds = Deserialize<List<string>>(selectedNodeIdsJson) ?? [];
+        await SelectionChanged.InvokeAsync(new CanvasWorkbenchSelectionChangedEventArgs(primaryNodeId, selectedNodeIds));
+    }
+
+    [JSInvokable]
+    public async Task OnNodesMoved(string positionsJson)
+    {
+        var positions = Deserialize<List<CanvasWorkbenchNodePositionChange>>(positionsJson) ?? [];
+        await NodesMoved.InvokeAsync(new CanvasWorkbenchNodesMovedEventArgs(positions));
+    }
+
+    [JSInvokable]
+    public Task OnContextAction(string? nodeId, string actionId, double x, double y)
+        => ContextActionRequested.InvokeAsync(new CanvasWorkbenchContextActionRequest(nodeId, actionId, x, y));
+
+    [JSInvokable]
+    public Task OnCreateAction(string actionId, string? sourceNodeId, double x, double y)
+        => CreateActionInvoked.InvokeAsync(new CanvasWorkbenchCreateActionRequest(actionId, sourceNodeId, x, y));
+
+    [JSInvokable]
+    public Task OnNodeOpened(string nodeId)
+        => NodeOpened.InvokeAsync(nodeId);
+
+    [JSInvokable]
+    public async Task OnStateChanged(string stateJson)
+    {
+        var state = CanvasWorkbenchUiState.Parse(stateJson);
+        state.IsMaximized = isMaximized;
+        zoomPercent = ClampZoomPercent(state.Zoom);
+        await StateChanged.InvokeAsync(state.ToJson());
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnHelpToggled(bool isOpen)
+    {
+        helpOpen = isOpen;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleQuickCreateRail()
+        => showQuickCreateRail = !showQuickCreateRail;
+
+    private void ToggleHelp()
+        => helpOpen = !helpOpen;
+
+    private async Task ToggleMaximizeAsync()
+    {
+        isMaximized = !isMaximized;
+        await PublishUiStateAsync();
+    }
+
+    private async Task FitViewAsync()
+    {
+        if (!initialized)
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.fitView", host);
+    }
+
+    private async Task FocusPrimaryNodeAsync()
+    {
+        var targetNodeId = Surface.UiState.SelectedNodeIds.FirstOrDefault() ?? Surface.Nodes.FirstOrDefault()?.Id;
+        if (!initialized || string.IsNullOrWhiteSpace(targetNodeId))
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.focusNode", host, targetNodeId);
+    }
+
+    private Task ZoomInAsync() => SetZoomPercentAsync(Math.Min(175, zoomPercent + 10));
+
+    private Task ZoomOutAsync() => SetZoomPercentAsync(Math.Max(55, zoomPercent - 10));
+
+    private async Task HandleZoomChangedAsync(ChangeEventArgs args)
+    {
+        if (args.Value is null || !int.TryParse(args.Value.ToString(), out var parsed))
+        {
+            return;
+        }
+
+        await SetZoomPercentAsync(parsed);
+    }
+
+    private async Task SetZoomPercentAsync(int value)
+    {
+        zoomPercent = Math.Clamp(value, 55, 175);
+        if (initialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setZoomPercent", host, zoomPercent);
+        }
+    }
+
+    private async Task InvokeQuickCreateAsync(CanvasWorkbenchAction action)
+    {
+        showQuickCreateRail = false;
+        var sourceNode = ResolveQuickCreateSourceNode();
+        await CreateActionInvoked.InvokeAsync(new CanvasWorkbenchCreateActionRequest(
+            action.ActionId,
+            sourceNode?.Id,
+            sourceNode?.X ?? 0,
+            sourceNode?.Y ?? 0));
+    }
+
+    private CanvasWorkbenchNode? ResolveQuickCreateSourceNode()
+    {
+        var selected = Surface.UiState.SelectedNodeIds.FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(selected))
+        {
+            return Surface.Nodes.FirstOrDefault(node => string.Equals(node.Id, selected, StringComparison.Ordinal));
+        }
+
+        return Surface.Nodes.FirstOrDefault(node => string.Equals(node.Family, "root", StringComparison.OrdinalIgnoreCase))
+            ?? Surface.Nodes.FirstOrDefault();
+    }
+
+    private async Task PublishUiStateAsync()
+    {
+        var json = initialized
+            ? await JsRuntime.InvokeAsync<string>("CanDoItAll.canvasWorkbench.getState", host)
+            : Surface.UiState.ToJson();
+
+        var state = CanvasWorkbenchUiState.Parse(json);
+        state.IsMaximized = isMaximized;
+        zoomPercent = ClampZoomPercent(state.Zoom);
+        await StateChanged.InvokeAsync(state.ToJson());
+    }
+
+    private T? Deserialize<T>(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<T>(json, serializerOptions);
+        }
+        catch
+        {
+            return default;
+        }
+    }
+
+    private static int ClampZoomPercent(double zoom)
+        => (int)Math.Round(Math.Clamp(zoom, 0.55, 1.75) * 100);
+
+    public async ValueTask DisposeAsync()
+    {
+        if (initialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.dispose", host);
+        }
+
+        objectReference?.Dispose();
+    }
+}

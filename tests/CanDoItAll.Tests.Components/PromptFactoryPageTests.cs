@@ -8,7 +8,7 @@ namespace CanDoItAll.Tests.Components;
 public sealed class PromptFactoryPageTests
 {
     [Fact]
-    public async Task Renders_seeded_blocks_and_builds_prompt_for_selected_project()
+    public async Task Renders_canvas_workbench_and_builds_prompt_for_selected_project()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -23,15 +23,14 @@ public sealed class PromptFactoryPageTests
 
         var cut = harness.Context.RenderComponent<PromptFactoryPage>();
         cut.Find("[data-testid='prompt-factory-project']").Change(saveResult.Value!.ToString());
-        cut.FindAll("button").First(button => button.TextContent.Contains("Next", StringComparison.Ordinal)).Click();
-        cut.WaitForAssertion(() => Assert.Contains("Delivery Constraints", cut.Markup));
-        cut.FindAll("button").First(button => button.TextContent.Contains("Next", StringComparison.Ordinal)).Click();
         cut.Find("[data-testid='prompt-factory-build']").Click();
 
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Prompt built.", cut.Markup);
-            Assert.Contains("Prompt flow", cut.Markup);
+            Assert.Contains("Prompt session workbench", cut.Markup);
+            Assert.Contains("Generated prompt", cut.Markup);
+            Assert.Contains("Prompt flow canvas", cut.Markup);
         });
     }
 }
