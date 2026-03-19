@@ -194,6 +194,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
     public async Task<ProjectStructureSurface> GetStructureAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var project = await dbContext.Set<Project>().FirstAsync(item => item.Id == projectId, cancellationToken);
         await SyncGraphAsync(dbContext, projectId, cancellationToken);
 
@@ -220,6 +221,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
     public async Task<ProjectCalendarSurface> GetCalendarAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var project = await dbContext.Set<Project>().FirstAsync(item => item.Id == projectId, cancellationToken);
         await SyncGraphAsync(dbContext, projectId, cancellationToken);
 
@@ -251,6 +253,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
     public async Task<ProjectStructureNode> CreateObjectAsync(Guid projectId, ProjectObjectCreateRequest request, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var existingCount = await dbContext.Set<ProjectObjectRecord>().CountAsync(item => item.ProjectId == projectId && !item.IsSystemManaged, cancellationToken);
         var position = request.X.HasValue && request.Y.HasValue
             ? (request.X.Value, request.Y.Value)
@@ -294,6 +297,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var existingCount = await dbContext.Set<ProjectObjectRecord>().CountAsync(item => item.ProjectId == projectId && !item.IsSystemManaged, cancellationToken);
         var index = 0;
 
@@ -336,6 +340,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
     public async Task LinkObjectsAsync(Guid projectId, string sourceNodeKey, string targetNodeKey, ProjectObjectLinkKind linkKind, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await UpsertLinkAsync(dbContext, projectId, sourceNodeKey, targetNodeKey, linkKind, isSystemManaged: false, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
@@ -343,6 +348,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
     public async Task MoveObjectAsync(Guid projectId, string nodeKey, double x, double y, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var node = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey, cancellationToken);
         if (node is null)
@@ -359,6 +365,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
     public async Task SaveViewStateAsync(Guid projectId, string surfaceKind, string stateJson, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var record = await dbContext.Set<ProjectWorkbenchViewStateRecord>()
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.SurfaceKind == surfaceKind, cancellationToken);
         if (record is null)
@@ -380,6 +387,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
     public async Task<ArtifactReference?> ExecuteNodeCommandAsync(Guid projectId, string nodeKey, ProjectStructureCommandKind commandKind, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await SyncGraphAsync(dbContext, projectId, cancellationToken);
 
         var node = await dbContext.Set<ProjectObjectRecord>()
