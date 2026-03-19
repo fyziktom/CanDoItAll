@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Threading.Channels;
 
 namespace CanDoItAll.Manager;
@@ -18,6 +19,12 @@ public enum TuningRequestStatus
     Cancelled
 }
 
+public sealed record TuningRequestAttachmentCreateModel(
+    string FileName,
+    string ContentType,
+    string ContentBase64,
+    string Source);
+
 public sealed record TuningRequestCreateModel(
     string CapsuleKey,
     string ComponentName,
@@ -25,7 +32,9 @@ public sealed record TuningRequestCreateModel(
     Guid? ProjectId,
     string? TabId,
     string? SelectionId,
+    string? ContextSummary,
     string Instruction,
+    IReadOnlyList<TuningRequestAttachmentCreateModel>? Attachments = null,
     bool AutoSubmit = false);
 
 public sealed record TuningRequestRecord(
@@ -37,23 +46,29 @@ public sealed record TuningRequestRecord(
     Guid? ProjectId,
     string? TabId,
     string? SelectionId,
+    string? ContextSummary,
     string Instruction,
     TuningRequestStatus Status,
     DateTimeOffset CreatedAtUtc,
+    DateTimeOffset UpdatedAtUtc,
     string Summary,
     long? ReadyWatchEventId,
     int? ReadyWatchIteration,
-    bool CapsuleDriftDetected);
+    bool CapsuleDriftDetected,
+    int AttachmentCount,
+    string CapsuleSummary,
+    string EvidenceDirectory,
+    string? AdapterJobId);
 
 public sealed record TuningRequestEvent(Guid RequestId, DateTimeOffset TimestampUtc, TuningRequestStatus Status, string Summary);
 
 /* codex-capsule
 kind: service
 name: TuningRequestService
-summary: Stores dev-only tuning requests and advances them through a controlled fake execution lifecycle.
-owns: tuning-requests, tuning-events
-deps: ManagerOptions, IWatchSupervisor, ICapsuleCatalogService
-risks: auto-submit-without-ready, missing-capsule
+summary: Stores development tuning requests, packages evidence, and runs them through a real local adapter with watch-ready verification.
+owns: tuning-requests, tuning-events, request-packets, evidence-paths
+deps: ManagerOptions, IWatchSupervisor, ICapsuleCatalogService, ITuningExecutionAdapter
+risks: missing-adapter-config, unsafe-attachment-size, watch-ready-timeout
 tests: unit:TuningRequestServiceTests
 inputs: TuningRequestCreateModel
 outputs: TuningRequestRecord, TuningRequestEvent stream
@@ -61,7 +76,8 @@ outputs: TuningRequestRecord, TuningRequestEvent stream
 public sealed class TuningRequestService(
     IConfiguration configuration,
     IWatchSupervisor watchSupervisor,
-    ICapsuleCatalogService capsuleCatalogService)
+    ICapsuleCatalogService capsuleCatalogService,
+    ITuningExecutionAdapter tuningExecutionAdapter)
 {
     private readonly ManagerOptions _options = configuration.GetSection("Manager").Get<ManagerOptions>() ?? new();
     private readonly Dictionary<Guid, TuningRequestRecord> _requests = [];
@@ -114,27 +130,56 @@ public sealed class TuningRequestService(
             throw new InvalidOperationException("The tuning request instruction is required.");
         }
 
-        if (capsuleCatalogService.GetSymbol(model.CapsuleKey) is null)
-        {
-            throw new InvalidOperationException("The requested capsule key was not found in the current capsule catalog.");
-        }
+        var capsule = capsuleCatalogService.GetSymbol(model.CapsuleKey)
+            ?? throw new InvalidOperationException("The requested capsule key was not found in the current capsule catalog.");
 
-        var record = new TuningRequestRecord(
-            Guid.NewGuid(),
-            Guid.NewGuid().ToString("N"),
+        var requestId = Guid.NewGuid();
+        var createdAtUtc = DateTimeOffset.UtcNow;
+        var correlationId = Guid.NewGuid().ToString("N");
+        var requestDirectory = CreateRequestDirectory(requestId);
+        var attachments = await PersistAttachmentsAsync(requestDirectory, model.Attachments ?? [], cancellationToken);
+        await WritePacketAsync(requestDirectory, new TuningRequestPacket(
+            requestId,
+            correlationId,
             model.CapsuleKey,
             model.ComponentName.Trim(),
             string.IsNullOrWhiteSpace(model.Route) ? "/" : model.Route.Trim(),
             model.ProjectId,
             model.TabId,
             model.SelectionId,
+            model.ContextSummary?.Trim(),
             model.Instruction.Trim(),
-            _options.ReviewBeforeSend && !model.AutoSubmit ? TuningRequestStatus.AwaitingApproval : TuningRequestStatus.Queued,
-            DateTimeOffset.UtcNow,
-            "Tuning request created.",
+            attachments,
+            capsule.Summary,
+            createdAtUtc), cancellationToken);
+
+        var initialStatus = _options.ReviewBeforeSend && !model.AutoSubmit
+            ? TuningRequestStatus.AwaitingApproval
+            : TuningRequestStatus.Queued;
+        var record = new TuningRequestRecord(
+            requestId,
+            correlationId,
+            model.CapsuleKey,
+            model.ComponentName.Trim(),
+            string.IsNullOrWhiteSpace(model.Route) ? "/" : model.Route.Trim(),
+            model.ProjectId,
+            model.TabId,
+            model.SelectionId,
+            model.ContextSummary?.Trim(),
+            model.Instruction.Trim(),
+            initialStatus,
+            createdAtUtc,
+            createdAtUtc,
+            initialStatus == TuningRequestStatus.AwaitingApproval
+                ? "Tuning request packaged and waiting for approval."
+                : "Tuning request created.",
             null,
             null,
-            false);
+            false,
+            attachments.Count,
+            capsule.Summary,
+            requestDirectory,
+            null);
 
         lock (_gate)
         {
@@ -144,34 +189,80 @@ public sealed class TuningRequestService(
         }
 
         await PublishAsync(record.Id, record.Status, record.Summary, cancellationToken);
-        if (!_options.ReviewBeforeSend || model.AutoSubmit)
+        await AppendEventLogAsync(record, cancellationToken);
+        if (record.Status == TuningRequestStatus.Queued)
         {
-            _ = Task.Run(() => SimulateExecutionAsync(record.Id, cancellationToken), cancellationToken);
+            _ = Task.Run(() => RunExecutionAsync(record.Id, CancellationToken.None), CancellationToken.None);
         }
 
         return record;
     }
 
-    public async Task CancelAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<TuningRequestRecord> SubmitAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        await SetStatusAsync(id, TuningRequestStatus.Cancelled, "Tuning request cancelled.", null, null, false, cancellationToken);
+        var current = Get(id) ?? throw new InvalidOperationException("The requested tuning request was not found.");
+        if (current.Status != TuningRequestStatus.AwaitingApproval)
+        {
+            return current;
+        }
+
+        await SetStatusAsync(id, TuningRequestStatus.Queued, "Tuning request approved and queued for the local adapter.", null, null, current.CapsuleDriftDetected, current.AdapterJobId, cancellationToken);
+        _ = Task.Run(() => RunExecutionAsync(id, CancellationToken.None), CancellationToken.None);
+        return Get(id)!;
     }
 
-    private async Task SimulateExecutionAsync(Guid id, CancellationToken cancellationToken)
+    public async Task CancelAsync(Guid id, CancellationToken cancellationToken = default)
+        => await SetStatusAsync(id, TuningRequestStatus.Cancelled, "Tuning request cancelled.", null, null, false, Get(id)?.AdapterJobId, cancellationToken);
+
+    private async Task RunExecutionAsync(Guid id, CancellationToken cancellationToken)
     {
-        await SetStatusAsync(id, TuningRequestStatus.Packaging, "Packaging request payload.", null, null, false, cancellationToken);
-        await Task.Delay(100, cancellationToken);
-        await SetStatusAsync(id, TuningRequestStatus.SubmittedToCodex, "Submitted to Codex adapter.", null, null, false, cancellationToken);
-        await Task.Delay(100, cancellationToken);
-        await SetStatusAsync(id, TuningRequestStatus.CodexRunning, "Codex is applying changes.", null, null, false, cancellationToken);
-        await Task.Delay(150, cancellationToken);
-        await SetStatusAsync(id, TuningRequestStatus.ChangesApplied, "Changes applied, waiting for watch readiness.", null, null, false, cancellationToken);
-        await SetStatusAsync(id, TuningRequestStatus.WaitingForWatchReady, "Waiting for the watched app to become ready.", null, null, false, cancellationToken);
+        var record = Get(id);
+        if (record is null || record.Status == TuningRequestStatus.Cancelled)
+        {
+            return;
+        }
+
+        var requestJsonPath = Path.Combine(record.EvidenceDirectory, "request.json");
+        var stdoutPath = Path.Combine(record.EvidenceDirectory, "adapter.stdout.log");
+        var stderrPath = Path.Combine(record.EvidenceDirectory, "adapter.stderr.log");
+        var eventsPath = Path.Combine(record.EvidenceDirectory, "events.ndjson");
+        var workspaceRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, _options.WorkspaceRoot));
+
+        await SetStatusAsync(id, TuningRequestStatus.Packaging, "Packaging request payload and evidence.", null, null, false, record.AdapterJobId, cancellationToken);
+
+        TuningExecutionResult executionResult;
+        try
+        {
+            await SetStatusAsync(id, TuningRequestStatus.SubmittedToCodex, "Submitted to the local tuning adapter.", null, null, false, record.AdapterJobId, cancellationToken);
+            await SetStatusAsync(id, TuningRequestStatus.CodexRunning, "Local tuning adapter is running.", null, null, false, record.AdapterJobId, cancellationToken);
+            executionResult = await tuningExecutionAdapter.ExecuteAsync(new TuningExecutionContext(
+                id,
+                workspaceRoot,
+                record.EvidenceDirectory,
+                requestJsonPath,
+                stdoutPath,
+                stderrPath,
+                eventsPath), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await SetStatusAsync(id, TuningRequestStatus.Failed, ex.Message, null, null, false, null, cancellationToken);
+            return;
+        }
+
+        if (executionResult.ExitCode != 0)
+        {
+            await SetStatusAsync(id, TuningRequestStatus.Failed, executionResult.Summary, null, null, false, executionResult.AdapterJobId, cancellationToken);
+            return;
+        }
+
+        await SetStatusAsync(id, TuningRequestStatus.ChangesApplied, executionResult.Summary, null, null, false, executionResult.AdapterJobId, cancellationToken);
+        await SetStatusAsync(id, TuningRequestStatus.WaitingForWatchReady, "Waiting for the watched app to become ready.", null, null, false, executionResult.AdapterJobId, cancellationToken);
 
         var ready = await watchSupervisor.WaitForReadyAsync(0, TimeSpan.FromSeconds(30), cancellationToken);
         if (ready is null)
         {
-            await SetStatusAsync(id, TuningRequestStatus.VerificationFailed, "The watched app did not become ready in time.", null, null, false, cancellationToken);
+            await SetStatusAsync(id, TuningRequestStatus.VerificationFailed, "The watched app did not become ready in time.", null, null, false, executionResult.AdapterJobId, cancellationToken);
             return;
         }
 
@@ -185,6 +276,7 @@ public sealed class TuningRequestService(
                 ready.LastEventId,
                 ready.ConfirmedWatchIteration ?? ready.ExpectedWatchIteration,
                 true,
+                executionResult.AdapterJobId,
                 cancellationToken);
             return;
         }
@@ -196,6 +288,7 @@ public sealed class TuningRequestService(
             ready.LastEventId,
             ready.ConfirmedWatchIteration ?? ready.ExpectedWatchIteration,
             false,
+            executionResult.AdapterJobId,
             cancellationToken);
     }
 
@@ -206,8 +299,10 @@ public sealed class TuningRequestService(
         long? readyWatchEventId,
         int? readyWatchIteration,
         bool capsuleDriftDetected,
+        string? adapterJobId,
         CancellationToken cancellationToken)
     {
+        TuningRequestRecord? updatedRecord = null;
         lock (_gate)
         {
             if (!_requests.TryGetValue(id, out var record))
@@ -215,17 +310,24 @@ public sealed class TuningRequestService(
                 return;
             }
 
-            _requests[id] = record with
+            updatedRecord = record with
             {
                 Status = status,
                 Summary = summary,
                 ReadyWatchEventId = readyWatchEventId ?? record.ReadyWatchEventId,
                 ReadyWatchIteration = readyWatchIteration ?? record.ReadyWatchIteration,
-                CapsuleDriftDetected = capsuleDriftDetected
+                CapsuleDriftDetected = capsuleDriftDetected,
+                AdapterJobId = adapterJobId ?? record.AdapterJobId,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
             };
+            _requests[id] = updatedRecord;
         }
 
         await PublishAsync(id, status, summary, cancellationToken);
+        if (updatedRecord is not null)
+        {
+            await AppendEventLogAsync(updatedRecord, cancellationToken);
+        }
     }
 
     private async Task PublishAsync(Guid id, TuningRequestStatus status, string summary, CancellationToken cancellationToken)
@@ -243,5 +345,59 @@ public sealed class TuningRequestService(
         {
             await hub.PublishAsync(tuningEvent, cancellationToken);
         }
+    }
+
+    private string CreateRequestDirectory(Guid requestId)
+    {
+        var workspaceRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, _options.WorkspaceRoot));
+        var artifactsRoot = Path.Combine(workspaceRoot, _options.ArtifactsRoot, "tuning", requestId.ToString("N"));
+        Directory.CreateDirectory(artifactsRoot);
+        Directory.CreateDirectory(Path.Combine(artifactsRoot, "attachments"));
+        return artifactsRoot;
+    }
+
+    private async Task<IReadOnlyList<TuningAttachmentPacket>> PersistAttachmentsAsync(
+        string requestDirectory,
+        IReadOnlyList<TuningRequestAttachmentCreateModel> attachments,
+        CancellationToken cancellationToken)
+    {
+        var saved = new List<TuningAttachmentPacket>();
+        var attachmentsDirectory = Path.Combine(requestDirectory, "attachments");
+        foreach (var attachment in attachments)
+        {
+            var bytes = Convert.FromBase64String(attachment.ContentBase64 ?? string.Empty);
+            if (bytes.Length > _options.AttachmentSizeLimitBytes)
+            {
+                throw new InvalidOperationException($"Attachment '{attachment.FileName}' exceeds the configured size limit.");
+            }
+
+            var safeName = Path.GetFileName(string.IsNullOrWhiteSpace(attachment.FileName) ? $"{Guid.NewGuid():N}.bin" : attachment.FileName);
+            var relativePath = Path.Combine("attachments", safeName);
+            var fullPath = Path.Combine(requestDirectory, relativePath);
+            await File.WriteAllBytesAsync(fullPath, bytes, cancellationToken);
+            saved.Add(new TuningAttachmentPacket(safeName, attachment.ContentType, attachment.Source, relativePath.Replace('\\', '/')));
+        }
+
+        return saved;
+    }
+
+    private static async Task WritePacketAsync(string requestDirectory, TuningRequestPacket packet, CancellationToken cancellationToken)
+    {
+        var packetPath = Path.Combine(requestDirectory, "request.json");
+        await File.WriteAllTextAsync(
+            packetPath,
+            JsonSerializer.Serialize(packet, new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true }),
+            cancellationToken);
+    }
+
+    private static async Task AppendEventLogAsync(TuningRequestRecord record, CancellationToken cancellationToken)
+    {
+        var logPath = Path.Combine(record.EvidenceDirectory, "events.ndjson");
+        var entry = new TuningEventLogEntry(
+            record.UpdatedAtUtc,
+            record.Status.ToString(),
+            record.Summary,
+            record.AdapterJobId);
+        await File.AppendAllTextAsync(logPath, $"{JsonSerializer.Serialize(entry)}{Environment.NewLine}", cancellationToken);
     }
 }

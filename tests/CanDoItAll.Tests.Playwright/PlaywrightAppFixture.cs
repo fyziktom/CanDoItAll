@@ -81,7 +81,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
         if (_workspaceRoot is not null && Directory.Exists(_workspaceRoot))
         {
-            Directory.Delete(_workspaceRoot, recursive: true);
+            DeleteDirectoryWithRetry(_workspaceRoot);
         }
     }
 
@@ -121,5 +121,26 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         }
 
         throw new TimeoutException($"Timed out waiting for runtime readiness.{Environment.NewLine}{string.Join(Environment.NewLine, _logs)}");
+    }
+
+    private static void DeleteDirectoryWithRetry(string path)
+    {
+        const int maxAttempts = 6;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                Directory.Delete(path, recursive: true);
+                return;
+            }
+            catch (IOException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(150 * attempt);
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(150 * attempt);
+            }
+        }
     }
 }

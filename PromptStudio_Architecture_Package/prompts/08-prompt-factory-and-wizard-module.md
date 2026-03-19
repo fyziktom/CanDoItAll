@@ -30,7 +30,7 @@ This prompt covers M6: the guided prompt-creation workflow that consumes the sha
 
 ## Tasks
 1. Implement the Factory module domain still needed at this stage: blueprints, build sessions, context assemblies, and validation results.
-2. Build the wizard stepper and main Prompt Factory UI.
+2. Build the wizard stepper and a dedicated prompt-session tab experience instead of a single large flat form.
 3. Implement project phase selection, automatic flow-template and shared-block recommendation, controlled shared-block customization, and blueprint recommendation.
 4. Implement context assembly from project metadata, options, selected resources, shared blocks, and prior records where appropriate.
 5. Implement generated prompt rendering and editing.
@@ -38,7 +38,8 @@ This prompt covers M6: the guided prompt-creation workflow that consumes the sha
 7. Implement save-as-draft, save-as-final, copy, export, and provider-send actions.
 8. Ensure prompt factory output integrates with the Prompts module instead of bypassing it.
 9. Integrate prompt sessions and prompt steps with the project structure workbench model so follow-up prompts can branch from a prior step.
-10. Add tests for context assembly, shared-block composition, blueprint rendering, validation warnings, and wizard flow.
+10. Add governance surfaces for shared blocks and flow templates so the wizard does not depend only on seeded defaults.
+11. Add tests for context assembly, shared-block composition, blueprint rendering, validation warnings, session restore, and wizard flow.
 
 ## Required deliverables
 - Factory module domain and services
@@ -49,17 +50,21 @@ This prompt covers M6: the guided prompt-creation workflow that consumes the sha
 - generated prompt preview/editor
 - save/export/send flows
 - build session persistence
+- dedicated prompt-session tabs
+- governance surfaces for shared blocks and flow templates
 - automated tests
 
 ## Acceptance criteria
 - a user can choose project + phase + blueprint and get a generated prompt
 - a user can choose the shared flow template and reusable blocks without copying prompt fragments manually
 - the wizard auto-applies the appropriate shared blocks for the selected prompt type before manual fine-tuning
+- the main prompt-building experience is staged and session-based instead of one large flat form
 - selected resources and stack options appear in the context assembly
 - warnings appear before send/export where required
 - save-as-draft/save-as-final integrate with the prompt library correctly
 - provider-send path goes through the provider abstraction
 - the wizard consumes centrally managed shared blocks instead of duplicating instruction text in UI code
+- prompt sessions can reopen as meaningful internal work items and remain visible in the workbench graph
 - tests cover the main wizard and context rules
 
 ## Session output format
@@ -71,4 +76,4 @@ This prompt covers M6: the guided prompt-creation workflow that consumes the sha
 6. Follow-up risks or next steps
 
 ## Stop condition
-Stop when the Prompt Factory is usable end-to-end and traceable.
+Stop when the Prompt Factory is usable end-to-end, traceable, and clearly behaves like a real wizard session instead of a flat form.

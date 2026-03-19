@@ -23,6 +23,7 @@ The plan deliberately implements **product value first**, **risk controls early*
 7. Deliver validation before deep automation or execution features.
 8. Build tests in parallel, not at the end.
 9. Keep every phase shippable.
+10. Do not accept raw CRUD pages or placeholder wrappers as the final answer for wizard-driven or canvas-driven requirements.
 
 ### 2.2 Milestone principles
 Each milestone must end with:
@@ -200,24 +201,30 @@ Each milestone must end with:
 - implement dates, phases, and statuses
 - implement generalized option selections
 - implement stack profile UI
+- implement wizard-first project authoring
+- prepare project artifact tabs for opened projects
 
 ### Tasks
 1. Implement project aggregate and tables.
 2. Implement phase editor and status handling.
 3. Implement option catalog and selection model.
-4. Build project creation wizard.
-5. Build project overview page.
+4. Build project creation and edit wizard flows instead of relying on one raw editor page as the main UX.
+5. Build project overview page and opened-project tab flow.
 6. Build stack profile page.
 7. Implement recent/recommended project summaries.
+8. Prepare the project-object graph mapping required by the workbench.
 
 ### Deliverables
 - project creation workflow
 - project overview page
 - stack profile editor
 - option selection and notes persistence
+- wizard-first project authoring flow
+- opened-project tab baseline
 
 ### Acceptance criteria
 - new project can be created end-to-end
+- project creation is guided and comfortable instead of raw CRUD
 - phases and dates persist correctly
 - option notes persist correctly
 - project summaries load quickly
@@ -264,16 +271,19 @@ Each milestone must end with:
 - implement the project structure canvas wrapper
 - implement the project events calendar wrapper
 - link workbench surfaces to real project artifacts
+- make the structure canvas a real authoring surface for the project-object graph
 
 ### Tasks
 1. Create the Workbench module and persistence model.
 2. Implement tab host services, tab registry, and browser-storage-backed restore.
 3. Build shell tab strip, pinning, reordering, close actions, and restore UX.
-4. Implement the project structure canvas wrapper using the documented JavaScript engine.
-5. Implement the project events calendar wrapper using the documented JavaScript widget.
-6. Build inspector or outline surfaces around the structure canvas.
-7. Support opening related artifacts from the canvas and calendar into internal tabs.
-8. Add tests for tab restore, sleep or wake, and the wrapper contracts.
+4. Implement artifact-aware internal tab kinds for opened projects, prompt sessions, validations, and tests.
+5. Implement the project structure canvas wrapper using the documented JavaScript engine, not a placeholder list renderer.
+6. Implement the project events calendar wrapper using the documented JavaScript widget, not a placeholder list renderer.
+7. Build inspector or outline surfaces around the structure canvas and support direct project-object creation/linking.
+8. Support opening related artifacts from the canvas and calendar into internal tabs.
+9. Add typed visual profiles and the grouped hexagonal right-click context menu to the structure canvas.
+10. Add tests for tab restore, sleep or wake, artifact-tab behavior, and the wrapper contracts.
 
 ### Deliverables
 - Workbench module
@@ -281,14 +291,16 @@ Each milestone must end with:
 - local restore path
 - project structure canvas wrapper
 - project calendar wrapper
+- project-object authoring baseline
 - automated tests
 
 ### Acceptance criteria
 - users can open, close, reorder, pin, and restore internal tabs
+- opened projects and prompt sessions behave as first-class internal tabs
 - refresh or reconnect restores the prior tab session safely
 - heavy tabs can sleep without losing recoverable state
-- the structure canvas is usable through a wrapper-first integration
-- the project calendar is usable through a wrapper-first integration
+- the structure canvas is usable through a real wrapper-first integration around the documented engine
+- the project calendar is usable through a real wrapper-first integration around the documented engine
 - linked artifacts open into internal tabs
 
 ## M5 — Prompt library
@@ -362,10 +374,11 @@ Each milestone must end with:
 - implement context assembly
 - implement pre-send validation
 - implement save/export/send flows
+- implement prompt sessions as first-class workbench tabs
 
 ### Tasks
 1. Implement `PromptBlueprint`.
-2. Build wizard stepper.
+2. Build wizard stepper and dedicated session-tab experience.
 3. Integrate automatic flow-template and shared-block recommendation into the wizard, with controlled user overrides.
 4. Implement context assembly pipeline.
 5. Implement generated prompt preview.
@@ -373,6 +386,7 @@ Each milestone must end with:
 7. Implement save-as-draft/save-as-final.
 8. Implement copy/export.
 9. Implement provider send path through the provider abstraction.
+10. Integrate prompt session and branch visibility with the structure workbench.
 
 ### Deliverables
 - prompt factory UI
@@ -381,9 +395,11 @@ Each milestone must end with:
 - prompt generation pipeline
 - provider send/export paths
 - build session persistence
+- prompt session tab baseline
 
 ### Acceptance criteria
 - user can create a prompt from a project phase in one guided flow
+- the wizard is a real staged session rather than one large form
 - shared blocks are reused from the central catalog instead of being duplicated in wizard code
 - prompt-type defaults can auto-apply the right shared blocks before user fine-tuning
 - selected resources and options appear in assembled context
@@ -592,7 +608,7 @@ Proceed only if:
 ## Gate G3A — after M4A
 Proceed only if:
 - internal tabs can be restored safely after interruption
-- the structure canvas and calendar wrappers are operational
+- the structure canvas and calendar wrappers are operational around the documented engines, not placeholder list renderers
 - linked artifacts open inside internal tabs instead of forcing browser-tab workflows
 - canvas commands route through typed C# actions and the grouped hexagonal context menu is operational
 
@@ -610,6 +626,7 @@ Proceed only if:
 - no sensitive leakage has been observed in the send path
 - prompt sessions can be re-entered through the workbench model
 - the wizard composes prompts from shared blocks and flow templates instead of page-local hardcoded text
+- prompt sessions behave as first-class artifact tabs instead of route-only pages
 
 ## Gate G5 — after M8
 Proceed only if:

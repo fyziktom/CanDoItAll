@@ -1,5 +1,11 @@
 namespace CanDoItAll.ComponentKit.Components;
 
+public sealed record TuningAttachmentRequest(
+    string FileName,
+    string ContentType,
+    string ContentBase64,
+    string Source);
+
 public sealed record TuningBoundaryRequest(
     string CapsuleKey,
     string ComponentName,

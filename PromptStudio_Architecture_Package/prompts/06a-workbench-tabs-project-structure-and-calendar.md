@@ -31,6 +31,7 @@ Implement the internal tab workspace, tab persistence and sleep lifecycle, the p
 - Wrap the existing canvas and calendar JavaScript engines first; do not rewrite them in pure C# in version one.
 - Treat the JavaScript engines as rendering and interaction adapters only; keep business logic, persistence, validation, and command semantics in C#.
 - Implement the grouped hexagonal context menu pattern as the standard canvas action launcher.
+- Do not satisfy the canvas/calendar scope with placeholder card-list rendering.
 - Add or update tests for the touched behavior.
 
 ## Scope
@@ -40,13 +41,15 @@ This prompt covers the workbench architecture that sits between projects/resourc
 1. Implement the workbench or tab-session domain: tab identity, tab kind, open/background/sleep lifecycle, restore snapshots, and pinned tabs.
 2. Implement tab host services, registry, persistence store, and local-storage-backed restore flow.
 3. Build the shell-level tab strip, tab actions, restore UX, and dirty or sleeping indicators.
-4. Implement a project structure canvas wrapper using a JS interop adapter, typed .NET DTOs, and Blazor-owned inspector or outline surfaces.
-5. Implement a project events calendar wrapper using a JS interop adapter and typed .NET DTOs.
-6. Ensure both workbench surfaces open inside internal tabs instead of forcing browser-tab workflows.
-7. Add project artifact linking so calendar items and structure nodes can open related prompts, resources, validations, and tests inside the tab workspace.
-8. Implement the grouped hexagonal context menu for node actions and route every command into typed C# workbench handlers.
-9. Ensure workbench surfaces expose stable tab, capsule, and selection metadata needed by development tuning mode.
-10. Add tests for tab persistence, restore, sleep or wake behavior, canvas command routing, and the JS interop wrappers' main round-trip contracts.
+4. Implement artifact-aware internal tab kinds for opened projects, prompt sessions, validations, and test artifacts.
+5. Implement a project structure canvas wrapper using the documented JS engine, typed .NET DTOs, and Blazor-owned inspector or outline surfaces.
+6. Implement a project events calendar wrapper using the documented JS engine and typed .NET DTOs.
+7. Ensure both workbench surfaces open inside internal tabs instead of forcing browser-tab workflows.
+8. Add project artifact linking so calendar items and structure nodes can open related prompts, resources, validations, and tests inside the tab workspace.
+9. Implement the grouped hexagonal context menu for node actions and route every command into typed C# workbench handlers.
+10. Support direct creation and linking of project-object graph items from the structure workbench.
+11. Ensure workbench surfaces expose stable tab, capsule, and selection metadata needed by development tuning mode.
+12. Add tests for tab persistence, restore, sleep or wake behavior, artifact-tab semantics, canvas command routing, and the JS interop wrappers' main round-trip contracts.
 
 ## Required deliverables
 - tab workspace domain and services
@@ -54,17 +57,21 @@ This prompt covers the workbench architecture that sits between projects/resourc
 - browser-storage-backed restore path
 - project structure canvas wrapper
 - project events calendar wrapper
+- artifact-aware workbench tabs
+- project-object authoring baseline
 - artifact linking into internal tabs
 - automated tests
 
 ## Acceptance criteria
 - the user can open, close, reorder, and reactivate internal tabs
+- opened projects and prompt sessions behave as meaningful internal work items
 - tab state survives refresh or crash through local storage
 - heavy tabs can transition into a sleeping state and recover safely
-- the project structure canvas works through a wrapper-first JS interop approach
-- the events calendar works through a wrapper-first JS interop approach
+- the project structure canvas works through a real wrapper-first JS interop approach around the documented engine
+- the events calendar works through a real wrapper-first JS interop approach around the documented engine
 - prompts, resources, validations, and tests can be opened from the workbench surfaces inside internal tabs
 - the grouped hexagonal context menu is available on the structure canvas and its actions are executed through C# workbench services
+- the workbench can create and connect project-object graph items directly instead of only visualizing them
 - workbench surfaces publish stable metadata for manager-driven tuning and verification flows
 - tests cover the critical restore and wrapper contracts
 
@@ -77,4 +84,4 @@ This prompt covers the workbench architecture that sits between projects/resourc
 6. Follow-up risks or next steps
 
 ## Stop condition
-Stop when the application has a credible internal workbench model and the visual orchestration surfaces are integrated instead of merely documented.
+Stop when the application has a credible internal workbench model and the visual orchestration surfaces are real, not placeholder renderings.

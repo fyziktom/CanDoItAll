@@ -5,4 +5,10 @@ public sealed record ArtifactReference(
     Guid? EntityId,
     string Title,
     string Route,
-    string? Description = null);
+    string? Description = null,
+    Guid? ProjectId = null,
+    string? ArtifactKey = null,
+    string? ProjectName = null,
+    string? PhaseName = null,
+    string? TabKind = null,
+    string? SnapshotJson = null);

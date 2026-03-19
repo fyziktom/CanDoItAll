@@ -2,38 +2,61 @@
 @implements IDisposable
 @using CanDoItAll.ComponentKit.Components
 @using CanDoItAll.Infrastructure.Configuration
+@using CanDoItAll.Modules.Factory
+@using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Workbench
 @using CanDoItAll.SharedKernel
 @using CanDoItAll.Web.Composition
 @using CanDoItAll.Web.Infrastructure
+@using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager Navigation
 @inject Microsoft.Extensions.Options.IOptions<DevelopmentManagerOptions> DevelopmentManagerOptions
 @inject DevelopmentManagerClient DevelopmentManagerClient
 @inject TuningCoordinator TuningCoordinator
 @inject WorkbenchStateService Workbench
+@inject ProjectsService ProjectsService
+@inject PromptFactoryService PromptFactoryService
+@inject IJSRuntime JS
 
 <AppShell NavigationItems="ShellNavigation.Items"
-          CurrentRoute="@CurrentRoute"
+          Workspaces="workspaces"
+          ActiveWorkspaceId="@activeWorkspaceId"
+          CurrentRoute="@CurrentRouteBase"
           Tabs="Workbench.Tabs"
+          RecentTabs="Workbench.RecentTabs"
+          OpenedProjects="OpenedProjectTabs"
+          OpenedSessions="OpenedPromptSessionTabs"
           ActiveTabId="Workbench.ActiveTabId"
+          ProjectContextTitle="@ActiveProjectTitle"
+          PhaseContextTitle="@ActivePhaseTitle"
+          SelectWorkspace="HandleSelectWorkspaceAsync"
           Navigate="HandleNavigateAsync"
+          OpenWorkbenchItem="HandleOpenWorkbenchItemAsync"
           SelectTab="HandleSelectTabAsync"
           CloseTab="HandleCloseTabAsync"
           MoveTabLeft="HandleMoveLeftAsync"
           MoveTabRight="HandleMoveRightAsync"
           ToggleTabPin="HandleTogglePinAsync"
-          ToggleTabSleep="HandleToggleSleepAsync">
+          ToggleTabSleep="HandleToggleSleepAsync"
+          CloseOtherTabs="HandleCloseOthersAsync"
+          CloseTabsToRight="HandleCloseRightAsync"
+          CloseBackgroundTabs="HandleCloseBackgroundAsync"
+          ReopenRecentTab="HandleReopenRecentAsync">
     <TopBar>
         <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div class="space-y-1">
-                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Active Workspace</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">@ActiveWorkspaceTitle</p>
                 <h2 class="text-2xl font-semibold tracking-tight text-slate-950">@ActiveNavigation.Title</h2>
                 <p class="max-w-3xl text-sm leading-6 text-slate-600">@ActiveNavigation.Description</p>
+                @if (!string.IsNullOrWhiteSpace(ActiveProjectTitle))
+                {
+                    <p class="text-sm font-medium text-slate-700">Current project: @ActiveProjectTitle@if (!string.IsNullOrWhiteSpace(ActivePhaseTitle)) { <span class="text-slate-500"> · @ActivePhaseTitle</span> }</p>
+                }
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
                 <StatusBadge Tone="info" Text="Interactive Server" />
-                <StatusBadge Tone="success" Text="Tailwind active" />
+                <StatusBadge Tone="success" Text="@($"Workspace {OpenedProjectTabs.Count + OpenedPromptSessionTabs.Count} live item(s)")" />
                 <StatusBadge Tone="neutral" Text="@($"Tabs {Workbench.Tabs.Count}")" />
             </div>
         </div>
@@ -58,7 +81,7 @@
     </Body>
     <RightRail>
         <div class="space-y-4">
-            <SectionCard Title="Workbench" Description="Internal tabs restore through browser storage so project work stays inside one app session.">
+            <SectionCard Title="Workbench" Description="Internal tabs now track artifact identity, recent closures, and contextual restore instead of flat route launches.">
                 <div class="grid gap-3">
                     <div class="rounded-2xl bg-slate-50 p-3">
                         <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Current route</p>
@@ -82,12 +105,21 @@
                 </div>
             </SectionCard>
 
-            <SectionCard Title="Execution Notes" Description="The current build keeps the shell, module seams, and restore baseline in place while deeper feature slices fill in each workspace.">
-                <ul class="space-y-2 text-sm leading-6 text-slate-600">
-                    <li>Module routes load from their own assemblies.</li>
-                    <li>Browser-local session restore keeps internal tabs sticky.</li>
-                    <li>The development readiness probe is mapped at `/_dev/runtime` in development.</li>
-                </ul>
+            <SectionCard Title="Context Queue" Description="The shell keeps active projects and prompt sessions visible so work starts from artifacts instead of a flat route list.">
+                <div class="space-y-3 text-sm text-slate-700">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Opened projects</p>
+                        <p class="mt-1">@OpenedProjectTabs.Count</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Prompt sessions</p>
+                        <p class="mt-1">@OpenedPromptSessionTabs.Count</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Recent closures</p>
+                        <p class="mt-1">@Workbench.RecentTabs.Count</p>
+                    </div>
+                </div>
             </SectionCard>
 
             @if (DevelopmentManagerOptions.Value.TuningModeEnabled)
@@ -114,6 +146,40 @@
                                                data-testid="tuning-instruction" />
                             </div>
 
+                            <div class="space-y-2">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <label class="text-sm font-medium text-slate-700">Attachments</label>
+                                    <div class="flex flex-wrap gap-2">
+                                        <label class="cursor-pointer rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">
+                                            Add image
+                                            <InputFile class="hidden" accept="image/*" OnChange="HandleTuningFilesSelectedAsync" />
+                                        </label>
+                                        <button type="button"
+                                                class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+                                                @onclick="PasteClipboardImageAsync">
+                                            Paste clipboard image
+                                        </button>
+                                    </div>
+                                </div>
+
+                                @if (tuningAttachments.Count == 0)
+                                {
+                                    <p class="text-xs text-slate-500">Attach a screenshot or paste an image from the clipboard when visual evidence matters.</p>
+                                }
+                                else
+                                {
+                                    <div class="space-y-2">
+                                        @foreach (var attachment in tuningAttachments)
+                                        {
+                                            <div class="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                                                <span>@attachment.FileName (@attachment.Source)</span>
+                                                <button type="button" class="font-semibold text-rose-700" @onclick="() => RemoveTuningAttachment(attachment.FileName)">Remove</button>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
                             <div class="flex flex-wrap gap-2">
                                 <button type="button"
                                         class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
@@ -127,12 +193,35 @@
                                         @onclick="ClearTuningRequest">
                                     Clear
                                 </button>
+                                @if (pendingTuningRequest is { Status: "AwaitingApproval" })
+                                {
+                                    <button type="button"
+                                            class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                            disabled="@tuningBusy"
+                                            @onclick="SubmitPendingTuningRequestAsync">
+                                        Submit after review
+                                    </button>
+                                }
                             </div>
                         }
 
                         @if (!string.IsNullOrWhiteSpace(tuningMessage))
                         {
                             <p class="text-sm @(tuningMessage.StartsWith("Unable", StringComparison.OrdinalIgnoreCase) || tuningMessage.StartsWith("Add ", StringComparison.OrdinalIgnoreCase) ? "text-rose-700" : "text-emerald-700")">@tuningMessage</p>
+                        }
+
+                        @if (pendingTuningRequest is not null)
+                        {
+                            <div class="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+                                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Latest request</p>
+                                <p class="mt-2 font-semibold text-slate-900">@pendingTuningRequest.ComponentName</p>
+                                <p class="mt-1 text-xs text-slate-500">@pendingTuningRequest.Status</p>
+                                <p class="mt-1 text-xs text-slate-500">@pendingTuningRequest.Summary</p>
+                                @if (pendingTuningRequest.AttachmentCount > 0)
+                                {
+                                    <p class="mt-1 text-xs text-slate-500">@($"{pendingTuningRequest.AttachmentCount} attachment(s) packaged")</p>
+                                }
+                            </div>
                         }
                     </div>
                 </SectionCard>
@@ -148,27 +237,58 @@
 </div>
 
 @code {
-    private string CurrentRoute => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0];
+    private readonly IReadOnlyList<ShellWorkspaceItem> workspaces =
+    [
+        new("delivery", "Delivery Workspace", "Project authoring, structure, calendars, and prompt sessions.", "/projects"),
+        new("quality", "Quality Desk", "Validation runs, test plans, and evidence review.", "/validation"),
+        new("automation", "Automation Ops", "Activity, automation status, and environment settings.", "/automation")
+    ];
 
-    private string CurrentRouteDisplay => string.IsNullOrWhiteSpace(CurrentRoute) ? "/" : $"/{CurrentRoute}";
-
-    private ShellNavigationItem ActiveNavigation => ShellNavigation.MatchRoute(CurrentRoute);
-
-    private string ActiveTabTitle => Workbench.GetActiveTab()?.Title ?? ActiveNavigation.Title;
-
-    private bool TuningEnabled => DevelopmentManagerOptions.Value.TuningModeEnabled && CurrentTuningSurface is not null;
-
-    private TuningSurfaceDefinition? CurrentTuningSurface => ResolveTuningSurface(CurrentRouteDisplay);
-
+    private string activeWorkspaceId = "delivery";
     private string tuningInstruction = string.Empty;
     private string? tuningMessage;
     private bool tuningBusy;
+    private readonly List<TuningAttachmentRequest> tuningAttachments = [];
+    private DevelopmentTuningRequestResult? pendingTuningRequest;
+
+    private string CurrentLocation => Navigation.ToBaseRelativePath(Navigation.Uri);
+
+    private Uri CurrentUri => Navigation.ToAbsoluteUri(Navigation.Uri);
+
+    private string CurrentRouteBase => CurrentUri.AbsolutePath.TrimStart('/');
+
+    private string CurrentRouteDisplay => string.IsNullOrWhiteSpace(CurrentLocation) ? "/" : $"/{CurrentLocation}";
+
+    private ShellNavigationItem ActiveNavigation => ShellNavigation.MatchRoute(CurrentRouteBase);
+
+    private string ActiveWorkspaceTitle => workspaces.FirstOrDefault(item => item.Id == activeWorkspaceId)?.Title ?? "Workspace";
+
+    private string ActiveTabTitle => Workbench.GetActiveTab()?.Title ?? ActiveNavigation.Title;
+
+    private string? ActiveProjectTitle => Workbench.GetActiveTab()?.ProjectName;
+
+    private string? ActivePhaseTitle => Workbench.GetActiveTab()?.PhaseName;
+
+    private IReadOnlyList<WorkbenchTabState> OpenedProjectTabs => Workbench.Tabs
+        .Where(tab => tab.ProjectId.HasValue && tab.TabKind is WorkbenchTabKinds.ProjectOverview or WorkbenchTabKinds.ProjectStructure or WorkbenchTabKinds.ProjectCalendar)
+        .GroupBy(tab => tab.ProjectId)
+        .Select(group => group.First())
+        .ToList();
+
+    private IReadOnlyList<WorkbenchTabState> OpenedPromptSessionTabs => Workbench.Tabs
+        .Where(tab => string.Equals(tab.TabKind, WorkbenchTabKinds.PromptWizardSession, StringComparison.Ordinal))
+        .ToList();
+
+    private bool TuningEnabled => DevelopmentManagerOptions.Value.TuningModeEnabled && CurrentTuningSurface is not null;
+
+    private TuningSurfaceDefinition? CurrentTuningSurface => ResolveTuningSurface(CurrentUri.AbsolutePath);
 
     protected override void OnInitialized()
     {
         Navigation.LocationChanged += HandleLocationChanged;
         Workbench.Changed += HandleWorkbenchChanged;
         TuningCoordinator.Changed += HandleWorkbenchChanged;
+        activeWorkspaceId = ResolveWorkspaceId(CurrentUri.AbsolutePath);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -178,34 +298,54 @@
             return;
         }
 
-        await Workbench.InitializeAsync(ShellNavigation.Items.Select(item => new WorkbenchTabState(
-            $"route:{item.Route}",
-            item.Title,
-            item.Route,
-            IsPinned: item.PinnedByDefault,
-            CanClose: !item.PinnedByDefault)));
+        await Workbench.InitializeAsync(
+            [
+                new WorkbenchTabState(
+                    "route:dashboard",
+                    "Dashboard",
+                    "/",
+                    IsPinned: true,
+                    CanClose: false,
+                    TabKind: WorkbenchTabKinds.Page,
+                    ArtifactKey: "/",
+                    RestoreKey: "/",
+                    TabGroup: "Workspace")
+            ]);
 
-        await Workbench.TrackRouteAsync(CurrentRouteDisplay, ActiveNavigation.Title, ActiveNavigation.PinnedByDefault);
+        await ResolveAndTrackCurrentTabAsync();
         StateHasChanged();
     }
 
     private async Task HandleNavigateAsync(string route)
     {
-        var navigation = ShellNavigation.MatchRoute(route);
-        await Workbench.TrackRouteAsync(route, navigation.Title, navigation.PinnedByDefault);
         Navigation.NavigateTo(route);
+        await ResolveAndTrackCurrentTabAsync();
     }
 
-    private Task HandleSelectTabAsync(string tabId)
+    private Task HandleOpenWorkbenchItemAsync(string tabId) => HandleSelectTabAsync(tabId);
+
+    private Task HandleSelectWorkspaceAsync(string workspaceId)
+    {
+        activeWorkspaceId = workspaceId;
+        var workspace = workspaces.FirstOrDefault(item => item.Id == workspaceId);
+        if (workspace is not null)
+        {
+            Navigation.NavigateTo(workspace.DefaultRoute);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleSelectTabAsync(string tabId)
     {
         var tab = Workbench.Tabs.FirstOrDefault(candidate => string.Equals(candidate.TabId, tabId, StringComparison.Ordinal));
         if (tab is null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         Navigation.NavigateTo(tab.Route);
-        return Workbench.ActivateAsync(tab.TabId);
+        await Workbench.ActivateAsync(tab.TabId);
     }
 
     private async Task HandleCloseTabAsync(string tabId)
@@ -226,6 +366,22 @@
 
     private Task HandleToggleSleepAsync(string tabId) => Workbench.ToggleSleepAsync(tabId);
 
+    private Task HandleCloseOthersAsync(string tabId) => Workbench.CloseOthersAsync(tabId);
+
+    private Task HandleCloseRightAsync(string tabId) => Workbench.CloseRightAsync(tabId);
+
+    private Task HandleCloseBackgroundAsync(string tabId) => Workbench.CloseAllBackgroundAsync(tabId);
+
+    private async Task HandleReopenRecentAsync(string tabId)
+    {
+        await Workbench.ReopenRecentAsync(tabId);
+        var reopened = Workbench.GetActiveTab();
+        if (reopened is not null)
+        {
+            Navigation.NavigateTo(reopened.Route);
+        }
+    }
+
     private async Task SendTuningRequestAsync()
     {
         if (TuningCoordinator.CurrentRequest is null)
@@ -241,6 +397,7 @@
         var result = await DevelopmentManagerClient.CreateTuningRequestAsync(
             TuningCoordinator.CurrentRequest,
             tuningInstruction,
+            tuningAttachments,
             autoSubmit: !DevelopmentManagerOptions.Value.ReviewBeforeSend);
 
         tuningBusy = false;
@@ -250,17 +407,84 @@
 
         if (result.IsSuccess)
         {
+            pendingTuningRequest = result.Value;
             tuningInstruction = string.Empty;
+            tuningAttachments.Clear();
             TuningCoordinator.Clear();
         }
 
         StateHasChanged();
     }
 
+    private async Task SubmitPendingTuningRequestAsync()
+    {
+        if (pendingTuningRequest is null)
+        {
+            tuningMessage = "No tuning request is awaiting approval.";
+            return;
+        }
+
+        tuningBusy = true;
+        tuningMessage = null;
+        StateHasChanged();
+
+        var result = await DevelopmentManagerClient.SubmitTuningRequestAsync(pendingTuningRequest.Id);
+        tuningBusy = false;
+        if (result.IsSuccess)
+        {
+            pendingTuningRequest = result.Value;
+            tuningMessage = $"Tuning request submitted as {result.Value!.Status}.";
+        }
+        else
+        {
+            tuningMessage = string.Join(" ", result.Errors.Select(error => error.Message));
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task HandleTuningFilesSelectedAsync(InputFileChangeEventArgs args)
+    {
+        foreach (var file in args.GetMultipleFiles())
+        {
+            await using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            tuningAttachments.Add(new TuningAttachmentRequest(
+                file.Name,
+                file.ContentType,
+                Convert.ToBase64String(memoryStream.ToArray()),
+                "upload"));
+        }
+
+        tuningMessage = $"{tuningAttachments.Count} attachment(s) ready.";
+    }
+
+    private async Task PasteClipboardImageAsync()
+    {
+        var image = await JS.InvokeAsync<ClipboardImagePayload?>("candoitallTuning.readClipboardImage");
+        if (image is null)
+        {
+            tuningMessage = "No clipboard image was found.";
+            return;
+        }
+
+        tuningAttachments.Add(new TuningAttachmentRequest(
+            image.FileName,
+            image.ContentType,
+            image.ContentBase64,
+            "clipboard"));
+        tuningMessage = $"{tuningAttachments.Count} attachment(s) ready.";
+    }
+
+    private void RemoveTuningAttachment(string fileName)
+        => tuningAttachments.RemoveAll(item => string.Equals(item.FileName, fileName, StringComparison.OrdinalIgnoreCase));
+
     private void ClearTuningRequest()
     {
         tuningInstruction = string.Empty;
         tuningMessage = null;
+        tuningAttachments.Clear();
         TuningCoordinator.Clear();
     }
 
@@ -270,10 +494,171 @@
     {
         _ = InvokeAsync(async () =>
         {
-            var navigation = ShellNavigation.MatchRoute(CurrentRoute);
-            await Workbench.TrackRouteAsync(CurrentRouteDisplay, navigation.Title, navigation.PinnedByDefault);
+            activeWorkspaceId = ResolveWorkspaceId(CurrentUri.AbsolutePath);
+            await ResolveAndTrackCurrentTabAsync();
             StateHasChanged();
         });
+    }
+
+    private async Task ResolveAndTrackCurrentTabAsync()
+    {
+        var descriptor = await ResolveCurrentTabDescriptorAsync(CurrentUri);
+        await Workbench.TrackTabAsync(descriptor);
+    }
+
+    private async Task<WorkbenchTabDescriptor> ResolveCurrentTabDescriptorAsync(Uri uri)
+    {
+        var path = uri.AbsolutePath;
+        var query = QueryHelpers.ParseQuery(uri.Query);
+        var route = $"{path}{uri.Query}";
+
+        if (string.Equals(path, "/projects", StringComparison.OrdinalIgnoreCase) &&
+            TryReadGuid(query, "projectId", out var projectId))
+        {
+            var project = await ProjectsService.GetAsync(projectId);
+            return new WorkbenchTabDescriptor(
+                $"project:{projectId:N}",
+                string.IsNullOrWhiteSpace(project.Name) ? "Project Overview" : project.Name,
+                route,
+                WorkbenchTabKinds.ProjectOverview,
+                ProjectId: projectId,
+                ArtifactId: projectId,
+                ArtifactKind: "project",
+                ArtifactKey: $"project:{projectId:N}",
+                RestoreKey: $"project:{projectId:N}",
+                ProjectScope: projectId.ToString(),
+                ProjectName: project.Name,
+                PhaseName: project.CurrentPhase,
+                Description: "Wizard-first project overview and editing session.",
+                TabGroup: "Projects");
+        }
+
+        if (TryReadProjectSurface(path, "structure", out var structureProjectId))
+        {
+            var project = await ProjectsService.GetAsync(structureProjectId);
+            return new WorkbenchTabDescriptor(
+                $"project-structure:{structureProjectId:N}",
+                $"{project.Name} · Structure",
+                route,
+                WorkbenchTabKinds.ProjectStructure,
+                ProjectId: structureProjectId,
+                ArtifactId: structureProjectId,
+                ArtifactKind: "project-structure",
+                ArtifactKey: $"project-structure:{structureProjectId:N}",
+                RestoreKey: $"project-structure:{structureProjectId:N}",
+                ProjectScope: structureProjectId.ToString(),
+                ProjectName: project.Name,
+                PhaseName: project.CurrentPhase,
+                Description: "Canvas-driven project structure workbench.",
+                TabGroup: "Projects");
+        }
+
+        if (TryReadProjectSurface(path, "calendar", out var calendarProjectId))
+        {
+            var project = await ProjectsService.GetAsync(calendarProjectId);
+            return new WorkbenchTabDescriptor(
+                $"project-calendar:{calendarProjectId:N}",
+                $"{project.Name} · Calendar",
+                route,
+                WorkbenchTabKinds.ProjectCalendar,
+                ProjectId: calendarProjectId,
+                ArtifactId: calendarProjectId,
+                ArtifactKind: "project-calendar",
+                ArtifactKey: $"project-calendar:{calendarProjectId:N}",
+                RestoreKey: $"project-calendar:{calendarProjectId:N}",
+                ProjectScope: calendarProjectId.ToString(),
+                ProjectName: project.Name,
+                PhaseName: project.CurrentPhase,
+                Description: "Project calendar and scheduled artifact surface.",
+                TabGroup: "Projects");
+        }
+
+        if (string.Equals(path, "/prompt-factory", StringComparison.OrdinalIgnoreCase) &&
+            (TryReadGuid(query, "sessionId", out var sessionId) || TryReadGuid(query, "runId", out sessionId)))
+        {
+            var editor = await PromptFactoryService.GetEditorAsync(
+                query.ContainsKey("sessionId") ? sessionId : null,
+                query.ContainsKey("runId") ? sessionId : null);
+            var project = editor.ProjectId.HasValue ? await ProjectsService.GetAsync(editor.ProjectId.Value) : null;
+            var sessionLabel = string.IsNullOrWhiteSpace(editor.Phase) ? "Prompt Session" : $"Prompt Session · {editor.Phase}";
+            return new WorkbenchTabDescriptor(
+                $"prompt-session:{sessionId:N}",
+                sessionLabel,
+                route,
+                WorkbenchTabKinds.PromptWizardSession,
+                ProjectId: editor.ProjectId,
+                ArtifactId: sessionId,
+                ArtifactKind: "prompt-session",
+                ArtifactKey: $"prompt-session:{sessionId:N}",
+                RestoreKey: $"prompt-session:{sessionId:N}",
+                ProjectScope: editor.ProjectId?.ToString(),
+                ProjectName: project?.Name,
+                PhaseName: editor.Phase,
+                Description: "Prompt wizard session with branchable flow state.",
+                TabGroup: "Prompt Sessions");
+        }
+
+        if (string.Equals(path, "/validation", StringComparison.OrdinalIgnoreCase) &&
+            TryReadGuid(query, "runId", out var validationRunId))
+        {
+            return new WorkbenchTabDescriptor(
+                $"validation:{validationRunId:N}",
+                "Validation Run",
+                route,
+                WorkbenchTabKinds.ValidationRun,
+                ArtifactId: validationRunId,
+                ArtifactKind: "validation-run",
+                ArtifactKey: $"validation:{validationRunId:N}",
+                RestoreKey: $"validation:{validationRunId:N}",
+                Description: "Validation review artifact.",
+                TabGroup: "Validation");
+        }
+
+        if (string.Equals(path, "/test-lab", StringComparison.OrdinalIgnoreCase) &&
+            TryReadGuid(query, "planId", out var testPlanId))
+        {
+            return new WorkbenchTabDescriptor(
+                $"test-plan:{testPlanId:N}",
+                "Test Plan",
+                route,
+                WorkbenchTabKinds.TestPlan,
+                ArtifactId: testPlanId,
+                ArtifactKind: "test-plan",
+                ArtifactKey: $"test-plan:{testPlanId:N}",
+                RestoreKey: $"test-plan:{testPlanId:N}",
+                Description: "Test plan artifact session.",
+                TabGroup: "Testing");
+        }
+
+        if (string.Equals(path, "/prompt-gallery", StringComparison.OrdinalIgnoreCase) &&
+            TryReadGuid(query, "promptId", out var promptId))
+        {
+            return new WorkbenchTabDescriptor(
+                $"prompt:{promptId:N}",
+                "Prompt Detail",
+                route,
+                WorkbenchTabKinds.PromptDetail,
+                ArtifactId: promptId,
+                ArtifactKind: "prompt",
+                ArtifactKey: $"prompt:{promptId:N}",
+                RestoreKey: $"prompt:{promptId:N}",
+                Description: "Prompt detail artifact.",
+                TabGroup: "Prompt Sessions");
+        }
+
+        var navigation = ShellNavigation.MatchRoute(path.TrimStart('/'));
+        return new WorkbenchTabDescriptor(
+            string.Equals(path, "/settings", StringComparison.OrdinalIgnoreCase) ? "route:settings" : BuildPageTabId(path),
+            navigation.Title,
+            route,
+            string.Equals(path, "/settings", StringComparison.OrdinalIgnoreCase) ? WorkbenchTabKinds.Settings : WorkbenchTabKinds.Page,
+            ArtifactKind: navigation.Title,
+            ArtifactKey: NormalizeArtifactKey(path),
+            RestoreKey: NormalizeArtifactKey(path),
+            Description: navigation.Description,
+            TabGroup: ResolvePageGroup(path),
+            IsPinned: navigation.PinnedByDefault,
+            CanClose: !navigation.PinnedByDefault);
     }
 
     public void Dispose()
@@ -283,9 +668,9 @@
         TuningCoordinator.Changed -= HandleWorkbenchChanged;
     }
 
-    private static TuningSurfaceDefinition? ResolveTuningSurface(string route)
+    private static TuningSurfaceDefinition? ResolveTuningSurface(string path)
     {
-        var normalized = route.Trim().ToLowerInvariant();
+        var normalized = path.Trim().ToLowerInvariant();
         if (normalized.EndsWith("/structure", StringComparison.Ordinal))
         {
             return new TuningSurfaceDefinition("page-projectstructurepage", "ProjectStructurePage", "Project structure canvas and outline coordination.");
@@ -311,5 +696,49 @@
         };
     }
 
+    private static bool TryReadGuid(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> query, string key, out Guid value)
+        => Guid.TryParse(query.TryGetValue(key, out var raw) ? raw.ToString() : null, out value);
+
+    private static bool TryReadProjectSurface(string path, string surfaceSegment, out Guid projectId)
+    {
+        projectId = Guid.Empty;
+        var segments = path.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length == 3 &&
+               string.Equals(segments[0], "projects", StringComparison.OrdinalIgnoreCase) &&
+               Guid.TryParse(segments[1], out projectId) &&
+               string.Equals(segments[2], surfaceSegment, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveWorkspaceId(string path)
+        => path.Trim().ToLowerInvariant() switch
+        {
+            "/validation" or "/test-lab" => "quality",
+            "/automation" or "/activity" or "/settings" => "automation",
+            _ => "delivery"
+        };
+
+    private static string ResolvePageGroup(string path)
+        => path.Trim().ToLowerInvariant() switch
+        {
+            "/validation" => "Validation",
+            "/test-lab" => "Testing",
+            "/settings" => "Settings",
+            "/automation" or "/activity" => "Operations",
+            _ => "Workspace"
+        };
+
+    private static string NormalizeArtifactKey(string path)
+        => string.IsNullOrWhiteSpace(path) || string.Equals(path, "/", StringComparison.Ordinal) ? "/" : path.Trim();
+
+    private static string BuildPageTabId(string path)
+    {
+        var normalized = string.IsNullOrWhiteSpace(path) || string.Equals(path, "/", StringComparison.Ordinal)
+            ? "dashboard"
+            : path.Trim('/').Replace('/', ':');
+        return $"route:{normalized}";
+    }
+
     private sealed record TuningSurfaceDefinition(string CapsuleKey, string ComponentName, string ContextSummary);
+
+    private sealed record ClipboardImagePayload(string FileName, string ContentType, string ContentBase64);
 }

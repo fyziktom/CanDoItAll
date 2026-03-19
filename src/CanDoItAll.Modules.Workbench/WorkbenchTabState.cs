@@ -7,14 +7,14 @@ namespace CanDoItAll.Modules.Workbench;
 /* codex-capsule
 kind: service
 name: WorkbenchStateService
-summary: Owns the internal tab session including restore, pinning, ordering, sleep, and activation rules.
-owns: tab-list, active-tab, restore-report
+summary: Owns the internal tab session including restore, pinning, ordering, sleep, snapshots, overflow, and artifact-first activation rules.
+owns: tab-list, recent-tabs, active-tab, restore-report
 deps: IWorkbenchStateStore, WorkbenchOptions, IClock
-risks: stale-snapshot, duplicate-route, dirty-state-loss
+risks: stale-snapshot, duplicate-artifact, dirty-state-loss
 tests: unit:WorkbenchStateServiceTests
 inputs: route opens, artifact opens, tab actions
 outputs: WorkbenchSessionSnapshot
-state: ordered-tabs, active-tab-id, restore-report
+state: ordered-tabs, recent-tabs, active-tab-id, restore-report
 restore: browser-storage snapshot versioned by schema
 */
 public sealed class WorkbenchStateService(
@@ -22,13 +22,20 @@ public sealed class WorkbenchStateService(
     IOptions<WorkbenchOptions> options,
     IClock clock)
 {
+    private const int SnapshotVersion = 3;
+    private const string CompatibilityMarker = "candoitall.workbench.v3";
+    private const int MaxRecentTabs = 12;
+
     private readonly List<WorkbenchTabState> _tabs = [];
+    private readonly List<WorkbenchTabState> _recentTabs = [];
     private readonly WorkbenchOptions _options = options.Value;
     private bool _initialized;
 
     public event Action? Changed;
 
     public IReadOnlyList<WorkbenchTabState> Tabs => _tabs.OrderBy(tab => tab.Order).ToList();
+
+    public IReadOnlyList<WorkbenchTabState> RecentTabs => _recentTabs.ToList();
 
     public string? ActiveTabId { get; private set; }
 
@@ -43,30 +50,53 @@ public sealed class WorkbenchStateService(
 
         var snapshot = await stateStore.LoadAsync(cancellationToken);
         var failures = new List<WorkbenchRestoreFailure>();
+
         if (snapshot?.Tabs.Count > 0)
         {
             foreach (var tab in snapshot.Tabs.OrderBy(tab => tab.Order))
             {
-                if (string.IsNullOrWhiteSpace(tab.TabId) || string.IsNullOrWhiteSpace(tab.Route))
+                if (!TryNormalizeRestoredTab(tab, out var normalized, out var failure))
                 {
-                    failures.Add(new WorkbenchRestoreFailure(tab.TabId, tab.Title, "Tab route or id was missing."));
+                    failures.Add(failure!);
                     continue;
                 }
 
-                if (_tabs.Any(existing => string.Equals(existing.TabId, tab.TabId, StringComparison.Ordinal)))
+                if (_tabs.Any(existing => string.Equals(existing.TabId, normalized.TabId, StringComparison.Ordinal)))
                 {
-                    failures.Add(new WorkbenchRestoreFailure(tab.TabId, tab.Title, "Duplicate tab id found in restore snapshot."));
+                    failures.Add(new WorkbenchRestoreFailure(normalized.TabId, normalized.Title, "Duplicate tab id found in restore snapshot."));
                     continue;
                 }
 
-                _tabs.Add(tab with { LastActivatedAtUtc = tab.LastActivatedAtUtc ?? clock.GetUtcNow() });
+                _tabs.Add(normalized);
+            }
+        }
+
+        if (snapshot?.RecentTabs is { Count: > 0 })
+        {
+            foreach (var recentTab in snapshot.RecentTabs)
+            {
+                if (!TryNormalizeRestoredTab(recentTab, out var normalized, out _))
+                {
+                    continue;
+                }
+
+                if (_recentTabs.Any(existing => string.Equals(existing.TabId, normalized.TabId, StringComparison.Ordinal)) ||
+                    _tabs.Any(existing => string.Equals(existing.TabId, normalized.TabId, StringComparison.Ordinal)))
+                {
+                    continue;
+                }
+
+                _recentTabs.Add(normalized with { ClosedAtUtc = recentTab.ClosedAtUtc ?? clock.GetUtcNow() });
             }
         }
 
         if (_tabs.Count == 0)
         {
-            _tabs.Clear();
-            _tabs.AddRange(defaultTabs.Select((tab, index) => tab with { Order = index, LastActivatedAtUtc = clock.GetUtcNow() }));
+            _tabs.AddRange(defaultTabs.Select((tab, index) => NormalizeNewTab(tab with
+            {
+                Order = index,
+                LastActivatedAtUtc = tab.LastActivatedAtUtc ?? clock.GetUtcNow()
+            })));
         }
 
         ActiveTabId = snapshot?.ActiveTabId;
@@ -83,52 +113,135 @@ public sealed class WorkbenchStateService(
         NotifyStateChanged();
     }
 
-    public async Task TrackRouteAsync(
+    public Task TrackRouteAsync(
         string route,
         string title,
         bool pinned,
         Guid? projectId = null,
-        string tabKind = "page",
+        string tabKind = WorkbenchTabKinds.Page,
         CancellationToken cancellationToken = default)
+        => TrackTabAsync(
+            new WorkbenchTabDescriptor(
+                BuildPageTabId(route),
+                title,
+                route,
+                tabKind,
+                ProjectId: projectId,
+                ArtifactId: projectId,
+                ArtifactKind: tabKind,
+                ArtifactKey: NormalizeRoute(route),
+                RestoreKey: NormalizeRoute(route),
+                ProjectScope: projectId?.ToString(),
+                TabGroup: ResolveTabGroup(tabKind),
+                IsPinned: pinned,
+                CanClose: !pinned),
+            cancellationToken);
+
+    public Task OpenArtifactAsync(ArtifactReference artifactReference, CancellationToken cancellationToken = default)
     {
-        var normalized = NormalizeRoute(route);
-        var existing = _tabs.FirstOrDefault(tab => string.Equals(tab.Route, normalized, StringComparison.OrdinalIgnoreCase));
+        var tabKind = string.IsNullOrWhiteSpace(artifactReference.TabKind)
+            ? artifactReference.Kind
+            : artifactReference.TabKind;
+        var route = NormalizeRoute(artifactReference.Route);
+        var artifactKey = string.IsNullOrWhiteSpace(artifactReference.ArtifactKey)
+            ? $"{tabKind}:{artifactReference.EntityId?.ToString("N") ?? route}"
+            : artifactReference.ArtifactKey;
+
+        return TrackTabAsync(
+            new WorkbenchTabDescriptor(
+                BuildArtifactTabId(tabKind, artifactReference.EntityId, route),
+                artifactReference.Title,
+                route,
+                tabKind,
+                ProjectId: artifactReference.ProjectId,
+                ArtifactId: artifactReference.EntityId,
+                ArtifactKind: artifactReference.Kind,
+                ArtifactKey: artifactKey,
+                RestoreKey: artifactKey,
+                ProjectScope: artifactReference.ProjectId?.ToString(),
+                ProjectName: artifactReference.ProjectName,
+                PhaseName: artifactReference.PhaseName,
+                Description: artifactReference.Description,
+                SnapshotJson: artifactReference.SnapshotJson,
+                TabGroup: ResolveTabGroup(tabKind)),
+            cancellationToken);
+    }
+
+    public async Task TrackTabAsync(WorkbenchTabDescriptor descriptor, CancellationToken cancellationToken = default)
+    {
+        var normalizedRoute = NormalizeRoute(descriptor.Route);
+        var normalizedArtifactKey = string.IsNullOrWhiteSpace(descriptor.ArtifactKey)
+            ? $"{descriptor.TabKind}:{normalizedRoute}"
+            : descriptor.ArtifactKey;
+
+        var existing = _tabs.FirstOrDefault(tab =>
+            string.Equals(tab.ArtifactKey, normalizedArtifactKey, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(tab.TabId, descriptor.TabId, StringComparison.Ordinal));
+
         if (existing is null)
         {
-            _tabs.Add(new WorkbenchTabState(
-                $"route:{normalized}",
-                title,
-                normalized,
-                IsPinned: pinned,
-                CanClose: !pinned,
-                ProjectScope: projectId?.ToString(),
-                TabKind: tabKind,
-                ProjectId: projectId,
-                RestoreKey: normalized,
+            var tab = NormalizeNewTab(new WorkbenchTabState(
+                descriptor.TabId,
+                descriptor.Title,
+                normalizedRoute,
+                IsPinned: descriptor.IsPinned,
+                CanClose: descriptor.CanClose,
+                ProjectScope: descriptor.ProjectScope ?? descriptor.ProjectId?.ToString(),
+                TabKind: descriptor.TabKind,
+                ProjectId: descriptor.ProjectId,
+                RestoreKey: descriptor.RestoreKey ?? normalizedArtifactKey,
+                CanSleep: descriptor.CanSleep,
+                CapsuleKey: descriptor.CapsuleKey,
+                Description: descriptor.Description,
+                SnapshotJson: descriptor.SnapshotJson,
+                ArtifactKey: normalizedArtifactKey,
+                ArtifactKind: descriptor.ArtifactKind,
+                ArtifactId: descriptor.ArtifactId,
+                ProjectName: descriptor.ProjectName,
+                PhaseName: descriptor.PhaseName,
+                TabGroup: descriptor.TabGroup ?? ResolveTabGroup(descriptor.TabKind),
                 LastActivatedAtUtc: clock.GetUtcNow(),
                 Order: _tabs.Count));
+
+            _tabs.Add(tab);
+            RemoveFromRecent(tab.TabId);
+            ActiveTabId = tab.TabId;
         }
         else
         {
+            RemoveFromRecent(existing.TabId);
             ReplaceTab(existing with
             {
-                Title = title,
-                IsPinned = existing.IsPinned || pinned,
-                CanClose = !(existing.IsPinned || pinned),
+                Title = descriptor.Title,
+                Route = normalizedRoute,
+                IsPinned = existing.IsPinned || descriptor.IsPinned,
+                CanClose = !(existing.IsPinned || descriptor.IsPinned),
                 IsSleeping = false,
+                ProjectScope = descriptor.ProjectScope ?? existing.ProjectScope ?? descriptor.ProjectId?.ToString(),
+                TabKind = descriptor.TabKind,
+                ProjectId = descriptor.ProjectId ?? existing.ProjectId,
+                RestoreKey = descriptor.RestoreKey ?? existing.RestoreKey ?? normalizedArtifactKey,
+                CanSleep = descriptor.CanSleep,
+                CapsuleKey = descriptor.CapsuleKey ?? existing.CapsuleKey,
+                Description = descriptor.Description ?? existing.Description,
+                SnapshotJson = descriptor.SnapshotJson ?? existing.SnapshotJson,
+                ArtifactKey = normalizedArtifactKey,
+                ArtifactKind = descriptor.ArtifactKind ?? existing.ArtifactKind,
+                ArtifactId = descriptor.ArtifactId ?? existing.ArtifactId,
+                ProjectName = descriptor.ProjectName ?? existing.ProjectName,
+                PhaseName = descriptor.PhaseName ?? existing.PhaseName,
+                TabGroup = descriptor.TabGroup ?? existing.TabGroup ?? ResolveTabGroup(descriptor.TabKind),
                 LastActivatedAtUtc = clock.GetUtcNow()
             });
+
+            ActiveTabId = existing.TabId;
         }
 
-        ActiveTabId = _tabs.First(tab => string.Equals(tab.Route, normalized, StringComparison.OrdinalIgnoreCase)).TabId;
         EnsureActiveTabIsAwake();
         AutoSleepBackgroundTabs();
         await PersistAsync(cancellationToken);
         NotifyStateChanged();
     }
-
-    public Task OpenArtifactAsync(ArtifactReference artifactReference, CancellationToken cancellationToken = default)
-        => TrackRouteAsync(artifactReference.Route, artifactReference.Title, false, artifactReference.EntityId, artifactReference.Kind, cancellationToken);
 
     public async Task ActivateAsync(string tabId, CancellationToken cancellationToken = default)
     {
@@ -139,6 +252,7 @@ public sealed class WorkbenchStateService(
         }
 
         ActiveTabId = tabId;
+        RemoveFromRecent(tab.TabId);
         ReplaceTab(tab with { IsSleeping = false, LastActivatedAtUtc = clock.GetUtcNow() });
         EnsureActiveTabIsAwake();
         AutoSleepBackgroundTabs();
@@ -155,12 +269,119 @@ public sealed class WorkbenchStateService(
         }
 
         _tabs.Remove(tab);
+        RememberRecentTab(tab);
         Reindex();
+
         if (string.Equals(ActiveTabId, tabId, StringComparison.Ordinal))
         {
             ActiveTabId = _tabs.LastOrDefault()?.TabId;
         }
 
+        EnsureActiveTabIsAwake();
+        await PersistAsync(cancellationToken);
+        NotifyStateChanged();
+    }
+
+    public async Task CloseOthersAsync(string tabId, CancellationToken cancellationToken = default)
+    {
+        var remaining = new List<WorkbenchTabState>();
+        foreach (var tab in Tabs)
+        {
+            if (tab.IsPinned || string.Equals(tab.TabId, tabId, StringComparison.Ordinal))
+            {
+                remaining.Add(tab);
+                continue;
+            }
+
+            RememberRecentTab(tab);
+        }
+
+        _tabs.Clear();
+        _tabs.AddRange(remaining.Select((tab, index) => tab with { Order = index }));
+        ActiveTabId = _tabs.FirstOrDefault(tab => string.Equals(tab.TabId, tabId, StringComparison.Ordinal))?.TabId
+            ?? _tabs.FirstOrDefault()?.TabId;
+        EnsureActiveTabIsAwake();
+        await PersistAsync(cancellationToken);
+        NotifyStateChanged();
+    }
+
+    public async Task CloseRightAsync(string tabId, CancellationToken cancellationToken = default)
+    {
+        var ordered = Tabs.ToList();
+        var index = ordered.FindIndex(tab => string.Equals(tab.TabId, tabId, StringComparison.Ordinal));
+        if (index < 0)
+        {
+            return;
+        }
+
+        for (var current = ordered.Count - 1; current > index; current--)
+        {
+            var candidate = ordered[current];
+            if (candidate.IsPinned)
+            {
+                continue;
+            }
+
+            ordered.RemoveAt(current);
+            RememberRecentTab(candidate);
+        }
+
+        _tabs.Clear();
+        _tabs.AddRange(ordered.Select((tab, orderIndex) => tab with { Order = orderIndex }));
+        EnsureActiveTabIsAwake();
+        await PersistAsync(cancellationToken);
+        NotifyStateChanged();
+    }
+
+    public async Task CloseAllBackgroundAsync(string? keepTabId = null, CancellationToken cancellationToken = default)
+    {
+        keepTabId ??= ActiveTabId;
+        var protectedIds = new HashSet<string>(StringComparer.Ordinal);
+        if (!string.IsNullOrWhiteSpace(keepTabId))
+        {
+            protectedIds.Add(keepTabId);
+        }
+
+        var remaining = new List<WorkbenchTabState>();
+        foreach (var tab in Tabs)
+        {
+            if (tab.IsPinned || protectedIds.Contains(tab.TabId))
+            {
+                remaining.Add(tab);
+                continue;
+            }
+
+            RememberRecentTab(tab);
+        }
+
+        _tabs.Clear();
+        _tabs.AddRange(remaining.Select((tab, index) => tab with { Order = index }));
+        ActiveTabId ??= _tabs.FirstOrDefault()?.TabId;
+        EnsureActiveTabIsAwake();
+        await PersistAsync(cancellationToken);
+        NotifyStateChanged();
+    }
+
+    public async Task ReopenRecentAsync(string tabId, CancellationToken cancellationToken = default)
+    {
+        var recent = _recentTabs.FirstOrDefault(tab => string.Equals(tab.TabId, tabId, StringComparison.Ordinal));
+        if (recent is null)
+        {
+            return;
+        }
+
+        RemoveFromRecent(tabId);
+        _tabs.Add(NormalizeNewTab(recent with
+        {
+            ClosedAtUtc = null,
+            IsSleeping = false,
+            LastActivatedAtUtc = clock.GetUtcNow(),
+            Order = _tabs.Count
+        }));
+
+        ActiveTabId = recent.TabId;
+        EnsureActiveTabIsAwake();
+        AutoSleepBackgroundTabs();
         await PersistAsync(cancellationToken);
         NotifyStateChanged();
     }
@@ -234,18 +455,32 @@ public sealed class WorkbenchStateService(
         NotifyStateChanged();
     }
 
+    public async Task UpdateSnapshotAsync(string tabId, string? snapshotJson, CancellationToken cancellationToken = default)
+    {
+        var tab = _tabs.FirstOrDefault(candidate => string.Equals(candidate.TabId, tabId, StringComparison.Ordinal));
+        if (tab is null)
+        {
+            return;
+        }
+
+        ReplaceTab(tab with { SnapshotJson = snapshotJson });
+        await PersistAsync(cancellationToken);
+        NotifyStateChanged();
+    }
+
     public WorkbenchTabState? GetActiveTab()
         => _tabs.FirstOrDefault(tab => string.Equals(tab.TabId, ActiveTabId, StringComparison.Ordinal));
 
     private async Task PersistAsync(CancellationToken cancellationToken)
     {
         var snapshot = new WorkbenchSessionSnapshot(
-            2,
+            SnapshotVersion,
             ActiveTabId,
             Tabs.ToArray(),
-            CompatibilityMarker: "candoitall.workbench.v2",
+            CompatibilityMarker,
             SavedAtUtc: clock.GetUtcNow(),
-            RestoreFailures: LastRestoreReport?.Failures);
+            RestoreFailures: LastRestoreReport?.Failures,
+            RecentTabs: _recentTabs.ToArray());
 
         await stateStore.SaveAsync(snapshot, cancellationToken);
     }
@@ -291,6 +526,36 @@ public sealed class WorkbenchStateService(
         }
     }
 
+    private static bool TryNormalizeRestoredTab(WorkbenchTabState tab, out WorkbenchTabState normalized, out WorkbenchRestoreFailure? failure)
+    {
+        if (string.IsNullOrWhiteSpace(tab.TabId) || string.IsNullOrWhiteSpace(tab.Route))
+        {
+            normalized = tab;
+            failure = new WorkbenchRestoreFailure(tab.TabId, tab.Title, "Tab route or id was missing.");
+            return false;
+        }
+
+        normalized = NormalizeNewTab(tab);
+        failure = null;
+        return true;
+    }
+
+    private static WorkbenchTabState NormalizeNewTab(WorkbenchTabState tab)
+    {
+        var route = NormalizeRoute(tab.Route);
+        var artifactKey = string.IsNullOrWhiteSpace(tab.ArtifactKey)
+            ? $"{tab.TabKind}:{route}"
+            : tab.ArtifactKey;
+
+        return tab with
+        {
+            Route = route,
+            RestoreKey = tab.RestoreKey ?? artifactKey,
+            ArtifactKey = artifactKey,
+            TabGroup = tab.TabGroup ?? ResolveTabGroup(tab.TabKind)
+        };
+    }
+
     private void Reindex()
     {
         for (var index = 0; index < _tabs.Count; index++)
@@ -304,7 +569,31 @@ public sealed class WorkbenchStateService(
         var index = _tabs.FindIndex(tab => string.Equals(tab.TabId, updatedTab.TabId, StringComparison.Ordinal));
         if (index >= 0)
         {
-            _tabs[index] = updatedTab;
+            _tabs[index] = NormalizeNewTab(updatedTab);
+        }
+    }
+
+    private void RememberRecentTab(WorkbenchTabState tab)
+    {
+        RemoveFromRecent(tab.TabId);
+        _recentTabs.Insert(0, NormalizeNewTab(tab with
+        {
+            ClosedAtUtc = clock.GetUtcNow(),
+            IsSleeping = false
+        }));
+
+        if (_recentTabs.Count > MaxRecentTabs)
+        {
+            _recentTabs.RemoveRange(MaxRecentTabs, _recentTabs.Count - MaxRecentTabs);
+        }
+    }
+
+    private void RemoveFromRecent(string tabId)
+    {
+        var existing = _recentTabs.FirstOrDefault(tab => string.Equals(tab.TabId, tabId, StringComparison.Ordinal));
+        if (existing is not null)
+        {
+            _recentTabs.Remove(existing);
         }
     }
 
@@ -318,6 +607,34 @@ public sealed class WorkbenchStateService(
         }
 
         return route.StartsWith('/') ? route : $"/{route}";
+    }
+
+    private static string ResolveTabGroup(string tabKind) => tabKind switch
+    {
+        WorkbenchTabKinds.ProjectOverview or WorkbenchTabKinds.ProjectStructure or WorkbenchTabKinds.ProjectCalendar => "Projects",
+        WorkbenchTabKinds.PromptWizardSession or WorkbenchTabKinds.PromptDetail => "Prompt Sessions",
+        WorkbenchTabKinds.ValidationRun => "Validation",
+        WorkbenchTabKinds.TestPlan => "Testing",
+        WorkbenchTabKinds.Settings => "Settings",
+        _ => "Workspace"
+    };
+
+    private static string BuildPageTabId(string route)
+    {
+        var normalized = NormalizeRoute(route).Trim('/');
+        return string.IsNullOrWhiteSpace(normalized)
+            ? "route:dashboard"
+            : $"route:{normalized.Replace('/', ':').Replace('?', ':').Replace('&', ':')}";
+    }
+
+    private static string BuildArtifactTabId(string tabKind, Guid? artifactId, string route)
+    {
+        if (artifactId.HasValue)
+        {
+            return $"{tabKind}:{artifactId.Value:N}";
+        }
+
+        return $"{tabKind}:{NormalizeRoute(route).Trim('/').Replace('/', ':').Replace('?', ':').Replace('&', ':')}";
     }
 }
 
@@ -333,6 +650,9 @@ public sealed class InMemoryWorkbenchStateStore : IWorkbenchStateStore
         _snapshot = snapshot with
         {
             Tabs = snapshot.Tabs
+                .Select(tab => tab with { })
+                .ToArray(),
+            RecentTabs = snapshot.RecentTabs?
                 .Select(tab => tab with { })
                 .ToArray()
         };

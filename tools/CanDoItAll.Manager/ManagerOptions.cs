@@ -21,4 +21,12 @@ public sealed class ManagerOptions
     public string ArtifactsRoot { get; set; } = ".artifacts\\codex-manager";
 
     public string CapsuleArtifactsRoot { get; set; } = ".artifacts\\codex-capsules";
+
+    public string TuningCommand { get; set; } = string.Empty;
+
+    public string TuningArguments { get; set; } = "--input \"{requestPath}\"";
+
+    public string? TuningWorkingDirectory { get; set; }
+
+    public int AttachmentSizeLimitBytes { get; set; } = 5 * 1024 * 1024;
 }

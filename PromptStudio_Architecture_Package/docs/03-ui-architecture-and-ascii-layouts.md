@@ -36,10 +36,13 @@ The UI must make a large functional scope feel coherent. The design must support
 ## 3.1 Global navigation
 - Dashboard
 - Projects
+- Resources
 - Prompt Gallery
 - Prompt Factory
 - Validation Center
 - Test Lab
+- Activity
+- Automation
 - Settings
 
 ## 3.2 Project workspace navigation
@@ -265,6 +268,12 @@ Purpose:
 Purpose:
 - browse, filter, and manage projects
 
+### Required behaviors
+- use card-based project summaries as the default browse surface
+- launch project creation and major edits through a wizard, not a raw one-page editor
+- allow opening a project overview or active project workspace into its own internal tab
+- surface next recommended actions from the project card when practical
+
 ### Filters
 - status
 - current phase
@@ -278,6 +287,16 @@ Purpose:
 Purpose:
 - show project identity, phase timeline, stack profile summary, recent prompts, recent validations, and related resources
 
+## 7.3C Project creation and edit wizard
+Purpose:
+- guide project setup and major project changes through a comfortable staged flow
+
+### Required behaviors
+- support modal launch for quick setup and dedicated internal-tab launch for longer sessions
+- break the flow into logical steps such as identity, dates/phases, stack profile, linked objects, and review
+- use the same shared wizard language later reused by the prompt wizard
+- hand the user into the project workbench or project overview at the end of the flow
+
 ## 7.3A Project structure workbench
 Purpose:
 - visualize project phases, resources, prompts, validations, tests, and decisions in one linked surface
@@ -287,10 +306,12 @@ Purpose:
 - canvas wrapper around the documented JavaScript engine
 - outline + inspector + command surfaces around the canvas
 - grouped hexagonal context menu for primary actions and chained subcommands
+- direct creation and linking of project-object graph items, not only passive visualization
 - open linked artifacts into internal tabs
 - save and restore viewport, selection, and layout state
 - support prompt-step branching from an existing prompt node
 - support flow-template and shared-block nodes with visible prepared/used/skipped/running state
+- render object kinds with distinct shape, color, icon, and state accents
 - keep business mutations, validation, and persistence in C# even when visual popups are rendered by the canvas layer
 
 ## 7.3B Project calendar
@@ -344,6 +365,12 @@ Purpose:
 7. edit generated prompt
 8. validate
 9. save/send/export
+
+### Required behaviors
+- each prompt-building session should live in a dedicated internal tab with restorable state
+- the wizard should feel staged and guided, not like one large form
+- prompt branches and prior steps should be visible from the workbench graph and reopenable from there
+- shared prompt blocks and flow-template governance should come from centrally managed surfaces instead of seed-only defaults
 
 ## 7.7 Validation center
 Purpose:
@@ -554,6 +581,12 @@ Purpose:
 - error states
 - loading states
 
+### 9.1A Workflow and collection rules
+- major create and edit flows should default to wizard-first UX
+- wizards may use modals for small tasks and dedicated internal tabs for long-running sessions
+- project and prompt workflows should prefer canvas-aware entry points where the workbench adds clear value
+- collection views should default to cards; dense tables require a specific productivity reason
+
 ### 9.2 Sensitive views should have
 - redacted default display
 - explicit reveal action where appropriate
@@ -572,6 +605,7 @@ Purpose:
 - dirty-state indicators must be visible without opening the tab
 - restore after refresh or reconnect must be deliberate and user-visible
 - structure canvas and calendar must reopen linked artifacts inside internal tabs
+- opened projects and prompt sessions must behave as first-class internal work items, not only as routes
 
 ### 9.5 Development manager and tuning rules
 - development-manager status must stay out of the normal product way when not in development mode
@@ -625,8 +659,11 @@ The UI should be implemented as:
 - one shell
 - page-level feature modules
 - reusable shared components
+- wizard-first project authoring
 - typed editors for resource kinds
 - wizard-based prompt factory
+- artifact-first internal tabs
+- unified project-object graph surfaces
 - dedicated validation center
 - dedicated test lab
 - consistent list/detail/action pattern

@@ -12,6 +12,7 @@ builder.Services.AddSingleton<CapsuleCatalogService>();
 builder.Services.AddSingleton<ICapsuleCatalogService>(serviceProvider => serviceProvider.GetRequiredService<CapsuleCatalogService>());
 builder.Services.AddSingleton<WatchSupervisorService>();
 builder.Services.AddSingleton<IWatchSupervisor>(serviceProvider => serviceProvider.GetRequiredService<WatchSupervisorService>());
+builder.Services.AddSingleton<ITuningExecutionAdapter, LocalProcessTuningExecutionAdapter>();
 builder.Services.AddSingleton<TuningRequestService>();
 builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<WatchSupervisorService>());
 builder.Services.AddHostedService<CapsuleRefreshService>();
@@ -126,6 +127,24 @@ app.MapPost("/api/tuning/requests/{requestId:guid}/cancel", async (Guid requestI
 
     await tuningRequests.CancelAsync(requestId, cancellationToken);
     return Results.Ok();
+});
+
+app.MapPost("/api/tuning/requests/{requestId:guid}/submit", async (Guid requestId, HttpContext httpContext, ManagerSessionService session, TuningRequestService tuningRequests, CancellationToken cancellationToken) =>
+{
+    if (!session.IsAuthorized(httpContext.Request))
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        var record = await tuningRequests.SubmitAsync(requestId, cancellationToken);
+        return Results.Ok(record);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { Error = ex.Message });
+    }
 });
 
 app.Run();

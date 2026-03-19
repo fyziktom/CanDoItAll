@@ -1,7 +1,7 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JsRuntime
 
-<div @ref="host" class="min-h-[28rem] rounded-2xl border border-slate-200 bg-slate-50"></div>
+<div @ref="host" class="min-h-[36rem] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"></div>
 
 @code {
     private ElementReference host;
@@ -17,6 +17,12 @@
     [Parameter]
     public EventCallback<Guid> SelectedEventChanged { get; set; }
 
+    [Parameter]
+    public EventCallback<Guid> OpenEventRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ViewStateChanged { get; set; }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (Surface is null)
@@ -27,12 +33,12 @@
         objectReference ??= DotNetObjectReference.Create(this);
         if (!initialized)
         {
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCalendar.create", host, objectReference, Surface, SelectedEventId);
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCalendar.create", host, objectReference, Surface, SelectedEventId, Surface.ViewStateJson);
             initialized = true;
             return;
         }
 
-        await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCalendar.update", host, Surface, SelectedEventId);
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCalendar.update", host, Surface, SelectedEventId, Surface.ViewStateJson);
     }
 
     [JSInvokable]
@@ -45,6 +51,21 @@
 
         return Task.CompletedTask;
     }
+
+    [JSInvokable]
+    public Task OnEventOpened(string eventId)
+    {
+        if (Guid.TryParse(eventId, out var parsed))
+        {
+            return OpenEventRequested.InvokeAsync(parsed);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public Task OnViewStateChanged(string stateJson)
+        => ViewStateChanged.InvokeAsync(stateJson);
 
     public async ValueTask DisposeAsync()
     {

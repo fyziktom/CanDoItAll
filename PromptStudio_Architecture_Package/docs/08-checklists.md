@@ -52,6 +52,7 @@ This document contains implementation, review, QA, and release checklists intend
 ### 2.1 Shell checklist
 - [ ] The shell shows current workspace/project context clearly.
 - [ ] Main navigation is stable across pages.
+- [ ] The left rail is more than a flat route list; it supports real workspace/project workflow context.
 - [ ] The internal tab strip is visible and understandable.
 - [ ] Internal tabs can be reordered and pinned.
 - [ ] Dirty-state and sleeping-state indicators are visible.
@@ -68,6 +69,8 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Error states exist.
 - [ ] Filter/sort/search controls exist where needed.
 - [ ] Lists and detail views are consistent.
+- [ ] Major create/edit flows use a guided wizard when the workflow is multi-step or high-risk.
+- [ ] Card-based list presentation is the default unless a table is clearly justified.
 
 ### 2.3 Form checklist
 - [ ] Required fields are visibly marked.
@@ -106,12 +109,15 @@ This document contains implementation, review, QA, and release checklists intend
 
 - [ ] Project creation wizard exists.
 - [ ] Project editing exists.
+- [ ] Project creation and major edits are wizard-first instead of relying on one raw editor form.
 - [ ] Phase timeline exists.
 - [ ] Status handling exists.
 - [ ] Primary and secondary language selection exists.
 - [ ] Generalized option selections exist.
 - [ ] Notes per option exist.
 - [ ] Project overview summarizes current phase and next actions.
+- [ ] Opened projects can live in dedicated internal tabs.
+- [ ] A unified project-object graph exists and is ready for workbench authoring.
 
 ## 4. Resource module checklist
 
@@ -144,11 +150,14 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Tab sleep and wake policy exists.
 - [ ] Project structure canvas wrapper exists.
 - [ ] Project calendar wrapper exists.
+- [ ] The structure canvas and calendar wrappers use the documented engines rather than placeholder list rendering.
 - [ ] Canvas and calendar open linked artifacts into internal tabs.
 - [ ] Prompt sessions can be represented in the structure surface.
 - [ ] Flow-template and prompt-run nodes can be represented in the structure surface.
 - [ ] The grouped hexagonal context menu exists on the structure canvas.
 - [ ] Canvas commands are routed into typed C# handlers instead of mutating state in JavaScript.
+- [ ] Project-object kinds have distinct visual profiles in the canvas.
+- [ ] Opened projects and prompt sessions behave as first-class artifact tabs instead of route-only tabs.
 
 ## 5B. Development acceleration checklist
 
@@ -161,6 +170,8 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] A tuning request is not marked ready if changed files introduce unreported capsule drift.
 - [ ] Tuning request model exists.
 - [ ] Tuning request history is traceable.
+- [ ] Tuning requests support screenshot or clipboard image attachment.
+- [ ] The main tuning execution path uses a real local Codex adapter or CLI integration instead of a fake lifecycle simulator.
 
 ## 6. Prompt factory checklist
 
@@ -181,6 +192,8 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Copy/export exists.
 - [ ] Provider send flow exists.
 - [ ] Prompt build session is recorded.
+- [ ] Prompt wizard sessions can reopen in their own internal tabs.
+- [ ] The main prompt-building experience is a staged wizard, not one large flat form.
 
 ## 7. Validation checklist
 
@@ -262,6 +275,7 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Validation center flow exists.
 - [ ] Test lab flow exists.
 - [ ] Dev-only tuning request flow exists with a fake or controlled Codex adapter.
+- [ ] Playwright fixture cleanup exits cleanly without filesystem-lock failures.
 
 ## 11. Documentation checklist
 
@@ -294,6 +308,7 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] A user can work through internal tabs instead of many browser tabs.
 - [ ] Project structure workbench is usable.
 - [ ] Project calendar is usable.
+- [ ] Project creation and prompt creation feel guided and comfortable instead of raw CRUD.
 - [ ] Prompt factory is usable without hidden setup.
 - [ ] Validation center stores results reliably.
 - [ ] Test lab stores evidence reliably.

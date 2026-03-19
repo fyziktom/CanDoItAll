@@ -56,10 +56,12 @@ public sealed class PromptFactoryService(
         var settings = await workspaceService.GetSettingsAsync(cancellationToken);
         return new PromptFactoryEditorModel
         {
+            SessionName = "Prompt session",
             BlueprintId = defaults.BlueprintId,
             FlowTemplateId = defaults.FlowTemplateId,
             ProviderProfileId = settings.DefaultProviderProfileId,
-            SelectedBlockIds = defaults.BlockIds.ToList()
+            SelectedBlockIds = defaults.BlockIds.ToList(),
+            DraftTitle = "Prompt Factory Draft"
         };
     }
 
@@ -75,6 +77,8 @@ public sealed class PromptFactoryService(
         return new PromptFactoryEditorModel
         {
             SessionId = session.Id,
+            PromptRunId = session.PromptRunId,
+            SessionName = session.Name,
             ProjectId = session.ProjectId,
             Phase = session.Phase,
             BlueprintId = session.BlueprintId,
@@ -89,7 +93,10 @@ public sealed class PromptFactoryService(
             WarningSummary = session.WarningSummary,
             DraftTitle = BuildDraftTitle(session.Phase),
             Warnings = SplitWarnings(session.WarningSummary),
-            Nodes = session.PromptRunId.HasValue ? (await LoadRunNodesAsync(session.PromptRunId.Value, cancellationToken)).ToList() : []
+            Nodes = session.PromptRunId.HasValue ? (await LoadRunNodesAsync(session.PromptRunId.Value, cancellationToken)).ToList() : [],
+            HasCustomizedBlocks = session.HasCustomizedBlocks,
+            WizardStepIndex = session.WizardStepIndex,
+            SelectedNodeId = session.SelectedPromptRunNodeId
         };
     }
 
@@ -121,6 +128,8 @@ public sealed class PromptFactoryService(
 
         return new PromptFactoryEditorModel
         {
+            PromptRunId = run.Id,
+            SessionName = BuildSessionName(run.Name, run.Phase),
             ProjectId = run.ProjectId,
             Phase = run.Phase,
             FlowTemplateId = run.FlowTemplateId,
@@ -130,7 +139,7 @@ public sealed class PromptFactoryService(
                 .Distinct()
                 .ToList(),
             Nodes = nodes
-                .Select(item => new PromptRunNodeSummary(item.Id, item.Title, item.BranchKey, item.Sequence, item.State, item.PromptArtifactId))
+                .Select(MapRunNodeSummary)
                 .ToList()
         };
     }
@@ -142,7 +151,15 @@ public sealed class PromptFactoryService(
         return await dbContext.Set<PromptBlockDefinition>()
             .OrderBy(item => item.BlockKind)
             .ThenBy(item => item.Name)
-            .Select(item => new PromptBlockSummary(item.Id, item.Name, item.BlockKind, item.Summary, item.IsRecommendedByDefault))
+            .Select(item => new PromptBlockSummary(
+                item.Id,
+                item.Name,
+                item.BlockKind,
+                item.Summary,
+                item.IsRecommendedByDefault,
+                SplitTokens(item.PromptTypeRules),
+                SplitTokens(item.BlueprintRules),
+                SplitTokens(item.PhaseRules)))
             .ToListAsync(cancellationToken);
     }
 
@@ -151,7 +168,14 @@ public sealed class PromptFactoryService(
         await EnsureSeedsAsync(cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var templates = await dbContext.Set<PromptFlowTemplate>().OrderBy(item => item.Name).ToListAsync(cancellationToken);
-        return templates.Select(item => new PromptFlowTemplateSummary(item.Id, item.Name, item.Summary, DeserializeIds(item.BlockIdsJson))).ToList();
+        return templates
+            .Select(item => new PromptFlowTemplateSummary(
+                item.Id,
+                item.Name,
+                item.Summary,
+                DeserializeIds(item.BlockIdsJson),
+                SplitTokens(item.PromptTypeRules)))
+            .ToList();
     }
 
     public async Task<IReadOnlyList<PromptBlueprintSummary>> ListBlueprintsAsync(CancellationToken cancellationToken = default)
@@ -162,6 +186,213 @@ public sealed class PromptFactoryService(
             .OrderBy(item => item.Name)
             .Select(item => new PromptBlueprintSummary(item.Id, item.Name, item.PromptType, item.Summary, item.Guidance, item.RecommendedFlowTemplateId))
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Guid>> GetRecommendedBlockIdsAsync(
+        Guid? blueprintId,
+        Guid? flowTemplateId,
+        string? phase,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureSeedsAsync(cancellationToken);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var blocks = await dbContext.Set<PromptBlockDefinition>().OrderBy(item => item.Name).ToListAsync(cancellationToken);
+        var templates = await dbContext.Set<PromptFlowTemplate>().ToListAsync(cancellationToken);
+        var blueprints = await dbContext.Set<PromptBlueprint>().ToListAsync(cancellationToken);
+
+        var blueprint = blueprints.FirstOrDefault(item => item.Id == blueprintId);
+        var promptType = blueprint?.PromptType ?? string.Empty;
+        var blueprintName = blueprint?.Name ?? string.Empty;
+        var selectedTemplate = flowTemplateId.HasValue
+            ? templates.FirstOrDefault(item => item.Id == flowTemplateId.Value)
+            : null;
+
+        var recommendedIds = new HashSet<Guid>();
+        if (selectedTemplate is not null)
+        {
+            foreach (var id in DeserializeIds(selectedTemplate.BlockIdsJson))
+            {
+                recommendedIds.Add(id);
+            }
+        }
+
+        foreach (var block in blocks)
+        {
+            if (block.IsRecommendedByDefault ||
+                RuleMatches(block.PromptTypeRules, promptType) ||
+                RuleMatches(block.BlueprintRules, blueprintName) ||
+                RuleMatches(block.PhaseRules, phase) ||
+                RuleMatches(selectedTemplate?.PromptTypeRules, promptType))
+            {
+                recommendedIds.Add(block.Id);
+            }
+        }
+
+        return recommendedIds.ToList();
+    }
+
+    public async Task<PromptBlockEditorModel> GetBlockEditorAsync(Guid? blockId, CancellationToken cancellationToken = default)
+    {
+        if (!blockId.HasValue)
+        {
+            return new PromptBlockEditorModel();
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var block = await dbContext.Set<PromptBlockDefinition>().FirstOrDefaultAsync(item => item.Id == blockId.Value, cancellationToken);
+        if (block is null)
+        {
+            return new PromptBlockEditorModel();
+        }
+
+        return new PromptBlockEditorModel
+        {
+            Id = block.Id,
+            Name = block.Name,
+            BlockKind = block.BlockKind,
+            Summary = block.Summary,
+            Content = block.Content,
+            IsRecommendedByDefault = block.IsRecommendedByDefault,
+            PromptTypes = block.PromptTypeRules,
+            Blueprints = block.BlueprintRules,
+            Phases = block.PhaseRules
+        };
+    }
+
+    public async Task<PromptFlowTemplateEditorModel> GetTemplateEditorAsync(Guid? templateId, CancellationToken cancellationToken = default)
+    {
+        if (!templateId.HasValue)
+        {
+            return new PromptFlowTemplateEditorModel();
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var template = await dbContext.Set<PromptFlowTemplate>().FirstOrDefaultAsync(item => item.Id == templateId.Value, cancellationToken);
+        if (template is null)
+        {
+            return new PromptFlowTemplateEditorModel();
+        }
+
+        return new PromptFlowTemplateEditorModel
+        {
+            Id = template.Id,
+            Name = template.Name,
+            Summary = template.Summary,
+            SelectedBlockIds = DeserializeIds(template.BlockIdsJson).ToList(),
+            RecommendedPromptTypes = template.PromptTypeRules
+        };
+    }
+
+    public async Task<Result<PromptFactoryEditorModel>> SaveSessionStateAsync(PromptFactoryEditorModel model, CancellationToken cancellationToken = default)
+    {
+        if (!model.ProjectId.HasValue)
+        {
+            return Result<PromptFactoryEditorModel>.Failure(Error.Validation("Select a project before saving a prompt session."));
+        }
+
+        await EnsureSeedsAsync(cancellationToken);
+        var sessionId = await UpsertSessionAsync(model, model.GeneratedPrompt, model.Warnings, cancellationToken);
+        return Result<PromptFactoryEditorModel>.Success(await GetEditorAsync(sessionId, cancellationToken));
+    }
+
+    public async Task<Result<Guid>> SaveBlockAsync(PromptBlockEditorModel model, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(model.Name))
+        {
+            return Result<Guid>.Failure(Error.Validation("Block name is required."));
+        }
+
+        if (string.IsNullOrWhiteSpace(model.Content))
+        {
+            return Result<Guid>.Failure(Error.Validation("Block content is required."));
+        }
+
+        await EnsureSeedsAsync(cancellationToken);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var entity = model.Id.HasValue
+            ? await dbContext.Set<PromptBlockDefinition>().FirstOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
+            : null;
+
+        if (entity is null)
+        {
+            entity = new PromptBlockDefinition();
+            await dbContext.Set<PromptBlockDefinition>().AddAsync(entity, cancellationToken);
+        }
+
+        entity.Name = model.Name.Trim();
+        entity.BlockKind = model.BlockKind;
+        entity.Summary = model.Summary?.Trim() ?? string.Empty;
+        entity.Content = model.Content.Trim();
+        entity.IsRecommendedByDefault = model.IsRecommendedByDefault;
+        entity.PromptTypeRules = NormalizeTokens(model.PromptTypes);
+        entity.BlueprintRules = NormalizeTokens(model.Blueprints);
+        entity.PhaseRules = NormalizeTokens(model.Phases);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Result<Guid>.Success(entity.Id);
+    }
+
+    public async Task<Result<Guid>> SaveTemplateAsync(PromptFlowTemplateEditorModel model, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(model.Name))
+        {
+            return Result<Guid>.Failure(Error.Validation("Template name is required."));
+        }
+
+        await EnsureSeedsAsync(cancellationToken);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var entity = model.Id.HasValue
+            ? await dbContext.Set<PromptFlowTemplate>().FirstOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
+            : null;
+
+        if (entity is null)
+        {
+            entity = new PromptFlowTemplate();
+            await dbContext.Set<PromptFlowTemplate>().AddAsync(entity, cancellationToken);
+        }
+
+        entity.Name = model.Name.Trim();
+        entity.Summary = model.Summary?.Trim() ?? string.Empty;
+        entity.BlockIdsJson = SerializeIds(model.SelectedBlockIds);
+        entity.PromptTypeRules = NormalizeTokens(model.RecommendedPromptTypes);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Result<Guid>.Success(entity.Id);
+    }
+
+    public async Task<Result<PromptRunNodeSummary>> BranchNodeAsync(Guid promptRunNodeId, string? branchLabel = null, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var source = await dbContext.Set<PromptRunNode>().FirstOrDefaultAsync(item => item.Id == promptRunNodeId, cancellationToken);
+        if (source is null)
+        {
+            return Result<PromptRunNodeSummary>.Failure(Error.Failure("The selected prompt step could not be found."));
+        }
+
+        var branchName = string.IsNullOrWhiteSpace(branchLabel)
+            ? BuildBranchLabel(source.Title)
+            : branchLabel.Trim();
+        var branchKey = BuildBranchKey(branchName);
+        var nextSequence = await dbContext.Set<PromptRunNode>()
+            .Where(item => item.PromptRunId == source.PromptRunId)
+            .MaxAsync(item => (int?)item.Sequence, cancellationToken) ?? -1;
+
+        var node = new PromptRunNode
+        {
+            PromptRunId = source.PromptRunId,
+            PromptBlockDefinitionId = source.PromptBlockDefinitionId,
+            ParentPromptRunNodeId = source.Id,
+            Title = $"{source.Title} follow-up",
+            BranchKey = branchKey,
+            BranchLabel = branchName,
+            Sequence = nextSequence + 1,
+            State = PromptRunNodeState.Pending,
+            Notes = $"Branched from {source.Title}."
+        };
+
+        await dbContext.Set<PromptRunNode>().AddAsync(node, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
     }
 
     public async Task<Result<PromptFactoryEditorModel>> BuildAsync(PromptFactoryEditorModel model, CancellationToken cancellationToken = default)
@@ -180,70 +411,38 @@ public sealed class PromptFactoryService(
                                (model.SelectedResourceIds.Count == 0 || model.SelectedResourceIds.Contains(resource.Id)))
             .ToList();
 
-        var blocks = await LoadBlocksAsync(model.SelectedBlockIds, model.FlowTemplateId, cancellationToken);
+        var effectiveBlockIds = await ResolveEffectiveBlockIdsAsync(model, cancellationToken);
+        var blocks = await LoadBlocksAsync(effectiveBlockIds, model.FlowTemplateId, cancellationToken);
         var blueprint = (await ListBlueprintsAsync(cancellationToken)).FirstOrDefault(item => item.Id == model.BlueprintId);
         var warnings = BuildWarnings(model, project, selectedResources);
         var prompt = ComposePrompt(model, project, blueprint, blocks, selectedResources);
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var session = model.SessionId.HasValue
-            ? await dbContext.Set<PromptBuildSession>().FirstOrDefaultAsync(item => item.Id == model.SessionId.Value, cancellationToken)
-            : null;
-
-        if (session is null)
-        {
-            session = new PromptBuildSession();
-            await dbContext.Set<PromptBuildSession>().AddAsync(session, cancellationToken);
-        }
-
-        session.ProjectId = model.ProjectId;
-        session.Phase = string.IsNullOrWhiteSpace(model.Phase) ? project.CurrentPhase : model.Phase.Trim();
-        session.BlueprintId = model.BlueprintId;
-        session.FlowTemplateId = model.FlowTemplateId;
-        session.ProviderProfileId = model.ProviderProfileId;
-        session.RepositoryName = model.RepositoryName?.Trim() ?? string.Empty;
-        session.BranchName = model.BranchName?.Trim() ?? string.Empty;
-        session.CommitSha = model.CommitSha?.Trim() ?? string.Empty;
-        session.SelectedBlockIdsJson = SerializeIds(blocks.Select(item => item.Id));
-        session.SelectedResourceIdsJson = SerializeIds(selectedResources.Select(item => item.Id));
-        session.GeneratedPrompt = prompt;
-        session.WarningSummary = string.Join('\n', warnings);
-        session.UpdatedAtUtc = clock.GetUtcNow();
-
-        if (!session.PromptRunId.HasValue)
-        {
-            session.PromptRunId = await EnsureRunAsync(dbContext, model.ProjectId.Value, session.Phase, model.FlowTemplateId, blocks, cancellationToken);
-        }
-        else
-        {
-            await SyncRunNodesAsync(dbContext, session.PromptRunId.Value, blocks, cancellationToken);
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
+        model.SelectedBlockIds = effectiveBlockIds.ToList();
+        var sessionId = await UpsertSessionAsync(model, prompt, warnings, cancellationToken);
         await searchIndexService.UpsertAsync(new SearchDocumentInput(
             "prompt-session",
-            session.Id.ToString(),
+            sessionId.ToString(),
             "Prompt Factory",
-            BuildDraftTitle(session.Phase),
+            BuildDraftTitle(string.IsNullOrWhiteSpace(model.Phase) ? project.CurrentPhase : model.Phase),
             string.Join(" ", warnings),
             prompt,
-            $"/prompt-factory?sessionId={session.Id}",
-            session.ProjectId), cancellationToken);
+            $"/prompt-factory?sessionId={sessionId}",
+            model.ProjectId), cancellationToken);
         await activityStream.RecordAsync(new ActivityWriteRequest(
             "factory",
             "build",
             "Built prompt session",
-            BuildDraftTitle(session.Phase),
-            ProjectId: session.ProjectId,
+            BuildDraftTitle(string.IsNullOrWhiteSpace(model.Phase) ? project.CurrentPhase : model.Phase),
+            ProjectId: model.ProjectId,
             ArtifactKind: "prompt-session",
-            ArtifactId: session.Id,
-            Route: $"/prompt-factory?sessionId={session.Id}"), cancellationToken);
+            ArtifactId: sessionId,
+            Route: $"/prompt-factory?sessionId={sessionId}"), cancellationToken);
 
-        var updated = await GetEditorAsync(session.Id, cancellationToken);
+        var updated = await GetEditorAsync(sessionId, cancellationToken);
         updated.GeneratedPrompt = prompt;
         updated.WarningSummary = string.Join('\n', warnings);
         updated.Warnings = warnings;
-        updated.DraftTitle = BuildDraftTitle(session.Phase);
+        updated.DraftTitle = BuildDraftTitle(string.IsNullOrWhiteSpace(model.Phase) ? project.CurrentPhase : model.Phase);
         return Result<PromptFactoryEditorModel>.Success(updated);
     }
 
@@ -392,7 +591,16 @@ public sealed class PromptFactoryService(
             .Where(item => item.PromptRunId == promptRunId)
             .OrderBy(item => item.BranchKey)
             .ThenBy(item => item.Sequence)
-            .Select(item => new PromptRunNodeSummary(item.Id, item.Title, item.BranchKey, item.Sequence, item.State, item.PromptArtifactId))
+            .Select(item => new PromptRunNodeSummary(
+                item.Id,
+                item.Title,
+                item.BranchKey,
+                item.BranchLabel,
+                item.Sequence,
+                item.State,
+                item.PromptArtifactId,
+                item.ParentPromptRunNodeId,
+                item.Notes))
             .ToListAsync(cancellationToken);
     }
 
@@ -406,11 +614,52 @@ public sealed class PromptFactoryService(
 
         var blocks = new[]
         {
-            new PromptBlockDefinition { Name = "Delivery Constraints", BlockKind = PromptBlockKind.Constraint, Summary = "Keep scope disciplined and user-visible.", Content = "Stay inside the requested scope. Prefer typed, testable changes. Preserve module boundaries.", IsRecommendedByDefault = true },
-            new PromptBlockDefinition { Name = "Architecture Review", BlockKind = PromptBlockKind.Validation, Summary = "Call out architecture tradeoffs and risks.", Content = "Describe architecture choices, dependencies, and migration risks before implementation detail.", IsRecommendedByDefault = true },
-            new PromptBlockDefinition { Name = "Security Checks", BlockKind = PromptBlockKind.Security, Summary = "Protect secrets and outbound data.", Content = "Do not expose secrets. Highlight approvals, redaction needs, and sensitive egress paths.", IsRecommendedByDefault = true },
-            new PromptBlockDefinition { Name = "Testing Expectations", BlockKind = PromptBlockKind.Testing, Summary = "Demand evidence and coverage.", Content = "Include tests, expected verification, and evidence that should prove the change works.", IsRecommendedByDefault = true },
-            new PromptBlockDefinition { Name = "Implementation Detail", BlockKind = PromptBlockKind.Delivery, Summary = "Turn the plan into code changes.", Content = "Produce concrete implementation steps, affected files, and follow-up validation guidance.", IsRecommendedByDefault = true }
+            new PromptBlockDefinition
+            {
+                Name = "Delivery Constraints",
+                BlockKind = PromptBlockKind.Constraint,
+                Summary = "Keep scope disciplined and user-visible.",
+                Content = "Stay inside the requested scope. Prefer typed, testable changes. Preserve module boundaries.",
+                IsRecommendedByDefault = true,
+                PromptTypeRules = "Architecture,Plan,Validation"
+            },
+            new PromptBlockDefinition
+            {
+                Name = "Architecture Review",
+                BlockKind = PromptBlockKind.Validation,
+                Summary = "Call out architecture tradeoffs and risks.",
+                Content = "Describe architecture choices, dependencies, and migration risks before implementation detail.",
+                IsRecommendedByDefault = true,
+                PromptTypeRules = "Architecture"
+            },
+            new PromptBlockDefinition
+            {
+                Name = "Security Checks",
+                BlockKind = PromptBlockKind.Security,
+                Summary = "Protect secrets and outbound data.",
+                Content = "Do not expose secrets. Highlight approvals, redaction needs, and sensitive egress paths.",
+                IsRecommendedByDefault = true,
+                PromptTypeRules = "Architecture,Validation",
+                PhaseRules = "Review,Validation,Security"
+            },
+            new PromptBlockDefinition
+            {
+                Name = "Testing Expectations",
+                BlockKind = PromptBlockKind.Testing,
+                Summary = "Demand evidence and coverage.",
+                Content = "Include tests, expected verification, and evidence that should prove the change works.",
+                IsRecommendedByDefault = true,
+                PromptTypeRules = "Plan,Validation"
+            },
+            new PromptBlockDefinition
+            {
+                Name = "Implementation Detail",
+                BlockKind = PromptBlockKind.Delivery,
+                Summary = "Turn the plan into code changes.",
+                Content = "Produce concrete implementation steps, affected files, and follow-up validation guidance.",
+                IsRecommendedByDefault = true,
+                PromptTypeRules = "Plan"
+            }
         };
 
         await dbContext.Set<PromptBlockDefinition>().AddRangeAsync(blocks, cancellationToken);
@@ -420,7 +669,8 @@ public sealed class PromptFactoryService(
         {
             Name = "Implementation flow",
             Summary = "Architecture to implementation to validation.",
-            BlockIdsJson = SerializeIds(blocks.Select(item => item.Id))
+            BlockIdsJson = SerializeIds(blocks.Select(item => item.Id)),
+            PromptTypeRules = "Architecture,Plan,Validation"
         };
 
         await dbContext.Set<PromptFlowTemplate>().AddAsync(defaultTemplate, cancellationToken);
@@ -490,6 +740,76 @@ public sealed class PromptFactoryService(
         return blocks.Where(item => ids.Contains(item.Id)).OrderBy(item => item.BlockKind).ThenBy(item => item.Name).ToList();
     }
 
+    private async Task<IReadOnlyList<Guid>> ResolveEffectiveBlockIdsAsync(PromptFactoryEditorModel model, CancellationToken cancellationToken)
+    {
+        if (model.HasCustomizedBlocks && model.SelectedBlockIds.Count > 0)
+        {
+            return model.SelectedBlockIds.Distinct().ToList();
+        }
+
+        return await GetRecommendedBlockIdsAsync(model.BlueprintId, model.FlowTemplateId, model.Phase, cancellationToken);
+    }
+
+    private async Task<Guid> UpsertSessionAsync(
+        PromptFactoryEditorModel model,
+        string generatedPrompt,
+        IReadOnlyCollection<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var session = model.SessionId.HasValue
+            ? await dbContext.Set<PromptBuildSession>().FirstOrDefaultAsync(item => item.Id == model.SessionId.Value, cancellationToken)
+            : null;
+
+        if (session is null)
+        {
+            session = new PromptBuildSession();
+            await dbContext.Set<PromptBuildSession>().AddAsync(session, cancellationToken);
+        }
+
+        if (!model.ProjectId.HasValue)
+        {
+            throw new InvalidOperationException("A prompt session requires a project.");
+        }
+
+        var project = await projectsService.GetAsync(model.ProjectId, cancellationToken);
+        var phase = string.IsNullOrWhiteSpace(model.Phase) ? project.CurrentPhase : model.Phase.Trim();
+        var effectiveBlockIds = await ResolveEffectiveBlockIdsAsync(model, cancellationToken);
+        var blocks = await LoadBlocksAsync(effectiveBlockIds, model.FlowTemplateId, cancellationToken);
+
+        session.Name = string.IsNullOrWhiteSpace(model.SessionName)
+            ? BuildSessionName(project.Name, phase)
+            : model.SessionName.Trim();
+        session.ProjectId = model.ProjectId;
+        session.Phase = phase;
+        session.BlueprintId = model.BlueprintId;
+        session.FlowTemplateId = model.FlowTemplateId;
+        session.ProviderProfileId = model.ProviderProfileId;
+        session.RepositoryName = model.RepositoryName?.Trim() ?? string.Empty;
+        session.BranchName = model.BranchName?.Trim() ?? string.Empty;
+        session.CommitSha = model.CommitSha?.Trim() ?? string.Empty;
+        session.SelectedBlockIdsJson = SerializeIds(effectiveBlockIds);
+        session.SelectedResourceIdsJson = SerializeIds(model.SelectedResourceIds);
+        session.GeneratedPrompt = generatedPrompt ?? string.Empty;
+        session.WarningSummary = string.Join('\n', warnings);
+        session.WizardStepIndex = model.WizardStepIndex;
+        session.HasCustomizedBlocks = model.HasCustomizedBlocks;
+        session.SelectedPromptRunNodeId = model.SelectedNodeId;
+        session.UpdatedAtUtc = clock.GetUtcNow();
+
+        if (!session.PromptRunId.HasValue)
+        {
+            session.PromptRunId = await EnsureRunAsync(dbContext, model.ProjectId.Value, phase, model.FlowTemplateId, blocks, cancellationToken);
+        }
+        else
+        {
+            await SyncRunNodesAsync(dbContext, session.PromptRunId.Value, blocks, cancellationToken);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return session.Id;
+    }
+
     private async Task<Guid> EnsureRunAsync(
         AppDbContext dbContext,
         Guid projectId,
@@ -503,7 +823,7 @@ public sealed class PromptFactoryService(
         {
             ProjectId = projectId,
             FlowTemplateId = flowTemplateIdValue,
-            Name = $"Prompt flow · {phase}",
+            Name = BuildRunName(phase),
             Phase = phase,
             CreatedAtUtc = clock.GetUtcNow(),
             UpdatedAtUtc = clock.GetUtcNow()
@@ -523,7 +843,10 @@ public sealed class PromptFactoryService(
         for (var index = 0; index < blocks.Count; index++)
         {
             var block = blocks[index];
-            var node = nodes.FirstOrDefault(item => item.PromptBlockDefinitionId == block.Id);
+            var node = nodes.FirstOrDefault(item =>
+                item.PromptBlockDefinitionId == block.Id &&
+                item.ParentPromptRunNodeId is null &&
+                string.Equals(item.BranchKey, "main", StringComparison.OrdinalIgnoreCase));
             if (node is null)
             {
                 node = new PromptRunNode
@@ -536,6 +859,7 @@ public sealed class PromptFactoryService(
 
             node.Title = block.Name;
             node.BranchKey = "main";
+            node.BranchLabel = "Main";
             node.Sequence = index;
             node.State = PromptRunNodeState.Prepared;
             node.Notes = block.Summary;
@@ -651,8 +975,55 @@ public sealed class PromptFactoryService(
     private static IReadOnlyList<Guid> DeserializeIds(string json)
         => JsonSerializer.Deserialize<List<Guid>>(string.IsNullOrWhiteSpace(json) ? "[]" : json) ?? [];
 
+    private static PromptRunNodeSummary MapRunNodeSummary(PromptRunNode node)
+        => new(
+            node.Id,
+            node.Title,
+            node.BranchKey,
+            node.BranchLabel,
+            node.Sequence,
+            node.State,
+            node.PromptArtifactId,
+            node.ParentPromptRunNodeId,
+            node.Notes);
+
+    private static IReadOnlyList<string> SplitTokens(string? value)
+        => string.IsNullOrWhiteSpace(value)
+            ? []
+            : value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static string NormalizeTokens(string? value)
+        => string.Join(',', SplitTokens(value).Distinct(StringComparer.OrdinalIgnoreCase));
+
+    private static bool RuleMatches(string? rules, string? candidate)
+    {
+        if (string.IsNullOrWhiteSpace(rules) || string.IsNullOrWhiteSpace(candidate))
+        {
+            return false;
+        }
+
+        return SplitTokens(rules).Any(rule => string.Equals(rule, candidate, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string BuildSessionName(string projectName, string phase)
+        => string.IsNullOrWhiteSpace(phase) ? $"{projectName} prompt session" : $"{projectName} - {phase} prompt session";
+
+    private static string BuildRunName(string phase)
+        => string.IsNullOrWhiteSpace(phase) ? "Prompt flow" : $"Prompt flow - {phase}";
+
+    private static string BuildBranchLabel(string title)
+        => string.IsNullOrWhiteSpace(title) ? "Follow-up" : $"{title} follow-up";
+
+    private static string BuildBranchKey(string branchLabel)
+    {
+        var key = branchLabel.Trim().ToLowerInvariant();
+        key = new string(key.Where(character => char.IsLetterOrDigit(character) || character == ' ' || character == '-').ToArray());
+        key = key.Replace(' ', '-');
+        return string.IsNullOrWhiteSpace(key) ? $"branch-{Guid.NewGuid():N}" : key;
+    }
+
     private static string BuildDraftTitle(string phase)
-        => string.IsNullOrWhiteSpace(phase) ? "Prompt Factory Draft" : $"Prompt Factory · {phase}";
+        => string.IsNullOrWhiteSpace(phase) ? "Prompt Factory Draft" : $"Prompt Factory - {phase}";
 
     private static List<string> SplitWarnings(string warningSummary)
         => warningSummary.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();

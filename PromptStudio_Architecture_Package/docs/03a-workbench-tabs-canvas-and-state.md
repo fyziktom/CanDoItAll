@@ -292,6 +292,8 @@ The canvas may render visually rich overlays, inline editors, or modal-like surf
 
 This is not only a visual tree of folders. It is the operational graph of project work.
 
+The authoritative graph model should use a shared project-object contract so the canvas can remain both extensible and understandable. A contract conceptually similar to `IProjectObject` should carry stable identity, object kind, project ownership, title, status, notes, and visual-profile metadata, while typed implementations or descriptors provide object-specific properties and behavior.
+
 The canvas should support nodes such as:
 
 - project root
@@ -320,6 +322,14 @@ Connections should support semantics such as:
 - blocks
 - follows
 - derived from
+
+Each object kind should also have a typed visual profile that defines at least:
+
+- shape
+- base color or accent
+- icon or glyph
+- state badge behavior
+- optional compact and expanded presentation variants
 
 ### 9.3 Prompt-wizard integration
 
@@ -382,6 +392,8 @@ The project structure canvas should support:
 - persistent node positions
 - restore of selected node and viewport after reopen
 - undo and redo at the workbench-command layer
+- direct creation of project-object nodes from the canvas or its supporting inspector surfaces
+- direct linking and relinking of project-object nodes from the canvas or its supporting inspector surfaces
 
 The grouped hexagonal menu is not decoration. It is the standard action launcher for:
 

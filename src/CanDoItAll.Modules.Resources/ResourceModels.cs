@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.SharedKernel;
@@ -33,6 +34,51 @@ public enum ResourceSensitivity
     Normal,
     Sensitive,
     Restricted
+}
+
+public sealed record ResourceDescriptor(
+    ResourceKind Kind,
+    string DisplayName,
+    string PrimaryLabel,
+    string Summary);
+
+public sealed record RepositoryResourceConfig(string RepositoryUrl, string DefaultBranch, string RelativePath);
+
+public sealed record FolderResourceConfig(string Path, string WorkingDirectory);
+
+public sealed record FileResourceConfig(string Path, string WorkingDirectory);
+
+public sealed record WebLinkResourceConfig(string Url, string TitleHint);
+
+public sealed record FtpResourceConfig(string Host, int? Port, string RemotePath, string UserName);
+
+public sealed record SshResourceConfig(string Host, int? Port, string UserName, string WorkingDirectory);
+
+public sealed record PowerShellScriptResourceConfig(string ScriptPath, string Arguments, string WorkingDirectory);
+
+public sealed record DockerComposeResourceConfig(string ComposeFilePath, string ServiceName);
+
+public sealed record SecretLinkResourceConfig(string Purpose, string SecretNameHint);
+
+public sealed record PromptLinkResourceConfig(string PromptReference, string PromptTitleHint);
+
+public static class ResourceDescriptorRegistry
+{
+    public static IReadOnlyList<ResourceDescriptor> All { get; } =
+    [
+        new(ResourceKind.Repository, "Repository", "Repository URL", "Track a source repository with branch and path details."),
+        new(ResourceKind.Folder, "Folder", "Folder path", "Register a working directory, mounted volume, or content root."),
+        new(ResourceKind.File, "File", "File path", "Track a concrete file that the project depends on."),
+        new(ResourceKind.WebLink, "Web link", "URL", "Register documentation, APIs, and browser-based resources."),
+        new(ResourceKind.Ftp, "FTP", "Host", "Store FTP connection metadata while keeping secrets external."),
+        new(ResourceKind.Ssh, "SSH", "Host", "Store SSH connection metadata and target working directory."),
+        new(ResourceKind.PowerShellScript, "PowerShell script", "Script path", "Track automation scripts and expected arguments."),
+        new(ResourceKind.DockerCompose, "Docker Compose", "Compose file", "Describe Compose or Docker-based local infrastructure."),
+        new(ResourceKind.SecretLink, "Secret link", "Purpose", "Link a resource to an external secret reference."),
+        new(ResourceKind.PromptLink, "Prompt link", "Prompt reference", "Connect a resource to a reusable prompt artifact.")
+    ];
+
+    public static ResourceDescriptor Get(ResourceKind kind) => All.First(item => item.Kind == kind);
 }
 
 public sealed class ProjectResource
@@ -108,6 +154,44 @@ public sealed class ResourceEditorModel
 
     public Guid? LinkedSecretId { get; set; }
 
+    public string RepositoryUrl { get; set; } = string.Empty;
+
+    public string DefaultBranch { get; set; } = string.Empty;
+
+    public string RelativePath { get; set; } = string.Empty;
+
+    public string FolderPath { get; set; } = string.Empty;
+
+    public string FilePath { get; set; } = string.Empty;
+
+    public string WorkingDirectory { get; set; } = string.Empty;
+
+    public string WebUrl { get; set; } = string.Empty;
+
+    public string UrlTitleHint { get; set; } = string.Empty;
+
+    public string Host { get; set; } = string.Empty;
+
+    public int? Port { get; set; }
+
+    public string RemotePath { get; set; } = string.Empty;
+
+    public string UserName { get; set; } = string.Empty;
+
+    public string ScriptPath { get; set; } = string.Empty;
+
+    public string ScriptArguments { get; set; } = string.Empty;
+
+    public string ComposeFilePath { get; set; } = string.Empty;
+
+    public string ComposeService { get; set; } = string.Empty;
+
+    public string SecretPurpose { get; set; } = string.Empty;
+
+    public string PromptReference { get; set; } = string.Empty;
+
+    public string PromptTitleHint { get; set; } = string.Empty;
+
     public ResourceValidationStatus ValidationStatus { get; set; } = ResourceValidationStatus.Unknown;
 
     public ResourceSensitivity Sensitivity { get; set; } = ResourceSensitivity.Normal;
@@ -160,7 +244,7 @@ public sealed class ResourcesService(
             return new ResourceEditorModel();
         }
 
-        return new ResourceEditorModel
+        var editor = new ResourceEditorModel
         {
             Id = resource.Id,
             ProjectId = resource.ProjectId,
@@ -175,6 +259,9 @@ public sealed class ResourcesService(
             SupportsPreview = resource.SupportsPreview,
             SupportsIndexing = resource.SupportsIndexing
         };
+
+        ApplyTypedConfiguration(editor, resource.ResourceKind, resource.ConfigJson);
+        return editor;
     }
 
     public async Task<Result<Guid>> SaveAsync(ResourceEditorModel model, CancellationToken cancellationToken = default)
@@ -189,9 +276,10 @@ public sealed class ResourcesService(
             return Result<Guid>.Failure(Error.Validation("Resource name is required."));
         }
 
-        if (string.IsNullOrWhiteSpace(model.LocationOrIdentifier))
+        var validationError = ValidateTypedEditor(model);
+        if (validationError is not null)
         {
-            return Result<Guid>.Failure(Error.Validation("Location or identifier is required."));
+            return Result<Guid>.Failure(validationError);
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -213,8 +301,8 @@ public sealed class ResourcesService(
         entity.ResourceKind = model.ResourceKind;
         entity.Name = model.Name.Trim();
         entity.Description = model.Description?.Trim() ?? string.Empty;
-        entity.LocationOrIdentifier = model.LocationOrIdentifier.Trim();
-        entity.ConfigJson = string.IsNullOrWhiteSpace(model.ConfigJson) ? "{}" : model.ConfigJson;
+        entity.LocationOrIdentifier = BuildLocation(model);
+        entity.ConfigJson = SerializeConfig(model);
         entity.LinkedSecretIdsJson = model.LinkedSecretId.HasValue ? $"[\"{model.LinkedSecretId.Value}\"]" : "[]";
         entity.ValidationStatus = model.ValidationStatus;
         entity.Sensitivity = model.Sensitivity;
@@ -265,6 +353,144 @@ public sealed class ResourcesService(
             ArtifactKind: "resource",
             ArtifactId: resource.Id,
             Route: "/resources"), cancellationToken);
+    }
+
+    private static Error? ValidateTypedEditor(ResourceEditorModel model)
+        => model.ResourceKind switch
+        {
+            ResourceKind.Repository when string.IsNullOrWhiteSpace(model.RepositoryUrl) => Error.Validation("Repository URL is required."),
+            ResourceKind.Folder when string.IsNullOrWhiteSpace(model.FolderPath) => Error.Validation("Folder path is required."),
+            ResourceKind.File when string.IsNullOrWhiteSpace(model.FilePath) => Error.Validation("File path is required."),
+            ResourceKind.WebLink when string.IsNullOrWhiteSpace(model.WebUrl) => Error.Validation("URL is required."),
+            ResourceKind.Ftp when string.IsNullOrWhiteSpace(model.Host) => Error.Validation("FTP host is required."),
+            ResourceKind.Ssh when string.IsNullOrWhiteSpace(model.Host) => Error.Validation("SSH host is required."),
+            ResourceKind.PowerShellScript when string.IsNullOrWhiteSpace(model.ScriptPath) => Error.Validation("Script path is required."),
+            ResourceKind.DockerCompose when string.IsNullOrWhiteSpace(model.ComposeFilePath) => Error.Validation("Compose file path is required."),
+            ResourceKind.SecretLink when string.IsNullOrWhiteSpace(model.SecretPurpose) => Error.Validation("Secret purpose is required."),
+            ResourceKind.PromptLink when string.IsNullOrWhiteSpace(model.PromptReference) => Error.Validation("Prompt reference is required."),
+            _ => null
+        };
+
+    private static string BuildLocation(ResourceEditorModel model) => model.ResourceKind switch
+    {
+        ResourceKind.Repository => model.RepositoryUrl.Trim(),
+        ResourceKind.Folder => model.FolderPath.Trim(),
+        ResourceKind.File => model.FilePath.Trim(),
+        ResourceKind.WebLink => model.WebUrl.Trim(),
+        ResourceKind.Ftp => BuildRemoteEndpoint(model.Host, model.Port, model.RemotePath),
+        ResourceKind.Ssh => BuildRemoteEndpoint(model.Host, model.Port, model.WorkingDirectory),
+        ResourceKind.PowerShellScript => model.ScriptPath.Trim(),
+        ResourceKind.DockerCompose => model.ComposeFilePath.Trim(),
+        ResourceKind.SecretLink => model.SecretPurpose.Trim(),
+        ResourceKind.PromptLink => model.PromptReference.Trim(),
+        _ => model.LocationOrIdentifier.Trim()
+    };
+
+    private static string SerializeConfig(ResourceEditorModel model)
+        => model.ResourceKind switch
+        {
+            ResourceKind.Repository => JsonSerializer.Serialize(new RepositoryResourceConfig(model.RepositoryUrl, model.DefaultBranch, model.RelativePath)),
+            ResourceKind.Folder => JsonSerializer.Serialize(new FolderResourceConfig(model.FolderPath, model.WorkingDirectory)),
+            ResourceKind.File => JsonSerializer.Serialize(new FileResourceConfig(model.FilePath, model.WorkingDirectory)),
+            ResourceKind.WebLink => JsonSerializer.Serialize(new WebLinkResourceConfig(model.WebUrl, model.UrlTitleHint)),
+            ResourceKind.Ftp => JsonSerializer.Serialize(new FtpResourceConfig(model.Host, model.Port, model.RemotePath, model.UserName)),
+            ResourceKind.Ssh => JsonSerializer.Serialize(new SshResourceConfig(model.Host, model.Port, model.UserName, model.WorkingDirectory)),
+            ResourceKind.PowerShellScript => JsonSerializer.Serialize(new PowerShellScriptResourceConfig(model.ScriptPath, model.ScriptArguments, model.WorkingDirectory)),
+            ResourceKind.DockerCompose => JsonSerializer.Serialize(new DockerComposeResourceConfig(model.ComposeFilePath, model.ComposeService)),
+            ResourceKind.SecretLink => JsonSerializer.Serialize(new SecretLinkResourceConfig(model.SecretPurpose, string.Empty)),
+            ResourceKind.PromptLink => JsonSerializer.Serialize(new PromptLinkResourceConfig(model.PromptReference, model.PromptTitleHint)),
+            _ => string.IsNullOrWhiteSpace(model.ConfigJson) ? "{}" : model.ConfigJson
+        };
+
+    private static void ApplyTypedConfiguration(ResourceEditorModel model, ResourceKind kind, string configJson)
+    {
+        var json = string.IsNullOrWhiteSpace(configJson) ? "{}" : configJson;
+        switch (kind)
+        {
+            case ResourceKind.Repository:
+                if (JsonSerializer.Deserialize<RepositoryResourceConfig>(json) is { } repository)
+                {
+                    model.RepositoryUrl = repository.RepositoryUrl;
+                    model.DefaultBranch = repository.DefaultBranch;
+                    model.RelativePath = repository.RelativePath;
+                }
+                break;
+            case ResourceKind.Folder:
+                if (JsonSerializer.Deserialize<FolderResourceConfig>(json) is { } folder)
+                {
+                    model.FolderPath = folder.Path;
+                    model.WorkingDirectory = folder.WorkingDirectory;
+                }
+                break;
+            case ResourceKind.File:
+                if (JsonSerializer.Deserialize<FileResourceConfig>(json) is { } file)
+                {
+                    model.FilePath = file.Path;
+                    model.WorkingDirectory = file.WorkingDirectory;
+                }
+                break;
+            case ResourceKind.WebLink:
+                if (JsonSerializer.Deserialize<WebLinkResourceConfig>(json) is { } webLink)
+                {
+                    model.WebUrl = webLink.Url;
+                    model.UrlTitleHint = webLink.TitleHint;
+                }
+                break;
+            case ResourceKind.Ftp:
+                if (JsonSerializer.Deserialize<FtpResourceConfig>(json) is { } ftp)
+                {
+                    model.Host = ftp.Host;
+                    model.Port = ftp.Port;
+                    model.RemotePath = ftp.RemotePath;
+                    model.UserName = ftp.UserName;
+                }
+                break;
+            case ResourceKind.Ssh:
+                if (JsonSerializer.Deserialize<SshResourceConfig>(json) is { } ssh)
+                {
+                    model.Host = ssh.Host;
+                    model.Port = ssh.Port;
+                    model.UserName = ssh.UserName;
+                    model.WorkingDirectory = ssh.WorkingDirectory;
+                }
+                break;
+            case ResourceKind.PowerShellScript:
+                if (JsonSerializer.Deserialize<PowerShellScriptResourceConfig>(json) is { } script)
+                {
+                    model.ScriptPath = script.ScriptPath;
+                    model.ScriptArguments = script.Arguments;
+                    model.WorkingDirectory = script.WorkingDirectory;
+                }
+                break;
+            case ResourceKind.DockerCompose:
+                if (JsonSerializer.Deserialize<DockerComposeResourceConfig>(json) is { } compose)
+                {
+                    model.ComposeFilePath = compose.ComposeFilePath;
+                    model.ComposeService = compose.ServiceName;
+                }
+                break;
+            case ResourceKind.SecretLink:
+                if (JsonSerializer.Deserialize<SecretLinkResourceConfig>(json) is { } secret)
+                {
+                    model.SecretPurpose = secret.Purpose;
+                }
+                break;
+            case ResourceKind.PromptLink:
+                if (JsonSerializer.Deserialize<PromptLinkResourceConfig>(json) is { } prompt)
+                {
+                    model.PromptReference = prompt.PromptReference;
+                    model.PromptTitleHint = prompt.PromptTitleHint;
+                }
+                break;
+        }
+    }
+
+    private static string BuildRemoteEndpoint(string host, int? port, string path)
+    {
+        var hostPart = string.IsNullOrWhiteSpace(host) ? "remote" : host.Trim();
+        var portPart = port.HasValue ? $":{port.Value}" : string.Empty;
+        var pathPart = string.IsNullOrWhiteSpace(path) ? string.Empty : $"/{path.Trim().TrimStart('/')}";
+        return $"{hostPart}{portPart}{pathPart}";
     }
 
     private static Guid? ParseLinkedSecret(string json)

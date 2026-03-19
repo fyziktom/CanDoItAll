@@ -17,7 +17,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.GetByTestId("project-save-button").ClickAsync();
 
         await page.WaitForSelectorAsync("text=Project saved.");
-        await page.WaitForSelectorAsync("text=Playwright Project");
+        await page.WaitForURLAsync("**/projects?projectId=*");
     }
 
     [Fact]
@@ -33,17 +33,15 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
 
         var storageBeforeReload = await page.EvaluateAsync<string?>("() => localStorage.getItem('candoitall.workbench.session')");
         Assert.NotNull(storageBeforeReload);
-        Assert.Contains("/projects", storageBeforeReload, StringComparison.Ordinal);
-        Assert.Contains("/validation", storageBeforeReload, StringComparison.Ordinal);
-        Assert.Contains("/test-lab", storageBeforeReload, StringComparison.Ordinal);
+        Assert.Contains("\"version\":3", storageBeforeReload, StringComparison.Ordinal);
+        Assert.Contains("route:test-lab", storageBeforeReload, StringComparison.Ordinal);
 
         await page.ReloadAsync();
         await page.WaitForSelectorAsync("text=Tests, evidence, and execution results");
 
         var storageAfterReload = await page.EvaluateAsync<string?>("() => localStorage.getItem('candoitall.workbench.session')");
         Assert.NotNull(storageAfterReload);
-        Assert.Contains("/projects", storageAfterReload, StringComparison.Ordinal);
-        Assert.Contains("/validation", storageAfterReload, StringComparison.Ordinal);
-        Assert.Contains("/test-lab", storageAfterReload, StringComparison.Ordinal);
+        Assert.Contains("\"version\":3", storageAfterReload, StringComparison.Ordinal);
+        Assert.Contains("route:test-lab", storageAfterReload, StringComparison.Ordinal);
     }
 }

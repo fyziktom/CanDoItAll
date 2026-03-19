@@ -1,10 +1,42 @@
+@using CanDoItAll.SharedKernel
+
 <div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#eef4fb_100%)] text-slate-900">
     <div class="mx-auto flex min-h-screen max-w-[1800px] gap-6 px-4 py-4 lg:px-6">
-        <aside class="hidden w-72 shrink-0 rounded-[2rem] border border-white/70 bg-slate-950 p-5 text-slate-100 shadow-2xl shadow-slate-900/10 lg:block">
-            <div class="mb-8 space-y-1">
-                <p class="text-xs font-semibold uppercase tracking-[0.35em] text-sky-300">CanDoItAll</p>
-                <h1 class="text-2xl font-semibold tracking-tight text-white">Local delivery workbench</h1>
-                <p class="text-sm leading-6 text-slate-400">Projects, prompts, validation, scheduling, and evidence in one recoverable workspace.</p>
+        <aside class="hidden w-80 shrink-0 rounded-[2rem] border border-white/70 bg-slate-950 p-5 text-slate-100 shadow-2xl shadow-slate-900/10 lg:block">
+            <div class="mb-8 space-y-3">
+                <div class="space-y-1">
+                    <p class="text-xs font-semibold uppercase tracking-[0.35em] text-sky-300">CanDoItAll</p>
+                    <h1 class="text-2xl font-semibold tracking-tight text-white">Local delivery workbench</h1>
+                    <p class="text-sm leading-6 text-slate-400">Projects, prompts, validation, scheduling, and evidence in one recoverable workspace.</p>
+                </div>
+
+                @if (Workspaces.Count > 0)
+                {
+                    <div class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                        <p class="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">Workspace</p>
+                        @foreach (var workspace in Workspaces)
+                        {
+                            <button type="button"
+                                    class="w-full rounded-2xl px-3 py-3 text-left transition @(workspace.Id == ActiveWorkspaceId ? "bg-sky-400/15 text-white" : "text-slate-300 hover:bg-white/5 hover:text-white")"
+                                    @onclick="() => SelectWorkspace.InvokeAsync(workspace.Id)">
+                                <span class="block text-sm font-semibold">@workspace.Title</span>
+                                <span class="mt-1 block text-xs leading-5 text-slate-400">@workspace.Description</span>
+                            </button>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(ProjectContextTitle))
+                {
+                    <div class="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-3">
+                        <p class="text-[10px] font-semibold uppercase tracking-[0.28em] text-sky-300">Project Context</p>
+                        <p class="mt-2 text-sm font-semibold text-white">@ProjectContextTitle</p>
+                        @if (!string.IsNullOrWhiteSpace(PhaseContextTitle))
+                        {
+                            <p class="mt-1 text-xs text-slate-300">@PhaseContextTitle</p>
+                        }
+                    </div>
+                }
             </div>
 
             <nav class="space-y-2">
@@ -23,6 +55,38 @@
                     </button>
                 }
             </nav>
+
+            @if (OpenedProjects.Count > 0)
+            {
+                <div class="mt-8 space-y-2">
+                    <p class="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">Opened Projects</p>
+                    @foreach (var item in OpenedProjects)
+                    {
+                        <button type="button"
+                                class="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-left transition hover:bg-white/10"
+                                @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
+                            <span class="block text-sm font-semibold text-white">@item.Title</span>
+                            <span class="mt-1 block text-xs text-slate-400">@item.TabKind · @item.Route</span>
+                        </button>
+                    }
+                </div>
+            }
+
+            @if (OpenedSessions.Count > 0)
+            {
+                <div class="mt-8 space-y-2">
+                    <p class="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">Prompt Sessions</p>
+                    @foreach (var item in OpenedSessions)
+                    {
+                        <button type="button"
+                                class="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-left transition hover:bg-white/10"
+                                @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
+                            <span class="block text-sm font-semibold text-white">@item.Title</span>
+                            <span class="mt-1 block text-xs text-slate-400">@item.Route</span>
+                        </button>
+                    }
+                </div>
+            }
         </aside>
 
         <main class="flex min-w-0 flex-1 flex-col gap-4">
@@ -31,13 +95,18 @@
             </div>
 
             <AppTabStrip Items="Tabs"
+                         RecentTabs="RecentTabs"
                          ActiveTabId="ActiveTabId"
                          Activate="SelectTab"
                          Close="CloseTab"
                          MoveLeft="MoveTabLeft"
                          MoveRight="MoveTabRight"
                          TogglePin="ToggleTabPin"
-                         ToggleSleep="ToggleTabSleep" />
+                         ToggleSleep="ToggleTabSleep"
+                         CloseOthers="CloseOtherTabs"
+                         CloseRight="CloseTabsToRight"
+                         CloseBackground="CloseBackgroundTabs"
+                         ReopenRecent="ReopenRecentTab" />
 
             <div class="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
                 <section class="min-w-0 rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-xl shadow-slate-200/60 backdrop-blur">
@@ -57,16 +126,43 @@
     public IReadOnlyList<ShellNavigationItem> NavigationItems { get; set; } = [];
 
     [Parameter]
+    public IReadOnlyList<ShellWorkspaceItem> Workspaces { get; set; } = [];
+
+    [Parameter]
+    public string ActiveWorkspaceId { get; set; } = string.Empty;
+
+    [Parameter]
     public string CurrentRoute { get; set; } = string.Empty;
 
     [Parameter]
     public IReadOnlyList<WorkbenchTabState> Tabs { get; set; } = [];
 
     [Parameter]
+    public IReadOnlyList<WorkbenchTabState> RecentTabs { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<WorkbenchTabState> OpenedProjects { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<WorkbenchTabState> OpenedSessions { get; set; } = [];
+
+    [Parameter]
     public string? ActiveTabId { get; set; }
 
     [Parameter]
+    public string? ProjectContextTitle { get; set; }
+
+    [Parameter]
+    public string? PhaseContextTitle { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectWorkspace { get; set; }
+
+    [Parameter]
     public EventCallback<string> Navigate { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OpenWorkbenchItem { get; set; }
 
     [Parameter]
     public EventCallback<string> SelectTab { get; set; }
@@ -85,6 +181,18 @@
 
     [Parameter]
     public EventCallback<string> ToggleTabSleep { get; set; }
+
+    [Parameter]
+    public EventCallback<string> CloseOtherTabs { get; set; }
+
+    [Parameter]
+    public EventCallback<string> CloseTabsToRight { get; set; }
+
+    [Parameter]
+    public EventCallback<string> CloseBackgroundTabs { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ReopenRecentTab { get; set; }
 
     [Parameter]
     public RenderFragment? TopBar { get; set; }

@@ -42,7 +42,7 @@ public sealed class WorkbenchStateServiceTests
         Assert.False(service.Tabs.First(tab => tab.TabId == "dashboard").IsSleeping);
         Assert.True(service.Tabs.First(tab => tab.TabId == "projects").IsSleeping);
         Assert.NotNull(store.SavedSnapshot);
-        Assert.Equal("candoitall.workbench.v2", store.SavedSnapshot!.CompatibilityMarker);
+        Assert.Equal("candoitall.workbench.v3", store.SavedSnapshot!.CompatibilityMarker);
     }
 
     [Fact]

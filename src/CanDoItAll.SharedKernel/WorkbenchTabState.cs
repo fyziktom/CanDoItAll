@@ -1,5 +1,39 @@
 namespace CanDoItAll.SharedKernel;
 
+public static class WorkbenchTabKinds
+{
+    public const string Page = "page";
+    public const string ProjectOverview = "project-overview";
+    public const string ProjectStructure = "project-structure";
+    public const string ProjectCalendar = "project-calendar";
+    public const string PromptWizardSession = "prompt-wizard-session";
+    public const string ValidationRun = "validation-run";
+    public const string TestPlan = "test-plan";
+    public const string PromptDetail = "prompt-detail";
+    public const string Settings = "settings";
+}
+
+public sealed record WorkbenchTabDescriptor(
+    string TabId,
+    string Title,
+    string Route,
+    string TabKind = WorkbenchTabKinds.Page,
+    Guid? ProjectId = null,
+    Guid? ArtifactId = null,
+    string? ArtifactKind = null,
+    string? ArtifactKey = null,
+    string? RestoreKey = null,
+    string? ProjectScope = null,
+    string? ProjectName = null,
+    string? PhaseName = null,
+    string? Description = null,
+    string? SnapshotJson = null,
+    string? CapsuleKey = null,
+    string? TabGroup = null,
+    bool IsPinned = false,
+    bool CanClose = true,
+    bool CanSleep = true);
+
 public sealed record WorkbenchTabState(
     string TabId,
     string Title,
@@ -16,6 +50,13 @@ public sealed record WorkbenchTabState(
     string? CapsuleKey = null,
     string? Description = null,
     string? SnapshotJson = null,
+    string? ArtifactKey = null,
+    string? ArtifactKind = null,
+    Guid? ArtifactId = null,
+    string? ProjectName = null,
+    string? PhaseName = null,
+    string? TabGroup = null,
+    DateTimeOffset? ClosedAtUtc = null,
     DateTimeOffset? LastActivatedAtUtc = null,
     int Order = 0);
 
@@ -35,7 +76,8 @@ public sealed record WorkbenchSessionSnapshot(
     IReadOnlyList<WorkbenchTabState> Tabs,
     string? CompatibilityMarker = null,
     DateTimeOffset? SavedAtUtc = null,
-    IReadOnlyList<WorkbenchRestoreFailure>? RestoreFailures = null);
+    IReadOnlyList<WorkbenchRestoreFailure>? RestoreFailures = null,
+    IReadOnlyList<WorkbenchTabState>? RecentTabs = null);
 
 public interface IWorkbenchStateStore
 {

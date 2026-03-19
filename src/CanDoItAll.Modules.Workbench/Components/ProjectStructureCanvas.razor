@@ -1,7 +1,7 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JsRuntime
 
-<div @ref="host" class="min-h-[28rem] rounded-2xl border border-slate-200 bg-slate-50"></div>
+<div @ref="host" class="min-h-[36rem] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"></div>
 
 @code {
     private ElementReference host;
@@ -17,6 +17,18 @@
     [Parameter]
     public EventCallback<string> SelectedNodeChanged { get; set; }
 
+    [Parameter]
+    public EventCallback<ProjectNodeMoveRequest> NodeMoved { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectCanvasContextActionRequest> ContextActionRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OpenNodeRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ViewStateChanged { get; set; }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (Surface is null)
@@ -27,17 +39,33 @@
         objectReference ??= DotNetObjectReference.Create(this);
         if (!initialized)
         {
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCanvas.create", host, objectReference, Surface, SelectedNodeId);
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCanvas.create", host, objectReference, Surface, SelectedNodeId, Surface.ViewStateJson);
             initialized = true;
             return;
         }
 
-        await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCanvas.update", host, Surface, SelectedNodeId);
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCanvas.update", host, Surface, SelectedNodeId, Surface.ViewStateJson);
     }
 
     [JSInvokable]
     public Task OnNodeSelected(string nodeId)
         => SelectedNodeChanged.InvokeAsync(nodeId);
+
+    [JSInvokable]
+    public Task OnNodeMoved(string nodeId, double x, double y)
+        => NodeMoved.InvokeAsync(new ProjectNodeMoveRequest(nodeId, x, y));
+
+    [JSInvokable]
+    public Task OnContextAction(string? nodeId, string action, double x, double y)
+        => ContextActionRequested.InvokeAsync(new ProjectCanvasContextActionRequest(nodeId, action, x, y));
+
+    [JSInvokable]
+    public Task OnNodeOpened(string nodeId)
+        => OpenNodeRequested.InvokeAsync(nodeId);
+
+    [JSInvokable]
+    public Task OnViewStateChanged(string stateJson)
+        => ViewStateChanged.InvokeAsync(stateJson);
 
     public async ValueTask DisposeAsync()
     {

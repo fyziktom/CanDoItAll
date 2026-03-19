@@ -39,6 +39,8 @@ The first release must already support the required project, prompt, provider, v
 ## 3.3 Project management
 
 - **FR-014** — The application shall support project creation with name, description, dates, phases, and status.
+- **FR-014A** — Project creation and editing shall be wizard-first, using a guided modal or dedicated internal tab instead of a single raw CRUD form as the primary user experience.
+- **FR-014B** — The project workspace shall use a unified project-object graph so linked work items can be created, connected, and inspected as part of one project structure model.
 - **FR-015** — The application shall support custom and predefined project phases.
 - **FR-016** — The application shall support project stack profiling including primary language, secondary languages, DB type, UI type, external APIs, and storage strategy.
 - **FR-017** — The application shall support notes on every relevant project option.
@@ -48,6 +50,7 @@ The first release must already support the required project, prompt, provider, v
 
 - **FR-019** — The application shall support linked resources for folder, file, web link, FTP, PowerShell script, repository, Docker/Docker Compose, SSH, secrets, and prompt.
 - **FR-020** — The application shall support a generalized resource model with resource-type-specific configuration.
+- **FR-020A** — Resource records shall participate in the unified project-object graph without collapsing all object behavior into one generic page editor.
 - **FR-021** — The application shall support connection/profile reuse across projects.
 - **FR-022** — The application shall support validation status, indexing status, and sensitivity classification for resources.
 - **FR-023** — The application shall support file preview for high-value file types and generic handling for unsupported files.
@@ -70,6 +73,8 @@ The first release must already support the required project, prompt, provider, v
 - **FR-031C** — The application shall support storing prompt-flow node state such as pending, prepared, running, used, skipped, failed, validated, and superseded.
 - **FR-031D** — The application shall support multiple concurrent prompt runs or branches for the same project or feature while preserving traceability.
 - **FR-031E** — The prompt wizard shall automatically apply recommended shared prompt blocks based on phase, flow template, or blueprint while still allowing controlled user customization.
+- **FR-031F** — Prompt wizard sessions shall be first-class internal workbench tabs with restore state and graph visibility.
+- **FR-031G** — Shared prompt blocks and flow-template rules shall be governed through maintainable application surfaces, not only hardcoded seed data.
 - **FR-032** — The application shall support editable generated prompts before persistence or sending.
 - **FR-033** — The application shall support saving partial prompt work.
 - **FR-034** — The application shall support exporting prompts to clipboard or file.
@@ -95,14 +100,20 @@ The first release must already support the required project, prompt, provider, v
 ## 3.9 UI and extensibility
 
 - **FR-047** — The application shall provide functional UI coverage for all listed capabilities in v1.
+- **FR-047A** — Major create and edit workflows shall be wizard-first and progressively disclosed instead of exposing raw CRUD forms as the main user path.
+- **FR-047B** — Collection and browse surfaces shall default to card-based presentations; dense tables are the exception, not the standard.
 - **FR-048** — The application shall use Tailwind CSS and a unified component strategy.
 - **FR-049** — The application shall support adding new resource types and prompt phases without redesigning core flows.
 - **FR-050** — The application shall remain structurally ready for future sidecar services or microservices.
 - **FR-051** — The application shall provide an internal application-tab workspace instead of depending on many browser tabs for concurrent work.
+- **FR-051A** — Internal tabs shall support opened projects, prompt sessions, validation runs, test plans, and other artifact work items instead of tracking only top-level routes.
 - **FR-052** — The application shall support opening, closing, pinning, reordering, and reactivating internal tabs.
 - **FR-053** — The application shall support active, background, and sleeping tab states for heavy work surfaces.
 - **FR-054** — The application shall persist internal tab session state in browser storage and restore it after refresh, reconnect, close, or crash.
 - **FR-055** — The application shall provide a project structure canvas for visualizing phases, resources, prompts, validations, tests, and relationships.
+- **FR-055A** — The project structure canvas shall be able to create and edit project-object graph items directly, not only visualize pre-existing records.
+- **FR-055B** — Project-object kinds shown in the canvas shall have typed visual profiles such as shape, color, icon, and state accent.
+- **FR-055C** — The project structure canvas shall remain usable with large graphs containing many linked nodes.
 - **FR-056** — The project structure canvas shall support opening linked artifacts from the canvas into internal tabs.
 - **FR-057** — The project structure canvas shall support representing prompt sessions and prompt steps, including branching from an existing step into a new follow-up prompt.
 - **FR-057A** — The project structure canvas shall support representing prompt flow templates, reusable prompt blocks, and prompt-run nodes with visible execution state.
@@ -126,7 +137,9 @@ The first release must already support the required project, prompt, provider, v
 - **FR-068** — The development manager shall report missing, malformed, or stale capsules through a coverage and drift contract.
 - **FR-069** — The UI shall support a dev-only tuning mode in which a user can target a specific component or workbench surface from the running application.
 - **FR-070** — A tuning request shall support route, project, tab, selection, capsule, screenshot, and free-form instruction context.
+- **FR-070A** — The tuning path shall support screenshot and clipboard-image attachment capture from the running application.
 - **FR-071** — The development manager shall support tracked local Codex job orchestration for approved tuning requests inside the configured workspace boundary.
+- **FR-071A** — The primary tuning execution path shall use a real local adapter or Codex CLI integration rather than a fake status simulator.
 - **FR-072** — A tuning request shall not be marked ready for review until the Codex job has completed and the watched application is ready again.
 - **FR-073** — The development manager shall retain local history tying tuning requests to watch events, changed files, and verification outcomes.
 - **FR-074** — Generated artifacts, logs, and attachments created by the manager shall be excluded from self-triggering application rebuild loops.
@@ -222,6 +235,7 @@ The first release must already support the required project, prompt, provider, v
 6. Internal tabs, workbench restore, project structure canvas, and project calendar are part of the first serious usable version, not future polish.
 7. The local development manager, source capsules, and dev-only tuning loop are part of the intended build velocity strategy, not optional late tooling.
 8. Shared prompt blocks, prompt-flow templates, and their canvas representation are part of the first serious usable prompt-workflow version, not optional polish.
+9. Wizard-first project creation, artifact-first internal tabs, and the unified project-object graph are part of the first serious usable version, not optional later refinement.
 
 ## 7. Recommended technical principles
 

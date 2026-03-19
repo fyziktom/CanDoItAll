@@ -22,15 +22,16 @@ public sealed class PromptFactoryPageTests
         Assert.True(saveResult.IsSuccess);
 
         var cut = harness.Context.RenderComponent<PromptFactoryPage>();
-        cut.WaitForAssertion(() => Assert.Contains("Delivery Constraints", cut.Markup));
-
         cut.Find("[data-testid='prompt-factory-project']").Change(saveResult.Value!.ToString());
+        cut.FindAll("button").First(button => button.TextContent.Contains("Next", StringComparison.Ordinal)).Click();
+        cut.WaitForAssertion(() => Assert.Contains("Delivery Constraints", cut.Markup));
+        cut.FindAll("button").First(button => button.TextContent.Contains("Next", StringComparison.Ordinal)).Click();
         cut.Find("[data-testid='prompt-factory-build']").Click();
 
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Prompt built.", cut.Markup);
-            Assert.Contains("Prompt run nodes", cut.Markup);
+            Assert.Contains("Prompt flow", cut.Markup);
         });
     }
 }

@@ -34,8 +34,10 @@ This prompt consolidates the UI into a cohesive whole. It may run after or parti
 5. Standardize navigation, breadcrumbs, status presentation, and action ordering.
 6. Build or refine any missing shared components that are repeatedly needed across modules, especially workbench shell components such as the hexagonal canvas context menu, prompt-block selector surfaces, and prompt-flow node presentation components.
 7. Implement or refine development-only watch status, tuning handles, capsule summaries, and manager job notifications without polluting normal product usage.
-8. Improve usability of the Dashboard and project workspace summary views.
-9. Add component tests for shared shell and component patterns.
+8. Upgrade the left rail to the intended enterprise-style workstation navigation instead of leaving it as a flat route list.
+9. Standardize wizard-first creation and edit experiences for major workflows and keep card-based lists as the default collection pattern.
+10. Improve usability of the Dashboard and project workspace summary views.
+11. Add component tests for shared shell and component patterns.
 
 ## Required deliverables
 - refined shell and page templates
@@ -49,6 +51,9 @@ This prompt consolidates the UI into a cohesive whole. It may run after or parti
 - empty/loading/error states exist on the major pages
 - current project/phase context is clearly visible
 - internal tabs behave like a deliberate application workbench
+- the left rail reflects real workstation context instead of only top-level routes
+- major workflows feel wizard-first instead of CRUD-first
+- list-heavy screens default to cards unless a table is explicitly justified
 - shared prompt-block and workbench interaction components follow one consistent visual language
 - development-only tuning affordances are explicit, safe, and visually separate from business actions
 - component tests cover critical shared shell patterns

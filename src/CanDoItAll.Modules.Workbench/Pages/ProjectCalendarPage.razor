@@ -16,18 +16,22 @@ tests: component:ProjectCalendarPageTests, e2e:workbench-calendar
 
 @if (surface is null)
 {
-    <p class="text-sm text-slate-500">Loading project calendar…</p>
+    <p class="text-sm text-slate-500">Loading project calendar...</p>
 }
 else
 {
     <div class="space-y-6">
         <PageHeader Eyebrow="Workbench"
                     Title="@($"{surface.ProjectName} calendar")"
-                    Description="Review phase windows, validation activity, and test execution on one linked schedule surface." />
+                    Description="Review phase windows, validation activity, tests, and custom milestones in one linked schedule surface." />
 
         <div class="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-            <SectionCard Title="Project calendar" Description="The JavaScript calendar wrapper owns rendering while event selection and artifact opening stay typed in .NET.">
-                <ProjectEventsCalendar Surface="surface" SelectedEventId="selectedEventId" SelectedEventChanged="HandleEventSelected" />
+            <SectionCard Title="Project calendar" Description="The JavaScript calendar wrapper owns rendering while selection, view persistence, and artifact opening stay typed in .NET.">
+                <ProjectEventsCalendar Surface="surface"
+                                       SelectedEventId="selectedEventId"
+                                       SelectedEventChanged="HandleEventSelected"
+                                       OpenEventRequested="HandleOpenEventAsync"
+                                       ViewStateChanged="HandleViewStateChangedAsync" />
             </SectionCard>
 
             <SectionCard Title="Selected event" Description="Calendar items open their linked artifacts inside the internal workbench.">
@@ -39,8 +43,11 @@ else
                 {
                     <div class="space-y-4">
                         <div>
-                            <p class="text-sm font-semibold text-slate-900">@selectedEvent.Title</p>
-                            <p class="mt-1 text-xs text-slate-500">@selectedEvent.StartUtc.LocalDateTime:g → @selectedEvent.EndUtc.LocalDateTime:g</p>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p class="text-sm font-semibold text-slate-900">@selectedEvent.Title</p>
+                                <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]" style="@($"background:{selectedEvent.AccentColor}18;color:{selectedEvent.AccentColor}")">@selectedEvent.ObjectType</span>
+                            </div>
+                            <p class="mt-1 text-xs text-slate-500">@selectedEvent.StartUtc.LocalDateTime:g -> @selectedEvent.EndUtc.LocalDateTime:g</p>
                             <p class="mt-1 text-xs text-slate-500">@selectedEvent.Status</p>
                         </div>
                         <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="() => Navigation.NavigateTo(selectedEvent.Route)">
@@ -62,15 +69,50 @@ else
 
     private ProjectCalendarEvent? selectedEvent => surface?.Events.FirstOrDefault(item => item.Id == selectedEventId);
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
     {
         surface = await ProjectWorkbenchService.GetCalendarAsync(ProjectId);
-        selectedEventId ??= surface.Events.FirstOrDefault()?.Id;
+        selectedEventId ??= TryReadSelectedEventId(surface.ViewStateJson) ?? surface.Events.FirstOrDefault()?.Id;
     }
 
     private Task HandleEventSelected(Guid eventId)
     {
         selectedEventId = eventId;
         return Task.CompletedTask;
+    }
+
+    private Task HandleViewStateChangedAsync(string stateJson)
+        => ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "calendar", stateJson);
+
+    private Task HandleOpenEventAsync(Guid eventId)
+    {
+        var item = surface?.Events.FirstOrDefault(candidate => candidate.Id == eventId);
+        if (item is not null)
+        {
+            Navigation.NavigateTo(item.Route);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static Guid? TryReadSelectedEventId(string? viewStateJson)
+    {
+        if (string.IsNullOrWhiteSpace(viewStateJson))
+        {
+            return null;
+        }
+
+        const string marker = "\"selectedEventId\":\"";
+        var start = viewStateJson.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (start < 0)
+        {
+            return null;
+        }
+
+        start += marker.Length;
+        var end = viewStateJson.IndexOf('"', start);
+        return end > start && Guid.TryParse(viewStateJson[start..end], out var parsed) ? parsed : null;
     }
 }

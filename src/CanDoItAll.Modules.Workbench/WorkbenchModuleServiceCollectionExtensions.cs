@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -8,6 +9,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
     {
         services.AddScoped<WorkbenchStateService>();
         services.AddScoped<ProjectWorkbenchService>();
+        services.AddScoped<IProjectWorkbenchSeedService>(serviceProvider => serviceProvider.GetRequiredService<ProjectWorkbenchService>());
         return services;
     }
 }

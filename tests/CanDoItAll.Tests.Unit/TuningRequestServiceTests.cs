@@ -9,12 +9,15 @@ public sealed class TuningRequestServiceTests
     [Fact]
     public async Task CreateAsync_requires_known_capsule()
     {
+        await using var scope = await CreateScopeAsync();
         var service = CreateService(
+            scope.RootPath,
             new FakeWatchSupervisor(),
-            new FakeCapsuleCatalogService { Coverage = HealthyCoverage });
+            new FakeCapsuleCatalogService { Coverage = HealthyCoverage },
+            new FakeTuningExecutionAdapter());
 
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(
-            new TuningRequestCreateModel("missing", "ProjectsPage", "/projects", null, null, null, "Tighten spacing")));
+            new TuningRequestCreateModel("missing", "ProjectsPage", "/projects", null, null, null, null, "Tighten spacing")));
 
         Assert.Contains("capsule key", error.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -22,6 +25,7 @@ public sealed class TuningRequestServiceTests
     [Fact]
     public async Task CreateAsync_marks_request_verification_failed_when_capsule_drift_exists()
     {
+        await using var scope = await CreateScopeAsync();
         var watchSupervisor = new FakeWatchSupervisor
         {
             ReadySnapshot = new WatchStatusSnapshot(WatchState.Ready, "Ready", 8, 2, 1, 1, DateTimeOffset.UtcNow, ["http://127.0.0.1:5188"])
@@ -32,14 +36,47 @@ public sealed class TuningRequestServiceTests
         };
         capsules.Records["page-projectspage"] = SampleCapsule;
 
-        var service = CreateService(watchSupervisor, capsules);
+        var service = CreateService(scope.RootPath, watchSupervisor, capsules, new FakeTuningExecutionAdapter());
         var record = await service.CreateAsync(
-            new TuningRequestCreateModel("page-projectspage", "ProjectsPage", "/projects", Guid.NewGuid(), "route:/projects", null, "Update spacing", AutoSubmit: true));
+            new TuningRequestCreateModel("page-projectspage", "ProjectsPage", "/projects", Guid.NewGuid(), "route:/projects", null, null, "Update spacing", AutoSubmit: true));
 
         var completed = await WaitForStatusAsync(service, record.Id, TuningRequestStatus.VerificationFailed);
         Assert.True(completed.CapsuleDriftDetected);
         Assert.NotNull(completed.ReadyWatchEventId);
         Assert.Contains("Capsule drift detected", completed.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreateAsync_persists_attachments_and_waits_for_explicit_submit_when_review_is_required()
+    {
+        await using var scope = await CreateScopeAsync();
+        var capsules = new FakeCapsuleCatalogService();
+        capsules.Records["page-projectspage"] = SampleCapsule;
+        var adapter = new FakeTuningExecutionAdapter();
+        var service = CreateService(scope.RootPath, new FakeWatchSupervisor(), capsules, adapter, reviewBeforeSend: true);
+
+        var record = await service.CreateAsync(new TuningRequestCreateModel(
+            "page-projectspage",
+            "ProjectsPage",
+            "/projects",
+            Guid.NewGuid(),
+            "route:/projects",
+            null,
+            "Wizard overview",
+            "Adjust spacing",
+            [new TuningRequestAttachmentCreateModel("mock.png", "image/png", Convert.ToBase64String([1, 2, 3]), "upload")]));
+
+        Assert.Equal(TuningRequestStatus.AwaitingApproval, record.Status);
+        Assert.Equal(1, record.AttachmentCount);
+        Assert.True(File.Exists(Path.Combine(record.EvidenceDirectory, "request.json")));
+        Assert.True(File.Exists(Path.Combine(record.EvidenceDirectory, "attachments", "mock.png")));
+        Assert.False(adapter.Executed);
+
+        var submitted = await service.SubmitAsync(record.Id);
+        Assert.Equal(TuningRequestStatus.Queued, submitted.Status);
+        var ready = await WaitForStatusAsync(service, record.Id, TuningRequestStatus.ReadyForReview);
+        Assert.True(adapter.Executed);
+        Assert.Equal("The request is ready for review.", ready.Summary);
     }
 
     private static async Task<TuningRequestRecord> WaitForStatusAsync(TuningRequestService service, Guid requestId, TuningRequestStatus expectedStatus)
@@ -59,17 +96,24 @@ public sealed class TuningRequestServiceTests
         throw new TimeoutException($"Timed out waiting for status {expectedStatus}.");
     }
 
-    private static TuningRequestService CreateService(IWatchSupervisor watchSupervisor, ICapsuleCatalogService capsuleCatalogService)
+    private static TuningRequestService CreateService(
+        string rootPath,
+        IWatchSupervisor watchSupervisor,
+        ICapsuleCatalogService capsuleCatalogService,
+        ITuningExecutionAdapter tuningExecutionAdapter,
+        bool reviewBeforeSend = false)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Manager:TuningModeEnabled"] = "true",
-                ["Manager:ReviewBeforeSend"] = "false"
+                ["Manager:ReviewBeforeSend"] = reviewBeforeSend.ToString(),
+                ["Manager:WorkspaceRoot"] = rootPath,
+                ["Manager:ArtifactsRoot"] = ".artifacts\\codex-manager"
             })
             .Build();
 
-        return new TuningRequestService(configuration, watchSupervisor, capsuleCatalogService);
+        return new TuningRequestService(configuration, watchSupervisor, capsuleCatalogService, tuningExecutionAdapter);
     }
 
     private static CapsuleCoverageSummary HealthyCoverage => new(1, 1, 0, 0, 0, [], [], DateTimeOffset.UtcNow);
@@ -125,5 +169,40 @@ public sealed class TuningRequestServiceTests
         public CapsuleRecord? GetSymbol(string symbolId) => Records.GetValueOrDefault(symbolId);
 
         public Task RefreshAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class FakeTuningExecutionAdapter : ITuningExecutionAdapter
+    {
+        public bool Executed { get; private set; }
+
+        public Task<TuningExecutionResult> ExecuteAsync(TuningExecutionContext context, CancellationToken cancellationToken = default)
+        {
+            Executed = true;
+            File.WriteAllText(context.StdOutPath, "adapter ok");
+            File.WriteAllText(context.StdErrPath, string.Empty);
+            return Task.FromResult(new TuningExecutionResult("job-1", 0, "Local tuning adapter completed successfully."));
+        }
+    }
+
+    private static async Task<TestScope> CreateScopeAsync()
+    {
+        var rootPath = Path.Combine(Path.GetTempPath(), "candoitall-tuning-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(rootPath);
+        return await Task.FromResult(new TestScope(rootPath));
+    }
+
+    private sealed class TestScope(string rootPath) : IAsyncDisposable
+    {
+        public string RootPath { get; } = rootPath;
+
+        public ValueTask DisposeAsync()
+        {
+            if (Directory.Exists(RootPath))
+            {
+                Directory.Delete(RootPath, recursive: true);
+            }
+
+            return ValueTask.CompletedTask;
+        }
     }
 }

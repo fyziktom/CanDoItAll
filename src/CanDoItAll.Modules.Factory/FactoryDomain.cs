@@ -39,6 +39,12 @@ public sealed class PromptBlockDefinition
     public string Content { get; set; } = string.Empty;
 
     public bool IsRecommendedByDefault { get; set; }
+
+    public string PromptTypeRules { get; set; } = string.Empty;
+
+    public string BlueprintRules { get; set; } = string.Empty;
+
+    public string PhaseRules { get; set; } = string.Empty;
 }
 
 public sealed class PromptFlowTemplate
@@ -50,6 +56,8 @@ public sealed class PromptFlowTemplate
     public string Summary { get; set; } = string.Empty;
 
     public string BlockIdsJson { get; set; } = "[]";
+
+    public string PromptTypeRules { get; set; } = string.Empty;
 }
 
 public sealed class PromptBlueprint
@@ -94,9 +102,13 @@ public sealed class PromptRunNode
 
     public Guid? PromptArtifactId { get; set; }
 
+    public Guid? ParentPromptRunNodeId { get; set; }
+
     public string Title { get; set; } = string.Empty;
 
     public string BranchKey { get; set; } = "main";
+
+    public string BranchLabel { get; set; } = "Main";
 
     public int Sequence { get; set; }
 
@@ -108,6 +120,8 @@ public sealed class PromptRunNode
 public sealed class PromptBuildSession
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    public string Name { get; set; } = string.Empty;
 
     public Guid? ProjectId { get; set; }
 
@@ -123,6 +137,8 @@ public sealed class PromptBuildSession
 
     public Guid? PromptRunId { get; set; }
 
+    public Guid? SelectedPromptRunNodeId { get; set; }
+
     public string RepositoryName { get; set; } = string.Empty;
 
     public string BranchName { get; set; } = string.Empty;
@@ -137,6 +153,10 @@ public sealed class PromptBuildSession
 
     public string WarningSummary { get; set; } = string.Empty;
 
+    public int WizardStepIndex { get; set; }
+
+    public bool HasCustomizedBlocks { get; set; }
+
     public DateTimeOffset UpdatedAtUtc { get; set; }
 }
 
@@ -149,6 +169,9 @@ internal sealed class PromptBlockDefinitionConfiguration : IEntityTypeConfigurat
         builder.Property(item => item.Name).HasMaxLength(160).IsRequired();
         builder.Property(item => item.Summary).HasColumnType("TEXT");
         builder.Property(item => item.Content).HasColumnType("TEXT");
+        builder.Property(item => item.PromptTypeRules).HasMaxLength(300);
+        builder.Property(item => item.BlueprintRules).HasMaxLength(300);
+        builder.Property(item => item.PhaseRules).HasMaxLength(300);
     }
 }
 
@@ -161,6 +184,7 @@ internal sealed class PromptFlowTemplateConfiguration : IEntityTypeConfiguration
         builder.Property(item => item.Name).HasMaxLength(160).IsRequired();
         builder.Property(item => item.Summary).HasColumnType("TEXT");
         builder.Property(item => item.BlockIdsJson).HasColumnType("TEXT");
+        builder.Property(item => item.PromptTypeRules).HasMaxLength(300);
     }
 }
 
@@ -196,6 +220,7 @@ internal sealed class PromptRunNodeConfiguration : IEntityTypeConfiguration<Prom
         builder.HasKey(item => item.Id);
         builder.Property(item => item.Title).HasMaxLength(200).IsRequired();
         builder.Property(item => item.BranchKey).HasMaxLength(80).IsRequired();
+        builder.Property(item => item.BranchLabel).HasMaxLength(120).IsRequired();
         builder.Property(item => item.Notes).HasColumnType("TEXT");
     }
 }
@@ -206,6 +231,7 @@ internal sealed class PromptBuildSessionConfiguration : IEntityTypeConfiguration
     {
         builder.ToTable("Factory_PromptBuildSessions");
         builder.HasKey(item => item.Id);
+        builder.Property(item => item.Name).HasMaxLength(200).IsRequired();
         builder.Property(item => item.Phase).HasMaxLength(120);
         builder.Property(item => item.RepositoryName).HasMaxLength(200);
         builder.Property(item => item.BranchName).HasMaxLength(120);
@@ -217,17 +243,77 @@ internal sealed class PromptBuildSessionConfiguration : IEntityTypeConfiguration
     }
 }
 
-public sealed record PromptBlockSummary(Guid Id, string Name, PromptBlockKind BlockKind, string Summary, bool IsRecommendedByDefault);
+public sealed record PromptBlockSummary(
+    Guid Id,
+    string Name,
+    PromptBlockKind BlockKind,
+    string Summary,
+    bool IsRecommendedByDefault,
+    IReadOnlyList<string> PromptTypes,
+    IReadOnlyList<string> Blueprints,
+    IReadOnlyList<string> Phases);
 
-public sealed record PromptFlowTemplateSummary(Guid Id, string Name, string Summary, IReadOnlyList<Guid> BlockIds);
+public sealed record PromptFlowTemplateSummary(
+    Guid Id,
+    string Name,
+    string Summary,
+    IReadOnlyList<Guid> BlockIds,
+    IReadOnlyList<string> RecommendedPromptTypes);
 
 public sealed record PromptBlueprintSummary(Guid Id, string Name, string PromptType, string Summary, string Guidance, Guid? RecommendedFlowTemplateId);
 
-public sealed record PromptRunNodeSummary(Guid Id, string Title, string BranchKey, int Sequence, PromptRunNodeState State, Guid? PromptArtifactId);
+public sealed record PromptRunNodeSummary(
+    Guid Id,
+    string Title,
+    string BranchKey,
+    string BranchLabel,
+    int Sequence,
+    PromptRunNodeState State,
+    Guid? PromptArtifactId,
+    Guid? ParentNodeId,
+    string Notes);
+
+public sealed class PromptBlockEditorModel
+{
+    public Guid? Id { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public PromptBlockKind BlockKind { get; set; } = PromptBlockKind.Instruction;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string Content { get; set; } = string.Empty;
+
+    public bool IsRecommendedByDefault { get; set; }
+
+    public string PromptTypes { get; set; } = string.Empty;
+
+    public string Blueprints { get; set; } = string.Empty;
+
+    public string Phases { get; set; } = string.Empty;
+}
+
+public sealed class PromptFlowTemplateEditorModel
+{
+    public Guid? Id { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public List<Guid> SelectedBlockIds { get; set; } = [];
+
+    public string RecommendedPromptTypes { get; set; } = string.Empty;
+}
 
 public sealed class PromptFactoryEditorModel
 {
     public Guid? SessionId { get; set; }
+
+    public Guid? PromptRunId { get; set; }
+
+    public string SessionName { get; set; } = string.Empty;
 
     public Guid? ProjectId { get; set; }
 
@@ -258,4 +344,10 @@ public sealed class PromptFactoryEditorModel
     public List<string> Warnings { get; set; } = [];
 
     public List<PromptRunNodeSummary> Nodes { get; set; } = [];
+
+    public bool HasCustomizedBlocks { get; set; }
+
+    public int WizardStepIndex { get; set; }
+
+    public Guid? SelectedNodeId { get; set; }
 }

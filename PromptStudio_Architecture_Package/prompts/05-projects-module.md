@@ -28,27 +28,33 @@ This prompt covers M3: project creation, editing, overview, stack profile, dates
 
 ## Tasks
 1. Implement the Projects module aggregates and persistence.
-2. Implement project creation and edit flows.
+2. Implement wizard-first project creation and major edit flows instead of relying on one raw editor form as the primary UX.
 3. Implement phase timeline and status handling.
 4. Implement the generalized option selection model for language, DB, UI, external APIs, storage, and notes.
 5. Build Project Overview and Stack Profile pages according to the UI document.
-6. Prepare project routes and artifact-opening contracts used later by the project structure and project calendar workbench surfaces.
-7. Add project summary/query models for dashboard and list screens.
-8. Add tests for project creation, phase handling, and option selection persistence.
+6. Add opened-project tab semantics so a project can become a first-class internal work item.
+7. Introduce the unified project-object graph baseline required by the workbench and later canvas editing flows.
+8. Prepare project routes and artifact-opening contracts used later by the project structure and project calendar workbench surfaces.
+9. Add project summary/query models for dashboard and list screens.
+10. Add tests for project creation, phase handling, option selection persistence, and the wizard-first flow.
 
 ## Required deliverables
 - Projects module domain and persistence
-- project creation and editing UI
+- wizard-first project creation and editing UI
 - project overview page
 - stack profile page
+- opened-project tab baseline
+- unified project-object graph baseline
 - option selection infrastructure
 - automated tests
 
 ## Acceptance criteria
 - a project can be created end-to-end
+- project creation is guided and comfortable instead of raw CRUD
 - dates, phases, and statuses persist correctly
 - option selections and notes persist correctly
 - project list and overview views are usable, not placeholder-only
+- a project can be opened as a meaningful internal work item
 - the generalized option model is implemented instead of hardcoded one-off fields
 - tests pass for project flows
 
@@ -61,4 +67,4 @@ This prompt covers M3: project creation, editing, overview, stack profile, dates
 6. Follow-up risks or next steps
 
 ## Stop condition
-Stop when the project workspace becomes a credible center of the application.
+Stop when the project workspace becomes a credible center of the application and no longer depends on raw CRUD as the main experience.

@@ -6,3 +6,9 @@ public sealed record ShellNavigationItem(
     string Icon,
     string Description,
     bool PinnedByDefault = true);
+
+public sealed record ShellWorkspaceItem(
+    string Id,
+    string Title,
+    string Description,
+    string DefaultRoute);

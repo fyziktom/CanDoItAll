@@ -48,7 +48,7 @@ tests: component:ResourcesPageTests, e2e:resources-smoke
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <label class="mb-1 block text-sm font-medium text-slate-700">Project</label>
-                            <InputSelect @bind-Value="editor.ProjectId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                            <InputSelect @bind-Value="editor.ProjectId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-project-select">
                                 <option value="">Select a project</option>
                                 @foreach (var project in projects)
                                 {
@@ -58,7 +58,7 @@ tests: component:ResourcesPageTests, e2e:resources-smoke
                         </div>
                         <div>
                             <label class="mb-1 block text-sm font-medium text-slate-700">Kind</label>
-                            <InputSelect @bind-Value="editor.ResourceKind" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                            <InputSelect @bind-Value="editor.ResourceKind" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-kind-select">
                                 @foreach (var kind in Enum.GetValues<ResourceKind>())
                                 {
                                     <option value="@kind">@kind</option>
@@ -67,10 +67,15 @@ tests: component:ResourcesPageTests, e2e:resources-smoke
                         </div>
                     </div>
 
+                    <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm text-sky-800">
+                        <p class="font-semibold text-sky-950">@Descriptor.DisplayName</p>
+                        <p class="mt-1">@Descriptor.Summary</p>
+                    </div>
+
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
-                            <InputText @bind-Value="editor.Name" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                            <InputText @bind-Value="editor.Name" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-name-input" />
                         </div>
                         <div>
                             <label class="mb-1 block text-sm font-medium text-slate-700">Linked secret</label>
@@ -84,17 +89,154 @@ tests: component:ResourcesPageTests, e2e:resources-smoke
                         </div>
                     </div>
 
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Location or identifier</label>
-                        <InputText @bind-Value="editor.LocationOrIdentifier" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    @switch (editor.ResourceKind)
+                    {
+                        case ResourceKind.Repository:
+                            <div class="grid gap-4 md:grid-cols-3">
+                                <div class="md:col-span-2">
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Repository URL</label>
+                                    <InputText @bind-Value="editor.RepositoryUrl" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Default branch</label>
+                                    <InputText @bind-Value="editor.DefaultBranch" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-slate-700">Relative path</label>
+                                <InputText @bind-Value="editor.RelativePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                            </div>
+                            break;
+                        case ResourceKind.Folder:
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Folder path</label>
+                                    <InputText @bind-Value="editor.FolderPath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
+                                    <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                </div>
+                            </div>
+                            break;
+                        case ResourceKind.File:
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">File path</label>
+                                    <InputText @bind-Value="editor.FilePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
+                                    <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                </div>
+                            </div>
+                            break;
+                        case ResourceKind.WebLink:
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div class="md:col-span-2">
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">URL</label>
+                                    <InputText @bind-Value="editor.WebUrl" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Title hint</label>
+                                    <InputText @bind-Value="editor.UrlTitleHint" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                </div>
+                            </div>
+                            break;
+                        case ResourceKind.Ftp:
+                            <div class="grid gap-4 md:grid-cols-4">
+                                <div class="md:col-span-2">
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Host</label>
+                                    <InputText @bind-Value="editor.Host" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Port</label>
+                                    <InputNumber @bind-Value="editor.Port" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">User</label>
+                                    <InputText @bind-Value="editor.UserName" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-slate-700">Remote path</label>
+                                <InputText @bind-Value="editor.RemotePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                            </div>
+                            break;
+                        case ResourceKind.Ssh:
+                            <div class="grid gap-4 md:grid-cols-4">
+                                <div class="md:col-span-2">
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Host</label>
+                                    <InputText @bind-Value="editor.Host" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Port</label>
+                                    <InputNumber @bind-Value="editor.Port" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">User</label>
+                                    <InputText @bind-Value="editor.UserName" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
+                                <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                            </div>
+                            break;
+                        case ResourceKind.PowerShellScript:
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Script path</label>
+                                    <InputText @bind-Value="editor.ScriptPath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
+                                    <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-slate-700">Arguments</label>
+                                <InputText @bind-Value="editor.ScriptArguments" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                            </div>
+                            break;
+                        case ResourceKind.DockerCompose:
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Compose file</label>
+                                    <InputText @bind-Value="editor.ComposeFilePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Service name</label>
+                                    <InputText @bind-Value="editor.ComposeService" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                </div>
+                            </div>
+                            break;
+                        case ResourceKind.SecretLink:
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-slate-700">Secret purpose</label>
+                                <InputText @bind-Value="editor.SecretPurpose" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                            </div>
+                            break;
+                        case ResourceKind.PromptLink:
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Prompt reference</label>
+                                    <InputText @bind-Value="editor.PromptReference" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Prompt title hint</label>
+                                    <InputText @bind-Value="editor.PromptTitleHint" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                </div>
+                            </div>
+                            break;
+                    }
+
+                    <div class="rounded-2xl bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                        Stored identifier: @PreviewLocation
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
                         <InputTextArea @bind-Value="editor.Description" class="min-h-20 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Config JSON</label>
-                        <InputTextArea @bind-Value="editor.ConfigJson" class="min-h-20 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
@@ -122,7 +264,7 @@ tests: component:ResourcesPageTests, e2e:resources-smoke
                     </div>
 
                     <div class="flex flex-wrap gap-2">
-                        <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Save resource</button>
+                        <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" data-testid="resource-save-button">Save resource</button>
                         <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateNewAsync">Reset</button>
                         @if (editor.Id.HasValue)
                         {
@@ -151,6 +293,23 @@ tests: component:ResourcesPageTests, e2e:resources-smoke
     private IReadOnlyList<SecretListItem> secrets = [];
     private ResourceEditorModel editor = new();
     private string? message;
+
+    private ResourceDescriptor Descriptor => ResourceDescriptorRegistry.Get(editor.ResourceKind);
+
+    private string PreviewLocation => editor.ResourceKind switch
+    {
+        ResourceKind.Repository => editor.RepositoryUrl,
+        ResourceKind.Folder => editor.FolderPath,
+        ResourceKind.File => editor.FilePath,
+        ResourceKind.WebLink => editor.WebUrl,
+        ResourceKind.Ftp => $"{editor.Host}{(editor.Port.HasValue ? $":{editor.Port.Value}" : string.Empty)}{(string.IsNullOrWhiteSpace(editor.RemotePath) ? string.Empty : $"/{editor.RemotePath.Trim().TrimStart('/')}")}",
+        ResourceKind.Ssh => $"{editor.Host}{(editor.Port.HasValue ? $":{editor.Port.Value}" : string.Empty)}{(string.IsNullOrWhiteSpace(editor.WorkingDirectory) ? string.Empty : $"/{editor.WorkingDirectory.Trim().TrimStart('/')}")}",
+        ResourceKind.PowerShellScript => editor.ScriptPath,
+        ResourceKind.DockerCompose => editor.ComposeFilePath,
+        ResourceKind.SecretLink => editor.SecretPurpose,
+        ResourceKind.PromptLink => editor.PromptReference,
+        _ => editor.LocationOrIdentifier
+    };
 
     protected override async Task OnParametersSetAsync() => await LoadAsync(ResourceIdQuery, ProjectIdQuery);
 
