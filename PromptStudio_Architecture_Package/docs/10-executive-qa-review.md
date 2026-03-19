@@ -30,6 +30,9 @@ It is strong because it:
 - drifting away from the generalized option model
 - under-designed internal tab restore and sleep behavior
 - weak integration of the project structure and calendar workbenches
+- false-ready behavior in the local development manager
+- capsule drift that would quietly degrade Codex effectiveness
+- unsafe or unclear tuning-mode autonomy
 
 ## 3. What is high quality in this package
 
@@ -60,6 +63,9 @@ The sequence of implementation milestones and Codex prompts is concrete enough t
 
 ### 3.6 Workbench realism
 The package now treats internal tabs, project structure, and project calendar as first-class delivery features instead of leaving them as future UX polish. That matters because the product would otherwise be operationally weaker than the intended workstation model.
+
+### 3.7 Development-loop realism
+The package now also treats build velocity as an architectural concern. The manager, watch-ready contract, source capsules, and dev-only tuning loop are correctly defined as system features that shape implementation quality, not as random scripts.
 
 ## 4. Critical questions asked during review
 
@@ -121,6 +127,15 @@ There is a real risk that a team could claim to have internal tabs while actuall
 - require restore after interruption as a tested gate
 - require structure and calendar surfaces to open linked artifacts into internal tabs
 
+## 5.6 Concern M6 — Fake development acceleration
+There is a similar risk that a team could claim to have a fast local loop while actually relying on weak console parsing, arbitrary sleeps, stale capsule docs, or ambiguous tuning notifications.
+
+**Management control**
+- require a runtime readiness endpoint, not console parsing alone
+- require manager tests for build failure, crash, and recovery transitions
+- require capsule coverage and drift reporting
+- require ready-for-review notifications to correlate Codex completion with watch readiness
+
 ## 6. QA concerns
 
 ## 6.1 Concern Q1 — Missing negative-path coverage
@@ -147,6 +162,18 @@ Tab snapshots, sleeping tabs, canvas state, and calendar state can all look corr
 **Required action**
 Test restore and partial-restore behavior as a first-class quality area, not as a late manual check.
 
+## 6.5 Concern Q5 — Manager readiness can lie
+If the local manager emits `Ready` too early, the whole agent and Playwright loop becomes unreliable.
+
+**Required action**
+Test normalized watch states, runtime readiness probes, and crash transitions as a first-class subsystem.
+
+## 6.6 Concern Q6 — Capsule governance can decay quietly
+Compressed source capsules are valuable only if they remain current. Teams under schedule pressure will skip them unless the system surfaces drift aggressively.
+
+**Required action**
+Require capsule coverage and drift output in milestone reviews and do not treat stale capsules as harmless.
+
 ## 7. Acceptance conditions for implementation start
 
 The package is approved to move into implementation only if the team commits to the following conditions:
@@ -159,6 +186,7 @@ The package is approved to move into implementation only if the team commits to 
 6. build tests continuously, not as a final clean-up task
 7. use validation and QA checklists as real gates
 8. implement internal tab restore and workbench wrappers as real product work, not placeholders
+9. implement the manager, capsule, and tuning loop as a tested subsystem, not as a best-effort script bundle
 
 ## 8. Mandatory no-compromise areas
 
@@ -173,6 +201,9 @@ These are non-negotiable:
 - coherent UI shell
 - credible internal tab workspace
 - usable project structure and calendar workbenches
+- trustworthy local watch-ready loop
+- visible capsule freshness and drift reporting
+- development-only tuning mode with explicit safety boundaries
 
 ## 9. Warning signs during implementation
 
@@ -188,6 +219,9 @@ If any of the following appear, management should intervene:
 - every review becomes “ask the LLM” instead of applying hard checks
 - internal tabs cannot be restored after interruption
 - the structure canvas exists visually but cannot open or resume real artifacts
+- the manager reports ready while the app is still faulted or rebuilding
+- capsule coverage is unknown or clearly stale
+- tuning notifications say "done" before the changed app is actually live
 
 ## 10. Go / no-go recommendation
 
@@ -197,6 +231,7 @@ If any of the following appear, management should intervene:
 - the architecture is sound
 - the implementation path is clear
 - the risks are known and manageable
+- the development loop itself is now explicit and governable
 
 ### No-go conditions
 Pause implementation if:
@@ -218,5 +253,6 @@ It gives:
 - a review and testing system
 - a professional level of risk awareness
 - an explicit workbench model that matches the intended daily-use operating pattern
+- an explicit development-acceleration model that shortens delivery without removing control
 
 From an accountable QA and management perspective, it is sufficient to authorize implementation.

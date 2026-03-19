@@ -2,9 +2,13 @@
 flowchart LR
     User["User / Architect / Developer / Reviewer"]
     PromptStudio["PromptStudio<br/>Blazor Web App<br/>Interactive Server"]
+    Manager["CanDoItAll.Manager<br/>Local Development Manager"]
     Workspace["Local Workspace Storage"]
     DB["SQLite / PostgreSQL"]
     BrowserState["Browser localStorage"]
+    CapsuleArtifacts["Capsule Artifacts / Drift Reports"]
+    CodexCli["Codex CLI"]
+    Playwright["Playwright Verification"]
     OpenAI["OpenAI API"]
     OllamaLocal["Ollama Local"]
     OllamaRemote["Ollama Remote / Cloud"]
@@ -16,9 +20,17 @@ flowchart LR
     Sidecars["Optional Sidecar Services"]
 
     User --> PromptStudio
+    User --> Manager
     PromptStudio --> Workspace
     PromptStudio --> DB
     PromptStudio --> BrowserState
+    PromptStudio --> Manager
+    Manager --> PromptStudio
+    Manager --> CapsuleArtifacts
+    Manager --> CodexCli
+    CodexCli --> Manager
+    CodexCli --> Playwright
+    Playwright --> PromptStudio
     PromptStudio --> OpenAI
     PromptStudio --> OllamaLocal
     PromptStudio --> OllamaRemote

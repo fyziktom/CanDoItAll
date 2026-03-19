@@ -6,10 +6,11 @@ Implement the test lab domain/UI and strengthen automated testing across unit, i
 ## Required reading
 1. `docs/03-ui-architecture-and-ascii-layouts.md`
 2. `docs/03a-workbench-tabs-canvas-and-state.md`
-3. `docs/07-implementation-plan.md`
-4. `docs/08-checklists.md`
-5. `docs/09-validation-and-testing-plan.md`
-6. `docs/11-references.md`
+3. `docs/03b-development-manager-watch-capsules-and-tuning.md`
+4. `docs/07-implementation-plan.md`
+5. `docs/08-checklists.md`
+6. `docs/09-validation-and-testing-plan.md`
+7. `docs/11-references.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -31,9 +32,10 @@ This prompt covers M8 and the broader test infrastructure expectations for the p
 2. Build pages for test plans, linked test cases, evidence artifacts, and results.
 3. Support screenshot/evidence metadata and linkage to project stories/features/phases.
 4. Add or refine unit, integration, and component tests for the already implemented modules.
-5. Set up or refine Playwright project configuration and initial end-to-end suites for primary flows, including internal tab restore and workbench surfaces.
-6. Ensure test artifacts and reports can be associated with the Test Lab concept.
-7. Add documentation or scripts for running the full test stack.
+5. Set up or refine Playwright project configuration and initial end-to-end suites for primary flows, including internal tab restore, workbench surfaces, and manager-ready waits.
+6. Add automated coverage for manager watch-state normalization, runtime readiness confirmation, capsule generation, and dev-only tuning request flows using fake or controlled adapters where required.
+7. Ensure test artifacts and reports can be associated with the Test Lab concept.
+8. Add documentation or scripts for running the full test stack.
 
 ## Required deliverables
 - TestLab domain and UI
@@ -49,6 +51,7 @@ This prompt covers M8 and the broader test infrastructure expectations for the p
 - automated tests exist across all intended layers
 - failing tests produce actionable artifacts
 - test lab pages are linked coherently to projects and validations
+- the manager loop can be validated without relying on arbitrary sleeps
 
 ## Session output format
 1. Scope summary

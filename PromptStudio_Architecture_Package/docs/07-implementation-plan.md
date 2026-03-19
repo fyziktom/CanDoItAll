@@ -15,12 +15,13 @@ The plan deliberately implements **product value first**, **risk controls early*
 
 ### 2.1 Sequence principles
 1. Build the shell and module seams first.
-2. Lock persistence and secret handling early.
-3. Deliver project and resource management before advanced prompt automation.
-4. Deliver prompt library before full prompt factory automation.
-5. Deliver validation before deep automation or execution features.
-6. Build tests in parallel, not at the end.
-7. Keep every phase shippable.
+2. Install the local development manager and reliable watch-ready loop early because it accelerates every later milestone.
+3. Lock persistence and secret handling early.
+4. Deliver project and resource management before advanced prompt automation.
+5. Deliver prompt library before full prompt factory automation.
+6. Deliver validation before deep automation or execution features.
+7. Build tests in parallel, not at the end.
+8. Keep every phase shippable.
 
 ### 2.2 Milestone principles
 Each milestone must end with:
@@ -34,6 +35,7 @@ Each milestone must end with:
 | Milestone | Theme | Outcome |
 |---|---|---|
 | M0 | Foundation | Solution bootstrapped with module seams, shell, and conventions |
+| M0A | Development acceleration | Local manager, watch-ready loop, capsules, and tuning foundation |
 | M1 | Persistence and security | DB, `DbContextFactory`, storage abstraction, secret vault baseline |
 | M2 | Workspace and providers | Provider profiles, workspace defaults, health checks |
 | M3 | Projects and stack profile | Project creation, dates, phases, generalized options |
@@ -83,6 +85,44 @@ Each milestone must end with:
 - all modules register through a predictable pattern
 - Tailwind pipeline works
 - test projects run
+
+## M0A — Development acceleration manager
+
+### Goals
+- implement the local development manager
+- normalize `dotnet watch` output into reliable states
+- add the main-app runtime readiness endpoint
+- establish source-capsule conventions and generation
+- add the dev-only tuning-mode foundation
+- create tests for the watch and capsule loop
+
+### Tasks
+1. Create the `CanDoItAll.Manager` tool project and wire it into the solution.
+2. Implement supervised `dotnet watch` launch using `--non-interactive`.
+3. Normalize raw watch output into structured watch states and history.
+4. Add the development-only runtime readiness endpoint to the main app.
+5. Expose loopback-only OpenAPI and SSE endpoints for watch status, logs, capsule coverage, and tuning requests.
+6. Define the capsule format, skip marker, and artifact output path.
+7. Implement incremental capsule generation and drift reporting.
+8. Add the shared UI primitives required for dev-only tuning mode.
+9. Add tests with fake watch output, fake readiness probes, and fake Codex execution adapters.
+
+### Deliverables
+- `CanDoItAll.Manager`
+- normalized watch-state contract
+- readiness endpoint in the main app
+- capsule generation baseline
+- dev-only tuning request foundation
+- tests and run documentation for the local loop
+
+### Acceptance criteria
+- the manager can supervise the main app through `dotnet watch`
+- the manager emits a trustworthy `Ready` result only after runtime readiness is confirmed
+- recent logs and normalized events are queryable
+- capsule coverage and drift are visible
+- tuning mode remains explicitly development-only
+- manager artifacts do not create self-triggering rebuild loops
+- touched tests pass
 
 ## M1 — Persistence and security baseline
 
@@ -425,14 +465,22 @@ Runs from M0 onward:
 - badges/status patterns
 - internal tab-strip and workbench-shell components
 
-### Workstream C — Visual workbench wrappers
+### Workstream C — Development manager and capsule governance
+Runs from M0 onward:
+- manager process supervision
+- runtime readiness contracts
+- capsule format enforcement
+- capsule artifact generation
+- tuning request wiring
+
+### Workstream D — Visual workbench wrappers
 Runs from M0 onward:
 - project structure canvas wrapper preparation
 - project calendar wrapper preparation
 - typed DTO contracts for both wrappers
 - browser-storage-backed restore contracts
 
-### Workstream D — Documentation and ADR tracking
+### Workstream E — Documentation and ADR tracking
 Runs continuously:
 - update internal docs
 - record deviations from the plan
@@ -444,18 +492,19 @@ Runs continuously:
 ### Order of dependency
 1. SharedKernel
 2. Infrastructure
-3. Security
-4. Workspace
-5. Projects
-6. Resources
-7. Workbench
-8. Prompts
-9. Factory
-10. Validation
-11. TestLab
-12. Activity
-13. Automation
-14. Web shell refinements
+3. CanDoItAll.Manager tool baseline
+4. Security
+5. Workspace
+6. Projects
+7. Resources
+8. Workbench
+9. Prompts
+10. Factory
+11. Validation
+12. TestLab
+13. Activity
+14. Automation
+15. Web shell refinements
 
 ## 7. Definition of done
 
@@ -476,6 +525,14 @@ Proceed only if:
 - module registration pattern is stable
 - shell is working
 - Tailwind and test harnesses are in place
+
+## Gate G0A — after M0A
+Proceed only if:
+- the manager can supervise the main app locally
+- the ready signal requires both watch progress and runtime readiness
+- capsule coverage and drift are visible
+- tuning mode is dev-only and workspace-bounded
+- manager tests cover build failure and runtime-fault transitions
 
 ## Gate G1 — after M1
 Proceed only if:
@@ -530,6 +587,13 @@ User value:
 - create project
 - define stack profile
 
+### Slice 1A — Development acceleration alpha
+Includes M0A
+User value:
+- trustworthy local watch-ready loop
+- always-fresh capsule artifacts
+- targeted tuning workflow foundation
+
 ### Slice 2 — Resource and prompt alpha
 Includes M4–M5  
 User value:
@@ -567,10 +631,10 @@ Resources/connectors + prompt factory
 Secret handling and output/send/export safety
 
 ### Highest design risk
-UI fragmentation from feature growth and a weak workbench model
+UI fragmentation from feature growth, a weak workbench model, and under-specified dev tooling
 
 ### Highest technical risk
-Background processing and provider differences
+Background processing, provider differences, and false-ready development-loop behavior
 
 ## 12. Final implementation guidance
 

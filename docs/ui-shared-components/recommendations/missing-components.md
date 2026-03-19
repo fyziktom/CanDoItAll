@@ -190,6 +190,25 @@ Recommended deliverables:
 - shared date and time editing primitives
 - workbench integration so calendar items open related artifacts
 
+## Priority 5: development acceleration surfaces
+
+### 16. Development watch and tuning primitives
+
+Why:
+
+- the architecture now depends on a local manager, watch-ready feedback, and targeted tuning mode
+- these should not be rebuilt ad hoc inside feature pages
+
+Recommended deliverables:
+
+- `DevWatchStatusBadge`
+- `TunableComponentBoundary`
+- `TuningHandle`
+- `TuningRequestPanel`
+- `ClipboardImagePasteZone`
+- `CapsuleSummaryCard`
+- `ManagerNotificationToast`
+
 ## Recommended sequencing
 
 1. Dialog / tooltip / context menu foundation
@@ -197,6 +216,7 @@ Recommended deliverables:
 3. Validation-aware form layer
 4. Searchable select + date/time controls
 5. Canvas wrapper and project calendar wrapper
-6. Better grid and chart story
+6. Development watch and tuning primitives
+7. Better grid and chart story
 
 This order removes the biggest blockers for real application development without prematurely over-engineering the smaller display primitives.

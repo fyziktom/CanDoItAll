@@ -19,6 +19,26 @@ This architecture package is primarily a design artifact. The following referenc
 5. ASP.NET Core file uploads  
    https://learn.microsoft.com/en-us/aspnet/core/blazor/file-uploads?view=aspnetcore-10.0
 
+## Developer tooling and local APIs
+
+- `dotnet watch` command reference
+  https://learn.microsoft.com/dotnet/core/tools/dotnet-watch
+
+- ASP.NET Core file watcher guidance
+  https://learn.microsoft.com/aspnet/core/tutorials/dotnet-watch?view=aspnetcore-10.0
+
+- ASP.NET Core OpenAPI document generation
+  https://learn.microsoft.com/aspnet/core/fundamentals/openapi/aspnetcore-openapi?view=aspnetcore-10.0
+
+- ASP.NET Core OpenAPI overview
+  https://learn.microsoft.com/aspnet/core/fundamentals/openapi/overview?view=aspnetcore-10.0
+
+- ASP.NET Core Minimal API responses, including SSE
+  https://learn.microsoft.com/aspnet/core/fundamentals/minimal-apis/responses?view=aspnetcore-10.0
+
+- ASP.NET Core Blazor protected browser storage
+  https://learn.microsoft.com/aspnet/core/blazor/state-management/protected-browser-storage?view=aspnetcore-10.0
+
 ## EF Core and persistence
 
 6. DbContext lifetime, configuration, and initialization  

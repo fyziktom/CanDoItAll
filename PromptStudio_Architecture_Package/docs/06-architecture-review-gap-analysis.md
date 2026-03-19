@@ -177,6 +177,42 @@ Introduce a project events calendar as a first-class workbench feature using the
 ### Required control
 Calendar items must link back into internal tabs and project artifacts.
 
+## 4.13 Finding M — Console parsing alone is too weak for a trustworthy dev loop
+`dotnet watch` output is useful, but a purely text-parsing approach can create false-ready behavior if the app builds successfully and then faults during startup or restore.
+
+### Decision
+Introduce a separate local development manager and require a development-only runtime readiness endpoint in the main app.
+
+### Required control
+The manager must emit `Ready` only when both normalized watch output and runtime readiness agree.
+
+## 4.14 Finding N — Source documentation will drift unless capsules are enforced
+The proposed compressed source documentation is high leverage, but it will decay quickly if it is treated as an optional nice-to-have.
+
+### Decision
+Require structured source capsules for significant handwritten components and types, plus coverage and drift reporting.
+
+### Required control
+Missing or malformed capsules must be visible through manager APIs, checklists, and milestone gates.
+
+## 4.15 Finding O — Tuning mode can become unsafe or noisy without hard boundaries
+Direct UI-to-Codex request flows are powerful, but they can also create accidental over-automation, unclear provenance, or local security mistakes.
+
+### Decision
+Keep tuning mode explicitly development-only and route it through the manager with request correlation, approval policy, and watch-ready confirmation.
+
+### Required control
+Tuning requests must stay loopback-only, workspace-bounded, redacted, and traceable.
+
+## 4.16 Finding P — Generated artifacts can destabilize the local loop
+If capsule outputs, tuning attachments, or manager logs sit in watched paths, the local development loop can trigger itself repeatedly and become unreliable.
+
+### Decision
+Store manager artifacts in excluded paths and treat self-triggering watch loops as a first-class failure mode.
+
+### Required control
+The first implementation must include explicit exclusions and tests for loop prevention.
+
 ## 5. Architecture adjustments made after review
 
 The following adjustments were made during review:
@@ -210,6 +246,15 @@ The following adjustments were made during review:
 
 10. **Project calendar added as a first-class surface**  
     Scheduling and artifact linkage are now covered in the architecture itself.
+
+11. **Development manager added as a first-class local tool**
+    Watch supervision, readiness signaling, and Codex-facing APIs are now explicit architecture.
+
+12. **Source capsules and drift reporting added**
+    Codex-friendly compressed documentation is now a governed part of the source tree.
+
+13. **Dev-only tuning mode added with guardrails**
+    Targeted UI refinement is now structured instead of ad hoc.
 
 ## 6. Remaining residual risks
 
@@ -270,6 +315,30 @@ The structure canvas could become a vague generic graph editor and lose delivery
 - keep typed relationship vocabulary
 - keep wrapper-first reuse of the documented engine
 
+### Residual risk R8 — False-ready or stale-ready signals
+If the manager or readiness probe becomes weak, automation may test or notify against the wrong runtime state.
+
+**Mitigation**
+- require runtime readiness confirmation
+- keep explicit watch state history
+- test failure and crash transitions, not only successful rebuilds
+
+### Residual risk R9 — Capsule maintenance fatigue
+Teams may skip capsule updates when moving quickly.
+
+**Mitigation**
+- require capsule coverage reporting
+- keep the capsule format compressed and low-friction
+- add checklist and prompt pressure to maintain it
+
+### Residual risk R10 — Tuning loop abuse
+A fast local tuning loop can tempt teams to bypass review or rely on automation without enough inspection.
+
+**Mitigation**
+- default to review-before-send
+- keep dev-only scope explicit
+- store correlation history and verification outcome
+
 ## 7. Why the architecture is still approved
 
 Despite the risks, the architecture remains approved because it:
@@ -304,6 +373,9 @@ The implementation team must preserve these constraints:
 8. Keep background work visible and diagnosable.
 9. Keep internal tab lifecycle explicit and recoverable.
 10. Keep project structure and calendar surfaces linked to the real artifact model.
+11. Keep manager readiness signals explicit, local-only, and testable.
+12. Keep capsule coverage and drift visible.
+13. Keep tuning mode dev-only, correlated, and reviewable.
 
 ## 10. Review verdict
 

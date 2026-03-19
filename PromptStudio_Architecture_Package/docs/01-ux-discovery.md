@@ -216,6 +216,15 @@ These future roles must influence policy design now, even if the first release r
 - import/export package data
 - handle module growth without breaking navigation
 
+### Capability group U8A — Development acceleration and assisted tuning
+- observe normalized local watch, build, and runtime state
+- wait for a trustworthy ready signal before browser verification
+- keep compressed source capsules current from in-file comments
+- inspect capsule coverage and drift
+- enable a dev-only tuning mode with per-component targeting
+- submit targeted tuning requests with screenshot and context
+- review change readiness only after Codex and watch propagation complete
+
 ## 7. Project lifecycle map
 
 ## 7.1 Main lifecycle
@@ -375,6 +384,9 @@ As a user, I want a unified shell and consistent interaction patterns even as mo
 ### Epic E10 — Stay Extensible
 As an architect, I want modular growth paths and future service boundaries so the app does not collapse under feature growth.
 
+### Epic E10A — Accelerate Development Safely
+As a developer or delivery lead, I want a machine-readable local change loop and targeted tuning workflow so the application can evolve quickly without relying on guesswork.
+
 ## 11. User stories
 
 ## 11.1 Workspace and setup stories
@@ -452,6 +464,17 @@ As an architect, I want modular growth paths and future service boundaries so th
 - **US-056** — As a user, I can branch a new prompt or follow-up action from a specific prompt step represented in the project structure canvas.
 - **US-057** — As a user, I can manage project events, milestones, reviews, and deadlines in a project calendar linked to project artifacts.
 - **US-058** — As a user, I can open related prompts, resources, validations, or tests directly from the project structure canvas or calendar into internal tabs.
+
+## 11.10 Development acceleration and tuning stories
+- **US-059** — As a developer, I can see normalized watch, build, and runtime state for the running app instead of reading raw console output only.
+- **US-060** — As a developer, I can wait for a trustworthy ready signal before starting Playwright or manual validation.
+- **US-061** — As a developer, I can rely on short structured capsules attached to components and classes so implementation context stays current.
+- **US-062** — As a developer, I can see which capsules are missing, stale, or malformed after source changes.
+- **US-063** — As a developer, I can enable a dev-only tuning mode and target a specific component from the running UI.
+- **US-064** — As a developer, I can attach a pasted screenshot and a short instruction to that targeted tuning request.
+- **US-065** — As a developer, I can send that request through a local manager to Codex CLI and track its status.
+- **US-066** — As a developer, I am notified only after the requested change is both applied and watch-ready again.
+- **US-067** — As a delivery lead, I can inspect history tying a tuning request to changed files, watch readiness, and verification outcome.
 
 ## 12. Use cases
 
@@ -582,6 +605,36 @@ As an architect, I want modular growth paths and future service boundaries so th
 5. Persist and later restore the calendar state and preferred view.
 **Success result:** Project scheduling and artifact navigation stay connected.
 
+### UC-13 — Wait for the application to be truly ready after a change
+**Primary actor:** Developer / Codex
+**Main flow:**
+1. Change source files or receive a Codex-generated patch.
+2. Let the manager observe the new watch cycle.
+3. Confirm build or hot reload progress from normalized watch state.
+4. Confirm runtime readiness through the development endpoint in the main app.
+5. Continue with Playwright or manual review only after the manager emits `Ready`.
+**Success result:** Verification starts from a trustworthy runtime state instead of arbitrary sleeps.
+
+### UC-14 — Keep capsule documentation aligned to source
+**Primary actor:** Developer
+**Main flow:**
+1. Edit a component or class.
+2. Update or add its capsule comment.
+3. Let the manager regenerate capsule artifacts.
+4. Review capsule coverage or drift if the structure is invalid or missing.
+**Success result:** Codex-facing reference documentation stays near the real source state.
+
+### UC-15 — Tune a component directly from the running UI
+**Primary actor:** Developer / Architect
+**Main flow:**
+1. Enable tuning mode in development.
+2. Click the tuning handle on a specific component.
+3. Paste a screenshot and add a short instruction.
+4. Submit the request through the local manager.
+5. Wait for Codex completion, watch readiness, and optional verification.
+6. Review the result in the app after the ready notification appears.
+**Success result:** UI refinement becomes a short targeted loop instead of a manual multi-tool handoff.
+
 ## 13. Navigation expectations
 
 ## 13.1 Top-level navigation
@@ -627,6 +680,8 @@ Every major item should be openable from:
 10. **Internal workbench over browser-tab sprawl** — high-density work must stay inside application-managed tabs.
 11. **Recoverability** — refresh, reconnect, and crash recovery must feel intentional.
 12. **Future-safe IA** — navigation must support growth without turning into tool sprawl.
+13. **Fast but trustworthy iteration** — development acceleration features must reduce waiting without introducing false-ready states.
+14. **Dev-only assistance is explicit** — tuning controls and manager-driven automation must remain visibly separate from normal product usage.
 
 ## 15. UX validation criteria
 
@@ -639,6 +694,9 @@ The UX is acceptable only if:
 - validation views connect requirements, outputs, and findings
 - internal tabs can be reopened after interruption
 - project structure and calendar views can open linked artifacts
+- normalized watch readiness is visible and trustworthy during development
+- capsule drift is visible before it becomes widespread documentation debt
+- tuning mode can target a specific component without exposing unsafe controls in normal usage
 - adding a new phase or resource type does not require a UI redesign
 - the shell remains coherent even when more modules are added
 
@@ -652,6 +710,10 @@ The UX is acceptable only if:
 6. **Under-designed activity history** — traceability can become unusable if not filtered and grouped well.
 7. **Browser-tab overload** — without internal tabs, Interactive Server cost multiplies quickly.
 8. **Canvas sprawl without conventions** — a structure canvas can become visually noisy unless node and link semantics are disciplined.
+9. **False-ready automation** — a fast loop can become actively harmful if readiness is inferred from weak signals.
+10. **Capsule drift** — compressed source documentation will decay if missing coverage is tolerated.
+11. **Unsafe local automation** — tuning mode can become risky if it exposes Codex submission too casually.
+12. **Self-triggering watch loops** — generated artifacts can create noisy rebuild cycles unless excluded deliberately.
 
 ## 17. UX mitigation actions
 
@@ -664,6 +726,10 @@ The UX is acceptable only if:
 - Implement project and prompt templates from the beginning.
 - Build the internal tab model and restore policy intentionally instead of as ad hoc component state.
 - Keep structure-canvas and calendar wrappers aligned to the documented JavaScript engines before attempting deeper rewrites.
+- Use a dedicated local manager to normalize watch and runtime readiness instead of relying on raw console text alone.
+- Require capsule coverage and drift visibility from the start.
+- Keep tuning mode dev-only, explicit, and tied to local manager approvals and notifications.
+- Exclude generated manager artifacts from rebuild loops.
 
 ## 18. Final UX conclusion
 
@@ -676,5 +742,6 @@ The required UX is best served by:
 - a **test evidence area**
 - a **generalized option model**
 - a **consistent component system**
+- a **developer acceleration loop with trustworthy readiness and targeted tuning**
 
 This is sufficient to support the current scope and still leave space for future vertical and horizontal growth.

@@ -6,9 +6,10 @@ Refine the shared shell, page templates, reusable components, and cross-module U
 ## Required reading
 1. `docs/03-ui-architecture-and-ascii-layouts.md`
 2. `docs/03a-workbench-tabs-canvas-and-state.md`
-3. `docs/04-solution-architecture.md`
-4. `docs/07-implementation-plan.md`
-5. `docs/08-checklists.md`
+3. `docs/03b-development-manager-watch-capsules-and-tuning.md`
+4. `docs/04-solution-architecture.md`
+5. `docs/07-implementation-plan.md`
+6. `docs/08-checklists.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -32,8 +33,9 @@ This prompt consolidates the UI into a cohesive whole. It may run after or parti
 4. Implement or refine the internal tab strip, dirty or sleeping indicators, tab overflow behavior, and restore UX.
 5. Standardize navigation, breadcrumbs, status presentation, and action ordering.
 6. Build or refine any missing shared components that are repeatedly needed across modules, especially workbench shell components.
-7. Improve usability of the Dashboard and project workspace summary views.
-8. Add component tests for shared shell and component patterns.
+7. Implement or refine development-only watch status, tuning handles, capsule summaries, and manager job notifications without polluting normal product usage.
+8. Improve usability of the Dashboard and project workspace summary views.
+9. Add component tests for shared shell and component patterns.
 
 ## Required deliverables
 - refined shell and page templates
@@ -47,6 +49,7 @@ This prompt consolidates the UI into a cohesive whole. It may run after or parti
 - empty/loading/error states exist on the major pages
 - current project/phase context is clearly visible
 - internal tabs behave like a deliberate application workbench
+- development-only tuning affordances are explicit, safe, and visually separate from business actions
 - component tests cover critical shared shell patterns
 
 ## Session output format

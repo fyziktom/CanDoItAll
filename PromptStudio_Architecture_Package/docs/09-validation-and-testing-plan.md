@@ -33,6 +33,9 @@ The testing strategy therefore cannot rely on one layer only. It must validate:
 Use for:
 - domain rules
 - internal tab lifecycle rules
+- watch-state normalization rules
+- capsule parsing and drift rules
+- tuning request packaging rules
 - prompt rendering logic
 - context assembly rules
 - option compatibility rules
@@ -45,6 +48,8 @@ Use for:
 - EF Core persistence behavior
 - database provider bootstrap
 - browser-state-backed tab restore contracts
+- manager readiness confirmation contracts
+- capsule artifact generation
 - secret protection round-trips
 - file storage abstractions
 - activity/audit writes
@@ -55,6 +60,7 @@ Use for:
 Use for:
 - Blazor forms
 - internal tab strip behavior
+- dev-only tuning boundary behavior
 - wizard steps
 - status badges and result components
 - resource editor rendering
@@ -65,6 +71,7 @@ Use for:
 
 ### Top layer — end-to-end tests
 Use for:
+- development manager ready-signal flow
 - project creation flow
 - internal tab restore flow
 - project structure canvas flow
@@ -132,6 +139,8 @@ These validations are about operational safety:
 - `AppDbContext` mappings
 - SQLite path
 - PostgreSQL path or smoke coverage
+- manager API contracts
+- watch-to-ready correlation
 - secret encryption/decryption
 - file store persistence
 - provider profile persistence
@@ -151,6 +160,7 @@ Use:
 - project creation wizard
 - stack profile editor
 - tab strip and sleeping-state UI
+- tuning overlay and request panel
 - resource editor forms
 - prompt editor
 - wizard step navigation
@@ -168,19 +178,21 @@ Use:
 
 ### Minimum e2e scenarios
 1. first-run launch and dashboard render
-2. create project
-3. add project options and notes
-4. restore the internal workbench after refresh or reconnect
-5. open and reorder internal tabs
-6. use the project structure canvas to open a linked artifact
-7. use the project calendar to open a linked artifact
-8. add repository resource
-9. add SSH or FTP profile with secret reference
-10. create prompt draft
-11. run prompt factory and save prompt
-12. record prompt usage
-13. run a validation workflow
-14. attach test evidence
+2. wait for the manager to emit a trustworthy ready signal
+3. create project
+4. add project options and notes
+5. restore the internal workbench after refresh or reconnect
+6. open and reorder internal tabs
+7. use the project structure canvas to open a linked artifact
+8. use the project calendar to open a linked artifact
+9. add repository resource
+10. add SSH or FTP profile with secret reference
+11. create prompt draft
+12. run prompt factory and save prompt
+13. record prompt usage
+14. run a validation workflow
+15. attach test evidence
+16. submit a dev-only tuning request using a fake or controlled Codex adapter
 
 ### Secondary e2e scenarios
 - provider health check
@@ -203,6 +215,7 @@ Playwright should be used for:
 ## 6.2 Playwright test organization
 Recommended categories:
 - `smoke/`
+- `manager/`
 - `workbench/`
 - `projects/`
 - `resources/`
@@ -245,6 +258,8 @@ However:
 | Prompt generation flows | yes | yes | yes | yes |
 | Validation center | yes | yes | yes | yes |
 | Test lab | yes | yes | low | yes |
+| Development manager | yes | yes | low | yes |
+| Capsule coverage | yes | yes | low | yes |
 
 ## 8. Test data strategy
 
@@ -294,6 +309,12 @@ Used for:
 
 ## 10. Quality gates by milestone
 
+## Gate after M0A
+- manager watch-state tests passing
+- runtime readiness confirmation passing
+- capsule generation and drift tests passing
+- tuning request lifecycle smoke passing
+
 ## Gate after M1
 - persistence tests passing
 - secret safety tests passing
@@ -340,6 +361,10 @@ The system must be tested not only for success but also for failure modes.
 - invalid SSH/FTP settings
 - missing secret reference
 - unsupported resource preview
+- watch process exit before ready
+- runtime readiness probe timeout
+- malformed or missing capsule on a touched type
+- tuning request that targets an invalid capsule key
 - prompt factory missing required context
 - export/send attempt with sensitive content warning
 - failed background job
@@ -375,12 +400,16 @@ Verify:
 - activity timeline records major actions
 - warnings and errors are understandable
 - logs help debugging without oversharing
+- manager watch history helps diagnose false-ready or failed-ready transitions
+- capsule drift output helps identify stale source descriptions
 
 ## 14. Manual review pack
 
 For milestone reviews, prepare:
 - demo script
 - screenshot pack
+- manager ready-signal evidence
+- capsule coverage or drift report
 - known issue list
 - coverage matrix delta
 - quality gate status

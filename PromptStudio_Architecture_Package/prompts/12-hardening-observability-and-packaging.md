@@ -11,6 +11,7 @@ Implement the remaining hardening work: activity timeline, search document index
 5. `docs/09-validation-and-testing-plan.md`
 6. `docs/10-executive-qa-review.md`
 7. `docs/03a-workbench-tabs-canvas-and-state.md`
+8. `docs/03b-development-manager-watch-capsules-and-tuning.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -33,9 +34,10 @@ This prompt covers M9 and the release-hardening work needed before calling the i
 3. Implement background job records and a UI for background task visibility.
 4. Review observability: logs, health indicators, diagnostics, restore diagnostics, and safe error messaging.
 5. Harden workbench restore, sleeping-tab behavior, and snapshot versioning.
-6. Re-run the checklists and close the most important UX and safety gaps.
-7. Improve packaging/startup/readme guidance for local usage.
-8. Add or refine tests for activity/search/job visibility and workbench-hardening flows.
+6. Harden the manager loop: watch-state transitions, readiness semantics, capsule drift reporting, and tuning-request history.
+7. Re-run the checklists and close the most important UX and safety gaps.
+8. Improve packaging/startup/readme guidance for local usage, including manager startup.
+9. Add or refine tests for activity/search/job visibility, workbench-hardening flows, and manager-hardening flows.
 
 ## Required deliverables
 - Activity module
@@ -52,6 +54,7 @@ This prompt covers M9 and the release-hardening work needed before calling the i
 - observability is useful without exposing secrets
 - release checklists can be passed against the current state
 - touched tests pass
+- the manager loop is trustworthy under build failure, crash, and recovery conditions
 
 ## Session output format
 1. Scope summary

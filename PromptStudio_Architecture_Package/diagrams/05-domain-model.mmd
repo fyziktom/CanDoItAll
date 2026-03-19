@@ -65,6 +65,42 @@ classDiagram
       +DateTimeOffset EndsAtUtc
     }
 
+    class ManagerWatchSession {
+      +Guid Id
+      +string State
+      +int? ExpectedIteration
+      +DateTimeOffset StartedAt
+    }
+
+    class ManagerWatchSignal {
+      +Guid Id
+      +Guid ManagerWatchSessionId
+      +string SignalKind
+      +string Summary
+      +DateTimeOffset OccurredAt
+    }
+
+    class CapsuleDocument {
+      +Guid Id
+      +string SymbolId
+      +string Kind
+      +DateTimeOffset GeneratedAt
+    }
+
+    class TuningRequest {
+      +Guid Id
+      +string TargetSymbolId
+      +string Status
+      +DateTimeOffset CreatedAt
+    }
+
+    class TuningJob {
+      +Guid Id
+      +Guid TuningRequestId
+      +string Status
+      +DateTimeOffset? CompletedAt
+    }
+
     class SecretRecord {
       +Guid Id
       +string Name
@@ -129,6 +165,9 @@ classDiagram
     WorkbenchTab "1" --> "*" TabSnapshot
     Project "1" --> "*" ProjectStructureManifest
     Project "1" --> "*" ProjectCalendarEvent
+    ManagerWatchSession "1" --> "*" ManagerWatchSignal
+    CapsuleDocument "1" --> "*" TuningRequest : used by
+    TuningRequest "1" --> "*" TuningJob
     Project "1" --> "*" PromptArtifact
     PromptArtifact "1" --> "*" PromptVersion
     PromptBlueprint "1" --> "*" PromptArtifact : source for

@@ -104,6 +104,24 @@ The first release must already support the required project, prompt, provider, v
 - **FR-059** — The project events calendar shall support opening linked artifacts into internal tabs.
 - **FR-060** — The shared UI architecture shall include shell-level components for the internal tab strip, sleeping-tab indicators, workbench inspectors, date and time editing, and canvas host surfaces.
 
+## 3.10 Development acceleration and adaptive tuning
+
+- **FR-061** — The solution shall provide a separate local development manager that can supervise `dotnet watch` for the main application.
+- **FR-062** — The development manager shall normalize watch, build, hot reload, restart, and runtime-fault states into a machine-readable contract.
+- **FR-063** — The development manager shall expose a loopback-only local OpenAPI for watch status, log history, capsule summaries, and tuning-request status.
+- **FR-063A** — The development manager shall expose the active local application URLs that are valid for browser verification after each ready cycle.
+- **FR-064** — The development manager shall expose an event stream suitable for waiting on watch readiness, capsule refresh completion, and tuning-request progress.
+- **FR-065** — The main application shall expose a development-only runtime readiness endpoint so the manager can confirm actual application readiness instead of trusting console parsing alone.
+- **FR-066** — The solution shall require short structured capsule comments on significant handwritten components and C# types, with explicit skip markers for approved exemptions.
+- **FR-067** — The development manager shall watch source changes and incrementally generate Codex-optimized capsule artifacts from those comments.
+- **FR-068** — The development manager shall report missing, malformed, or stale capsules through a coverage and drift contract.
+- **FR-069** — The UI shall support a dev-only tuning mode in which a user can target a specific component or workbench surface from the running application.
+- **FR-070** — A tuning request shall support route, project, tab, selection, capsule, screenshot, and free-form instruction context.
+- **FR-071** — The development manager shall support tracked local Codex job orchestration for approved tuning requests inside the configured workspace boundary.
+- **FR-072** — A tuning request shall not be marked ready for review until the Codex job has completed and the watched application is ready again.
+- **FR-073** — The development manager shall retain local history tying tuning requests to watch events, changed files, and verification outcomes.
+- **FR-074** — Generated artifacts, logs, and attachments created by the manager shall be excluded from self-triggering application rebuild loops.
+
 ## 4. Non-functional requirements
 
 ## 4.1 Architecture and maintainability
@@ -149,6 +167,11 @@ The first release must already support the required project, prompt, provider, v
 - **NFR-023** — UI components shall be component-testable.
 - **NFR-024** — End-to-end workflows shall be testable with Playwright.
 - **NFR-025** — Logs, health checks, and activity history shall help diagnose failures without exposing secrets.
+- **NFR-026** — The development manager shall provide stable ready or not-ready semantics even if raw watch output wording changes between SDK versions.
+- **NFR-027** — Capsule generation should be incremental and fast enough to remain part of the normal edit loop.
+- **NFR-028** — One malformed capsule, failed tuning request, or failed watch cycle shall not permanently disable the development manager.
+- **NFR-029** — The development manager API shall remain local-only, workspace-bounded, and token-protected for mutating operations.
+- **NFR-030** — Tuning requests, watch logs, and capsule artifacts shall avoid storing secrets or raw sensitive payloads unless explicitly approved and redacted.
 
 ## 5. Constraints
 
@@ -158,6 +181,7 @@ The first release must already support the required project, prompt, provider, v
 - Main application shell is a Blazor Web App using Interactive Server rendering.
 - Styling uses Tailwind CSS and a shared custom component strategy.
 - The architecture must integrate the existing `CanDoItAll.Components` library and document missing shell or workbench components explicitly.
+- The architecture must include a separate local development manager using official `dotnet watch` and local ASP.NET Core APIs for the agent-feedback loop.
 - Persistence uses EF Core with SQLite and PostgreSQL support.
 - The solution must support `IDbContextFactory`, design-time factory, and in-memory test mode.
 - The system must support OpenAI and Ollama integrations.
@@ -182,6 +206,7 @@ The first release must already support the required project, prompt, provider, v
 4. The app may eventually manage heavy background work and optional sidecars.
 5. Not every resource type needs full semantic preview in v1, but all required types need supported registration and management.
 6. Internal tabs, workbench restore, project structure canvas, and project calendar are part of the first serious usable version, not future polish.
+7. The local development manager, source capsules, and dev-only tuning loop are part of the intended build velocity strategy, not optional late tooling.
 
 ## 7. Recommended technical principles
 
@@ -302,6 +327,14 @@ The application must stay ready for:
 - execution/automation sidecar
 - remote API extraction of heavy modules
 
+## 10.4 Immediate local development-manager integration
+The solution must also support an immediate local development sidecar that:
+- supervises `dotnet watch`
+- confirms runtime readiness through a development-only endpoint
+- exposes loopback-only OpenAPI and SSE contracts
+- generates capsule artifacts from source comments
+- coordinates dev-only tuning requests
+
 ## 11. UX-to-technical implications
 
 1. Because the UI is project-centered, the backend must expose fast project summary read models.
@@ -311,6 +344,8 @@ The application must stay ready for:
 5. Because the system is local-first, file and process boundaries must be treated as part of the core architecture.
 6. Because the application uses Interactive Server rendering, internal workspace tabs must be application-managed and recoverable.
 7. Because prompt workflows can branch, the project structure surface must represent prompt sessions and prompt steps as first-class linked artifacts.
+8. Because Codex and Playwright need trustworthy timing, the development manager must expose explicit ready semantics instead of relying on arbitrary sleeps.
+9. Because agent context drifts quickly, compressed source capsules must be treated as maintainable product-adjacent artifacts.
 
 ## 12. Validation and quality requirements
 

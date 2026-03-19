@@ -16,18 +16,21 @@ This package now assumes the repository also contains:
 2. `docs/02-technical-requirements.md`
 3. `docs/03-ui-architecture-and-ascii-layouts.md`
 4. `docs/03a-workbench-tabs-canvas-and-state.md`
-5. `docs/04-solution-architecture.md`
-6. `docs/05-requirement-coverage-matrix.md`
-7. `docs/06-architecture-review-gap-analysis.md`
-8. `docs/07-implementation-plan.md`
-9. `docs/08-checklists.md`
-10. `docs/09-validation-and-testing-plan.md`
-11. `docs/10-executive-qa-review.md`
-12. `docs/11-references.md`
-13. `prompts/00-codex-starting-prompt.md`
-14. `prompts/01-bootstrap-solution.md` ... `prompts/06-assets-and-connectors-module.md`
-15. `prompts/06a-workbench-tabs-project-structure-and-calendar.md`
-16. `prompts/07-prompt-library-and-gallery-module.md` ... `prompts/12-hardening-observability-and-packaging.md`
+5. `docs/03b-development-manager-watch-capsules-and-tuning.md`
+6. `docs/04-solution-architecture.md`
+7. `docs/05-requirement-coverage-matrix.md`
+8. `docs/06-architecture-review-gap-analysis.md`
+9. `docs/07-implementation-plan.md`
+10. `docs/08-checklists.md`
+11. `docs/09-validation-and-testing-plan.md`
+12. `docs/10-executive-qa-review.md`
+13. `docs/11-references.md`
+14. `prompts/00-codex-starting-prompt.md`
+15. `prompts/01-bootstrap-solution.md`
+16. `prompts/01a-development-manager-watch-capsules-and-tuning.md`
+17. `prompts/02-shared-kernel-and-infrastructure.md` ... `prompts/06-assets-and-connectors-module.md`
+18. `prompts/06a-workbench-tabs-project-structure-and-calendar.md`
+19. `prompts/07-prompt-library-and-gallery-module.md` ... `prompts/12-hardening-observability-and-packaging.md`
 
 ## Package structure
 
@@ -69,6 +72,9 @@ The package recommends a **modular monolith first** approach with clear internal
 - UI architecture and ASCII layouts
 - internal tab-workbench architecture, crash recovery, and sleeping-tab lifecycle
 - project structure canvas and project events calendar integration strategy
+- development acceleration through a local manager, `dotnet watch`, and a Codex-facing local API
+- compressed source capsules that generate Codex-optimized reference artifacts
+- dev-only tuning mode for targeted UI/component refinement loops
 - modular solution structure
 - domain and storage design
 - secret handling and provider configuration
@@ -88,10 +94,11 @@ Use the documents in this order:
 1. Approve or adjust the UX assumptions.
 2. Lock the technical requirements.
 3. Approve the UI structure, navigation model, and internal workbench strategy.
-4. Approve the architecture.
-5. Review the shared component and canvas source-analysis packs in the main repository.
-6. Use the Codex prompts sequentially, including `prompts/06a-workbench-tabs-project-structure-and-calendar.md`.
-7. Run the validation and testing plan after every milestone.
+4. Approve the development manager, watch loop, capsule rules, and tuning workflow.
+5. Approve the architecture.
+6. Review the shared component and canvas source-analysis packs in the main repository.
+7. Use the Codex prompts sequentially, including `prompts/01a-development-manager-watch-capsules-and-tuning.md` and `prompts/06a-workbench-tabs-project-structure-and-calendar.md`.
+8. Run the validation and testing plan after every milestone.
 
 ## Expected implementation philosophy
 
@@ -111,6 +118,7 @@ Use the documents in this order:
 - Prefer one `DbContext` per operation through `IDbContextFactory`.
 - Use existing shared UI components whenever possible and create missing components in the same style.
 - Treat internal tabs, project structure canvas, and project calendar as core architecture, not optional polish.
+- Treat the local manager, watch-ready loop, capsule freshness, and dev-only tuning workflow as productivity-critical infrastructure, not loose tooling.
 
 ## Quick start
 

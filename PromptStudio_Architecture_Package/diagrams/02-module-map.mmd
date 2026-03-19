@@ -4,6 +4,7 @@ flowchart TB
     CK["ComponentKit"]
     SK["SharedKernel"]
     INF["Infrastructure"]
+    MAN["CanDoItAll.Manager"]
 
     WS["Workspace Module"]
     SEC["Security Module"]
@@ -28,6 +29,9 @@ flowchart TB
     Web --> TEST
     Web --> ACT
     Web --> AUTO
+    MAN --> Web
+    MAN --> INF
+    MAN --> SK
 
     WS --> SEC
     RES --> SEC

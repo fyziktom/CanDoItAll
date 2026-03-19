@@ -6,9 +6,10 @@ Implement the reusable core primitives and cross-cutting infrastructure foundati
 ## Required reading
 1. `docs/02-technical-requirements.md`
 2. `docs/03a-workbench-tabs-canvas-and-state.md`
-3. `docs/04-solution-architecture.md`
-4. `docs/07-implementation-plan.md`
-5. `docs/08-checklists.md`
+3. `docs/03b-development-manager-watch-capsules-and-tuning.md`
+4. `docs/04-solution-architecture.md`
+5. `docs/07-implementation-plan.md`
+6. `docs/08-checklists.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -28,7 +29,7 @@ This prompt covers the SharedKernel and Infrastructure baseline that should exis
 ## Tasks
 1. Implement shared primitives such as result types, error models, typed identifiers if appropriate, time/provider abstractions, and guard helpers.
 2. Implement common options classes and validation where the architecture expects them.
-3. Create infrastructure abstractions for file storage, workspace path resolution, event dispatch plumbing, browser-state-backed restore, and background job queue contracts.
+3. Create infrastructure abstractions for file storage, workspace path resolution, event dispatch plumbing, browser-state-backed restore, background job queue contracts, and development-only runtime readiness contracts where the architecture expects them.
 4. Add health check and logging/redaction foundations.
 5. Add a safe serialization utility layer if needed.
 6. Ensure all these primitives are minimal and not bloated.
@@ -40,6 +41,7 @@ This prompt covers the SharedKernel and Infrastructure baseline that should exis
 - background queue contracts
 - file/workspace abstraction interfaces
 - browser-storage-backed workbench restore interfaces
+- readiness and artifact-path abstractions needed by the manager loop
 - validated options baseline
 - tests for the shared/core layer
 

@@ -53,6 +53,10 @@ This matrix demonstrates that the proposed UX, architecture, implementation plan
 | project structure canvas | 01, 02, 03, 03a, 04, 07 | Workbench, Projects, ComponentKit | Project Structure | 06a, 10, 11 | component, integration, e2e |
 | prompt-step branching on structure canvas | 01, 02, 03a, 04, 07 | Workbench, Factory, Prompts | Project Structure, Prompt Factory | 06a, 08, 10, 11 | unit, component, e2e |
 | project events calendar | 01, 02, 03, 03a, 04, 07 | Workbench, Projects, ComponentKit | Project Calendar | 06a, 10, 11 | component, integration, e2e |
+| development manager and normalized watch loop | 01, 02, 03b, 04, 07, 09, 10 | CanDoItAll.Manager, Web | dev-only status surfaces | 01a, 11, 12 | unit, integration, smoke |
+| readiness wait contract for Codex and Playwright | 01, 02, 03b, 04, 07, 09 | CanDoItAll.Manager, Web | dev-only status surfaces | 01a, 11 | integration, e2e |
+| source capsules and capsule drift reporting | 01, 02, 03b, 04, 07, 08, 09 | CanDoItAll.Manager, ComponentKit, Web | dev-only tuning surfaces, docs | 01a, 10, 12 | unit, integration |
+| dev-only tuning mode and targeted Codex requests | 01, 02, 03, 03b, 04, 07, 08, 09, 10 | CanDoItAll.Manager, ComponentKit, Workbench, Web | dev-only tuning overlay | 01a, 10, 11, 12 | component, integration, e2e |
 | UI architecture | 03, 04 | Web, ComponentKit, modules | all screens | 10 | component, e2e |
 | UI implementation plan | 03, 07 | Web, ComponentKit | all screens | 10 | component, e2e |
 | UI testing, Playwright, screenshots | 03, 09 | TestLab | Test Lab | 11 | e2e, evidence |
@@ -101,6 +105,7 @@ These are covered architecturally without forcing premature over-engineering.
 2. The highest future-growth pressure is in **Automation + Search + Sidecar extraction**.
 3. The highest product-value concentration is in **Projects + Prompts + Factory + Validation**.
 4. The highest safety pressure is in **Security + provider send/export flows + execution gates**.
+5. The highest developer-velocity leverage is in **CanDoItAll.Manager + watch readiness + capsule freshness**.
 
 ## 5. Coverage verdict
 

@@ -7,14 +7,15 @@ Implement the internal tab workspace, tab persistence and sleep lifecycle, the p
 1. `README.md`
 2. `docs/03-ui-architecture-and-ascii-layouts.md`
 3. `docs/03a-workbench-tabs-canvas-and-state.md`
-4. `docs/04-solution-architecture.md`
-5. `docs/06-architecture-review-gap-analysis.md`
-6. `docs/07-implementation-plan.md`
-7. `docs/08-checklists.md`
-8. `C:\repositories\CanDoItAll\docs\canvas-playlist-builder\README.md`
-9. `C:\repositories\CanDoItAll\docs\canvas-playlist-builder\rebuild\blazor-jsinterop-component-plan.md`
-10. `C:\repositories\CanDoItAll\docs\canvas-events-calendar\README.md`
-11. `C:\repositories\CanDoItAll\docs\canvas-events-calendar\rebuild\blazor-jsinterop-component-plan.md`
+4. `docs/03b-development-manager-watch-capsules-and-tuning.md`
+5. `docs/04-solution-architecture.md`
+6. `docs/06-architecture-review-gap-analysis.md`
+7. `docs/07-implementation-plan.md`
+8. `docs/08-checklists.md`
+9. `C:\repositories\CanDoItAll\docs\canvas-playlist-builder\README.md`
+10. `C:\repositories\CanDoItAll\docs\canvas-playlist-builder\rebuild\blazor-jsinterop-component-plan.md`
+11. `C:\repositories\CanDoItAll\docs\canvas-events-calendar\README.md`
+12. `C:\repositories\CanDoItAll\docs\canvas-events-calendar\rebuild\blazor-jsinterop-component-plan.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -41,7 +42,8 @@ This prompt covers the workbench architecture that sits between projects/resourc
 5. Implement a project events calendar wrapper using a JS interop adapter and typed .NET DTOs.
 6. Ensure both workbench surfaces open inside internal tabs instead of forcing browser-tab workflows.
 7. Add project artifact linking so calendar items and structure nodes can open related prompts, resources, validations, and tests inside the tab workspace.
-8. Add tests for tab persistence, restore, sleep or wake behavior, and the JS interop wrappers' main round-trip contracts.
+8. Ensure workbench surfaces expose stable tab, capsule, and selection metadata needed by development tuning mode.
+9. Add tests for tab persistence, restore, sleep or wake behavior, and the JS interop wrappers' main round-trip contracts.
 
 ## Required deliverables
 - tab workspace domain and services
@@ -59,6 +61,7 @@ This prompt covers the workbench architecture that sits between projects/resourc
 - the project structure canvas works through a wrapper-first JS interop approach
 - the events calendar works through a wrapper-first JS interop approach
 - prompts, resources, validations, and tests can be opened from the workbench surfaces inside internal tabs
+- workbench surfaces publish stable metadata for manager-driven tuning and verification flows
 - tests cover the critical restore and wrapper contracts
 
 ## Session output format

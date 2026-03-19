@@ -38,6 +38,15 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Job inputs avoid raw secret duplication.
 - [ ] Jobs publish activity/status updates.
 
+### 1.5 Development manager checklist
+- [ ] `CanDoItAll.Manager` exists as a separate local tool.
+- [ ] `dotnet watch` is supervised with normalized states.
+- [ ] Ready status requires runtime readiness, not console parsing alone.
+- [ ] Loopback-only API boundaries are enforced.
+- [ ] SSE or equivalent event streaming exists for watch and tuning events.
+- [ ] Manager artifacts are excluded from self-triggering rebuild loops.
+- [ ] Capsule coverage and drift reporting are visible.
+
 ## 2. UX and UI checklist
 
 ### 2.1 Shell checklist
@@ -84,6 +93,14 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Sleeping tabs can wake safely.
 - [ ] Linked artifacts reopen inside internal tabs.
 
+### 2.6 Development tuning checklist
+- [ ] Tuning mode is hidden outside development mode.
+- [ ] Tunable components use one shared boundary pattern.
+- [ ] Tuning handles are visually distinct from business actions.
+- [ ] The tuning panel shows capsule, route, and project or tab context before submission.
+- [ ] Clipboard image paste works or is intentionally replaced with an equivalent flow.
+- [ ] "Codex finished" is distinct from "watch ready for review".
+
 ## 3. Project module checklist
 
 - [ ] Project creation wizard exists.
@@ -128,6 +145,18 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Project calendar wrapper exists.
 - [ ] Canvas and calendar open linked artifacts into internal tabs.
 - [ ] Prompt sessions can be represented in the structure surface.
+
+## 5B. Development acceleration checklist
+
+- [ ] Manager watch status endpoint exists.
+- [ ] Manager wait-ready endpoint or SSE exists.
+- [ ] Runtime readiness endpoint exists in the main app.
+- [ ] Capsule parser and artifact generator exist.
+- [ ] Capsule skip marker exists for approved exemptions.
+- [ ] Capsule coverage and drift contract exists.
+- [ ] A tuning request is not marked ready if changed files introduce unreported capsule drift.
+- [ ] Tuning request model exists.
+- [ ] Tuning request history is traceable.
 
 ## 6. Prompt factory checklist
 
@@ -196,6 +225,8 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Secret storage round-trip is tested.
 - [ ] Provider adapter contract tests exist.
 - [ ] Resource persistence and retrieval are tested.
+- [ ] Manager readiness confirmation is tested against build, fault, and recovery transitions.
+- [ ] Capsule generation and drift detection are integration-tested.
 
 ### 10.3 Component testing
 - [ ] Key form components are covered.
@@ -207,12 +238,14 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Startup smoke test exists.
 - [ ] Project creation flow exists.
 - [ ] Add-resource flow exists.
+- [ ] Development manager ready signal flow exists.
 - [ ] Internal tab restore flow exists.
 - [ ] Project structure canvas flow exists.
 - [ ] Project calendar flow exists.
 - [ ] Prompt factory flow exists.
 - [ ] Validation center flow exists.
 - [ ] Test lab flow exists.
+- [ ] Dev-only tuning request flow exists with a fake or controlled Codex adapter.
 
 ## 11. Documentation checklist
 
@@ -224,6 +257,8 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Secret handling behavior is documented.
 - [ ] Known limitations are documented.
 - [ ] Code comments are in English.
+- [ ] Significant handwritten components and types have capsules or explicit skip markers.
+- [ ] Generated capsule index and coverage outputs are current.
 
 ## 12. Release readiness checklist
 
@@ -231,6 +266,7 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Solution builds from clean checkout.
 - [ ] Database setup path is documented.
 - [ ] First-run experience works.
+- [ ] Development manager startup path is documented.
 - [ ] Workbench restore after interruption works.
 - [ ] Logs are reviewable.
 - [ ] Migration path is stable.
@@ -254,6 +290,8 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Export/send warnings are present.
 - [ ] Dangerous actions are clearly labeled.
 - [ ] Secret reveal/copy behavior is intentional and reviewable.
+- [ ] Tuning mode is loopback-only, dev-only, and workspace-bounded.
+- [ ] Manager diagnostics do not expose raw secrets or unsafe payloads.
 
 ## 13. Executive “do not compromise” checklist
 
@@ -265,3 +303,5 @@ These items must not be traded away for speed:
 - [ ] UI consistency
 - [ ] test baseline
 - [ ] module boundaries
+- [ ] trustworthy watch-ready loop
+- [ ] capsule freshness and drift visibility

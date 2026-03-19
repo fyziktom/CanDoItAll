@@ -456,6 +456,19 @@ The product is not ready if any of the following remain missing:
 - project calendar wrapper with artifact linking
 - tests covering tab restore and heavy-tab sleep behavior
 
+## 13A. Relationship to the development manager and tuning loop
+
+The workbench architecture must expose enough stable metadata to support the development manager defined in `03b-development-manager-watch-capsules-and-tuning.md`.
+
+At minimum:
+
+- tab hosts should expose stable tab ids and restore keys
+- structure and calendar surfaces should expose stable capsule keys
+- tunable workbench surfaces should publish current project, tab, and selection context
+- heavy workbench surfaces should distinguish busy, restorable, and ready states clearly enough for manager-driven verification flows
+
+This prevents tuning mode from becoming a page-specific hack and keeps targeted refinement aligned to the real workbench model.
+
 ## 14. Delivery conclusion
 
 The internal tab workbench, project structure canvas, and project events calendar are core product features.

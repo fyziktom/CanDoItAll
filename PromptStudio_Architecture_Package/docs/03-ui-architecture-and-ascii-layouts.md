@@ -65,6 +65,8 @@ The UI must make a large functional scope feel coherent. The design must support
 - command palette (future-ready)
 - provider connection status
 - secret warnings / redaction hints
+- development-manager watch status (dev only)
+- tuning-mode toggle and job notifications (dev only)
 
 ## 4. UI zones and layout model
 
@@ -134,6 +136,8 @@ Reference inputs:
 - `DirtyStateDot`
 - `SleepStateBadge`
 - `SaveStateIndicator`
+- `DevWatchStatusBadge`
+- `ManagerNotificationToast`
 
 ## 5.2 Form and editor components
 - `SmartForm`
@@ -177,6 +181,8 @@ Reference inputs:
 - `ReviewDiffViewer`
 - `CoverageMatrixView`
 - `ExecutionPreviewPanel`
+- `CapsuleSummaryCard`
+- `ClipboardImagePasteZone`
 
 ## 5.5 Type-specific resource components
 - `FolderResourceEditor`
@@ -199,6 +205,9 @@ Reference inputs:
 - `NodeInspectorField`
 - `ArtifactLinkChip`
 - `TimelineEventBadge`
+- `TunableComponentBoundary`
+- `TuningHandle`
+- `TuningRequestPanel`
 
 ## 6. State model for the UI
 
@@ -211,12 +220,15 @@ The UI should distinguish:
 - transient notifications
 - persisted filters/sorting preferences
 - persisted workbench restore state
+- development-manager connection state
+- tuning-request state (dev only)
 
 ### Recommended state approach
 - use component-local state for simple forms
 - use scoped feature state for the current page/workflow
 - use lightweight app-wide state containers only for shell-level needs
 - use an explicit browser-storage abstraction for tab and workbench restore
+- use a dedicated client for manager watch and tuning events only in development
 - do not centralize all state into one giant client store
 
 ## 7. Main screens
@@ -350,6 +362,18 @@ Purpose:
 ## 7.9 Settings
 Purpose:
 - workspace defaults, providers, database, storage root, secret vault, safety policies, feature flags
+
+## 7.9A Developer tuning overlay (development only)
+Purpose:
+- expose a safe, explicit path for targeted UI and component tuning from the running application
+
+### Required behaviors
+- hidden outside development mode
+- visible tuning handles only on components that opt in through a shared boundary
+- show capsule summary, route, tab, and project context before submission
+- support pasted screenshot or clipboard image
+- show manager job state and ready-for-review notifications
+- never expose secrets or dangerous controls casually
 
 ## 8. ASCII layouts
 
@@ -537,6 +561,14 @@ Purpose:
 - restore after refresh or reconnect must be deliberate and user-visible
 - structure canvas and calendar must reopen linked artifacts inside internal tabs
 
+### 9.5 Development manager and tuning rules
+- development-manager status must stay out of the normal product way when not in development mode
+- tuning handles must be small, consistent, and visually distinct from business actions
+- a tuning request must preview capsule and context information before submission
+- the UI should show "waiting for watch ready" distinctly from "Codex finished"
+- ready-for-review notifications must link back to the affected workbench tab or route
+- capsule drift warnings should be visible in development without polluting normal user flows
+
 ## 10. Design system rules
 
 1. Use a restrained visual language.
@@ -585,5 +617,6 @@ The UI should be implemented as:
 - dedicated validation center
 - dedicated test lab
 - consistent list/detail/action pattern
+- explicit development-only tuning and watch-feedback surfaces
 
 This structure gives the user a practical, scalable workstation rather than a disconnected set of tools.

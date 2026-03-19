@@ -10,6 +10,7 @@ This architecture is chosen because it solves the current problem well:
 - low operational complexity on a local workstation
 - strong modularity for future growth
 - practical support for a large feature surface
+- a clear place for a separate local development manager that accelerates delivery
 
 ## 2. Architectural goals
 
@@ -20,6 +21,7 @@ This architecture is chosen because it solves the current problem well:
 5. Handle secrets and execution-capable integrations carefully.
 6. Enable future extraction of heavy workloads into sidecars/services.
 7. Remain implementable in small Codex-friendly slices.
+8. Keep the local development loop explicit, trustworthy, and automatable.
 
 ## 3. Architectural style
 
@@ -82,6 +84,10 @@ PromptStudio.sln
 └─ docs/                                   # optional runtime docs/export area
 ```
 
+The solution should also include a separate local tool project outside the product modules:
+
+- `tools/CanDoItAll.Manager` — development manager for `dotnet watch`, local OpenAPI or SSE, capsule generation, and dev-only tuning orchestration
+
 ## 5. Project responsibilities
 
 ## 5.1 PromptStudio.Web
@@ -94,6 +100,8 @@ Responsibilities:
 - feature discovery
 - authentication/authorization foundation for future growth
 - top-level error handling
+- development-only runtime readiness endpoint for the manager
+- development-only tuning-mode integration points
 
 Keep it thin. Business rules must live in modules.
 
@@ -120,6 +128,7 @@ Responsibilities:
 - serialization helpers
 - event dispatch plumbing
 - common persistence helpers
+- dev-only runtime probe contracts that do not belong in business modules
 
 ## 5.4 PromptStudio.ComponentKit
 Responsibilities:
@@ -130,6 +139,7 @@ Responsibilities:
 - tab-strip and shell primitives
 - canvas and workbench host components
 - state presentation primitives
+- tunable component boundaries and dev-only tuning UI primitives
 
 ## 5.5 PromptStudio.Modules.Workbench
 Responsibilities:
@@ -140,6 +150,19 @@ Responsibilities:
 - project events calendar orchestration
 - deep-link resolution into internal tabs
 - workbench-level artifact opening policies
+- stable tab and selection metadata for tuning-mode context
+
+## 5.5A CanDoItAll.Manager
+Responsibilities:
+- supervise `dotnet watch` for the main app
+- normalize watch, build, and runtime states
+- expose loopback-only OpenAPI and SSE endpoints for Codex and diagnostics
+- generate capsule artifacts from source comments
+- report capsule coverage and drift
+- accept and track dev-only tuning requests
+- correlate Codex jobs, watch readiness, and verification outcomes
+
+This tool is intentionally separate from the runtime product modules. It accelerates local delivery and testing without polluting the product domain model.
 
 ## 5.6 Feature modules
 Each module owns:
@@ -322,6 +345,24 @@ Key aggregates:
 - `AutomationPolicy`
 - `SidecarRegistration`
 
+## 6.12 Development manager tool
+Responsibilities:
+- watch session supervision
+- structured watch signals
+- runtime readiness confirmation
+- capsule document generation
+- capsule coverage reporting
+- tuning request orchestration
+- local correlation history
+
+Key models:
+- `ManagerWatchSession`
+- `ManagerWatchSignal`
+- `CapsuleDocument`
+- `CapsuleCoverageReport`
+- `TuningRequest`
+- `TuningJob`
+
 ## 7. Recommended internal architecture inside modules
 
 Each module should use a practical vertical-slice layout:
@@ -390,6 +431,17 @@ The shell must treat internal tabs as a first-class runtime concern:
 1. The user opens an artifact through the tab host.
 2. The tab host resolves whether to activate, duplicate, background, or restore.
 3. Heavy tabs can move into a sleeping snapshot state.
+4. Workbench surfaces publish stable tab and selection metadata for deep links and tuning-mode context.
+
+## 8.5 Development manager runtime pattern
+The local development loop should work as follows:
+
+1. The manager launches `dotnet watch` for the main app.
+2. The manager parses raw watch output into normalized state transitions.
+3. The manager confirms runtime readiness through the development-only readiness endpoint exposed by the main app.
+4. The manager publishes watch and readiness events through local API and SSE endpoints.
+5. Capsule changes regenerate Codex-optimized artifacts incrementally.
+6. Tuning requests correlate a component, capsule, Codex job, watch-ready event, and optional verification result.
 4. Tab session state is persisted through a browser-storage abstraction.
 5. On restart or reconnect, the shell restores the session and rehydrates tabs selectively.
 
@@ -474,6 +526,7 @@ Use a hybrid model:
 - exported prompt packages
 - large evidence files
 - optional extracted tab or canvas snapshot payloads when not suitable for direct database storage
+- manager-owned capsule artifacts, tuning attachments, and correlation logs in excluded artifact paths
 
 ## 10.5 File storage abstraction
 Create:
@@ -486,6 +539,7 @@ Support modes:
 - managed copy
 - cached preview
 - evidence artifact storage
+- manager artifact storage with excluded watch paths
 
 ## 11. Secret handling architecture
 
@@ -882,6 +936,8 @@ The v1 architecture must support all three options later.
 - Prompts_PromptCollections
 - Prompts_PromptUsageRecords
 - Factory_PromptBlueprints
+
+Manager watch history, capsule artifacts, and tuning attachments should remain outside the main product database unless a later requirement demands durable cross-session analytics.
 - Factory_PromptBuildSessions
 - Validation_ValidationRuns
 - Validation_ValidationFindings
@@ -934,6 +990,9 @@ Use strongly typed options:
 - job processing settings
 - workbench tab sleep settings
 - browser restore and snapshot settings
+- development manager watch settings
+- capsule generation and coverage settings
+- tuning mode settings
 
 ## 24. Architecture decisions record (summary)
 
@@ -973,6 +1032,18 @@ Use strongly typed options:
 **Decision:** Use rule-first validation with optional AI augmentation.  
 **Reason:** Keeps the system trustworthy and testable.
 
+### ADR-10
+**Decision:** Implement a separate local development manager using official `dotnet watch`, loopback-only APIs, and a runtime readiness probe.
+**Reason:** The agent-development loop needs trustworthy machine-readable signals without polluting the product runtime model.
+
+### ADR-11
+**Decision:** Require structured source capsules for significant components and types, then generate Codex-optimized artifacts from them.
+**Reason:** Agent context must stay short, current, and close to the real source instead of drifting into stale manual documentation.
+
+### ADR-12
+**Decision:** Keep tuning mode explicitly development-only and route it through the manager with correlation ids and watch-ready confirmation.
+**Reason:** This maximizes iteration speed without turning local automation into an unsafe or ambiguous workflow.
+
 ## 25. Architecture conclusion
 
 PromptStudio should be built as a **modular, local-first, C#-centric Blazor workstation** with:
@@ -980,6 +1051,8 @@ PromptStudio should be built as a **modular, local-first, C#-centric Blazor work
 - an internal recoverable tab workspace
 - a project structure workbench
 - a project events calendar
+- a separate local development manager for watch readiness, capsules, and tuning orchestration
+- governed source capsules that stay near the real code
 - typed project resources
 - a strong prompt domain
 - secure secret handling
