@@ -165,9 +165,11 @@ public sealed class WatchSupervisorService(
     private readonly List<WatchLogEntry> _logs = [];
     private readonly List<WatchEvent> _events = [];
     private readonly HashSet<string> _activeUrls = [];
+    private Process? _activeWatchProcess;
     private long _lastLogId;
     private long _lastEventId;
     private int? _startupExpectedIteration;
+    private int _automaticRecoveryRequested;
     private WatchStatusSnapshot _status = new(WatchState.Idle, "Idle", 0, 0, null, null, DateTimeOffset.UtcNow, []);
 
     public WatchStatusSnapshot GetStatus()
@@ -210,6 +212,13 @@ public sealed class WatchSupervisorService(
     public Task ProcessWatchLineAsync(string line, bool isError = false, CancellationToken cancellationToken = default)
         => HandleWatchLineAsync(line, isError, cancellationToken);
 
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await StopActiveWatchProcessAsync("Manager shutdown requested.", cancellationToken);
+        await CleanupWorkspaceProcessesAsync("Manager shutdown cleanup.", cancellationToken);
+        await base.StopAsync(cancellationToken);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!_options.AutoStartWatch)
@@ -233,11 +242,10 @@ public sealed class WatchSupervisorService(
     {
         var workspaceRoot = ResolveWorkspaceRoot();
         var watchProjectPath = ResolveWatchProjectPath(workspaceRoot);
-        var launchProfileArgument = string.IsNullOrWhiteSpace(_options.WatchLaunchProfile)
-            ? string.Empty
-            : $" --launch-profile \"{_options.WatchLaunchProfile}\"";
+        Interlocked.Exchange(ref _automaticRecoveryRequested, 0);
+        await CleanupWorkspaceProcessesAsync("Preparing a fresh watch launch.", cancellationToken);
 
-        var startInfo = new ProcessStartInfo("dotnet", $"watch --project \"{watchProjectPath}\" run{launchProfileArgument} --non-interactive")
+        var startInfo = new ProcessStartInfo("dotnet")
         {
             WorkingDirectory = workspaceRoot,
             RedirectStandardOutput = true,
@@ -245,9 +253,24 @@ public sealed class WatchSupervisorService(
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        foreach (var argument in WorkspaceRuntimeProcessTools.BuildWatchArgumentList(watchProjectPath, _options))
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
 
         startInfo.Environment["DOTNET_WATCH_SUPPRESS_EMOJIS"] = "1";
         startInfo.Environment["DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH"] = "1";
+        startInfo.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "0";
+        if (_options.WatchDisableAppHost)
+        {
+            startInfo.Environment["UseAppHost"] = "false";
+        }
+
+        if (_options.WatchDisableSharedCompilation)
+        {
+            startInfo.Environment["UseSharedCompilation"] = "false";
+        }
+
         if (_options.WatchDetailedErrorsEnabled)
         {
             startInfo.Environment["DetailedErrors"] = "true";
@@ -255,15 +278,35 @@ public sealed class WatchSupervisorService(
         }
 
         ClearInheritedAspNetEnvironment(startInfo);
+        startInfo.Environment["ASPNETCORE_ENVIRONMENT"] = ResolveWatchEnvironmentName();
+        startInfo.Environment["DOTNET_ENVIRONMENT"] = ResolveWatchEnvironmentName();
+        var watchUrls = WorkspaceRuntimeProcessTools.BuildWatchUrlsEnvironmentValue(_options);
+        if (!string.IsNullOrWhiteSpace(watchUrls))
+        {
+            startInfo.Environment["ASPNETCORE_URLS"] = watchUrls;
+        }
 
         using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
         process.Start();
+        Interlocked.Exchange(ref _activeWatchProcess, process);
         Transition(WatchState.Starting, "Started dotnet watch.");
 
         var stdoutTask = ReadStreamAsync(process.StandardOutput, false, cancellationToken);
         var stderrTask = ReadStreamAsync(process.StandardError, true, cancellationToken);
 
-        await Task.WhenAll(stdoutTask, stderrTask, process.WaitForExitAsync(cancellationToken));
+        try
+        {
+            await Task.WhenAll(stdoutTask, stderrTask, process.WaitForExitAsync(cancellationToken));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await TerminateProcessAsync(process, "Watch cancellation requested.", cancellationToken);
+        }
+        finally
+        {
+            Interlocked.CompareExchange(ref _activeWatchProcess, null, process);
+            await TerminateProcessAsync(process, "Watch cycle cleanup.", cancellationToken);
+        }
     }
 
     private async Task ReadStreamAsync(StreamReader reader, bool isError, CancellationToken cancellationToken)
@@ -284,6 +327,7 @@ public sealed class WatchSupervisorService(
     {
         var transition = WatchOutputParser.Parse(line);
         var logLevel = ClassifyWatchLine(line, isError, transition);
+        var requiresWorkspaceRecovery = WorkspaceRuntimeProcessTools.RequiresWorkspaceRecovery(line);
         var logEntry = AppendLog(line, logLevel >= LogLevel.Error);
         EchoWatchLineToConsole(line, logLevel);
         var parsedUrl = WatchOutputParser.TryParseUrl(line);
@@ -297,6 +341,11 @@ public sealed class WatchSupervisorService(
 
         if (transition is null)
         {
+            if (requiresWorkspaceRecovery)
+            {
+                await RequestWorkspaceRecoveryAsync(line, cancellationToken);
+            }
+
             return;
         }
 
@@ -341,6 +390,11 @@ public sealed class WatchSupervisorService(
                 }
 
                 break;
+        }
+
+        if (requiresWorkspaceRecovery)
+        {
+            await RequestWorkspaceRecoveryAsync(line, cancellationToken);
         }
     }
 
@@ -473,9 +527,14 @@ public sealed class WatchSupervisorService(
 
     private IReadOnlyList<string> ResolveConfiguredReadinessUrls()
     {
-        var workspaceRoot = ResolveWorkspaceRoot();
-        var watchProjectPath = ResolveWatchProjectPath(workspaceRoot);
-        return LaunchProfileSettingsResolver.ResolveRuntimeProbeUrls(watchProjectPath, _options.WatchLaunchProfile)
+        var configuredApplicationUrls = ManagerStatusResponseFactory.ResolveConfiguredApplicationUrls(
+            ResolveWatchProjectPath(ResolveWorkspaceRoot()),
+            _options);
+        var configured = configuredApplicationUrls
+            .Select(url => $"{url.TrimEnd('/')}/_dev/runtime")
+            .ToArray();
+
+        return configured
             .Concat(_options.ReadinessUrls)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -484,6 +543,11 @@ public sealed class WatchSupervisorService(
     private string ResolveWorkspaceRoot() => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, _options.WorkspaceRoot));
 
     private string ResolveWatchProjectPath(string workspaceRoot) => Path.GetFullPath(Path.Combine(workspaceRoot, _options.WatchProjectPath));
+
+    private string ResolveWatchEnvironmentName()
+        => Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+           ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+           ?? "Development";
 
     private static void ClearInheritedAspNetEnvironment(ProcessStartInfo startInfo)
     {
@@ -510,6 +574,92 @@ public sealed class WatchSupervisorService(
                  })
         {
             startInfo.Environment.Remove(variableName);
+        }
+    }
+
+    private async Task RequestWorkspaceRecoveryAsync(string line, CancellationToken cancellationToken)
+    {
+        if (Interlocked.Exchange(ref _automaticRecoveryRequested, 1) != 0)
+        {
+            return;
+        }
+
+        logger.LogWarning("Detected a recoverable workspace runtime conflict. Recycling dotnet watch. Trigger: {WatchLine}", line);
+        await CleanupWorkspaceProcessesAsync("Automatic recovery from a locked output or port conflict.", cancellationToken);
+    }
+
+    private async Task CleanupWorkspaceProcessesAsync(string reason, CancellationToken cancellationToken)
+    {
+        if (!_options.CleanupWorkspaceProcessesOnStart)
+        {
+            return;
+        }
+
+        var watchProjectPath = ResolveWatchProjectPath(ResolveWorkspaceRoot());
+        var currentProcessId = Environment.ProcessId;
+        var processes = WorkspaceRuntimeProcessTools.EnumerateWorkspaceOwnedProcesses(watchProjectPath, currentProcessId)
+            .OrderByDescending(process => string.Equals(process.Name, "dotnet.exe", StringComparison.OrdinalIgnoreCase) ||
+                                          string.Equals(process.Name, "dotnet", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        if (processes.Length == 0)
+        {
+            return;
+        }
+
+        logger.LogWarning(
+            "Reclaiming {ProcessCount} workspace-owned process(es). Reason: {Reason}. PIDs: {ProcessIds}",
+            processes.Length,
+            reason,
+            string.Join(", ", processes.Select(process => process.ProcessId)));
+
+        foreach (var process in processes)
+        {
+            await TerminateProcessByIdAsync(process.ProcessId, process.Name, reason, cancellationToken);
+        }
+    }
+
+    private async Task StopActiveWatchProcessAsync(string reason, CancellationToken cancellationToken)
+    {
+        var activeProcess = Interlocked.Exchange(ref _activeWatchProcess, null);
+        if (activeProcess is null)
+        {
+            return;
+        }
+
+        await TerminateProcessAsync(activeProcess, reason, cancellationToken);
+    }
+
+    private async Task TerminateProcessByIdAsync(int processId, string processName, string reason, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            await TerminateProcessAsync(process, $"{reason} [{processName} {processId}]", cancellationToken);
+        }
+        catch (ArgumentException)
+        {
+        }
+    }
+
+    private async Task TerminateProcessAsync(Process process, string reason, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (process.HasExited)
+            {
+                return;
+            }
+
+            logger.LogInformation("Stopping process {ProcessId}. Reason: {Reason}", process.Id, reason);
+            process.Kill(entireProcessTree: true);
+            await process.WaitForExitAsync(CancellationToken.None);
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (ArgumentException)
+        {
         }
     }
 

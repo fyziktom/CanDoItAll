@@ -2,7 +2,11 @@ using System.Text.Json;
 using CanDoItAll.Manager;
 using Microsoft.AspNetCore.OpenApi;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    EnvironmentName = ManagerHostEnvironment.ResolveEnvironmentName()
+});
 builder.WebHost.UseUrls(builder.Configuration["Manager:Url"] ?? "http://127.0.0.1:6407");
 
 builder.Services.AddOpenApi();
@@ -24,19 +28,42 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.MapGet("/api/status", (ManagerSessionService session, WatchSupervisorService watch, IConfiguration configuration) =>
+app.MapGet("/", (HttpContext httpContext, ManagerSessionService session, WatchSupervisorService watch, CapsuleCatalogService capsules, IConfiguration configuration) =>
 {
     var options = configuration.GetSection("Manager").Get<ManagerOptions>() ?? new ManagerOptions();
-    return Results.Ok(new
-    {
-        Name = "CanDoItAll.Manager",
-        Environment = app.Environment.EnvironmentName,
-        SessionToken = session.SessionToken,
-        WorkspaceRoot = options.WorkspaceRoot,
-        WatchProjectPath = options.WatchProjectPath,
-        Watch = watch.GetStatus(),
-        TimestampUtc = DateTimeOffset.UtcNow
-    });
+    var workspaceRoot = ManagerStatusResponseFactory.ResolveWorkspaceRoot(AppContext.BaseDirectory, options);
+    var watchProjectPath = ManagerStatusResponseFactory.ResolveWatchProjectPath(workspaceRoot, options);
+    var status = ManagerStatusResponseFactory.Create(
+        app.Environment.EnvironmentName,
+        session.SessionToken,
+        workspaceRoot,
+        watchProjectPath,
+        watch.GetStatus(),
+        options,
+        $"{httpContext.Request.Scheme}://{httpContext.Request.Host}");
+    var html = ManagerDashboardPage.Render(
+        status,
+        capsules.GetCoverage(),
+        openApiAvailable: app.Environment.IsDevelopment());
+
+    return Results.Content(html, "text/html; charset=utf-8");
+});
+
+app.MapGet("/api/status", (HttpContext httpContext, ManagerSessionService session, WatchSupervisorService watch, IConfiguration configuration) =>
+{
+    var options = configuration.GetSection("Manager").Get<ManagerOptions>() ?? new ManagerOptions();
+    var workspaceRoot = ManagerStatusResponseFactory.ResolveWorkspaceRoot(AppContext.BaseDirectory, options);
+    var watchProjectPath = ManagerStatusResponseFactory.ResolveWatchProjectPath(workspaceRoot, options);
+    var status = ManagerStatusResponseFactory.Create(
+        app.Environment.EnvironmentName,
+        session.SessionToken,
+        workspaceRoot,
+        watchProjectPath,
+        watch.GetStatus(),
+        options,
+        $"{httpContext.Request.Scheme}://{httpContext.Request.Host}");
+
+    return Results.Ok(status);
 })
 .WithName("GetManagerStatus");
 

@@ -8,15 +8,27 @@ public sealed class ManagerOptions
 
     public string WatchLaunchProfile { get; set; } = "https";
 
+    public string[] WatchUrls { get; set; } = [];
+
     public string[] ReadinessUrls { get; set; } = [];
 
     public int ReadinessTimeoutSeconds { get; set; } = 90;
 
     public bool AutoStartWatch { get; set; } = true;
 
+    public bool CleanupWorkspaceProcessesOnStart { get; set; } = true;
+
     public bool WatchDetailedErrorsEnabled { get; set; } = true;
 
     public bool WatchEchoOutputToConsole { get; set; }
+
+    public bool WatchSkipRestore { get; set; } = true;
+
+    public bool WatchDisableAppHost { get; set; } = true;
+
+    public bool WatchDisableBuildServers { get; set; } = true;
+
+    public bool WatchDisableSharedCompilation { get; set; } = true;
 
     public bool TuningModeEnabled { get; set; }
 
