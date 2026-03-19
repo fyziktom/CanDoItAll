@@ -7,8 +7,9 @@ Implement projects, phases, statuses, generalized option selections, and the pro
 1. `docs/01-ux-discovery.md`
 2. `docs/02-technical-requirements.md`
 3. `docs/03-ui-architecture-and-ascii-layouts.md`
-4. `docs/04-solution-architecture.md`
-5. `docs/07-implementation-plan.md`
+4. `docs/03a-workbench-tabs-canvas-and-state.md`
+5. `docs/04-solution-architecture.md`
+6. `docs/07-implementation-plan.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -31,8 +32,9 @@ This prompt covers M3: project creation, editing, overview, stack profile, dates
 3. Implement phase timeline and status handling.
 4. Implement the generalized option selection model for language, DB, UI, external APIs, storage, and notes.
 5. Build Project Overview and Stack Profile pages according to the UI document.
-6. Add project summary/query models for dashboard and list screens.
-7. Add tests for project creation, phase handling, and option selection persistence.
+6. Prepare project routes and artifact-opening contracts used later by the project structure and project calendar workbench surfaces.
+7. Add project summary/query models for dashboard and list screens.
+8. Add tests for project creation, phase handling, and option selection persistence.
 
 ## Required deliverables
 - Projects module domain and persistence

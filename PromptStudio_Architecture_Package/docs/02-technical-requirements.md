@@ -93,6 +93,16 @@ The first release must already support the required project, prompt, provider, v
 - **FR-048** — The application shall use Tailwind CSS and a unified component strategy.
 - **FR-049** — The application shall support adding new resource types and prompt phases without redesigning core flows.
 - **FR-050** — The application shall remain structurally ready for future sidecar services or microservices.
+- **FR-051** — The application shall provide an internal application-tab workspace instead of depending on many browser tabs for concurrent work.
+- **FR-052** — The application shall support opening, closing, pinning, reordering, and reactivating internal tabs.
+- **FR-053** — The application shall support active, background, and sleeping tab states for heavy work surfaces.
+- **FR-054** — The application shall persist internal tab session state in browser storage and restore it after refresh, reconnect, close, or crash.
+- **FR-055** — The application shall provide a project structure canvas for visualizing phases, resources, prompts, validations, tests, and relationships.
+- **FR-056** — The project structure canvas shall support opening linked artifacts from the canvas into internal tabs.
+- **FR-057** — The project structure canvas shall support representing prompt sessions and prompt steps, including branching from an existing step into a new follow-up prompt.
+- **FR-058** — The application shall provide a project events calendar linked to milestones, phases, deadlines, validations, and related project artifacts.
+- **FR-059** — The project events calendar shall support opening linked artifacts into internal tabs.
+- **FR-060** — The shared UI architecture shall include shell-level components for the internal tab strip, sleeping-tab indicators, workbench inspectors, date and time editing, and canvas host surfaces.
 
 ## 4. Non-functional requirements
 
@@ -119,6 +129,8 @@ The first release must already support the required project, prompt, provider, v
 - **NFR-013** — Long-running tasks shall not block the UI thread or degrade the workspace experience.
 - **NFR-014** — Background failures shall surface as actionable diagnostics.
 - **NFR-015** — The design shall support idempotent processing of internal events where relevant.
+- **NFR-015A** — Internal tab restore shall degrade safely when one snapshot is incompatible or corrupted.
+- **NFR-015B** — Canvas and calendar workbench surfaces shall restore enough user state to resume work meaningfully after interruption.
 
 ## 4.4 Performance
 
@@ -127,6 +139,8 @@ The first release must already support the required project, prompt, provider, v
 - **NFR-018** — Prompt generation should feel interactive, with visible progress when remote operations take time.
 - **NFR-019** — Search should remain acceptable across many projects and prompts within a single-user workspace.
 - **NFR-020** — The architecture shall allow later optimization of search, indexing, and provider calls without redesigning business modules.
+- **NFR-020A** — The internal tab workspace shall reduce browser-tab and Interactive Server circuit pressure by allowing heavy screens to sleep.
+- **NFR-020B** — Tab wake and restore should feel fast enough that users prefer internal tabs over opening additional browser tabs.
 
 ## 4.5 Testability and observability
 
@@ -143,6 +157,7 @@ The first release must already support the required project, prompt, provider, v
 - Target runtime is .NET 10.
 - Main application shell is a Blazor Web App using Interactive Server rendering.
 - Styling uses Tailwind CSS and a shared custom component strategy.
+- The architecture must integrate the existing `CanDoItAll.Components` library and document missing shell or workbench components explicitly.
 - Persistence uses EF Core with SQLite and PostgreSQL support.
 - The solution must support `IDbContextFactory`, design-time factory, and in-memory test mode.
 - The system must support OpenAI and Ollama integrations.
@@ -166,6 +181,7 @@ The first release must already support the required project, prompt, provider, v
 3. Multi-user and remote collaboration are later concerns but not ignored.
 4. The app may eventually manage heavy background work and optional sidecars.
 5. Not every resource type needs full semantic preview in v1, but all required types need supported registration and management.
+6. Internal tabs, workbench restore, project structure canvas, and project calendar are part of the first serious usable version, not future polish.
 
 ## 7. Recommended technical principles
 
@@ -293,6 +309,8 @@ The application must stay ready for:
 3. Because prompts are reusable and versioned, immutable versions plus mutable drafts are required.
 4. Because validations are traceable, validation runs need durable records.
 5. Because the system is local-first, file and process boundaries must be treated as part of the core architecture.
+6. Because the application uses Interactive Server rendering, internal workspace tabs must be application-managed and recoverable.
+7. Because prompt workflows can branch, the project structure surface must represent prompt sessions and prompt steps as first-class linked artifacts.
 
 ## 12. Validation and quality requirements
 
@@ -366,6 +384,14 @@ The delivered system is acceptable only if:
 ### Risk T6 — Validation depends too much on LLMs
 **Risk:** Deterministic quality controls become weak.  
 **Mitigation:** Rule-first validation engine with optional LLM review augmentation.
+
+### Risk T7 — Browser-tab overload undermines the workstation model
+**Risk:** Users open many browser tabs, multiplying Blazor Server circuits and memory use while losing coherent workspace state.
+**Mitigation:** Build the internal tab workspace, sleep policy, and restore path as core architecture.
+
+### Risk T8 — Visual orchestration surfaces are treated as optional polish
+**Risk:** The application ships with many disconnected pages but without the structure canvas and calendar that make project control practical.
+**Mitigation:** Treat the workbench canvas and calendar as first-class deliverables in requirements, milestones, prompts, and QA gates.
 
 ## 15. Final technical conclusion
 

@@ -32,6 +32,7 @@ The testing strategy therefore cannot rely on one layer only. It must validate:
 ### Base layer — unit tests
 Use for:
 - domain rules
+- internal tab lifecycle rules
 - prompt rendering logic
 - context assembly rules
 - option compatibility rules
@@ -43,6 +44,7 @@ Use for:
 Use for:
 - EF Core persistence behavior
 - database provider bootstrap
+- browser-state-backed tab restore contracts
 - secret protection round-trips
 - file storage abstractions
 - activity/audit writes
@@ -52,15 +54,21 @@ Use for:
 ### Upper-middle layer — component tests
 Use for:
 - Blazor forms
+- internal tab strip behavior
 - wizard steps
 - status badges and result components
 - resource editor rendering
 - prompt gallery filtering
+- project structure inspector surfaces
+- project calendar host surfaces
 - validation center components
 
 ### Top layer — end-to-end tests
 Use for:
 - project creation flow
+- internal tab restore flow
+- project structure canvas flow
+- project calendar flow
 - resource registration flow
 - prompt factory flow
 - validation flow
@@ -142,6 +150,7 @@ Use:
 ### Focus
 - project creation wizard
 - stack profile editor
+- tab strip and sleeping-state UI
 - resource editor forms
 - prompt editor
 - wizard step navigation
@@ -161,13 +170,17 @@ Use:
 1. first-run launch and dashboard render
 2. create project
 3. add project options and notes
-4. add repository resource
-5. add SSH or FTP profile with secret reference
-6. create prompt draft
-7. run prompt factory and save prompt
-8. record prompt usage
-9. run a validation workflow
-10. attach test evidence
+4. restore the internal workbench after refresh or reconnect
+5. open and reorder internal tabs
+6. use the project structure canvas to open a linked artifact
+7. use the project calendar to open a linked artifact
+8. add repository resource
+9. add SSH or FTP profile with secret reference
+10. create prompt draft
+11. run prompt factory and save prompt
+12. record prompt usage
+13. run a validation workflow
+14. attach test evidence
 
 ### Secondary e2e scenarios
 - provider health check
@@ -190,6 +203,7 @@ Playwright should be used for:
 ## 6.2 Playwright test organization
 Recommended categories:
 - `smoke/`
+- `workbench/`
 - `projects/`
 - `resources/`
 - `prompts/`
@@ -292,6 +306,11 @@ Used for:
 ## Gate after M4
 - resource add/edit e2e passing
 - secret reference scenarios passing
+
+## Gate after M4A
+- tab restore and sleep/wake tests passing
+- project structure canvas wrapper contracts passing
+- project calendar wrapper contracts passing
 
 ## Gate after M6
 - prompt factory e2e passing

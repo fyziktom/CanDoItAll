@@ -18,6 +18,23 @@ Recommended shape:
 - `ConfirmDialog`
 - `ModalShell`
 
+### 1A. Internal workbench tab system
+
+Why:
+
+- the application needs many concurrent work surfaces without opening many browser tabs
+- Blazor Interactive Server benefits from deliberate tab sleep and restore behavior
+
+Recommended shape:
+
+- `AppTabStrip`
+- `AppTab`
+- `TabOverflowMenu`
+- `DirtyStateDot`
+- `SleepStateBadge`
+- `ITabHostService`
+- `ITabPersistenceStore`
+
 ### 2. Real tooltip / popover / context-menu system
 
 Why:
@@ -159,12 +176,27 @@ Recommended deliverables:
 - strongly typed manifest and selection models
 - host components for ribbon, dock, and context menu chrome
 
+### 15. Project calendar wrapper and scheduling primitives
+
+Why:
+
+- project work needs milestone, review, deadline, and release scheduling
+- the architecture package now treats the calendar as a first-class workbench surface
+
+Recommended deliverables:
+
+- a Blazor `ProjectCalendar` wrapper
+- typed event and linkage models
+- shared date and time editing primitives
+- workbench integration so calendar items open related artifacts
+
 ## Recommended sequencing
 
 1. Dialog / tooltip / context menu foundation
-2. Validation-aware form layer
-3. Searchable select + date/time controls
-4. Canvas wrapper
-5. Better grid and chart story
+2. Internal workbench tab system
+3. Validation-aware form layer
+4. Searchable select + date/time controls
+5. Canvas wrapper and project calendar wrapper
+6. Better grid and chart story
 
 This order removes the biggest blockers for real application development without prematurely over-engineering the smaller display primitives.

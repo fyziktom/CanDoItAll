@@ -5,9 +5,10 @@ Refine the shared shell, page templates, reusable components, and cross-module U
 
 ## Required reading
 1. `docs/03-ui-architecture-and-ascii-layouts.md`
-2. `docs/04-solution-architecture.md`
-3. `docs/07-implementation-plan.md`
-4. `docs/08-checklists.md`
+2. `docs/03a-workbench-tabs-canvas-and-state.md`
+3. `docs/04-solution-architecture.md`
+4. `docs/07-implementation-plan.md`
+5. `docs/08-checklists.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -28,10 +29,11 @@ This prompt consolidates the UI into a cohesive whole. It may run after or parti
 1. Review all existing pages against the UI architecture document.
 2. Build or refine shared page templates, right-side drawer behavior, action toolbar patterns, badges, empty states, and error/loading states.
 3. Ensure shell-wide context visibility for workspace, project, and current phase.
-4. Standardize navigation, breadcrumbs, status presentation, and action ordering.
-5. Build or refine any missing shared components that are repeatedly needed across modules.
-6. Improve usability of the Dashboard and project workspace summary views.
-7. Add component tests for shared shell and component patterns.
+4. Implement or refine the internal tab strip, dirty or sleeping indicators, tab overflow behavior, and restore UX.
+5. Standardize navigation, breadcrumbs, status presentation, and action ordering.
+6. Build or refine any missing shared components that are repeatedly needed across modules, especially workbench shell components.
+7. Improve usability of the Dashboard and project workspace summary views.
+8. Add component tests for shared shell and component patterns.
 
 ## Required deliverables
 - refined shell and page templates
@@ -44,6 +46,7 @@ This prompt consolidates the UI into a cohesive whole. It may run after or parti
 - repeated UI patterns are centralized into reusable components
 - empty/loading/error states exist on the major pages
 - current project/phase context is clearly visible
+- internal tabs behave like a deliberate application workbench
 - component tests cover critical shared shell patterns
 
 ## Session output format

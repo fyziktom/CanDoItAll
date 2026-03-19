@@ -28,6 +28,8 @@ It is strong because it:
 - hidden complexity in file preview/indexing
 - accidental UI fragmentation
 - drifting away from the generalized option model
+- under-designed internal tab restore and sleep behavior
+- weak integration of the project structure and calendar workbenches
 
 ## 3. What is high quality in this package
 
@@ -56,6 +58,9 @@ Validation is integrated into the product design itself. That aligns well with t
 ### 3.5 Implementation readiness
 The sequence of implementation milestones and Codex prompts is concrete enough to start work immediately.
 
+### 3.6 Workbench realism
+The package now treats internal tabs, project structure, and project calendar as first-class delivery features instead of leaving them as future UX polish. That matters because the product would otherwise be operationally weaker than the intended workstation model.
+
 ## 4. Critical questions asked during review
 
 ### Q1 — Does the architecture actually cover everything requested?
@@ -72,6 +77,9 @@ The sequence of implementation milestones and Codex prompts is concrete enough t
 
 ### Q5 — Could Codex realistically build this incrementally?
 **Answer:** Yes, because the package breaks work into stable slices and keeps acceptance criteria explicit.
+
+### Q6 — Does the package address Blazor Server browser-tab pressure directly?
+**Answer:** Yes. The internal tab workspace, sleep policy, and restore path are now explicit architectural requirements.
 
 ## 5. Top management concerns
 
@@ -105,6 +113,14 @@ Different implementation sessions can produce inconsistent UI patterns.
 - use page templates and ComponentKit strictly
 - reject one-off feature screens that ignore shell conventions
 
+## 5.5 Concern M5 — Fake workbench behavior
+There is a real risk that a team could claim to have internal tabs while actually shipping weak restore, no sleep policy, and poor linkage into structure or calendar surfaces.
+
+**Management control**
+- require explicit tab lifecycle contracts
+- require restore after interruption as a tested gate
+- require structure and calendar surfaces to open linked artifacts into internal tabs
+
 ## 6. QA concerns
 
 ## 6.1 Concern Q1 — Missing negative-path coverage
@@ -125,6 +141,12 @@ File format handling is one of the most failure-prone areas.
 **Required action**
 Keep parser and preview logic isolated behind provider interfaces and fallbacks.
 
+## 6.4 Concern Q4 — Workbench recovery can fail in subtle ways
+Tab snapshots, sleeping tabs, canvas state, and calendar state can all look correct on the happy path while failing after reconnect or crash.
+
+**Required action**
+Test restore and partial-restore behavior as a first-class quality area, not as a late manual check.
+
 ## 7. Acceptance conditions for implementation start
 
 The package is approved to move into implementation only if the team commits to the following conditions:
@@ -136,6 +158,7 @@ The package is approved to move into implementation only if the team commits to 
 5. keep prompt generation logic out of page-only code
 6. build tests continuously, not as a final clean-up task
 7. use validation and QA checklists as real gates
+8. implement internal tab restore and workbench wrappers as real product work, not placeholders
 
 ## 8. Mandatory no-compromise areas
 
@@ -148,6 +171,8 @@ These are non-negotiable:
 - validation result persistence
 - end-to-end usability of the prompt factory
 - coherent UI shell
+- credible internal tab workspace
+- usable project structure and calendar workbenches
 
 ## 9. Warning signs during implementation
 
@@ -161,6 +186,8 @@ If any of the following appear, management should intervene:
 - the team postpones testing “until the feature set stabilizes”
 - background jobs become invisible operationally
 - every review becomes “ask the LLM” instead of applying hard checks
+- internal tabs cannot be restored after interruption
+- the structure canvas exists visually but cannot open or resume real artifacts
 
 ## 10. Go / no-go recommendation
 
@@ -190,5 +217,6 @@ It gives:
 - a codex-ready implementation sequence
 - a review and testing system
 - a professional level of risk awareness
+- an explicit workbench model that matches the intended daily-use operating pattern
 
 From an accountable QA and management perspective, it is sufficient to authorize implementation.

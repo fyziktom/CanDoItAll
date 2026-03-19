@@ -4,21 +4,27 @@ flowchart LR
     PromptStudio["PromptStudio<br/>Blazor Web App<br/>Interactive Server"]
     Workspace["Local Workspace Storage"]
     DB["SQLite / PostgreSQL"]
+    BrowserState["Browser localStorage"]
     OpenAI["OpenAI API"]
     OllamaLocal["Ollama Local"]
     OllamaRemote["Ollama Remote / Cloud"]
     FileSystem["Local Files / Folders"]
     Repo["Git Repositories / GitHub"]
     Connectors["SSH / FTP / Docker / PowerShell Profiles"]
+    Canvas["Project Structure Canvas Engine"]
+    Calendar["Project Calendar Engine"]
     Sidecars["Optional Sidecar Services"]
 
     User --> PromptStudio
     PromptStudio --> Workspace
     PromptStudio --> DB
+    PromptStudio --> BrowserState
     PromptStudio --> OpenAI
     PromptStudio --> OllamaLocal
     PromptStudio --> OllamaRemote
     PromptStudio --> FileSystem
     PromptStudio --> Repo
     PromptStudio --> Connectors
+    PromptStudio --> Canvas
+    PromptStudio --> Calendar
     PromptStudio --> Sidecars

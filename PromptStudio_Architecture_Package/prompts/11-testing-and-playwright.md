@@ -5,10 +5,11 @@ Implement the test lab domain/UI and strengthen automated testing across unit, i
 
 ## Required reading
 1. `docs/03-ui-architecture-and-ascii-layouts.md`
-2. `docs/07-implementation-plan.md`
-3. `docs/08-checklists.md`
-4. `docs/09-validation-and-testing-plan.md`
-5. `docs/11-references.md`
+2. `docs/03a-workbench-tabs-canvas-and-state.md`
+3. `docs/07-implementation-plan.md`
+4. `docs/08-checklists.md`
+5. `docs/09-validation-and-testing-plan.md`
+6. `docs/11-references.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -30,7 +31,7 @@ This prompt covers M8 and the broader test infrastructure expectations for the p
 2. Build pages for test plans, linked test cases, evidence artifacts, and results.
 3. Support screenshot/evidence metadata and linkage to project stories/features/phases.
 4. Add or refine unit, integration, and component tests for the already implemented modules.
-5. Set up or refine Playwright project configuration and initial end-to-end suites for primary flows.
+5. Set up or refine Playwright project configuration and initial end-to-end suites for primary flows, including internal tab restore and workbench surfaces.
 6. Ensure test artifacts and reports can be associated with the Test Lab concept.
 7. Add documentation or scripts for running the full test stack.
 

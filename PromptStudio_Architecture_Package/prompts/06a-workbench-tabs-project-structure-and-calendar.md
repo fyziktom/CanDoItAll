@@ -1,0 +1,73 @@
+# Codex Prompt 06A - Workbench Tabs, Project Structure Canvas, and Project Calendar
+
+## Objective
+Implement the internal tab workspace, tab persistence and sleep lifecycle, the project structure canvas wrapper, and the project events calendar wrapper so the application becomes a real project-control workbench instead of a set of disconnected pages.
+
+## Required reading
+1. `README.md`
+2. `docs/03-ui-architecture-and-ascii-layouts.md`
+3. `docs/03a-workbench-tabs-canvas-and-state.md`
+4. `docs/04-solution-architecture.md`
+5. `docs/06-architecture-review-gap-analysis.md`
+6. `docs/07-implementation-plan.md`
+7. `docs/08-checklists.md`
+8. `C:\repositories\CanDoItAll\docs\canvas-playlist-builder\README.md`
+9. `C:\repositories\CanDoItAll\docs\canvas-playlist-builder\rebuild\blazor-jsinterop-component-plan.md`
+10. `C:\repositories\CanDoItAll\docs\canvas-events-calendar\README.md`
+11. `C:\repositories\CanDoItAll\docs\canvas-events-calendar\rebuild\blazor-jsinterop-component-plan.md`
+
+## Constraints
+- Use .NET 10 and C#.
+- Use Blazor Web App with Interactive Server rendering.
+- Use Tailwind CSS and the shared component strategy.
+- Use the existing `CanDoItAll.Components` library where possible and add missing shell/workbench components in the same style.
+- Keep code comments in English.
+- Preserve the modular monolith boundaries from the architecture package.
+- Prefer one `DbContext` per operation via `IDbContextFactory`.
+- Keep business logic out of page-only code.
+- Do not log or expose secrets.
+- Keep tab restore state behind an explicit browser-storage abstraction.
+- Wrap the existing canvas and calendar JavaScript engines first; do not rewrite them in pure C# in version one.
+- Add or update tests for the touched behavior.
+
+## Scope
+This prompt covers the workbench architecture that sits between projects/resources and later prompt-factory or validation flows.
+
+## Tasks
+1. Implement the workbench or tab-session domain: tab identity, tab kind, open/background/sleep lifecycle, restore snapshots, and pinned tabs.
+2. Implement tab host services, registry, persistence store, and local-storage-backed restore flow.
+3. Build the shell-level tab strip, tab actions, restore UX, and dirty or sleeping indicators.
+4. Implement a project structure canvas wrapper using a JS interop adapter, typed .NET DTOs, and Blazor-owned inspector or outline surfaces.
+5. Implement a project events calendar wrapper using a JS interop adapter and typed .NET DTOs.
+6. Ensure both workbench surfaces open inside internal tabs instead of forcing browser-tab workflows.
+7. Add project artifact linking so calendar items and structure nodes can open related prompts, resources, validations, and tests inside the tab workspace.
+8. Add tests for tab persistence, restore, sleep or wake behavior, and the JS interop wrappers' main round-trip contracts.
+
+## Required deliverables
+- tab workspace domain and services
+- tab strip and shell integration
+- browser-storage-backed restore path
+- project structure canvas wrapper
+- project events calendar wrapper
+- artifact linking into internal tabs
+- automated tests
+
+## Acceptance criteria
+- the user can open, close, reorder, and reactivate internal tabs
+- tab state survives refresh or crash through local storage
+- heavy tabs can transition into a sleeping state and recover safely
+- the project structure canvas works through a wrapper-first JS interop approach
+- the events calendar works through a wrapper-first JS interop approach
+- prompts, resources, validations, and tests can be opened from the workbench surfaces inside internal tabs
+- tests cover the critical restore and wrapper contracts
+
+## Session output format
+1. Scope summary
+2. Implementation plan
+3. Changed files
+4. Test/build commands
+5. Completion summary
+6. Follow-up risks or next steps
+
+## Stop condition
+Stop when the application has a credible internal workbench model and the visual orchestration surfaces are integrated instead of merely documented.

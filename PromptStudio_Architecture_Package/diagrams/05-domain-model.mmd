@@ -35,6 +35,36 @@ classDiagram
       +string Sensitivity
     }
 
+    class WorkbenchTab {
+      +Guid Id
+      +Guid? ProjectId
+      +string TabKind
+      +string Title
+      +string State
+    }
+
+    class TabSnapshot {
+      +Guid Id
+      +Guid WorkbenchTabId
+      +string SnapshotJson
+      +DateTimeOffset CapturedAt
+    }
+
+    class ProjectStructureManifest {
+      +Guid Id
+      +Guid ProjectId
+      +string Name
+      +string ManifestJson
+    }
+
+    class ProjectCalendarEvent {
+      +Guid Id
+      +Guid ProjectId
+      +string Title
+      +DateTimeOffset StartsAtUtc
+      +DateTimeOffset EndsAtUtc
+    }
+
     class SecretRecord {
       +Guid Id
       +string Name
@@ -95,6 +125,10 @@ classDiagram
     Project "1" --> "*" ProjectPhase
     Project "1" --> "*" ProjectOptionSelection
     Project "1" --> "*" ProjectResource
+    Project "1" --> "*" WorkbenchTab
+    WorkbenchTab "1" --> "*" TabSnapshot
+    Project "1" --> "*" ProjectStructureManifest
+    Project "1" --> "*" ProjectCalendarEvent
     Project "1" --> "*" PromptArtifact
     PromptArtifact "1" --> "*" PromptVersion
     PromptBlueprint "1" --> "*" PromptArtifact : source for

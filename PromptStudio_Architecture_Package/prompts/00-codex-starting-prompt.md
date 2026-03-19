@@ -8,12 +8,17 @@ Implement PromptStudio incrementally according to the architecture package in th
 2. `docs/01-ux-discovery.md`
 3. `docs/02-technical-requirements.md`
 4. `docs/03-ui-architecture-and-ascii-layouts.md`
-5. `docs/04-solution-architecture.md`
-6. `docs/05-requirement-coverage-matrix.md`
-7. `docs/07-implementation-plan.md`
-8. `docs/08-checklists.md`
-9. `docs/09-validation-and-testing-plan.md`
-10. `docs/10-executive-qa-review.md`
+5. `docs/03a-workbench-tabs-canvas-and-state.md`
+6. `docs/04-solution-architecture.md`
+7. `docs/05-requirement-coverage-matrix.md`
+8. `docs/07-implementation-plan.md`
+9. `docs/08-checklists.md`
+10. `docs/09-validation-and-testing-plan.md`
+11. `docs/10-executive-qa-review.md`
+12. `C:\repositories\CanDoItAll\docs\ui-shared-components\README.md`
+13. `C:\repositories\CanDoItAll\docs\ui-shared-components\recommendations\missing-components.md`
+14. `C:\repositories\CanDoItAll\docs\canvas-playlist-builder\README.md`
+15. `C:\repositories\CanDoItAll\docs\canvas-events-calendar\README.md`
 
 ## Product summary
 You are building a local-first modular workstation for software-delivery prompt workflows. The application must support:
@@ -23,6 +28,8 @@ You are building a local-first modular workstation for software-delivery prompt 
 - phase-driven prompt factory
 - validation workflows
 - test planning and evidence
+- internal application tabs with restore and sleeping behavior
+- project structure canvas and project events calendar
 - secure provider and secret handling
 - OpenAI and Ollama integration paths
 - future-ready sidecar/microservice seams
@@ -32,6 +39,7 @@ You are building a local-first modular workstation for software-delivery prompt 
 - Use **.NET 10** and **C#**.
 - The main application is a **Blazor Web App** using **Interactive Server rendering**.
 - Styling uses **Tailwind CSS** and the existing component set.
+- The shared component baseline is the `CanDoItAll.Components` library already present in this repository.
 - Keep all code comments in English.
 - Keep the architecture as a **modular monolith**.
 - Prefer one `DbContext` per operation via `IDbContextFactory`.
@@ -40,6 +48,7 @@ You are building a local-first modular workstation for software-delivery prompt 
 - Do not implement dangerous execution flows without explicit approval gates.
 - Keep files and naming aligned to the architecture package.
 - Add automated tests continuously.
+- Treat the internal workbench, project structure, and project calendar as core architecture, not optional polish.
 
 ## Session instructions
 1. Read the architecture package.
@@ -56,6 +65,7 @@ You are building a local-first modular workstation for software-delivery prompt 
 - Infrastructure baseline
 - ComponentKit baseline
 - shell layout and route placeholders
+- internal tab workspace baseline
 - Tailwind integration
 - test project setup
 - scripts/docs needed to start development cleanly
@@ -66,6 +76,7 @@ You are building a local-first modular workstation for software-delivery prompt 
 - placeholder pages for all main areas
 - module registration extensions
 - basic test project wiring
+- wiring that is ready for internal tabs, canvas wrappers, and calendar wrappers
 - concise repo-level setup notes
 
 ## Files you are likely to create

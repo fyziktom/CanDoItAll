@@ -48,6 +48,11 @@ This matrix demonstrates that the proposed UX, architecture, implementation plan
 | ASCII layout design | 03 | Validation consumes, docs | Validation Center | 09 | review/manual |
 | layout validation vs stories/use cases | 01, 03, 04, 09 | Validation | Validation Center | 09 | review/manual |
 | reusable component library plan | 03, 04, 07 | ComponentKit | all screens | 02, 10 | component tests |
+| internal tab workspace | 01, 02, 03, 03a, 04, 07 | Workbench, ComponentKit, Web | shell-wide | 01, 02, 06a, 10, 12 | component, e2e |
+| tab restore and sleeping lifecycle | 01, 02, 03a, 04, 07, 09 | Workbench, Infrastructure, Web | shell-wide | 02, 06a, 10, 11, 12 | integration, component, e2e |
+| project structure canvas | 01, 02, 03, 03a, 04, 07 | Workbench, Projects, ComponentKit | Project Structure | 06a, 10, 11 | component, integration, e2e |
+| prompt-step branching on structure canvas | 01, 02, 03a, 04, 07 | Workbench, Factory, Prompts | Project Structure, Prompt Factory | 06a, 08, 10, 11 | unit, component, e2e |
+| project events calendar | 01, 02, 03, 03a, 04, 07 | Workbench, Projects, ComponentKit | Project Calendar | 06a, 10, 11 | component, integration, e2e |
 | UI architecture | 03, 04 | Web, ComponentKit, modules | all screens | 10 | component, e2e |
 | UI implementation plan | 03, 07 | Web, ComponentKit | all screens | 10 | component, e2e |
 | UI testing, Playwright, screenshots | 03, 09 | TestLab | Test Lab | 11 | e2e, evidence |

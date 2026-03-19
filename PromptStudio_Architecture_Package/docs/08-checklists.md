@@ -43,6 +43,9 @@ This document contains implementation, review, QA, and release checklists intend
 ### 2.1 Shell checklist
 - [ ] The shell shows current workspace/project context clearly.
 - [ ] Main navigation is stable across pages.
+- [ ] The internal tab strip is visible and understandable.
+- [ ] Internal tabs can be reordered and pinned.
+- [ ] Dirty-state and sleeping-state indicators are visible.
 - [ ] Search is accessible from the shell.
 - [ ] Background task state is visible.
 - [ ] Provider health is visible.
@@ -73,6 +76,13 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Focus states are visible.
 - [ ] Error summaries are screen-reader friendly.
 - [ ] Icons are not the only source of meaning.
+
+### 2.5 Workbench restore checklist
+- [ ] Internal tab state persists through browser storage.
+- [ ] Refresh or reconnect restores the previous workbench session.
+- [ ] Partial restore failure does not lose the entire session.
+- [ ] Sleeping tabs can wake safely.
+- [ ] Linked artifacts reopen inside internal tabs.
 
 ## 3. Project module checklist
 
@@ -107,6 +117,17 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Search exists.
 - [ ] Usage history exists.
 - [ ] Clone flow exists.
+
+## 5A. Workbench and orchestration checklist
+
+- [ ] Workbench module exists.
+- [ ] Internal tab host service exists.
+- [ ] Tab snapshot and restore model exists.
+- [ ] Tab sleep and wake policy exists.
+- [ ] Project structure canvas wrapper exists.
+- [ ] Project calendar wrapper exists.
+- [ ] Canvas and calendar open linked artifacts into internal tabs.
+- [ ] Prompt sessions can be represented in the structure surface.
 
 ## 6. Prompt factory checklist
 
@@ -186,6 +207,9 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Startup smoke test exists.
 - [ ] Project creation flow exists.
 - [ ] Add-resource flow exists.
+- [ ] Internal tab restore flow exists.
+- [ ] Project structure canvas flow exists.
+- [ ] Project calendar flow exists.
 - [ ] Prompt factory flow exists.
 - [ ] Validation center flow exists.
 - [ ] Test lab flow exists.
@@ -207,6 +231,7 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Solution builds from clean checkout.
 - [ ] Database setup path is documented.
 - [ ] First-run experience works.
+- [ ] Workbench restore after interruption works.
 - [ ] Logs are reviewable.
 - [ ] Migration path is stable.
 - [ ] Provider settings survive restart.
@@ -214,6 +239,9 @@ This document contains implementation, review, QA, and release checklists intend
 
 ### 12.2 Product readiness
 - [ ] A user can complete the primary end-to-end journey.
+- [ ] A user can work through internal tabs instead of many browser tabs.
+- [ ] Project structure workbench is usable.
+- [ ] Project calendar is usable.
 - [ ] Prompt factory is usable without hidden setup.
 - [ ] Validation center stores results reliably.
 - [ ] Test lab stores evidence reliably.

@@ -6,10 +6,11 @@ Implement the guided prompt factory, blueprint catalog, context assembly pipelin
 ## Required reading
 1. `docs/01-ux-discovery.md`
 2. `docs/03-ui-architecture-and-ascii-layouts.md`
-3. `docs/04-solution-architecture.md`
-4. `docs/06-architecture-review-gap-analysis.md`
-5. `docs/07-implementation-plan.md`
-6. `docs/09-validation-and-testing-plan.md`
+3. `docs/03a-workbench-tabs-canvas-and-state.md`
+4. `docs/04-solution-architecture.md`
+5. `docs/06-architecture-review-gap-analysis.md`
+6. `docs/07-implementation-plan.md`
+7. `docs/09-validation-and-testing-plan.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -35,7 +36,8 @@ This prompt covers M6: the core prompt-creation workflow that turns project cont
 6. Implement validation warnings for missing context, provider mismatch, or sensitive content.
 7. Implement save-as-draft, save-as-final, copy, export, and provider-send actions.
 8. Ensure prompt factory output integrates with the Prompts module instead of bypassing it.
-9. Add tests for context assembly, blueprint rendering, validation warnings, and wizard flow.
+9. Integrate prompt sessions and prompt steps with the project structure workbench model so follow-up prompts can branch from a prior step.
+10. Add tests for context assembly, blueprint rendering, validation warnings, and wizard flow.
 
 ## Required deliverables
 - Factory module domain and services

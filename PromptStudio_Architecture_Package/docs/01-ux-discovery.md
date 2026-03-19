@@ -155,6 +155,14 @@ These future roles must influence policy design now, even if the first release r
 - add project notes
 - link assets and prompts
 
+### Capability group U2A — Project orchestration workbench
+- open project work inside internal application tabs
+- restore a project work session after refresh, close, or crash
+- keep inactive tabs sleeping without losing recoverable state
+- visualize project structure as a canvas of phases, prompts, resources, validations, and tests
+- schedule project events, reviews, milestones, and prompt deadlines in a project calendar
+- open related artifacts from the structure canvas and calendar into internal tabs
+
 ### Capability group U3 — Resource management
 - add typed resources
 - validate access
@@ -179,6 +187,12 @@ These future roles must influence policy design now, even if the first release r
 - validation before send/export
 - save as draft/template/final
 - send to provider or copy/export
+
+### Capability group U5A — Prompt flow orchestration
+- show prompt sessions and prompt steps inside the project structure canvas
+- branch from any prompt step into a follow-up prompt
+- trace which resources and prior prompts influenced each step
+- reopen prompt work from the exact prior node without rebuilding context manually
 
 ### Capability group U6 — Review and validation
 - validate stories/use cases
@@ -334,6 +348,9 @@ As a workspace owner, I want to configure global defaults and provider connectio
 ### Epic E2 — Manage Projects and Delivery Phases
 As an architect or developer, I want to create and maintain project metadata, phases, and statuses so prompts can be generated against real delivery context.
 
+### Epic E2A — Operate the Project Workbench
+As an architect or delivery lead, I want one internal workbench with tabs, a structure canvas, and a project calendar so I can coordinate complex project work without relying on many browser tabs.
+
 ### Epic E3 — Link Technical Resources
 As a user, I want to attach many resource types to a project so prompts can be grounded in actual source material.
 
@@ -425,6 +442,16 @@ As an architect, I want modular growth paths and future service boundaries so th
 - **US-048** — As an architect, I can add a new resource type without redesigning the whole application.
 - **US-049** — As an architect, I can add a new prompt phase/blueprint without rewriting existing flows.
 - **US-050** — As an architect, I can split heavy modules into sidecar services later while preserving the UI model.
+
+## 11.9 Workbench and orchestration stories
+- **US-051** — As a user, I can open multiple project artifacts inside internal application tabs instead of opening many browser tabs.
+- **US-052** — As a user, I can reorder, pin, close, and restore internal tabs according to my workflow.
+- **US-053** — As a user, I can reopen the application after refresh, crash, or reconnect and recover the prior internal tab session.
+- **US-054** — As a user, I can let inactive heavy tabs sleep while preserving enough state for fast restore.
+- **US-055** — As a user, I can view the project structure as a canvas of phases, resources, prompts, validations, and tests.
+- **US-056** — As a user, I can branch a new prompt or follow-up action from a specific prompt step represented in the project structure canvas.
+- **US-057** — As a user, I can manage project events, milestones, reviews, and deadlines in a project calendar linked to project artifacts.
+- **US-058** — As a user, I can open related prompts, resources, validations, or tests directly from the project structure canvas or calendar into internal tabs.
 
 ## 12. Use cases
 
@@ -525,6 +552,36 @@ As an architect, I want modular growth paths and future service boundaries so th
 5. Link findings to story/feature.
 **Success result:** UI evidence and validation become traceable.
 
+### UC-10 — Restore the internal workbench after interruption
+**Primary actor:** Architect / Developer  
+**Main flow:**
+1. Work across several internal tabs.
+2. Refresh, reconnect, or reopen the application.
+3. Restore the previous tab session from persisted browser state.
+4. Reopen active, background, and sleeping tabs safely.
+5. Resume the previous task from the recovered active tab.
+**Success result:** The workspace is recoverable without relying on many browser tabs.
+
+### UC-11 — Manage project structure visually
+**Primary actor:** Architect / Delivery Lead  
+**Main flow:**
+1. Open the project structure tab.
+2. Add or select phases, resources, prompt sessions, validations, or tests.
+3. Link nodes with meaningful relationships.
+4. Open a related artifact from the canvas.
+5. Save and later restore the structure state.
+**Success result:** Complex project flow becomes visible and navigable.
+
+### UC-12 — Coordinate work through the project calendar
+**Primary actor:** Architect / QA / Delivery Lead  
+**Main flow:**
+1. Open the project calendar tab.
+2. Create or update milestones, reviews, deadlines, or release events.
+3. Link events to project phases or artifacts.
+4. Open the related artifact from the calendar.
+5. Persist and later restore the calendar state and preferred view.
+**Success result:** Project scheduling and artifact navigation stay connected.
+
 ## 13. Navigation expectations
 
 ## 13.1 Top-level navigation
@@ -538,6 +595,8 @@ As an architect, I want modular growth paths and future service boundaries so th
 
 ## 13.2 Project-level navigation
 - Overview
+- Structure
+- Calendar
 - Stack Profile
 - Resources
 - Prompts
@@ -565,7 +624,9 @@ Every major item should be openable from:
 7. **Fast reuse** — clone, duplicate, apply template, and save draft should be first-class actions.
 8. **Human approval gates** — any action with external execution consequences must be explicit.
 9. **Clear system state** — show whether something is saved, draft, validated, indexed, synced, or failed.
-10. **Future-safe IA** — navigation must support growth without turning into tool sprawl.
+10. **Internal workbench over browser-tab sprawl** — high-density work must stay inside application-managed tabs.
+11. **Recoverability** — refresh, reconnect, and crash recovery must feel intentional.
+12. **Future-safe IA** — navigation must support growth without turning into tool sprawl.
 
 ## 15. UX validation criteria
 
@@ -576,6 +637,8 @@ The UX is acceptable only if:
 - prompt usage can be traced back to project/phase/time
 - secrets are referenced, not scattered
 - validation views connect requirements, outputs, and findings
+- internal tabs can be reopened after interruption
+- project structure and calendar views can open linked artifacts
 - adding a new phase or resource type does not require a UI redesign
 - the shell remains coherent even when more modules are added
 
@@ -587,6 +650,8 @@ The UX is acceptable only if:
 4. **Security fatigue** — too many safety dialogs can become ignored noise.
 5. **Over-generic option modeling** — too much abstraction can harm discoverability.
 6. **Under-designed activity history** — traceability can become unusable if not filtered and grouped well.
+7. **Browser-tab overload** — without internal tabs, Interactive Server cost multiplies quickly.
+8. **Canvas sprawl without conventions** — a structure canvas can become visually noisy unless node and link semantics are disciplined.
 
 ## 17. UX mitigation actions
 
@@ -597,6 +662,8 @@ The UX is acceptable only if:
 - Keep validation deterministic where possible and AI-assisted where useful.
 - Build search and filters early.
 - Implement project and prompt templates from the beginning.
+- Build the internal tab model and restore policy intentionally instead of as ad hoc component state.
+- Keep structure-canvas and calendar wrappers aligned to the documented JavaScript engines before attempting deeper rewrites.
 
 ## 18. Final UX conclusion
 

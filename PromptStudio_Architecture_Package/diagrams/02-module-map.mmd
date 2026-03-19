@@ -8,6 +8,7 @@ flowchart TB
     WS["Workspace Module"]
     SEC["Security Module"]
     PROJ["Projects Module"]
+    WB["Workbench Module"]
     RES["Resources Module"]
     PR["Prompts Module"]
     FAC["Factory Module"]
@@ -19,6 +20,7 @@ flowchart TB
     Web --> CK
     Web --> WS
     Web --> PROJ
+    Web --> WB
     Web --> RES
     Web --> PR
     Web --> FAC
@@ -29,6 +31,12 @@ flowchart TB
 
     WS --> SEC
     RES --> SEC
+    WB --> PROJ
+    WB --> RES
+    WB --> PR
+    WB --> FAC
+    WB --> VAL
+    WB --> TEST
     FAC --> PR
     FAC --> PROJ
     FAC --> RES
@@ -43,6 +51,7 @@ flowchart TB
     WS --> INF
     SEC --> INF
     PROJ --> INF
+    WB --> INF
     RES --> INF
     PR --> INF
     FAC --> INF
@@ -55,6 +64,7 @@ flowchart TB
     WS --> SK
     SEC --> SK
     PROJ --> SK
+    WB --> SK
     RES --> SK
     PR --> SK
     FAC --> SK

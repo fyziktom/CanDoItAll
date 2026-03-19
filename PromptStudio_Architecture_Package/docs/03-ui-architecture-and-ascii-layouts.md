@@ -44,6 +44,8 @@ The UI must make a large functional scope feel coherent. The design must support
 
 ## 3.2 Project workspace navigation
 - Overview
+- Structure
+- Calendar
 - Stack Profile
 - Resources
 - Prompts
@@ -55,6 +57,7 @@ The UI must make a large functional scope feel coherent. The design must support
 
 ## 3.3 Global utility surfaces
 - universal search
+- internal tab strip
 - notifications/toasts
 - status bar
 - background task drawer
@@ -65,7 +68,7 @@ The UI must make a large functional scope feel coherent. The design must support
 
 ## 4. UI zones and layout model
 
-The application uses a consistent 4-zone layout:
+The application uses a consistent 5-zone layout:
 
 1. **Left rail**
    - global navigation
@@ -79,10 +82,17 @@ The application uses a consistent 4-zone layout:
    - provider status
    - settings access
 
-3. **Main content area**
+3. **Workbench tab strip**
+   - internal tabs
+   - pinned tabs
+   - dirty-state indicators
+   - sleeping-tab indicators
+   - overflow and restore actions
+
+4. **Main content area**
    - page-specific list/detail/workflow content
 
-4. **Right utility panel**
+5. **Right utility panel**
    - actions
    - validation summary
    - metadata
@@ -90,16 +100,26 @@ The application uses a consistent 4-zone layout:
    - contextual help
    - save/send/export controls
 
-This pattern keeps the UI unified and scales well as modules grow.
+This pattern keeps the UI unified, limits browser-tab sprawl, and scales better for Blazor Interactive Server work.
 
 ## 5. Reusable component architecture
 
 The UI should rely on the existing component set first, then extend it with application-specific components.
 
+Reference inputs:
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Components`
+- `C:\repositories\CanDoItAll\docs\ui-shared-components`
+- `C:\repositories\CanDoItAll\docs\canvas-playlist-builder`
+- `C:\repositories\CanDoItAll\docs\canvas-events-calendar`
+
 ## 5.1 Base shell components
 - `AppShell`
 - `AppSidebar`
 - `AppTopbar`
+- `AppTabStrip`
+- `AppTab`
+- `TabOverflowMenu`
+- `TabRestoreBanner`
 - `PageHeader`
 - `BreadcrumbTrail`
 - `SectionCard`
@@ -111,15 +131,22 @@ The UI should rely on the existing component set first, then extend it with appl
 - `EmptyState`
 - `ErrorState`
 - `LoadingBlock`
+- `DirtyStateDot`
+- `SleepStateBadge`
+- `SaveStateIndicator`
 
 ## 5.2 Form and editor components
 - `SmartForm`
 - `FieldGroup`
+- `ValidatedFormField`
 - `OptionSelector`
 - `OptionMatrix`
 - `NoteField`
 - `DateRangeEditor`
 - `SecretReferencePicker`
+- `DatePicker`
+- `TimePicker`
+- `DateTimeEditor`
 - `ResourceTypePicker`
 - `PromptEditor`
 - `PromptSectionEditor`
@@ -143,6 +170,9 @@ The UI should rely on the existing component set first, then extend it with appl
 - `ContextAssemblerPanel`
 - `PromptBlueprintSelector`
 - `GeneratedPromptPreview`
+- `PromptFlowPanel`
+- `PromptStepCard`
+- `PromptBranchActionMenu`
 - `ApprovalGatePanel`
 - `ReviewDiffViewer`
 - `CoverageMatrixView`
@@ -160,20 +190,33 @@ The UI should rely on the existing component set first, then extend it with appl
 - `SecretResourceLinkEditor`
 - `PromptLinkEditor`
 
+## 5.6 Workbench and canvas components
+- `CanvasWorkbenchShell`
+- `WorkbenchInspectorPane`
+- `WorkbenchOutlinePane`
+- `ProjectStructureCanvas`
+- `ProjectCalendar`
+- `NodeInspectorField`
+- `ArtifactLinkChip`
+- `TimelineEventBadge`
+
 ## 6. State model for the UI
 
 The UI should distinguish:
+- internal tab session state
 - page state
 - local form state
 - background operation state
 - project context state
 - transient notifications
 - persisted filters/sorting preferences
+- persisted workbench restore state
 
 ### Recommended state approach
 - use component-local state for simple forms
 - use scoped feature state for the current page/workflow
 - use lightweight app-wide state containers only for shell-level needs
+- use an explicit browser-storage abstraction for tab and workbench restore
 - do not centralize all state into one giant client store
 
 ## 7. Main screens
@@ -217,6 +260,29 @@ Purpose:
 ## 7.3 Project overview
 Purpose:
 - show project identity, phase timeline, stack profile summary, recent prompts, recent validations, and related resources
+
+## 7.3A Project structure workbench
+Purpose:
+- visualize project phases, resources, prompts, validations, tests, and decisions in one linked surface
+
+### Required behaviors
+- internal-tab hosted, not browser-tab hosted
+- canvas wrapper around the documented JavaScript engine
+- outline + inspector + command surfaces around the canvas
+- open linked artifacts into internal tabs
+- save and restore viewport, selection, and layout state
+- support prompt-step branching from an existing prompt node
+
+## 7.3B Project calendar
+Purpose:
+- coordinate milestones, reviews, prompt deadlines, validation windows, and release events
+
+### Required behaviors
+- internal-tab hosted, not browser-tab hosted
+- wrapper around the documented JavaScript calendar widget
+- day, week, month, year, and list views
+- open linked artifacts into internal tabs
+- persist preferred view and visible date range per project
 
 ## 7.4 Resources page
 Purpose:
@@ -464,6 +530,13 @@ Purpose:
 - linked sources or artifacts
 - explicit decision actions
 
+### 9.4 Internal tab and workbench rules
+- every openable artifact should resolve through the internal tab host first
+- heavy tabs should be sleep-capable unless there is a strong reason not to be
+- dirty-state indicators must be visible without opening the tab
+- restore after refresh or reconnect must be deliberate and user-visible
+- structure canvas and calendar must reopen linked artifacts inside internal tabs
+
 ## 10. Design system rules
 
 1. Use a restrained visual language.
@@ -486,6 +559,8 @@ Purpose:
 ### Layout coverage summary
 - Dashboard supports US-011, US-027, US-043, US-045.
 - Project overview supports US-006 through US-011.
+- Project structure supports US-051, US-055, US-056, and US-058.
+- Project calendar supports US-057 and US-058.
 - Resources page supports US-012 through US-022.
 - Prompt gallery supports US-023 through US-029.
 - Prompt factory supports US-030 through US-036.
@@ -493,7 +568,11 @@ Purpose:
 - Test lab supports US-044 through US-047.
 
 ### UI gap check
-No requested major capability is missing from the proposed page inventory.
+The package now explicitly includes the previously missing workbench capabilities:
+- internal application tabs
+- project structure canvas
+- project events calendar
+- prompt-step branching surfaces
 
 ## 12. UI architecture conclusion
 

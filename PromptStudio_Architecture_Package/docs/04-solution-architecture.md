@@ -64,6 +64,7 @@ PromptStudio.sln
 │  ├─ PromptStudio.Modules.Workspace/      # Settings, provider profiles, defaults
 │  ├─ PromptStudio.Modules.Security/       # Secret vault, redaction, approval gates
 │  ├─ PromptStudio.Modules.Projects/       # Projects, phases, statuses, stack profile
+│  ├─ PromptStudio.Modules.Workbench/      # Internal tabs, project structure, project calendar
 │  ├─ PromptStudio.Modules.Resources/      # Typed resources and connector profiles
 │  ├─ PromptStudio.Modules.Prompts/        # Prompt library, collections, versions, usage
 │  ├─ PromptStudio.Modules.Factory/        # Prompt factory, blueprints, context assembly
@@ -123,12 +124,24 @@ Responsibilities:
 ## 5.4 PromptStudio.ComponentKit
 Responsibilities:
 - app-specific reusable Blazor components
-- wrappers around existing provided component set
+- wrappers around the existing `CanDoItAll.Components` set
 - visual consistency helpers
 - page templates
+- tab-strip and shell primitives
+- canvas and workbench host components
 - state presentation primitives
 
-## 5.5 Feature modules
+## 5.5 PromptStudio.Modules.Workbench
+Responsibilities:
+- internal tab workspace
+- browser-state-backed tab restore
+- sleeping and background tab lifecycle
+- project structure canvas orchestration
+- project events calendar orchestration
+- deep-link resolution into internal tabs
+- workbench-level artifact opening policies
+
+## 5.6 Feature modules
 Each module owns:
 - domain entities/value objects
 - commands/queries/services
@@ -186,7 +199,26 @@ Key aggregates:
 - `ProjectStackProfile`
 - `ProjectOptionSelection`
 
-## 6.4 Resources module
+## 6.4 Workbench module
+Responsibilities:
+- internal tabs
+- tab snapshots and restore
+- tab sleep and wake policies
+- project structure manifests
+- project structure relationships
+- project calendar events and views
+- artifact-opening intents
+
+Key aggregates:
+- `WorkbenchSession`
+- `WorkbenchTab`
+- `TabSnapshot`
+- `ProjectStructureManifest`
+- `ProjectStructureLink`
+- `ProjectCalendarEvent`
+- `ProjectCalendarPreference`
+
+## 6.5 Resources module
 Responsibilities:
 - typed project resources
 - connector profiles
@@ -201,7 +233,7 @@ Key aggregates:
 - `ResourceValidationRecord`
 - `ResourceSnapshot`
 
-## 6.5 Prompts module
+## 6.6 Prompts module
 Responsibilities:
 - prompt drafts
 - prompt versions
@@ -217,7 +249,7 @@ Key aggregates:
 - `PromptUsageRecord`
 - `PromptTag`
 
-## 6.6 Factory module
+## 6.7 Factory module
 Responsibilities:
 - phase-driven wizard
 - blueprint catalog
@@ -232,7 +264,7 @@ Key aggregates:
 - `ContextAssembly`
 - `PromptValidationResult`
 
-## 6.7 Validation module
+## 6.8 Validation module
 Responsibilities:
 - story/use-case validation
 - layout validation
@@ -248,7 +280,7 @@ Key aggregates:
 - `ValidationFinding`
 - `ReviewDecision`
 
-## 6.8 TestLab module
+## 6.9 TestLab module
 Responsibilities:
 - coverage planning
 - test evidence
@@ -263,7 +295,7 @@ Key aggregates:
 - `TestRunRecord`
 - `EvidenceArtifact`
 
-## 6.9 Activity module
+## 6.10 Activity module
 Responsibilities:
 - audit trail
 - timeline
@@ -277,7 +309,7 @@ Key aggregates:
 - `SearchDocument`
 - `NotificationRecord`
 
-## 6.10 Automation module
+## 6.11 Automation module
 Responsibilities:
 - background job queue
 - sidecar integration contracts
@@ -352,6 +384,17 @@ Pattern:
 - publish activity event
 - refresh UI state through polling or notifications
 
+## 8.4 Workbench runtime pattern
+The shell must treat internal tabs as a first-class runtime concern:
+
+1. The user opens an artifact through the tab host.
+2. The tab host resolves whether to activate, duplicate, background, or restore.
+3. Heavy tabs can move into a sleeping snapshot state.
+4. Tab session state is persisted through a browser-storage abstraction.
+5. On restart or reconnect, the shell restores the session and rehydrates tabs selectively.
+
+This pattern is mandatory because the product runs on Interactive Server and must not depend on many browser tabs for normal work.
+
 ## 9. Rendering model
 
 The web host should use:
@@ -363,6 +406,7 @@ Why:
 - the application is local-first
 - server-rendered interactivity fits the workstation-hosted control plane
 - the app benefits from central access to file system, secrets, and local integrations
+- internal tabs let the app manage heavy screen lifecycles intentionally instead of delegating that to browser-tab behavior
 
 ## 10. Persistence architecture
 
@@ -429,6 +473,7 @@ Use a hybrid model:
 - screenshots
 - exported prompt packages
 - large evidence files
+- optional extracted tab or canvas snapshot payloads when not suitable for direct database storage
 
 ## 10.5 File storage abstraction
 Create:
@@ -825,6 +870,11 @@ The v1 architecture must support all three options later.
 - Projects_Projects
 - Projects_ProjectPhases
 - Projects_ProjectOptionSelections
+- Workbench_WorkbenchSessions
+- Workbench_WorkbenchTabs
+- Workbench_ProjectStructureManifests
+- Workbench_ProjectStructureLinks
+- Workbench_ProjectCalendarEvents
 - Resources_ProjectResources
 - Resources_ResourceValidationRecords
 - Prompts_PromptArtifacts
@@ -882,6 +932,8 @@ Use strongly typed options:
 - file handling limits
 - safety policy settings
 - job processing settings
+- workbench tab sleep settings
+- browser restore and snapshot settings
 
 ## 24. Architecture decisions record (summary)
 
@@ -906,10 +958,18 @@ Use strongly typed options:
 **Reason:** Satisfies current breadth of asset types and future extensibility.
 
 ### ADR-06
+**Decision:** Build an internal application-tab workspace with browser-state restore.  
+**Reason:** Interactive Server needs deliberate tab lifecycle control; browser tabs are too expensive and too weak for the intended workstation model.
+
+### ADR-07
+**Decision:** Wrap the documented JavaScript project-structure and calendar engines before attempting deeper rewrites.  
+**Reason:** The proven canvas and calendar engines already exist and should be reused through typed Blazor contracts first.
+
+### ADR-08
 **Decision:** Separate prompt library from prompt factory.  
 **Reason:** Managing prompts and generating prompts are related but distinct capabilities.
 
-### ADR-07
+### ADR-09
 **Decision:** Use rule-first validation with optional AI augmentation.  
 **Reason:** Keeps the system trustworthy and testable.
 
@@ -917,6 +977,9 @@ Use strongly typed options:
 
 PromptStudio should be built as a **modular, local-first, C#-centric Blazor workstation** with:
 - a unified shell
+- an internal recoverable tab workspace
+- a project structure workbench
+- a project events calendar
 - typed project resources
 - a strong prompt domain
 - secure secret handling

@@ -10,6 +10,7 @@ Implement the remaining hardening work: activity timeline, search document index
 4. `docs/08-checklists.md`
 5. `docs/09-validation-and-testing-plan.md`
 6. `docs/10-executive-qa-review.md`
+7. `docs/03a-workbench-tabs-canvas-and-state.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -30,10 +31,11 @@ This prompt covers M9 and the release-hardening work needed before calling the i
 1. Implement the Activity module and a usable activity timeline.
 2. Implement search document indexing and basic cross-entity search.
 3. Implement background job records and a UI for background task visibility.
-4. Review observability: logs, health indicators, diagnostics, and safe error messaging.
-5. Re-run the checklists and close the most important UX and safety gaps.
-6. Improve packaging/startup/readme guidance for local usage.
-7. Add or refine tests for activity/search/job visibility flows.
+4. Review observability: logs, health indicators, diagnostics, restore diagnostics, and safe error messaging.
+5. Harden workbench restore, sleeping-tab behavior, and snapshot versioning.
+6. Re-run the checklists and close the most important UX and safety gaps.
+7. Improve packaging/startup/readme guidance for local usage.
+8. Add or refine tests for activity/search/job visibility and workbench-hardening flows.
 
 ## Required deliverables
 - Activity module

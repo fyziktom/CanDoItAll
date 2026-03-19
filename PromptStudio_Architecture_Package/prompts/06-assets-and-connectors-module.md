@@ -6,9 +6,10 @@ Implement the generalized resource model, descriptor registry, typed editors, co
 ## Required reading
 1. `docs/01-ux-discovery.md`
 2. `docs/03-ui-architecture-and-ascii-layouts.md`
-3. `docs/04-solution-architecture.md`
-4. `docs/06-architecture-review-gap-analysis.md`
-5. `docs/07-implementation-plan.md`
+3. `docs/03a-workbench-tabs-canvas-and-state.md`
+4. `docs/04-solution-architecture.md`
+5. `docs/06-architecture-review-gap-analysis.md`
+6. `docs/07-implementation-plan.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -43,7 +44,8 @@ This prompt covers M4: project-linked resources for all required kinds, status t
 5. Add connector/profile reuse where applicable.
 6. Build the Resources page with filters, badges, and a detail drawer.
 7. Keep preview/indexing behavior capability-based; do not overbuild parsers.
-8. Add component and integration tests for resource creation and editing.
+8. Ensure resources are openable from later workbench surfaces through stable artifact identifiers.
+9. Add component and integration tests for resource creation and editing.
 
 ## Required deliverables
 - generalized resource persistence

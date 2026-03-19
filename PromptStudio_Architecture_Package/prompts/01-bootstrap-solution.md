@@ -5,9 +5,10 @@ Create the initial solution structure and development foundation for PromptStudi
 
 ## Required reading
 1. `README.md`
-2. `docs/04-solution-architecture.md`
-3. `docs/07-implementation-plan.md`
-4. `docs/08-checklists.md`
+2. `docs/03a-workbench-tabs-canvas-and-state.md`
+3. `docs/04-solution-architecture.md`
+4. `docs/07-implementation-plan.md`
+5. `docs/08-checklists.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -27,8 +28,8 @@ This prompt covers the M0 foundation work: solution structure, project creation,
 ## Tasks
 1. Create the solution and all planned projects under `src/` and `tests/`.
 2. Create a clean module registration pattern so each module can expose an `Add...Module` extension.
-3. Create `PromptStudio.Web` with shell layout, navigation, and placeholder routes for Dashboard, Projects, Prompt Gallery, Prompt Factory, Validation Center, Test Lab, and Settings.
-4. Create `PromptStudio.SharedKernel`, `PromptStudio.Infrastructure`, and `PromptStudio.ComponentKit`.
+3. Create `PromptStudio.Web` with shell layout, internal tab host baseline, navigation, and placeholder routes for Dashboard, Projects, Prompt Gallery, Prompt Factory, Validation Center, Test Lab, and Settings.
+4. Create `PromptStudio.SharedKernel`, `PromptStudio.Infrastructure`, `PromptStudio.ComponentKit`, and the Workbench module baseline.
 5. Add Tailwind configuration/build integration appropriate for the web project.
 6. Add test projects for unit, integration, component, and Playwright layers.
 7. Add repo-level documentation for build/test/start commands.
@@ -45,6 +46,7 @@ This prompt covers the M0 foundation work: solution structure, project creation,
 ## Acceptance criteria
 - solution builds from a clean restore
 - shell navigation works
+- the shell has an internal tab workspace baseline instead of assuming browser tabs
 - all planned top-level routes exist
 - module registration is discoverable and consistent
 - Tailwind assets are included in the web host

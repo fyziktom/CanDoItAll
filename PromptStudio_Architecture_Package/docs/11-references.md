@@ -105,6 +105,23 @@ This architecture package is primarily a design artifact. The following referenc
 31. Playwright accessibility testing  
     https://playwright.dev/docs/accessibility-testing
 
+## Local repository reference packs
+
+32. Shared Blazor component library  
+    `C:\repositories\CanDoItAll\src\CanDoItAll.Components`
+
+33. Shared component guidance  
+    `C:\repositories\CanDoItAll\docs\ui-shared-components\README.md`
+
+34. Shared component roadmap  
+    `C:\repositories\CanDoItAll\docs\ui-shared-components\recommendations\missing-components.md`
+
+35. Project structure canvas source-analysis pack  
+    `C:\repositories\CanDoItAll\docs\canvas-playlist-builder\README.md`
+
+36. Project calendar source-analysis pack  
+    `C:\repositories\CanDoItAll\docs\canvas-events-calendar\README.md`
+
 ## Note
 
 These references inform the architecture but do not constrain it to every implementation detail. The proposed solution intentionally wraps vendor/platform specifics behind the application’s own module and service abstractions where long-term flexibility matters.

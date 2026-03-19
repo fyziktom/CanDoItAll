@@ -38,6 +38,7 @@ Each milestone must end with:
 | M2 | Workspace and providers | Provider profiles, workspace defaults, health checks |
 | M3 | Projects and stack profile | Project creation, dates, phases, generalized options |
 | M4 | Resources and connectors | Typed resources, secret references, validation states |
+| M4A | Workbench and visual orchestration | Internal tabs, tab restore, project structure canvas, project calendar |
 | M5 | Prompt library | Drafts, versions, collections, tags, usage history |
 | M6 | Prompt factory | Phase wizard, blueprints, context assembly, prompt validation |
 | M7 | Validation center | Review flows, checklists, findings, coverage links |
@@ -61,7 +62,7 @@ Each milestone must end with:
 1. Create solution and projects.
 2. Create module registration pattern.
 3. Create shared result/error primitives.
-4. Create shell layout and page placeholders.
+4. Create shell layout, internal tab host contracts, and page placeholders.
 5. Integrate the existing component set and create ComponentKit wrappers.
 6. Add test projects.
 7. Add lint/format/test scripts.
@@ -70,6 +71,7 @@ Each milestone must end with:
 ### Deliverables
 - compilable solution
 - working shell
+- internal tab shell baseline
 - placeholder routes for all main areas
 - CI-friendly test command baseline
 - initial component styling foundation
@@ -77,6 +79,7 @@ Each milestone must end with:
 ### Acceptance criteria
 - solution builds cleanly
 - shell navigation works
+- the shell has a credible internal tab workspace baseline
 - all modules register through a predictable pattern
 - Tailwind pipeline works
 - test projects run
@@ -210,6 +213,41 @@ Each milestone must end with:
 - resource records display status clearly
 - resource add/edit flows are test-covered
 - no raw secret duplication occurs in resource rows
+
+## M4A — Workbench and visual orchestration
+
+### Goals
+- implement the internal tab workspace
+- implement browser-state-backed restore and sleeping-tab behavior
+- implement the project structure canvas wrapper
+- implement the project events calendar wrapper
+- link workbench surfaces to real project artifacts
+
+### Tasks
+1. Create the Workbench module and persistence model.
+2. Implement tab host services, tab registry, and browser-storage-backed restore.
+3. Build shell tab strip, pinning, reordering, close actions, and restore UX.
+4. Implement the project structure canvas wrapper using the documented JavaScript engine.
+5. Implement the project events calendar wrapper using the documented JavaScript widget.
+6. Build inspector or outline surfaces around the structure canvas.
+7. Support opening related artifacts from the canvas and calendar into internal tabs.
+8. Add tests for tab restore, sleep or wake, and the wrapper contracts.
+
+### Deliverables
+- Workbench module
+- internal tab workspace
+- local restore path
+- project structure canvas wrapper
+- project calendar wrapper
+- automated tests
+
+### Acceptance criteria
+- users can open, close, reorder, pin, and restore internal tabs
+- refresh or reconnect restores the prior tab session safely
+- heavy tabs can sleep without losing recoverable state
+- the structure canvas is usable through a wrapper-first integration
+- the project calendar is usable through a wrapper-first integration
+- linked artifacts open into internal tabs
 
 ## M5 — Prompt library
 
@@ -385,8 +423,16 @@ Runs from M0 onward:
 - list/detail templates
 - wizard components
 - badges/status patterns
+- internal tab-strip and workbench-shell components
 
-### Workstream C — Documentation and ADR tracking
+### Workstream C — Visual workbench wrappers
+Runs from M0 onward:
+- project structure canvas wrapper preparation
+- project calendar wrapper preparation
+- typed DTO contracts for both wrappers
+- browser-storage-backed restore contracts
+
+### Workstream D — Documentation and ADR tracking
 Runs continuously:
 - update internal docs
 - record deviations from the plan
@@ -402,13 +448,14 @@ Runs continuously:
 4. Workspace
 5. Projects
 6. Resources
-7. Prompts
-8. Factory
-9. Validation
-10. TestLab
-11. Activity
-12. Automation
-13. Web shell refinements
+7. Workbench
+8. Prompts
+9. Factory
+10. Validation
+11. TestLab
+12. Activity
+13. Automation
+14. Web shell refinements
 
 ## 7. Definition of done
 
@@ -447,11 +494,18 @@ Proceed only if:
 - all required resource kinds can be registered
 - security references are functioning correctly
 
+## Gate G3A — after M4A
+Proceed only if:
+- internal tabs can be restored safely after interruption
+- the structure canvas and calendar wrappers are operational
+- linked artifacts open inside internal tabs instead of forcing browser-tab workflows
+
 ## Gate G4 — after M6
 Proceed only if:
 - prompt factory is usable end-to-end
 - save/export/send flows are stable
 - no sensitive leakage has been observed in the send path
+- prompt sessions can be re-entered through the workbench model
 
 ## Gate G5 — after M8
 Proceed only if:
@@ -482,6 +536,13 @@ User value:
 - attach resources
 - manage prompt library
 
+### Slice 2A — Workbench alpha
+Includes M4A  
+User value:
+- keep project work inside internal tabs
+- visualize project structure
+- manage project schedule visually
+
 ### Slice 3 — Prompt factory beta
 Includes M6  
 User value:
@@ -506,7 +567,7 @@ Resources/connectors + prompt factory
 Secret handling and output/send/export safety
 
 ### Highest design risk
-UI fragmentation from feature growth
+UI fragmentation from feature growth and a weak workbench model
 
 ### Highest technical risk
 Background processing and provider differences

@@ -150,6 +150,33 @@ Use one shell, one page pattern, one right-side context/action drawer, and a sma
 ### Required control
 Every new feature must fit the shell instead of inventing a new interaction pattern.
 
+## 4.10 Finding J — Browser tabs are the wrong concurrency model for this product
+The product is supposed to become a daily workstation with many concurrent artifacts open at once. If the architecture leaves that to browser tabs, Interactive Server circuits and render trees will multiply in a way that is expensive and operationally messy.
+
+### Decision
+The application needs an internal tab workspace with active, background, and sleeping states.
+
+### Required control
+Tab lifecycle, restore, and browser storage persistence must be architecture-level concerns, not page-level convenience code.
+
+## 4.11 Finding K — The project structure surface was underspecified
+The package previously described projects, prompts, validations, and tests, but it did not define the visual orchestration surface that connects them operationally.
+
+### Decision
+Introduce the project structure canvas as a first-class workbench feature using the documented playlist-builder canvas strategy as the starting point.
+
+### Required control
+Version one must wrap the proven JavaScript engine instead of inventing a new graph renderer in C#.
+
+## 4.12 Finding L — The project calendar is not optional administration detail
+For delivery work, milestones, prompt deadlines, reviews, releases, and test windows matter. Without a project calendar linked to project artifacts, the product will be structurally complete but operationally awkward.
+
+### Decision
+Introduce a project events calendar as a first-class workbench feature using the documented calendar wrapper strategy.
+
+### Required control
+Calendar items must link back into internal tabs and project artifacts.
+
 ## 5. Architecture adjustments made after review
 
 The following adjustments were made during review:
@@ -174,6 +201,15 @@ The following adjustments were made during review:
 
 7. **Single DbContext decision explicitly justified**  
    Keeps the v1 implementation realistic.
+
+8. **Internal workbench made explicit**  
+   The application now requires internal tabs, sleeping-tab lifecycle, and browser-state restore.
+
+9. **Project structure canvas added as a first-class surface**  
+   Prompt and project orchestration now have a visual model instead of only lists and forms.
+
+10. **Project calendar added as a first-class surface**  
+    Scheduling and artifact linkage are now covered in the architecture itself.
 
 ## 6. Remaining residual risks
 
@@ -218,6 +254,22 @@ Jobs, indexing, health checks, and evidence handling can create operational nois
 - small number of job types initially
 - avoid speculative background work
 
+### Residual risk R6 — Workbench state corruption or stale restore
+Restoring many internal tabs after interruption can fail in subtle ways if snapshot contracts are weak.
+
+**Mitigation**
+- version tab snapshots
+- isolate browser-storage persistence behind explicit interfaces
+- allow partial restore instead of all-or-nothing failure
+
+### Residual risk R7 — Canvas over-generalization
+The structure canvas could become a vague generic graph editor and lose delivery focus.
+
+**Mitigation**
+- keep typed node categories
+- keep typed relationship vocabulary
+- keep wrapper-first reuse of the documented engine
+
 ## 7. Why the architecture is still approved
 
 Despite the risks, the architecture remains approved because it:
@@ -250,6 +302,8 @@ The implementation team must preserve these constraints:
 6. Keep execution approval explicit.
 7. Keep UI patterns consistent.
 8. Keep background work visible and diagnosable.
+9. Keep internal tab lifecycle explicit and recoverable.
+10. Keep project structure and calendar surfaces linked to the real artifact model.
 
 ## 10. Review verdict
 
