@@ -1,0 +1,58 @@
+@inject TuningCoordinator TuningCoordinator
+
+<div class="relative">
+    @if (IsEnabled)
+    {
+        <button type="button"
+                class="absolute right-3 top-3 z-10 rounded-full border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-sky-700 shadow-sm"
+                title="@($"Tune {ComponentName}")"
+                @onclick="OpenRequested">
+            tune
+        </button>
+    }
+
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public bool IsEnabled { get; set; }
+
+    [Parameter, EditorRequired]
+    public string CapsuleKey { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string ComponentName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? ContextSummary { get; set; }
+
+    [Parameter]
+    public string? Route { get; set; }
+
+    [Parameter]
+    public Guid? ProjectId { get; set; }
+
+    [Parameter]
+    public string? TabId { get; set; }
+
+    [Parameter]
+    public string? SelectionId { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public EventCallback<TuningBoundaryRequest> Requested { get; set; }
+
+    private async Task OpenRequested()
+    {
+        var request = new TuningBoundaryRequest(CapsuleKey, ComponentName, ContextSummary, Route, ProjectId, TabId, SelectionId);
+        TuningCoordinator.Open(request);
+
+        if (Requested.HasDelegate)
+        {
+            await Requested.InvokeAsync(request);
+        }
+    }
+}

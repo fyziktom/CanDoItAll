@@ -1,0 +1,116 @@
+@page "/projects/{ProjectId:guid}/structure"
+@* codex-capsule
+kind: page
+name: ProjectStructurePage
+summary: Hosts the project structure canvas, outline, and typed command actions for linked artifacts.
+owns: structure-canvas, node-outline, node-inspector
+deps: ProjectWorkbenchService, NavigationManager
+risks: stale-node-selection, invalid-command-routing
+tests: component:ProjectStructurePageTests, e2e:workbench-structure
+*@
+@using CanDoItAll.ComponentKit.Components
+@inject ProjectWorkbenchService ProjectWorkbenchService
+@inject NavigationManager Navigation
+
+<PageTitle>Project Structure</PageTitle>
+
+@if (surface is null)
+{
+    <p class="text-sm text-slate-500">Loading project structure…</p>
+}
+else
+{
+    <div class="space-y-6">
+        <PageHeader Eyebrow="Workbench"
+                    Title="@($"{surface.ProjectName} structure")"
+                    Description="Visualize the project graph, inspect linked artifacts, and launch workbench commands through typed C# handlers." />
+
+        <div class="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+            <SectionCard Title="Structure canvas" Description="The JavaScript wrapper renders the visual surface while selection and command routing stay in .NET.">
+                <ProjectStructureCanvas Surface="surface" SelectedNodeId="selectedNodeId" SelectedNodeChanged="HandleSelectedNodeChanged" />
+            </SectionCard>
+
+            <div class="space-y-4">
+                <SectionCard Title="Outline" Description="The outline mirrors the canvas model so the structure remains navigable even when the visual surface is dense.">
+                    <div class="space-y-2">
+                        @foreach (var node in surface.Nodes)
+                        {
+                            <button type="button"
+                                    class="w-full rounded-2xl border px-3 py-3 text-left text-sm @(selectedNodeId == node.Id ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-slate-50 text-slate-700")"
+                                    @onclick="() => selectedNodeId = node.Id">
+                                <span class="block font-semibold">@node.Title</span>
+                                <span class="mt-1 block text-xs @(selectedNodeId == node.Id ? "text-slate-200" : "text-slate-500")">@node.Kind · @node.Status</span>
+                            </button>
+                        }
+                    </div>
+                </SectionCard>
+
+                <SectionCard Title="Inspector" Description="Selected nodes publish one stable set of actions instead of page-specific shortcuts.">
+                    @if (selectedNode is null)
+                    {
+                        <p class="text-sm text-slate-500">Select a node to inspect its route and related actions.</p>
+                    }
+                    else
+                    {
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">@selectedNode.Kind</p>
+                                <p class="mt-2 text-lg font-semibold text-slate-900">@selectedNode.Title</p>
+                                <p class="mt-1 text-sm text-slate-600">@selectedNode.Subtitle</p>
+                                <p class="mt-1 text-xs text-slate-500">@selectedNode.Status</p>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-3">
+                                @foreach (var command in Enum.GetValues<ProjectStructureCommandKind>())
+                                {
+                                    <button type="button"
+                                            class="aspect-square rounded-2xl bg-slate-900 px-2 py-2 text-center text-xs font-semibold text-white [clip-path:polygon(25%_6%,75%_6%,100%_50%,75%_94%,25%_94%,0_50%)]"
+                                            @onclick="() => ExecuteCommandAsync(command)">
+                                        @command
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </SectionCard>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid ProjectId { get; set; }
+
+    private ProjectStructureSurface? surface;
+    private string? selectedNodeId;
+
+    private ProjectStructureNode? selectedNode => surface?.Nodes.FirstOrDefault(node => node.Id == selectedNodeId);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        surface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
+        selectedNodeId ??= surface.Nodes.FirstOrDefault()?.Id;
+    }
+
+    private Task HandleSelectedNodeChanged(string nodeId)
+    {
+        selectedNodeId = nodeId;
+        return Task.CompletedTask;
+    }
+
+    private async Task ExecuteCommandAsync(ProjectStructureCommandKind commandKind)
+    {
+        if (string.IsNullOrWhiteSpace(selectedNodeId))
+        {
+            return;
+        }
+
+        var artifact = await ProjectWorkbenchService.ExecuteNodeCommandAsync(ProjectId, selectedNodeId, commandKind);
+        surface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
+        if (artifact is not null)
+        {
+            Navigation.NavigateTo(artifact.Route);
+        }
+    }
+}

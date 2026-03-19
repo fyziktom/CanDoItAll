@@ -1,0 +1,334 @@
+@page "/prompt-factory"
+@* codex-capsule
+kind: page
+name: PromptFactoryPage
+summary: Builds prompt sessions from projects, flow templates, shared blocks, and provider settings.
+owns: prompt-session-editor, run-node-visibility, prompt-preview
+deps: PromptFactoryService, ProjectsService, ResourcesService, WorkspaceService
+risks: missing-project-context, stale-run-routing
+tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
+*@
+@using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Modules.Projects
+@using CanDoItAll.Modules.Resources
+@using CanDoItAll.Modules.Workspace
+@inject PromptFactoryService PromptFactoryService
+@inject ProjectsService ProjectsService
+@inject ResourcesService ResourcesService
+@inject WorkspaceService WorkspaceService
+
+<PageTitle>Prompt Factory</PageTitle>
+
+<div class="space-y-6">
+    <PageHeader Eyebrow="Prompt Factory"
+                Title="Guided prompt assembly"
+                Description="Build a reusable prompt from project context, shared blocks, flow templates, selected resources, and provider settings." />
+
+    <div class="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <SectionCard Title="Build session" Description="Sessions persist project, phase, block, and provider choices so the workbench can reopen prompt-building progress later.">
+            <EditForm Model="editor" OnValidSubmit="BuildAsync">
+                <div class="space-y-4">
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Project</label>
+                            <InputSelect @bind-Value="editor.ProjectId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="prompt-factory-project" @onchange="HandleProjectChangedAsync">
+                                <option value="">Select a project</option>
+                                @foreach (var project in projects)
+                                {
+                                    <option value="@project.Id">@project.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Phase</label>
+                            <InputText @bind-Value="editor.Phase" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Blueprint</label>
+                            <InputSelect @bind-Value="editor.BlueprintId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" @onchange="HandleBlueprintChangedAsync">
+                                @foreach (var blueprint in blueprints)
+                                {
+                                    <option value="@blueprint.Id">@($"{blueprint.Name} - {blueprint.PromptType}")</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Flow template</label>
+                            <InputSelect @bind-Value="editor.FlowTemplateId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                @foreach (var template in templates)
+                                {
+                                    <option value="@template.Id">@template.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Provider</label>
+                            <InputSelect @bind-Value="editor.ProviderProfileId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                <option value="">No provider selected</option>
+                                @foreach (var provider in providers)
+                                {
+                                    <option value="@provider.Id">@($"{provider.Name} - {provider.ProviderKind}")</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Draft title</label>
+                            <InputText @bind-Value="editor.DraftTitle" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-3">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Repository</label>
+                            <InputText @bind-Value="editor.RepositoryName" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Branch</label>
+                            <InputText @bind-Value="editor.BranchName" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Commit</label>
+                            <InputText @bind-Value="editor.CommitSha" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Shared blocks</h3>
+                        <div class="grid gap-2 md:grid-cols-2">
+                            @foreach (var block in blocks)
+                            {
+                                <label class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+                                    <input type="checkbox"
+                                           checked="@editor.SelectedBlockIds.Contains(block.Id)"
+                                           @onchange="args => ToggleBlock(block.Id, ReadCheckboxValue(args))" />
+                                    <span>
+                                        <span class="block font-semibold text-slate-900">@block.Name</span>
+                                        <span class="mt-1 block text-xs text-slate-500">@block.BlockKind - @block.Summary</span>
+                                    </span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Project resources</h3>
+                        @if (projectResources.Count == 0)
+                        {
+                            <p class="text-sm text-slate-500">Select a project to choose linked resources.</p>
+                        }
+                        else
+                        {
+                            <div class="grid gap-2 md:grid-cols-2">
+                                @foreach (var resource in projectResources)
+                                {
+                                    <label class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+                                        <input type="checkbox"
+                                               checked="@editor.SelectedResourceIds.Contains(resource.Id)"
+                                               @onchange="args => ToggleResource(resource.Id, ReadCheckboxValue(args))" />
+                                        <span>
+                                            <span class="block font-semibold text-slate-900">@resource.Name</span>
+                                            <span class="mt-1 block text-xs text-slate-500">@resource.ResourceKind - @resource.ValidationStatus - @resource.Sensitivity</span>
+                                        </span>
+                                    </label>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" data-testid="prompt-factory-build">Build prompt</button>
+                        <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="SaveDraftAsync">Save draft</button>
+                        <button type="button" class="inline-flex items-center rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700" @onclick="SaveFinalAsync">Save final</button>
+                        <button type="button" class="inline-flex items-center rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700" @onclick="ExportAsync">Export</button>
+                        <button type="button" class="inline-flex items-center rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700" @onclick="SendAsync">Send</button>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        <p class="text-sm text-emerald-700">@message</p>
+                    }
+                </div>
+            </EditForm>
+        </SectionCard>
+
+        <SectionCard Title="Preview and flow" Description="The generated prompt remains editable, warnings surface before send, and the flow nodes show the prompt-run structure behind the wizard.">
+            @if (editor.Warnings.Count > 0)
+            {
+                <div class="mb-4 space-y-2">
+                    @foreach (var warning in editor.Warnings)
+                    {
+                        <div class="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">@warning</div>
+                    }
+                </div>
+            }
+
+            <div class="space-y-4">
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Generated prompt</label>
+                    <InputTextArea @bind-Value="editor.GeneratedPrompt" class="min-h-[26rem] w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-sm" />
+                </div>
+
+                <div class="space-y-3">
+                    <h3 class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Prompt run nodes</h3>
+                    @if (editor.Nodes.Count == 0)
+                    {
+                        <p class="text-sm text-slate-500">Build a prompt to initialize its flow nodes.</p>
+                    }
+                    else
+                    {
+                        @foreach (var node in editor.Nodes)
+                        {
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-900">@node.Title</p>
+                                        <p class="mt-1 text-xs text-slate-500">@node.BranchKey - step @node.Sequence</p>
+                                    </div>
+                                    <StatusBadge Tone="@ResolveNodeTone(node.State)" Text="@node.State.ToString()" />
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </SectionCard>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "sessionId")]
+    public Guid? SessionIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "runId")]
+    public Guid? RunIdQuery { get; set; }
+
+    private IReadOnlyList<ProjectSummary> projects = [];
+    private IReadOnlyList<ResourceSummary> projectResources = [];
+    private IReadOnlyList<ProviderProfileSummary> providers = [];
+    private IReadOnlyList<PromptBlockSummary> blocks = [];
+    private IReadOnlyList<PromptFlowTemplateSummary> templates = [];
+    private IReadOnlyList<PromptBlueprintSummary> blueprints = [];
+    private PromptFactoryEditorModel editor = new();
+    private string? message;
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync(SessionIdQuery, RunIdQuery);
+
+    private async Task LoadAsync(Guid? sessionId = null, Guid? runId = null)
+    {
+        projects = await ProjectsService.ListAsync();
+        providers = await WorkspaceService.ListProviderProfilesAsync();
+        blocks = await PromptFactoryService.ListBlocksAsync();
+        templates = await PromptFactoryService.ListTemplatesAsync();
+        blueprints = await PromptFactoryService.ListBlueprintsAsync();
+        editor = await PromptFactoryService.GetEditorAsync(sessionId, runId);
+        await LoadResourcesAsync();
+    }
+
+    private async Task HandleProjectChangedAsync(ChangeEventArgs _)
+    {
+        await LoadResourcesAsync();
+    }
+
+    private Task HandleBlueprintChangedAsync(ChangeEventArgs _)
+    {
+        var blueprint = blueprints.FirstOrDefault(item => item.Id == editor.BlueprintId);
+        if (blueprint?.RecommendedFlowTemplateId is not null)
+        {
+            editor.FlowTemplateId = blueprint.RecommendedFlowTemplateId;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task LoadResourcesAsync()
+    {
+        var resources = await ResourcesService.ListAsync();
+        projectResources = editor.ProjectId.HasValue
+            ? resources.Where(resource => resource.ProjectId == editor.ProjectId.Value).ToList()
+            : [];
+    }
+
+    private async Task BuildAsync()
+    {
+        var result = await PromptFactoryService.BuildAsync(editor);
+        message = result.IsSuccess ? "Prompt built." : string.Join(" ", result.Errors.Select(error => error.Message));
+        if (result.IsSuccess)
+        {
+            editor = result.Value!;
+        }
+    }
+
+    private async Task SaveDraftAsync()
+    {
+        var result = await PromptFactoryService.SaveDraftAsync(editor);
+        message = result.IsSuccess ? "Draft saved to the prompt library." : string.Join(" ", result.Errors.Select(error => error.Message));
+    }
+
+    private async Task SaveFinalAsync()
+    {
+        var result = await PromptFactoryService.SaveFinalAsync(editor);
+        message = result.IsSuccess ? "Final prompt saved." : string.Join(" ", result.Errors.Select(error => error.Message));
+    }
+
+    private async Task ExportAsync()
+    {
+        var result = await PromptFactoryService.ExportAsync(editor);
+        message = result.IsSuccess ? $"Prompt exported to {result.Value}" : string.Join(" ", result.Errors.Select(error => error.Message));
+    }
+
+    private async Task SendAsync()
+    {
+        var result = await PromptFactoryService.SendAsync(editor);
+        message = result.IsSuccess ? $"Provider response received from {result.Value!.ProviderName}." : string.Join(" ", result.Errors.Select(error => error.Message));
+    }
+
+    private void ToggleBlock(Guid id, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!editor.SelectedBlockIds.Contains(id))
+            {
+                editor.SelectedBlockIds.Add(id);
+            }
+            return;
+        }
+
+        editor.SelectedBlockIds.Remove(id);
+    }
+
+    private void ToggleResource(Guid id, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!editor.SelectedResourceIds.Contains(id))
+            {
+                editor.SelectedResourceIds.Add(id);
+            }
+            return;
+        }
+
+        editor.SelectedResourceIds.Remove(id);
+    }
+
+    private static bool ReadCheckboxValue(ChangeEventArgs args) => args.Value switch
+    {
+        bool value => value,
+        string text when bool.TryParse(text, out var value) => value,
+        _ => false
+    };
+
+    private static string ResolveNodeTone(PromptRunNodeState state) => state switch
+    {
+        PromptRunNodeState.Validated => "success",
+        PromptRunNodeState.Failed => "danger",
+        PromptRunNodeState.Used => "info",
+        PromptRunNodeState.Skipped or PromptRunNodeState.Superseded => "warning",
+        _ => "neutral"
+    };
+}

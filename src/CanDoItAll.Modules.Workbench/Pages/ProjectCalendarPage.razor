@@ -1,0 +1,76 @@
+@page "/projects/{ProjectId:guid}/calendar"
+@* codex-capsule
+kind: page
+name: ProjectCalendarPage
+summary: Hosts the project calendar surface and opens linked artifacts from scheduled events.
+owns: project-calendar, selected-event-panel
+deps: ProjectWorkbenchService, NavigationManager
+risks: stale-event-selection, wrong-artifact-route
+tests: component:ProjectCalendarPageTests, e2e:workbench-calendar
+*@
+@using CanDoItAll.ComponentKit.Components
+@inject ProjectWorkbenchService ProjectWorkbenchService
+@inject NavigationManager Navigation
+
+<PageTitle>Project Calendar</PageTitle>
+
+@if (surface is null)
+{
+    <p class="text-sm text-slate-500">Loading project calendar…</p>
+}
+else
+{
+    <div class="space-y-6">
+        <PageHeader Eyebrow="Workbench"
+                    Title="@($"{surface.ProjectName} calendar")"
+                    Description="Review phase windows, validation activity, and test execution on one linked schedule surface." />
+
+        <div class="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+            <SectionCard Title="Project calendar" Description="The JavaScript calendar wrapper owns rendering while event selection and artifact opening stay typed in .NET.">
+                <ProjectEventsCalendar Surface="surface" SelectedEventId="selectedEventId" SelectedEventChanged="HandleEventSelected" />
+            </SectionCard>
+
+            <SectionCard Title="Selected event" Description="Calendar items open their linked artifacts inside the internal workbench.">
+                @if (selectedEvent is null)
+                {
+                    <p class="text-sm text-slate-500">Select an event to inspect it and open the linked artifact.</p>
+                }
+                else
+                {
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-900">@selectedEvent.Title</p>
+                            <p class="mt-1 text-xs text-slate-500">@selectedEvent.StartUtc.LocalDateTime:g → @selectedEvent.EndUtc.LocalDateTime:g</p>
+                            <p class="mt-1 text-xs text-slate-500">@selectedEvent.Status</p>
+                        </div>
+                        <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="() => Navigation.NavigateTo(selectedEvent.Route)">
+                            Open linked artifact
+                        </button>
+                    </div>
+                }
+            </SectionCard>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid ProjectId { get; set; }
+
+    private ProjectCalendarSurface? surface;
+    private Guid? selectedEventId;
+
+    private ProjectCalendarEvent? selectedEvent => surface?.Events.FirstOrDefault(item => item.Id == selectedEventId);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        surface = await ProjectWorkbenchService.GetCalendarAsync(ProjectId);
+        selectedEventId ??= surface.Events.FirstOrDefault()?.Id;
+    }
+
+    private Task HandleEventSelected(Guid eventId)
+    {
+        selectedEventId = eventId;
+        return Task.CompletedTask;
+    }
+}

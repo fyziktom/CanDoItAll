@@ -1,0 +1,68 @@
+@page "/automation"
+@* codex-capsule
+kind: page
+name: AutomationPage
+summary: Displays background job history and operational status for asynchronous work.
+owns: background-job-list
+deps: AutomationWorkspaceService
+risks: hidden-job-failure, stale-status
+tests: component:AutomationPageTests, e2e:automation-smoke
+*@
+@using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Infrastructure.BackgroundJobs
+@inject AutomationWorkspaceService AutomationWorkspaceService
+
+<PageTitle>Automation</PageTitle>
+
+<div class="space-y-6">
+    <PageHeader Eyebrow="Automation"
+                Title="Background jobs and operational work"
+                Description="Inspect queued, running, and completed jobs so long-running work stays visible instead of disappearing behind buttons." />
+
+    <SectionCard Title="Background jobs" Description="The tracker records prompt sends, exports, and other operational tasks with correlation ids and outcomes.">
+        @if (jobs.Count == 0)
+        {
+            <p class="text-sm text-slate-500">No background jobs have been recorded yet.</p>
+        }
+        else
+        {
+            <div class="space-y-3">
+                @foreach (var job in jobs)
+                {
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-900">@job.Description</p>
+                                <p class="mt-1 text-xs text-slate-500">@job.JobType - @job.CorrelationId</p>
+                            </div>
+                            <StatusBadge Tone="@ResolveTone(job.State)" Text="@job.State.ToString()" />
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(job.ErrorSummary))
+                        {
+                            <p class="mt-3 text-sm text-rose-700">@job.ErrorSummary</p>
+                        }
+                        <p class="mt-3 text-xs text-slate-500">Created @job.CreatedAtUtc.LocalDateTime:g - Updated @job.UpdatedAtUtc.LocalDateTime:g</p>
+                    </div>
+                }
+            </div>
+        }
+    </SectionCard>
+</div>
+
+@code {
+    private IReadOnlyList<BackgroundJobSummary> jobs = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        jobs = await AutomationWorkspaceService.ListJobsAsync();
+    }
+
+    private static string ResolveTone(BackgroundJobState state) => state switch
+    {
+        BackgroundJobState.Succeeded => "success",
+        BackgroundJobState.Running => "info",
+        BackgroundJobState.Failed => "danger",
+        BackgroundJobState.Cancelled => "warning",
+        _ => "neutral"
+    };
+}

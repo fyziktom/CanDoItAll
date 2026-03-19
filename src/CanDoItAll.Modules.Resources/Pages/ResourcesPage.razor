@@ -1,0 +1,210 @@
+@page "/resources"
+@* codex-capsule
+kind: page
+name: ResourcesPage
+summary: Registers typed resources, secret references, and validation metadata for projects.
+owns: resource-list, resource-editor, connector-metadata
+deps: ResourcesService, ProjectsService, SecretService
+risks: wrong-project-link, secret-reference-mismatch
+tests: component:ResourcesPageTests, e2e:resources-smoke
+*@
+@using CanDoItAll.Modules.Projects
+@using CanDoItAll.Modules.Security
+@inject ResourcesService ResourcesService
+@inject ProjectsService ProjectsService
+@inject SecretService SecretService
+
+<PageTitle>Resources</PageTitle>
+
+<div class="space-y-6">
+    <PageHeader Eyebrow="Resources"
+                Title="Typed project resources"
+                Description="Register repositories, folders, scripts, links, and secret-backed connectors through one generalized resource model." />
+
+    <div class="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+        <SectionCard Title="Registered resources" Description="Every entry below is backed by the resource registry instead of hardcoded page-local state.">
+            <div class="space-y-3">
+                <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">
+                    New resource
+                </button>
+
+                @foreach (var resource in resources)
+                {
+                    <button type="button" class="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left" @onclick="() => EditAsync(resource.Id)">
+                        <span>
+                            <span class="block text-sm font-semibold text-slate-900">@resource.Name</span>
+                            <span class="block text-xs text-slate-500">@resource.ProjectName - @resource.ResourceKind</span>
+                            <span class="block truncate text-xs text-slate-500">@resource.LocationOrIdentifier</span>
+                        </span>
+                        <StatusBadge Tone="@ResolveTone(resource.ValidationStatus)" Text="@resource.ValidationStatus.ToString()" />
+                    </button>
+                }
+            </div>
+        </SectionCard>
+
+        <SectionCard Title="Resource editor" Description="Secrets stay referenced, not duplicated, and validation/indexing capabilities remain explicit flags.">
+            <EditForm Model="editor" OnValidSubmit="SaveAsync">
+                <div class="space-y-4">
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Project</label>
+                            <InputSelect @bind-Value="editor.ProjectId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                <option value="">Select a project</option>
+                                @foreach (var project in projects)
+                                {
+                                    <option value="@project.Id">@project.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Kind</label>
+                            <InputSelect @bind-Value="editor.ResourceKind" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                @foreach (var kind in Enum.GetValues<ResourceKind>())
+                                {
+                                    <option value="@kind">@kind</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
+                            <InputText @bind-Value="editor.Name" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Linked secret</label>
+                            <InputSelect @bind-Value="editor.LinkedSecretId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                <option value="">None</option>
+                                @foreach (var secret in secrets)
+                                {
+                                    <option value="@secret.Id">@secret.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Location or identifier</label>
+                        <InputText @bind-Value="editor.LocationOrIdentifier" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
+                        <InputTextArea @bind-Value="editor.Description" class="min-h-20 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Config JSON</label>
+                        <InputTextArea @bind-Value="editor.ConfigJson" class="min-h-20 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Validation</label>
+                            <InputSelect @bind-Value="editor.ValidationStatus" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                @foreach (var status in Enum.GetValues<ResourceValidationStatus>())
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Sensitivity</label>
+                            <InputSelect @bind-Value="editor.Sensitivity" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                @foreach (var sensitivity in Enum.GetValues<ResourceSensitivity>())
+                                {
+                                    <option value="@sensitivity">@sensitivity</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+                    <div class="grid gap-3 md:grid-cols-2">
+                        <label class="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="editor.SupportsPreview" /> Preview capable</label>
+                        <label class="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="editor.SupportsIndexing" /> Indexing capable</label>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Save resource</button>
+                        <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateNewAsync">Reset</button>
+                        @if (editor.Id.HasValue)
+                        {
+                            <button type="button" class="inline-flex items-center rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700" @onclick="DeleteAsync">Delete</button>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        <p class="text-sm text-emerald-700">@message</p>
+                    }
+                </div>
+            </EditForm>
+        </SectionCard>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "resourceId")]
+    public Guid? ResourceIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "projectId")]
+    public Guid? ProjectIdQuery { get; set; }
+
+    private IReadOnlyList<ResourceSummary> resources = [];
+    private IReadOnlyList<ProjectSummary> projects = [];
+    private IReadOnlyList<SecretListItem> secrets = [];
+    private ResourceEditorModel editor = new();
+    private string? message;
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync(ResourceIdQuery, ProjectIdQuery);
+
+    private async Task LoadAsync(Guid? resourceId = null, Guid? projectId = null)
+    {
+        resources = await ResourcesService.ListAsync();
+        projects = await ProjectsService.ListAsync();
+        secrets = await SecretService.ListForPickerAsync();
+        editor = resourceId.HasValue
+            ? await ResourcesService.GetAsync(resourceId.Value)
+            : new ResourceEditorModel { ProjectId = projectId };
+    }
+
+    private Task CreateNewAsync()
+    {
+        editor = new ResourceEditorModel { ProjectId = ProjectIdQuery };
+        message = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task EditAsync(Guid id)
+    {
+        editor = await ResourcesService.GetAsync(id);
+        message = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        var result = await ResourcesService.SaveAsync(editor);
+        message = result.IsSuccess ? "Resource saved." : string.Join(" ", result.Errors.Select(error => error.Message));
+        resources = await ResourcesService.ListAsync();
+        if (result.IsSuccess)
+        {
+            editor = await ResourcesService.GetAsync(result.Value);
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!editor.Id.HasValue)
+        {
+            return;
+        }
+
+        await ResourcesService.DeleteAsync(editor.Id.Value);
+        await LoadAsync(null, ProjectIdQuery);
+        message = "Resource deleted.";
+    }
+
+    private static string ResolveTone(ResourceValidationStatus status) => status switch
+    {
+        ResourceValidationStatus.Valid => "success",
+        ResourceValidationStatus.Warning => "warning",
+        ResourceValidationStatus.Invalid => "danger",
+        _ => "neutral"
+    };
+}

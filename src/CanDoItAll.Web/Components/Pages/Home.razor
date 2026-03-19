@@ -1,0 +1,48 @@
+@page "/"
+@page "/dashboard"
+@* codex-capsule
+kind: page
+name: Home
+summary: Shows the dashboard entry point, workbench overview, and manager loop guidance.
+owns: dashboard-summary, startup-guidance
+deps: shared-shell-components
+risks: stale-startup-copy, missing-next-step
+tests: component:HomePageTests, e2e:smoke-dashboard
+*@
+@using CanDoItAll.ComponentKit.Components
+
+<PageTitle>Dashboard</PageTitle>
+
+<div class="space-y-6">
+    <PageHeader Eyebrow="Dashboard"
+                Title="Delivery control surface"
+                Description="Use the dashboard as the jump-off point for projects, prompt generation, validation, testing, and the local manager loop." />
+
+    <div class="grid gap-4 xl:grid-cols-3">
+        <SectionCard Title="Delivery flow" Description="The current slice anchors the shell and module seams so every later prompt lands on a stable workbench.">
+            <div class="space-y-3 text-sm leading-6 text-slate-600">
+                <p>Projects own context, resources capture the source surface, prompts turn that context into delivery actions, and validation plus test evidence close the loop.</p>
+                <div class="flex flex-wrap gap-2">
+                    <StatusBadge Tone="success" Text="Foundation in progress" />
+                    <StatusBadge Tone="info" Text="Module seams active" />
+                </div>
+            </div>
+        </SectionCard>
+
+        <SectionCard Title="Workbench" Description="Internal tabs keep the application inside one browser tab while preserving restore state.">
+            <ul class="space-y-2 text-sm leading-6 text-slate-600">
+                <li>Open multiple areas without extra browser circuits.</li>
+                <li>Restore recent routes from local browser storage.</li>
+                <li>Keep room for heavier canvas and calendar surfaces.</li>
+            </ul>
+        </SectionCard>
+
+        <SectionCard Title="Manager loop" Description="The web host already exposes a development readiness contract for the later manager sidecar.">
+            <ul class="space-y-2 text-sm leading-6 text-slate-600">
+                <li>`/_dev/runtime` reports environment, readiness, and watch iteration when in development.</li>
+                <li>Generated artifacts are expected under `.artifacts/` to stay out of build loops.</li>
+                <li>Tuning handles will attach to explicit component boundaries only.</li>
+            </ul>
+        </SectionCard>
+    </div>
+</div>

@@ -1,0 +1,213 @@
+@page "/validation"
+@* codex-capsule
+kind: page
+name: ValidationCenterPage
+summary: Runs deterministic validation rules, stores findings, and records review decisions for artifacts.
+owns: validation-run-list, validation-editor, findings-panel
+deps: ValidationService, ProjectsService
+risks: wrong-checklist-selection, route-mismatch
+tests: component:ValidationCenterPageTests, e2e:validation-smoke
+*@
+@using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Modules.Projects
+@inject ValidationService ValidationService
+@inject ProjectsService ProjectsService
+
+<PageTitle>Validation Center</PageTitle>
+
+<div class="space-y-6">
+    <PageHeader Eyebrow="Validation"
+                Title="Validation center"
+                Description="Run deterministic reviews, store findings, and track review decisions for architecture, plans, layouts, stories, prototypes, and test coverage." />
+
+    <div class="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+        <SectionCard Title="Validation runs" Description="Every run is persisted with its findings so reviews can be reopened later instead of being one-off notes.">
+            <div class="space-y-3">
+                <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">New validation</button>
+
+                @foreach (var run in runs)
+                {
+                    <button type="button" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left" @onclick="() => EditAsync(run.Id)">
+                        <span class="block text-sm font-semibold text-slate-900">@run.ArtifactTitle</span>
+                        <span class="mt-1 block text-xs text-slate-500">@run.ValidationType - @run.Decision - @run.FindingCount finding(s)</span>
+                        <span class="mt-1 block text-xs text-slate-500">@run.UpdatedAtUtc.LocalDateTime:g</span>
+                    </button>
+                }
+            </div>
+        </SectionCard>
+
+        <SectionCard Title="Run editor" Description="Deterministic validation stays primary. Findings and final review decisions are stored on the same run.">
+            <EditForm Model="editor" OnValidSubmit="RunAsync">
+                <div class="space-y-4">
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Project</label>
+                            <InputSelect @bind-Value="editor.ProjectId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                <option value="">None</option>
+                                @foreach (var project in projects)
+                                {
+                                    <option value="@project.Id">@project.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Validation type</label>
+                            <InputSelect @bind-Value="editor.ValidationType" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                @foreach (var validationType in Enum.GetValues<ValidationType>())
+                                {
+                                    <option value="@validationType">@validationType</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Checklist</label>
+                            <InputSelect @bind-Value="editor.ChecklistId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                @foreach (var checklist in checklists.Where(item => item.ValidationType == editor.ValidationType))
+                                {
+                                    <option value="@checklist.Id">@($"{checklist.Name} ({checklist.VersionLabel})")</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Artifact route</label>
+                            <InputText @bind-Value="editor.ArtifactRoute" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Artifact title</label>
+                        <InputText @bind-Value="editor.ArtifactTitle" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Source content</label>
+                        <InputTextArea @bind-Value="editor.SourceContent" class="min-h-64 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-sm" />
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" data-testid="validation-run-button">Run validation</button>
+                        <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateNewAsync">Reset</button>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        <p class="text-sm text-emerald-700">@message</p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(editor.Summary))
+                    {
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                            @editor.Summary
+                        </div>
+                    }
+
+                    @if (editor.Findings.Count > 0)
+                    {
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <h3 class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Findings</h3>
+                                @if (editor.Id.HasValue)
+                                {
+                                    <InputSelect @bind-Value="editor.Decision" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" @onchange="SetDecisionAsync">
+                                        @foreach (var decision in Enum.GetValues<ValidationDecision>())
+                                        {
+                                            <option value="@decision">@decision</option>
+                                        }
+                                    </InputSelect>
+                                }
+                            </div>
+
+                            @foreach (var finding in editor.Findings)
+                            {
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <p class="text-sm font-semibold text-slate-900">@finding.Title</p>
+                                        <StatusBadge Tone="@ResolveTone(finding.Severity)" Text="@finding.Severity.ToString()" />
+                                    </div>
+                                    <p class="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">@finding.RuleCode</p>
+                                    <p class="mt-3 text-sm leading-6 text-slate-600">@finding.Detail</p>
+                                    <p class="mt-3 text-sm text-sky-700">@finding.RecommendedAction</p>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </EditForm>
+        </SectionCard>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "runId")]
+    public Guid? RunIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "projectId")]
+    public Guid? ProjectIdQuery { get; set; }
+
+    private IReadOnlyList<ProjectSummary> projects = [];
+    private IReadOnlyList<ValidationChecklistSummary> checklists = [];
+    private IReadOnlyList<ValidationRunSummary> runs = [];
+    private ValidationRunEditorModel editor = new();
+    private string? message;
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync(RunIdQuery, ProjectIdQuery);
+
+    private async Task LoadAsync(Guid? runId = null, Guid? projectId = null)
+    {
+        projects = await ProjectsService.ListAsync();
+        checklists = await ValidationService.ListChecklistsAsync();
+        runs = await ValidationService.ListRunsAsync();
+        editor = runId.HasValue
+            ? await ValidationService.GetRunAsync(runId.Value)
+            : await ValidationService.GetRunAsync(null);
+
+        if (!runId.HasValue && projectId.HasValue)
+        {
+            editor.ProjectId = projectId;
+        }
+    }
+
+    private async Task CreateNewAsync()
+    {
+        editor = await ValidationService.GetRunAsync(null);
+        editor.ProjectId ??= ProjectIdQuery;
+        message = null;
+    }
+
+    private async Task EditAsync(Guid id)
+    {
+        editor = await ValidationService.GetRunAsync(id);
+        message = null;
+    }
+
+    private async Task RunAsync()
+    {
+        var result = await ValidationService.RunAsync(editor);
+        message = result.IsSuccess ? "Validation completed." : string.Join(" ", result.Errors.Select(error => error.Message));
+        runs = await ValidationService.ListRunsAsync();
+        if (result.IsSuccess)
+        {
+            editor = await ValidationService.GetRunAsync(result.Value);
+        }
+    }
+
+    private async Task SetDecisionAsync(ChangeEventArgs _)
+    {
+        if (!editor.Id.HasValue)
+        {
+            return;
+        }
+
+        await ValidationService.SetDecisionAsync(editor.Id.Value, editor.Decision);
+        runs = await ValidationService.ListRunsAsync();
+        message = $"Decision updated to {editor.Decision}.";
+    }
+
+    private static string ResolveTone(ValidationFindingSeverity severity) => severity switch
+    {
+        ValidationFindingSeverity.Error => "danger",
+        ValidationFindingSeverity.Warning => "warning",
+        _ => "info"
+    };
+}

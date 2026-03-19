@@ -1,0 +1,207 @@
+@page "/test-lab"
+@* codex-capsule
+kind: page
+name: TestLabPage
+summary: Manages test plans, evidence, and recorded execution results for project phases.
+owns: test-plan-list, test-plan-editor, evidence-records
+deps: TestLabService, ProjectsService
+risks: missing-plan-context, evidence-path-drift
+tests: component:TestLabPageTests, e2e:test-lab-smoke
+*@
+@using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Modules.Projects
+@inject TestLabService TestLabService
+@inject ProjectsService ProjectsService
+
+<PageTitle>Test Lab</PageTitle>
+
+<div class="space-y-6">
+    <PageHeader Eyebrow="Test Lab"
+                Title="Tests, evidence, and execution results"
+                Description="Track planned coverage, linked test cases, screenshot evidence, and the latest execution results for each project phase." />
+
+    <div class="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+        <SectionCard Title="Test plans" Description="Plans tie together coverage goals, implemented cases, evidence artifacts, and latest run results.">
+            <div class="space-y-3">
+                <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">New test plan</button>
+
+                @foreach (var plan in plans)
+                {
+                    <button type="button" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left" @onclick="() => EditAsync(plan.Id)">
+                        <span class="block text-sm font-semibold text-slate-900">@plan.Title</span>
+                        <span class="mt-1 block text-xs text-slate-500">@plan.Phase - @plan.CaseCount case(s) - @plan.EvidenceCount evidence item(s)</span>
+                        <span class="mt-1 block text-xs text-slate-500">Latest: @(plan.LatestResult?.ToString() ?? "No run yet")</span>
+                    </button>
+                }
+            </div>
+        </SectionCard>
+
+        <SectionCard Title="Plan editor" Description="Test plans link manual and automated evidence without forcing those records into a separate spreadsheet or note system.">
+            <EditForm Model="editor" OnValidSubmit="SaveAsync">
+                <div class="space-y-4">
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Project</label>
+                            <InputSelect @bind-Value="editor.ProjectId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                <option value="">None</option>
+                                @foreach (var project in projects)
+                                {
+                                    <option value="@project.Id">@project.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Phase</label>
+                            <InputText @bind-Value="editor.Phase" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Title</label>
+                        <InputText @bind-Value="editor.Title" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Coverage goal</label>
+                        <InputTextArea @bind-Value="editor.CoverageGoal" class="min-h-24 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Playwright spec path</label>
+                        <InputText @bind-Value="editor.PlaywrightSpecPath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <h3 class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Test cases</h3>
+                            <button type="button" class="rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700" @onclick="AddCaseAsync">Add case</button>
+                        </div>
+                        @foreach (var testCase in editor.Cases)
+                        {
+                            <div class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-4">
+                                <InputText @bind-Value="testCase.Name" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                <InputText @bind-Value="testCase.StoryOrFeature" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                <InputSelect @bind-Value="testCase.Status" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                    @foreach (var status in Enum.GetValues<TestCaseStatus>())
+                                    {
+                                        <option value="@status">@status</option>
+                                    }
+                                </InputSelect>
+                                <InputText @bind-Value="testCase.Notes" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                            </div>
+                        }
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <h3 class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Evidence</h3>
+                            <button type="button" class="rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700" @onclick="AddEvidenceAsync">Add evidence</button>
+                        </div>
+                        @foreach (var evidence in editor.Evidence)
+                        {
+                            <div class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-4">
+                                <InputText @bind-Value="evidence.EvidenceLabel" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                <InputText @bind-Value="evidence.ArtifactPath" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                <InputText @bind-Value="evidence.EvidenceKind" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                <InputText @bind-Value="evidence.Notes" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                            </div>
+                        }
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <h3 class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Runs</h3>
+                            <button type="button" class="rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700" @onclick="AddRunAsync">Add run</button>
+                        </div>
+                        @foreach (var run in editor.Runs)
+                        {
+                            <div class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-4">
+                                <InputDate @bind-Value="run.ExecutedAtUtc" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                <InputText @bind-Value="run.Runner" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                <InputSelect @bind-Value="run.Result" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                    @foreach (var status in Enum.GetValues<TestCaseStatus>())
+                                    {
+                                        <option value="@status">@status</option>
+                                    }
+                                </InputSelect>
+                                <InputText @bind-Value="run.Summary" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                            </div>
+                        }
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" data-testid="testlab-save-button">Save plan</button>
+                        <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateNewAsync">Reset</button>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        <p class="text-sm text-emerald-700">@message</p>
+                    }
+                </div>
+            </EditForm>
+        </SectionCard>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "planId")]
+    public Guid? PlanIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "projectId")]
+    public Guid? ProjectIdQuery { get; set; }
+
+    private IReadOnlyList<ProjectSummary> projects = [];
+    private IReadOnlyList<TestPlanSummary> plans = [];
+    private TestPlanEditorModel editor = new();
+    private string? message;
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync(PlanIdQuery, ProjectIdQuery);
+
+    private async Task LoadAsync(Guid? planId = null, Guid? projectId = null)
+    {
+        projects = await ProjectsService.ListAsync();
+        plans = await TestLabService.ListAsync();
+        editor = planId.HasValue ? await TestLabService.GetAsync(planId.Value) : new TestPlanEditorModel { ProjectId = projectId };
+    }
+
+    private Task CreateNewAsync()
+    {
+        editor = new TestPlanEditorModel { ProjectId = ProjectIdQuery };
+        message = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task EditAsync(Guid id)
+    {
+        editor = await TestLabService.GetAsync(id);
+        message = null;
+    }
+
+    private Task AddCaseAsync()
+    {
+        editor.Cases.Add(new TestCaseEditorModel());
+        return Task.CompletedTask;
+    }
+
+    private Task AddEvidenceAsync()
+    {
+        editor.Evidence.Add(new TestEvidenceEditorModel());
+        return Task.CompletedTask;
+    }
+
+    private Task AddRunAsync()
+    {
+        editor.Runs.Add(new TestRunEditorModel());
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAsync()
+    {
+        var result = await TestLabService.SaveAsync(editor);
+        message = result.IsSuccess ? "Test plan saved." : string.Join(" ", result.Errors.Select(error => error.Message));
+        plans = await TestLabService.ListAsync();
+        if (result.IsSuccess)
+        {
+            editor = await TestLabService.GetAsync(result.Value);
+        }
+    }
+}

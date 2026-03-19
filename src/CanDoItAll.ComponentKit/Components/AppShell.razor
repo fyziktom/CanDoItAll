@@ -1,0 +1,97 @@
+<div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#eef4fb_100%)] text-slate-900">
+    <div class="mx-auto flex min-h-screen max-w-[1800px] gap-6 px-4 py-4 lg:px-6">
+        <aside class="hidden w-72 shrink-0 rounded-[2rem] border border-white/70 bg-slate-950 p-5 text-slate-100 shadow-2xl shadow-slate-900/10 lg:block">
+            <div class="mb-8 space-y-1">
+                <p class="text-xs font-semibold uppercase tracking-[0.35em] text-sky-300">CanDoItAll</p>
+                <h1 class="text-2xl font-semibold tracking-tight text-white">Local delivery workbench</h1>
+                <p class="text-sm leading-6 text-slate-400">Projects, prompts, validation, scheduling, and evidence in one recoverable workspace.</p>
+            </div>
+
+            <nav class="space-y-2">
+                @foreach (var item in NavigationItems)
+                {
+                    var isActive = string.Equals(CurrentRoute, item.Route.TrimStart('/'), StringComparison.OrdinalIgnoreCase)
+                        || (string.IsNullOrWhiteSpace(CurrentRoute) && item.Route == "/");
+                    <button type="button"
+                            class="flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition @(isActive ? "bg-sky-400/15 text-white" : "text-slate-300 hover:bg-white/5 hover:text-white")"
+                            @onclick="() => Navigate.InvokeAsync(item.Route)">
+                        <span class="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold uppercase">@item.Icon</span>
+                        <span class="space-y-1">
+                            <span class="block text-sm font-semibold">@item.Title</span>
+                            <span class="block text-xs leading-5 text-slate-400">@item.Description</span>
+                        </span>
+                    </button>
+                }
+            </nav>
+        </aside>
+
+        <main class="flex min-w-0 flex-1 flex-col gap-4">
+            <div class="rounded-[2rem] border border-white/80 bg-white/80 p-4 shadow-xl shadow-slate-200/60 backdrop-blur">
+                @TopBar
+            </div>
+
+            <AppTabStrip Items="Tabs"
+                         ActiveTabId="ActiveTabId"
+                         Activate="SelectTab"
+                         Close="CloseTab"
+                         MoveLeft="MoveTabLeft"
+                         MoveRight="MoveTabRight"
+                         TogglePin="ToggleTabPin"
+                         ToggleSleep="ToggleTabSleep" />
+
+            <div class="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+                <section class="min-w-0 rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-xl shadow-slate-200/60 backdrop-blur">
+                    @Body
+                </section>
+
+                <aside class="rounded-[2rem] border border-white/80 bg-white/85 p-5 shadow-xl shadow-slate-200/60 backdrop-blur">
+                    @RightRail
+                </aside>
+            </div>
+        </main>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ShellNavigationItem> NavigationItems { get; set; } = [];
+
+    [Parameter]
+    public string CurrentRoute { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<WorkbenchTabState> Tabs { get; set; } = [];
+
+    [Parameter]
+    public string? ActiveTabId { get; set; }
+
+    [Parameter]
+    public EventCallback<string> Navigate { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectTab { get; set; }
+
+    [Parameter]
+    public EventCallback<string> CloseTab { get; set; }
+
+    [Parameter]
+    public EventCallback<string> MoveTabLeft { get; set; }
+
+    [Parameter]
+    public EventCallback<string> MoveTabRight { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ToggleTabPin { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ToggleTabSleep { get; set; }
+
+    [Parameter]
+    public RenderFragment? TopBar { get; set; }
+
+    [Parameter]
+    public RenderFragment? Body { get; set; }
+
+    [Parameter]
+    public RenderFragment? RightRail { get; set; }
+}

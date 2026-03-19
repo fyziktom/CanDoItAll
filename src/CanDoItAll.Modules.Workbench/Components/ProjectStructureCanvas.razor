@@ -1,0 +1,51 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JsRuntime
+
+<div @ref="host" class="min-h-[28rem] rounded-2xl border border-slate-200 bg-slate-50"></div>
+
+@code {
+    private ElementReference host;
+    private DotNetObjectReference<ProjectStructureCanvas>? objectReference;
+    private bool initialized;
+
+    [Parameter, EditorRequired]
+    public ProjectStructureSurface Surface { get; set; } = default!;
+
+    [Parameter]
+    public string? SelectedNodeId { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectedNodeChanged { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Surface is null)
+        {
+            return;
+        }
+
+        objectReference ??= DotNetObjectReference.Create(this);
+        if (!initialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCanvas.create", host, objectReference, Surface, SelectedNodeId);
+            initialized = true;
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCanvas.update", host, Surface, SelectedNodeId);
+    }
+
+    [JSInvokable]
+    public Task OnNodeSelected(string nodeId)
+        => SelectedNodeChanged.InvokeAsync(nodeId);
+
+    public async ValueTask DisposeAsync()
+    {
+        if (initialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCanvas.dispose", host);
+        }
+
+        objectReference?.Dispose();
+    }
+}

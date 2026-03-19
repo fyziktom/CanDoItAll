@@ -1,0 +1,58 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JsRuntime
+
+<div @ref="host" class="min-h-[28rem] rounded-2xl border border-slate-200 bg-slate-50"></div>
+
+@code {
+    private ElementReference host;
+    private DotNetObjectReference<ProjectEventsCalendar>? objectReference;
+    private bool initialized;
+
+    [Parameter, EditorRequired]
+    public ProjectCalendarSurface Surface { get; set; } = default!;
+
+    [Parameter]
+    public Guid? SelectedEventId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> SelectedEventChanged { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Surface is null)
+        {
+            return;
+        }
+
+        objectReference ??= DotNetObjectReference.Create(this);
+        if (!initialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCalendar.create", host, objectReference, Surface, SelectedEventId);
+            initialized = true;
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCalendar.update", host, Surface, SelectedEventId);
+    }
+
+    [JSInvokable]
+    public Task OnEventSelected(string eventId)
+    {
+        if (Guid.TryParse(eventId, out var parsed))
+        {
+            return SelectedEventChanged.InvokeAsync(parsed);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (initialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCalendar.dispose", host);
+        }
+
+        objectReference?.Dispose();
+    }
+}

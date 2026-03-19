@@ -1,0 +1,219 @@
+@page "/prompt-gallery"
+@* codex-capsule
+kind: page
+name: PromptGalleryPage
+summary: Manages saved prompts, immutable versions, collections, tags, and prompt usage history.
+owns: prompt-list, prompt-editor, version-history
+deps: PromptsService
+risks: wrong-version-context, collection-drift
+tests: component:PromptGalleryPageTests, e2e:prompt-gallery-smoke
+*@
+@inject PromptsService PromptsService
+
+<PageTitle>Prompt Gallery</PageTitle>
+
+<div class="space-y-6">
+    <PageHeader Eyebrow="Prompt Library"
+                Title="Prompt gallery and versions"
+                Description="Manage prompt drafts, immutable versions, collections, tags, and clone flows before the factory wizard writes into this library." />
+
+    <div class="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <SectionCard Title="Saved prompts" Description="Draft and final prompts are persisted separately from version history.">
+            <div class="space-y-3">
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">
+                        New prompt
+                    </button>
+                    <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateCollectionAsync">
+                        Add collection
+                    </button>
+                </div>
+
+                @foreach (var prompt in prompts)
+                {
+                    <button type="button" class="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left" @onclick="() => EditAsync(prompt.Id)">
+                        <span>
+                            <span class="block text-sm font-semibold text-slate-900">@prompt.Title</span>
+                            <span class="block text-xs text-slate-500">@prompt.Phase - @prompt.CollectionName</span>
+                            <span class="block text-xs text-slate-500">@prompt.Tags</span>
+                        </span>
+                        <StatusBadge Tone="@(prompt.Status == PromptArtifactStatus.Final ? "success" : "info")" Text="@($"{prompt.Status} v{prompt.VersionCount}")" />
+                    </button>
+                }
+            </div>
+        </SectionCard>
+
+        <SectionCard Title="Prompt editor" Description="Finalizing a prompt creates a new immutable version instead of overwriting prior output.">
+            <EditForm Model="editor" OnValidSubmit="SaveDraftAsync">
+                <div class="space-y-4">
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Title</label>
+                            <InputText @bind-Value="editor.Title" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Phase</label>
+                            <InputText @bind-Value="editor.Phase" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        </div>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Collection</label>
+                            <InputSelect @bind-Value="editor.CollectionId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                <option value="">None</option>
+                                @foreach (var collection in collections)
+                                {
+                                    <option value="@collection.Id">@collection.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Tags</label>
+                            <InputText @bind-Value="editor.TagsCsv" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Draft text</label>
+                        <InputTextArea @bind-Value="editor.DraftText" class="min-h-64 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-sm" />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Finalization reason</label>
+                        <InputText @bind-Value="editor.FinalizationReason" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Save draft</button>
+                        <button type="button" class="inline-flex items-center rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700" @onclick="FinalizeAsync">Create final version</button>
+                        @if (editor.Id.HasValue)
+                        {
+                            <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CloneAsync">Clone</button>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        <p class="text-sm text-emerald-700">@message</p>
+                    }
+                </div>
+            </EditForm>
+
+            @if (editor.Versions.Count > 0)
+            {
+                <div class="mt-6 grid gap-4 xl:grid-cols-2">
+                    <SectionCard Title="Versions" Description="Each finalization event appends a new immutable version.">
+                        <div class="space-y-2">
+                            @foreach (var version in editor.Versions)
+                            {
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <span class="font-semibold">Version @version.VersionNumber</span>
+                                        <span class="text-xs text-slate-500">@version.CreatedAtUtc.LocalDateTime:g</span>
+                                    </div>
+                                    <p class="mt-1 text-xs text-slate-500">@version.CreationReason</p>
+                                </div>
+                            }
+                        </div>
+                    </SectionCard>
+
+                    <SectionCard Title="Usage history" Description="Recent prompt usage stays tied to the prompt artifact and specific version where possible.">
+                        <div class="space-y-2">
+                            @if (editor.UsageHistory.Count == 0)
+                            {
+                                <p class="text-sm text-slate-500">No usage records yet.</p>
+                            }
+                            else
+                            {
+                                @foreach (var usage in editor.UsageHistory)
+                                {
+                                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="font-semibold">@usage.ProviderName</span>
+                                            <span class="text-xs text-slate-500">@usage.CreatedAtUtc.LocalDateTime:g</span>
+                                        </div>
+                                        <p class="mt-1 text-xs text-slate-500">@usage.RepositoryName - @usage.CommitSha</p>
+                                        <p class="mt-2 text-xs text-slate-500">@usage.UsageNote</p>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </SectionCard>
+                </div>
+            }
+        </SectionCard>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "promptId")]
+    public Guid? PromptIdQuery { get; set; }
+
+    private IReadOnlyList<PromptSummary> prompts = [];
+    private IReadOnlyList<PromptCollectionSummary> collections = [];
+    private PromptEditorModel editor = new();
+    private string? message;
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync(PromptIdQuery);
+
+    private async Task LoadAsync(Guid? promptId = null)
+    {
+        prompts = await PromptsService.ListAsync();
+        collections = await PromptsService.ListCollectionsAsync();
+        editor = promptId.HasValue ? await PromptsService.GetAsync(promptId.Value) : new PromptEditorModel();
+    }
+
+    private Task CreateNewAsync()
+    {
+        editor = new PromptEditorModel();
+        message = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task CreateCollectionAsync()
+    {
+        await PromptsService.EnsureCollectionAsync($"Collection {collections.Count + 1}");
+        collections = await PromptsService.ListCollectionsAsync();
+        message = "Collection created.";
+    }
+
+    private async Task EditAsync(Guid id)
+    {
+        editor = await PromptsService.GetAsync(id);
+        message = null;
+    }
+
+    private async Task SaveDraftAsync()
+    {
+        var result = await PromptsService.SaveDraftAsync(editor);
+        message = result.IsSuccess ? "Draft saved." : string.Join(" ", result.Errors.Select(error => error.Message));
+        prompts = await PromptsService.ListAsync();
+        if (result.IsSuccess)
+        {
+            editor = await PromptsService.GetAsync(result.Value);
+        }
+    }
+
+    private async Task FinalizeAsync()
+    {
+        var result = await PromptsService.FinalizeAsync(editor);
+        message = result.IsSuccess ? "Final version created." : string.Join(" ", result.Errors.Select(error => error.Message));
+        prompts = await PromptsService.ListAsync();
+        if (result.IsSuccess)
+        {
+            editor = await PromptsService.GetAsync(result.Value);
+        }
+    }
+
+    private async Task CloneAsync()
+    {
+        if (!editor.Id.HasValue)
+        {
+            return;
+        }
+
+        var cloneId = await PromptsService.CloneAsync(editor.Id.Value);
+        prompts = await PromptsService.ListAsync();
+        if (cloneId.HasValue)
+        {
+            editor = await PromptsService.GetAsync(cloneId.Value);
+            message = "Prompt cloned into a new draft.";
+        }
+    }
+}

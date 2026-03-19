@@ -1,0 +1,60 @@
+<div class="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white/70 p-2 shadow-sm shadow-slate-200/50">
+    @foreach (var tab in Items)
+    {
+        var isActive = string.Equals(tab.TabId, ActiveTabId, StringComparison.Ordinal);
+        <div class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm @(isActive ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-slate-50 text-slate-700")">
+            <button type="button" class="inline-flex items-center gap-2" @onclick="() => Activate.InvokeAsync(tab.TabId)">
+                <span class="font-medium">@tab.Title</span>
+                @if (tab.IsDirty)
+                {
+                    <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+                }
+                @if (tab.IsPinned)
+                {
+                    <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700">pin</span>
+                }
+                @if (tab.IsSleeping)
+                {
+                    <span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">zZ</span>
+                }
+            </button>
+
+            <div class="inline-flex items-center gap-1 text-[10px] font-semibold">
+                <button type="button" class="rounded-lg px-1.5 py-1 opacity-70 transition hover:opacity-100" title="Move left" @onclick="() => MoveLeft.InvokeAsync(tab.TabId)">&#x2039;</button>
+                <button type="button" class="rounded-lg px-1.5 py-1 opacity-70 transition hover:opacity-100" title="Move right" @onclick="() => MoveRight.InvokeAsync(tab.TabId)">&#x203A;</button>
+                <button type="button" class="rounded-lg px-1.5 py-1 opacity-70 transition hover:opacity-100" title="Pin tab" @onclick="() => TogglePin.InvokeAsync(tab.TabId)">pin</button>
+                <button type="button" class="rounded-lg px-1.5 py-1 opacity-70 transition hover:opacity-100" title="Sleep or wake tab" @onclick="() => ToggleSleep.InvokeAsync(tab.TabId)">zZ</button>
+                @if (tab.CanClose)
+                {
+                    <button type="button" class="rounded-lg px-1.5 py-1 opacity-70 transition hover:opacity-100" title="Close tab" @onclick="() => Close.InvokeAsync(tab.TabId)">x</button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<WorkbenchTabState> Items { get; set; } = [];
+
+    [Parameter]
+    public string? ActiveTabId { get; set; }
+
+    [Parameter]
+    public EventCallback<string> Activate { get; set; }
+
+    [Parameter]
+    public EventCallback<string> Close { get; set; }
+
+    [Parameter]
+    public EventCallback<string> MoveLeft { get; set; }
+
+    [Parameter]
+    public EventCallback<string> MoveRight { get; set; }
+
+    [Parameter]
+    public EventCallback<string> TogglePin { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ToggleSleep { get; set; }
+}

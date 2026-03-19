@@ -1,0 +1,315 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Infrastructure.Configuration
+@using CanDoItAll.Modules.Workbench
+@using CanDoItAll.SharedKernel
+@using CanDoItAll.Web.Composition
+@using CanDoItAll.Web.Infrastructure
+@inject NavigationManager Navigation
+@inject Microsoft.Extensions.Options.IOptions<DevelopmentManagerOptions> DevelopmentManagerOptions
+@inject DevelopmentManagerClient DevelopmentManagerClient
+@inject TuningCoordinator TuningCoordinator
+@inject WorkbenchStateService Workbench
+
+<AppShell NavigationItems="ShellNavigation.Items"
+          CurrentRoute="@CurrentRoute"
+          Tabs="Workbench.Tabs"
+          ActiveTabId="Workbench.ActiveTabId"
+          Navigate="HandleNavigateAsync"
+          SelectTab="HandleSelectTabAsync"
+          CloseTab="HandleCloseTabAsync"
+          MoveTabLeft="HandleMoveLeftAsync"
+          MoveTabRight="HandleMoveRightAsync"
+          ToggleTabPin="HandleTogglePinAsync"
+          ToggleTabSleep="HandleToggleSleepAsync">
+    <TopBar>
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div class="space-y-1">
+                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Active Workspace</p>
+                <h2 class="text-2xl font-semibold tracking-tight text-slate-950">@ActiveNavigation.Title</h2>
+                <p class="max-w-3xl text-sm leading-6 text-slate-600">@ActiveNavigation.Description</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <StatusBadge Tone="info" Text="Interactive Server" />
+                <StatusBadge Tone="success" Text="Tailwind active" />
+                <StatusBadge Tone="neutral" Text="@($"Tabs {Workbench.Tabs.Count}")" />
+            </div>
+        </div>
+    </TopBar>
+    <Body>
+        @if (CurrentTuningSurface is { } tuningSurface)
+        {
+            <TunableComponentBoundary IsEnabled="@TuningEnabled"
+                                      CapsuleKey="@tuningSurface.CapsuleKey"
+                                      ComponentName="@tuningSurface.ComponentName"
+                                      ContextSummary="@tuningSurface.ContextSummary"
+                                      Route="@CurrentRouteDisplay"
+                                      ProjectId="@Workbench.GetActiveTab()?.ProjectId"
+                                      TabId="@Workbench.ActiveTabId">
+                @Body
+            </TunableComponentBoundary>
+        }
+        else
+        {
+            @Body
+        }
+    </Body>
+    <RightRail>
+        <div class="space-y-4">
+            <SectionCard Title="Workbench" Description="Internal tabs restore through browser storage so project work stays inside one app session.">
+                <div class="grid gap-3">
+                    <div class="rounded-2xl bg-slate-50 p-3">
+                        <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Current route</p>
+                        <p class="mt-2 text-sm font-medium text-slate-900">@CurrentRouteDisplay</p>
+                    </div>
+                    <div class="rounded-2xl bg-slate-50 p-3">
+                        <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Active tab</p>
+                        <p class="mt-2 text-sm font-medium text-slate-900">@ActiveTabTitle</p>
+                    </div>
+                    @if (Workbench.LastRestoreReport is not null)
+                    {
+                        <div class="rounded-2xl bg-slate-50 p-3">
+                            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Restore report</p>
+                            <p class="mt-2 text-sm font-medium text-slate-900">@($"{Workbench.LastRestoreReport.RestoredCount} tab(s) restored")</p>
+                            @if (Workbench.LastRestoreReport.Failures.Count > 0)
+                            {
+                                <p class="mt-1 text-xs text-amber-700">@($"{Workbench.LastRestoreReport.Failures.Count} tab(s) needed safe fallback.")</p>
+                            }
+                        </div>
+                    }
+                </div>
+            </SectionCard>
+
+            <SectionCard Title="Execution Notes" Description="The current build keeps the shell, module seams, and restore baseline in place while deeper feature slices fill in each workspace.">
+                <ul class="space-y-2 text-sm leading-6 text-slate-600">
+                    <li>Module routes load from their own assemblies.</li>
+                    <li>Browser-local session restore keeps internal tabs sticky.</li>
+                    <li>The development readiness probe is mapped at `/_dev/runtime` in development.</li>
+                </ul>
+            </SectionCard>
+
+            @if (DevelopmentManagerOptions.Value.TuningModeEnabled)
+            {
+                <SectionCard Title="Tuning Mode" Description="Development-only request packaging for the active page surface.">
+                    <div class="space-y-3">
+                        @if (TuningCoordinator.CurrentRequest is null)
+                        {
+                            <p class="text-sm leading-6 text-slate-600">Use the `tune` handle on the current page surface to capture route, project, and tab context before opening a tuning request.</p>
+                        }
+                        else
+                        {
+                            <div class="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+                                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Target</p>
+                                <p class="mt-2 font-semibold text-slate-900">@TuningCoordinator.CurrentRequest.ComponentName</p>
+                                <p class="mt-1 text-xs text-slate-500">@TuningCoordinator.CurrentRequest.CapsuleKey</p>
+                                <p class="mt-1 text-xs text-slate-500">@TuningCoordinator.CurrentRequest.Route</p>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-slate-700">Instruction</label>
+                                <InputTextArea @bind-Value="tuningInstruction"
+                                               class="min-h-28 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                                               data-testid="tuning-instruction" />
+                            </div>
+
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button"
+                                        class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                        disabled="@tuningBusy"
+                                        data-testid="tuning-send"
+                                        @onclick="SendTuningRequestAsync">
+                                    Send request
+                                </button>
+                                <button type="button"
+                                        class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
+                                        @onclick="ClearTuningRequest">
+                                    Clear
+                                </button>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(tuningMessage))
+                        {
+                            <p class="text-sm @(tuningMessage.StartsWith("Unable", StringComparison.OrdinalIgnoreCase) || tuningMessage.StartsWith("Add ", StringComparison.OrdinalIgnoreCase) ? "text-rose-700" : "text-emerald-700")">@tuningMessage</p>
+                        }
+                    </div>
+                </SectionCard>
+            }
+        </div>
+    </RightRail>
+</AppShell>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">x</span>
+</div>
+
+@code {
+    private string CurrentRoute => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0];
+
+    private string CurrentRouteDisplay => string.IsNullOrWhiteSpace(CurrentRoute) ? "/" : $"/{CurrentRoute}";
+
+    private ShellNavigationItem ActiveNavigation => ShellNavigation.MatchRoute(CurrentRoute);
+
+    private string ActiveTabTitle => Workbench.GetActiveTab()?.Title ?? ActiveNavigation.Title;
+
+    private bool TuningEnabled => DevelopmentManagerOptions.Value.TuningModeEnabled && CurrentTuningSurface is not null;
+
+    private TuningSurfaceDefinition? CurrentTuningSurface => ResolveTuningSurface(CurrentRouteDisplay);
+
+    private string tuningInstruction = string.Empty;
+    private string? tuningMessage;
+    private bool tuningBusy;
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += HandleLocationChanged;
+        Workbench.Changed += HandleWorkbenchChanged;
+        TuningCoordinator.Changed += HandleWorkbenchChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await Workbench.InitializeAsync(ShellNavigation.Items.Select(item => new WorkbenchTabState(
+            $"route:{item.Route}",
+            item.Title,
+            item.Route,
+            IsPinned: item.PinnedByDefault,
+            CanClose: !item.PinnedByDefault)));
+
+        await Workbench.TrackRouteAsync(CurrentRouteDisplay, ActiveNavigation.Title, ActiveNavigation.PinnedByDefault);
+        StateHasChanged();
+    }
+
+    private async Task HandleNavigateAsync(string route)
+    {
+        var navigation = ShellNavigation.MatchRoute(route);
+        await Workbench.TrackRouteAsync(route, navigation.Title, navigation.PinnedByDefault);
+        Navigation.NavigateTo(route);
+    }
+
+    private Task HandleSelectTabAsync(string tabId)
+    {
+        var tab = Workbench.Tabs.FirstOrDefault(candidate => string.Equals(candidate.TabId, tabId, StringComparison.Ordinal));
+        if (tab is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        Navigation.NavigateTo(tab.Route);
+        return Workbench.ActivateAsync(tab.TabId);
+    }
+
+    private async Task HandleCloseTabAsync(string tabId)
+    {
+        await Workbench.CloseAsync(tabId);
+        var activeTab = Workbench.GetActiveTab();
+        if (activeTab is not null && !string.Equals(CurrentRouteDisplay, activeTab.Route, StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo(activeTab.Route);
+        }
+    }
+
+    private Task HandleMoveLeftAsync(string tabId) => Workbench.MoveAsync(tabId, -1);
+
+    private Task HandleMoveRightAsync(string tabId) => Workbench.MoveAsync(tabId, 1);
+
+    private Task HandleTogglePinAsync(string tabId) => Workbench.TogglePinAsync(tabId);
+
+    private Task HandleToggleSleepAsync(string tabId) => Workbench.ToggleSleepAsync(tabId);
+
+    private async Task SendTuningRequestAsync()
+    {
+        if (TuningCoordinator.CurrentRequest is null)
+        {
+            tuningMessage = "Select a tunable surface before sending a request.";
+            return;
+        }
+
+        tuningBusy = true;
+        tuningMessage = null;
+        StateHasChanged();
+
+        var result = await DevelopmentManagerClient.CreateTuningRequestAsync(
+            TuningCoordinator.CurrentRequest,
+            tuningInstruction,
+            autoSubmit: !DevelopmentManagerOptions.Value.ReviewBeforeSend);
+
+        tuningBusy = false;
+        tuningMessage = result.IsSuccess
+            ? $"Tuning request queued as {result.Value!.Status}."
+            : string.Join(" ", result.Errors.Select(error => error.Message));
+
+        if (result.IsSuccess)
+        {
+            tuningInstruction = string.Empty;
+            TuningCoordinator.Clear();
+        }
+
+        StateHasChanged();
+    }
+
+    private void ClearTuningRequest()
+    {
+        tuningInstruction = string.Empty;
+        tuningMessage = null;
+        TuningCoordinator.Clear();
+    }
+
+    private void HandleWorkbenchChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            var navigation = ShellNavigation.MatchRoute(CurrentRoute);
+            await Workbench.TrackRouteAsync(CurrentRouteDisplay, navigation.Title, navigation.PinnedByDefault);
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= HandleLocationChanged;
+        Workbench.Changed -= HandleWorkbenchChanged;
+        TuningCoordinator.Changed -= HandleWorkbenchChanged;
+    }
+
+    private static TuningSurfaceDefinition? ResolveTuningSurface(string route)
+    {
+        var normalized = route.Trim().ToLowerInvariant();
+        if (normalized.EndsWith("/structure", StringComparison.Ordinal))
+        {
+            return new TuningSurfaceDefinition("page-projectstructurepage", "ProjectStructurePage", "Project structure canvas and outline coordination.");
+        }
+
+        if (normalized.EndsWith("/calendar", StringComparison.Ordinal))
+        {
+            return new TuningSurfaceDefinition("page-projectcalendarpage", "ProjectCalendarPage", "Project events calendar surface and artifact navigation.");
+        }
+
+        return normalized switch
+        {
+            "/" => new TuningSurfaceDefinition("page-home", "Home", "Dashboard summary and startup guidance."),
+            "/projects" => new TuningSurfaceDefinition("page-projectspage", "ProjectsPage", "Project list, editor, and phase planning."),
+            "/resources" => new TuningSurfaceDefinition("page-resourcespage", "ResourcesPage", "Resource registry and connector editing."),
+            "/prompt-gallery" => new TuningSurfaceDefinition("page-promptgallerypage", "PromptGalleryPage", "Prompt library, versions, and usage history."),
+            "/prompt-factory" => new TuningSurfaceDefinition("page-promptfactorypage", "PromptFactoryPage", "Prompt assembly, flow templates, and provider sends."),
+            "/validation" => new TuningSurfaceDefinition("page-validationcenterpage", "ValidationCenterPage", "Validation runs, findings, and review decisions."),
+            "/test-lab" => new TuningSurfaceDefinition("page-testlabpage", "TestLabPage", "Test plans, evidence, and execution records."),
+            "/activity" => new TuningSurfaceDefinition("page-activitypage", "ActivityPage", "Activity timeline and cross-entity search."),
+            "/automation" => new TuningSurfaceDefinition("page-automationpage", "AutomationPage", "Background job visibility and diagnostics."),
+            _ => null
+        };
+    }
+
+    private sealed record TuningSurfaceDefinition(string CapsuleKey, string ComponentName, string ContextSummary);
+}
