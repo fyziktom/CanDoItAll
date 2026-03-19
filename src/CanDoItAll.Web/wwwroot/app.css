@@ -18,3 +18,32 @@ select {
 a {
     color: inherit;
 }
+
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    inset: auto 1rem 1rem 1rem;
+    z-index: 1000;
+    border: 1px solid #fecaca;
+    border-radius: 1rem;
+    background: #fff1f2;
+    color: #9f1239;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.16);
+    padding: 0.875rem 1rem;
+}
+
+#blazor-error-ui .reload {
+    margin-left: 0.5rem;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+#blazor-error-ui .dismiss {
+    margin-left: 0.5rem;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+#blazor-error-ui.show {
+    display: block;
+}

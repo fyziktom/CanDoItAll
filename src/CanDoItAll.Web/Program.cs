@@ -21,9 +21,10 @@ using CanDoItAll.Web.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+var detailedErrorsEnabled = builder.Configuration.GetValue<bool?>("DetailedErrors") ?? builder.Environment.IsDevelopment();
 
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options => options.DetailedErrors = detailedErrorsEnabled);
 
 builder.Services.AddCanDoItAllComponents();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, ModuleAssemblies.All);
@@ -73,6 +74,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapRazorComponents<App>()
+    .AddAdditionalAssemblies(ModuleAssemblies.All)
     .AddInteractiveServerRenderMode();
 
 await using (var scope = app.Services.CreateAsyncScope())

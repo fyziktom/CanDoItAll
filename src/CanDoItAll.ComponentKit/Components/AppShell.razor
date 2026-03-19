@@ -42,8 +42,8 @@
             <nav class="space-y-2">
                 @foreach (var item in NavigationItems)
                 {
-                    var isActive = string.Equals(CurrentRoute, item.Route.TrimStart('/'), StringComparison.OrdinalIgnoreCase)
-                        || (string.IsNullOrWhiteSpace(CurrentRoute) && item.Route == "/");
+                    var normalizedCurrentRoute = string.IsNullOrWhiteSpace(CurrentRoute) ? "/" : $"/{CurrentRoute.TrimStart('/')}";
+                    var isActive = IsRouteMatch(normalizedCurrentRoute, item.Route);
                     <button type="button"
                             class="flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition @(isActive ? "bg-sky-400/15 text-white" : "text-slate-300 hover:bg-white/5 hover:text-white")"
                             @onclick="() => Navigate.InvokeAsync(item.Route)">
@@ -202,4 +202,15 @@
 
     [Parameter]
     public RenderFragment? RightRail { get; set; }
+
+    private static bool IsRouteMatch(string currentRoute, string navigationRoute)
+    {
+        if (string.Equals(navigationRoute, "/", StringComparison.Ordinal))
+        {
+            return string.Equals(currentRoute, "/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return string.Equals(currentRoute, navigationRoute, StringComparison.OrdinalIgnoreCase) ||
+               currentRoute.StartsWith($"{navigationRoute}/", StringComparison.OrdinalIgnoreCase);
+    }
 }

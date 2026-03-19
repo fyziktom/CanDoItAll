@@ -21,7 +21,18 @@ public static class ShellNavigation
     public static ShellNavigationItem MatchRoute(string relativeRoute)
     {
         var normalized = string.IsNullOrWhiteSpace(relativeRoute) ? "/" : $"/{relativeRoute.TrimStart('/')}";
-        return Items.FirstOrDefault(item => string.Equals(item.Route, normalized, StringComparison.OrdinalIgnoreCase))
+        return Items.FirstOrDefault(item => IsRouteMatch(normalized, item.Route))
             ?? Items[0];
+    }
+
+    public static bool IsRouteMatch(string currentRoute, string navigationRoute)
+    {
+        if (string.Equals(navigationRoute, "/", StringComparison.Ordinal))
+        {
+            return string.Equals(currentRoute, "/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return string.Equals(currentRoute, navigationRoute, StringComparison.OrdinalIgnoreCase) ||
+               currentRoute.StartsWith($"{navigationRoute}/", StringComparison.OrdinalIgnoreCase);
     }
 }

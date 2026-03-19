@@ -14,6 +14,10 @@ public sealed class ManagerOptions
 
     public bool AutoStartWatch { get; set; } = true;
 
+    public bool WatchDetailedErrorsEnabled { get; set; } = true;
+
+    public bool WatchEchoOutputToConsole { get; set; }
+
     public bool TuningModeEnabled { get; set; }
 
     public bool ReviewBeforeSend { get; set; } = true;

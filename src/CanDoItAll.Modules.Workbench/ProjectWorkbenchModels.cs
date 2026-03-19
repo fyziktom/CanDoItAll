@@ -225,9 +225,13 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
 
         var viewState = await LoadViewStateAsync(dbContext, projectId, "calendar", cancellationToken);
         var preferredView = ResolvePreferredCalendarView(viewState);
-        var events = await dbContext.Set<ProjectObjectRecord>()
+        var eventRecords = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == projectId && item.StartUtc.HasValue && item.EndUtc.HasValue)
+            .ToListAsync(cancellationToken);
+        var events = eventRecords
             .OrderBy(item => item.StartUtc)
+            .ThenBy(item => item.EndUtc)
+            .ThenBy(item => item.Title)
             .Select(item => new ProjectCalendarEvent(
                 item.Id,
                 item.Title,
@@ -239,7 +243,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
                 item.ExternalArtifactId,
                 item.ObjectType,
                 ResolveVisualProfile(item.ObjectType, item.Status).AccentColor))
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         return new ProjectCalendarSurface(project.Id, project.Name, events, preferredView, viewState);
     }
@@ -483,10 +487,11 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
             .Where(item => item.ProjectId == projectId)
             .OrderBy(item => item.Name)
             .ToListAsync(cancellationToken);
-        var runs = await dbContext.Set<PromptRun>()
+        var runs = (await dbContext.Set<PromptRun>()
             .Where(item => item.ProjectId == projectId)
+            .ToListAsync(cancellationToken))
             .OrderBy(item => item.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
+            .ToList();
         var runIds = runs.Select(item => item.Id).ToArray();
         var runNodes = runIds.Length == 0
             ? []
@@ -494,14 +499,16 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
                 .Where(item => runIds.Contains(item.PromptRunId))
                 .OrderBy(item => item.Sequence)
                 .ToListAsync(cancellationToken);
-        var validations = await dbContext.Set<ValidationRun>()
+        var validations = (await dbContext.Set<ValidationRun>()
             .Where(item => item.ProjectId == projectId)
+            .ToListAsync(cancellationToken))
             .OrderByDescending(item => item.UpdatedAtUtc)
-            .ToListAsync(cancellationToken);
-        var testPlans = await dbContext.Set<TestPlan>()
+            .ToList();
+        var testPlans = (await dbContext.Set<TestPlan>()
             .Where(item => item.ProjectId == projectId)
+            .ToListAsync(cancellationToken))
             .OrderByDescending(item => item.UpdatedAtUtc)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         var expectedNodes = new List<ProjectObjectRecord>
         {

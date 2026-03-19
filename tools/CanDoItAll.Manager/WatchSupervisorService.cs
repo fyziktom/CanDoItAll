@@ -248,6 +248,12 @@ public sealed class WatchSupervisorService(
 
         startInfo.Environment["DOTNET_WATCH_SUPPRESS_EMOJIS"] = "1";
         startInfo.Environment["DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH"] = "1";
+        if (_options.WatchDetailedErrorsEnabled)
+        {
+            startInfo.Environment["DetailedErrors"] = "true";
+            startInfo.Environment["ASPNETCORE_DETAILEDERRORS"] = "true";
+        }
+
         ClearInheritedAspNetEnvironment(startInfo);
 
         using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
@@ -277,6 +283,7 @@ public sealed class WatchSupervisorService(
     private async Task HandleWatchLineAsync(string line, bool isError, CancellationToken cancellationToken)
     {
         var logEntry = AppendLog(line, isError);
+        EchoWatchLineToConsole(line, isError);
         var parsedUrl = WatchOutputParser.TryParseUrl(line);
         if (!string.IsNullOrWhiteSpace(parsedUrl))
         {
@@ -333,6 +340,22 @@ public sealed class WatchSupervisorService(
 
                 break;
         }
+    }
+
+    private void EchoWatchLineToConsole(string line, bool isError)
+    {
+        if (!_options.WatchEchoOutputToConsole || string.IsNullOrWhiteSpace(line))
+        {
+            return;
+        }
+
+        if (isError)
+        {
+            logger.LogError("[watch] {WatchLine}", line);
+            return;
+        }
+
+        logger.LogInformation("[watch] {WatchLine}", line);
     }
 
     private async Task ConfirmRuntimeReadinessAsync(int expectedIteration, CancellationToken cancellationToken)
