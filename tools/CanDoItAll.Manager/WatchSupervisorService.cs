@@ -220,10 +220,13 @@ public sealed class WatchSupervisorService(
 
     private async Task RunWatchProcessAsync(CancellationToken cancellationToken)
     {
-        var workspaceRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, _options.WorkspaceRoot));
-        var watchProjectPath = Path.Combine(workspaceRoot, _options.WatchProjectPath);
+        var workspaceRoot = ResolveWorkspaceRoot();
+        var watchProjectPath = ResolveWatchProjectPath(workspaceRoot);
+        var launchProfileArgument = string.IsNullOrWhiteSpace(_options.WatchLaunchProfile)
+            ? string.Empty
+            : $" --launch-profile \"{_options.WatchLaunchProfile}\"";
 
-        var startInfo = new ProcessStartInfo("dotnet", $"watch --project \"{watchProjectPath}\" run --non-interactive")
+        var startInfo = new ProcessStartInfo("dotnet", $"watch --project \"{watchProjectPath}\" run{launchProfileArgument} --non-interactive")
         {
             WorkingDirectory = workspaceRoot,
             RedirectStandardOutput = true,
@@ -234,6 +237,7 @@ public sealed class WatchSupervisorService(
 
         startInfo.Environment["DOTNET_WATCH_SUPPRESS_EMOJIS"] = "1";
         startInfo.Environment["DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH"] = "1";
+        ClearInheritedAspNetEnvironment(startInfo);
 
         using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
         process.Start();
@@ -360,7 +364,41 @@ public sealed class WatchSupervisorService(
     private IEnumerable<string> GetCandidateReadinessUrls()
     {
         var active = GetStatus().ActiveUrls.Select(url => $"{url.TrimEnd('/')}/_dev/runtime");
-        return active.Concat(_options.ReadinessUrls).Distinct(StringComparer.OrdinalIgnoreCase);
+        var configured = ResolveConfiguredReadinessUrls();
+        return active.Concat(configured).Distinct(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private IReadOnlyList<string> ResolveConfiguredReadinessUrls()
+    {
+        var workspaceRoot = ResolveWorkspaceRoot();
+        var watchProjectPath = ResolveWatchProjectPath(workspaceRoot);
+        return LaunchProfileSettingsResolver.ResolveRuntimeProbeUrls(watchProjectPath, _options.WatchLaunchProfile)
+            .Concat(_options.ReadinessUrls)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private string ResolveWorkspaceRoot() => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, _options.WorkspaceRoot));
+
+    private string ResolveWatchProjectPath(string workspaceRoot) => Path.GetFullPath(Path.Combine(workspaceRoot, _options.WatchProjectPath));
+
+    private static void ClearInheritedAspNetEnvironment(ProcessStartInfo startInfo)
+    {
+        foreach (var variableName in new[]
+                 {
+                     "ASPNETCORE_URLS",
+                     "ASPNETCORE_HTTP_PORT",
+                     "ASPNETCORE_HTTPS_PORT",
+                     "ASPNETCORE_HTTP_PORTS",
+                     "ASPNETCORE_HTTPS_PORTS",
+                     "HTTP_PORTS",
+                     "HTTPS_PORTS",
+                     "DOTNET_LAUNCH_PROFILE",
+                     "LAUNCH_PROFILE"
+                 })
+        {
+            startInfo.Environment.Remove(variableName);
+        }
     }
 
     private WatchLogEntry AppendLog(string line, bool isError)

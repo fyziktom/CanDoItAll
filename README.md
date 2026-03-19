@@ -32,7 +32,7 @@ dotnet run --project tools/CanDoItAll.Manager
 Notes:
 
 - The manager listens on `http://127.0.0.1:6407` by default.
-- It supervises `dotnet watch` for the web app, confirms readiness through `/_dev/runtime`, and exposes loopback-only watch, capsule, and tuning endpoints.
+- It supervises `dotnet watch` for the web app, starts it with the web app `https` launch profile, confirms readiness through `/_dev/runtime`, and exposes loopback-only watch, capsule, and tuning endpoints.
 - Capsule artifacts are written under `.artifacts/codex-capsules` at the repo root.
 
 ## Test Commands

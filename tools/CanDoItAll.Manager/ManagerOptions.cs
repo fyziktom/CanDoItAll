@@ -6,7 +6,9 @@ public sealed class ManagerOptions
 
     public string WatchProjectPath { get; set; } = "src\\CanDoItAll.Web\\CanDoItAll.Web.csproj";
 
-    public string[] ReadinessUrls { get; set; } = ["https://localhost:5001/_dev/runtime", "http://localhost:5000/_dev/runtime"];
+    public string WatchLaunchProfile { get; set; } = "https";
+
+    public string[] ReadinessUrls { get; set; } = [];
 
     public int ReadinessTimeoutSeconds { get; set; } = 90;
 
