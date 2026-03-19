@@ -1,19 +1,19 @@
 # UI Shared Components
 
-This folder documents the shared Blazor component layer currently living in:
+This folder documents the shared Blazor component library currently stored in:
 
-- `C:\repositories\zyphonote\src\App.Components\Radzen`
-- `C:\repositories\zyphonote\src\App.Components\Radzen\Blazor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Components`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Components\Components`
 
-The current library is best understood as a Radzen-shaped compatibility layer, not the real Radzen package. It provides a small, intentionally narrow subset of components with familiar names and enums, backed by custom Razor components, custom helper enums, and a generated CSS file.
+The current library is a compatibility layer with familiar component names and enums, backed by custom Razor components, helper enums, and a generated CSS file.
 
 ## Key conclusions
 
-- The API shape is Radzen-like, but the implementation is fully custom.
+- The API surface is custom and intentionally narrow.
 - Most components are thin wrappers over native HTML plus utility-class styling.
 - The library is useful for consistent layout and simple CRUD screens.
 - Several names imply richer behavior than what is actually implemented.
-- Codex should always check this documentation before assuming a full Radzen feature exists.
+- Codex should check this documentation before assuming a feature exists.
 
 ## Documentation map
 
@@ -25,14 +25,15 @@ The current library is best understood as a Radzen-shaped compatibility layer, n
 - [Components: data and feedback](components/data-and-feedback.md)
 - [Guidelines: Codex usage guide](guidelines/codex-usage-guide.md)
 - [Recommendations: missing components](recommendations/missing-components.md)
+- [Transfer checklist](component-transfer-checklist.md)
 
 ## Fast bootstrap checklist
 
-1. Reference `Zyphonote.App.Components`.
-2. Import `@using Radzen` and `@using Radzen.Blazor`.
-3. Register services with `services.AddRadzenComponents()`.
-4. Load `_content/Zyphonote.App.Components/css/output.css`.
-5. Do not assume advanced Radzen features unless they are documented here.
+1. Reference `CanDoItAll.Components`.
+2. Import `@using CanDoItAll.Components`.
+3. Register services with `services.AddCanDoItAllComponents()`.
+4. Load `_content/CanDoItAll.Components/css/output.css`.
+5. Do not assume advanced features unless they are documented here.
 
 ## Fast rules for Codex
 

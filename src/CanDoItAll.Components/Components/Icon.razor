@@ -1,0 +1,35 @@
+@if (!string.IsNullOrWhiteSpace(Name))
+{
+    var iconCssClass = ResolveIconCssClass(Name);
+    if (iconCssClass is not null)
+    {
+        <i @attributes='AdditionalAttributes.WithClass($"rz-icon rz-fa-icon {iconCssClass}")' aria-hidden="true"></i>
+    }
+    else
+    {
+        <span @attributes='AdditionalAttributes.WithClass("rz-icon-fallback")' title="@($"Unknown icon token: {Name}")" aria-hidden="true">@Name</span>
+    }
+}
+
+@code {
+    [Parameter]
+    public string? Name { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private static string? ResolveIconCssClass(string? iconToken)
+    {
+        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        {
+            return cssClass;
+        }
+
+        return null;
+    }
+}
+
+
+
+
+

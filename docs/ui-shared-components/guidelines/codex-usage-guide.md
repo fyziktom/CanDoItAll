@@ -1,6 +1,6 @@
 # Codex Usage Guide
 
-This guide is the operational checklist Codex should use before picking a shared UI component from the current `zyphonote` component layer.
+This guide is the operational checklist Codex should use before picking a shared UI component from the current `CanDoItAll.Components` layer.
 
 ## 1. First decide whether the shared library is appropriate
 
@@ -28,21 +28,20 @@ Do not use the shared library as-is when the screen needs:
 ### Services
 
 ```csharp
-services.AddRadzenComponents();
+services.AddCanDoItAllComponents();
 ```
 
 ### Imports
 
 ```razor
-@using Radzen
-@using Radzen.Blazor
+@using CanDoItAll.Components
 ```
 
 ### CSS
 
 Load:
 
-- `_content/Zyphonote.App.Components/css/output.css`
+- `_content/CanDoItAll.Components/css/output.css`
 
 Without that CSS, component markup still renders, but the intended visual system is incomplete.
 
@@ -50,7 +49,7 @@ Without that CSS, component markup still renders, but the intended visual system
 
 | Need | Preferred component | Avoid when |
 | --- | --- | --- |
-| Page or card actions | `Button` | You need submit semantics plus richer states than `disabled`/`busy` |
+| Page or card actions | `Button` | You need submit semantics plus richer states than `disabled` or `busy` |
 | Horizontal or vertical arrangement | `Stack` | You need grid math or breakpoint-specific columns |
 | Responsive section layout | `Row` + `Column` | You need complex nested CSS grid behavior |
 | Field label + control | `FormField` | You need validation summary or field-level error rendering |
@@ -58,7 +57,7 @@ Without that CSS, component markup still renders, but the intended visual system
 | Numeric input | `Numeric<TValue>` | You need culture-specific formatting or spinbutton UX |
 | Select | `DropDown<TValue>` | You need search, templates, async results, or multi-select |
 | Toggle | `Switch` | You need tri-state or checkbox semantics |
-| Boolean checkbox | `CheckBox<bool>` | You need anything other than bool/bool? |
+| Boolean checkbox | `CheckBox<bool>` | You need anything other than bool or bool? |
 | Tabbed sections | `Tabs` | You need disabled tabs, close buttons, or route-backed tabs |
 | Wizard steps | `Steps` | You need complex validation per step |
 | Small data table | `DataGrid<TItem>` | You need sorting, filtering, selection, or virtualization |
@@ -72,11 +71,11 @@ Without that CSS, component markup still renders, but the intended visual system
 
 Bad assumption:
 
-- “This looks like Radzen, so `Variant.Outlined` will work everywhere.”
+- "This looks feature-complete, so `Variant.Outlined` will work everywhere."
 
 Safer assumption:
 
-- “This library copied only the API shape it needed. I must verify the component implementation.”
+- "This library copied only the API shape it needed. I must verify the component implementation."
 
 ### Check for hidden placeholders
 
@@ -111,7 +110,7 @@ That affects:
 - simple control components
 - `Button`
 
-This matches the existing app’s usage and is low risk.
+This matches the existing library's usage and is low risk.
 
 ### Preferred responsive pattern
 
@@ -128,7 +127,7 @@ This matches the existing app’s usage and is low risk.
 - `Sidebar` has `ExpandedChanged` but never raises it.
 - `Alert.Variant` and `Alert.Shade` are inert.
 - `Button.Shade` is inert.
-- `DataGrid` forwards unknown attributes but does not implement Radzen-style responsive behavior.
+- `DataGrid` forwards unknown attributes but does not implement responsive behavior.
 - `Chart` ignores `CategoryAxis`, `GridLines.Visible`, and `LineSeries.Smooth`.
 - `ProgressBar.Unit` is unused.
 
@@ -144,7 +143,7 @@ Examples that justify new shared components:
 
 - searchable combo box
 - modal dialog service
-- autocomplete/tag picker
+- autocomplete or tag picker
 - validation-aware field wrapper
 - real chart wrapper
 - file upload card

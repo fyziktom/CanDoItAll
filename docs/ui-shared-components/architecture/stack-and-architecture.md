@@ -4,49 +4,39 @@
 
 | Concern | Current implementation |
 | --- | --- |
-| Source root | `C:\repositories\zyphonote\src\App.Components` |
-| UI subset | `C:\repositories\zyphonote\src\App.Components\Radzen\Blazor` |
-| Assembly name | `Zyphonote.App.Components` |
+| Source root | `C:\repositories\CanDoItAll\src\CanDoItAll.Components` |
+| Component files | `C:\repositories\CanDoItAll\src\CanDoItAll.Components\Components` |
+| Assembly name | `CanDoItAll.Components` |
 | SDK | `Microsoft.NET.Sdk.Razor` |
 | Target framework | `net10.0` |
-| Root namespace | `App.Components` |
-| Component namespace | `Radzen.Blazor` |
-| Helper namespace | `Radzen` |
+| Root namespace | `CanDoItAll.Components` |
+| Component namespace | `CanDoItAll.Components` |
+| Helper namespace | `CanDoItAll.Components` |
 
 ## NuGet and framework dependencies
 
-The component project references only:
+The component project currently references:
 
-- `Microsoft.AspNetCore.Components`
 - `Microsoft.AspNetCore.Components.Web`
-- `Microsoft.Extensions.DependencyInjection.Abstractions`
-
-It does not reference the Radzen NuGet package.
 
 ## What this library really is
 
 The project defines:
 
-- Radzen-like enums in `RadzenPrimitives.cs`
+- shared enums and helpers in `ComponentPrimitives.cs`
 - a tiny service layer for notifications
 - helper extensions for merging `class` and `style` into `AdditionalAttributes`
-- custom Razor components in the `Radzen.Blazor` namespace
+- custom Razor components in the `CanDoItAll.Components` namespace
 
-That gives the app a familiar `<Button />`, `<DataGrid />`, `<Tabs />`, `<Stack />`, and similar syntax, while keeping the runtime dependency surface very small.
+That gives host projects a familiar `<Button />`, `<DataGrid />`, `<Tabs />`, `<Stack />`, and similar syntax while keeping the runtime dependency surface very small.
 
-## Consumption pattern in `zyphonote`
+## Consumption pattern
 
 Current integration points:
 
-- service registration via `services.AddRadzenComponents()`
-- namespace imports via `@using Radzen` and `@using Radzen.Blazor`
-- CSS loading via `_content/Zyphonote.App.Components/css/output.css`
-
-Observed host references:
-
-- `C:\repositories\zyphonote\src\App.Blazor\ServiceCollectionExtensions.cs`
-- `C:\repositories\zyphonote\src\App.Web\wwwroot\index.html`
-- `C:\repositories\zyphonote\src\App.MauiHost\wwwroot\index.html`
+- service registration via `services.AddCanDoItAllComponents()`
+- namespace imports via `@using CanDoItAll.Components`
+- CSS loading via `_content/CanDoItAll.Components/css/output.css`
 
 ## Internal design patterns
 
@@ -71,7 +61,7 @@ Most components expose:
 
 - `AdditionalAttributes`
 
-The helper extensions merge incoming `class` and `style` with the component’s base CSS. This is the main extension mechanism. There is very little component-level theming logic beyond this.
+The helper extensions merge incoming `class` and `style` with the component's base CSS. This is the main extension mechanism. There is very little component-level theming logic beyond this.
 
 ### 3. Utility-class-first styling
 
@@ -88,7 +78,7 @@ That means:
 
 ### 4. Partial API compatibility
 
-Many components expose Radzen-style parameters for migration convenience, but only part of the contract is implemented.
+Many components expose migration-friendly parameters, but only part of the contract is implemented.
 
 Examples:
 
@@ -114,7 +104,7 @@ This matters for Codex because:
 
 ## Service model
 
-`AddRadzenComponents()` currently registers only one service:
+`AddCanDoItAllComponents()` currently registers only one service:
 
 - `NotificationService`
 
@@ -149,4 +139,4 @@ Do not stretch it into:
 - full overlay system
 - advanced data visualization
 
-When the app needs those features, either extend the shared library deliberately or build a dedicated component instead of assuming the current surface already supports it.
+When an app needs those features, either extend the shared library deliberately or build a dedicated component instead of assuming the current surface already supports it.

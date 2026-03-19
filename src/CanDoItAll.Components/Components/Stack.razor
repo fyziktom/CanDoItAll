@@ -1,0 +1,64 @@
+<div @attributes='AdditionalAttributes.WithClassAndStyle("rz-stack flex", BuildStyle())'>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public Orientation Orientation { get; set; } = Orientation.Vertical;
+
+    [Parameter]
+    public AlignItems AlignItems { get; set; } = AlignItems.Start;
+
+    [Parameter]
+    public JustifyContent JustifyContent { get; set; } = JustifyContent.Start;
+
+    [Parameter]
+    public FlexWrap Wrap { get; set; } = FlexWrap.NoWrap;
+
+    [Parameter]
+    public string? Gap { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string BuildStyle()
+    {
+        var direction = Orientation == Orientation.Horizontal
+            ? "row"
+            : "column";
+
+        var align = AlignItems switch
+        {
+            AlignItems.Center => "center",
+            AlignItems.End => "flex-end",
+            AlignItems.Stretch => "stretch",
+            _ => "flex-start"
+        };
+
+        var justify = JustifyContent switch
+        {
+            JustifyContent.Center => "center",
+            JustifyContent.End => "flex-end",
+            JustifyContent.SpaceBetween => "space-between",
+            JustifyContent.SpaceAround => "space-around",
+            _ => "flex-start"
+        };
+
+        var wrap = Wrap == FlexWrap.Wrap
+            ? "wrap"
+            : "nowrap";
+
+        var gap = string.IsNullOrWhiteSpace(Gap)
+            ? "0"
+            : Gap;
+
+        return $"display:flex;flex-direction:{direction};align-items:{align};justify-content:{justify};flex-wrap:{wrap};gap:{gap};";
+    }
+}
+
+
+
+

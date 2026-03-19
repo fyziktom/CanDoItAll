@@ -4,7 +4,7 @@
 
 Most shared primitives live in:
 
-- `C:\repositories\zyphonote\src\App.Components\Radzen\RadzenPrimitives.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Components\Primitives\ComponentPrimitives.cs`
 
 ## Helper extensions
 
@@ -12,7 +12,7 @@ Most shared primitives live in:
 
 Purpose:
 
-- merges the component’s base `class` with `AdditionalAttributes["class"]`
+- merges the component's base `class` with `AdditionalAttributes["class"]`
 
 Why it matters:
 
@@ -23,7 +23,7 @@ Why it matters:
 
 Purpose:
 
-- merges both base class/style and incoming `class`/`style`
+- merges both base class or style and incoming `class` or `style`
 
 Why it matters:
 
@@ -35,7 +35,7 @@ Why it matters:
 | --- | --- | --- |
 | `NotificationSeverity` | `Info`, `Success`, `Warning`, `Error` | Used by `NotificationService` and `Notification` |
 | `NotificationMessage` | Toast payload | `Summary`, `Detail`, `Duration`, `Severity` |
-| `NotificationService` | Scoped event dispatcher | Only service registered by `AddRadzenComponents()` |
+| `NotificationService` | Scoped event dispatcher | Only service registered by `AddCanDoItAllComponents()` |
 
 ## Internal support models
 
@@ -88,7 +88,7 @@ If a token is unknown:
 
 ## DI helper
 
-### `ServiceCollectionExtensions.AddRadzenComponents(...)`
+### `ServiceCollectionExtensions.AddCanDoItAllComponents(...)`
 
 Current behavior:
 
@@ -104,4 +104,4 @@ Implication:
 ## Codex guidance
 
 - If a parameter comes from these enums, verify in the component source that the enum member actually changes rendering.
-- If a feature looks like classic Radzen behavior but there is no supporting service or JS here, assume it is not implemented.
+- If a feature looks richer than the documented implementation and there is no supporting service or JS here, assume it is not implemented.

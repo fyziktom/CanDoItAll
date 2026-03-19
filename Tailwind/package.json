@@ -1,0 +1,12 @@
+{
+  "name": "candoitall-tailwind",
+  "private": true,
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.7",
+    "tailwindcss": "^4.1.7"
+  },
+  "scripts": {
+    "build": "tailwindcss -i ./input.css -o ../src/CanDoItAll.Components/wwwroot/css/output.css",
+    "watch": "tailwindcss -i ./input.css -o ../src/CanDoItAll.Components/wwwroot/css/output.css --watch"
+  }
+}

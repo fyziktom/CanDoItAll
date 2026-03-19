@@ -1,0 +1,21 @@
+<aside @attributes='AdditionalAttributes.WithClass($"rz-sidebar {(Expanded ? string.Empty : "hidden")}")'>
+    @ChildContent
+</aside>
+
+@code {
+    [Parameter]
+    public bool Expanded { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<bool> ExpandedChanged { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+}
+
+
+
+

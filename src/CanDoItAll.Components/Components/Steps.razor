@@ -1,0 +1,161 @@
+<CascadingValue Value="this" IsFixed="true">
+    <div style="display:none">
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+    </div>
+</CascadingValue>
+
+@if (items.Count > 0)
+{
+    <div @attributes='AdditionalAttributes.WithClass("rz-steps flex flex-col gap-3")'>
+        <ol class="flex flex-wrap items-center gap-2" role="list">
+            @for (var index = 0; index < items.Count; index++)
+            {
+                var stepIndex = index;
+                var item = items[stepIndex];
+                var isActive = stepIndex == EffectiveValue;
+                var isCompleted = stepIndex < EffectiveValue;
+                var canSelectCurrent = CanSelect && !item.Disabled;
+                var iconCssClass = ResolveIconCssClass(item.Icon);
+
+                <li class="flex items-center gap-2">
+                    <button type="button"
+                            disabled="@(!canSelectCurrent)"
+                            class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 @(ResolveStepCss(isActive, isCompleted))"
+                            @onclick="() => TrySelectAsync(stepIndex)">
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-current text-xs font-semibold">@(index + 1)</span>
+                        @if (iconCssClass is not null)
+                        {
+                            <i class="@($"rz-fa-icon {iconCssClass}")" aria-hidden="true"></i>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(item.Icon))
+                        {
+                            <span class="rz-icon-fallback" title="@($"Unknown icon token: {item.Icon}")" aria-hidden="true">@item.Icon</span>
+                        }
+                        <span>@item.Text</span>
+                    </button>
+
+                    @if (stepIndex < items.Count - 1)
+                    {
+                        <span class="h-px w-6 bg-slate-300"></span>
+                    }
+                </li>
+            }
+        </ol>
+
+        @if (items[EffectiveValue].ChildContent is not null)
+        {
+            <div class="rounded-lg border border-slate-200 bg-white p-3">
+                @items[EffectiveValue].ChildContent
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private readonly List<StepsItem> items = [];
+
+    [Parameter]
+    public int Value { get; set; }
+
+    [Parameter]
+    public EventCallback<int> ValueChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<int> Change { get; set; }
+
+    [Parameter]
+    public Func<int, Task<bool>>? CanChange { get; set; }
+
+    [Parameter]
+    public bool CanSelect { get; set; } = true;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    internal void RegisterItem(StepsItem item)
+    {
+        if (!items.Contains(item))
+        {
+            items.Add(item);
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    internal void UnregisterItem(StepsItem item)
+    {
+        if (items.Remove(item))
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private int EffectiveValue
+    {
+        get
+        {
+            if (items.Count == 0)
+            {
+                return 0;
+            }
+
+            return Math.Clamp(Value, 0, items.Count - 1);
+        }
+    }
+
+    private async Task TrySelectAsync(int index)
+    {
+        if (index < 0 || index >= items.Count)
+        {
+            return;
+        }
+
+        if (!CanSelect || items[index].Disabled || index == EffectiveValue)
+        {
+            return;
+        }
+
+        if (CanChange is not null)
+        {
+            var canChange = await CanChange(index);
+            if (!canChange)
+            {
+                return;
+            }
+        }
+
+        Value = index;
+        await ValueChanged.InvokeAsync(Value);
+        await Change.InvokeAsync(Value);
+    }
+
+    private static string ResolveStepCss(bool isActive, bool isCompleted)
+    {
+        if (isActive)
+        {
+            return "border-indigo-400 bg-indigo-100 text-indigo-900";
+        }
+
+        if (isCompleted)
+        {
+            return "border-emerald-300 bg-emerald-50 text-emerald-900";
+        }
+
+        return "border-slate-300 bg-white text-slate-700 hover:bg-slate-50";
+    }
+
+    private static string? ResolveIconCssClass(string? iconToken)
+    {
+        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        {
+            return cssClass;
+        }
+
+        return null;
+    }
+}

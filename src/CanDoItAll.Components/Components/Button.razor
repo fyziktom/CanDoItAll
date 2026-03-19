@@ -1,0 +1,128 @@
+@{
+    var iconCssClass = ResolveIconCssClass(Icon);
+}
+
+<button type="button"
+        @attributes='AdditionalAttributes.WithClass(ResolveButtonCssClass())'
+        disabled="@IsDisabled"
+        @onclick="OnClickAsync"
+        >
+    @if (IsBusy)
+    {
+        <span class="inline-flex h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent"></span>
+    }
+    else if (iconCssClass is not null)
+    {
+        <i class="@($"rz-fa-icon {iconCssClass}")" aria-hidden="true"></i>
+    }
+    else if (!string.IsNullOrWhiteSpace(Icon))
+    {
+        <span class="rz-icon-fallback" title="@($"Unknown icon token: {Icon}")" aria-hidden="true">@Icon</span>
+    }
+    @if (!string.IsNullOrWhiteSpace(Text))
+    {
+        <span class="rz-button-text">@Text</span>
+    }
+    @if (string.IsNullOrWhiteSpace(Text) && !string.IsNullOrWhiteSpace(Icon))
+    {
+        <span class="sr-only">@ResolveIconLabel(Icon)</span>
+    }
+</button>
+
+@code {
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public string? Icon { get; set; }
+
+    [Parameter]
+    public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Primary;
+
+    [Parameter]
+    public ButtonSize Size { get; set; } = ButtonSize.Medium;
+
+    [Parameter]
+    public Variant Variant { get; set; } = Variant.Filled;
+
+    [Parameter]
+    public Shade Shade { get; set; } = Shade.Default;
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback Click { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private bool IsDisabled => Disabled || IsBusy;
+
+    private async Task OnClickAsync()
+    {
+        if (!IsDisabled)
+        {
+            await Click.InvokeAsync();
+        }
+    }
+
+    private static string? ResolveIconCssClass(string? iconToken)
+    {
+        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        {
+            return cssClass;
+        }
+
+        return null;
+    }
+
+    private static string ResolveIconLabel(string? iconToken)
+    {
+        if (string.IsNullOrWhiteSpace(iconToken))
+        {
+            return "action";
+        }
+
+        return iconToken
+            .Replace('_', ' ')
+            .Replace('-', ' ');
+    }
+
+    private string ResolveButtonCssClass()
+    {
+        var baseCss = "rz-button inline-flex items-center justify-center gap-2 rounded-md border font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
+        var sizeCss = Size switch
+        {
+            ButtonSize.Small => "px-2.5 py-1.5 text-xs",
+            ButtonSize.Large => "px-4 py-2.5 text-base",
+            _ => "px-3.5 py-2 text-sm"
+        };
+
+        var styleCss = ResolveStyleCss();
+        return $"{baseCss} {sizeCss} {styleCss}";
+    }
+
+    private string ResolveStyleCss()
+    {
+        return (Variant, ButtonStyle) switch
+        {
+            (Variant.Text, _) => "border-transparent bg-transparent text-slate-700 hover:bg-slate-100",
+            (_, ButtonStyle.Light) => "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200",
+            (_, ButtonStyle.Secondary) => "border-fuchsia-300 bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-200",
+            (_, ButtonStyle.Success) => "border-emerald-300 bg-emerald-100 text-emerald-800 hover:bg-emerald-200",
+            (_, ButtonStyle.Info) => "border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200",
+            (_, ButtonStyle.Warning) => "border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200",
+            (_, ButtonStyle.Danger) => "border-red-300 bg-red-100 text-red-800 hover:bg-red-200",
+            _ => "border-indigo-300 bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
+        };
+    }
+}
+
+
+
+
+
