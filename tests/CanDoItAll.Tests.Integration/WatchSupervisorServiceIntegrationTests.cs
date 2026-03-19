@@ -66,6 +66,56 @@ public sealed class WatchSupervisorServiceIntegrationTests
         Assert.Contains("http://localhost:5032", snapshot.ActiveUrls);
     }
 
+    [Fact]
+    public async Task ProcessWatchLineAsync_treats_stderr_progress_lines_as_non_error_logs()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Manager:AutoStartWatch"] = "false"
+            })
+            .Build();
+
+        var service = new WatchSupervisorService(
+            NullLogger<WatchSupervisorService>.Instance,
+            new FakeHttpClientFactory(new RuntimeProbeHandler(new RuntimeProbeSnapshot(true, "Ready", 1, ["http://127.0.0.1:5188"]))),
+            configuration);
+
+        await service.ProcessWatchLineAsync("dotnet watch : Hot reload enabled. For a list of supported edits, see https://aka.ms/dotnet/hot-reload.", isError: true);
+
+        var log = Assert.Single(service.GetLogs(1));
+        Assert.False(log.IsError);
+    }
+
+    [Fact]
+    public async Task ProcessWatchLineAsync_waits_for_a_listening_url_before_probing_runtime_readiness()
+    {
+        var handler = new RuntimeProbeHandler(new RuntimeProbeSnapshot(true, "Ready", 1, ["http://127.0.0.1:5188"]));
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Manager:AutoStartWatch"] = "false",
+                ["Manager:ReadinessTimeoutSeconds"] = "1",
+                ["Manager:ReadinessUrls:0"] = "http://127.0.0.1:5188/_dev/runtime"
+            })
+            .Build();
+
+        var service = new WatchSupervisorService(
+            NullLogger<WatchSupervisorService>.Instance,
+            new FakeHttpClientFactory(handler),
+            configuration);
+
+        await service.ProcessWatchLineAsync("Building");
+        await service.ProcessWatchLineAsync("dotnet watch : Waiting for changes", isError: true);
+
+        Assert.Equal(0, handler.RequestCount);
+
+        await service.ProcessWatchLineAsync("Now listening on: http://127.0.0.1:5188");
+
+        Assert.Equal(1, handler.RequestCount);
+        Assert.Equal(WatchState.Ready, service.GetStatus().State);
+    }
+
     private sealed class FakeHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
@@ -73,7 +123,12 @@ public sealed class WatchSupervisorServiceIntegrationTests
 
     private sealed class RuntimeProbeHandler(RuntimeProbeSnapshot snapshot) : HttpMessageHandler
     {
+        public int RequestCount { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(snapshot) });
+        {
+            RequestCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(snapshot) });
+        }
     }
 }

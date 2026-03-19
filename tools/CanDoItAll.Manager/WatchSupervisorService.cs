@@ -282,8 +282,10 @@ public sealed class WatchSupervisorService(
 
     private async Task HandleWatchLineAsync(string line, bool isError, CancellationToken cancellationToken)
     {
-        var logEntry = AppendLog(line, isError);
-        EchoWatchLineToConsole(line, isError);
+        var transition = WatchOutputParser.Parse(line);
+        var logLevel = ClassifyWatchLine(line, isError, transition);
+        var logEntry = AppendLog(line, logLevel >= LogLevel.Error);
+        EchoWatchLineToConsole(line, logLevel);
         var parsedUrl = WatchOutputParser.TryParseUrl(line);
         if (!string.IsNullOrWhiteSpace(parsedUrl))
         {
@@ -293,7 +295,6 @@ public sealed class WatchSupervisorService(
             }
         }
 
-        var transition = WatchOutputParser.Parse(line);
         if (transition is null)
         {
             return;
@@ -309,9 +310,10 @@ public sealed class WatchSupervisorService(
             case WatchState.Restarting:
             case WatchState.BuildFailed:
             case WatchState.RuntimeFaulted:
-                if (transition.State == WatchState.Restarting)
+                if (transition.State is WatchState.Starting or WatchState.Restarting)
                 {
                     ResetStartupIteration();
+                    ClearActiveUrls();
                 }
 
                 await PublishEventAsync(transition.State, transition.Summary, null, null, logEntry.Id, cancellationToken);
@@ -324,7 +326,7 @@ public sealed class WatchSupervisorService(
                 }
 
                 await PublishEventAsync(transition.State, transition.Summary, startupExpectedIteration, null, logEntry.Id, cancellationToken);
-                if (transition.RequiresReadinessProbe)
+                if (transition.RequiresReadinessProbe && ShouldProbeReadiness(parsedUrl))
                 {
                     await ConfirmRuntimeReadinessAsync(startupExpectedIteration, cancellationToken);
                 }
@@ -333,7 +335,7 @@ public sealed class WatchSupervisorService(
             case WatchState.HotReloadApplied:
                 var nextExpectedIteration = GetNextExpectedIteration();
                 await PublishEventAsync(transition.State, transition.Summary, nextExpectedIteration, null, logEntry.Id, cancellationToken);
-                if (transition.RequiresReadinessProbe)
+                if (transition.RequiresReadinessProbe && ShouldProbeReadiness(parsedUrl))
                 {
                     await ConfirmRuntimeReadinessAsync(nextExpectedIteration, cancellationToken);
                 }
@@ -342,20 +344,69 @@ public sealed class WatchSupervisorService(
         }
     }
 
-    private void EchoWatchLineToConsole(string line, bool isError)
+    private void EchoWatchLineToConsole(string line, LogLevel logLevel)
     {
         if (!_options.WatchEchoOutputToConsole || string.IsNullOrWhiteSpace(line))
         {
             return;
         }
 
-        if (isError)
+        if (logLevel >= LogLevel.Error)
         {
             logger.LogError("[watch] {WatchLine}", line);
             return;
         }
 
+        if (logLevel == LogLevel.Warning)
+        {
+            logger.LogWarning("[watch] {WatchLine}", line);
+            return;
+        }
+
         logger.LogInformation("[watch] {WatchLine}", line);
+    }
+
+    private static LogLevel ClassifyWatchLine(string line, bool isError, WatchOutputTransition? transition)
+    {
+        if (transition is { State: WatchState.BuildFailed or WatchState.RuntimeFaulted })
+        {
+            return LogLevel.Error;
+        }
+
+        if (line.StartsWith("crit:", StringComparison.OrdinalIgnoreCase) ||
+            line.StartsWith("fail:", StringComparison.OrdinalIgnoreCase))
+        {
+            return LogLevel.Error;
+        }
+
+        if (line.StartsWith("warn:", StringComparison.OrdinalIgnoreCase))
+        {
+            return LogLevel.Warning;
+        }
+
+        if (isError &&
+            (line.Contains("Unhandled exception", StringComparison.OrdinalIgnoreCase) ||
+             line.Contains("Build FAILED", StringComparison.OrdinalIgnoreCase) ||
+             line.Contains(" error ", StringComparison.OrdinalIgnoreCase) ||
+             line.Contains(": error ", StringComparison.OrdinalIgnoreCase)))
+        {
+            return LogLevel.Error;
+        }
+
+        return LogLevel.Information;
+    }
+
+    private bool ShouldProbeReadiness(string? parsedUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(parsedUrl))
+        {
+            return true;
+        }
+
+        lock (_gate)
+        {
+            return _activeUrls.Count > 0;
+        }
     }
 
     private async Task ConfirmRuntimeReadinessAsync(int expectedIteration, CancellationToken cancellationToken)
@@ -446,7 +497,16 @@ public sealed class WatchSupervisorService(
                      "HTTP_PORTS",
                      "HTTPS_PORTS",
                      "DOTNET_LAUNCH_PROFILE",
-                     "LAUNCH_PROFILE"
+                     "LAUNCH_PROFILE",
+                     "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES",
+                     "ASPNETCORE_PREVENTHOSTINGSTARTUP",
+                     "ASPNETCORE_BROWSER_TOOLS",
+                     "ASPNETCORE_AUTO_RELOAD_WS_ENDPOINT",
+                     "ASPNETCORE_AUTO_RELOAD_WS_KEY",
+                     "ASPNETCORE_AUTO_RELOAD_WS_INTERVAL",
+                     "DOTNET_STARTUP_HOOKS",
+                     "DOTNET_ADDITIONAL_DEPS",
+                     "DOTNET_SHARED_STORE"
                  })
         {
             startInfo.Environment.Remove(variableName);
@@ -474,6 +534,14 @@ public sealed class WatchSupervisorService(
         lock (_gate)
         {
             _startupExpectedIteration = null;
+        }
+    }
+
+    private void ClearActiveUrls()
+    {
+        lock (_gate)
+        {
+            _activeUrls.Clear();
         }
     }
 

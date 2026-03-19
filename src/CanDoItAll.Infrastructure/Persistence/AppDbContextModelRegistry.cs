@@ -1,10 +1,12 @@
 using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Infrastructure.Persistence;
 
 public static class AppDbContextModelRegistry
 {
     private static readonly object Gate = new();
+    private static readonly Type EntityTypeConfigurationType = typeof(IEntityTypeConfiguration<>);
     private static IReadOnlyList<Assembly> _assemblies = [];
 
     public static IReadOnlyList<Assembly> Assemblies
@@ -22,7 +24,30 @@ public static class AppDbContextModelRegistry
     {
         lock (Gate)
         {
-            _assemblies = assemblies.Distinct().ToArray();
+            _assemblies = assemblies
+                .Distinct()
+                .Where(ContainsEntityTypeConfiguration)
+                .ToArray();
+        }
+    }
+
+    private static bool ContainsEntityTypeConfiguration(Assembly assembly)
+        => GetLoadableTypes(assembly).Any(type =>
+            type is { IsAbstract: false, IsInterface: false } &&
+            !type.ContainsGenericParameters &&
+            type.GetInterfaces().Any(@interface =>
+                @interface.IsGenericType &&
+                @interface.GetGenericTypeDefinition() == EntityTypeConfigurationType));
+
+    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException exception)
+        {
+            return exception.Types.OfType<Type>();
         }
     }
 }
