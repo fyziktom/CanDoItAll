@@ -77,6 +77,9 @@ public static partial class WatchOutputParser
     [GeneratedRegex(@"Now listening on:\s+(?<url>\S+)", RegexOptions.IgnoreCase)]
     private static partial Regex ListeningRegex();
 
+    [GeneratedRegex(@"\berror\b(?:\s+\S+:|:)", RegexOptions.IgnoreCase)]
+    private static partial Regex ErrorRegex();
+
     public static WatchOutputTransition? Parse(string line)
     {
         if (string.IsNullOrWhiteSpace(line))
@@ -89,18 +92,20 @@ public static partial class WatchOutputParser
             return new WatchOutputTransition(WatchState.Building, "Build started.");
         }
 
-        if (line.Contains("Hot reload", StringComparison.OrdinalIgnoreCase))
+        if (line.Contains("Hot reload of changes", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("Hot reload applied", StringComparison.OrdinalIgnoreCase))
         {
             return new WatchOutputTransition(WatchState.HotReloadApplied, "Hot reload applied.", requiresReadinessProbe: true);
         }
 
-        if (line.Contains("Waiting for a file to change", StringComparison.OrdinalIgnoreCase))
+        if (line.Contains("Waiting for a file to change", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("Waiting for changes", StringComparison.OrdinalIgnoreCase))
         {
             return new WatchOutputTransition(WatchState.Launching, "Build completed, waiting for runtime readiness.", requiresReadinessProbe: true);
         }
 
         if (line.Contains("watch : Started", StringComparison.OrdinalIgnoreCase) ||
-            line.Contains("dotnet watch", StringComparison.OrdinalIgnoreCase))
+            line.Contains("Hot reload enabled", StringComparison.OrdinalIgnoreCase))
         {
             return new WatchOutputTransition(WatchState.Starting, "Watch process started.");
         }
@@ -110,8 +115,13 @@ public static partial class WatchOutputParser
             return new WatchOutputTransition(WatchState.RuntimeFaulted, "Runtime fault detected.");
         }
 
-        if (line.Contains("Failed", StringComparison.OrdinalIgnoreCase) ||
-            line.Contains("error", StringComparison.OrdinalIgnoreCase))
+        if (line.StartsWith("fail:", StringComparison.OrdinalIgnoreCase))
+        {
+            return new WatchOutputTransition(WatchState.RuntimeFaulted, "Runtime fault detected.");
+        }
+
+        if (line.Contains("Build failed", StringComparison.OrdinalIgnoreCase) ||
+            ErrorRegex().IsMatch(line))
         {
             return new WatchOutputTransition(WatchState.BuildFailed, "Build or runtime error detected.");
         }
@@ -157,6 +167,7 @@ public sealed class WatchSupervisorService(
     private readonly HashSet<string> _activeUrls = [];
     private long _lastLogId;
     private long _lastEventId;
+    private int? _startupExpectedIteration;
     private WatchStatusSnapshot _status = new(WatchState.Idle, "Idle", 0, 0, null, null, DateTimeOffset.UtcNow, []);
 
     public WatchStatusSnapshot GetStatus()
@@ -284,25 +295,47 @@ public sealed class WatchSupervisorService(
         switch (transition.State)
         {
             case WatchState.Building:
+                ResetStartupIteration();
+                await PublishEventAsync(transition.State, transition.Summary, null, null, logEntry.Id, cancellationToken);
+                break;
             case WatchState.Starting:
             case WatchState.Restarting:
             case WatchState.BuildFailed:
             case WatchState.RuntimeFaulted:
+                if (transition.State == WatchState.Restarting)
+                {
+                    ResetStartupIteration();
+                }
+
                 await PublishEventAsync(transition.State, transition.Summary, null, null, logEntry.Id, cancellationToken);
                 break;
             case WatchState.Launching:
+                var startupExpectedIteration = GetOrCreateStartupExpectedIteration();
+                if (IsIterationAlreadyReady(startupExpectedIteration))
+                {
+                    break;
+                }
+
+                await PublishEventAsync(transition.State, transition.Summary, startupExpectedIteration, null, logEntry.Id, cancellationToken);
+                if (transition.RequiresReadinessProbe)
+                {
+                    await ConfirmRuntimeReadinessAsync(startupExpectedIteration, cancellationToken);
+                }
+
+                break;
             case WatchState.HotReloadApplied:
-                var nextExpectedIteration = (GetStatus().ExpectedWatchIteration ?? 0) + 1;
+                var nextExpectedIteration = GetNextExpectedIteration();
                 await PublishEventAsync(transition.State, transition.Summary, nextExpectedIteration, null, logEntry.Id, cancellationToken);
                 if (transition.RequiresReadinessProbe)
                 {
-                    await ConfirmRuntimeReadinessAsync(cancellationToken);
+                    await ConfirmRuntimeReadinessAsync(nextExpectedIteration, cancellationToken);
                 }
+
                 break;
         }
     }
 
-    private async Task ConfirmRuntimeReadinessAsync(CancellationToken cancellationToken)
+    private async Task ConfirmRuntimeReadinessAsync(int expectedIteration, CancellationToken cancellationToken)
     {
         var client = httpClientFactory.CreateClient();
         client.Timeout = TimeSpan.FromSeconds(5);
@@ -320,13 +353,9 @@ public sealed class WatchSupervisorService(
                         continue;
                     }
 
-                    var expectedIteration = GetStatus().ExpectedWatchIteration;
-                    if (expectedIteration.HasValue)
+                    if (!snapshot.WatchIteration.HasValue || snapshot.WatchIteration.Value < expectedIteration)
                     {
-                        if (!snapshot.WatchIteration.HasValue || snapshot.WatchIteration.Value < expectedIteration.Value)
-                        {
-                            continue;
-                        }
+                        continue;
                     }
 
                     if (snapshot.ActiveUrls is not null)
@@ -358,7 +387,7 @@ public sealed class WatchSupervisorService(
             await Task.Delay(250, cancellationToken);
         }
 
-        await PublishEventAsync(WatchState.RuntimeFaulted, "Runtime readiness probe timed out.", GetStatus().ExpectedWatchIteration, null, _lastLogId, cancellationToken);
+        await PublishEventAsync(WatchState.RuntimeFaulted, "Runtime readiness probe timed out.", expectedIteration, null, _lastLogId, cancellationToken);
     }
 
     private IEnumerable<string> GetCandidateReadinessUrls()
@@ -414,6 +443,44 @@ public sealed class WatchSupervisorService(
 
             _status = _status with { LastLogId = entry.Id };
             return entry;
+        }
+    }
+
+    private void ResetStartupIteration()
+    {
+        lock (_gate)
+        {
+            _startupExpectedIteration = null;
+        }
+    }
+
+    private int GetOrCreateStartupExpectedIteration()
+    {
+        lock (_gate)
+        {
+            _startupExpectedIteration ??= GetNextExpectedIterationLocked();
+            return _startupExpectedIteration.Value;
+        }
+    }
+
+    private int GetNextExpectedIteration()
+    {
+        lock (_gate)
+        {
+            return GetNextExpectedIterationLocked();
+        }
+    }
+
+    private int GetNextExpectedIterationLocked()
+        => Math.Max(_status.ExpectedWatchIteration ?? 0, _status.ConfirmedWatchIteration ?? 0) + 1;
+
+    private bool IsIterationAlreadyReady(int expectedIteration)
+    {
+        lock (_gate)
+        {
+            return _status.State == WatchState.Ready &&
+                   _status.ExpectedWatchIteration == expectedIteration &&
+                   _status.ConfirmedWatchIteration == expectedIteration;
         }
     }
 

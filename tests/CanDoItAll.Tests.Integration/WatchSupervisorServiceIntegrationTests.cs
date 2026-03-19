@@ -36,6 +36,36 @@ public sealed class WatchSupervisorServiceIntegrationTests
         Assert.Equal(1, snapshot.ConfirmedWatchIteration);
     }
 
+    [Fact]
+    public async Task ProcessWatchLineAsync_keeps_multiple_listening_urls_on_the_same_startup_iteration()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Manager:AutoStartWatch"] = "false",
+                ["Manager:ReadinessTimeoutSeconds"] = "1",
+                ["Manager:ReadinessUrls:0"] = "https://localhost:7271/_dev/runtime"
+            })
+            .Build();
+
+        var service = new WatchSupervisorService(
+            NullLogger<WatchSupervisorService>.Instance,
+            new FakeHttpClientFactory(new RuntimeProbeHandler(new RuntimeProbeSnapshot(true, "Ready", 1, ["https://localhost:7271", "http://localhost:5032"]))),
+            configuration);
+
+        await service.ProcessWatchLineAsync("Building");
+        await service.ProcessWatchLineAsync("Now listening on: https://localhost:7271");
+        await service.ProcessWatchLineAsync("Now listening on: http://localhost:5032");
+
+        var snapshot = service.GetStatus();
+
+        Assert.Equal(WatchState.Ready, snapshot.State);
+        Assert.Equal(1, snapshot.ExpectedWatchIteration);
+        Assert.Equal(1, snapshot.ConfirmedWatchIteration);
+        Assert.Contains("https://localhost:7271", snapshot.ActiveUrls);
+        Assert.Contains("http://localhost:5032", snapshot.ActiveUrls);
+    }
+
     private sealed class FakeHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
