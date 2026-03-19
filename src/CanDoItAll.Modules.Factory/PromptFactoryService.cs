@@ -238,6 +238,7 @@ public sealed class PromptFactoryService(
             return new PromptBlockEditorModel();
         }
 
+        await EnsureSchemaAsync(cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var block = await dbContext.Set<PromptBlockDefinition>().FirstOrDefaultAsync(item => item.Id == blockId.Value, cancellationToken);
         if (block is null)
@@ -266,6 +267,7 @@ public sealed class PromptFactoryService(
             return new PromptFlowTemplateEditorModel();
         }
 
+        await EnsureSchemaAsync(cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var template = await dbContext.Set<PromptFlowTemplate>().FirstOrDefaultAsync(item => item.Id == templateId.Value, cancellationToken);
         if (template is null)
@@ -362,6 +364,7 @@ public sealed class PromptFactoryService(
 
     public async Task<Result<PromptRunNodeSummary>> BranchNodeAsync(Guid promptRunNodeId, string? branchLabel = null, CancellationToken cancellationToken = default)
     {
+        await EnsureSchemaAsync(cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var source = await dbContext.Set<PromptRunNode>().FirstOrDefaultAsync(item => item.Id == promptRunNodeId, cancellationToken);
         if (source is null)
@@ -586,6 +589,7 @@ public sealed class PromptFactoryService(
 
     public async Task<IReadOnlyList<PromptRunNodeSummary>> LoadRunNodesAsync(Guid promptRunId, CancellationToken cancellationToken = default)
     {
+        await EnsureSchemaAsync(cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await dbContext.Set<PromptRunNode>()
             .Where(item => item.PromptRunId == promptRunId)
@@ -606,106 +610,134 @@ public sealed class PromptFactoryService(
 
     private async Task EnsureSeedsAsync(CancellationToken cancellationToken)
     {
+        await EnsureSchemaAsync(cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        if (await dbContext.Set<PromptBlockDefinition>().AnyAsync(cancellationToken))
+        var blocks = await dbContext.Set<PromptBlockDefinition>()
+            .OrderBy(item => item.Name)
+            .ToListAsync(cancellationToken);
+
+        if (blocks.Count == 0)
         {
-            return;
+            blocks =
+            [
+                new PromptBlockDefinition
+                {
+                    Name = "Delivery Constraints",
+                    BlockKind = PromptBlockKind.Constraint,
+                    Summary = "Keep scope disciplined and user-visible.",
+                    Content = "Stay inside the requested scope. Prefer typed, testable changes. Preserve module boundaries.",
+                    IsRecommendedByDefault = true,
+                    PromptTypeRules = "Architecture,Plan,Validation"
+                },
+                new PromptBlockDefinition
+                {
+                    Name = "Architecture Review",
+                    BlockKind = PromptBlockKind.Validation,
+                    Summary = "Call out architecture tradeoffs and risks.",
+                    Content = "Describe architecture choices, dependencies, and migration risks before implementation detail.",
+                    IsRecommendedByDefault = true,
+                    PromptTypeRules = "Architecture"
+                },
+                new PromptBlockDefinition
+                {
+                    Name = "Security Checks",
+                    BlockKind = PromptBlockKind.Security,
+                    Summary = "Protect secrets and outbound data.",
+                    Content = "Do not expose secrets. Highlight approvals, redaction needs, and sensitive egress paths.",
+                    IsRecommendedByDefault = true,
+                    PromptTypeRules = "Architecture,Validation",
+                    PhaseRules = "Review,Validation,Security"
+                },
+                new PromptBlockDefinition
+                {
+                    Name = "Testing Expectations",
+                    BlockKind = PromptBlockKind.Testing,
+                    Summary = "Demand evidence and coverage.",
+                    Content = "Include tests, expected verification, and evidence that should prove the change works.",
+                    IsRecommendedByDefault = true,
+                    PromptTypeRules = "Plan,Validation"
+                },
+                new PromptBlockDefinition
+                {
+                    Name = "Implementation Detail",
+                    BlockKind = PromptBlockKind.Delivery,
+                    Summary = "Turn the plan into code changes.",
+                    Content = "Produce concrete implementation steps, affected files, and follow-up validation guidance.",
+                    IsRecommendedByDefault = true,
+                    PromptTypeRules = "Plan"
+                }
+            ];
+
+            await dbContext.Set<PromptBlockDefinition>().AddRangeAsync(blocks, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        var blocks = new[]
+        var templates = await dbContext.Set<PromptFlowTemplate>()
+            .OrderBy(item => item.Name)
+            .ToListAsync(cancellationToken);
+        var defaultTemplate = templates.FirstOrDefault();
+        if (defaultTemplate is null)
         {
-            new PromptBlockDefinition
+            var recommendedBlockIds = blocks
+                .Where(item => item.IsRecommendedByDefault)
+                .Select(item => item.Id)
+                .ToArray();
+            if (recommendedBlockIds.Length == 0)
             {
-                Name = "Delivery Constraints",
-                BlockKind = PromptBlockKind.Constraint,
-                Summary = "Keep scope disciplined and user-visible.",
-                Content = "Stay inside the requested scope. Prefer typed, testable changes. Preserve module boundaries.",
-                IsRecommendedByDefault = true,
-                PromptTypeRules = "Architecture,Plan,Validation"
-            },
-            new PromptBlockDefinition
-            {
-                Name = "Architecture Review",
-                BlockKind = PromptBlockKind.Validation,
-                Summary = "Call out architecture tradeoffs and risks.",
-                Content = "Describe architecture choices, dependencies, and migration risks before implementation detail.",
-                IsRecommendedByDefault = true,
-                PromptTypeRules = "Architecture"
-            },
-            new PromptBlockDefinition
-            {
-                Name = "Security Checks",
-                BlockKind = PromptBlockKind.Security,
-                Summary = "Protect secrets and outbound data.",
-                Content = "Do not expose secrets. Highlight approvals, redaction needs, and sensitive egress paths.",
-                IsRecommendedByDefault = true,
-                PromptTypeRules = "Architecture,Validation",
-                PhaseRules = "Review,Validation,Security"
-            },
-            new PromptBlockDefinition
-            {
-                Name = "Testing Expectations",
-                BlockKind = PromptBlockKind.Testing,
-                Summary = "Demand evidence and coverage.",
-                Content = "Include tests, expected verification, and evidence that should prove the change works.",
-                IsRecommendedByDefault = true,
-                PromptTypeRules = "Plan,Validation"
-            },
-            new PromptBlockDefinition
-            {
-                Name = "Implementation Detail",
-                BlockKind = PromptBlockKind.Delivery,
-                Summary = "Turn the plan into code changes.",
-                Content = "Produce concrete implementation steps, affected files, and follow-up validation guidance.",
-                IsRecommendedByDefault = true,
-                PromptTypeRules = "Plan"
+                recommendedBlockIds = blocks.Select(item => item.Id).ToArray();
             }
-        };
 
-        await dbContext.Set<PromptBlockDefinition>().AddRangeAsync(blocks, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+            defaultTemplate = new PromptFlowTemplate
+            {
+                Name = "Implementation flow",
+                Summary = "Architecture to implementation to validation.",
+                BlockIdsJson = SerializeIds(recommendedBlockIds),
+                PromptTypeRules = "Architecture,Plan,Validation"
+            };
 
-        var defaultTemplate = new PromptFlowTemplate
+            await dbContext.Set<PromptFlowTemplate>().AddAsync(defaultTemplate, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        if (!await dbContext.Set<PromptBlueprint>().AnyAsync(cancellationToken))
         {
-            Name = "Implementation flow",
-            Summary = "Architecture to implementation to validation.",
-            BlockIdsJson = SerializeIds(blocks.Select(item => item.Id)),
-            PromptTypeRules = "Architecture,Plan,Validation"
-        };
+            await dbContext.Set<PromptBlueprint>().AddRangeAsync(
+                [
+                    new PromptBlueprint
+                    {
+                        Name = "Architecture Definition",
+                        PromptType = "Architecture",
+                        Summary = "Define the implementation architecture for the current project phase.",
+                        Guidance = "Focus on modules, persistence, external integrations, and concrete slice sequencing.",
+                        RecommendedFlowTemplateId = defaultTemplate.Id
+                    },
+                    new PromptBlueprint
+                    {
+                        Name = "Implementation Plan",
+                        PromptType = "Plan",
+                        Summary = "Create an implementation plan for the current phase.",
+                        Guidance = "Break the work into milestones, dependencies, acceptance criteria, and validation steps.",
+                        RecommendedFlowTemplateId = defaultTemplate.Id
+                    },
+                    new PromptBlueprint
+                    {
+                        Name = "Validation Follow-Up",
+                        PromptType = "Validation",
+                        Summary = "Respond to findings and produce follow-up actions.",
+                        Guidance = "Explain the finding, proposed code changes, test impact, and evidence expectations.",
+                        RecommendedFlowTemplateId = defaultTemplate.Id
+                    }
+                ],
+                cancellationToken);
 
-        await dbContext.Set<PromptFlowTemplate>().AddAsync(defaultTemplate, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
 
-        await dbContext.Set<PromptBlueprint>().AddRangeAsync(
-            [
-                new PromptBlueprint
-                {
-                    Name = "Architecture Definition",
-                    PromptType = "Architecture",
-                    Summary = "Define the implementation architecture for the current project phase.",
-                    Guidance = "Focus on modules, persistence, external integrations, and concrete slice sequencing.",
-                    RecommendedFlowTemplateId = defaultTemplate.Id
-                },
-                new PromptBlueprint
-                {
-                    Name = "Implementation Plan",
-                    PromptType = "Plan",
-                    Summary = "Create an implementation plan for the current phase.",
-                    Guidance = "Break the work into milestones, dependencies, acceptance criteria, and validation steps.",
-                    RecommendedFlowTemplateId = defaultTemplate.Id
-                },
-                new PromptBlueprint
-                {
-                    Name = "Validation Follow-Up",
-                    PromptType = "Validation",
-                    Summary = "Respond to findings and produce follow-up actions.",
-                    Guidance = "Explain the finding, proposed code changes, test impact, and evidence expectations.",
-                    RecommendedFlowTemplateId = defaultTemplate.Id
-                }
-            ],
-            cancellationToken);
-
-        await dbContext.SaveChangesAsync(cancellationToken);
+    private async Task EnsureSchemaAsync(CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await PromptFactorySchemaInitializer.EnsureAsync(dbContext, cancellationToken);
     }
 
     private async Task<(Guid? BlueprintId, Guid? FlowTemplateId, IReadOnlyList<Guid> BlockIds)> GetSeedDefaultsAsync(CancellationToken cancellationToken)

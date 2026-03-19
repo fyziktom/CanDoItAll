@@ -78,6 +78,8 @@ internal sealed class TestApplication : IAsyncDisposable
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         await dbContext.Database.EnsureCreatedAsync();
+        await PromptFactorySchemaInitializer.EnsureAsync(dbContext);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext);
 
         return new TestApplication(rootPath, provider);
     }

@@ -85,6 +85,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
     await using var dbContext = await dbContextFactory.CreateDbContextAsync();
     await dbContext.Database.EnsureCreatedAsync();
+    await PromptFactorySchemaInitializer.EnsureAsync(dbContext);
     await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext);
 
     readiness.MarkReady(app.Environment.EnvironmentName, urls: app.Urls.Count > 0 ? app.Urls : ["https://localhost"]);
