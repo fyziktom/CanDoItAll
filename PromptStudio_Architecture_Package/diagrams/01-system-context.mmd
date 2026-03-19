@@ -1,0 +1,24 @@
+%% 01-system-context.mmd
+flowchart LR
+    User["User / Architect / Developer / Reviewer"]
+    PromptStudio["PromptStudio<br/>Blazor Web App<br/>Interactive Server"]
+    Workspace["Local Workspace Storage"]
+    DB["SQLite / PostgreSQL"]
+    OpenAI["OpenAI API"]
+    OllamaLocal["Ollama Local"]
+    OllamaRemote["Ollama Remote / Cloud"]
+    FileSystem["Local Files / Folders"]
+    Repo["Git Repositories / GitHub"]
+    Connectors["SSH / FTP / Docker / PowerShell Profiles"]
+    Sidecars["Optional Sidecar Services"]
+
+    User --> PromptStudio
+    PromptStudio --> Workspace
+    PromptStudio --> DB
+    PromptStudio --> OpenAI
+    PromptStudio --> OllamaLocal
+    PromptStudio --> OllamaRemote
+    PromptStudio --> FileSystem
+    PromptStudio --> Repo
+    PromptStudio --> Connectors
+    PromptStudio --> Sidecars

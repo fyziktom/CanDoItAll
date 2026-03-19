@@ -1,0 +1,105 @@
+%% 05-domain-model.mmd
+classDiagram
+    class Project {
+      +Guid Id
+      +string Name
+      +string Description
+      +string Status
+      +DateOnly StartDate
+      +DateOnly TargetEndDate
+    }
+
+    class ProjectPhase {
+      +Guid Id
+      +Guid ProjectId
+      +string Name
+      +string Status
+      +DateOnly? DueDate
+    }
+
+    class ProjectOptionSelection {
+      +Guid Id
+      +Guid ProjectId
+      +string Group
+      +string OptionCode
+      +string Note
+    }
+
+    class ProjectResource {
+      +Guid Id
+      +Guid ProjectId
+      +string ResourceKind
+      +string Name
+      +string LocationOrIdentifier
+      +string StoragePolicy
+      +string Sensitivity
+    }
+
+    class SecretRecord {
+      +Guid Id
+      +string Name
+      +string Kind
+      +string EncryptedPayload
+    }
+
+    class PromptArtifact {
+      +Guid Id
+      +string Title
+      +string Status
+      +string Phase
+    }
+
+    class PromptVersion {
+      +Guid Id
+      +Guid PromptArtifactId
+      +int VersionNumber
+      +string Body
+    }
+
+    class PromptBlueprint {
+      +Guid Id
+      +string Name
+      +string Phase
+      +string PromptTemplate
+    }
+
+    class ValidationRun {
+      +Guid Id
+      +string ValidationKind
+      +string Status
+      +DateTimeOffset StartedAt
+      +DateTimeOffset? CompletedAt
+    }
+
+    class ValidationFinding {
+      +Guid Id
+      +Guid ValidationRunId
+      +string Severity
+      +string Title
+    }
+
+    class TestPlan {
+      +Guid Id
+      +Guid ProjectId
+      +string Name
+      +string Status
+    }
+
+    class EvidenceArtifact {
+      +Guid Id
+      +Guid ProjectId
+      +string Kind
+      +string Path
+    }
+
+    Project "1" --> "*" ProjectPhase
+    Project "1" --> "*" ProjectOptionSelection
+    Project "1" --> "*" ProjectResource
+    Project "1" --> "*" PromptArtifact
+    PromptArtifact "1" --> "*" PromptVersion
+    PromptBlueprint "1" --> "*" PromptArtifact : source for
+    ValidationRun "1" --> "*" ValidationFinding
+    Project "1" --> "*" ValidationRun
+    Project "1" --> "*" TestPlan
+    Project "1" --> "*" EvidenceArtifact
+    ProjectResource "*" --> "*" SecretRecord : references

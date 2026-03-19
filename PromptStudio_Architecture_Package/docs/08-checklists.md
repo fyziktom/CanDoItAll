@@ -1,0 +1,239 @@
+# 08 — Checklists
+
+This document contains implementation, review, QA, and release checklists intended for repeated use during development.
+
+## 1. Architecture checklist
+
+### 1.1 Module boundary checklist
+- [ ] Each module has a clearly stated responsibility.
+- [ ] Cross-module references are intentional and minimal.
+- [ ] SharedKernel contains only truly shared primitives.
+- [ ] Infrastructure does not absorb domain rules.
+- [ ] UI pages do not own business logic.
+- [ ] Module services expose clear contracts.
+- [ ] Future extraction to a sidecar/service is still plausible.
+
+### 1.2 Persistence checklist
+- [ ] Each entity is owned by one module.
+- [ ] Table names are module-prefixed.
+- [ ] `IDbContextFactory` is used for runtime operations.
+- [ ] `IDesignTimeDbContextFactory` exists and works.
+- [ ] SQLite and PostgreSQL configuration paths both work.
+- [ ] Transactions and save flows are explicit where required.
+- [ ] Audit records are written for key state transitions.
+
+### 1.3 Security checklist
+- [ ] Secrets are centralized as secret records.
+- [ ] Secret payloads are encrypted at rest.
+- [ ] Logs redact sensitive values.
+- [ ] UI redacts sensitive fields by default.
+- [ ] Export/send flows warn when sensitive data may leave the machine.
+- [ ] Execution-capable actions require approval.
+- [ ] Secret references are used instead of raw duplication.
+
+### 1.4 Background processing checklist
+- [ ] Long-running work is not done directly in page logic.
+- [ ] Background jobs are visible to the user.
+- [ ] Failures are actionable and traceable.
+- [ ] Job inputs avoid raw secret duplication.
+- [ ] Jobs publish activity/status updates.
+
+## 2. UX and UI checklist
+
+### 2.1 Shell checklist
+- [ ] The shell shows current workspace/project context clearly.
+- [ ] Main navigation is stable across pages.
+- [ ] Search is accessible from the shell.
+- [ ] Background task state is visible.
+- [ ] Provider health is visible.
+- [ ] Right-side drawer follows one consistent pattern.
+
+### 2.2 Page checklist
+- [ ] Every page has a title and purpose summary.
+- [ ] Primary actions are obvious.
+- [ ] Empty states exist.
+- [ ] Loading states exist.
+- [ ] Error states exist.
+- [ ] Filter/sort/search controls exist where needed.
+- [ ] Lists and detail views are consistent.
+
+### 2.3 Form checklist
+- [ ] Required fields are visibly marked.
+- [ ] Validation messages are clear.
+- [ ] Save state is obvious.
+- [ ] Advanced options are progressively disclosed.
+- [ ] Notes can be attached where the design expects them.
+- [ ] Sensitive inputs are handled carefully.
+- [ ] Cancel/reset flows are predictable.
+
+### 2.4 Accessibility checklist
+- [ ] Keyboard navigation works for primary workflows.
+- [ ] Labels exist for interactive controls.
+- [ ] Contrast is acceptable.
+- [ ] Focus states are visible.
+- [ ] Error summaries are screen-reader friendly.
+- [ ] Icons are not the only source of meaning.
+
+## 3. Project module checklist
+
+- [ ] Project creation wizard exists.
+- [ ] Project editing exists.
+- [ ] Phase timeline exists.
+- [ ] Status handling exists.
+- [ ] Primary and secondary language selection exists.
+- [ ] Generalized option selections exist.
+- [ ] Notes per option exist.
+- [ ] Project overview summarizes current phase and next actions.
+
+## 4. Resource module checklist
+
+- [ ] Generalized `ProjectResource` model exists.
+- [ ] Descriptor registry exists.
+- [ ] Required resource types all have editors.
+- [ ] Resource detail panel exists.
+- [ ] Validation state is tracked.
+- [ ] Preview/indexing capability is tracked.
+- [ ] Sensitivity classification is tracked.
+- [ ] Secret references work correctly.
+- [ ] Unsupported file types still have graceful metadata handling.
+
+## 5. Prompt module checklist
+
+- [ ] Prompt draft model exists.
+- [ ] Prompt version model exists.
+- [ ] Finalization creates immutable versions.
+- [ ] Collections/galleries exist.
+- [ ] Tags exist.
+- [ ] Search exists.
+- [ ] Usage history exists.
+- [ ] Clone flow exists.
+
+## 6. Prompt factory checklist
+
+- [ ] Project phase selection exists.
+- [ ] Blueprint selection exists.
+- [ ] Context assembly service exists.
+- [ ] Prompt preview is editable.
+- [ ] Missing-input warnings exist.
+- [ ] Save-as-draft exists.
+- [ ] Save-as-final exists.
+- [ ] Copy/export exists.
+- [ ] Provider send flow exists.
+- [ ] Prompt build session is recorded.
+
+## 7. Validation checklist
+
+### 7.1 Core validation engine
+- [ ] Validation run model exists.
+- [ ] Finding model exists.
+- [ ] Severity is explicit.
+- [ ] Checklist version is tracked.
+- [ ] Review decisions are storable.
+- [ ] Validation can link to project artifacts.
+
+### 7.2 Review coverage
+- [ ] Story validation exists.
+- [ ] Layout validation exists.
+- [ ] Architecture validation exists.
+- [ ] Plan validation exists.
+- [ ] Prototype validation path exists.
+- [ ] Test coverage planning exists.
+
+## 8. Test lab checklist
+
+- [ ] Test plan model exists.
+- [ ] Test case linkage exists.
+- [ ] Screenshot evidence model exists.
+- [ ] Playwright linkage exists.
+- [ ] Results can be stored.
+- [ ] Story/phase linkage exists.
+- [ ] Test status categories are clear.
+
+## 9. Provider integration checklist
+
+- [ ] Provider abstraction exists.
+- [ ] OpenAI profile path works.
+- [ ] Ollama local profile path works.
+- [ ] Ollama remote profile path works.
+- [ ] Health checks exist.
+- [ ] Capability flags are tracked.
+- [ ] Provider failures produce actionable errors.
+- [ ] Request logs are redacted.
+- [ ] Send/export paths clearly identify provider and model.
+
+## 10. Testing checklist
+
+### 10.1 Unit testing
+- [ ] Domain rules are unit-tested.
+- [ ] Prompt rendering logic is unit-tested.
+- [ ] Validation rules are unit-tested.
+- [ ] Mapping and conversion helpers are unit-tested.
+
+### 10.2 Integration testing
+- [ ] SQLite integration tests exist.
+- [ ] PostgreSQL path is covered in at least smoke/integration form.
+- [ ] Secret storage round-trip is tested.
+- [ ] Provider adapter contract tests exist.
+- [ ] Resource persistence and retrieval are tested.
+
+### 10.3 Component testing
+- [ ] Key form components are covered.
+- [ ] Wizard components are covered.
+- [ ] Status and detail panels are covered.
+- [ ] Error/loading states are covered.
+
+### 10.4 End-to-end testing
+- [ ] Startup smoke test exists.
+- [ ] Project creation flow exists.
+- [ ] Add-resource flow exists.
+- [ ] Prompt factory flow exists.
+- [ ] Validation center flow exists.
+- [ ] Test lab flow exists.
+
+## 11. Documentation checklist
+
+- [ ] Module responsibilities are documented.
+- [ ] Setup instructions are documented.
+- [ ] Storage root behavior is documented.
+- [ ] Database configuration is documented.
+- [ ] Provider configuration is documented.
+- [ ] Secret handling behavior is documented.
+- [ ] Known limitations are documented.
+- [ ] Code comments are in English.
+
+## 12. Release readiness checklist
+
+### 12.1 Technical readiness
+- [ ] Solution builds from clean checkout.
+- [ ] Database setup path is documented.
+- [ ] First-run experience works.
+- [ ] Logs are reviewable.
+- [ ] Migration path is stable.
+- [ ] Provider settings survive restart.
+- [ ] Workspace storage path behavior is stable.
+
+### 12.2 Product readiness
+- [ ] A user can complete the primary end-to-end journey.
+- [ ] Prompt factory is usable without hidden setup.
+- [ ] Validation center stores results reliably.
+- [ ] Test lab stores evidence reliably.
+- [ ] Required resource types are available.
+- [ ] Screens are not placeholder-quality.
+
+### 12.3 Safety readiness
+- [ ] No known plain-text secret leak exists.
+- [ ] Approval gates are enforced where promised.
+- [ ] Export/send warnings are present.
+- [ ] Dangerous actions are clearly labeled.
+- [ ] Secret reveal/copy behavior is intentional and reviewable.
+
+## 13. Executive “do not compromise” checklist
+
+These items must not be traded away for speed:
+- [ ] secret safety
+- [ ] prompt traceability
+- [ ] typed resource extensibility
+- [ ] validation persistence
+- [ ] UI consistency
+- [ ] test baseline
+- [ ] module boundaries

@@ -1,0 +1,613 @@
+# 01 — UX Discovery, Roles, User Stories, and Use Cases
+
+## 1. Product framing
+
+### Product mission
+PromptStudio is a local-first workbench that helps technical teams create, review, refine, store, and reuse prompts tied to real software delivery work. The product is not only a prompt editor; it is a **project-context prompt system** that understands phases, linked assets, stack choices, constraints, and validation criteria.
+
+### Product promise
+A user should be able to open one project workspace, see its current delivery phase, attach relevant technical assets, choose the target LLM/provider, and generate a phase-appropriate prompt with enough context to be immediately useful for Codex or another implementation model.
+
+### UX philosophy
+The UX must feel:
+- structured, not chaotic
+- powerful, not overwhelming
+- modular, not fragmented
+- consistent, even as more tools are added later
+- transparent about what is generated, stored, encrypted, validated, or sent to external services
+
+### Primary value propositions
+1. Replace ad hoc prompt text files with structured prompt workflows.
+2. Tie prompts to projects, phases, assets, and implementation history.
+3. Reduce prompt quality variance through guided blueprints and checklists.
+4. Make agent-assisted development auditable and repeatable.
+5. Provide one cohesive workstation for architecture, implementation planning, review, validation, and testing prompts.
+
+## 2. Product assumptions
+
+### Confirmed assumptions
+- The primary runtime is a local workstation.
+- The main UI runs as a Blazor Web App with Interactive Server rendering.
+- The app is primarily single-user in the first release, but the design must remain future-ready for multi-user expansion.
+- The user works across many software projects with different stacks.
+- The user wants strong control, not fully autonomous execution.
+
+### Deliberate assumptions introduced by the architecture
+- Roles exist logically even if v1 is effectively single-user.
+- Secrets are managed centrally and linked into projects via references.
+- All linked objects are treated as typed resources with a shared UX shell and resource-specific editors.
+- Prompt generation must be phase-aware and validation-aware.
+- Future microservices are optional and must not complicate v1 unnecessarily.
+
+## 3. Actors and logical roles
+
+## 3.1 Core roles
+
+### Role R1 — Workspace Owner
+The person who owns the local workspace, configures providers, sets defaults, controls security posture, and approves sensitive actions.
+
+**Needs**
+- full control over settings
+- secure secret handling
+- ability to approve execution-capable actions
+- confidence that data is not leaking to providers unintentionally
+
+### Role R2 — Solution Architect
+The person designing systems, reviewing technical structure, and preparing implementation guidance.
+
+**Needs**
+- architecture prompts
+- review prompts
+- traceability between requirements, architecture, and implementation
+- phase-driven workflows
+
+### Role R3 — Developer / Implementer
+The person using prompts to scaffold, refine, or validate implementation work.
+
+**Needs**
+- stack-aware prompt generation
+- access to linked assets and repositories
+- implementation checklists
+- clear acceptance criteria
+
+### Role R4 — QA / Reviewer
+The person validating plans, UX, implementations, and tests.
+
+**Needs**
+- validation checklists
+- review prompts
+- defect and gap tracking
+- screenshot/test evidence flows
+
+### Role R5 — DevOps / Integrations Operator
+The person handling environments, Docker, repositories, SSH, FTP, scripts, and deployment-linked assets.
+
+**Needs**
+- safe handling of connector profiles
+- visibility into execution boundaries
+- reusable connection profiles
+- auditability of environment-related prompts
+
+### Role R6 — Stakeholder / Observer
+A read-mostly role for reviewing project structure, prompt outputs, decisions, and progress.
+
+**Needs**
+- clear summaries
+- read-only views
+- simple navigation
+- low-complexity presentation of decisions
+
+## 3.2 Future roles
+- Team Administrator
+- Security Officer
+- Project Contributor
+- External Reviewer
+
+These future roles must influence policy design now, even if the first release runs as a trusted local workspace.
+
+## 4. Personas
+
+### Persona P1 — Lead Architect with multiple active projects
+- Maintains 5–20 projects in parallel
+- Switches often between architecture, validation, and implementation planning
+- Needs a prompt system that preserves context without retyping it
+
+### Persona P2 — Solo full-stack engineer
+- Wants one tool to capture project metadata, resources, and prompts
+- Prefers quick flows and reusable templates
+- Needs practical outputs over academic rigor
+
+### Persona P3 — Delivery lead using LLMs responsibly
+- Wants AI help but requires oversight
+- Needs history, review points, and repeatable quality checks
+- Rejects “magic” UX that hides what happened
+
+### Persona P4 — Technical QA with architecture awareness
+- Wants to validate whether prompts and generated outputs align with requirements
+- Needs strong links between stories, layouts, architecture, tests, and results
+
+## 5. Jobs to be done
+
+1. **When I start a new project**, help me define the project profile, stack, phases, and linked resources once so I can reuse them across the whole lifecycle.
+2. **When I am at a specific delivery phase**, help me generate a prompt appropriate to that phase without manually rebuilding the whole context.
+3. **When I revise an architecture or implementation plan**, help me compare it against requirements, stories, and earlier outputs.
+4. **When I need project-linked prompts**, help me store, tag, search, version, and reuse them.
+5. **When I work with repositories and assets**, help me include the right technical context safely.
+6. **When I involve sensitive profiles or credentials**, protect them by default.
+7. **When the application grows**, keep the UI coherent and the architecture modular.
+
+## 6. UX capability map
+
+### Capability group U1 — Workspace setup
+- configure application defaults
+- select storage mode
+- manage provider profiles
+- manage secret store
+- define default component/theme behavior
+- set default prompt blueprints
+
+### Capability group U2 — Project management
+- create and edit project
+- define dates and phases
+- define statuses
+- select primary/secondary language
+- select data/UI/storage/API options
+- add project notes
+- link assets and prompts
+
+### Capability group U3 — Resource management
+- add typed resources
+- validate access
+- preview supported file types
+- attach notes and tags
+- control storage policy
+- mark sensitive resources
+- view last validation/indexing state
+
+### Capability group U4 — Prompt library
+- create prompt
+- create prompt gallery/collection
+- save template / blueprint / draft / final prompt
+- tag and search prompts
+- view usage history by project / phase / repo / time
+
+### Capability group U5 — Prompt factory
+- guided phase selection
+- template selection
+- auto-assembled context
+- editable prompt preview
+- validation before send/export
+- save as draft/template/final
+- send to provider or copy/export
+
+### Capability group U6 — Review and validation
+- validate stories/use cases
+- validate layouts
+- validate architecture
+- validate implementation plan
+- validate prototype against plan
+- plan test coverage
+- record findings and decisions
+
+### Capability group U7 — Testing and evidence
+- manage validation plans
+- record screenshot evidence
+- link Playwright scenarios
+- store test outcomes
+- connect evidence back to project phase
+
+### Capability group U8 — Operations and extensibility
+- launch or connect sidecar services later
+- manage connector health
+- import/export package data
+- handle module growth without breaking navigation
+
+## 7. Project lifecycle map
+
+## 7.1 Main lifecycle
+1. Project setup
+2. UX discovery
+3. Architecture drafting
+4. Architecture review
+5. Implementation planning
+6. Initial implementation
+7. Prototype validation
+8. Architecture revision
+9. Test planning
+10. Test implementation
+11. Validation and iteration
+12. Feature addition loop
+
+## 7.2 Reusable feature loop
+For every new feature:
+1. feature context selection
+2. architecture prompt
+3. plan prompt
+4. plan validation
+5. implementation prompt
+6. implementation validation
+7. test plan prompt
+8. test execution and evidence
+9. closure note
+
+The UX must make both the **main lifecycle** and the **feature loop** obvious and navigable.
+
+## 8. Information inputs the UX must collect
+
+### 8.1 Workspace-level inputs
+- workspace name
+- default storage root
+- default database provider
+- default UI theme preferences
+- provider profiles
+- secret handling policy
+- default prompt output style
+- default review strictness
+- default artifact retention
+
+### 8.2 Project-level inputs
+- project name
+- project description
+- project status
+- start date
+- phase dates
+- expected finish date
+- primary language
+- secondary languages
+- data layer choice
+- UI framework choice
+- external API selections
+- storage strategy
+- architecture style note
+- special constraints
+- code generation notes
+- testing notes
+
+### 8.3 Resource-level inputs
+- resource type
+- display name
+- technical location/path/URL
+- optional credentials/profile reference
+- tags
+- notes
+- project phase relevance
+- security classification
+- storage policy
+- preview eligibility
+- indexing eligibility
+
+### 8.4 Prompt-level inputs
+- prompt title
+- prompt type (template, draft, final, review, blueprint)
+- project phase
+- target LLM/provider
+- model preference
+- applicable tech stack
+- selected resources
+- expected output format
+- validation checklist
+- notes
+- version tags
+
+## 9. Generalized option model
+
+The UX must not hardcode every future technical choice as a custom screen. It needs a generalized option model.
+
+### 9.1 Option groups
+- primary language
+- secondary language
+- database type
+- UI framework
+- rendering mode
+- styling approach
+- repository strategy
+- architecture style
+- storage strategy
+- testing strategy
+- deployment style
+- external APIs
+- CI/CD strategy
+- documentation style
+- additional tools
+
+### 9.2 Option record shape
+Each selectable option must support:
+- option code
+- display name
+- description
+- category
+- compatibility tags
+- optional icon
+- optional recommended flag
+- optional deprecation flag
+- user note
+- selection order
+- source (built-in or user-defined)
+
+This design avoids continuous schema rewrites every time a new stack choice is introduced.
+
+## 10. Epics
+
+### Epic E1 — Manage Workspace Configuration
+As a workspace owner, I want to configure global defaults and provider connections so every new project starts from a known baseline.
+
+### Epic E2 — Manage Projects and Delivery Phases
+As an architect or developer, I want to create and maintain project metadata, phases, and statuses so prompts can be generated against real delivery context.
+
+### Epic E3 — Link Technical Resources
+As a user, I want to attach many resource types to a project so prompts can be grounded in actual source material.
+
+### Epic E4 — Manage Prompts and Galleries
+As a user, I want to create, version, group, search, and reuse prompts so I stop duplicating prompt work.
+
+### Epic E5 — Generate Phase-Aware Prompts
+As a user, I want a guided prompt factory so I can create context-rich prompts for architecture, implementation, testing, and reviews.
+
+### Epic E6 — Validate Work Products
+As a reviewer, I want structured validation flows so I can check alignment between stories, layouts, architecture, plans, code, and tests.
+
+### Epic E7 — Preserve Traceability
+As a lead, I want usage history, timestamps, repository references, and decisions so prompt-driven work remains explainable.
+
+### Epic E8 — Operate Safely
+As a workspace owner, I want credentials and dangerous actions to be carefully controlled so convenience does not undermine security.
+
+### Epic E9 — Keep the UI Cohesive
+As a user, I want a unified shell and consistent interaction patterns even as more tools are added.
+
+### Epic E10 — Stay Extensible
+As an architect, I want modular growth paths and future service boundaries so the app does not collapse under feature growth.
+
+## 11. User stories
+
+## 11.1 Workspace and setup stories
+- **US-001** — As a workspace owner, I can define the default database provider for new workspaces.
+- **US-002** — As a workspace owner, I can configure OpenAI and Ollama provider profiles independently.
+- **US-003** — As a workspace owner, I can store API keys and passwords securely and reference them without exposing raw values.
+- **US-004** — As a workspace owner, I can define default prompt blueprints for common project phases.
+- **US-005** — As a workspace owner, I can test provider connectivity before saving a profile.
+
+## 11.2 Project stories
+- **US-006** — As a user, I can create a project with name, description, dates, phases, and status.
+- **US-007** — As a user, I can define phase-specific dates and expected completion targets.
+- **US-008** — As a user, I can select a primary language and optional secondary languages.
+- **US-009** — As a user, I can choose project options such as DB type, UI stack, storage model, and external APIs.
+- **US-010** — As a user, I can attach notes to each option so unusual decisions are preserved.
+- **US-011** — As a user, I can reopen an existing project and immediately see its current phase and next relevant actions.
+
+## 11.3 Resource stories
+- **US-012** — As a user, I can attach a local folder to a project.
+- **US-013** — As a user, I can attach one or more files of many types to a project.
+- **US-014** — As a user, I can attach a web link with a title and note.
+- **US-015** — As a user, I can attach an FTP profile and reference stored credentials.
+- **US-016** — As a user, I can attach an SSH profile and reference stored credentials or key pairs.
+- **US-017** — As a user, I can attach PowerShell scripts with explicit sensitivity labeling.
+- **US-018** — As a user, I can attach a local or remote repository.
+- **US-019** — As a user, I can attach Docker or Docker Compose resources.
+- **US-020** — As a user, I can attach secret records to a project by reference rather than embedding them everywhere.
+- **US-021** — As a user, I can validate whether a connector profile still works.
+- **US-022** — As a user, I can see whether a resource supports preview, indexing, or execution.
+
+## 11.4 Prompt library stories
+- **US-023** — As a user, I can create a prompt and save it as a draft.
+- **US-024** — As a user, I can save a reusable prompt blueprint/template.
+- **US-025** — As a user, I can group prompts into galleries/collections.
+- **US-026** — As a user, I can tag prompts and search them by tag, phase, or stack.
+- **US-027** — As a user, I can see where a prompt was used, including time and repository context.
+- **US-028** — As a user, I can version a prompt rather than overwriting it blindly.
+- **US-029** — As a user, I can clone an existing prompt into a new prompt draft.
+
+## 11.5 Prompt factory stories
+- **US-030** — As a user, I can choose a project phase and get a recommended blueprint.
+- **US-031** — As a user, I can build a prompt automatically from selected project metadata and linked resources.
+- **US-032** — As a user, I can edit the auto-generated prompt before saving or sending it.
+- **US-033** — As a user, I can save partially completed prompt work.
+- **US-034** — As a user, I can export a generated prompt to clipboard or file.
+- **US-035** — As a user, I can submit a prompt to a chosen provider profile when allowed.
+- **US-036** — As a user, I can see validation warnings before submitting a prompt externally.
+
+## 11.6 Validation stories
+- **US-037** — As a reviewer, I can validate user stories and use cases.
+- **US-038** — As a reviewer, I can validate ASCII layouts against stories and use cases.
+- **US-039** — As a reviewer, I can validate architecture against requirements.
+- **US-040** — As a reviewer, I can validate implementation plans against the approved architecture.
+- **US-041** — As a reviewer, I can validate an initial prototype against the implementation plan.
+- **US-042** — As a reviewer, I can prepare a test coverage plan and attach it to the project.
+- **US-043** — As a reviewer, I can save findings, risks, and required follow-up actions.
+
+## 11.7 Testing and evidence stories
+- **US-044** — As a user, I can store screenshot evidence linked to a validation run.
+- **US-045** — As a user, I can associate Playwright scenarios and test results with a project phase.
+- **US-046** — As a user, I can distinguish planned tests, implemented tests, and executed results.
+- **US-047** — As a user, I can keep UI tests and evidence associated with the exact feature or milestone they validate.
+
+## 11.8 Extensibility stories
+- **US-048** — As an architect, I can add a new resource type without redesigning the whole application.
+- **US-049** — As an architect, I can add a new prompt phase/blueprint without rewriting existing flows.
+- **US-050** — As an architect, I can split heavy modules into sidecar services later while preserving the UI model.
+
+## 12. Use cases
+
+### UC-01 — Create workspace defaults
+**Primary actor:** Workspace Owner  
+**Precondition:** Application starts with no configured workspace  
+**Main flow:**
+1. Open settings.
+2. Enter workspace defaults.
+3. Configure database provider.
+4. Configure provider profiles.
+5. Save encrypted credentials.
+6. Run health checks.
+7. Confirm defaults.
+**Success result:** Workspace baseline is ready for projects.
+
+### UC-02 — Create a project
+**Primary actor:** Architect / Developer  
+**Main flow:**
+1. Open project creation wizard.
+2. Enter project name and description.
+3. Enter dates and initial phases.
+4. Select stack options and notes.
+5. Save project.
+**Success result:** Project workspace is created and visible in the dashboard.
+
+### UC-03 — Add a typed resource
+**Primary actor:** Architect / Developer / DevOps  
+**Main flow:**
+1. Open project resources.
+2. Choose resource type.
+3. Fill the type-specific form.
+4. Reference any required secret profile.
+5. Save.
+6. Optionally validate and index.
+**Success result:** Resource becomes visible in project workspace.
+
+### UC-04 — Build an architecture prompt
+**Primary actor:** Architect  
+**Main flow:**
+1. Open prompt factory.
+2. Choose project and phase “Architecture”.
+3. Select blueprint.
+4. Select relevant resources and options.
+5. Review assembled prompt.
+6. Save and optionally send/export.
+**Success result:** Prompt is stored and traceable.
+
+### UC-05 — Review architecture against requirements
+**Primary actor:** Reviewer  
+**Main flow:**
+1. Open validation center.
+2. Choose target architecture artifact.
+3. Choose requirement baseline.
+4. Run review checklist.
+5. Record findings.
+**Success result:** Gap list and actions are stored.
+
+### UC-06 — Record prompt usage with repo context
+**Primary actor:** Developer  
+**Main flow:**
+1. Open prompt detail.
+2. Mark prompt as used.
+3. Select project and repository.
+4. Enter branch / commit / note.
+5. Save usage record.
+**Success result:** Usage becomes part of project history.
+
+### UC-07 — Add a new feature through the mini-cycle
+**Primary actor:** Architect / Developer / Reviewer  
+**Main flow:**
+1. Open project feature cycle.
+2. Enter feature summary.
+3. Generate architecture prompt.
+4. Generate plan prompt.
+5. Generate implementation prompt.
+6. Generate test plan prompt.
+7. Record validations.
+**Success result:** Feature work becomes a structured sub-cycle.
+
+### UC-08 — Manage sensitive connector profiles
+**Primary actor:** Workspace Owner / DevOps  
+**Main flow:**
+1. Create secret record.
+2. Create FTP/SSH profile.
+3. Reference secret.
+4. Run connection test.
+5. Save only encrypted storage.
+**Success result:** Sensitive data is reusable and protected.
+
+### UC-09 — Validate UI with screenshots and tests
+**Primary actor:** QA / Developer  
+**Main flow:**
+1. Open test lab.
+2. Link validation plan.
+3. Attach Playwright suite and screenshots.
+4. Record result.
+5. Link findings to story/feature.
+**Success result:** UI evidence and validation become traceable.
+
+## 13. Navigation expectations
+
+## 13.1 Top-level navigation
+- Dashboard
+- Projects
+- Prompt Gallery
+- Prompt Factory
+- Validation Center
+- Test Lab
+- Settings
+
+## 13.2 Project-level navigation
+- Overview
+- Stack Profile
+- Resources
+- Prompts
+- Architecture
+- Plan
+- Validation
+- Test Evidence
+- Activity
+
+## 13.3 Deep-link expectations
+Every major item should be openable from:
+- dashboard cards
+- search results
+- activity timeline
+- related links inside detail pages
+
+## 14. UX principles for the interface
+
+1. **Project context first** — the current project and phase should always be visible.
+2. **Type-aware editing** — different resource types need tailored forms, not generic JSON forms.
+3. **Progressive disclosure** — advanced options should not bury the happy path.
+4. **Auditability** — every generated prompt and validation result must be traceable.
+5. **Sensitive-by-default design** — secret values should never be casually visible.
+6. **Same pattern everywhere** — list + details + actions must remain consistent across modules.
+7. **Fast reuse** — clone, duplicate, apply template, and save draft should be first-class actions.
+8. **Human approval gates** — any action with external execution consequences must be explicit.
+9. **Clear system state** — show whether something is saved, draft, validated, indexed, synced, or failed.
+10. **Future-safe IA** — navigation must support growth without turning into tool sprawl.
+
+## 15. UX validation criteria
+
+The UX is acceptable only if:
+- a new user can create a project in one guided flow
+- a user can add at least one resource of each required type
+- the prompt factory can be used without manual copy-paste of project metadata
+- prompt usage can be traced back to project/phase/time
+- secrets are referenced, not scattered
+- validation views connect requirements, outputs, and findings
+- adding a new phase or resource type does not require a UI redesign
+- the shell remains coherent even when more modules are added
+
+## 16. UX risks
+
+1. **Scope sprawl** — too many resource types may make forms inconsistent.
+2. **Feature density** — the application can become “everything everywhere” without strong IA.
+3. **False sense of automation** — users might assume generated prompts are inherently correct.
+4. **Security fatigue** — too many safety dialogs can become ignored noise.
+5. **Over-generic option modeling** — too much abstraction can harm discoverability.
+6. **Under-designed activity history** — traceability can become unusable if not filtered and grouped well.
+
+## 17. UX mitigation actions
+
+- Use a typed resource descriptor registry.
+- Use phase-based dashboards and recommended actions.
+- Keep one common page template for lists/details/forms.
+- Use a universal right-side action panel for save/validate/export/send operations.
+- Keep validation deterministic where possible and AI-assisted where useful.
+- Build search and filters early.
+- Implement project and prompt templates from the beginning.
+
+## 18. Final UX conclusion
+
+The required UX is best served by:
+- a **workspace shell**
+- a **project-centered flow**
+- a **typed resource system**
+- a **prompt library + prompt factory pair**
+- a **validation center**
+- a **test evidence area**
+- a **generalized option model**
+- a **consistent component system**
+
+This is sufficient to support the current scope and still leave space for future vertical and horizontal growth.
