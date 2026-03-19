@@ -1,7 +1,7 @@
 # Codex Prompt 01 — Bootstrap Solution
 
 ## Objective
-Create the initial solution structure and development foundation for PromptStudio.
+Create the initial solution structure and development foundation for CanDoItAll.
 
 ## Required reading
 1. `README.md`
@@ -29,8 +29,8 @@ This prompt covers the M0 foundation work: solution structure, project creation,
 ## Tasks
 1. Create the solution and all planned projects under `src/` and `tests/`.
 2. Create a clean module registration pattern so each module can expose an `Add...Module` extension.
-3. Create `PromptStudio.Web` with shell layout, internal tab host baseline, navigation, and placeholder routes for Dashboard, Projects, Prompt Gallery, Prompt Factory, Validation Center, Test Lab, and Settings.
-4. Create `PromptStudio.SharedKernel`, `PromptStudio.Infrastructure`, `PromptStudio.ComponentKit`, and the Workbench module baseline.
+3. Create `CanDoItAll.Web` with shell layout, internal tab host baseline, navigation, and placeholder routes for Dashboard, Projects, Prompt Gallery, Prompt Factory, Validation Center, Test Lab, and Settings.
+4. Create `CanDoItAll.SharedKernel`, `CanDoItAll.Infrastructure`, `CanDoItAll.ComponentKit`, and the Workbench module baseline.
 5. Add Tailwind configuration/build integration appropriate for the web project.
 6. Add test projects for unit, integration, component, and Playwright layers.
 7. Add the development-only hooks required for the later manager milestone, especially a clean place for a runtime readiness endpoint and dev-only tuning boundaries.

@@ -48,6 +48,9 @@ Recommended shape:
 - `Popover`
 - `ContextMenuService`
 - `ContextMenuHost`
+- `HexContextMenu`
+- `HexContextMenuItem`
+- `HexContextMenuChain`
 
 ### 3. Validation-aware field layer
 
@@ -175,6 +178,21 @@ Recommended deliverables:
 - a JS interop bridge
 - strongly typed manifest and selection models
 - host components for ribbon, dock, and context menu chrome
+- a `CanvasNodeModalHost` for visually rich canvas popups that still dispatch into C#
+
+### 14A. Prompt-flow and shared-block surfaces
+
+Why:
+
+- the architecture now depends on centrally managed shared prompt blocks and reusable flow templates
+- prompt reuse quality will degrade quickly if these surfaces are improvised in feature pages
+
+Recommended deliverables:
+
+- `PromptBlockLibraryPanel`
+- `PromptFlowTemplateSelector`
+- `PromptFlowNodeBubble`
+- `PromptBranchActionMenu`
 
 ### 15. Project calendar wrapper and scheduling primitives
 
@@ -216,7 +234,8 @@ Recommended deliverables:
 3. Validation-aware form layer
 4. Searchable select + date/time controls
 5. Canvas wrapper and project calendar wrapper
-6. Development watch and tuning primitives
-7. Better grid and chart story
+6. Prompt-flow and shared-block surfaces
+7. Development watch and tuning primitives
+8. Better grid and chart story
 
 This order removes the biggest blockers for real application development without prematurely over-engineering the smaller display primitives.

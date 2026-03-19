@@ -2,7 +2,7 @@
 
 ## 1. Executive summary
 
-The recommended architecture for PromptStudio is a **local-first modular monolith** built with **.NET 10**, **C#**, **Blazor Web App using Interactive Server rendering**, **Tailwind CSS**, and **EF Core 10**. The modular monolith is intentionally designed with **explicit internal contracts**, **durable business events**, and **sidecar-ready boundaries** so the application can later split heavy subsystems into local or remote services without invalidating the original design.
+The recommended architecture for CanDoItAll is a **local-first modular monolith** built with **.NET 10**, **C#**, **Blazor Web App using Interactive Server rendering**, **Tailwind CSS**, and **EF Core 10**. The modular monolith is intentionally designed with **explicit internal contracts**, **durable business events**, and **sidecar-ready boundaries** so the application can later split heavy subsystems into local or remote services without invalidating the original design.
 
 This architecture is chosen because it solves the current problem well:
 - one cohesive UI
@@ -11,6 +11,8 @@ This architecture is chosen because it solves the current problem well:
 - strong modularity for future growth
 - practical support for a large feature surface
 - a clear place for a separate local development manager that accelerates delivery
+
+Within this architecture, `PromptStudio` may exist only as an internal prompt-focused workspace/module concept inside CanDoItAll. It must not be treated as the application name.
 
 ## 2. Architectural goals
 
@@ -55,31 +57,31 @@ Start with a modular monolith, but make the seams real:
 ## 4. High-level solution structure
 
 ```text
-PromptStudio.sln
+CanDoItAll.slnx
 │
 ├─ src/
-│  ├─ PromptStudio.Web/                    # Blazor host, composition root, shell
-│  ├─ PromptStudio.SharedKernel/           # Common primitives, results, base abstractions
-│  ├─ PromptStudio.Infrastructure/         # Cross-cutting infrastructure
-│  ├─ PromptStudio.ComponentKit/           # Shared UI wrappers and missing reusable components
+│  ├─ CanDoItAll.Web/                      # Blazor host, composition root, shell
+│  ├─ CanDoItAll.SharedKernel/             # Common primitives, results, base abstractions
+│  ├─ CanDoItAll.Infrastructure/           # Cross-cutting infrastructure
+│  ├─ CanDoItAll.ComponentKit/             # Shared UI wrappers and missing reusable components
 │  │
-│  ├─ PromptStudio.Modules.Workspace/      # Settings, provider profiles, defaults
-│  ├─ PromptStudio.Modules.Security/       # Secret vault, redaction, approval gates
-│  ├─ PromptStudio.Modules.Projects/       # Projects, phases, statuses, stack profile
-│  ├─ PromptStudio.Modules.Workbench/      # Internal tabs, project structure, project calendar
-│  ├─ PromptStudio.Modules.Resources/      # Typed resources and connector profiles
-│  ├─ PromptStudio.Modules.Prompts/        # Prompt library, collections, versions, usage
-│  ├─ PromptStudio.Modules.Factory/        # Prompt factory, blueprints, context assembly
-│  ├─ PromptStudio.Modules.Validation/     # Review flows, checklists, findings
-│  ├─ PromptStudio.Modules.TestLab/        # Test plans, evidence, screenshot/test links
-│  ├─ PromptStudio.Modules.Activity/       # Activity timeline, audit, search documents
-│  └─ PromptStudio.Modules.Automation/     # Background jobs, execution gates, sidecar hooks
+│  ├─ CanDoItAll.Modules.Workspace/        # Settings, provider profiles, defaults
+│  ├─ CanDoItAll.Modules.Security/         # Secret vault, redaction, approval gates
+│  ├─ CanDoItAll.Modules.Projects/         # Projects, phases, statuses, stack profile
+│  ├─ CanDoItAll.Modules.Workbench/        # Internal tabs, project structure, project calendar
+│  ├─ CanDoItAll.Modules.Resources/        # Typed resources and connector profiles
+│  ├─ CanDoItAll.Modules.Prompts/          # Prompt library, collections, versions, usage
+│  ├─ CanDoItAll.Modules.Factory/          # Prompt factory, blueprints, context assembly
+│  ├─ CanDoItAll.Modules.Validation/       # Review flows, checklists, findings
+│  ├─ CanDoItAll.Modules.TestLab/          # Test plans, evidence, screenshot/test links
+│  ├─ CanDoItAll.Modules.Activity/         # Activity timeline, audit, search documents
+│  └─ CanDoItAll.Modules.Automation/       # Background jobs, execution gates, sidecar hooks
 │
 ├─ tests/
-│  ├─ PromptStudio.Tests.Unit/
-│  ├─ PromptStudio.Tests.Integration/
-│  ├─ PromptStudio.Tests.Components/
-│  └─ PromptStudio.Tests.Playwright/
+│  ├─ CanDoItAll.Tests.Unit/
+│  ├─ CanDoItAll.Tests.Integration/
+│  ├─ CanDoItAll.Tests.Components/
+│  └─ CanDoItAll.Tests.Playwright/
 │
 └─ docs/                                   # optional runtime docs/export area
 ```
@@ -90,7 +92,7 @@ The solution should also include a separate local tool project outside the produ
 
 ## 5. Project responsibilities
 
-## 5.1 PromptStudio.Web
+## 5.1 CanDoItAll.Web
 Responsibilities:
 - application startup
 - DI composition root
@@ -105,7 +107,7 @@ Responsibilities:
 
 Keep it thin. Business rules must live in modules.
 
-## 5.2 PromptStudio.SharedKernel
+## 5.2 CanDoItAll.SharedKernel
 Responsibilities:
 - entity base types
 - strongly typed identifiers
@@ -117,7 +119,7 @@ Responsibilities:
 
 Do not turn this into a dumping ground.
 
-## 5.3 PromptStudio.Infrastructure
+## 5.3 CanDoItAll.Infrastructure
 Responsibilities:
 - database bootstrap
 - file storage abstractions
@@ -130,7 +132,7 @@ Responsibilities:
 - common persistence helpers
 - dev-only runtime probe contracts that do not belong in business modules
 
-## 5.4 PromptStudio.ComponentKit
+## 5.4 CanDoItAll.ComponentKit
 Responsibilities:
 - app-specific reusable Blazor components
 - wrappers around the existing `CanDoItAll.Components` set
@@ -141,7 +143,7 @@ Responsibilities:
 - state presentation primitives
 - tunable component boundaries and dev-only tuning UI primitives
 
-## 5.5 PromptStudio.Modules.Workbench
+## 5.5 CanDoItAll.Modules.Workbench
 Responsibilities:
 - internal tab workspace
 - browser-state-backed tab restore
@@ -173,6 +175,9 @@ Each module owns:
 - module UI components/pages where appropriate
 - integration contracts/events
 - read models and display DTOs
+
+UI grouping note:
+The prompt-oriented workspace may be surfaced in the shell as `PromptStudio`, but that is only a workspace label over `CanDoItAll.Modules.Prompts`, `CanDoItAll.Modules.Factory`, and related prompt-validation flows. It is not the application name and should not drive solution or namespace naming.
 
 ## 6. Module design
 
@@ -231,6 +236,8 @@ Responsibilities:
 - project structure relationships
 - project calendar events and views
 - artifact-opening intents
+- canvas command dispatch and action routing
+- prompt-flow node projection into the workbench surface
 
 Key aggregates:
 - `WorkbenchSession`
@@ -240,6 +247,8 @@ Key aggregates:
 - `ProjectStructureLink`
 - `ProjectCalendarEvent`
 - `ProjectCalendarPreference`
+- `WorkbenchCommand`
+- `WorkbenchSelection`
 
 ## 6.5 Resources module
 Responsibilities:
@@ -274,6 +283,9 @@ Key aggregates:
 
 ## 6.7 Factory module
 Responsibilities:
+- shared prompt block catalog
+- prompt flow template catalog
+- prompt run orchestration
 - phase-driven wizard
 - blueprint catalog
 - context assembly
@@ -282,6 +294,10 @@ Responsibilities:
 - prompt generation sessions
 
 Key aggregates:
+- `PromptBlockDefinition`
+- `PromptFlowTemplate`
+- `PromptRun`
+- `PromptRunNode`
 - `PromptBlueprint`
 - `PromptBuildSession`
 - `ContextAssembly`
@@ -368,7 +384,7 @@ Key models:
 Each module should use a practical vertical-slice layout:
 
 ```text
-PromptStudio.Modules.Prompts/
+CanDoItAll.Modules.Prompts/
 ├─ Domain/
 ├─ Application/
 │  ├─ Commands/
@@ -734,6 +750,8 @@ Each resource kind registers:
 - Phase
 - Category
 - PromptTemplate
+- DefaultBlockIds
+- AutoAppliedBlockRulesJson
 - InputContractJson
 - OutputContractJson
 - DefaultChecklistIds
@@ -744,14 +762,56 @@ Each resource kind registers:
 
 ## 15.1 Pipeline
 1. select project and phase
-2. select blueprint
-3. assemble relevant context
-4. validate completeness
-5. render prompt
-6. allow user edits
-7. persist draft/final
-8. export/send
-9. record usage or execution outcome
+2. select or initialize the prompt flow template
+3. select shared prompt blocks and per-run customizations
+4. select blueprint
+5. assemble relevant context
+6. validate completeness
+7. render prompt
+8. allow user edits
+9. persist draft/final
+10. export/send
+11. record usage or execution outcome
+
+## 15.1A Shared block and flow-template model
+The Factory module must treat recurring prompt instructions as first-class assets, not strings copied between wizards.
+
+`PromptBlockDefinition`
+- Name
+- Category
+- InstructionTemplate
+- InputContractJson
+- ActivationRulesJson
+- DefaultOrder
+- Version
+- IsEnabled
+
+`PromptFlowTemplate`
+- Name
+- Phase
+- Category
+- BlockSequenceJson
+- RecommendedBlueprintId
+- ConcurrencyPolicy
+- Version
+
+`PromptRun`
+- ProjectId
+- FlowTemplateId
+- Status
+- StartedAtUtc
+- CompletedAtUtc
+
+`PromptRunNode`
+- PromptRunId
+- PromptBlockDefinitionId
+- ParentNodeId
+- State
+- CustomInstructionOverlay
+- OrderIndex
+- BranchKey
+
+The design must allow multiple active branches for one project or feature without losing lineage between nodes.
 
 ## 15.2 Context assembly inputs
 - project metadata
@@ -873,7 +933,7 @@ Jobs may read and process sensitive data, so:
 
 ## 19. Safe execution architecture
 
-PromptStudio may eventually trigger or assist actions involving:
+CanDoItAll may eventually trigger or assist actions involving:
 - PowerShell
 - Docker
 - SSH
@@ -1029,24 +1089,32 @@ Use strongly typed options:
 **Reason:** Managing prompts and generating prompts are related but distinct capabilities.
 
 ### ADR-09
+**Decision:** Treat shared prompt blocks and prompt-flow templates as centrally governed Factory assets.
+**Reason:** Repeated delivery instructions must be improved once and reused everywhere instead of copied into page-local strings.
+
+### ADR-10
+**Decision:** Keep canvas and calendar JavaScript engines as rendering and interaction adapters only.
+**Reason:** Business logic, orchestration, validation, persistence, and command semantics must stay testable and authoritative in C#.
+
+### ADR-11
 **Decision:** Use rule-first validation with optional AI augmentation.  
 **Reason:** Keeps the system trustworthy and testable.
 
-### ADR-10
+### ADR-12
 **Decision:** Implement a separate local development manager using official `dotnet watch`, loopback-only APIs, and a runtime readiness probe.
 **Reason:** The agent-development loop needs trustworthy machine-readable signals without polluting the product runtime model.
 
-### ADR-11
+### ADR-13
 **Decision:** Require structured source capsules for significant components and types, then generate Codex-optimized artifacts from them.
 **Reason:** Agent context must stay short, current, and close to the real source instead of drifting into stale manual documentation.
 
-### ADR-12
+### ADR-14
 **Decision:** Keep tuning mode explicitly development-only and route it through the manager with correlation ids and watch-ready confirmation.
 **Reason:** This maximizes iteration speed without turning local automation into an unsafe or ambiguous workflow.
 
 ## 25. Architecture conclusion
 
-PromptStudio should be built as a **modular, local-first, C#-centric Blazor workstation** with:
+CanDoItAll should be built as a **modular, local-first, C#-centric Blazor workstation** with:
 - a unified shell
 - an internal recoverable tab workspace
 - a project structure workbench
@@ -1055,6 +1123,7 @@ PromptStudio should be built as a **modular, local-first, C#-centric Blazor work
 - governed source capsules that stay near the real code
 - typed project resources
 - a strong prompt domain
+- centrally governed shared prompt blocks and prompt-flow templates
 - secure secret handling
 - provider-agnostic model integration
 - review and evidence workflows

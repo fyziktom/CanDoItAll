@@ -1,7 +1,7 @@
 %% 01-system-context.mmd
 flowchart LR
     User["User / Architect / Developer / Reviewer"]
-    PromptStudio["PromptStudio<br/>Blazor Web App<br/>Interactive Server"]
+    CanDoItAll["CanDoItAll<br/>Blazor Web App<br/>Interactive Server"]
     Manager["CanDoItAll.Manager<br/>Local Development Manager"]
     Workspace["Local Workspace Storage"]
     DB["SQLite / PostgreSQL"]
@@ -19,24 +19,24 @@ flowchart LR
     Calendar["Project Calendar Engine"]
     Sidecars["Optional Sidecar Services"]
 
-    User --> PromptStudio
+    User --> CanDoItAll
     User --> Manager
-    PromptStudio --> Workspace
-    PromptStudio --> DB
-    PromptStudio --> BrowserState
-    PromptStudio --> Manager
-    Manager --> PromptStudio
+    CanDoItAll --> Workspace
+    CanDoItAll --> DB
+    CanDoItAll --> BrowserState
+    CanDoItAll --> Manager
+    Manager --> CanDoItAll
     Manager --> CapsuleArtifacts
     Manager --> CodexCli
     CodexCli --> Manager
     CodexCli --> Playwright
-    Playwright --> PromptStudio
-    PromptStudio --> OpenAI
-    PromptStudio --> OllamaLocal
-    PromptStudio --> OllamaRemote
-    PromptStudio --> FileSystem
-    PromptStudio --> Repo
-    PromptStudio --> Connectors
-    PromptStudio --> Canvas
-    PromptStudio --> Calendar
-    PromptStudio --> Sidecars
+    Playwright --> CanDoItAll
+    CanDoItAll --> OpenAI
+    CanDoItAll --> OllamaLocal
+    CanDoItAll --> OllamaRemote
+    CanDoItAll --> FileSystem
+    CanDoItAll --> Repo
+    CanDoItAll --> Connectors
+    CanDoItAll --> Canvas
+    CanDoItAll --> Calendar
+    CanDoItAll --> Sidecars

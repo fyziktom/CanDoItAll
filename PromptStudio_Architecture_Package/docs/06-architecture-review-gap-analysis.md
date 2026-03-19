@@ -87,6 +87,15 @@ Keep the factory as its own module with explicit pipeline steps and session pers
 ### Required control
 Do not bury factory logic in UI components.
 
+## 4.3A Finding C1 — Prompt reuse will decay unless shared blocks are first-class
+The user’s repeated architecture, review, planning, implementation, and testing flows are too similar to manage as copied prompt fragments. Without a shared block model, reuse will become inconsistent quickly.
+
+### Decision
+Treat shared prompt blocks and prompt-flow templates as first-class Factory assets that are centrally managed and branch-aware.
+
+### Required control
+Do not hardcode repeated prompt instructions into pages, one-off handlers, or project-local records.
+
 ## 4.4 Finding D — Validation can become a “feature landfill”
 The validation center covers many review types. Without a consistent internal model, each one would become custom code.
 
@@ -256,6 +265,12 @@ The following adjustments were made during review:
 13. **Dev-only tuning mode added with guardrails**
     Targeted UI refinement is now structured instead of ad hoc.
 
+14. **Shared prompt blocks and flow templates added as first-class architecture**
+    Repeated delivery instructions are now modeled centrally instead of being left to copy-paste.
+
+15. **Canvas ownership boundary made explicit**
+    JavaScript remains the rendering and interaction layer while C# owns business state, validation, persistence, and command semantics.
+
 ## 6. Remaining residual risks
 
 ### Residual risk R1 — Too much v1 surface area
@@ -339,6 +354,22 @@ A fast local tuning loop can tempt teams to bypass review or rely on automation 
 - keep dev-only scope explicit
 - store correlation history and verification outcome
 
+### Residual risk R11 — Shared prompt blocks become unmanaged copy variants
+Even with the model in place, teams may still duplicate central prompt instructions locally when deadlines tighten.
+
+**Mitigation**
+- require the shared block catalog in milestone reviews
+- make duplicated instruction fragments a review finding
+- keep flow-template editing separate from ad hoc prompt text editing
+
+### Residual risk R12 — Canvas command logic drifts into JavaScript
+The more visually capable the canvas becomes, the stronger the temptation to let JavaScript mutate business state directly.
+
+**Mitigation**
+- keep typed C# command handlers mandatory
+- test command routing without the renderer
+- treat JavaScript-owned business mutations as an architectural defect
+
 ## 7. Why the architecture is still approved
 
 Despite the risks, the architecture remains approved because it:
@@ -353,10 +384,12 @@ Despite the risks, the architecture remains approved because it:
 The architecture would be considered inadequate if any of the following happened:
 - secrets were embedded directly in general resource tables without protection
 - prompt factory logic were implemented as page-only code without a service layer
+- repeated prompt instructions were duplicated across screens instead of governed through shared blocks
 - connector types were added ad hoc with no common descriptor model
 - validation flows each invented different result storage models
 - project options became hardcoded UI instead of a generalized catalog
 - the shell fragmented into unrelated tool pages
+- canvas interactions started mutating business state directly in JavaScript
 - microservice readiness were claimed without real boundaries and contracts
 - `DbContext` lifetimes were mishandled in Blazor and caused concurrency errors
 

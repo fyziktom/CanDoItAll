@@ -30,6 +30,8 @@ It is strong because it:
 - drifting away from the generalized option model
 - under-designed internal tab restore and sleep behavior
 - weak integration of the project structure and calendar workbenches
+- hardcoded prompt instructions drifting outside the shared block catalog
+- JavaScript canvas logic leaking into business rules or persistence paths
 - false-ready behavior in the local development manager
 - capsule drift that would quietly degrade Codex effectiveness
 - unsafe or unclear tuning-mode autonomy
@@ -66,6 +68,9 @@ The package now treats internal tabs, project structure, and project calendar as
 
 ### 3.7 Development-loop realism
 The package now also treats build velocity as an architectural concern. The manager, watch-ready contract, source capsules, and dev-only tuning loop are correctly defined as system features that shape implementation quality, not as random scripts.
+
+### 3.8 Prompt orchestration realism
+The package now treats repeated delivery instructions as centrally governed assets instead of hand-waved “templates”. That matters because architecture, review, planning, implementation, and test prompts are where teams most often regress into copy-paste drift.
 
 ## 4. Critical questions asked during review
 
@@ -136,6 +141,22 @@ There is a similar risk that a team could claim to have a fast local loop while 
 - require capsule coverage and drift reporting
 - require ready-for-review notifications to correlate Codex completion with watch readiness
 
+## 5.7 Concern M7 — Fake prompt reuse
+There is a real risk that a team could claim to support prompt reuse while actually hardcoding repeated instruction fragments into several screens, wizards, or ad hoc records.
+
+**Management control**
+- require a shared prompt block catalog and flow-template model
+- reject prompt-wizard implementations that duplicate central instructions in UI code
+- require branch-aware traceability for concurrent prompt runs
+
+## 5.8 Concern M8 — JavaScript ownership drift inside the canvas
+Because the canvas engine is visually strong, teams may start moving business behavior into JavaScript for convenience. That would damage testability, restore semantics, and architectural control.
+
+**Management control**
+- require JavaScript to stay limited to rendering and interaction capture
+- require all state mutation, validation, and persistence to remain in C#
+- require tests around command routing and restore semantics
+
 ## 6. QA concerns
 
 ## 6.1 Concern Q1 — Missing negative-path coverage
@@ -174,6 +195,12 @@ Compressed source capsules are valuable only if they remain current. Teams under
 **Required action**
 Require capsule coverage and drift output in milestone reviews and do not treat stale capsules as harmless.
 
+## 6.7 Concern Q7 — Prompt branches can become ambiguous
+If prompt runs, node states, and branches are not modeled explicitly, the canvas will look impressive while hiding ambiguous lineage and inconsistent state.
+
+**Required action**
+Test branch identity, node-state restore, and concurrent run behavior as first-class quality areas.
+
 ## 7. Acceptance conditions for implementation start
 
 The package is approved to move into implementation only if the team commits to the following conditions:
@@ -187,6 +214,8 @@ The package is approved to move into implementation only if the team commits to 
 7. use validation and QA checklists as real gates
 8. implement internal tab restore and workbench wrappers as real product work, not placeholders
 9. implement the manager, capsule, and tuning loop as a tested subsystem, not as a best-effort script bundle
+10. keep shared prompt blocks and flow templates centralized instead of letting prompt reuse degrade into copy-paste
+11. keep canvas business logic in C# even if the visual interaction layer stays in JavaScript
 
 ## 8. Mandatory no-compromise areas
 
@@ -201,6 +230,8 @@ These are non-negotiable:
 - coherent UI shell
 - credible internal tab workspace
 - usable project structure and calendar workbenches
+- centrally governed shared prompt blocks and flow templates
+- prompt-run lineage and node-state integrity
 - trustworthy local watch-ready loop
 - visible capsule freshness and drift reporting
 - development-only tuning mode with explicit safety boundaries
@@ -219,6 +250,8 @@ If any of the following appear, management should intervene:
 - every review becomes “ask the LLM” instead of applying hard checks
 - internal tabs cannot be restored after interruption
 - the structure canvas exists visually but cannot open or resume real artifacts
+- prompt reuse is claimed but shared instructions are duplicated across screens
+- canvas popups or context menus mutate business state directly in JavaScript
 - the manager reports ready while the app is still faulted or rebuilding
 - capsule coverage is unknown or clearly stale
 - tuning notifications say "done" before the changed app is actually live

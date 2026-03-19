@@ -22,8 +22,8 @@ The UI must make a large functional scope feel coherent. The design must support
 3. **Typed resource interactions**  
    Resource forms and detail panels must adapt to the resource type.
 
-4. **Factory-first prompt generation**  
-   Prompt creation should be guided and contextual, not a blank page by default.
+4. **Factory-first prompt generation with reusable flow building blocks**
+   Prompt creation should be guided and contextual, not a blank page or copy-paste ritual.
 
 5. **Validation as a first-class area**  
    Reviews, checks, and evidence must not be hidden as secondary features.
@@ -172,9 +172,12 @@ Reference inputs:
 ## 5.4 Workflow components
 - `WizardStepper`
 - `ContextAssemblerPanel`
+- `PromptBlockLibraryPanel`
+- `PromptFlowTemplateSelector`
 - `PromptBlueprintSelector`
 - `GeneratedPromptPreview`
 - `PromptFlowPanel`
+- `PromptFlowNodeBubble`
 - `PromptStepCard`
 - `PromptBranchActionMenu`
 - `ApprovalGatePanel`
@@ -200,6 +203,8 @@ Reference inputs:
 - `CanvasWorkbenchShell`
 - `WorkbenchInspectorPane`
 - `WorkbenchOutlinePane`
+- `HexContextMenu`
+- `CanvasNodeModalHost`
 - `ProjectStructureCanvas`
 - `ProjectCalendar`
 - `NodeInspectorField`
@@ -281,9 +286,12 @@ Purpose:
 - internal-tab hosted, not browser-tab hosted
 - canvas wrapper around the documented JavaScript engine
 - outline + inspector + command surfaces around the canvas
+- grouped hexagonal context menu for primary actions and chained subcommands
 - open linked artifacts into internal tabs
 - save and restore viewport, selection, and layout state
 - support prompt-step branching from an existing prompt node
+- support flow-template and shared-block nodes with visible prepared/used/skipped/running state
+- keep business mutations, validation, and persistence in C# even when visual popups are rendered by the canvas layer
 
 ## 7.3B Project calendar
 Purpose:
@@ -329,12 +337,13 @@ Purpose:
 ### Steps
 1. choose project
 2. choose phase
-3. choose blueprint
-4. select resources and options
-5. review assembled context
-6. edit generated prompt
-7. validate
-8. save/send/export
+3. confirm the recommended flow template and auto-applied shared blocks
+4. choose blueprint
+5. select resources and options
+6. review assembled context
+7. edit generated prompt
+8. validate
+9. save/send/export
 
 ## 7.7 Validation center
 Purpose:
@@ -381,7 +390,7 @@ Purpose:
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────────────────────┐
-│ PromptStudio | Workspace: Local Architect Lab | Search ... | Provider: OpenAI ✓ Ollama ✓ │
+│ CanDoItAll | Workspace: Local Architect Lab | Search ... | Provider: OpenAI ✓ Ollama ✓ │
 ├───────────────┬───────────────────────────────────────────────────────────┬────────────────┤
 │ Dashboard     │ Breadcrumbs: Projects / Alpha / Overview                 │ Quick Actions  │
 │ Projects      │ Page Title                                               │ Save           │
@@ -480,11 +489,14 @@ Purpose:
 ┌────────────────────────────────────────────────────────────────────────────────────────────┐
 │ Prompt Factory                                                                             │
 ├────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Step 1: Project  →  Step 2: Phase  →  Step 3: Blueprint  →  Step 4: Context  →  Review   │
+│ Step 1: Project  →  Step 2: Phase  →  Step 3: Flow Template  →  Step 4: Blueprint  →      │
+│ Step 5: Context  →  Review                                                                 │
 ├──────────────────────────────┬─────────────────────────────────────────────────────────────┤
 │ Context Inputs               │ Generated Prompt Preview                                     │
 │ Project: Alpha               │ You are implementing...                                      │
 │ Phase: Architecture Review   │                                                               │
+│ Flow: Feature-Architecture   │                                                               │
+│ Shared Blocks: Arch, QA      │                                                               │
 │ Blueprint: ArchReview-01     │ [editable prompt body]                                       │
 │ Resources: repo, spec, pdf   │                                                               │
 │ Options: C#, PostgreSQL      │                                                               │
@@ -568,6 +580,7 @@ Purpose:
 - the UI should show "waiting for watch ready" distinctly from "Codex finished"
 - ready-for-review notifications must link back to the affected workbench tab or route
 - capsule drift warnings should be visible in development without polluting normal user flows
+- canvas interaction menus may be visually implemented in JavaScript, but every command must map to a typed C# workbench action
 
 ## 10. Design system rules
 
@@ -591,11 +604,11 @@ Purpose:
 ### Layout coverage summary
 - Dashboard supports US-011, US-027, US-043, US-045.
 - Project overview supports US-006 through US-011.
-- Project structure supports US-051, US-055, US-056, and US-058.
+- Project structure supports US-051, US-055, US-056, US-056A, US-056B, US-056C, US-058, and US-058A.
 - Project calendar supports US-057 and US-058.
 - Resources page supports US-012 through US-022.
 - Prompt gallery supports US-023 through US-029.
-- Prompt factory supports US-030 through US-036.
+- Prompt factory supports US-030 through US-036 and US-056A.
 - Validation center supports US-037 through US-043.
 - Test lab supports US-044 through US-047.
 

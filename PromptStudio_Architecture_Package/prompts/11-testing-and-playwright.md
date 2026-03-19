@@ -32,7 +32,7 @@ This prompt covers M8 and the broader test infrastructure expectations for the p
 2. Build pages for test plans, linked test cases, evidence artifacts, and results.
 3. Support screenshot/evidence metadata and linkage to project stories/features/phases.
 4. Add or refine unit, integration, and component tests for the already implemented modules.
-5. Set up or refine Playwright project configuration and initial end-to-end suites for primary flows, including internal tab restore, workbench surfaces, and manager-ready waits.
+5. Set up or refine Playwright project configuration and initial end-to-end suites for primary flows, including internal tab restore, workbench surfaces, prompt-flow branching, hex-menu actions, and manager-ready waits.
 6. Add automated coverage for manager watch-state normalization, runtime readiness confirmation, capsule generation, and dev-only tuning request flows using fake or controlled adapters where required.
 7. Ensure test artifacts and reports can be associated with the Test Lab concept.
 8. Add documentation or scripts for running the full test stack.
@@ -48,6 +48,7 @@ This prompt covers M8 and the broader test infrastructure expectations for the p
 ## Acceptance criteria
 - test plans and evidence can be managed in the application
 - primary workflows have Playwright coverage
+- prompt-flow branching and canvas action routing are covered by automated tests
 - automated tests exist across all intended layers
 - failing tests produce actionable artifacts
 - test lab pages are linked coherently to projects and validations

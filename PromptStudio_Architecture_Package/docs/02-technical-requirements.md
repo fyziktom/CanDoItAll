@@ -2,7 +2,7 @@
 
 ## 1. Scope statement
 
-PromptStudio is a local-first, modular software delivery assistant focused on creating, storing, validating, and reusing prompts linked to software projects, technical assets, and delivery phases.
+CanDoItAll is a local-first, modular software delivery environment focused on project planning, prompt workflows, validation, testing, and related technical assets.
 
 The first release must already support the required project, prompt, provider, validation, and UI capabilities while remaining structurally ready for substantial future expansion.
 
@@ -65,6 +65,11 @@ The first release must already support the required project, prompt, provider, v
 
 - **FR-030** — The application shall support guided prompt generation by project phase.
 - **FR-031** — The application shall support automatic prompt assembly from project metadata, option selections, notes, and linked resources.
+- **FR-031A** — The application shall support a centrally managed catalog of shared prompt blocks that can be reused across phases, blueprints, and projects.
+- **FR-031B** — The application shall support prompt flow templates composed from shared blocks plus project- or phase-specific setup data.
+- **FR-031C** — The application shall support storing prompt-flow node state such as pending, prepared, running, used, skipped, failed, validated, and superseded.
+- **FR-031D** — The application shall support multiple concurrent prompt runs or branches for the same project or feature while preserving traceability.
+- **FR-031E** — The prompt wizard shall automatically apply recommended shared prompt blocks based on phase, flow template, or blueprint while still allowing controlled user customization.
 - **FR-032** — The application shall support editable generated prompts before persistence or sending.
 - **FR-033** — The application shall support saving partial prompt work.
 - **FR-034** — The application shall support exporting prompts to clipboard or file.
@@ -100,6 +105,10 @@ The first release must already support the required project, prompt, provider, v
 - **FR-055** — The application shall provide a project structure canvas for visualizing phases, resources, prompts, validations, tests, and relationships.
 - **FR-056** — The project structure canvas shall support opening linked artifacts from the canvas into internal tabs.
 - **FR-057** — The project structure canvas shall support representing prompt sessions and prompt steps, including branching from an existing step into a new follow-up prompt.
+- **FR-057A** — The project structure canvas shall support representing prompt flow templates, reusable prompt blocks, and prompt-run nodes with visible execution state.
+- **FR-057B** — Canvas and calendar JavaScript layers shall be limited to rendering, interaction capture, viewport behavior, and visual-only overlays; authoritative business logic, validation, persistence, and command execution shall remain in C# services and models.
+- **FR-057C** — The project structure canvas shall provide a grouped hexagonal context menu pattern that supports primary actions and chained subcommands.
+- **FR-057D** — If the canvas renders edit popups or modals for visual quality, those surfaces shall still submit intent to C# command handlers rather than owning business mutations themselves.
 - **FR-058** — The application shall provide a project events calendar linked to milestones, phases, deadlines, validations, and related project artifacts.
 - **FR-059** — The project events calendar shall support opening linked artifacts into internal tabs.
 - **FR-060** — The shared UI architecture shall include shell-level components for the internal tab strip, sleeping-tab indicators, workbench inspectors, date and time editing, and canvas host surfaces.
@@ -149,6 +158,7 @@ The first release must already support the required project, prompt, provider, v
 - **NFR-015** — The design shall support idempotent processing of internal events where relevant.
 - **NFR-015A** — Internal tab restore shall degrade safely when one snapshot is incompatible or corrupted.
 - **NFR-015B** — Canvas and calendar workbench surfaces shall restore enough user state to resume work meaningfully after interruption.
+- **NFR-015C** — Prompt-flow restore shall preserve branch identity and node state without duplicating or silently dropping steps after interruption.
 
 ## 4.4 Performance
 
@@ -159,10 +169,12 @@ The first release must already support the required project, prompt, provider, v
 - **NFR-020** — The architecture shall allow later optimization of search, indexing, and provider calls without redesigning business modules.
 - **NFR-020A** — The internal tab workspace shall reduce browser-tab and Interactive Server circuit pressure by allowing heavy screens to sleep.
 - **NFR-020B** — Tab wake and restore should feel fast enough that users prefer internal tabs over opening additional browser tabs.
+- **NFR-020C** — Canvas interactions should feel immediate through the JavaScript renderer while preserving C# as the authoritative command and state layer.
 
 ## 4.5 Testability and observability
 
 - **NFR-021** — Domain and application logic shall be unit-testable without UI concerns.
+- **NFR-021A** — Prompt-flow orchestration, canvas command dispatch, and context-menu action routing shall be unit-testable without the JavaScript renderer.
 - **NFR-022** — Persistence behavior shall be integration-testable with SQLite and PostgreSQL-compatible flows.
 - **NFR-023** — UI components shall be component-testable.
 - **NFR-024** — End-to-end workflows shall be testable with Playwright.
@@ -182,6 +194,8 @@ The first release must already support the required project, prompt, provider, v
 - Styling uses Tailwind CSS and a shared custom component strategy.
 - The architecture must integrate the existing `CanDoItAll.Components` library and document missing shell or workbench components explicitly.
 - The architecture must include a separate local development manager using official `dotnet watch` and local ASP.NET Core APIs for the agent-feedback loop.
+- Shared prompt blocks and prompt-flow templates must be centrally managed artifacts, not page-local strings copied between screens.
+- The canvas and calendar JavaScript engines must remain rendering or interaction adapters; business rules, orchestration, persistence, and validation stay in C#.
 - Persistence uses EF Core with SQLite and PostgreSQL support.
 - The solution must support `IDbContextFactory`, design-time factory, and in-memory test mode.
 - The system must support OpenAI and Ollama integrations.
@@ -207,6 +221,7 @@ The first release must already support the required project, prompt, provider, v
 5. Not every resource type needs full semantic preview in v1, but all required types need supported registration and management.
 6. Internal tabs, workbench restore, project structure canvas, and project calendar are part of the first serious usable version, not future polish.
 7. The local development manager, source capsules, and dev-only tuning loop are part of the intended build velocity strategy, not optional late tooling.
+8. Shared prompt blocks, prompt-flow templates, and their canvas representation are part of the first serious usable prompt-workflow version, not optional polish.
 
 ## 7. Recommended technical principles
 

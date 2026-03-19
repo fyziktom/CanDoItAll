@@ -10,7 +10,7 @@ This document closes three gaps that are too important to leave implicit:
 
 These are not optional enhancements. They are part of the core operating model of the application.
 
-PromptStudio is expected to become a daily project-control workstation. Without an internal tab system, a recoverable workbench state, and visual project orchestration surfaces, the application will not scale comfortably in real use.
+CanDoItAll is expected to become a daily project-control workstation. Without an internal tab system, a recoverable workbench state, and visual project orchestration surfaces, the application will not scale comfortably in real use.
 
 ## 2. Why internal tabs are mandatory
 
@@ -274,6 +274,20 @@ Do not rebuild the renderer in C# for version one.
 
 Use a Blazor wrapper around a reusable JavaScript canvas engine and keep the heavy rendering, hit testing, viewport math, and drag behavior in JavaScript.
 
+The JavaScript engine is a rendering and interaction adapter, not the business owner of the surface.
+
+Authoritative ownership must stay in C# for:
+
+- node and link models
+- prompt-flow orchestration state
+- command routing
+- validation rules
+- persistence
+- undo and redo semantics
+- artifact-opening policies
+
+The canvas may render visually rich overlays, inline editors, or modal-like surfaces when that produces better UX, but those surfaces must submit typed intents back into the C# workbench layer.
+
 ### 9.2 What the project structure canvas represents
 
 This is not only a visual tree of folders. It is the operational graph of project work.
@@ -284,6 +298,8 @@ The canvas should support nodes such as:
 - phase
 - milestone
 - feature or epic
+- prompt flow template
+- prompt block
 - prompt blueprint
 - prompt session
 - prompt step
@@ -311,13 +327,28 @@ Prompt execution is one of the main reasons this canvas exists.
 
 The project structure canvas must support:
 
+- displaying reusable prompt flow templates as nodes or bubbles
+- displaying shared prompt blocks as nodes or nested items where that helps explain the flow
 - displaying prompt sessions as nodes
 - displaying prompt steps as child nodes or linked nodes
 - branching from any step into a new follow-up prompt
+- running multiple prompt branches or review tracks in parallel for one feature or project
 - linking each step to source resources, templates, and prior outputs
-- showing status such as draft, running, waiting, failed, validated, superseded
+- showing status such as pending, prepared, draft, running, waiting, used, skipped, failed, validated, superseded
 
 This is how complex prompt chains remain explainable and reusable instead of dissolving into ad hoc chat history.
+
+Shared prompt blocks are important because many delivery flows repeat the same base instructions:
+
+- architecture definition
+- architecture review
+- implementation plan
+- implementation
+- security review
+- test planning
+- validation follow-up
+
+Those shared blocks must be centrally governed and reusable across projects. The canvas should show where they were used, skipped, customized, or branched so prompt history remains understandable.
 
 ### 9.4 Required host surfaces around the canvas
 
@@ -327,6 +358,7 @@ The canvas needs more than the canvas itself. The workbench should include:
 - an inspector pane
 - a command toolbar
 - context actions
+- a grouped hexagonal context menu for node-local and branch-local actions
 - status badges
 - save and autosave indicators
 - selection details
@@ -343,12 +375,25 @@ The project structure canvas should support:
 - collapse and expand
 - pan and zoom
 - context actions
+- grouped hexagonal right-click actions with chained subcommands
 - keyboard navigation for primary commands
 - autosave of layout state
 - fit-to-view
 - persistent node positions
 - restore of selected node and viewport after reopen
 - undo and redo at the workbench-command layer
+
+The grouped hexagonal menu is not decoration. It is the standard action launcher for:
+
+- node creation
+- branching
+- linking
+- status changes
+- prompt-run actions
+- quick-open actions
+- node-specific edit commands
+
+The menu can be drawn by the canvas engine, but its commands must dispatch into typed C# actions instead of mutating state directly inside JavaScript.
 
 ### 9.6 Persisted canvas state
 

@@ -32,7 +32,7 @@ This prompt consolidates the UI into a cohesive whole. It may run after or parti
 3. Ensure shell-wide context visibility for workspace, project, and current phase.
 4. Implement or refine the internal tab strip, dirty or sleeping indicators, tab overflow behavior, and restore UX.
 5. Standardize navigation, breadcrumbs, status presentation, and action ordering.
-6. Build or refine any missing shared components that are repeatedly needed across modules, especially workbench shell components.
+6. Build or refine any missing shared components that are repeatedly needed across modules, especially workbench shell components such as the hexagonal canvas context menu, prompt-block selector surfaces, and prompt-flow node presentation components.
 7. Implement or refine development-only watch status, tuning handles, capsule summaries, and manager job notifications without polluting normal product usage.
 8. Improve usability of the Dashboard and project workspace summary views.
 9. Add component tests for shared shell and component patterns.
@@ -49,6 +49,7 @@ This prompt consolidates the UI into a cohesive whole. It may run after or parti
 - empty/loading/error states exist on the major pages
 - current project/phase context is clearly visible
 - internal tabs behave like a deliberate application workbench
+- shared prompt-block and workbench interaction components follow one consistent visual language
 - development-only tuning affordances are explicit, safe, and visually separate from business actions
 - component tests cover critical shared shell patterns
 

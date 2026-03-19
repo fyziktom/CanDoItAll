@@ -16,7 +16,7 @@ State the exact feature or milestone to implement.
 - Keep the modular monolith boundaries intact.
 - Prefer one `DbContext` per operation through `IDbContextFactory`.
 - Do not put business logic directly into UI pages.
-- Use existing shared components first; build missing reusable components in `PromptStudio.ComponentKit`.
+- Use existing shared components first; build missing reusable components in `CanDoItAll.ComponentKit`.
 - Do not log secrets or raw sensitive values.
 - Keep dangerous actions behind explicit approval gates.
 - Add or update automated tests.

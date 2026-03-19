@@ -1,7 +1,7 @@
 # Codex Prompt 00 — Starting Prompt for the Full Implementation
 
 ## Objective
-Implement PromptStudio incrementally according to the architecture package in this directory. In this session, you must first align yourself to the architecture and then start with **Milestone M0**, followed by **M0A** only if M0 is already complete and clean.
+Implement CanDoItAll incrementally according to the architecture package in this directory. In this session, you must first align yourself to the architecture and then start with **Milestone M0**, followed by **M0A** only if M0 is already complete and clean.
 
 ## Required reading order
 1. `README.md`
@@ -26,6 +26,7 @@ You are building a local-first modular workstation for software-delivery prompt 
 - project creation and stack profiling
 - typed linked resources
 - prompt library and versioning
+- shared prompt blocks and reusable prompt-flow templates
 - phase-driven prompt factory
 - validation workflows
 - test planning and evidence

@@ -29,6 +29,8 @@ Implement the internal tab workspace, tab persistence and sleep lifecycle, the p
 - Do not log or expose secrets.
 - Keep tab restore state behind an explicit browser-storage abstraction.
 - Wrap the existing canvas and calendar JavaScript engines first; do not rewrite them in pure C# in version one.
+- Treat the JavaScript engines as rendering and interaction adapters only; keep business logic, persistence, validation, and command semantics in C#.
+- Implement the grouped hexagonal context menu pattern as the standard canvas action launcher.
 - Add or update tests for the touched behavior.
 
 ## Scope
@@ -42,8 +44,9 @@ This prompt covers the workbench architecture that sits between projects/resourc
 5. Implement a project events calendar wrapper using a JS interop adapter and typed .NET DTOs.
 6. Ensure both workbench surfaces open inside internal tabs instead of forcing browser-tab workflows.
 7. Add project artifact linking so calendar items and structure nodes can open related prompts, resources, validations, and tests inside the tab workspace.
-8. Ensure workbench surfaces expose stable tab, capsule, and selection metadata needed by development tuning mode.
-9. Add tests for tab persistence, restore, sleep or wake behavior, and the JS interop wrappers' main round-trip contracts.
+8. Implement the grouped hexagonal context menu for node actions and route every command into typed C# workbench handlers.
+9. Ensure workbench surfaces expose stable tab, capsule, and selection metadata needed by development tuning mode.
+10. Add tests for tab persistence, restore, sleep or wake behavior, canvas command routing, and the JS interop wrappers' main round-trip contracts.
 
 ## Required deliverables
 - tab workspace domain and services
@@ -61,6 +64,7 @@ This prompt covers the workbench architecture that sits between projects/resourc
 - the project structure canvas works through a wrapper-first JS interop approach
 - the events calendar works through a wrapper-first JS interop approach
 - prompts, resources, validations, and tests can be opened from the workbench surfaces inside internal tabs
+- the grouped hexagonal context menu is available on the structure canvas and its actions are executed through C# workbench services
 - workbench surfaces publish stable metadata for manager-driven tuning and verification flows
 - tests cover the critical restore and wrapper contracts
 

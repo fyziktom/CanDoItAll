@@ -92,6 +92,7 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Partial restore failure does not lose the entire session.
 - [ ] Sleeping tabs can wake safely.
 - [ ] Linked artifacts reopen inside internal tabs.
+- [ ] Prompt-flow node state restores without duplicating or silently dropping branches.
 
 ### 2.6 Development tuning checklist
 - [ ] Tuning mode is hidden outside development mode.
@@ -145,6 +146,9 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Project calendar wrapper exists.
 - [ ] Canvas and calendar open linked artifacts into internal tabs.
 - [ ] Prompt sessions can be represented in the structure surface.
+- [ ] Flow-template and prompt-run nodes can be represented in the structure surface.
+- [ ] The grouped hexagonal context menu exists on the structure canvas.
+- [ ] Canvas commands are routed into typed C# handlers instead of mutating state in JavaScript.
 
 ## 5B. Development acceleration checklist
 
@@ -160,7 +164,14 @@ This document contains implementation, review, QA, and release checklists intend
 
 ## 6. Prompt factory checklist
 
+- [ ] Shared prompt block catalog exists.
+- [ ] Prompt-flow template catalog exists.
+- [ ] Prompt-run and prompt-run-node models exist.
+- [ ] Parallel prompt branches are supported with clear lineage.
 - [ ] Project phase selection exists.
+- [ ] Flow-template selection exists.
+- [ ] Shared-block selection exists.
+- [ ] Shared blocks can be auto-applied by prompt type and then customized safely.
 - [ ] Blueprint selection exists.
 - [ ] Context assembly service exists.
 - [ ] Prompt preview is editable.
@@ -218,6 +229,8 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Prompt rendering logic is unit-tested.
 - [ ] Validation rules are unit-tested.
 - [ ] Mapping and conversion helpers are unit-tested.
+- [ ] Prompt-flow branching and node-state rules are unit-tested.
+- [ ] Canvas command routing can be tested without the JavaScript renderer.
 
 ### 10.2 Integration testing
 - [ ] SQLite integration tests exist.
@@ -233,6 +246,8 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Wizard components are covered.
 - [ ] Status and detail panels are covered.
 - [ ] Error/loading states are covered.
+- [ ] Shared-block and flow-template selection surfaces are covered.
+- [ ] Hexagonal context menu behavior is covered.
 
 ### 10.4 End-to-end testing
 - [ ] Startup smoke test exists.
@@ -242,6 +257,7 @@ This document contains implementation, review, QA, and release checklists intend
 - [ ] Internal tab restore flow exists.
 - [ ] Project structure canvas flow exists.
 - [ ] Project calendar flow exists.
+- [ ] Prompt-flow branching flow exists.
 - [ ] Prompt factory flow exists.
 - [ ] Validation center flow exists.
 - [ ] Test lab flow exists.

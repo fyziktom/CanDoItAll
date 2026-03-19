@@ -120,7 +120,7 @@ The manager owns five responsibilities:
 The manager should supervise the main app using the official command-line watcher:
 
 ```bash
-dotnet watch --project src/PromptStudio.Web run --non-interactive
+dotnet watch --project src/CanDoItAll.Web run --non-interactive
 ```
 
 This matches current Microsoft guidance for `dotnet watch` on .NET 10 and avoids interactive prompts that would block automation.

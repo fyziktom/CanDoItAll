@@ -3,10 +3,12 @@
 ## 1. Product framing
 
 ### Product mission
-PromptStudio is a local-first workbench that helps technical teams create, review, refine, store, and reuse prompts tied to real software delivery work. The product is not only a prompt editor; it is a **project-context prompt system** that understands phases, linked assets, stack choices, constraints, and validation criteria.
+CanDoItAll is a local-first workbench that helps technical teams plan, execute, validate, and refine software delivery work in one environment.
+
+Inside CanDoItAll, the prompt-focused workspace can be branded as `PromptStudio`. That prompt area helps users create, review, refine, store, and reuse prompts tied to real software delivery work. It is not the whole application; it is one module/workspace inside the larger environment.
 
 ### Product promise
-A user should be able to open one project workspace, see its current delivery phase, attach relevant technical assets, choose the target LLM/provider, and generate a phase-appropriate prompt with enough context to be immediately useful for Codex or another implementation model.
+A user should be able to open one CanDoItAll project workspace, see its current delivery phase, attach relevant technical assets, choose the target LLM/provider, and generate a phase-appropriate prompt with enough context to be immediately useful for Codex or another implementation model.
 
 ### UX philosophy
 The UX must feel:
@@ -189,8 +191,11 @@ These future roles must influence policy design now, even if the first release r
 - send to provider or copy/export
 
 ### Capability group U5A — Prompt flow orchestration
+- build prompt runs from centrally managed shared blocks and reusable flow templates
 - show prompt sessions and prompt steps inside the project structure canvas
+- show flow-template nodes or bubbles with setup data, activation rules, and used/not-used state
 - branch from any prompt step into a follow-up prompt
+- run multiple prompt branches or review tracks in parallel for the same project or feature
 - trace which resources and prior prompts influenced each step
 - reopen prompt work from the exact prior node without rebuilding context manually
 
@@ -254,6 +259,8 @@ For every new feature:
 9. closure note
 
 The UX must make both the **main lifecycle** and the **feature loop** obvious and navigable.
+
+The repeated feature loop must not rely on copy-paste prompt fragments spread across pages or projects. Common instructions for architecture, revision, plan, implementation, security review, and testing should come from centrally managed shared blocks that can be improved in one place and reused across many prompt flows.
 
 ## 8. Information inputs the UX must collect
 
@@ -462,8 +469,12 @@ As a developer or delivery lead, I want a machine-readable local change loop and
 - **US-054** — As a user, I can let inactive heavy tabs sleep while preserving enough state for fast restore.
 - **US-055** — As a user, I can view the project structure as a canvas of phases, resources, prompts, validations, and tests.
 - **US-056** — As a user, I can branch a new prompt or follow-up action from a specific prompt step represented in the project structure canvas.
+- **US-056A** — As a user, I can start a prompt flow from centrally managed shared blocks so repeated delivery instructions stay consistent across projects.
+- **US-056B** — As a user, I can see whether a prompt-flow node or bubble is pending, prepared, running, used, skipped, failed, or superseded.
+- **US-056C** — As a user, I can run multiple prompt branches or review tracks in parallel for one project without losing traceability.
 - **US-057** — As a user, I can manage project events, milestones, reviews, and deadlines in a project calendar linked to project artifacts.
 - **US-058** — As a user, I can open related prompts, resources, validations, or tests directly from the project structure canvas or calendar into internal tabs.
+- **US-058A** — As a user, I can use a grouped hexagonal context menu on canvas nodes so related actions and subcommands stay fast and readable.
 
 ## 11.10 Development acceleration and tuning stories
 - **US-059** — As a developer, I can see normalized watch, build, and runtime state for the running app instead of reading raw console output only.
@@ -517,10 +528,11 @@ As a developer or delivery lead, I want a machine-readable local change loop and
 **Main flow:**
 1. Open prompt factory.
 2. Choose project and phase “Architecture”.
-3. Select blueprint.
-4. Select relevant resources and options.
-5. Review assembled prompt.
-6. Save and optionally send/export.
+3. Select the recommended flow template and adjust any shared blocks that need project-specific tuning.
+4. Select blueprint.
+5. Select relevant resources and options.
+6. Review assembled prompt.
+7. Save and optionally send/export.
 **Success result:** Prompt is stored and traceable.
 
 ### UC-05 — Review architecture against requirements
@@ -548,11 +560,13 @@ As a developer or delivery lead, I want a machine-readable local change loop and
 **Main flow:**
 1. Open project feature cycle.
 2. Enter feature summary.
-3. Generate architecture prompt.
-4. Generate plan prompt.
-5. Generate implementation prompt.
-6. Generate test plan prompt.
-7. Record validations.
+3. Start one or more prompt-flow branches from the standard shared blocks.
+4. Generate architecture prompt.
+5. Generate plan prompt.
+6. Optionally start a parallel review branch such as security review or test planning.
+7. Generate implementation prompt.
+8. Generate test plan prompt.
+9. Record validations.
 **Success result:** Feature work becomes a structured sub-cycle.
 
 ### UC-08 — Manage sensitive connector profiles
@@ -590,10 +604,11 @@ As a developer or delivery lead, I want a machine-readable local change loop and
 **Main flow:**
 1. Open the project structure tab.
 2. Add or select phases, resources, prompt sessions, validations, or tests.
-3. Link nodes with meaningful relationships.
-4. Open a related artifact from the canvas.
-5. Save and later restore the structure state.
-**Success result:** Complex project flow becomes visible and navigable.
+3. Use the hexagonal context menu to open grouped commands and subcommands for the selected node.
+4. Link nodes with meaningful relationships.
+5. Open a related artifact from the canvas.
+6. Save and later restore the structure state.
+**Success result:** Complex project flow becomes visible and navigable, while commands still execute through the authoritative C# workbench layer.
 
 ### UC-12 — Coordinate work through the project calendar
 **Primary actor:** Architect / QA / Delivery Lead  

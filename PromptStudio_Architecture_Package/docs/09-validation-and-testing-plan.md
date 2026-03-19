@@ -2,7 +2,7 @@
 
 ## 1. Quality strategy
 
-PromptStudio is a workflow-heavy application with:
+CanDoItAll is a workflow-heavy application with:
 - many business rules
 - high-value UI flows
 - sensitive data handling
@@ -27,7 +27,7 @@ The testing strategy therefore cannot rely on one layer only. It must validate:
 6. **UI evidence and screenshots should support human review, not replace it**
 7. **Test planning must start early and evolve with milestones**
 
-## 3. Test pyramid for PromptStudio
+## 3. Test pyramid for CanDoItAll
 
 ### Base layer — unit tests
 Use for:
@@ -37,6 +37,7 @@ Use for:
 - capsule parsing and drift rules
 - tuning request packaging rules
 - prompt rendering logic
+- prompt-flow branching and node-state logic
 - context assembly rules
 - option compatibility rules
 - validation rules
@@ -67,6 +68,8 @@ Use for:
 - prompt gallery filtering
 - project structure inspector surfaces
 - project calendar host surfaces
+- shared prompt-block and flow-template selection surfaces
+- hexagonal context menu behavior
 - validation center components
 
 ### Top layer — end-to-end tests
@@ -76,6 +79,7 @@ Use for:
 - internal tab restore flow
 - project structure canvas flow
 - project calendar flow
+- prompt-flow branching flow
 - resource registration flow
 - prompt factory flow
 - validation flow
@@ -122,6 +126,9 @@ These validations are about operational safety:
 - option selection rules
 - resource descriptor behavior
 - prompt versioning rules
+- prompt-block reuse rules
+- prompt-block auto-application rules
+- prompt-flow branching and lineage rules
 - blueprint rendering
 - context assembly
 - validation rule logic
@@ -141,6 +148,7 @@ These validations are about operational safety:
 - PostgreSQL path or smoke coverage
 - manager API contracts
 - watch-to-ready correlation
+- prompt-run persistence and restore behavior
 - secret encryption/decryption
 - file store persistence
 - provider profile persistence
@@ -161,6 +169,8 @@ Use:
 - stack profile editor
 - tab strip and sleeping-state UI
 - tuning overlay and request panel
+- shared prompt-block catalog UI
+- flow-template selection UI
 - resource editor forms
 - prompt editor
 - wizard step navigation
@@ -184,15 +194,16 @@ Use:
 5. restore the internal workbench after refresh or reconnect
 6. open and reorder internal tabs
 7. use the project structure canvas to open a linked artifact
-8. use the project calendar to open a linked artifact
-9. add repository resource
-10. add SSH or FTP profile with secret reference
-11. create prompt draft
-12. run prompt factory and save prompt
-13. record prompt usage
-14. run a validation workflow
-15. attach test evidence
-16. submit a dev-only tuning request using a fake or controlled Codex adapter
+8. use the project structure canvas hex menu to branch a prompt flow node
+9. use the project calendar to open a linked artifact
+10. add repository resource
+11. add SSH or FTP profile with secret reference
+12. create prompt draft
+13. run prompt factory and save prompt
+14. record prompt usage
+15. run a validation workflow
+16. attach test evidence
+17. submit a dev-only tuning request using a fake or controlled Codex adapter
 
 ### Secondary e2e scenarios
 - provider health check
@@ -252,6 +263,7 @@ However:
 | Layouts | yes | yes | yes | limited |
 | Architecture docs | yes | yes | yes | limited |
 | Prompt blueprints | yes | yes | yes | yes |
+| Shared prompt blocks and flow templates | yes | yes | yes | yes |
 | Project forms | yes | yes | low | yes |
 | Secret handling | yes | yes | no | yes |
 | Provider settings | yes | yes | low | yes |
@@ -429,7 +441,7 @@ Before calling the build a release candidate:
 
 ## 16. Final test strategy conclusion
 
-The testing system for PromptStudio should combine:
+The testing system for CanDoItAll should combine:
 - unit tests for domain trustworthiness
 - integration tests for persistence and adapters
 - component tests for Blazor features

@@ -51,7 +51,11 @@ This matrix demonstrates that the proposed UX, architecture, implementation plan
 | internal tab workspace | 01, 02, 03, 03a, 04, 07 | Workbench, ComponentKit, Web | shell-wide | 01, 02, 06a, 10, 12 | component, e2e |
 | tab restore and sleeping lifecycle | 01, 02, 03a, 04, 07, 09 | Workbench, Infrastructure, Web | shell-wide | 02, 06a, 10, 11, 12 | integration, component, e2e |
 | project structure canvas | 01, 02, 03, 03a, 04, 07 | Workbench, Projects, ComponentKit | Project Structure | 06a, 10, 11 | component, integration, e2e |
+| canvas render-only boundary with C# command ownership | 02, 03, 03a, 04, 07, 10 | Workbench, ComponentKit, Web | Project Structure, Project Calendar | 06a, 10, 11 | unit, integration, e2e |
+| hexagonal canvas context menu | 01, 02, 03, 03a, 07 | Workbench, ComponentKit | Project Structure | 06a, 10, 11 | component, e2e |
 | prompt-step branching on structure canvas | 01, 02, 03a, 04, 07 | Workbench, Factory, Prompts | Project Structure, Prompt Factory | 06a, 08, 10, 11 | unit, component, e2e |
+| shared prompt blocks and flow templates | 01, 02, 03, 03a, 04, 07, 09, 10 | Factory, Prompts, Workbench | Prompt Factory, Project Structure | 07a, 08, 10, 11 | unit, component, e2e |
+| concurrent prompt branches with node state | 01, 02, 03a, 04, 07, 09, 10 | Factory, Workbench, Prompts | Project Structure, Prompt Factory | 07a, 08, 11 | unit, integration, e2e |
 | project events calendar | 01, 02, 03, 03a, 04, 07 | Workbench, Projects, ComponentKit | Project Calendar | 06a, 10, 11 | component, integration, e2e |
 | development manager and normalized watch loop | 01, 02, 03b, 04, 07, 09, 10 | CanDoItAll.Manager, Web | dev-only status surfaces | 01a, 11, 12 | unit, integration, smoke |
 | readiness wait contract for Codex and Playwright | 01, 02, 03b, 04, 07, 09 | CanDoItAll.Manager, Web | dev-only status surfaces | 01a, 11 | integration, e2e |

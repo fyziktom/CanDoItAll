@@ -1,7 +1,7 @@
 # Codex Prompt 08 — Prompt Factory and Phase Wizard
 
 ## Objective
-Implement the guided prompt factory, blueprint catalog, context assembly pipeline, prompt preview/editing, validation warnings, and send/export flows.
+Implement the guided prompt factory wizard on top of the shared prompt-block and prompt-flow foundation, including blueprint selection, context assembly, prompt preview/editing, validation warnings, and send/export flows.
 
 ## Required reading
 1. `docs/01-ux-discovery.md`
@@ -11,6 +11,7 @@ Implement the guided prompt factory, blueprint catalog, context assembly pipelin
 5. `docs/06-architecture-review-gap-analysis.md`
 6. `docs/07-implementation-plan.md`
 7. `docs/09-validation-and-testing-plan.md`
+8. `prompts/07a-shared-prompt-blocks-and-flow-orchestration.md`
 
 ## Constraints
 - Use .NET 10 and C#.
@@ -25,23 +26,24 @@ Implement the guided prompt factory, blueprint catalog, context assembly pipelin
 - Keep naming and file structure aligned with the package documents.
 
 ## Scope
-This prompt covers M6: the core prompt-creation workflow that turns project context into a usable prompt for Codex or another model.
+This prompt covers M6: the guided prompt-creation workflow that consumes the shared block and flow-template foundation and turns project context into a usable prompt for Codex or another model.
 
 ## Tasks
-1. Implement the Factory module domain: blueprints, build sessions, context assemblies, validation results.
+1. Implement the Factory module domain still needed at this stage: blueprints, build sessions, context assemblies, and validation results.
 2. Build the wizard stepper and main Prompt Factory UI.
-3. Implement project phase selection and blueprint recommendation.
-4. Implement context assembly from project metadata, options, selected resources, and prior records where appropriate.
+3. Implement project phase selection, automatic flow-template and shared-block recommendation, controlled shared-block customization, and blueprint recommendation.
+4. Implement context assembly from project metadata, options, selected resources, shared blocks, and prior records where appropriate.
 5. Implement generated prompt rendering and editing.
 6. Implement validation warnings for missing context, provider mismatch, or sensitive content.
 7. Implement save-as-draft, save-as-final, copy, export, and provider-send actions.
 8. Ensure prompt factory output integrates with the Prompts module instead of bypassing it.
 9. Integrate prompt sessions and prompt steps with the project structure workbench model so follow-up prompts can branch from a prior step.
-10. Add tests for context assembly, blueprint rendering, validation warnings, and wizard flow.
+10. Add tests for context assembly, shared-block composition, blueprint rendering, validation warnings, and wizard flow.
 
 ## Required deliverables
 - Factory module domain and services
 - Prompt Factory UI
+- flow-template and shared-block selection
 - blueprint selection
 - context assembly pipeline
 - generated prompt preview/editor
@@ -51,10 +53,13 @@ This prompt covers M6: the core prompt-creation workflow that turns project cont
 
 ## Acceptance criteria
 - a user can choose project + phase + blueprint and get a generated prompt
+- a user can choose the shared flow template and reusable blocks without copying prompt fragments manually
+- the wizard auto-applies the appropriate shared blocks for the selected prompt type before manual fine-tuning
 - selected resources and stack options appear in the context assembly
 - warnings appear before send/export where required
 - save-as-draft/save-as-final integrate with the prompt library correctly
 - provider-send path goes through the provider abstraction
+- the wizard consumes centrally managed shared blocks instead of duplicating instruction text in UI code
 - tests cover the main wizard and context rules
 
 ## Session output format

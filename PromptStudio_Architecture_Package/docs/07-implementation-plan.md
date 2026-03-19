@@ -19,9 +19,10 @@ The plan deliberately implements **product value first**, **risk controls early*
 3. Lock persistence and secret handling early.
 4. Deliver project and resource management before advanced prompt automation.
 5. Deliver prompt library before full prompt factory automation.
-6. Deliver validation before deep automation or execution features.
-7. Build tests in parallel, not at the end.
-8. Keep every phase shippable.
+6. Deliver shared prompt blocks and prompt-flow orchestration before the full prompt factory wizard.
+7. Deliver validation before deep automation or execution features.
+8. Build tests in parallel, not at the end.
+9. Keep every phase shippable.
 
 ### 2.2 Milestone principles
 Each milestone must end with:
@@ -42,6 +43,7 @@ Each milestone must end with:
 | M4 | Resources and connectors | Typed resources, secret references, validation states |
 | M4A | Workbench and visual orchestration | Internal tabs, tab restore, project structure canvas, project calendar |
 | M5 | Prompt library | Drafts, versions, collections, tags, usage history |
+| M5A | Prompt-flow foundation | Shared prompt blocks, reusable flow templates, prompt-run orchestration |
 | M6 | Prompt factory | Phase wizard, blueprints, context assembly, prompt validation |
 | M7 | Validation center | Review flows, checklists, findings, coverage links |
 | M8 | Test lab and evidence | Test planning, screenshot records, Playwright linkage |
@@ -320,10 +322,42 @@ Each milestone must end with:
 - usage can be linked to project and repository metadata
 - prompt clone flow works
 
+## M5A — Prompt-flow foundation
+
+### Goals
+- implement centrally managed shared prompt blocks
+- implement reusable prompt-flow templates
+- implement prompt-run and branch orchestration
+- connect prompt-flow nodes to the workbench structure model
+
+### Tasks
+1. Implement `PromptBlockDefinition`.
+2. Implement `PromptFlowTemplate`.
+3. Implement `PromptRun` and `PromptRunNode`.
+4. Build services for flow initialization, branching, node-state transitions, and traceability.
+5. Add workbench projections so prompt-flow nodes can appear in the structure canvas.
+6. Add tests for reusable-block composition, node states, and parallel branch handling.
+
+### Deliverables
+- shared prompt block catalog
+- prompt-flow template catalog
+- prompt-run persistence
+- branch-aware orchestration services
+- workbench integration baseline
+
+### Acceptance criteria
+- common delivery instructions can be managed from one shared place
+- recommended shared blocks can be auto-applied from phase, template, or blueprint rules
+- a project can start a flow from a reusable template instead of copying prompt text manually
+- node states such as pending, prepared, running, used, skipped, failed, and superseded are persisted
+- multiple prompt branches can run in parallel without losing lineage
+- workbench surfaces can display prompt-flow nodes credibly
+
 ## M6 — Prompt factory
 
 ### Goals
 - implement guided prompt wizard
+- use the shared block and flow-template foundation instead of ad hoc prompt strings
 - implement blueprint catalog
 - implement context assembly
 - implement pre-send validation
@@ -332,15 +366,17 @@ Each milestone must end with:
 ### Tasks
 1. Implement `PromptBlueprint`.
 2. Build wizard stepper.
-3. Implement context assembly pipeline.
-4. Implement generated prompt preview.
-5. Implement prompt validation warnings.
-6. Implement save-as-draft/save-as-final.
-7. Implement copy/export.
-8. Implement provider send path through the provider abstraction.
+3. Integrate automatic flow-template and shared-block recommendation into the wizard, with controlled user overrides.
+4. Implement context assembly pipeline.
+5. Implement generated prompt preview.
+6. Implement prompt validation warnings.
+7. Implement save-as-draft/save-as-final.
+8. Implement copy/export.
+9. Implement provider send path through the provider abstraction.
 
 ### Deliverables
 - prompt factory UI
+- flow-template and shared-block selection
 - blueprint selection
 - prompt generation pipeline
 - provider send/export paths
@@ -348,6 +384,8 @@ Each milestone must end with:
 
 ### Acceptance criteria
 - user can create a prompt from a project phase in one guided flow
+- shared blocks are reused from the central catalog instead of being duplicated in wizard code
+- prompt-type defaults can auto-apply the right shared blocks before user fine-tuning
 - selected resources and options appear in assembled context
 - validation warnings surface before send
 - generated prompt can be saved, copied, exported, or sent
@@ -556,6 +594,14 @@ Proceed only if:
 - internal tabs can be restored safely after interruption
 - the structure canvas and calendar wrappers are operational
 - linked artifacts open inside internal tabs instead of forcing browser-tab workflows
+- canvas commands route through typed C# actions and the grouped hexagonal context menu is operational
+
+## Gate G3B — after M5A
+Proceed only if:
+- shared prompt blocks are centrally manageable
+- prompt-flow templates exist for the repeated delivery sequences
+- prompt runs support branch identity and node states
+- workbench surfaces can display prompt-flow nodes without ad hoc duplication
 
 ## Gate G4 — after M6
 Proceed only if:
@@ -563,6 +609,7 @@ Proceed only if:
 - save/export/send flows are stable
 - no sensitive leakage has been observed in the send path
 - prompt sessions can be re-entered through the workbench model
+- the wizard composes prompts from shared blocks and flow templates instead of page-local hardcoded text
 
 ## Gate G5 — after M8
 Proceed only if:
@@ -607,6 +654,12 @@ User value:
 - visualize project structure
 - manage project schedule visually
 
+### Slice 2B — Prompt-flow foundation alpha
+Includes M5A
+User value:
+- manage reusable delivery prompt blocks centrally
+- start and branch prompt flows without copy-paste
+
 ### Slice 3 — Prompt factory beta
 Includes M6  
 User value:
@@ -631,7 +684,7 @@ Resources/connectors + prompt factory
 Secret handling and output/send/export safety
 
 ### Highest design risk
-UI fragmentation from feature growth, a weak workbench model, and under-specified dev tooling
+UI fragmentation from feature growth, a weak workbench model, under-specified dev tooling, or prompt reuse collapsing back into copy-paste
 
 ### Highest technical risk
 Background processing, provider differences, and false-ready development-loop behavior
@@ -643,6 +696,7 @@ The implementation team should stay disciplined:
 - lock persistence and security early
 - do not skip typed resource descriptors
 - do not blur prompts and factory concerns
+- do not hardcode reusable prompt instructions into pages or one-off handlers
 - do not push validation to the end
 - build tests continuously
 - keep every milestone user-demoable
