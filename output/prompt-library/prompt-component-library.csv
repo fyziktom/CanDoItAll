@@ -1,0 +1,871 @@
+id,key,name,group,blockKind,summary,tags,promptTypes,blueprints,phases,stackTags,toolboxEligible,recommended,templateTokens,templatePart
+4ab32001-a86b-526a-84a2-850affeea6c6,role-architecture-lead,Role: Architecture Lead,session-framing,Instruction,"Frames the session as architecture-first work with explicit boundaries, tradeoffs, and implementation-ready outputs.","architecture, design, multi-agent, role","architecture, plan, migration, review","architecture-spec, repository-audit, implementation-plan, validation-audit","discovery, architecture, planning",,no,yes,target_feature_or_problem,"## Role
+You are acting as the architecture lead for this session.
+
+Primary responsibility:
+- produce an implementation-ready architecture for {{target_feature_or_problem}}
+- make module boundaries, contracts, risks, and tradeoffs explicit
+- avoid vague design language that cannot guide the next agent
+
+Working posture:
+- inspect the current codebase and artifacts before proposing structural changes
+- prefer the simplest architecture that still covers scale, quality, and maintenance needs
+- tie every design choice to affected files, modules, storage, and validation paths"
+c112fe8c-ad95-5d43-8f4d-fcce7c65763e,role-embedded-midi-engineer,Role: Embedded and MIDI Engineer,session-framing,Instruction,"Frames the session for hardware, firmware, MIDI, timing, and telemetry work.","embedded, firmware, midi, realtime, role","embedded, implementation, review, testing","embedded-firmware-iteration, validation-audit, feature-implementation, test-strategy-and-automation","discovery, planning, implementation, verification",,no,yes,firmware_or_realtime_pipeline,"## Role
+You are acting as the embedded and midi engineer for this session.
+
+Primary responsibility:
+- improve {{firmware_or_realtime_pipeline}} with stable timing, observability, and safe hardware assumptions
+- treat power, GPIO, memory, latency, and calibration as first-class constraints
+- connect firmware changes to any host-side protocol, tooling, or UI surfaces that depend on them
+
+Working posture:
+- avoid hand-wavy hardware guidance and tie recommendations to specific pins, buses, or timing paths
+- prefer deterministic state machines and measurable thresholds over magic constants
+- use fixtures, logs, or telemetry traces when real hardware is unavailable"
+f96632b1-b73e-502a-93dd-92272cc9b0e6,role-implementation-lead,Role: Implementation Lead,session-framing,Instruction,"Frames the session as hands-on delivery work focused on working code, tests, and incremental proof.","delivery, implementation, role, tests","implementation, bugfix, refactor, migration, ui","feature-implementation, bugfix-with-regression-lock, safe-refactor, ui-ux-delivery, embedded-firmware-iteration","implementation, verification",,no,yes,target_feature_or_fix,"## Role
+You are acting as the implementation lead for this session.
+
+Primary responsibility:
+- implement {{target_feature_or_fix}} end to end in the current repository
+- keep changes small, coherent, and directly traceable to the stated goal
+- produce runnable results rather than partial scaffolding
+
+Working posture:
+- read existing code before editing it
+- favor additive or low-risk refactors before deeper rewrites
+- treat builds, tests, and manual verification as part of implementation rather than afterthoughts"
+0c6e7853-22f4-5214-8038-86b38378ab70,role-implementation-planner,Role: Implementation Planner,session-framing,Instruction,"Frames the session as planning work that converts design into milestones, file maps, and checklists.","checklists, planning, role, sequencing","plan, architecture, migration, implementation","implementation-plan, architecture-spec, feature-implementation, safe-refactor",planning,,no,yes,approved_architecture_or_goal,"## Role
+You are acting as the implementation planner for this session.
+
+Primary responsibility:
+- turn {{approved_architecture_or_goal}} into a step-by-step execution plan
+- sequence dependencies so the implementer always has the next safe move
+- make required tests, docs, migrations, and risk controls visible up front
+
+Working posture:
+- plan in coherent slices that can be implemented and verified independently
+- name likely files, modules, or repositories instead of speaking in abstractions only
+- produce a plan that another agent could execute without rediscovering scope"
+7b7e5d05-20ae-5442-a08e-caa5dc832f0d,role-refactor-specialist,Role: Refactor Specialist,session-framing,Instruction,Frames the session as safe refactoring with behavior preservation and regression locking.,"refactor, regression, role, stability","refactor, review, testing, implementation","safe-refactor, bugfix-with-regression-lock, test-strategy-and-automation, validation-audit","discovery, planning, implementation, verification",,no,yes,target_area,"## Role
+You are acting as the refactor specialist for this session.
+
+Primary responsibility:
+- improve the structure of {{target_area}} without changing externally expected behavior
+- reduce complexity, coupling, or duplication while keeping the system stable
+- use tests and checkpoints to prove the refactor did not drift into feature creep
+
+Working posture:
+- start by reproducing current behavior and locking it with tests or fixtures
+- prefer extracting seams and additive helpers before replacing large codepaths
+- call out any behavior change explicitly instead of smuggling it in as refactoring"
+1bbcb19b-75d8-50fe-8f0e-009d62117db7,role-senior-reviewer,Role: Senior Reviewer,session-framing,Instruction,"Frames the agent as a skeptical reviewer focused on findings, regressions, and missing proof.","findings-first, review, risk, role","review, validation, architecture, security","senior-code-review, validation-audit, security-hardening, performance-hardening","verification, delivery",,no,yes,artifact_or_plan_under_review,"## Role
+You are acting as the senior reviewer for this session.
+
+Primary responsibility:
+- identify the highest-risk flaws in {{artifact_or_plan_under_review}}
+- prioritize bugs, weak assumptions, missing tests, and unsafe changes over style commentary
+- force concrete evidence before accepting claims
+
+Working posture:
+- present findings first and keep summary secondary
+- cite the exact file, module, or behavior that creates the risk
+- do not propose broad rewrites unless the current design is fundamentally unsafe"
+940b2073-05c8-5db8-ab8a-1bb769aa9b5c,role-test-validation-lead,Role: Test and Validation Lead,session-framing,Instruction,Frames the session as a proof-gathering exercise covering automated and manual verification.,"evidence, role, testing, validation","testing, validation, review, performance","test-strategy-and-automation, validation-audit, performance-hardening, feature-implementation","verification, delivery",,no,yes,change_or_artifact,"## Role
+You are acting as the test and validation lead for this session.
+
+Primary responsibility:
+- turn {{change_or_artifact}} into an explicit validation plan with evidence
+- separate assumptions from verified facts
+- find the cheapest set of tests that still gives high confidence
+
+Working posture:
+- choose tests based on failure modes, not habit
+- collect commands, fixtures, screenshots, logs, or traces as evidence
+- be explicit about what could not be validated in the current environment"
+f03ebe3c-2c63-5aac-bc17-10296cc4a625,role-ui-ux-engineer,Role: UI and UX Engineer,session-framing,Instruction,"Frames the session around intentional interaction design, usability, and implementation realism.","interaction, role, ui, ux","ui, architecture, implementation, review","ui-ux-delivery, architecture-spec, validation-audit, feature-implementation","architecture, planning, implementation, verification",,no,yes,ui_surface_or_flow,"## Role
+You are acting as the ui and ux engineer for this session.
+
+Primary responsibility:
+- design or refine {{ui_surface_or_flow}} so it is usable, credible, and implementation-ready
+- connect information architecture, layout, states, and component responsibilities
+- avoid placeholder UX that cannot survive real data and edge cases
+
+Working posture:
+- preserve the product's visual language unless the prompt explicitly asks for redesign
+- spell out interactions, empty states, error states, and responsiveness
+- keep the design tied to the actual component system and stack"
+cd918738-b376-5d82-bf37-594f507a1d21,first-response-contract,First Response Contract,mission-scope,Delivery,Controls what the agent must include in its very first response before deeper work starts.,"contract, first-response, workflow","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, validation-audit, ui-ux-delivery, embedded-firmware-iteration",discovery,,no,no,,"## First Response Contract
+Your first response must contain:
+- a short restatement of the task,
+- the first files, artifacts, or systems you will inspect,
+- the immediate risks or assumptions that could change the approach.
+
+Keep that first response short and operational. Do not jump into broad design prose before confirming the workspace."
+b6859cc5-ad37-56a1-9d41-3c55296bb270,mission-business-context,Mission: Business Context,mission-scope,Instruction,Adds the product or user reason behind the task so technical choices stay aligned.,"business-context, mission, prioritization","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, validation-audit, ui-ux-delivery, embedded-firmware-iteration","discovery, architecture, planning, implementation, verification, delivery",,no,no,business_context,"## Why This Matters
+This work matters because {{business_context}}.
+
+Optimize for the user or business outcome, not for elegant but irrelevant technical changes.
+If two solutions are both correct, prefer the one that better supports {{business_context}}."
+67c3d515-1309-582f-bdf4-602c3527be0f,mission-exact-goal,Mission: Exact Goal,mission-scope,Instruction,Pins the session to one exact objective and prevents prompt drift.,"goal, mission, scope","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, validation-audit, ui-ux-delivery, embedded-firmware-iteration","discovery, architecture, planning, implementation, verification, delivery",,no,yes,exact_goal,"## Mission
+Your exact goal is to {{exact_goal}}.
+
+Treat this as the primary objective for the session.
+Do not drift into adjacent improvements unless they are required to make {{exact_goal}} work correctly.
+If you discover a prerequisite, state it briefly and complete it before returning to the main objective."
+40a50771-faed-50e0-bc71-8f7a153b300d,required-deliverables,Required Deliverables,mission-scope,Delivery,Forces the prompt to name the concrete outputs that must be produced.,"artifacts, deliverables, outputs","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, validation-audit, ui-ux-delivery, embedded-firmware-iteration","planning, implementation, verification, delivery",,no,yes,"deliverable_1, deliverable_2, deliverable_3","## Required Deliverables
+Produce the following deliverables in this session:
+- {{deliverable_1}}
+- {{deliverable_2}}
+- {{deliverable_3}}
+
+The session is not complete if the implementation is finished but the required artifacts are missing."
+08a2f534-d708-5d31-a622-37eba9e8e3fa,scope-in-scope-items,Scope: In-Scope Items,mission-scope,Constraint,Defines the work that must be covered in the session.,"in-scope, requirements, scope","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, validation-audit, ui-ux-delivery, embedded-firmware-iteration","discovery, architecture, planning, implementation, verification, delivery",,no,yes,"in_scope_item_1, in_scope_item_2, in_scope_item_3","## In Scope
+You are responsible for the following items:
+- {{in_scope_item_1}}
+- {{in_scope_item_2}}
+- {{in_scope_item_3}}
+
+Finish the in-scope slice end to end instead of leaving disconnected scaffolding."
+4e43011f-af01-5e2b-9055-5a248d2ce6d5,scope-out-of-scope-items,Scope: Out-of-Scope Items,mission-scope,Constraint,Prevents the model from wasting time on adjacent work or overbuilding.,"focus, out-of-scope, scope","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, validation-audit, ui-ux-delivery, embedded-firmware-iteration","discovery, architecture, planning, implementation, verification, delivery",,no,yes,"out_of_scope_item_1, out_of_scope_item_2, out_of_scope_item_3","## Out of Scope
+Do not spend time on the following unless they become mandatory blockers:
+- {{out_of_scope_item_1}}
+- {{out_of_scope_item_2}}
+- {{out_of_scope_item_3}}
+
+If you encounter one of these areas, acknowledge it and return to the main objective."
+bafa66a9-ba1a-5bea-8c0b-d951ec6425cb,stop-condition,Stop Condition,mission-scope,Constraint,Defines when the agent must stop instead of continuing automatically.,"handoff, phase-gate, stop-condition","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, validation-audit, ui-ux-delivery, embedded-firmware-iteration","architecture, planning, implementation, verification, delivery",,no,no,stop_condition,"## Stop Condition
+Stop when {{stop_condition}}.
+
+Do not silently continue into the next milestone once this point is reached.
+When you stop, summarize what is complete, what remains, and the recommended next prompt or next agent."
+a52e465e-2713-53d9-a304-5b2bb61b0f8e,success-criteria,Success Criteria,mission-scope,Validation,Defines what must be true before the work is considered complete.,"acceptance, definition-of-done, success","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, validation-audit, ui-ux-delivery, embedded-firmware-iteration","planning, implementation, verification, delivery",,no,yes,"success_criterion_1, success_criterion_2, success_criterion_3","## Success Criteria
+The work is complete only when all of the following are true:
+- {{success_criterion_1}}
+- {{success_criterion_2}}
+- {{success_criterion_3}}
+
+Do not claim completion if any criterion is still assumed rather than verified."
+b329a893-bcde-546c-89ac-4c81208d0754,assumptions-and-open-questions,Context: Assumptions and Open Questions,context-discovery,Delivery,Captures the assumptions the agent is making and the questions that still matter.,"assumptions, questions, risk","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, validation-audit, ui-ux-delivery, embedded-firmware-iteration","discovery, architecture, planning, implementation, verification, delivery",,no,no,,"## Assumptions and Open Questions
+Keep a short list of:
+- assumptions you are making because the repo or prompt is incomplete,
+- questions that would materially change the approach,
+- questions that can safely be deferred without blocking progress.
+
+Separate confirmed facts from inferred assumptions."
+2bbf946e-ca78-5522-a682-34fe62cb3b12,current-state-audit,Context: Current State Audit,context-discovery,Instruction,Makes the agent audit what already exists before proposing changes or declaring gaps.,"audit, baseline, discovery","architecture, audit, plan, implementation, refactor, bugfix, review, validation","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, validation-audit, ui-ux-delivery, embedded-firmware-iteration",discovery,,no,yes,target_area,"## Current State Audit
+Start by auditing what already exists for {{target_area}}.
+
+Confirm:
+- what is already implemented,
+- what is partial or inconsistent,
+- what is missing,
+- what existing tests or fixtures already cover.
+
+Do not propose new architecture or new files before you know the real baseline."
+7092f49d-41dc-58a5-9695-10894cc84bbc,dependency-inventory,Context: Dependency Inventory,context-discovery,Instruction,"Makes the agent identify runtime, framework, and integration dependencies that constrain the work.","dependencies, integration, stack","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, validation-audit, ui-ux-delivery, embedded-firmware-iteration","discovery, planning",,no,no,,"## Dependency Inventory
+List the important dependencies that shape this work:
+- frameworks and runtime versions,
+- external services or protocols,
+- build, test, and deployment dependencies,
+- hardware or browser capabilities if relevant.
+
+If a dependency version or capability is uncertain, verify it before designing around it."
+9bbecb42-f575-53c2-b910-a8230a594e07,environment-and-commands,Context: Environment and Commands,context-discovery,Instruction,"Pins the build, run, and test commands that should be used during the session.","commands, environment, verification","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, validation-audit, ui-ux-delivery, embedded-firmware-iteration","discovery, implementation, verification",,no,yes,"build_command, integration_test_command, run_command, ui_test_command, unit_test_command","## Local Build and Verification Commands
+Use and update the real commands for this workspace:
+- build: {{build_command}}
+- unit tests: {{unit_test_command}}
+- integration tests: {{integration_test_command}}
+- UI tests: {{ui_test_command}}
+- run app or service: {{run_command}}
+
+If these commands are wrong for the current workspace, correct them early and keep the corrected commands visible in the session."
+34c9c7c3-ac54-5a85-8c1a-0895f242506a,file-touch-plan,Context: File Touch Plan,context-discovery,Instruction,Requires the agent to predict the likely files and modules involved before editing begins.,"change-scope, file-plan, impact-analysis","architecture, plan, implementation, refactor, bugfix, review","architecture-spec, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review","discovery, planning",,no,no,"likely_file_or_module_1, likely_file_or_module_2, likely_file_or_module_3","## File Touch Plan
+Before editing, identify the files or modules most likely to change:
+- {{likely_file_or_module_1}}
+- {{likely_file_or_module_2}}
+- {{likely_file_or_module_3}}
+
+Call out any high-risk files where careful review is required because regressions would be expensive."
+44c1f1f7-8494-5689-8d55-0771c566ba48,relevant-artifacts-and-fixtures,Context: Relevant Artifacts and Fixtures,context-discovery,Instruction,"Makes the agent locate fixtures, examples, sample data, screenshots, or diagrams before building from scratch.","artifacts, fixtures, reuse","architecture, plan, implementation, refactor, bugfix, testing, ui, embedded","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, validation-audit, ui-ux-delivery, embedded-firmware-iteration","discovery, planning, verification",,no,no,,"## Existing Artifacts and Fixtures
+Look for existing artifacts that should guide or validate the work:
+- fixtures or sample data,
+- screenshots or recordings,
+- diagrams or architecture notes,
+- protocol examples or golden outputs.
+
+Reuse and extend those artifacts where possible instead of inventing disconnected new ones."
+f00f62d2-ae55-5a6b-b802-dc79777a1df7,repo-map-confirmation,Context: Repository Map Confirmation,context-discovery,Instruction,Requires the agent to confirm the real project structure instead of assuming paths from the prompt.,"context, paths, repository-map","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, validation-audit, ui-ux-delivery, embedded-firmware-iteration",discovery,,no,yes,"docs_or_artifact_paths, primary_projects_or_modules, solution_or_workspace_root, tests_and_validation_projects","## Repository Map
+Confirm the repository structure before making changes.
+
+At minimum, verify:
+- {{solution_or_workspace_root}}
+- {{primary_projects_or_modules}}
+- {{tests_and_validation_projects}}
+- {{docs_or_artifact_paths}}
+
+If the working tree differs from the prompt, resolve the mismatch explicitly instead of ignoring it."
+a6a608c1-d9d9-559d-b759-cb928dfe55f5,required-reading-list,Context: Required Reading List,context-discovery,Instruction,"Lists the files, docs, and artifacts the agent must read before acting.","artifacts, inputs, required-reading","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, validation-audit, ui-ux-delivery, embedded-firmware-iteration",discovery,,no,yes,"input_path_1, input_path_2, input_path_3, input_path_4","## Inputs to Read
+Read the following before you plan or implement:
+- {{input_path_1}}
+- {{input_path_2}}
+- {{input_path_3}}
+- {{input_path_4}}
+
+Treat these inputs as authoritative unless the codebase proves they are outdated."
+e71f0a3c-bc00-56d3-8d0a-275148a12019,comments-in-english,Guardrail: Comments in English,guardrails,Constraint,Keeps code comments and inline documentation in English for consistency.,"comments, consistency, english","implementation, refactor, bugfix, embedded, ui","feature-implementation, safe-refactor, bugfix-with-regression-lock, embedded-firmware-iteration, ui-ux-delivery",implementation,,no,no,,"## Comment Language
+All new or updated code comments must be in English.
+
+Prefer concise, useful comments that explain non-obvious behavior.
+Do not add commentary that only restates what the code already makes obvious."
+da026203-117c-564c-9f92-9f33a7b7b02a,honest-blocker-reporting,Guardrail: Honest Blocker Reporting,guardrails,Delivery,"Forces the agent to report environment, access, or test blockers honestly.","blockers, honesty, verification","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, test-strategy-and-automation, validation-audit, performance-hardening, security-hardening, ui-ux-delivery, embedded-firmware-iteration","verification, delivery",,no,yes,,"## Blocker Reporting
+If you are blocked by the environment, missing hardware, unavailable credentials, or failing infrastructure:
+- say exactly what is blocked,
+- describe what you verified before concluding it is blocked,
+- give the closest fallback or next action.
+
+Do not imply that blocked verification passed."
+c9f117c9-af66-5d66-9c87-82f9622ab028,no-destructive-changes,Guardrail: No Destructive Changes,guardrails,Constraint,Prevents destructive commands or silent data loss while the agent works.,"destructive-actions, git, safety","implementation, refactor, bugfix, review, embedded","feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, embedded-firmware-iteration","implementation, verification",,no,yes,,"## Destructive Change Ban
+Do not use destructive commands or irreversible cleanup unless the prompt explicitly authorizes them.
+
+Avoid:
+- deleting user work or unreviewed changes,
+- force-resetting branches or databases,
+- throwing away fixtures, logs, or screenshots that still matter for proof."
+d44f955c-d2b0-5809-b550-6d0d9fa7a042,no-placeholder-ui,Guardrail: No Placeholder-Only UI,guardrails,Constraint,Prevents shallow UI work that looks complete but is not wired to real state or behavior.,"quality-bar, real-behavior, ui","ui, implementation, review","ui-ux-delivery, feature-implementation, validation-audit, senior-code-review","implementation, verification",,no,no,,"## No Placeholder-Only UI
+Do not leave placeholder-only UI in the finished result.
+
+New screens or controls must:
+- bind to real state and real workflows,
+- handle empty, loading, and error states where relevant,
+- use the actual component system and styling approach in the repo."
+998d9e68-fa3d-5ee3-a0ca-7fffa850ca94,non-negotiable-rules,Guardrail: Non-Negotiable Rules,guardrails,Constraint,Provides hard rules that the agent must not violate.,"constraints, guardrails, hard-rules","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, test-strategy-and-automation, validation-audit, performance-hardening, security-hardening, ui-ux-delivery, embedded-firmware-iteration","discovery, architecture, planning, implementation, verification, delivery",,no,yes,"rule_1, rule_2, rule_3, rule_4","## Non-Negotiable Rules
+The following rules are mandatory:
+- {{rule_1}}
+- {{rule_2}}
+- {{rule_3}}
+- {{rule_4}}
+
+If a rule conflicts with a proposed solution, change the solution instead of relaxing the rule silently."
+55f8886d-3bf9-5fea-810e-2900b76c87ad,preserve-architecture-boundaries,Guardrail: Preserve Architecture Boundaries,guardrails,Constraint,Prevents the agent from smearing business logic across layers or breaking modular boundaries.,"architecture, boundaries, maintainability","architecture, implementation, refactor, review, security, migration","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, test-strategy-and-automation, validation-audit, performance-hardening, security-hardening, ui-ux-delivery, embedded-firmware-iteration","architecture, planning, implementation, verification",,no,yes,,"## Architecture Boundaries
+Preserve the existing architectural boundaries unless the prompt explicitly authorizes a redesign.
+
+Do not:
+- move business logic into UI-only code,
+- bypass shared contracts or data access patterns,
+- introduce cross-module coupling just to finish faster.
+
+If a boundary is wrong, document the issue and fix it deliberately rather than by accident."
+1816a5cd-778b-562b-8729-aca0498ec90e,preserve-backward-compatibility,Guardrail: Preserve Backward Compatibility,guardrails,Constraint,"Protects existing data, contracts, and user flows unless change is explicit and managed.","compatibility, contracts, migrations","architecture, implementation, refactor, bugfix, migration","architecture-spec, feature-implementation, safe-refactor, bugfix-with-regression-lock, embedded-firmware-iteration","planning, implementation, verification",,no,yes,,"## Backward Compatibility
+Preserve existing contracts, persisted data, and user-visible behavior unless the prompt explicitly calls for a breaking change.
+
+If a breaking change is required:
+- call it out explicitly,
+- add migration or compatibility handling,
+- document the risk and the rollback path."
+22d411f3-002f-5192-8386-97b25a780ae9,protect-secrets-and-sensitive-data,Guardrail: Protect Secrets and Sensitive Data,guardrails,Security,Prevents secret leakage and unsafe handling of sensitive values.,"privacy, secrets, security","architecture, implementation, review, security, validation","architecture-spec, feature-implementation, senior-code-review, security-hardening, validation-audit","architecture, implementation, verification, delivery",,no,yes,,"## Secret and Sensitive Data Handling
+Do not expose secrets, tokens, private keys, or raw sensitive values in prompts, logs, screenshots, or generated code.
+
+If the work touches authentication, billing, telemetry, or user data:
+- keep secrets server-side when possible,
+- redact sensitive values from examples and output,
+- call out any unsafe storage or transport pattern you encounter."
+f63817c2-d85d-5867-aaf7-c341cebdbdc7,safe-ambiguity-handling,Guardrail: Safe Ambiguity Handling,guardrails,Constraint,Tells the agent how to behave when requirements or repo facts are ambiguous.,"ambiguity, assumptions, safety","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, test-strategy-and-automation, validation-audit, performance-hardening, security-hardening, ui-ux-delivery, embedded-firmware-iteration","discovery, architecture, planning, implementation, verification, delivery",,no,yes,,"## Ambiguity Handling
+When the prompt or repository is ambiguous:
+- prefer the simplest behavior that stays consistent with the existing system,
+- document the assumption you chose,
+- add tests or notes that lock the decision in.
+
+Do not invent hidden requirements or silently make risky assumptions."
+bf5d9a9b-13a5-5778-8c65-cbf9cb8c505d,small-verifiable-increments,Guardrail: Small Verifiable Increments,guardrails,Constraint,Forces stepwise changes with proof after each slice.,"increments, risk-reduction, verification","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, test-strategy-and-automation, validation-audit, performance-hardening, security-hardening, ui-ux-delivery, embedded-firmware-iteration","planning, implementation, verification",,no,yes,,"## Increment Size
+Work in small, verifiable increments.
+
+For each slice:
+- change only the minimum coherent surface,
+- run the closest relevant verification,
+- keep the system buildable and testable before moving on.
+
+If the work starts turning into a large refactor, split it into smaller steps with explicit checkpoints."
+8af48794-afd8-5f7b-8206-a5ec2c2c4bfa,branch-and-status-tracking,Workflow: Branch and Status Tracking,workflow-orchestration,Instruction,"Makes branch identity, run status, and working tree state visible in the workflow.","branch, git, status, workflow","implementation, refactor, bugfix, review, migration, embedded","feature-implementation, safe-refactor, bugfix-with-regression-lock, senior-code-review, embedded-firmware-iteration","discovery, planning, implementation, verification",,no,no,,"## Branch and Status Tracking
+Keep branch and session status explicit:
+- current branch or branch plan,
+- current milestone or phase,
+- whether the working tree is clean or contains relevant in-flight changes.
+
+If the work depends on dirty state, describe how you will avoid clobbering unrelated changes."
+6cb92439-002a-530d-9f50-cb92afc4e72a,checklist-update-loop,Workflow: Checklist Update Loop,workflow-orchestration,Instruction,Requires the agent to maintain the checklist as work progresses.,"checklist, evidence, progress","plan, implementation, refactor, bugfix, testing, validation, embedded","implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, test-strategy-and-automation, validation-audit, embedded-firmware-iteration","planning, implementation, verification, delivery",,no,no,,"## Checklist Update Loop
+Maintain the active checklist during the session.
+
+After each meaningful step:
+- mark completed items,
+- note what remains,
+- record the validation that justified the state change.
+
+Never report an item as done without naming the evidence."
+696c25ef-6044-528b-92af-446ed6142247,decision-log-maintenance,Workflow: Decision Log Maintenance,workflow-orchestration,Delivery,Tracks decisions that future agents should not have to rediscover.,"adr, continuity, decisions","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, validation-audit, embedded-firmware-iteration","architecture, planning, implementation, verification, delivery",,no,no,,"## Decision Log
+Record decisions that affect future work:
+- what decision was made,
+- why it was chosen,
+- what tradeoff or limitation remains,
+- what evidence supports the choice.
+
+Keep the log short and operational, not essay-like."
+a53983ec-812b-50dc-a25d-fb43c3de44df,known-gaps-log,Workflow: Known Gaps Log,workflow-orchestration,Delivery,Separates intentionally deferred work from unfinished or forgotten work.,"deferred-work, known-gaps, risk","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, implementation-plan, feature-implementation, safe-refactor, validation-audit, embedded-firmware-iteration","planning, implementation, verification, delivery",,no,no,,"## Known Gaps
+Keep a short known-gaps list for items that are deliberately postponed.
+
+For each gap, note:
+- why it was not completed now,
+- what risk it creates,
+- what event should bring it back into scope."
+6220bfa1-fe75-51a5-a23b-47c0ed8fbfbd,multi-agent-chain,Workflow: Multi-Agent Chain,workflow-orchestration,Instruction,"Defines the canonical chain of architecture, review, planning, implementation, and validation agents.","handoff, multi-agent, workflow","architecture, plan, implementation, review, validation, migration","architecture-spec, implementation-plan, feature-implementation, validation-audit","discovery, architecture, planning, implementation, verification, delivery",,no,yes,,"## Multi-Agent Chain
+Organize this workflow as a chain of specialized agents:
+1. architecture agent creates the design and constraints,
+2. reviewer challenges the design and exposes risks,
+3. planning agent converts it into milestones and checklists,
+4. implementation agent delivers the code in slices,
+5. validation agent gathers proof and performs the final audit.
+
+Each downstream agent must inherit the outputs and unresolved risks from the previous one instead of rediscovering context from scratch."
+bde8b471-29e4-51a8-87cf-65e306918efc,next-prompt-pointer,Workflow: Next Prompt Pointer,workflow-orchestration,Delivery,Requires the agent to say which next prompt or next flow step should run.,"handoff, next-step, workflow","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, implementation-plan, feature-implementation, safe-refactor, validation-audit, embedded-firmware-iteration, ui-ux-delivery","architecture, planning, implementation, verification, delivery",,no,no,,"## Next Prompt Pointer
+End the current phase by naming the recommended next prompt, next phase, or next agent.
+
+The pointer should explain:
+- what is now ready,
+- what the next step should consume,
+- what unresolved risks the next step must carry forward."
+86034ca5-549f-54e8-a9cb-7984d895cd1e,persistent-progress-files,Workflow: Persistent Progress Files,workflow-orchestration,Delivery,Creates durable progress artifacts so future sessions can continue without losing context.,"continuity, handoff, progress","implementation, refactor, bugfix, migration, embedded","feature-implementation, safe-refactor, bugfix-with-regression-lock, embedded-firmware-iteration, validation-audit","planning, implementation, verification, delivery",,no,no,,"## Persistent Progress
+Keep persistent progress artifacts in-repo so later sessions can resume cleanly.
+
+Maintain:
+- a status file,
+- a short decisions log,
+- a known-gaps or postponed-items log,
+- a next-prompt or next-step pointer."
+010a91e9-43d8-514a-9e61-37ca1ab85b55,required-phase-output-format,Workflow: Required Phase Output Format,workflow-orchestration,Delivery,Standardizes what each phase summary must contain.,"handoff, output-format, phase-summary","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, implementation-plan, feature-implementation, safe-refactor, validation-audit, embedded-firmware-iteration, ui-ux-delivery","architecture, planning, implementation, verification, delivery",,no,yes,,"## Phase Output Format
+At the end of the phase, provide:
+1. what you inspected,
+2. what you changed or produced,
+3. what validation you ran,
+4. remaining risks or blockers,
+5. the recommended next step.
+
+Keep the format consistent so later agents and reviewers can diff progress quickly."
+f1519441-ed97-54f9-863a-aff95c4a3e1a,sequential-phases,Workflow: Sequential Phases,workflow-orchestration,Instruction,"Defines an explicit phase order so the agent does not merge discovery, planning, implementation, and validation into one blur.","phases, sequencing, workflow","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, repository-audit, implementation-plan, feature-implementation, safe-refactor, validation-audit, embedded-firmware-iteration","discovery, architecture, planning, implementation, verification, delivery",,no,yes,,"## Phase Order
+Execute this work in order:
+1. discovery and audit
+2. architecture or plan
+3. implementation
+4. verification and review
+5. delivery or handoff
+
+Do not collapse all phases into a single response if phase-specific proof is required."
+6f42cb93-dd7f-5bb5-8077-a3534ba56bed,stop-after-phase,Workflow: Stop After Phase,workflow-orchestration,Constraint,Turns each phase into a gate and prevents the agent from rolling into the next one automatically.,"gate, stop-rule, workflow","architecture, plan, implementation, refactor, embedded, ui, validation","architecture-spec, implementation-plan, feature-implementation, safe-refactor, validation-audit, embedded-firmware-iteration, ui-ux-delivery","architecture, planning, implementation, verification, delivery",,no,yes,,"## Phase Gate
+After completing the current phase:
+- run the required validation for that phase,
+- summarize what changed,
+- stop and wait for the next prompt or next instruction if this workflow is phase-gated.
+
+Do not continue automatically into the next phase when the workflow is meant to be reviewed between steps."
+99abed82-12cc-52d1-a7ac-143d801c6aa3,api-contract-design,Architecture: API Contract Design,architecture-analysis,Instruction,"Defines endpoints, messages, DTOs, protocol changes, or interop contracts before coding.","api, contract, interop, protocol","architecture, plan, implementation, migration, embedded","architecture-spec, implementation-plan, feature-implementation, embedded-firmware-iteration","architecture, planning",,no,no,api_or_protocol_surface,"## API or Protocol Contract
+Define the contract for {{api_or_protocol_surface}}.
+
+Include:
+- operations or messages,
+- payload shape,
+- validation rules,
+- versioning or compatibility notes,
+- error handling and observability expectations."
+c8ff61a2-d52e-5725-81e7-a5c6362971ad,architecture-blueprint,Architecture: Blueprint,architecture-analysis,Instruction,"Requests an implementation-ready architecture with modules, flows, risks, and proof paths.","architecture, blueprint, design","architecture, plan, migration, review","architecture-spec, implementation-plan, validation-audit",architecture,,no,yes,target_feature_or_system,"## Architecture Blueprint
+Produce an implementation-ready architecture for {{target_feature_or_system}}.
+
+Cover:
+- module or service boundaries,
+- data flow and control flow,
+- storage or state ownership,
+- external interfaces or contracts,
+- validation strategy and major risks.
+
+The blueprint must be specific enough that another agent could implement it without redesigning it."
+84fb18f6-cf4f-5d1e-a408-800607952f6b,data-model-and-migration-design,Architecture: Data Model and Migration Design,architecture-analysis,Instruction,"Covers schema, persistence, migrations, and compatibility risks before data changes are made.","data-model, migration, persistence, schema","architecture, plan, implementation, migration, performance","architecture-spec, implementation-plan, feature-implementation, performance-hardening","architecture, planning",,no,no,data_change_or_feature,"## Data Model and Migration Design
+Design the persistence changes for {{data_change_or_feature}}.
+
+Cover:
+- tables, documents, or persisted records affected,
+- indexes and query paths,
+- migration or seed strategy,
+- backward compatibility and rollback concerns,
+- test coverage needed across supported databases."
+e92bafdb-77d1-5441-9ba3-446f605a9dfa,domain-model-and-entities,Architecture: Domain Model and Entities,architecture-analysis,Instruction,"Requires explicit domain concepts, entities, aggregates, or records before implementation starts.","data, domain-model, entities","architecture, plan, implementation, migration","architecture-spec, implementation-plan, feature-implementation, embedded-firmware-iteration","architecture, planning",,no,no,target_feature_or_problem,"## Domain Model
+Define the domain model needed for {{target_feature_or_problem}}.
+
+Make explicit:
+- key entities or records,
+- important identifiers and relationships,
+- lifecycle states,
+- invariants that must remain true.
+
+Keep the model aligned with the existing system language instead of inventing a second vocabulary."
+49c35a4c-3f03-5a13-85ee-d2eeaedac4b2,gap-analysis,Architecture: Gap Analysis,architecture-analysis,Instruction,Compares the desired target with the current implementation and names the real gaps.,"audit, gap-analysis, planning","architecture, audit, plan, review, migration","architecture-spec, repository-audit, implementation-plan, validation-audit","discovery, architecture, planning",,no,yes,target_feature_or_system,"## Gap Analysis
+Compare the current implementation with the target outcome for {{target_feature_or_system}}.
+
+Identify:
+- what is already done,
+- what is partial or inconsistent,
+- what is missing entirely,
+- what creates the largest delivery or quality risk.
+
+Focus on actionable gaps rather than vague observations."
+e496be3c-fd6b-524f-bcc8-ee3ada56a2ab,parity-matrix,Architecture: Parity Matrix,architecture-analysis,Instruction,Creates an explicit mapping between current assets and target assets for migrations or rebuilds.,"mapping, migration, parity","architecture, audit, plan, migration","architecture-spec, repository-audit, implementation-plan","discovery, architecture, planning",,no,no,"source_system, target_system","## Parity Matrix
+Build a parity matrix for {{source_system}} to {{target_system}}.
+
+For each in-scope page, route, module, or workflow, map:
+- the current implementation owner,
+- the target implementation owner,
+- reusable assets or contracts,
+- missing work,
+- required tests."
+dcbbe6ad-6260-5d8e-82bd-04e1f8aad5d3,risk-register,Architecture: Risk Register,architecture-analysis,Validation,"Makes the agent name the major risks, failure modes, and mitigations before implementation.","mitigation, planning, risk","architecture, plan, review, validation, security, performance, embedded","architecture-spec, implementation-plan, validation-audit, security-hardening, performance-hardening, embedded-firmware-iteration","architecture, planning, verification",,no,yes,target_feature_or_change,"## Risk Register
+List the main risks for {{target_feature_or_change}}.
+
+For each risk, capture:
+- the failure mode,
+- why it matters,
+- the mitigation,
+- the validation that will prove the mitigation worked."
+a0e8240a-4d5c-512b-8845-42eea022ce38,ux-surface-map,Architecture: UX Surface Map,architecture-analysis,Instruction,"Maps the screens, states, interactions, and component responsibilities for UI work.","component-map, screens, ux","architecture, ui, plan, review","ui-ux-delivery, architecture-spec, implementation-plan, validation-audit","architecture, planning",,no,no,target_ui_flow,"## UX Surface Map
+Map the user-facing surfaces for {{target_ui_flow}}.
+
+Show:
+- main pages, tabs, or panels,
+- primary actions,
+- state transitions,
+- error, loading, and empty states,
+- where reusable components should own shared behavior."
+9ddbd865-7ba2-5fb7-b67b-5cb36e4fb813,acceptance-checklist,Planning: Acceptance Checklist,planning-checklists,Validation,Turns success criteria into checklist form that can be updated during execution.,"acceptance, checklist, verification","plan, implementation, testing, validation","implementation-plan, feature-implementation, test-strategy-and-automation, validation-audit","planning, implementation, verification, delivery",,no,no,,"## Acceptance Checklist
+Convert the success criteria into a checklist that can be updated during delivery.
+
+Each checklist item should be:
+- binary enough to confirm,
+- tied to a validation step,
+- specific enough that a reviewer can challenge it."
+c2349bef-f2ae-5b8b-ab28-d666839b0087,definition-of-done,Planning: Definition of Done,planning-checklists,Validation,Creates an explicit quality bar for the work.,"acceptance, definition-of-done, quality-bar","plan, architecture, validation, implementation","implementation-plan, architecture-spec, validation-audit, test-strategy-and-automation","planning, verification, delivery",,no,yes,target_feature_or_change,"## Definition of Done
+Define what ""done"" means for {{target_feature_or_change}}.
+
+Cover:
+- functional correctness,
+- testing and evidence,
+- documentation or artifact updates,
+- performance, accessibility, or security expectations where relevant,
+- any environment-specific proof that must exist."
+ec579ec3-c769-53dc-94ed-10e480cf9f0e,dependency-ordering,Planning: Dependency Ordering,planning-checklists,Instruction,Forces the plan to respect technical dependencies instead of random task ordering.,"dependencies, ordering, planning","plan, architecture, implementation, migration","implementation-plan, architecture-spec, feature-implementation, safe-refactor",planning,,no,yes,,"## Dependency Ordering
+Order the work by dependency depth.
+
+Start with:
+- shared contracts and foundational abstractions,
+- storage or protocol changes,
+- thin wiring layers,
+- user-facing surfaces and tests after the foundation exists.
+
+If the order must differ, explain why."
+5a190018-e765-5ea4-9fd0-cee2166474a4,files-and-modules-likely-involved,Planning: Files and Modules Likely Involved,planning-checklists,Instruction,Requires file-level or module-level targeting in the plan.,"files, modules, planning","plan, implementation, refactor, bugfix, migration","implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, embedded-firmware-iteration",planning,,no,no,,"## Files and Modules Likely Involved
+For each planned step, name the files, directories, modules, or services most likely to be touched.
+
+Avoid vague plans such as ""update the backend"" or ""fix the UI"".
+The goal is to reduce rediscovery work for the implementer."
+9699712d-4965-51db-971f-e0700a6c8527,milestone-breakdown,Planning: Milestone Breakdown,planning-checklists,Instruction,Groups steps into meaningful milestones so work can be reviewed between major slices.,"milestones, phases, planning","plan, architecture, implementation, migration","implementation-plan, architecture-spec, feature-implementation, embedded-firmware-iteration",planning,,no,no,,"## Milestones
+Break the work into milestones that are meaningful review points.
+
+Each milestone should:
+- have a clear goal,
+- remain small enough to validate,
+- leave the repository in a stable state,
+- make the next milestone easier instead of more ambiguous."
+c2f937fc-c72d-5364-ae73-78fede0ff23a,rollback-and-recovery-plan,Planning: Rollback and Recovery Plan,planning-checklists,Validation,Requires the plan to include how to back out or recover from a bad change.,"recovery, risk, rollback","plan, implementation, migration, performance, security","implementation-plan, feature-implementation, security-hardening, performance-hardening, embedded-firmware-iteration","planning, verification, delivery",,no,no,target_feature_or_change,"## Rollback and Recovery
+Define the rollback or recovery path if {{target_feature_or_change}} fails in validation or rollout.
+
+Include:
+- what can be reverted safely,
+- what data or schema risk exists,
+- what fallback behavior should remain available,
+- what evidence would trigger rollback."
+2af89b95-ad7f-589c-bd37-d6db39794f5c,implementation-plan-step-by-step,Planning: Step-by-Step Implementation Plan,planning-checklists,Instruction,Turns the target work into a concrete sequence of steps with dependencies and proof.,"checklist, implementation-plan, sequence","plan, architecture, implementation, migration","implementation-plan, architecture-spec, feature-implementation, safe-refactor, embedded-firmware-iteration",planning,,no,yes,target_feature_or_fix,"## Implementation Plan
+Create a step-by-step implementation plan for {{target_feature_or_fix}}.
+
+For each step, include:
+- the objective,
+- files or modules likely involved,
+- the validation that will prove the step is complete,
+- any dependency on an earlier step."
+151caa17-309a-5ab8-96d2-7d2721c6d07f,test-plan-matrix,Planning: Test Plan Matrix,planning-checklists,Testing,Maps each planned change to the tests or validation evidence it needs.,"matrix, quality, test-plan","plan, testing, validation, implementation","implementation-plan, test-strategy-and-automation, feature-implementation, validation-audit","planning, verification",,no,yes,,"## Test Plan Matrix
+Build a test matrix for the planned work.
+
+For each major step, define:
+- unit tests,
+- integration or contract tests,
+- UI or end-to-end tests,
+- manual checks if automation is not enough.
+
+Tie each test back to a specific failure mode."
+f9a46819-bc09-5053-935f-6b10bbf17f87,additive-refactor-first,Implementation: Additive Refactor First,implementation-execution,Instruction,Encourages extraction and additive seams before replacing core behavior.,"additive, refactor, risk-reduction","implementation, refactor, bugfix, migration","feature-implementation, safe-refactor, bugfix-with-regression-lock, performance-hardening","implementation, verification",,no,yes,,"## Additive Refactor First
+When the work needs structural change, prefer this order:
+1. introduce the new helper, contract, or seam,
+2. wire it into the existing code with minimal behavior change,
+3. switch behavior only after tests cover the new path.
+
+Avoid large one-step rewrites unless the target area is already isolated and well tested."
+bba1e012-1c9f-5b63-b8ba-998d6f2da9de,document-changed-files,Implementation: Document Changed Files,implementation-execution,Delivery,Keeps a clear record of changed files grouped by responsibility.,"files-changed, handoff, review","implementation, refactor, bugfix, migration, embedded, ui","feature-implementation, safe-refactor, bugfix-with-regression-lock, embedded-firmware-iteration, ui-ux-delivery","implementation, verification, delivery",,no,no,,"## Changed Files Record
+Keep track of changed files grouped by responsibility area.
+
+The goal is not a changelog for its own sake. It is to make reviews, handoffs, and later debugging easier."
+7dc2bc48-d79e-5c1b-9156-be7b45952f20,feature-flag-rollout,Implementation: Feature Flag Rollout,implementation-execution,Instruction,Uses flags or staged switches when a risky behavior change should not land all at once.,"feature-flag, risk, rollout","implementation, migration, performance, security, embedded","feature-implementation, performance-hardening, security-hardening, embedded-firmware-iteration","implementation, verification, delivery",,no,no,target_change,"## Feature Flag or Staged Rollout
+If {{target_change}} is risky, introduce it behind a feature flag, configuration switch, or staged default.
+
+Prefer:
+- additive wiring first,
+- test coverage on the new path,
+- flipping defaults only after validation."
+872c3dec-82af-5d29-8eda-18795b57b7e6,keep-public-surface-minimal,Implementation: Keep Public Surface Minimal,implementation-execution,Constraint,Prevents unnecessary API surface growth or overexposed internals.,"api-surface, contracts, maintainability","implementation, refactor, architecture, security, embedded","feature-implementation, safe-refactor, architecture-spec, security-hardening, embedded-firmware-iteration","architecture, implementation, verification",,no,no,,"## Public Surface Control
+Keep the public surface area minimal.
+
+Only expose new types, members, endpoints, or settings when they are genuinely required by the use case.
+Prefer internal seams over expanding the public API without a clear consumer."
+9f384c44-bc82-57ec-b435-b8d48a533710,manual-verification-steps,Implementation: Manual Verification Steps,implementation-execution,Validation,Requires the agent to leave reproducible manual verification instructions for the touched behavior.,"handoff, manual-verification, qa","implementation, bugfix, ui, embedded, validation","feature-implementation, bugfix-with-regression-lock, ui-ux-delivery, embedded-firmware-iteration, validation-audit","verification, delivery",,no,no,,"## Manual Verification
+Provide manual verification steps for the changed behavior.
+
+The steps should state:
+- what to open or run,
+- what input or action to perform,
+- what the expected result should be,
+- what logs, UI state, or artifacts should appear."
+e7b9c4f8-e670-5ff0-9d7a-83776560ef37,preserve-existing-contracts-and-data,Implementation: Preserve Existing Contracts and Data,implementation-execution,Constraint,"Protects data shape, protocol shape, and existing consumers while implementing new behavior.","compatibility, contracts, data","implementation, refactor, bugfix, migration, embedded","feature-implementation, safe-refactor, bugfix-with-regression-lock, embedded-firmware-iteration","implementation, verification",,no,no,target_change,"## Contract and Data Preservation
+While implementing {{target_change}}, preserve existing data and protocol expectations unless a planned migration says otherwise.
+
+Check:
+- serialized payloads,
+- storage format or schema assumptions,
+- API consumers,
+- user workflows that depend on the existing behavior."
+81805d81-39fa-582b-af27-09073d7eb484,run-build-after-each-slice,Implementation: Run Build After Each Slice,implementation-execution,Testing,Forces fast compile checks during implementation rather than only at the end.,"build, checkpoints, implementation","implementation, refactor, bugfix, migration, embedded","feature-implementation, safe-refactor, bugfix-with-regression-lock, embedded-firmware-iteration","implementation, verification",,no,yes,,"## Build Checkpoints
+After each meaningful implementation slice:
+- run the fastest relevant build or compile command,
+- fix breakages before moving on,
+- keep the next slice starting from a working baseline."
+4f35eb31-c88d-5beb-9599-d04d08a3cfbc,implement-in-small-slices,Implementation: Small Safe Slices,implementation-execution,Instruction,Requires the implementation to proceed in small slices with proof after each one.,"implementation, slices, verification","implementation, refactor, bugfix, migration, embedded, ui","feature-implementation, safe-refactor, bugfix-with-regression-lock, embedded-firmware-iteration, ui-ux-delivery","implementation, verification",,no,yes,,"## Implementation Style
+Implement the work in small, safe slices.
+
+Each slice should:
+- change one coherent behavior or structural step,
+- keep the codebase buildable,
+- be followed immediately by the closest relevant validation."
+87edddae-452a-5259-a6ba-0dad5f41fbc2,accessibility-validation-pass,Validation: Accessibility Validation Pass,validation-review,Validation,Adds accessibility checks for changed UI surfaces.,"a11y, accessibility, ui","ui, implementation, review, validation","ui-ux-delivery, validation-audit, feature-implementation, senior-code-review","verification, delivery",,no,no,target_ui_flow,"## Accessibility Validation
+Validate accessibility for {{target_ui_flow}}.
+
+Check:
+- keyboard reachability,
+- focus order and visible focus,
+- labels and semantics,
+- fallback behavior when canvas or complex UI is involved."
+7d65fc63-2d87-526e-84ce-9452bd920c3d,architecture-validation-pass,Validation: Architecture Validation Pass,validation-review,Validation,Checks whether the implementation still respects the intended architecture.,"architecture-validation, boundaries, design","validation, review, architecture, implementation","validation-audit, senior-code-review, architecture-spec, feature-implementation","verification, delivery",,no,no,,"## Architecture Validation
+Validate that the implementation still matches the intended architecture.
+
+Check:
+- module boundaries,
+- ownership of state and storage,
+- contract shape,
+- unwanted coupling or leakage between layers."
+6aa6264a-bd57-5832-870a-157894c73d41,evidence-output-required,Validation: Evidence Output Required,validation-review,Delivery,"Requires exact commands, proof artifacts, or scenario outputs in the final response.","commands, evidence, proof","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","validation-audit, feature-implementation, safe-refactor, bugfix-with-regression-lock, test-strategy-and-automation, embedded-firmware-iteration","verification, delivery",,no,yes,,"## Evidence Output
+In the final response, include the evidence that supports the result:
+- exact commands executed,
+- test or build outcome summary,
+- screenshots, traces, or logs if relevant,
+- what could not be verified in this environment."
+b7b0fbcc-096a-5d48-b069-b717c9e27005,final-audit,Validation: Final Audit,validation-review,Validation,Forces a final audit after the main implementation is complete.,"completion, final-audit, quality-gate","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","validation-audit, feature-implementation, safe-refactor, bugfix-with-regression-lock, ui-ux-delivery, embedded-firmware-iteration","verification, delivery",,no,yes,,"## Final Audit
+Perform a final audit before declaring completion.
+
+Confirm:
+- the success criteria are truly met,
+- the highest-risk regressions have proof,
+- the deliverables are present,
+- the remaining gaps are named honestly."
+b942715a-a9ec-55e8-b97e-1143dcda1314,mandatory-integration-tests,Validation: Mandatory Integration Tests,validation-review,Testing,Requires integration or contract tests where boundaries matter.,"boundaries, contracts, integration-tests","implementation, migration, testing, validation, security, performance","feature-implementation, test-strategy-and-automation, validation-audit, security-hardening, performance-hardening","implementation, verification",,no,no,,"## Integration or Contract Tests
+Add integration or contract tests wherever behavior crosses process, storage, or module boundaries.
+
+Use them to cover:
+- database behavior,
+- API contracts,
+- filesystem or network integration,
+- service composition that unit tests cannot prove."
+1f589242-5113-5989-a64d-516d99a2b180,mandatory-playwright-tests,Validation: Mandatory Playwright Tests,validation-review,Testing,Requires Playwright or browser-level tests for user-visible flows.,"e2e, playwright, ui-tests","implementation, bugfix, ui, testing, validation","feature-implementation, bugfix-with-regression-lock, test-strategy-and-automation, ui-ux-delivery, validation-audit","implementation, verification",,no,no,,"## UI End-to-End Tests
+Add or update Playwright coverage for any user-visible flow changed by this work.
+
+Focus on:
+- critical happy paths,
+- the regression being fixed,
+- the main state transition that proves the UI is wired correctly."
+cf0d99d6-96d0-54ca-b216-287c26ca6477,mandatory-unit-tests,Validation: Mandatory Unit Tests,validation-review,Testing,Forces unit tests for pure logic or tightly scoped behavior.,"logic, testing, unit-tests","implementation, refactor, bugfix, testing, validation, embedded","feature-implementation, safe-refactor, bugfix-with-regression-lock, test-strategy-and-automation, validation-audit, embedded-firmware-iteration","implementation, verification",,no,yes,,"## Unit Tests
+Add or update unit tests for the logic touched by this work.
+
+The unit tests should:
+- target the smallest stable unit that covers the behavior,
+- lock in the failure mode being fixed or introduced,
+- remain deterministic and fast."
+c96c62ed-d8c5-5c05-b9c1-256eefe30514,observability-validation-pass,Validation: Observability Validation Pass,validation-review,Validation,"Makes logs, metrics, traces, or debug surfaces part of the quality bar when relevant.","diagnostics, logging, observability","implementation, validation, performance, security, embedded","feature-implementation, validation-audit, performance-hardening, security-hardening, embedded-firmware-iteration","verification, delivery",,no,no,target_change,"## Observability Validation
+Confirm that {{target_change}} is observable enough to debug and support.
+
+Cover:
+- logs or traces for failure paths,
+- debug surfaces or diagnostics if needed,
+- redaction of sensitive values,
+- proof that the new behavior can be inspected when it fails."
+8cbb6457-11ce-5ab9-a77b-d35ea01d5c4e,performance-validation-pass,Validation: Performance Validation Pass,validation-review,Validation,Makes performance expectations explicit instead of optional.,"hot-path, latency, performance","performance, implementation, review, embedded, ui","performance-hardening, feature-implementation, validation-audit, embedded-firmware-iteration, ui-ux-delivery","verification, delivery",,no,no,target_change,"## Performance Validation
+Validate the performance impact of {{target_change}}.
+
+Measure or reason explicitly about:
+- critical hot paths,
+- allocations or payload size,
+- latency or scheduling impact,
+- changes that could degrade mobile, browser, or embedded environments."
+48655845-7a4a-590d-89a0-5930fe1d0200,regression-proof-required,Validation: Regression Proof Required,validation-review,Validation,Requires explicit proof that the old bug or risk is now locked down.,"evidence, proof, regression","bugfix, refactor, review, validation, testing","bugfix-with-regression-lock, safe-refactor, validation-audit, test-strategy-and-automation, senior-code-review","verification, delivery",,no,yes,target_bug_or_risk,"## Regression Proof
+Provide regression proof for {{target_bug_or_risk}}.
+
+That proof can be:
+- an automated test,
+- a fixture comparison,
+- a screenshot, trace, or log,
+- a targeted manual reproduction with a documented result.
+
+Do not rely on ""it should work now"" reasoning."
+a456a3c4-01c3-57a9-9517-eca806cdf911,reviewer-findings-first,Validation: Reviewer Findings First,validation-review,Validation,Sets the output style for review prompts so findings come before summary.,"findings-first, review, risk","review, validation, security, performance","senior-code-review, validation-audit, security-hardening, performance-hardening","verification, delivery",,no,yes,,"## Review Output Style
+If this session is a review, present findings first.
+
+Order them by severity and include:
+- the risky behavior or flaw,
+- where it lives,
+- why it matters,
+- what evidence is missing or what should change.
+
+Keep the overall summary short and secondary."
+fafc2173-13c5-5d33-9aaf-69ccf319daac,security-validation-pass,Validation: Security Validation Pass,validation-review,Security,Requires a security-focused validation pass for sensitive changes.,"review, security, threats","security, implementation, review, validation","security-hardening, feature-implementation, senior-code-review, validation-audit","verification, delivery",,no,no,target_change,"## Security Validation
+Perform a security-focused review of {{target_change}}.
+
+Look for:
+- secret leakage,
+- unsafe storage or transport,
+- injection or validation gaps,
+- authz or authn regressions,
+- excessive trust in client-side inputs."
+357a011a-6f14-51ea-8b8e-f86eda983c31,artifact-list-and-links,Output: Artifact List and Links,output-handoff,Delivery,"Keeps docs, spreadsheets, diagrams, screenshots, or logs visible as explicit outputs.","artifacts, docs, evidence","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, implementation-plan, feature-implementation, validation-audit, ui-ux-delivery, embedded-firmware-iteration",delivery,,no,no,,"## Artifacts
+List the generated or updated artifacts:
+- docs,
+- diagrams,
+- spreadsheets,
+- screenshots or videos,
+- logs or reports.
+
+Use stable file paths and call out anything that should be reviewed manually."
+bb6df67f-3eea-56b2-957c-e873aad225f3,output-commands-executed,Output: Commands Executed,output-handoff,Delivery,Requires the final response to name the important verification commands run.,"commands, output, verification","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","feature-implementation, safe-refactor, bugfix-with-regression-lock, test-strategy-and-automation, validation-audit, embedded-firmware-iteration",delivery,,no,yes,,"## Commands Executed
+Include the important commands executed for build, tests, migrations, or tooling.
+
+If a command failed or could not run, state that clearly and explain why."
+f514bb08-15ec-5396-a403-943d41987319,output-completion-summary,Output: Completion Summary,output-handoff,Delivery,Standardizes the final completion or non-completion statement.,"completion, output, status","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, implementation-plan, feature-implementation, safe-refactor, validation-audit, ui-ux-delivery, embedded-firmware-iteration",delivery,,no,yes,,"## Completion Summary
+State clearly:
+- what is complete,
+- what is not complete,
+- what the highest remaining risk is.
+
+Avoid vague phrases such as ""mostly done"" without specifics."
+82b4a3b0-f327-5744-ac7d-858301f84fc1,output-files-changed,Output: Files Changed,output-handoff,Delivery,Requires changed files to be summarized clearly in the final response.,"changes, files, output","implementation, refactor, bugfix, migration, ui, embedded","feature-implementation, safe-refactor, bugfix-with-regression-lock, ui-ux-delivery, embedded-firmware-iteration",delivery,,no,no,,"## Files Changed
+Include the changed files or artifacts grouped by responsibility area.
+
+Keep the list readable and focused on the signal, not a raw dump of every low-value file."
+3bb914f8-df29-542a-b55a-de8d5e5c8f95,handoff-to-next-agent,Output: Handoff to Next Agent,output-handoff,Delivery,Creates a compact handoff format for the next agent in a chain.,"continuity, handoff, next-agent","architecture, plan, implementation, review, validation, migration, embedded","architecture-spec, implementation-plan, feature-implementation, safe-refactor, validation-audit, embedded-firmware-iteration",delivery,,no,no,,"## Handoff
+When another agent will continue the work, include:
+- the current state,
+- artifacts or files they must read first,
+- the next decision they must make,
+- the constraints and risks they inherit."
+d6f89572-5f44-5082-a699-25978349e141,output-implementation-plan,Output: Implementation Plan,output-handoff,Delivery,Standardizes how a plan should be presented when the session is planning-oriented.,"handoff, output, plan","architecture, plan, migration","architecture-spec, implementation-plan",delivery,,no,no,,"## Implementation Plan Output
+When the session is planning-oriented, present the implementation plan as a flat, ordered sequence.
+
+Each item should be clear enough that another agent can execute it without rediscovering the intent."
+1b1b9abd-8506-5bda-873e-7570d09f84c1,output-remaining-risks-and-next-steps,Output: Remaining Risks and Next Steps,output-handoff,Delivery,Keeps residual risk and next actions visible at handoff.,"next-steps, output, risks","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, implementation-plan, feature-implementation, safe-refactor, validation-audit, ui-ux-delivery, embedded-firmware-iteration",delivery,,no,yes,,"## Remaining Risks and Next Steps
+Close with:
+- remaining risks,
+- unresolved assumptions,
+- the highest-value next action.
+
+If there is a specific next prompt or next agent, name it directly."
+b86bc372-376a-5aef-8964-3ea4d5a6d225,output-scope-summary,Output: Scope Summary,output-handoff,Delivery,Standardizes a brief restatement of what the session covered.,"output, scope, summary","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","architecture-spec, implementation-plan, feature-implementation, safe-refactor, senior-code-review, validation-audit, ui-ux-delivery, embedded-firmware-iteration",delivery,,no,yes,,"## Scope Summary
+Start the close-out with a short scope summary covering:
+- what the session was meant to accomplish,
+- what area of the repo or system it touched,
+- whether the result is complete, partial, or intentionally phase-gated."
+079cb980-2cbe-51be-9d4a-5457810717a9,stack-dotnet-solution,Stack: .NET Solution,stack-profiles,Instruction,"Applies .NET solution-level guidance for build, tests, layering, and project wiring.",".net, build, solution, tests","architecture, plan, implementation, refactor, bugfix, testing, validation, performance, security, migration","architecture-spec, implementation-plan, feature-implementation, safe-refactor, bugfix-with-regression-lock, validation-audit, performance-hardening, security-hardening","discovery, planning, implementation, verification",.net,no,yes,"dotnet_build_command, dotnet_test_command","## .NET Guidance
+Treat the real solution or project graph as authoritative.
+
+Requirements:
+- use the correct solution or project entry point instead of guessing,
+- preserve dependency injection, nullable, analyzers, and test conventions already used in the repo,
+- keep domain logic out of thin UI or host layers,
+- if you add a project or contract, wire references, configuration, and tests in the same session.
+
+Primary commands:
+- build: {{dotnet_build_command}}
+- test: {{dotnet_test_command}}"
+3278d0da-073b-51f1-bde1-3a6c73139e66,stack-arduino-firmware,Stack: Arduino Firmware,stack-profiles,Instruction,"Applies embedded firmware guidance for limited resources, state machines, and hardware reliability.","arduino, embedded, firmware, realtime","embedded, implementation, bugfix, performance, validation","embedded-firmware-iteration, feature-implementation, validation-audit, performance-hardening","discovery, planning, implementation, verification","arduino, embedded",no,yes,,"## Arduino Firmware Guidance
+For Arduino-class firmware work:
+- treat memory, timing, and pin ownership as hard constraints,
+- prefer deterministic state machines over implicit control flow,
+- minimize heap churn in hot paths,
+- make calibration, thresholds, and protocol behavior observable and testable."
+66474013-fdc5-52bf-9d30-a21e945e790d,stack-blazor-webapp,Stack: Blazor,stack-profiles,Instruction,"Applies Blazor-specific guidance for render modes, components, and JS interop boundaries.","blazor, components, js-interop","architecture, implementation, refactor, bugfix, ui, testing, validation","architecture-spec, feature-implementation, safe-refactor, bugfix-with-regression-lock, ui-ux-delivery, validation-audit","architecture, planning, implementation, verification","blazor, .net",no,yes,,"## Blazor Guidance
+For Blazor work:
+- keep business logic out of page-only code,
+- respect render mode boundaries and lifecycle realities,
+- keep component state, services, and JS interop responsibilities explicit,
+- preserve the existing component system and routing conventions.
+
+If a behavior depends on browser state or JS interop, document the contract on both sides of the boundary."
+4b6ab7f1-c2ee-587e-8a8a-f3fa4deceb19,stack-canvas-html-js,Stack: Canvas in HTML/JS,stack-profiles,Instruction,"Applies canvas-specific guidance for rendering, hit testing, DOM boundaries, and performance.","canvas, html5, javascript, rendering","architecture, implementation, bugfix, ui, performance, validation","architecture-spec, feature-implementation, bugfix-with-regression-lock, ui-ux-delivery, performance-hardening, validation-audit","architecture, planning, implementation, verification","canvas, html, javascript",no,yes,,"## Canvas Guidance
+For HTML5 canvas work:
+- keep the actual interactive surface canvas-first if that is the product intent,
+- use DOM only where it is clearly the correct tool,
+- make hit testing, coordinate transforms, resize behavior, and redraw costs explicit,
+- reuse existing canvas primitives before inventing a parallel rendering stack."
+c89c6ab9-0634-5bb1-bf45-73e87ec7c0f0,stack-efcore,Stack: EF Core,stack-profiles,Instruction,"Applies EF Core guidance for DbContext usage, migrations, query shape, and testability.","database, efcore, orm","architecture, plan, implementation, refactor, migration, performance, validation","architecture-spec, implementation-plan, feature-implementation, safe-refactor, performance-hardening, validation-audit","architecture, planning, implementation, verification","efcore, .net, database",no,yes,,"## EF Core Guidance
+For EF Core work:
+- keep `DbContext` lifetime and ownership clear,
+- shape entities and configurations explicitly,
+- watch for N+1 patterns, tracking mistakes, and provider-specific drift,
+- pair model changes with migrations, tests, and rollback notes."
+b110a4ce-6a21-5f03-a73c-01a57bb28f63,stack-html-js-css,Stack: HTML/JS/CSS,stack-profiles,Instruction,"Applies browser-first frontend guidance when working directly with HTML, JavaScript, and CSS.","css, frontend, html, javascript","architecture, implementation, bugfix, ui, testing, validation","feature-implementation, bugfix-with-regression-lock, ui-ux-delivery, validation-audit","planning, implementation, verification","html, javascript, css",no,yes,,"## HTML, JavaScript, and CSS Guidance
+For direct frontend work:
+- respect the existing asset pipeline and project structure,
+- keep behavior, layout, and styling responsibilities clear,
+- test edge states such as small screens, long content, and async failures,
+- avoid adding heavy dependencies unless the prompt explicitly allows them."
+9b38e985-cc1d-538a-b810-6411c7a981bf,stack-m5stack,Stack: M5Stack,stack-profiles,Instruction,"Applies M5Stack-specific guidance for pins, PMU, display, sensors, and board-level constraints.","embedded, hardware, m5stack","embedded, implementation, bugfix, review, validation","embedded-firmware-iteration, validation-audit, feature-implementation","discovery, planning, implementation, verification","m5stack, embedded",no,no,,"## M5Stack Guidance
+For M5Stack or M5Stick-class work:
+- verify the exact board model and pin assignments,
+- be deliberate about PMU, battery telemetry, and peripheral initialization,
+- do not repurpose reserved pins without proving the impact,
+- connect firmware behavior to any host-side telemetry or UI surfaces that depend on it."
+25d66d79-46d5-5dae-b03f-f4d37880506e,stack-midi-audio,Stack: MIDI and Audio,stack-profiles,Instruction,"Applies timing and signal-path guidance for MIDI, quantization, and audio scheduling work.","audio, midi, realtime, timing","embedded, implementation, bugfix, performance, validation, ui","embedded-firmware-iteration, feature-implementation, bugfix-with-regression-lock, validation-audit, performance-hardening","architecture, planning, implementation, verification","midi, audio",no,yes,,"## MIDI and Audio Guidance
+For MIDI or audio work:
+- make time bases explicit,
+- protect event ordering and timing accuracy,
+- use fixtures or captured traces when live hardware input is unavailable,
+- avoid hand-wavy assumptions around quantization, buffering, or scheduling."
+73de5d03-d635-5bee-a7cc-b1b99711fe12,stack-offline-first-sync,Stack: Offline-First Sync,stack-profiles,Instruction,"Applies offline-first guidance for local state, outbox sync, conflicts, and low-connectivity behavior.","local-state, offline-first, sync","architecture, plan, implementation, migration, validation, ui","architecture-spec, implementation-plan, feature-implementation, validation-audit, ui-ux-delivery","architecture, planning, implementation, verification","offline-first, sync",no,yes,,"## Offline-First Guidance
+For offline-first or sync-heavy work:
+- keep local state ownership explicit,
+- model outbox, retries, idempotency, and conflict handling deliberately,
+- make online and offline states visible in the UX,
+- prove behavior across reconnect and partial failure paths."
+150cb427-a26c-56b9-bf96-8e7e5ff964c8,stack-php-webapp,Stack: PHP Web App,stack-profiles,Instruction,"Applies PHP web app guidance for legacy code, mixed rendering, and safer incremental change.","legacy-modernization, php, webapp","architecture, implementation, refactor, bugfix, migration, ui","architecture-spec, feature-implementation, safe-refactor, bugfix-with-regression-lock, ui-ux-delivery","discovery, planning, implementation, verification",php,no,yes,,"## PHP Web App Guidance
+For PHP-based web apps:
+- inspect the real runtime structure before assuming framework boundaries,
+- preserve working server-side rendering, routing, and data flow unless the prompt calls for migration,
+- keep new JavaScript and CSS changes compatible with the existing PHP entry points,
+- prefer incremental modernization over hidden framework rewrites."
+085189e5-ae6e-5482-acd7-f443ac8e0751,stack-playwright-mcp,Stack: Playwright MCP,stack-profiles,Testing,"Applies Playwright MCP guidance for real-browser automation, evidence capture, and UI debugging.","browser-automation, mcp, playwright, testing","testing, validation, ui, implementation, bugfix","test-strategy-and-automation, validation-audit, ui-ux-delivery, feature-implementation, bugfix-with-regression-lock","implementation, verification, delivery","playwright, mcp",no,no,,"## Playwright MCP Guidance
+When browser automation is useful:
+- use Playwright MCP or the closest real-browser path instead of shallow DOM reasoning,
+- capture screenshots, traces, or recordings when they materially improve proof,
+- validate key flows end to end instead of only checking that elements render."
+9f46896c-6c66-5b1f-bb2c-43a853ed2f2e,stack-postgresql,Stack: PostgreSQL,stack-profiles,Instruction,"Applies PostgreSQL-specific guidance for schema, queries, indexes, and migrations.","database, postgresql, schema","architecture, plan, implementation, migration, performance, validation","architecture-spec, implementation-plan, feature-implementation, performance-hardening, validation-audit","architecture, planning, implementation, verification","postgresql, database",no,no,,"## PostgreSQL Guidance
+For PostgreSQL-backed work:
+- design schemas and indexes around actual query paths,
+- respect transaction and migration safety,
+- be explicit about JSON, array, text search, or extension usage,
+- confirm cross-environment behavior if the app also supports SQLite or in-memory testing."
+5a1a2019-fd4d-5853-bda5-80c66134331f,stack-sqlite,Stack: SQLite,stack-profiles,Instruction,"Applies SQLite-specific guidance for local, test, or offline data scenarios.","database, offline, sqlite","architecture, plan, implementation, migration, testing, validation","architecture-spec, implementation-plan, feature-implementation, validation-audit, test-strategy-and-automation","architecture, planning, implementation, verification","sqlite, database",no,no,,"## SQLite Guidance
+For SQLite-backed work:
+- remember the differences from PostgreSQL in typing, concurrency, and feature support,
+- keep schema and query choices compatible with the intended runtime role,
+- use it deliberately for local, test, or offline scenarios rather than as a silent stand-in."
+e6321bf3-faa4-5d43-9dd1-dfd1f3dc8948,stack-tailwind-css,Stack: Tailwind CSS,stack-profiles,Instruction,"Applies Tailwind-specific guidance for utility usage, design consistency, and component reuse.","css, design-system, tailwind","implementation, ui, review, validation","ui-ux-delivery, feature-implementation, validation-audit","planning, implementation, verification","tailwind, css",no,no,,"## Tailwind Guidance
+When the repo uses Tailwind:
+- preserve the existing design tokens and utility conventions,
+- extract reusable patterns when class lists become structural rather than incidental,
+- avoid style drift by matching spacing, typography, and interaction patterns already in use,
+- keep accessibility and responsive behavior visible in the implementation."
+188848e9-e26b-5ef3-9093-d4fe000d2ec8,toolbox-cache-downloads-mobile-data,Toolbox: Cache Downloads to Save Mobile Data,toolbox-snippets,Constraint,Adds a reusable instruction to reuse caches and avoid wasteful downloads.,"bandwidth, caching, mobile-data, toolbox","architecture, audit, plan, implementation, refactor, bugfix, review, testing, validation, performance, security, migration, embedded, ui","feature-implementation, test-strategy-and-automation, validation-audit, embedded-firmware-iteration","implementation, verification",,yes,no,,"## Cache-Aware Resource Usage
+Be careful with network-heavy setup steps.
+
+Reuse:
+- dependency caches,
+- Docker layers,
+- browser caches,
+- package manager caches,
+whenever it is safe to do so.
+
+The goal is to save bandwidth and mobile data without compromising reproducibility."
+1c02e351-64c0-5aaa-8c89-fa2921a134bb,toolbox-capture-browser-artifacts,Toolbox: Capture Browser Artifacts,toolbox-snippets,Delivery,"Adds screenshot, trace, log, or video capture expectations for browser validation.","artifacts, screenshots, toolbox, trace","ui, testing, validation, bugfix","ui-ux-delivery, test-strategy-and-automation, validation-audit, bugfix-with-regression-lock","verification, delivery",,yes,no,,"## Capture Browser Artifacts
+Collect browser evidence for the key scenarios:
+- screenshots for final or failing states,
+- traces when interaction or timing bugs matter,
+- logs or network evidence when data flow matters,
+- video only when it materially improves diagnosis.
+
+Include the saved artifact paths in the final output."
+8f1c947b-334d-57dd-8790-24d033e0c805,toolbox-create-manual-qa-checklist,Toolbox: Create Manual QA Checklist,toolbox-snippets,Validation,Adds a short manual QA list when automated coverage is not enough.,"checklist, manual-qa, toolbox","testing, validation, ui, embedded, implementation","test-strategy-and-automation, validation-audit, ui-ux-delivery, embedded-firmware-iteration, feature-implementation","verification, delivery",,yes,no,,"## Manual QA Checklist
+Create a short manual QA checklist for the changed flow.
+
+Include:
+- the scenario to run,
+- expected result,
+- failure clues to watch for,
+- any environment prerequisites."
+674221b0-20dc-5dfe-b504-7dee50634f53,toolbox-cross-db-compat-check,Toolbox: Cross-DB Compatibility Check,toolbox-snippets,Testing,"Adds compatibility checks across PostgreSQL, SQLite, or other supported data stores.","compatibility, database, postgresql, sqlite, toolbox","implementation, migration, testing, validation","feature-implementation, implementation-plan, test-strategy-and-automation, validation-audit","verification, delivery",,yes,no,,"## Cross-Database Compatibility
+Validate this data-layer change across the supported database providers.
+
+At minimum:
+- note which providers were tested,
+- identify provider-specific behavior or skipped coverage,
+- avoid assuming PostgreSQL and SQLite behave identically."
+14847572-66c9-5ccb-8220-27525ebdacd2,toolbox-db-migration-dry-run,Toolbox: Database Migration Dry Run,toolbox-snippets,Testing,Adds a migration dry run before data-layer work is considered complete.,"database, dry-run, migration, toolbox","implementation, migration, validation, performance, security","feature-implementation, implementation-plan, validation-audit, performance-hardening, security-hardening","verification, delivery",,yes,no,,"## Database Migration Dry Run
+Before declaring the data-layer work done:
+- generate or apply the migration in a safe non-production environment,
+- validate upgrade and downgrade behavior if supported,
+- record the exact commands and any warnings,
+- call out any provider-specific caveats."
+2a9776e9-88e4-58ee-9e43-2d5f0e823519,toolbox-generate-fixtures-and-seed-data,Toolbox: Generate Fixtures and Seed Data,toolbox-snippets,Testing,Adds a reusable instruction to create focused fixtures or seed data for proof.,"fixtures, seed-data, testing, toolbox","implementation, bugfix, testing, validation, embedded, ui","feature-implementation, bugfix-with-regression-lock, test-strategy-and-automation, validation-audit, embedded-firmware-iteration, ui-ux-delivery","planning, implementation, verification",,yes,no,,"## Fixtures and Seed Data
+Create focused fixtures or seed data for the scenarios being changed.
+
+Prefer:
+- the smallest data that still reproduces the behavior,
+- deterministic values,
+- fixtures that can be reused by unit, integration, or UI tests."
+3bb7003f-c041-5a39-9440-882f9a1519e9,toolbox-run-integration-tests-docker,Toolbox: Run Integration Tests in Docker,toolbox-snippets,Testing,Short insert that forces integration or API tests to run in Docker.,"docker, integration-tests, toolbox","implementation, migration, testing, validation, security, performance","feature-implementation, test-strategy-and-automation, validation-audit, security-hardening, performance-hardening","verification, delivery",,yes,no,,"## Integration Tests in Docker
+Run the integration or contract test suite inside Docker.
+
+Requirements:
+- start only the dependencies the tests truly need,
+- use persistent caches and volumes where safe to reduce repeated downloads,
+- record the exact command and the services started,
+- if external dependencies make Docker validation impossible here, explain the blocker and the closest fallback."
+97467063-0452-5f05-b1a3-6df0346e210f,toolbox-run-ui-tests-docker,Toolbox: Run UI Tests in Docker,toolbox-snippets,Testing,Short insert that forces Playwright or browser UI tests to run in Docker.,"docker, mobile-data, playwright, toolbox, ui-tests","implementation, bugfix, ui, testing, validation","feature-implementation, bugfix-with-regression-lock, ui-ux-delivery, test-strategy-and-automation, validation-audit","verification, delivery",,yes,no,,"## UI Tests in Docker
+Run the UI or Playwright suite inside Docker.
+
+Requirements:
+- install only the browsers and system dependencies actually needed,
+- capture screenshots, traces, or reports for failures,
+- reuse browser and package caches where possible to save bandwidth,
+- include the exact command and artifact locations in the final output."
+091484b8-3a88-5e4f-8422-9e458d0bbc86,toolbox-run-unit-tests-docker,Toolbox: Run Unit Tests in Docker,toolbox-snippets,Testing,Short insert that forces unit tests to run in Docker with cache-aware resource usage.,"docker, mobile-data, toolbox, unit-tests","implementation, bugfix, refactor, testing, validation","feature-implementation, bugfix-with-regression-lock, safe-refactor, test-strategy-and-automation, validation-audit","verification, delivery",,yes,no,docker_compose_file_or_dockerfile,"## Unit Tests in Docker
+You must run the unit test suite inside Docker before declaring this work done.
+
+Requirements:
+- use {{docker_compose_file_or_dockerfile}} if available, otherwise create the smallest viable temporary test container,
+- reuse package, image, and layer caches whenever possible to reduce network transfer and save mobile data,
+- print the exact Docker command, target test projects, and result summary,
+- if Docker validation is blocked, say so clearly and fall back to the nearest reproducible local command without pretending Docker passed."
+e5b8e812-2850-557d-9afe-4da0440d778d,toolbox-use-playwright-mcp-now,Toolbox: Use Playwright MCP Now,toolbox-snippets,Testing,Directs the agent to validate through Playwright MCP rather than static reasoning only.,"browser, mcp, playwright, toolbox","ui, bugfix, testing, validation","ui-ux-delivery, bugfix-with-regression-lock, test-strategy-and-automation, validation-audit",verification,,yes,no,,"## Use Playwright MCP
+Validate this UI flow with Playwright MCP or the closest real browser automation path available.
+
+Do not rely only on reading the code when:
+- interaction timing matters,
+- canvas or drag/drop behavior matters,
+- responsive behavior matters,
+- the reported bug is visual or browser-state dependent."

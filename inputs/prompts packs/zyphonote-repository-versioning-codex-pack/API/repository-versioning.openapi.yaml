@@ -1,0 +1,614 @@
+openapi: 3.1.0
+info:
+  title: Zyphonote Repository Versioning API
+  version: 0.1.0
+  description: >
+    Proposed API contract for git-like repositories, branches, forks, merge requests,
+    compare/merge preview, and offline-first origin sync.
+servers:
+  - url: /api/v1
+paths:
+  /repos/mine:
+    get:
+      summary: List repositories accessible to the current user.
+      parameters:
+        - in: query
+          name: entityType
+          schema:
+            type: string
+            enum: [score, learning_package, playlist, event]
+      responses:
+        '200':
+          description: Repository list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RepositorySummary'
+  /repos/{repoId}:
+    get:
+      summary: Get repository summary.
+      parameters:
+        - $ref: '#/components/parameters/RepoId'
+      responses:
+        '200':
+          description: Repository detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryDetail'
+  /repos/{repoId}/graph:
+    get:
+      summary: Get commit graph for repository.
+      parameters:
+        - $ref: '#/components/parameters/RepoId'
+        - in: query
+          name: ref
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 300
+        - in: query
+          name: beforeCommit
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Graph payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryGraph'
+  /repos/status-batch:
+    post:
+      summary: Compare local client repo states with origin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [repositories]
+              properties:
+                repositories:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/LocalRepoStatusInput'
+      responses:
+        '200':
+          description: Batched origin status.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  repositories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OriginRepoStatus'
+  /repos/pull-batch:
+    post:
+      summary: Fetch changed refs/commits/snapshots for a batch of repos.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [repositories]
+              properties:
+                repositories:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/PullRequestItem'
+      responses:
+        '200':
+          description: Batched pull response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  repositories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PullResponseItem'
+  /repos/{repoId}/commit:
+    post:
+      summary: Commit current working tree to a branch.
+      parameters:
+        - $ref: '#/components/parameters/RepoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommitRequest'
+      responses:
+        '201':
+          description: Commit created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCommitResponse'
+  /repos/{repoId}/push:
+    post:
+      summary: Push already-created local objects/commit to origin.
+      parameters:
+        - $ref: '#/components/parameters/RepoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushRequest'
+      responses:
+        '200':
+          description: Push result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushResponse'
+  /repos/{repoId}/branches:
+    post:
+      summary: Create a branch.
+      parameters:
+        - $ref: '#/components/parameters/RepoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                fromCommitHash:
+                  type: string
+      responses:
+        '201':
+          description: Branch created.
+  /repos/{repoId}/branches/{branchName}:
+    delete:
+      summary: Delete a branch.
+      parameters:
+        - $ref: '#/components/parameters/RepoId'
+        - in: path
+          name: branchName
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Branch deleted.
+  /repos/{repoId}/compare:
+    post:
+      summary: Compare two commits or refs.
+      parameters:
+        - $ref: '#/components/parameters/RepoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompareRequest'
+      responses:
+        '200':
+          description: Compare result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompareResponse'
+  /repos/{repoId}/merge-preview:
+    post:
+      summary: Compute a three-way merge preview.
+      parameters:
+        - $ref: '#/components/parameters/RepoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MergePreviewRequest'
+      responses:
+        '200':
+          description: Merge preview result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergePreviewResponse'
+  /repos/{repoId}/merge:
+    post:
+      summary: Merge source into target branch.
+      parameters:
+        - $ref: '#/components/parameters/RepoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MergeExecuteRequest'
+      responses:
+        '200':
+          description: Merge result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergeExecuteResponse'
+  /repos/{repoId}/fork:
+    post:
+      summary: Fork a repository.
+      parameters:
+        - $ref: '#/components/parameters/RepoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                branchName:
+                  type: string
+                nameHint:
+                  type: string
+      responses:
+        '201':
+          description: Fork created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForkResponse'
+  /merge-requests:
+    post:
+      summary: Create a merge request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMergeRequest'
+      responses:
+        '201':
+          description: Merge request created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergeRequestDetail'
+    get:
+      summary: List merge requests for current user.
+      responses:
+        '200':
+          description: Merge request list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MergeRequestSummary'
+  /merge-requests/{mergeRequestId}:
+    get:
+      summary: Get merge request detail.
+      parameters:
+        - in: path
+          name: mergeRequestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Merge request detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergeRequestDetail'
+  /merge-requests/{mergeRequestId}/merge:
+    post:
+      summary: Merge a merge request.
+      parameters:
+        - in: path
+          name: mergeRequestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Merge request merged.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergeExecuteResponse'
+  /merge-requests/{mergeRequestId}/close:
+    post:
+      summary: Close a merge request.
+      parameters:
+        - in: path
+          name: mergeRequestId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Merge request closed.
+components:
+  parameters:
+    RepoId:
+      in: path
+      name: repoId
+      required: true
+      schema:
+        type: string
+  schemas:
+    RepositorySummary:
+      type: object
+      properties:
+        repositoryId: { type: string }
+        entityType: { type: string }
+        rootEntityId: { type: string }
+        defaultBranch: { type: string }
+        currentCommitHash: { type: string, nullable: true }
+        visibility: { type: string }
+        forkPolicy: { type: string }
+        aheadBehind:
+          $ref: '#/components/schemas/AheadBehind'
+    RepositoryDetail:
+      allOf:
+        - $ref: '#/components/schemas/RepositorySummary'
+        - type: object
+          properties:
+            ownerUserId: { type: string }
+            upstreamRepositoryId: { type: string, nullable: true }
+            branches:
+              type: array
+              items:
+                $ref: '#/components/schemas/BranchRef'
+    BranchRef:
+      type: object
+      properties:
+        name: { type: string }
+        tipCommitHash: { type: string, nullable: true }
+        isDefault: { type: boolean }
+        isProtected: { type: boolean }
+    AheadBehind:
+      type: object
+      properties:
+        ahead: { type: integer }
+        behind: { type: integer }
+        diverged: { type: boolean }
+    RepositoryGraph:
+      type: object
+      properties:
+        repository:
+          $ref: '#/components/schemas/RepositorySummary'
+        commits:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphCommit'
+        refs:
+          type: array
+          items:
+            $ref: '#/components/schemas/BranchRef'
+    GraphCommit:
+      type: object
+      properties:
+        commitHash: { type: string }
+        shortHash: { type: string }
+        message: { type: string }
+        authorName: { type: string, nullable: true }
+        authoredUtc: { type: string, format: date-time }
+        parentCommitHashes:
+          type: array
+          items: { type: string }
+        lane:
+          type: integer
+        labels:
+          type: array
+          items: { type: string }
+    LocalRepoStatusInput:
+      type: object
+      properties:
+        repositoryId: { type: string }
+        branches:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              localTipCommitHash: { type: string, nullable: true }
+    OriginRepoStatus:
+      type: object
+      properties:
+        repositoryId: { type: string }
+        branches:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              remoteTipCommitHash: { type: string, nullable: true }
+              aheadBehind:
+                $ref: '#/components/schemas/AheadBehind'
+    PullRequestItem:
+      type: object
+      properties:
+        repositoryId: { type: string }
+        sinceCommitHash: { type: string, nullable: true }
+        branchNames:
+          type: array
+          items: { type: string }
+    PullResponseItem:
+      type: object
+      properties:
+        repositoryId: { type: string }
+        refs:
+          type: array
+          items:
+            $ref: '#/components/schemas/BranchRef'
+        commits:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphCommit'
+    CreateCommitRequest:
+      type: object
+      required: [branchName, expectedTipCommitHash, message, files]
+      properties:
+        branchName: { type: string }
+        expectedTipCommitHash: { type: string, nullable: true }
+        baseCommitHash: { type: string, nullable: true }
+        message: { type: string }
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommitFileInput'
+    CommitFileInput:
+      type: object
+      required: [path, contentKind]
+      properties:
+        path: { type: string }
+        contentKind: { type: string }
+        mimeType: { type: string, nullable: true }
+        inlineText: { type: string, nullable: true }
+        inlineBase64: { type: string, nullable: true }
+        sha256: { type: string, nullable: true }
+    CreateCommitResponse:
+      type: object
+      properties:
+        repositoryId: { type: string }
+        branchName: { type: string }
+        commitHash: { type: string }
+        snapshotHash: { type: string }
+    PushRequest:
+      type: object
+      properties:
+        branchName: { type: string }
+        expectedTipCommitHash: { type: string, nullable: true }
+        commitHash: { type: string }
+    PushResponse:
+      type: object
+      properties:
+        accepted: { type: boolean }
+        branchName: { type: string }
+        remoteTipCommitHash: { type: string, nullable: true }
+        conflict:
+          type: object
+          nullable: true
+    CompareRequest:
+      type: object
+      properties:
+        leftCommitHash: { type: string }
+        rightCommitHash: { type: string }
+    CompareResponse:
+      type: object
+      properties:
+        repositoryId: { type: string }
+        entityType: { type: string }
+        summary:
+          type: object
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompareFile'
+    CompareFile:
+      type: object
+      properties:
+        path: { type: string }
+        changeKind: { type: string }
+        semanticKind: { type: string }
+        hunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiffHunk'
+    DiffHunk:
+      type: object
+      properties:
+        hunkId: { type: string }
+        semanticKind: { type: string }
+        operation: { type: string }
+        scope:
+          type: object
+        isConflict: { type: boolean }
+        label: { type: string }
+    MergePreviewRequest:
+      type: object
+      properties:
+        baseCommitHash: { type: string }
+        oursCommitHash: { type: string }
+        theirsCommitHash: { type: string }
+    MergePreviewResponse:
+      type: object
+      properties:
+        mergeableState: { type: string }
+        mergedSnapshotHash: { type: string, nullable: true }
+        summary:
+          type: object
+        conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiffHunk'
+    MergeExecuteRequest:
+      type: object
+      properties:
+        sourceBranchName: { type: string }
+        targetBranchName: { type: string }
+        expectedTargetTipCommitHash: { type: string }
+        mergeStrategy: { type: string, enum: [merge_commit, fast_forward] }
+        message: { type: string }
+    MergeExecuteResponse:
+      type: object
+      properties:
+        merged: { type: boolean }
+        targetBranchName: { type: string }
+        commitHash: { type: string, nullable: true }
+        mergeableState: { type: string }
+    ForkResponse:
+      type: object
+      properties:
+        repositoryId: { type: string }
+        upstreamRepositoryId: { type: string }
+        defaultBranch: { type: string }
+    CreateMergeRequest:
+      type: object
+      required:
+        - sourceRepositoryId
+        - sourceBranchName
+        - targetRepositoryId
+        - targetBranchName
+        - title
+      properties:
+        sourceRepositoryId: { type: string }
+        sourceBranchName: { type: string }
+        targetRepositoryId: { type: string }
+        targetBranchName: { type: string }
+        title: { type: string }
+        description: { type: string, nullable: true }
+    MergeRequestSummary:
+      type: object
+      properties:
+        mergeRequestId: { type: string }
+        title: { type: string }
+        status: { type: string }
+        mergeableState: { type: string }
+        sourceRepositoryId: { type: string }
+        sourceBranchName: { type: string }
+        targetRepositoryId: { type: string }
+        targetBranchName: { type: string }
+    MergeRequestDetail:
+      allOf:
+        - $ref: '#/components/schemas/MergeRequestSummary'
+        - type: object
+          properties:
+            description: { type: string, nullable: true }
+            sourceHeadCommitHash: { type: string }
+            targetHeadCommitHash: { type: string }
+            mergeBaseCommitHash: { type: string, nullable: true }

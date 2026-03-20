@@ -1,0 +1,32 @@
+{
+  "repositories": [
+    {
+      "repositoryId": "c2165f6e-3b79-4d1f-9af3-2d8b2f4a18a9",
+      "entityType": "score",
+      "defaultBranch": "main",
+      "lastFetchedUtc": "2026-03-08T13:20:00.000000Z"
+    }
+  ],
+  "refs": [
+    {
+      "repositoryId": "c2165f6e-3b79-4d1f-9af3-2d8b2f4a18a9",
+      "scope": "origin",
+      "name": "main",
+      "tipCommitHash": "3f3d6490a3f925d02f0897a5f739711944d80a39f58769379127d9b1979e4afe"
+    },
+    {
+      "repositoryId": "c2165f6e-3b79-4d1f-9af3-2d8b2f4a18a9",
+      "scope": "local",
+      "name": "feature/pickup-measure",
+      "tipCommitHash": "7d06bb1ad5f4b6025ebd77953e0cbda5b76955039b2cb94e8999c4a529eb8221"
+    }
+  ],
+  "workingCopies": [
+    {
+      "repositoryId": "c2165f6e-3b79-4d1f-9af3-2d8b2f4a18a9",
+      "branchName": "feature/pickup-measure",
+      "baseCommitHash": "7d06bb1ad5f4b6025ebd77953e0cbda5b76955039b2cb94e8999c4a529eb8221",
+      "dirty": true
+    }
+  ]
+}

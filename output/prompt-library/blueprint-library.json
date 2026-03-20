@@ -1,0 +1,194 @@
+[
+  {
+    "key": "architecture-spec",
+    "name": "Architecture Spec",
+    "prompt_type": "architecture",
+    "summary": "Creates an implementation-ready architecture, gap analysis, risk model, and recommended next steps.",
+    "guidance": "Use when the first agent needs to design the solution, clarify boundaries, or map a major migration or feature before coding starts.",
+    "recommended_flow_key": "architecture-review-plan-implement-validate",
+    "recommended_block_keys": [
+      "role-architecture-lead",
+      "mission-exact-goal",
+      "repo-map-confirmation",
+      "required-reading-list",
+      "architecture-blueprint",
+      "risk-register"
+    ]
+  },
+  {
+    "key": "repository-audit",
+    "name": "Repository Audit",
+    "prompt_type": "audit",
+    "summary": "Audits the current state of the repository, identifies gaps, and creates a target map.",
+    "guidance": "Use when the repo is only partially understood, the bundle was created off-repo, or current implementation claims need to be verified before planning.",
+    "recommended_flow_key": "audit-plan-refactor-review",
+    "recommended_block_keys": [
+      "role-refactor-specialist",
+      "current-state-audit",
+      "file-touch-plan",
+      "gap-analysis",
+      "parity-matrix"
+    ]
+  },
+  {
+    "key": "implementation-plan",
+    "name": "Implementation Plan",
+    "prompt_type": "plan",
+    "summary": "Converts an approved design or goal into milestones, files, tests, and acceptance checkpoints.",
+    "guidance": "Use after architecture or audit work to prepare a deterministic plan that another agent can execute.",
+    "recommended_flow_key": "architecture-review-plan-implement-validate",
+    "recommended_block_keys": [
+      "role-implementation-planner",
+      "implementation-plan-step-by-step",
+      "dependency-ordering",
+      "test-plan-matrix",
+      "definition-of-done"
+    ]
+  },
+  {
+    "key": "feature-implementation",
+    "name": "Feature Implementation",
+    "prompt_type": "implementation",
+    "summary": "Delivers a feature or enhancement in code with staged verification and handoff.",
+    "guidance": "Use when the main requirement is to produce working code, tests, and artifacts rather than just planning.",
+    "recommended_flow_key": "architecture-review-plan-implement-validate",
+    "recommended_block_keys": [
+      "role-implementation-lead",
+      "implement-in-small-slices",
+      "mandatory-unit-tests",
+      "final-audit",
+      "output-completion-summary"
+    ]
+  },
+  {
+    "key": "safe-refactor",
+    "name": "Safe Refactor",
+    "prompt_type": "refactor",
+    "summary": "Improves structure while preserving behavior and locking regressions down.",
+    "guidance": "Use when complexity or duplication is the main issue and behavior should stay stable.",
+    "recommended_flow_key": "audit-plan-refactor-review",
+    "recommended_block_keys": [
+      "role-refactor-specialist",
+      "current-state-audit",
+      "preserve-backward-compatibility",
+      "additive-refactor-first",
+      "regression-proof-required"
+    ]
+  },
+  {
+    "key": "bugfix-with-regression-lock",
+    "name": "Bugfix with Regression Lock",
+    "prompt_type": "bugfix",
+    "summary": "Fixes a bug and leaves behind targeted regression proof.",
+    "guidance": "Use when the agent must reproduce, fix, and lock down a concrete defect quickly without widening scope.",
+    "recommended_flow_key": "bugfix-regression-proof",
+    "recommended_block_keys": [
+      "role-implementation-lead",
+      "success-criteria",
+      "mandatory-unit-tests",
+      "regression-proof-required",
+      "manual-verification-steps"
+    ]
+  },
+  {
+    "key": "senior-code-review",
+    "name": "Senior Code Review",
+    "prompt_type": "review",
+    "summary": "Produces findings-first review output focused on behavior, risk, and missing evidence.",
+    "guidance": "Use when a second-pass reviewer should challenge the design, change set, or validation claims.",
+    "recommended_flow_key": "release-hardening-final-audit",
+    "recommended_block_keys": [
+      "role-senior-reviewer",
+      "reviewer-findings-first",
+      "architecture-validation-pass",
+      "security-validation-pass",
+      "performance-validation-pass"
+    ]
+  },
+  {
+    "key": "test-strategy-and-automation",
+    "name": "Test Strategy and Automation",
+    "prompt_type": "testing",
+    "summary": "Designs or expands the test matrix, automation approach, and evidence expectations.",
+    "guidance": "Use when the session is about validation design, Playwright rollout, or closing coverage gaps.",
+    "recommended_flow_key": "playwright-automation-upgrade",
+    "recommended_block_keys": [
+      "role-test-validation-lead",
+      "test-plan-matrix",
+      "mandatory-playwright-tests",
+      "evidence-output-required"
+    ]
+  },
+  {
+    "key": "validation-audit",
+    "name": "Validation Audit",
+    "prompt_type": "validation",
+    "summary": "Performs a final proof-oriented audit on architecture, testing, and residual risk.",
+    "guidance": "Use when code or plans already exist and the main job is to validate, challenge, and close out honestly.",
+    "recommended_flow_key": "release-hardening-final-audit",
+    "recommended_block_keys": [
+      "role-test-validation-lead",
+      "final-audit",
+      "evidence-output-required",
+      "output-remaining-risks-and-next-steps"
+    ]
+  },
+  {
+    "key": "performance-hardening",
+    "name": "Performance Hardening",
+    "prompt_type": "performance",
+    "summary": "Optimizes hot paths, runtime cost, or scheduling behavior with explicit proof.",
+    "guidance": "Use when latency, browser performance, rendering cost, or embedded timing is part of the quality bar.",
+    "recommended_flow_key": "release-hardening-final-audit",
+    "recommended_block_keys": [
+      "performance-validation-pass",
+      "risk-register",
+      "manual-verification-steps",
+      "final-audit"
+    ]
+  },
+  {
+    "key": "security-hardening",
+    "name": "Security Hardening",
+    "prompt_type": "security",
+    "summary": "Focuses the session on threats, trust boundaries, secret handling, and hardening proof.",
+    "guidance": "Use for auth, billing, secrets, client/server trust boundaries, or unsafe configuration changes.",
+    "recommended_flow_key": "release-hardening-final-audit",
+    "recommended_block_keys": [
+      "protect-secrets-and-sensitive-data",
+      "security-validation-pass",
+      "risk-register",
+      "final-audit"
+    ]
+  },
+  {
+    "key": "ui-ux-delivery",
+    "name": "UI/UX Delivery",
+    "prompt_type": "ui",
+    "summary": "Designs and delivers user-facing flows with real interaction, accessibility, and browser proof.",
+    "guidance": "Use when the prompt is centered on pages, components, canvas, or navigation flows.",
+    "recommended_flow_key": "ui-canvas-feature-delivery",
+    "recommended_block_keys": [
+      "role-ui-ux-engineer",
+      "ux-surface-map",
+      "no-placeholder-ui",
+      "mandatory-playwright-tests",
+      "accessibility-validation-pass"
+    ]
+  },
+  {
+    "key": "embedded-firmware-iteration",
+    "name": "Embedded Firmware Iteration",
+    "prompt_type": "embedded",
+    "summary": "Designs and delivers firmware or hardware-integrated changes with timing and hardware constraints visible.",
+    "guidance": "Use when the work touches microcontrollers, sensors, MIDI, serial protocols, or host-side telemetry for hardware flows.",
+    "recommended_flow_key": "embedded-midi-firmware-tuning",
+    "recommended_block_keys": [
+      "role-embedded-midi-engineer",
+      "risk-register",
+      "mandatory-unit-tests",
+      "performance-validation-pass",
+      "manual-verification-steps"
+    ]
+  }
+]

@@ -1,0 +1,59 @@
+You are working in an existing .NET + Blazor WASM (PWA) music notation editor project.
+
+Goal: Fix MusicXML import/export and MIDI recording accuracy issues in the current codebase, without breaking existing editor/playback behavior.
+
+Context (current code and naming you MUST use)
+- MusicXML (current implementation): MusicTheory.Core/NotationEditor/Formats/MusicXmlSubsetService.cs
+  - Used by App.Blazor/Pages/NotationEditorPlayground.razor (Import MusicXML / Export MusicXML buttons).
+- MIDI recording pipeline:
+  - MusicTheory.Core/NotationEditor/Recording/MidiRecordingSession.cs
+  - MusicTheory.Core/NotationEditor/Recording/MidiRecordingNotationMapper.cs
+  - App.Blazor/Pages/NotationEditorPlayground.razor wires recording to IMidiService events
+  - WebMIDI interop: MusicNotation.Editor/wwwroot/midiInterop.js
+  - Blazor service: MusicNotation.Editor/Services/MidiService.cs
+
+Reported failures to fix
+1) MusicXML import fails or loads wrong:
+   - Many third-party MusicXML files include a DOCTYPE (DTD). XDocument.Parse often throws when DTD processing is prohibited.
+   - Current importer ignores <divisions> and assumes a legacy non-standard divisions model, which breaks durations (notes become far too long/short).
+   - Current importer is fragile for namespaces and for backup/forward semantics.
+
+2) MIDI recording is inaccurate:
+   - Stopping recording finalizes active notes using the timestamp of the last MIDI message, not the actual stop time.
+     This truncates the last held note(s) and sustain-pedal notes.
+   - Start/duration quantization can collapse sequential notes into the same start (appears as a chord) when tempo/rounding differs.
+   - Users need correct note start ordering and more reliable note lengths.
+
+Hard requirements
+- Keep the app Blazor WASM-ready (no server dependencies).
+- Keep editor logic in MusicTheory.Core and MusicNotation.Editor as it is (refactor safely, do not rewrite the whole editor).
+- All code comments must be in English.
+- Add/extend unit tests under tests/MusicTheory.Tests to cover the fixed behavior.
+- Update docs in /docs (especially docs/musicxml-mapping.md and docs/midi-recording-to-musicxml.md).
+- Do not break existing JSON format or playback engine.
+
+Deliverables
+- Robust MusicXML import that can load typical third-party MusicXML partwise files (at least a practical subset):
+  - Must ignore DTD/DOCTYPE safely
+  - Must handle XML namespaces gracefully (match by LocalName)
+  - Must read <divisions> (MusicXML standard: divisions per quarter note) and convert durations correctly into internal Rational (whole-note basis)
+  - Must support <forward> and <backup> to compute correct start times
+  - Must not crash layout even if imported measures overflow the current score time signature
+- MusicXML export that is standard-compliant enough to open correctly in third-party tools:
+  - Use divisions per quarter note (choose 16 by default) and write correct duration numbers
+  - Preserve the current feature set (harmony chord symbol per measure, staff/voice, rests, ties)
+  - Keep backward-compatibility: importer should still be able to read legacy files previously exported by this app
+- MIDI recording fixes:
+  - Use a proper stop timestamp (same time base as MIDI timestamps, i.e., performance.now) when finalizing active notes
+  - Improve quantization so sequential notes don’t collapse into a chord unless they were played within a small chord threshold window
+  - Optionally quantize end times (not only duration) to reduce drift
+  - Add tests for session completion and for “sequential vs chord” behavior
+
+How to work
+- Start with a short plan and milestones.
+- Implement step-by-step with tests after each milestone.
+- Prefer small, safe refactors.
+- If you introduce new helpers/services, keep public surface minimal and integrate via existing entry points (MusicXmlSubsetService and NotationEditorPlayground).
+- Provide a concise summary of changes and how to verify manually in the Playground (Import/Export MusicXML, Record MIDI).
+
+You have additional prompt files in this bundle that describe the exact tasks and acceptance criteria for each milestone. Follow them in order.

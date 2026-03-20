@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="280" viewBox="0 0 900 280">
+  <rect width="900" height="280" fill="#0f1622"/>
+  <text x="16" y="28" fill="#cfe3ff" font-family="Segoe UI" font-size="16">Spacing must scale with fontScale</text>
+
+  <text x="16" y="58" fill="#9fb9d8" font-family="Segoe UI" font-size="12">Old: stepPx fixed → circles overlap when text grows</text>
+  <circle cx="160" cy="110" r="34" fill="#4aa6d6"/>
+  <circle cx="210" cy="110" r="42" fill="#4aa6d6" opacity="0.9"/>
+  <text x="160" y="114" fill="#0f1622" font-family="Segoe UI" font-size="14" font-weight="700" text-anchor="middle">Amin7/C</text>
+  <text x="210" y="114" fill="#0f1622" font-family="Segoe UI" font-size="14" font-weight="700" text-anchor="middle">Emin</text>
+  <line x1="160" y1="110" x2="210" y2="110" stroke="rgba(200,240,255,0.35)" stroke-width="3"/>
+
+  <text x="16" y="170" fill="#9fb9d8" font-family="Segoe UI" font-size="12">New: stepPx = BASE_STEP_PX * zoom * lerp(1,fontScale,0.75)</text>
+  <circle cx="160" cy="220" r="34" fill="#5ac8a8"/>
+  <circle cx="280" cy="220" r="42" fill="#5ac8a8" opacity="0.92"/>
+  <line x1="160" y1="220" x2="280" y2="220" stroke="rgba(200,240,255,0.35)" stroke-width="3"/>
+  <text x="160" y="224" fill="#0f1622" font-family="Segoe UI" font-size="14" font-weight="700" text-anchor="middle">Amin7/C</text>
+  <text x="280" y="224" fill="#0f1622" font-family="Segoe UI" font-size="14" font-weight="700" text-anchor="middle">Emin</text>
+
+  <text x="650" y="110" fill="#cfe3ff" font-family="Segoe UI" font-size="12">minGap ≥ 10px</text>
+  <text x="650" y="132" fill="#cfe3ff" font-family="Segoe UI" font-size="12">retry zoom if overlap</text>
+</svg>

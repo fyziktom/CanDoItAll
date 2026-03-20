@@ -64,7 +64,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.GetByLabel("Canvas zoom").WaitForAsync();
         await page.GetByLabel("Open quick create actions").ClickAsync();
         await page.Locator(".cw-context-menu__action[data-action-id='add-note']").WaitForAsync();
-        await page.HoverAsync(".cw-context-menu__action[data-action-id='group-assets']");
+        await page.Locator(".cw-context-menu__action[data-action-id='group-assets']").HoverAsync(new() { Force = true });
         await page.Locator(".cw-context-menu__action[data-action-id='add-image-asset']").WaitForAsync();
         await page.Keyboard.PressAsync("Escape");
         await page.GetByRole(AriaRole.Button, new() { Name = "Help" }).ClickAsync();
@@ -118,7 +118,8 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         var canvasHost = page.Locator(".cw-canvas-host");
         await canvasHost.ScrollIntoViewIfNeededAsync();
         await ClickCanvasNodeAsync(page, ".cw-node[data-node-id^='project:']");
-        await canvasHost.FocusAsync();
+        var activeElementClass = await page.EvaluateAsync<string>("() => document.activeElement?.className || ''");
+        Assert.Contains("cw-canvas-host", activeElementClass, StringComparison.Ordinal);
 
         var radialLabels = await OpenCanvasContextMenuAsync(page, ".cw-node[data-node-id^='project:']");
         Assert.Contains("Assets", radialLabels);
@@ -127,10 +128,40 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         Assert.Contains("Assurance", radialLabels);
         Assert.Contains("Open", radialLabels);
         Assert.Contains("Connect", radialLabels);
-        await page.HoverAsync(".cw-context-menu__action[data-action-id='group-assets']");
+        await page.Locator(".cw-context-menu__action[data-action-id='group-assets']").HoverAsync(new() { Force = true });
+        await page.WaitForSelectorAsync(".cw-context-menu__orbit.is-submenu");
+        var submenuBackdrop = await page.EvaluateAsync<string?>(
+            @"() => getComputedStyle(document.querySelector('.cw-context-menu__orbit.is-submenu')).backdropFilter");
+        Assert.False(string.IsNullOrWhiteSpace(submenuBackdrop));
+        Assert.DoesNotContain("none", submenuBackdrop, StringComparison.OrdinalIgnoreCase);
+
+        var submenuMetrics = await page.EvaluateAsync<CanvasSubmenuMetrics>(
+            @"() => {
+                const action = document.querySelector('.cw-context-menu__action[data-action-id=""group-assets""]');
+                const orbit = document.querySelector('.cw-context-menu__orbit.is-submenu');
+                if (!action || !orbit) {
+                    return { actionRight: 0, actionMidY: 0, orbitX: 0, orbitY: 0 };
+                }
+
+                const actionRect = action.getBoundingClientRect();
+                const orbitRect = orbit.getBoundingClientRect();
+                return {
+                    actionRight: actionRect.right,
+                    actionMidY: actionRect.top + (actionRect.height / 2),
+                    orbitX: orbitRect.left + (orbitRect.width * 0.78),
+                    orbitY: orbitRect.top + (orbitRect.height * 0.42)
+                };
+            }");
+        await page.Mouse.MoveAsync((float)(submenuMetrics.ActionRight + 16), (float)submenuMetrics.ActionMidY);
+        Assert.Equal(1, await page.Locator(".cw-context-menu__orbit.is-submenu").CountAsync());
+        await page.Mouse.MoveAsync((float)submenuMetrics.OrbitX, (float)submenuMetrics.OrbitY);
+        Assert.Equal(1, await page.Locator(".cw-context-menu__orbit.is-submenu").CountAsync());
         await page.Locator(".cw-context-menu__action[data-action-id='add-image-asset']").WaitForAsync();
         await page.Locator(".cw-context-menu__action[data-action-id='add-video-asset']").WaitForAsync();
-        await page.HoverAsync(".cw-context-menu__action[data-action-id='group-blocks']");
+        await page.Keyboard.PressAsync("Escape");
+
+        await OpenCanvasContextMenuAsync(page, ".cw-node[data-node-id^='project:']");
+        await page.Locator(".cw-context-menu__action[data-action-id='group-blocks']").HoverAsync(new() { Force = true });
         await page.Locator(".cw-context-menu__action[data-action-id='add-block-feature']").WaitForAsync();
         await page.Locator(".cw-context-menu__action[data-action-id='add-block-support']").WaitForAsync();
         await page.Keyboard.PressAsync("Escape");
@@ -206,10 +237,24 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.WaitForFunctionAsync("() => document.querySelector('.cw-media-preview')?.tagName === 'IMG'");
         await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node.is-selected .cw-node__title')).some(node => node.textContent?.includes('Playwright dropped image'))");
 
-        await ClickCanvasNodeAsync(page, ".cw-node:not([data-node-id^='project:'])");
+        await ClickCanvasNodeAsync(page, ".cw-node.is-inline-text");
         await page.GetByRole(AriaRole.Button, new() { Name = "Focus root" }).ClickAsync();
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const host = document.querySelector('.cw-canvas-host');
+                const selected = document.querySelector('.cw-node.is-selected');
+                if (!host || !selected) {
+                    return false;
+                }
+
+                const hostRect = host.getBoundingClientRect();
+                const selectedRect = selected.getBoundingClientRect();
+                const deltaX = Math.abs(Math.round((selectedRect.left + (selectedRect.width / 2)) - (hostRect.left + (hostRect.width / 2))));
+                const deltaY = Math.abs(Math.round((selectedRect.top + (selectedRect.height / 2)) - (hostRect.top + (hostRect.height / 2))));
+                return deltaX <= 2 && deltaY <= 2;
+            }");
         var focusState = await ReadCanvasFocusStateAsync(page);
-        Assert.StartsWith("project:", focusState.SelectedId, StringComparison.Ordinal);
+        Assert.Equal("Playwright Canvas Repair", await page.Locator(".cw-panel-card h3").First.TextContentAsync());
         Assert.InRange(Math.Abs(focusState.DeltaX), 0, 2);
         Assert.InRange(Math.Abs(focusState.DeltaY), 0, 2);
 
@@ -262,21 +307,38 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
 
     private static async Task ClickCanvasNodeAsync(IPage page, string selector, MouseButton button = MouseButton.Left, int clickCount = 1)
     {
-        var node = page.Locator(selector).First;
-        await node.WaitForAsync();
-        await node.ScrollIntoViewIfNeededAsync();
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var node = page.Locator(selector).First;
+            await node.WaitForAsync();
 
-        var bounds = await node.BoundingBoxAsync();
-        Assert.NotNull(bounds);
-
-        await page.Mouse.ClickAsync(
-            bounds!.X + (bounds.Width / 2),
-            bounds.Y + (bounds.Height / 2),
-            new MouseClickOptions
+            try
             {
-                Button = button,
-                ClickCount = clickCount
-            });
+                await node.ScrollIntoViewIfNeededAsync();
+                var bounds = await node.BoundingBoxAsync();
+                if (bounds is null)
+                {
+                    await page.WaitForTimeoutAsync(120);
+                    continue;
+                }
+
+                await page.Mouse.ClickAsync(
+                    bounds.X + (bounds.Width / 2),
+                    bounds.Y + (bounds.Height / 2),
+                    new MouseClickOptions
+                    {
+                        Button = button,
+                        ClickCount = clickCount
+                    });
+                return;
+            }
+            catch (PlaywrightException exception) when (exception.Message.Contains("attached", StringComparison.OrdinalIgnoreCase))
+            {
+                await page.WaitForTimeoutAsync(120);
+            }
+        }
+
+        throw new InvalidOperationException($"Could not click canvas node matching selector '{selector}' after repeated rerenders.");
     }
 
     private static async Task OpenCanvasCreateComposerAsync(IPage page, string selector, string label, string? actionId = null)
@@ -406,6 +468,17 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         public double ViewportWidth { get; set; }
 
         public double ViewportHeight { get; set; }
+    }
+
+    private sealed class CanvasSubmenuMetrics
+    {
+        public double ActionRight { get; set; }
+
+        public double ActionMidY { get; set; }
+
+        public double OrbitX { get; set; }
+
+        public double OrbitY { get; set; }
     }
 
     private static string? ResolveGroupedAction(string? actionId) => actionId switch

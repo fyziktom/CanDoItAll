@@ -697,8 +697,113 @@
             extent += 182;
         }
 
-        state.contextMenu.style.left = `${round(clamp(center.x, extent, Math.max(extent, hostRect.width - extent)))}px`;
-        state.contextMenu.style.top = `${round(clamp(center.y, extent, Math.max(extent, hostRect.height - extent)))}px`;
+        const x = round(clamp(center.x, extent, Math.max(extent, hostRect.width - extent)));
+        const y = round(clamp(center.y, extent, Math.max(extent, hostRect.height - extent)));
+        state.contextMenu.style.left = `${x}px`;
+        state.contextMenu.style.top = `${y}px`;
+        return { x, y };
+    }
+
+    function getContextMenuOrbitRadius(offsets) {
+        let radius = 92;
+
+        for (const offset of offsets || []) {
+            radius = Math.max(radius, Math.hypot(offset.x, offset.y) + 58);
+        }
+
+        return radius;
+    }
+
+    function getContextMenuLocalPoint(state, clientX, clientY) {
+        const rootCenter = state.contextMenuState?.rootCenter;
+        if (!rootCenter) {
+            return null;
+        }
+
+        const hostPoint = getHostPoint(state, clientX, clientY);
+        return {
+            x: hostPoint.x - rootCenter.x,
+            y: hostPoint.y - rootCenter.y
+        };
+    }
+
+    function isPointInContextMenuLayer(layerState, localPoint) {
+        if (!layerState || !localPoint) {
+            return false;
+        }
+
+        const dx = localPoint.x - layerState.originOffset.x;
+        const dy = localPoint.y - layerState.originOffset.y;
+        return Math.hypot(dx, dy) <= layerState.radius;
+    }
+
+    function closeContextMenuLayersFrom(state, depth) {
+        const layers = state.contextMenuState?.layers;
+        if (!layers?.length || depth >= layers.length) {
+            return;
+        }
+
+        for (let index = layers.length - 1; index >= depth; index--) {
+            layers[index].element.remove();
+        }
+
+        state.contextMenuState.layers = layers.slice(0, depth);
+    }
+
+    function syncContextMenuLayers(state, event) {
+        const layers = state.contextMenuState?.layers;
+        if (!layers?.length || layers.length < 2) {
+            return;
+        }
+
+        const localPoint = getContextMenuLocalPoint(state, event.clientX, event.clientY);
+        if (!localPoint) {
+            return;
+        }
+
+        let deepestContainingLayer = 0;
+        for (let index = 0; index < layers.length; index++) {
+            if (isPointInContextMenuLayer(layers[index], localPoint)) {
+                deepestContainingLayer = index;
+            }
+        }
+
+        closeContextMenuLayersFrom(state, deepestContainingLayer + 1);
+    }
+
+    function resolveSubmenuOrigin(parentLayer, offset) {
+        const length = Math.hypot(offset.x, offset.y) || 1;
+        const outwardDistance = Math.max(108, round(parentLayer.radius * 0.34));
+        return {
+            x: round(parentLayer.originOffset.x + offset.x + ((offset.x / length) * outwardDistance)),
+            y: round(parentLayer.originOffset.y + offset.y + ((offset.y / length) * outwardDistance))
+        };
+    }
+
+    function createContextMenuLayer(state, options) {
+        const layer = createElement(state.document, "div", `cw-context-menu__layer${options.depth > 0 ? " is-submenu" : ""}`);
+        layer.style.zIndex = `${options.depth + 1}`;
+
+        const orbit = createElement(state.document, "div", `cw-context-menu__orbit${options.depth > 0 ? " is-submenu" : ""}`);
+        orbit.style.setProperty("--cw-orbit-x", `${options.originOffset.x}px`);
+        orbit.style.setProperty("--cw-orbit-y", `${options.originOffset.y}px`);
+        orbit.addEventListener("pointerdown", event => event.stopPropagation());
+
+        const core = createElement(state.document, "div", `cw-context-menu__core${options.depth > 0 ? " is-submenu" : ""}`);
+        core.appendChild(createElement(state.document, "span", "cw-context-menu__core-dot"));
+        core.appendChild(createElement(state.document, "span", "cw-context-menu__core-label", options.label || "Canvas"));
+        orbit.appendChild(core);
+        layer.appendChild(orbit);
+
+        return {
+            depth: options.depth,
+            element: layer,
+            orbit,
+            originOffset: options.originOffset,
+            radius: 0,
+            ownerActionId: options.ownerActionId || "",
+            ownerDepth: typeof options.ownerDepth === "number" ? options.ownerDepth : -1
+        };
     }
 
     function resolveQuickCreateSourceNode(state) {
@@ -1113,55 +1218,61 @@
         state.dotNetRef.invokeMethodAsync("OnContextAction", node.id, action.actionId, round(position.x), round(position.y));
     }
 
-    function renderContextMenuLayer(state, layer, options) {
+    function openContextSubmenu(state, parentLayer, options, action, offset) {
+        const nextDepth = parentLayer.depth + 1;
+        const existingLayer = state.contextMenuState?.layers?.[nextDepth];
+        if (existingLayer &&
+            existingLayer.ownerActionId === action.actionId &&
+            existingLayer.ownerDepth === parentLayer.depth) {
+            return;
+        }
+
+        closeContextMenuLayersFrom(state, nextDepth);
+
+        const submenuLayer = createContextMenuLayer(state, {
+            depth: nextDepth,
+            label: action.label || "More",
+            originOffset: resolveSubmenuOrigin(parentLayer, offset),
+            ownerActionId: action.actionId,
+            ownerDepth: parentLayer.depth
+        });
+
+        renderContextMenuLayer(state, submenuLayer, {
+            actions: action.children || [],
+            node: options.node,
+            clientX: options.clientX,
+            clientY: options.clientY,
+            placementKind: options.placementKind,
+            depth: nextDepth,
+            baseRadius: 82,
+            ringStep: 70
+        });
+
+        state.contextMenu.appendChild(submenuLayer.element);
+        state.contextMenuState.layers.push(submenuLayer);
+    }
+
+    function renderContextMenuLayer(state, layerState, options) {
         const offsets = getRadialOffsets(options.actions.length, options.baseRadius, options.ringStep);
+        layerState.radius = getContextMenuOrbitRadius(offsets);
+        layerState.orbit.style.setProperty("--cw-orbit-size", `${round(layerState.radius * 2)}px`);
         options.actions.forEach((action, index) => {
             const offset = offsets[index];
-            const menuX = round((options.originOffset?.x || 0) + offset.x);
-            const menuY = round((options.originOffset?.y || 0) + offset.y);
             const button = createElement(state.document, "button", `cw-context-menu__action tone-${action.tone || "neutral"}`);
             button.type = "button";
             button.dataset.actionId = action.actionId || "";
+            button.dataset.layerDepth = `${options.depth || 0}`;
             button.title = action.description || action.label || action.actionId || "action";
-            button.style.setProperty("--cw-menu-x", `${menuX}px`);
-            button.style.setProperty("--cw-menu-y", `${menuY}px`);
+            button.style.setProperty("--cw-menu-x", `${round(offset.x)}px`);
+            button.style.setProperty("--cw-menu-y", `${round(offset.y)}px`);
             button.addEventListener("pointerdown", event => event.stopPropagation());
             button.addEventListener("pointerenter", () => {
                 if (!action.children?.length) {
-                    if (state.contextMenuState?.submenuLayer) {
-                        state.contextMenuState.submenuLayer.remove();
-                        state.contextMenuState.submenuLayer = null;
-                    }
+                    closeContextMenuLayersFrom(state, (options.depth || 0) + 1);
                     return;
                 }
 
-                const submenuOrigin = {
-                    x: round(menuX * 1.18),
-                    y: round(menuY * 1.18)
-                };
-                if (state.contextMenuState?.submenuLayer) {
-                    state.contextMenuState.submenuLayer.remove();
-                }
-
-                const submenuLayer = createElement(state.document, "div", "cw-context-menu__layer is-submenu");
-                const submenuCore = createElement(state.document, "div", "cw-context-menu__core is-submenu");
-                submenuCore.style.setProperty("--cw-menu-x", `${submenuOrigin.x}px`);
-                submenuCore.style.setProperty("--cw-menu-y", `${submenuOrigin.y}px`);
-                submenuCore.appendChild(createElement(state.document, "span", "cw-context-menu__core-dot"));
-                submenuCore.appendChild(createElement(state.document, "span", "cw-context-menu__core-label", action.label || "More"));
-                submenuLayer.appendChild(submenuCore);
-                renderContextMenuLayer(state, submenuLayer, {
-                    actions: action.children,
-                    node: options.node,
-                    clientX: options.clientX,
-                    clientY: options.clientY,
-                    placementKind: options.placementKind,
-                    originOffset: submenuOrigin,
-                    baseRadius: 82,
-                    ringStep: 70
-                });
-                state.contextMenu.appendChild(submenuLayer);
-                state.contextMenuState.submenuLayer = submenuLayer;
+                openContextSubmenu(state, layerState, options, action, offset);
             });
             button.addEventListener("click", event => {
                 event.stopPropagation();
@@ -1175,7 +1286,7 @@
                 button.classList.add("has-children");
             }
 
-            layer.appendChild(button);
+            layerState.orbit.appendChild(button);
         });
 
         return offsets;
@@ -1189,36 +1300,38 @@
         }
 
         ensureHostFocus(state);
+        deferHostFocus(state);
         const hostPoint = getHostPoint(state, options.clientX, options.clientY);
         state.contextMenu.style.display = "block";
         const rootOffsets = getRadialOffsets(actions.length);
-        positionContextMenu(state, hostPoint, rootOffsets, actions);
+        const rootCenter = positionContextMenu(state, hostPoint, rootOffsets, actions);
         state.contextMenuState = {
             node: options.node || null,
             actions,
             clientX: options.clientX,
             clientY: options.clientY,
             placementKind: options.placementKind || (options.node ? "child" : "canvas"),
-            submenuLayer: null
+            rootCenter,
+            layers: []
         };
 
-        const core = createElement(state.document, "div", "cw-context-menu__core");
-        core.appendChild(createElement(state.document, "span", "cw-context-menu__core-dot"));
-        core.appendChild(createElement(state.document, "span", "cw-context-menu__core-label", options.label || options.node?.title || "Canvas"));
-        state.contextMenu.appendChild(core);
-
-        const rootLayer = createElement(state.document, "div", "cw-context-menu__layer");
+        const rootLayer = createContextMenuLayer(state, {
+            depth: 0,
+            label: options.label || options.node?.title || "Canvas",
+            originOffset: { x: 0, y: 0 }
+        });
         renderContextMenuLayer(state, rootLayer, {
             actions,
             node: options.node || null,
             clientX: options.clientX,
             clientY: options.clientY,
             placementKind: options.placementKind || (options.node ? "child" : "canvas"),
-            originOffset: { x: 0, y: 0 },
+            depth: 0,
             baseRadius: 96,
             ringStep: 84
         });
-        state.contextMenu.appendChild(rootLayer);
+        state.contextMenu.appendChild(rootLayer.element);
+        state.contextMenuState.layers.push(rootLayer);
     }
 
     function startPan(state, event) {
@@ -1526,6 +1639,7 @@
             render(state);
         }
         ensureHostFocus(state);
+        deferHostFocus(state);
         publishSelection(state);
         publishState(state);
     }
@@ -1593,6 +1707,7 @@
 
                 clearContextMenu(state);
                 ensureHostFocus(state);
+                deferHostFocus(state);
 
                 if (event.button === 2) {
                     return;
@@ -1640,6 +1755,7 @@
             },
             pointerMove: event => {
                 if (!state.interaction) {
+                    syncContextMenuLayers(state, event);
                     return;
                 }
 
@@ -1795,6 +1911,15 @@
         contextMenu.style.display = "none";
         marquee.style.display = "none";
         contextMenu.addEventListener("pointerdown", event => event.stopPropagation());
+        contextMenu.addEventListener("contextmenu", event => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const depth = (state.contextMenuState?.layers?.length || 1) - 1;
+            if (depth > 0) {
+                closeContextMenuLayersFrom(state, depth);
+            }
+        });
 
         scene.appendChild(links);
         scene.appendChild(nodeLayer);

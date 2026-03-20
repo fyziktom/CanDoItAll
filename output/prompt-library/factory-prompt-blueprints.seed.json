@@ -1,0 +1,220 @@
+[
+  {
+    "id": "a334bfb0-b8f9-5cec-9985-6d7ad7940d78",
+    "key": "architecture-spec",
+    "name": "Architecture Spec",
+    "promptType": "architecture",
+    "summary": "Creates an implementation-ready architecture, gap analysis, risk model, and recommended next steps.",
+    "guidance": "Use when the first agent needs to design the solution, clarify boundaries, or map a major migration or feature before coding starts.",
+    "recommendedFlowTemplateId": "1b7928d9-f36a-554c-8f28-07970ccec045",
+    "recommendedFlowKey": "architecture-review-plan-implement-validate",
+    "recommendedBlockKeys": [
+      "role-architecture-lead",
+      "mission-exact-goal",
+      "repo-map-confirmation",
+      "required-reading-list",
+      "architecture-blueprint",
+      "risk-register"
+    ]
+  },
+  {
+    "id": "8d4fe3b2-09ac-5a30-9f6a-56671bab6bb7",
+    "key": "repository-audit",
+    "name": "Repository Audit",
+    "promptType": "audit",
+    "summary": "Audits the current state of the repository, identifies gaps, and creates a target map.",
+    "guidance": "Use when the repo is only partially understood, the bundle was created off-repo, or current implementation claims need to be verified before planning.",
+    "recommendedFlowTemplateId": "c187d205-248d-541f-802e-e6be075f419a",
+    "recommendedFlowKey": "audit-plan-refactor-review",
+    "recommendedBlockKeys": [
+      "role-refactor-specialist",
+      "current-state-audit",
+      "file-touch-plan",
+      "gap-analysis",
+      "parity-matrix"
+    ]
+  },
+  {
+    "id": "b1f7b010-a24d-5ab8-817e-8cd56262c1e5",
+    "key": "implementation-plan",
+    "name": "Implementation Plan",
+    "promptType": "plan",
+    "summary": "Converts an approved design or goal into milestones, files, tests, and acceptance checkpoints.",
+    "guidance": "Use after architecture or audit work to prepare a deterministic plan that another agent can execute.",
+    "recommendedFlowTemplateId": "1b7928d9-f36a-554c-8f28-07970ccec045",
+    "recommendedFlowKey": "architecture-review-plan-implement-validate",
+    "recommendedBlockKeys": [
+      "role-implementation-planner",
+      "implementation-plan-step-by-step",
+      "dependency-ordering",
+      "test-plan-matrix",
+      "definition-of-done"
+    ]
+  },
+  {
+    "id": "033eb98d-b323-5eda-b439-4cd9b7341855",
+    "key": "feature-implementation",
+    "name": "Feature Implementation",
+    "promptType": "implementation",
+    "summary": "Delivers a feature or enhancement in code with staged verification and handoff.",
+    "guidance": "Use when the main requirement is to produce working code, tests, and artifacts rather than just planning.",
+    "recommendedFlowTemplateId": "1b7928d9-f36a-554c-8f28-07970ccec045",
+    "recommendedFlowKey": "architecture-review-plan-implement-validate",
+    "recommendedBlockKeys": [
+      "role-implementation-lead",
+      "implement-in-small-slices",
+      "mandatory-unit-tests",
+      "final-audit",
+      "output-completion-summary"
+    ]
+  },
+  {
+    "id": "e70bfbd8-5b94-539e-bf69-983e74503394",
+    "key": "safe-refactor",
+    "name": "Safe Refactor",
+    "promptType": "refactor",
+    "summary": "Improves structure while preserving behavior and locking regressions down.",
+    "guidance": "Use when complexity or duplication is the main issue and behavior should stay stable.",
+    "recommendedFlowTemplateId": "c187d205-248d-541f-802e-e6be075f419a",
+    "recommendedFlowKey": "audit-plan-refactor-review",
+    "recommendedBlockKeys": [
+      "role-refactor-specialist",
+      "current-state-audit",
+      "preserve-backward-compatibility",
+      "additive-refactor-first",
+      "regression-proof-required"
+    ]
+  },
+  {
+    "id": "6a5b3f6b-0b9b-5d8c-96d2-fc8b3ce37478",
+    "key": "bugfix-with-regression-lock",
+    "name": "Bugfix with Regression Lock",
+    "promptType": "bugfix",
+    "summary": "Fixes a bug and leaves behind targeted regression proof.",
+    "guidance": "Use when the agent must reproduce, fix, and lock down a concrete defect quickly without widening scope.",
+    "recommendedFlowTemplateId": "7f59c901-f4ed-5405-ba3f-0513835a81c3",
+    "recommendedFlowKey": "bugfix-regression-proof",
+    "recommendedBlockKeys": [
+      "role-implementation-lead",
+      "success-criteria",
+      "mandatory-unit-tests",
+      "regression-proof-required",
+      "manual-verification-steps"
+    ]
+  },
+  {
+    "id": "1793aa38-e643-5be2-b8fc-a77698a95691",
+    "key": "senior-code-review",
+    "name": "Senior Code Review",
+    "promptType": "review",
+    "summary": "Produces findings-first review output focused on behavior, risk, and missing evidence.",
+    "guidance": "Use when a second-pass reviewer should challenge the design, change set, or validation claims.",
+    "recommendedFlowTemplateId": "535eb49c-e7ce-5f53-808a-e6a3e0ca150a",
+    "recommendedFlowKey": "release-hardening-final-audit",
+    "recommendedBlockKeys": [
+      "role-senior-reviewer",
+      "reviewer-findings-first",
+      "architecture-validation-pass",
+      "security-validation-pass",
+      "performance-validation-pass"
+    ]
+  },
+  {
+    "id": "46bd236b-8d4b-58e6-8a61-dfe86e34aa2d",
+    "key": "test-strategy-and-automation",
+    "name": "Test Strategy and Automation",
+    "promptType": "testing",
+    "summary": "Designs or expands the test matrix, automation approach, and evidence expectations.",
+    "guidance": "Use when the session is about validation design, Playwright rollout, or closing coverage gaps.",
+    "recommendedFlowTemplateId": "c7a95ea0-3518-5b2c-9ad5-03f4ab87f22f",
+    "recommendedFlowKey": "playwright-automation-upgrade",
+    "recommendedBlockKeys": [
+      "role-test-validation-lead",
+      "test-plan-matrix",
+      "mandatory-playwright-tests",
+      "evidence-output-required"
+    ]
+  },
+  {
+    "id": "d6b73da4-db1c-5bcb-a390-430347451da3",
+    "key": "validation-audit",
+    "name": "Validation Audit",
+    "promptType": "validation",
+    "summary": "Performs a final proof-oriented audit on architecture, testing, and residual risk.",
+    "guidance": "Use when code or plans already exist and the main job is to validate, challenge, and close out honestly.",
+    "recommendedFlowTemplateId": "535eb49c-e7ce-5f53-808a-e6a3e0ca150a",
+    "recommendedFlowKey": "release-hardening-final-audit",
+    "recommendedBlockKeys": [
+      "role-test-validation-lead",
+      "final-audit",
+      "evidence-output-required",
+      "output-remaining-risks-and-next-steps"
+    ]
+  },
+  {
+    "id": "d1ba73d9-6876-5436-94ed-fd16d24dd1ba",
+    "key": "performance-hardening",
+    "name": "Performance Hardening",
+    "promptType": "performance",
+    "summary": "Optimizes hot paths, runtime cost, or scheduling behavior with explicit proof.",
+    "guidance": "Use when latency, browser performance, rendering cost, or embedded timing is part of the quality bar.",
+    "recommendedFlowTemplateId": "535eb49c-e7ce-5f53-808a-e6a3e0ca150a",
+    "recommendedFlowKey": "release-hardening-final-audit",
+    "recommendedBlockKeys": [
+      "performance-validation-pass",
+      "risk-register",
+      "manual-verification-steps",
+      "final-audit"
+    ]
+  },
+  {
+    "id": "021cddef-fa0e-5d03-8f0a-10aa355ea6d5",
+    "key": "security-hardening",
+    "name": "Security Hardening",
+    "promptType": "security",
+    "summary": "Focuses the session on threats, trust boundaries, secret handling, and hardening proof.",
+    "guidance": "Use for auth, billing, secrets, client/server trust boundaries, or unsafe configuration changes.",
+    "recommendedFlowTemplateId": "535eb49c-e7ce-5f53-808a-e6a3e0ca150a",
+    "recommendedFlowKey": "release-hardening-final-audit",
+    "recommendedBlockKeys": [
+      "protect-secrets-and-sensitive-data",
+      "security-validation-pass",
+      "risk-register",
+      "final-audit"
+    ]
+  },
+  {
+    "id": "40048277-60c6-5dbf-9f31-82480be38233",
+    "key": "ui-ux-delivery",
+    "name": "UI/UX Delivery",
+    "promptType": "ui",
+    "summary": "Designs and delivers user-facing flows with real interaction, accessibility, and browser proof.",
+    "guidance": "Use when the prompt is centered on pages, components, canvas, or navigation flows.",
+    "recommendedFlowTemplateId": "24678abc-467d-56b3-a76b-c267c6932fd7",
+    "recommendedFlowKey": "ui-canvas-feature-delivery",
+    "recommendedBlockKeys": [
+      "role-ui-ux-engineer",
+      "ux-surface-map",
+      "no-placeholder-ui",
+      "mandatory-playwright-tests",
+      "accessibility-validation-pass"
+    ]
+  },
+  {
+    "id": "46bdcfbb-5bb2-55c6-a9ff-f337dbb4dc10",
+    "key": "embedded-firmware-iteration",
+    "name": "Embedded Firmware Iteration",
+    "promptType": "embedded",
+    "summary": "Designs and delivers firmware or hardware-integrated changes with timing and hardware constraints visible.",
+    "guidance": "Use when the work touches microcontrollers, sensors, MIDI, serial protocols, or host-side telemetry for hardware flows.",
+    "recommendedFlowTemplateId": "424e5e12-24c9-5679-bd69-859029712d28",
+    "recommendedFlowKey": "embedded-midi-firmware-tuning",
+    "recommendedBlockKeys": [
+      "role-embedded-midi-engineer",
+      "risk-register",
+      "mandatory-unit-tests",
+      "performance-validation-pass",
+      "manual-verification-steps"
+    ]
+  }
+]

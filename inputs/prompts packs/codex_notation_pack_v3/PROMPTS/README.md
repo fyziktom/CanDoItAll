@@ -1,0 +1,17 @@
+# PROMPTS — How to run
+
+Run prompts in order:
+
+1) 00_START.md
+2) 01_RIPPLE_DURATION_CHANGE.md
+3) 02_AUTO_REST_FILL.md
+4) 03_BEAMLEVEL_DOTTED.md
+5) 04_TICKCONTEXT_SPACING.md
+6) 05_EXTEND_DURATIONS_32_64.md
+7) 06_CANVAS_HUD_RADIAL.md
+8) 07_VOICING_PARTS_MODEL.md
+9) 08_VOICING_LAYOUT_PAGES.md
+10) 09_LYRICS.md
+11) 10_FINAL_REVIEW.md
+
+Each prompt ends with **STOP**. Do not skip or merge prompts.

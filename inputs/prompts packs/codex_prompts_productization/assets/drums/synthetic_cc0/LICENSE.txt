@@ -1,0 +1,8 @@
+Synthetic drum samples (kick/snare/hi-hat) generated for MusicSheetReadingLearner prompt bundle.
+
+License: CC0 1.0 Universal (Public Domain Dedication)
+
+You may use, modify, and redistribute these samples without attribution.
+(No warranty.)
+
+Generated offline as simple WebAudio-friendly one-shots.

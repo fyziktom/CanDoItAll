@@ -1,0 +1,64 @@
+Task 3: Add fixtures and tests to prevent regressions
+
+Add fixture files
+Create directory:
+- tests/MusicTheory.Tests/Fixtures/MusicXml/
+
+Add these fixtures (as real files, not embedded strings)
+1) doctype-minimal-divisions16.musicxml
+- Minimal MusicXML partwise with:
+  - XML declaration
+  - DOCTYPE score-partwise
+  - <divisions>16</divisions> (per quarter note)
+  - <time>4/4</time>
+  - One quarter note (duration 16) in measure 1
+Expected:
+- Import succeeds
+- Note duration becomes Rational(1,4)
+
+2) standard-divisions480-quarter.musicxml
+- Minimal partwise with:
+  - <divisions>480</divisions>
+  - One quarter note with duration 480
+Expected:
+- Import duration Rational(1,4)
+
+3) legacy-divisions16-perwhole-quarter.musicxml
+- A minimal file matching the app’s legacy export behavior:
+  - <divisions>16</divisions>
+  - A quarter note encoded with duration 4 (legacy)
+  - Include <time>4/4</time>
+Expected:
+- Import heuristic selects LegacyPerWhole
+- Note duration becomes Rational(1,4)
+
+4) user-bach-air-trumpet.musicxml
+- Include the exact file supplied in the bug report (even if imperfect)
+Expected:
+- Import does not throw
+- Score renders after NormalizeFrom (no event starts beyond measure capacity)
+- (Do not assert full musical correctness; assert non-crash and non-empty measures)
+
+Add tests in tests/MusicTheory.Tests
+- New test class: MusicXmlImportExportTests.cs
+  - Import_IgnoresDoctypeAndLoads()
+  - Import_UsesDivisionsPerQuarter_CorrectDurations()
+  - Import_LegacyDivisionsPerWhole_StillLoads()
+  - Import_UserFixture_DoesNotThrow_AndProducesEvents()
+  - Export_ThenImport_RoundTrips_MinimumSignals()
+    - At least: measures count > 0, chord symbols preserved for demo score
+
+- New test class: MidiRecordingSessionTests.cs
+  - Complete_WithStopTimestamp_FlushesActiveNotesToStopTime()
+
+- Extend MidiRecordingNotationMapperTests.cs
+  - SequentialNotesOutsideChordWindow_DoNotShareSameStart()
+  - NotesInsideChordWindow_ShareSameStart()
+
+Test style rules
+- Use Xunit (existing)
+- Keep tests deterministic
+- Avoid relying on layout pixel coordinates; prefer rational timing assertions
+
+Acceptance criteria
+- Tests fail on the current buggy behavior and pass after your fixes.

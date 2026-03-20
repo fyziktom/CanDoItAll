@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect x="0" y="0" width="960" height="540" fill="#0f1622"/>
+  <!-- Reserved UI margins -->
+  <rect x="0" y="0" width="960" height="92" fill="rgba(90,160,214,0.08)"/>
+  <text x="12" y="22" fill="#cfe3ff" font-family="Segoe UI" font-size="14">Top UI reserved area (widgets)</text>
+
+  <!-- Widgets -->
+  <rect x="14" y="14" width="330" height="72" rx="12" fill="rgba(16,27,43,0.92)" stroke="rgba(122,160,214,0.55)"/>
+  <text x="26" y="38" fill="#cfe3ff" font-family="Segoe UI" font-size="13">Mood + Modules (collapsible)</text>
+
+  <rect x="690" y="14" width="256" height="72" rx="12" fill="rgba(16,27,43,0.92)" stroke="rgba(122,160,214,0.55)"/>
+  <text x="702" y="38" fill="#cfe3ff" font-family="Segoe UI" font-size="13">Text + Zoom + History</text>
+
+  <rect x="14" y="444" width="320" height="82" rx="12" fill="rgba(16,27,43,0.92)" stroke="rgba(122,160,214,0.55)"/>
+  <text x="26" y="468" fill="#cfe3ff" font-family="Segoe UI" font-size="13">MIDI status + confidence</text>
+
+  <rect x="650" y="430" width="296" height="96" rx="12" fill="rgba(16,27,43,0.92)" stroke="rgba(122,160,214,0.55)"/>
+  <text x="662" y="454" fill="#cfe3ff" font-family="Segoe UI" font-size="13">Recording + import/export</text>
+
+  <!-- Centerline -->
+  <line x1="40" y1="270" x2="920" y2="270" stroke="rgba(240,250,255,0.35)" stroke-width="2"/>
+  <text x="12" y="288" fill="#9fb9d8" font-family="Segoe UI" font-size="12">Centerline (current chord anchored here)</text>
+</svg>

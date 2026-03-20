@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600">
+  <rect x="0" y="0" width="1200" height="600" fill="#0f1622"/>
+  <!-- Margins -->
+  <rect x="60" y="60" width="1080" height="480" fill="none" stroke="#335" stroke-dasharray="6 6"/>
+  <text x="65" y="52" fill="#cfe3ff" font-family="Segoe UI" font-size="14">Safe drawing area (60px margins)</text>
+
+  <!-- Centerline -->
+  <line x1="60" y1="300" x2="1140" y2="300" stroke="#7aa0d6" stroke-width="2" opacity="0.55"/>
+  <text x="70" y="292" fill="#cfe3ff" font-family="Segoe UI" font-size="14">Centerline (canvasHeight * 0.5)</text>
+
+  <!-- Up / down labels -->
+  <text x="1080" y="90" fill="#cfe3ff" font-family="Segoe UI" font-size="14">UP = brighter / happier</text>
+  <text x="1080" y="520" fill="#cfe3ff" font-family="Segoe UI" font-size="14">DOWN = darker</text>
+
+  <!-- Example current node -->
+  <circle cx="420" cy="300" r="28" fill="#f4b03f"/>
+  <circle cx="420" cy="300" r="34" fill="none" stroke="#f4b03f" stroke-width="3" opacity="0.65"/>
+  <text x="420" y="300" fill="#10151c" font-family="Segoe UI" font-size="16" font-weight="700" text-anchor="middle" dominant-baseline="middle">C7</text>
+  <text x="420" y="345" fill="#cfe3ff" font-family="Segoe UI" font-size="13" text-anchor="middle">Current chord anchored on centerline</text>
+
+  <!-- Branch lanes -->
+  <line x1="420" y1="240" x2="1140" y2="240" stroke="#2b3b58" stroke-width="2" opacity="0.55"/>
+  <line x1="420" y1="360" x2="1140" y2="360" stroke="#2b3b58" stroke-width="2" opacity="0.55"/>
+  <text x="430" y="232" fill="#cfe3ff" font-family="Segoe UI" font-size="12">Lane -1 (example)</text>
+  <text x="430" y="382" fill="#cfe3ff" font-family="Segoe UI" font-size="12">Lane +1 (example)</text>
+
+  <!-- Branch nodes -->
+  <circle cx="620" cy="240" r="22" fill="#ff5a5f"/>
+  <text x="620" y="240" fill="#10151c" font-family="Segoe UI" font-size="14" font-weight="700" text-anchor="middle" dominant-baseline="middle">F9</text>
+  <circle cx="620" cy="360" r="22" fill="#2b6cb0"/>
+  <text x="620" y="360" fill="#10151c" font-family="Segoe UI" font-size="14" font-weight="700" text-anchor="middle" dominant-baseline="middle">C#m</text>
+
+  <!-- Edges -->
+  <path d="M 448 300 C 500 300, 560 240, 598 240" fill="none" stroke="#ff5a5f" stroke-width="5" opacity="0.65"/>
+  <path d="M 448 300 C 500 300, 560 360, 598 360" fill="none" stroke="#2b6cb0" stroke-width="5" opacity="0.65"/>
+  <text x="700" y="210" fill="#cfe3ff" font-family="Segoe UI" font-size="12">Branches go rightward; offset up/down by mood + lane</text>
+
+  <!-- Measurement annotation -->
+  <line x1="60" y1="560" x2="1140" y2="560" stroke="#335" stroke-width="2"/>
+  <line x1="60" y1="555" x2="60" y2="565" stroke="#335" stroke-width="2"/>
+  <line x1="1140" y1="555" x2="1140" y2="565" stroke="#335" stroke-width="2"/>
+  <text x="600" y="590" fill="#cfe3ff" font-family="Segoe UI" font-size="12" text-anchor="middle">Width 1200px (example); step spacing measured in px before zoom-to-fit</text>
+</svg>

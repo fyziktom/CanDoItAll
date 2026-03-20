@@ -1,0 +1,33 @@
+{
+  "mergeableState": "conflicts",
+  "summary": {
+    "conflicts": 2,
+    "autoMergedHunks": 5
+  },
+  "conflicts": [
+    {
+      "hunkId": "conflict-note-001",
+      "semanticKind": "note",
+      "operation": "update_note",
+      "scope": {
+        "partId": "part-piano-rh",
+        "measureId": "measure-0012",
+        "voiceId": "voice-1",
+        "noteId": "note-0140"
+      },
+      "isConflict": true,
+      "label": "Both branches changed the same note differently"
+    },
+    {
+      "hunkId": "conflict-measure-order-002",
+      "semanticKind": "measure",
+      "operation": "insert_measure_after",
+      "scope": {
+        "partId": "part-piano-lh",
+        "afterMeasureId": "measure-0016"
+      },
+      "isConflict": true,
+      "label": "Both branches inserted different measures at the same anchor"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "C7 arpeggio with blues melody overlay",
+  "description": "Left hand outlines C7 while right hand plays minor blues vocabulary. Expected: chord detection C7; scale inference C Blues Minor; route planning includes blues-friendly dominants.",
+  "pitchClassScores": {
+    "C": 0.22,
+    "E": 0.12,
+    "Bb": 0.16,
+    "G": 0.12,
+    "Eb": 0.1,
+    "F": 0.08,
+    "F#": 0.08,
+    "A": 0.04,
+    "D": 0.04,
+    "B": 0.02,
+    "C#": 0.02
+  },
+  "expected": {
+    "topChord": "C7",
+    "inferredScalesShouldContain": [
+      "C Blues minor",
+      "C Minor blues",
+      "C blues"
+    ],
+    "planningShouldContainChordLike": [
+      "F7",
+      "G7",
+      "Bb7"
+    ]
+  }
+}

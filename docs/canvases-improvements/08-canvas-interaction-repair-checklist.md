@@ -159,3 +159,51 @@ This checklist tracks the post-migration repair pass requested on 2026-03-19 for
 - Regression coverage was expanded in:
   - `tests/CanDoItAll.Tests.Components/ProjectStructurePageTests.cs`
   - `tests/CanDoItAll.Tests.Playwright/AppSmokeTests.cs`
+
+## Fifth-pass QA findings
+
+- The second-layer radial menu still visually collides with the first layer because it does not render its own soft overlay or backdrop region.
+- Submenus are still hover-fragile because the current implementation ties them to the hovered hex instead of the full submenu orbit, so moving through the gap toward submenu items can collapse the layer.
+- The menu stack is still modeled as a single transient submenu, which blocks clean future chaining into third and fourth layers.
+- Keyboard `Tab` and `Enter` note creation regressed because canvas focus is not being restored reliably after node clicks.
+- Typed create leaves such as `Link` are still vulnerable to skipped modal opening when submenu hover state collapses before the click resolves.
+
+## Fifth-pass execution checklist
+
+### Shared radial menu stack
+
+- [x] Add a semi-transparent submenu backdrop so deeper menu layers visually separate from the previous layer.
+- [x] Keep submenu layers open while the pointer remains inside the submenu orbit, not only while it remains over the parent hex.
+- [x] Model menu layers as a stack so deeper layers can be closed independently and future third or fourth layers can reuse the same logic.
+- [x] Allow right-click inside a submenu orbit to step back one layer without collapsing the whole menu.
+
+### Keyboard note flow
+
+- [x] Restore reliable canvas focus after clicking a node so `Tab` and `Enter` shortcuts work again from the current selection.
+- [x] Re-verify repeated note chaining after create and after save, not only from the initial selection.
+
+### Typed create dialogs
+
+- [x] Make grouped create leaves such as `Link`, `Connector`, `Secret`, `File`, `Image`, and `Video` open their modal consistently from radial submenus.
+- [x] Re-check that typed create confirmation still renders the new node immediately and keeps it selected.
+
+## Fifth-pass closure notes
+
+- The shared menu stack now renders submenu layers as circular orbits with their own blurred backdrop, so the second layer no longer visually merges into the first.
+- Submenu lifetime is now geometry-based rather than hover-target-based:
+  - moving through the gap toward submenu hexes keeps the submenu open
+  - right-click steps back one submenu level
+  - deeper layers can now reuse the same stack model
+- Canvas click handling now restores host focus after node selection, which brought `Tab` child-note flow and `Enter` sibling-note flow back without requiring an extra click.
+- Typed modal actions were re-verified across grouped create leaves:
+  - `Link`
+  - `Connector`
+  - `Secret`
+  - `File`
+  - `Image`
+  - `Video`
+  - plus representative grouped creates from `Blocks`, `Prompts`, and `Assurance`
+- Verification for this pass:
+  - `dotnet test CanDoItAll.slnx --no-restore -v minimal /p:BuildProjectReferences=false`
+  - Playwright project passes against the live local runtime by setting `CANDOITALL_PLAYWRIGHT_BASEURL=http://127.0.0.1:5032`
+  - manual Playwright MCP review confirmed the submenu backdrop, submenu persistence, typed `Link` modal, and restored inline note flow

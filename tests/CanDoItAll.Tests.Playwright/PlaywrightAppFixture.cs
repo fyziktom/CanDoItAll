@@ -12,7 +12,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
     private Task? _stderrPump;
     private string? _workspaceRoot;
 
-    public string BaseUrl { get; } = "http://127.0.0.1:5188";
+    public string BaseUrl { get; } = Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_BASEURL") ?? "http://127.0.0.1:5188";
 
     public IPlaywright Playwright { get; private set; } = default!;
 
@@ -20,6 +20,16 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
+        if (await IsRuntimeReadyAsync(TimeSpan.FromSeconds(3)))
+        {
+            Playwright = await Microsoft.Playwright.Playwright.CreateAsync();
+            Browser = await Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+            {
+                Headless = true
+            });
+            return;
+        }
+
         _workspaceRoot = Path.Combine(Path.GetTempPath(), "candoitall-playwright", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_workspaceRoot);
 
@@ -95,7 +105,6 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
     private async Task WaitForRuntimeReadyAsync()
     {
-        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(45);
 
         while (DateTimeOffset.UtcNow < timeoutAt)
@@ -107,8 +116,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
             try
             {
-                var payload = await client.GetStringAsync($"{BaseUrl}/_dev/runtime");
-                if (payload.Contains("\"isReady\":true", StringComparison.OrdinalIgnoreCase))
+                if (await IsRuntimeReadyAsync(TimeSpan.FromSeconds(2)))
                 {
                     return;
                 }
@@ -121,6 +129,21 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         }
 
         throw new TimeoutException($"Timed out waiting for runtime readiness.{Environment.NewLine}{string.Join(Environment.NewLine, _logs)}");
+    }
+
+    private async Task<bool> IsRuntimeReadyAsync(TimeSpan timeout)
+    {
+        using var client = new HttpClient { Timeout = timeout };
+
+        try
+        {
+            var payload = await client.GetStringAsync($"{BaseUrl}/_dev/runtime");
+            return payload.Contains("\"isReady\":true", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static void DeleteDirectoryWithRetry(string path)

@@ -1,0 +1,44 @@
+{
+  "repositoryId": "c2165f6e-3b79-4d1f-9af3-2d8b2f4a18a9",
+  "entityType": "score",
+  "summary": {
+    "filesChanged": 2,
+    "measureInsertions": 1,
+    "measureUpdates": 2,
+    "noteUpdates": 3,
+    "conflicts": 0
+  },
+  "files": [
+    {
+      "path": "score/canonical.json",
+      "changeKind": "modified",
+      "semanticKind": "score",
+      "hunks": [
+        {
+          "hunkId": "hunk-measure-insert-001",
+          "semanticKind": "measure",
+          "operation": "insert_measure_after",
+          "scope": {
+            "partId": "part-piano-rh",
+            "afterMeasureId": "measure-0008"
+          },
+          "isConflict": false,
+          "label": "Insert new pickup measure after measure 8"
+        },
+        {
+          "hunkId": "hunk-note-update-002",
+          "semanticKind": "note",
+          "operation": "update_note",
+          "scope": {
+            "partId": "part-piano-rh",
+            "measureId": "measure-0009",
+            "voiceId": "voice-1",
+            "noteId": "note-0094"
+          },
+          "isConflict": false,
+          "label": "Change note duration in measure 9"
+        }
+      ]
+    }
+  ]
+}

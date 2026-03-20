@@ -1,0 +1,27 @@
+Task 4: Documentation updates
+
+Update these docs under /docs (and keep the content aligned with actual code):
+
+1) docs/musicxml-mapping.md
+- Clarify that the editor now uses MusicXML standard divisions semantics:
+  - <divisions> is divisions per quarter note
+  - internal Rational is whole-note basis
+  - conversion: divisionsPerWhole = divisionsPerQuarter * 4
+- Mention:
+  - Import ignores DOCTYPE safely (DTD is ignored, external resolution disabled)
+  - Namespace handling (LocalName matching)
+  - Supported subset: partwise, single part import, notes/rests, basic durations + dots, ties, harmony chord symbol per measure, forward/backup
+  - What is not supported (tuplets, multiple parts, per-measure time/key changes)
+
+2) docs/midi-recording-to-musicxml.md
+- Add a section “Stop timestamp and accurate note endings”
+  - Explain why we must use performance.now and how it is obtained via midiInterop.js -> MidiService.GetNowMsAsync
+- Add a section “Chord window and monotonic starts”
+  - Explain how onset grouping works and how to tune ChordWindowMs
+- Add a section about quantizing end times (if implemented)
+
+3) docs/midi-overview.md (small update)
+- Mention the new GetNowMsAsync helper and why it exists (recording end time accuracy)
+
+Acceptance criteria
+- Docs reflect the real behavior after fixes and help future contributors understand the rationale.

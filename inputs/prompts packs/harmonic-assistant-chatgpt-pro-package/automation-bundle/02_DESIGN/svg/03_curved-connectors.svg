@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520">
+  <rect x="0" y="0" width="1200" height="520" fill="#0f1622"/>
+  <text x="40" y="44" fill="#cfe3ff" font-family="Segoe UI" font-size="18" font-weight="700">Curved Connector Examples (History + Mood Travel)</text>
+
+  <!-- Axis reference -->
+  <line x1="60" y1="260" x2="1140" y2="260" stroke="#7aa0d6" stroke-width="2" opacity="0.35"/>
+  <text x="70" y="248" fill="#cfe3ff" font-family="Segoe UI" font-size="12">Centerline (view space)</text>
+
+  <!-- Nodes -->
+  <circle cx="220" cy="190" r="24" fill="#ff5a5f" opacity="0.95"/>
+  <text x="220" y="190" fill="#0f1622" font-family="Segoe UI" font-size="14" font-weight="800" text-anchor="middle" dominant-baseline="middle">C7</text>
+
+  <circle cx="520" cy="330" r="24" fill="#244d7a" opacity="0.95"/>
+  <text x="520" y="330" fill="#cfe3ff" font-family="Segoe UI" font-size="14" font-weight="800" text-anchor="middle" dominant-baseline="middle">C#m</text>
+
+  <circle cx="820" cy="250" r="24" fill="#2fb67e" opacity="0.95"/>
+  <text x="820" y="250" fill="#0f1622" font-family="Segoe UI" font-size="14" font-weight="800" text-anchor="middle" dominant-baseline="middle">Fmaj7</text>
+
+  <!-- Cubic bezier connectors -->
+  <path d="M 244 190 C 320 190, 420 330, 496 330" fill="none" stroke="#d0e6ff" stroke-width="5" opacity="0.55"/>
+  <path d="M 544 330 C 620 330, 720 250, 796 250" fill="none" stroke="#d0e6ff" stroke-width="5" opacity="0.55"/>
+
+  <!-- Control points (visual) -->
+  <circle cx="320" cy="190" r="5" fill="#f4b03f"/>
+  <circle cx="420" cy="330" r="5" fill="#f4b03f"/>
+  <circle cx="620" cy="330" r="5" fill="#f4b03f"/>
+  <circle cx="720" cy="250" r="5" fill="#f4b03f"/>
+  <text x="40" y="450" fill="#cfe3ff" font-family="Segoe UI" font-size="13">
+    Use cubic Bezier for smooth mood travel. Control points follow the local tangents of the horizontal flow.
+  </text>
+  <text x="40" y="474" fill="#cfe3ff" font-family="Segoe UI" font-size="13">
+    Recommended: keep the curve mostly horizontal; apply vertical easing so it reads as "going up/down" over time.
+  </text>
+</svg>

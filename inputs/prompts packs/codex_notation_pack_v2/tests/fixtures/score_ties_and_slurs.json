@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 3,
+  "metadata": {
+    "title": "Fixture \u2014 Ties and Slurs",
+    "composer": "",
+    "copyright": "",
+    "tempoText": ""
+  },
+  "staffMode": 0,
+  "timeSignature": {
+    "numerator": 4,
+    "denominator": 4
+  },
+  "autoRestFillEnabled": false,
+  "keySignature": {
+    "tonic": "C",
+    "mode": "major",
+    "preference": "sharps",
+    "fifths": 0
+  },
+  "keySignatureChanges": [],
+  "timeSignatureChanges": [],
+  "measures": [
+    {
+      "index": 0,
+      "chordSymbol": {
+        "mainText": "C",
+        "subText": ""
+      },
+      "events": [
+        {
+          "id": "aedda2c1-f008-5d8b-81a4-635c19e35585",
+          "eventType": "note",
+          "startNumerator": 0,
+          "startDenominator": 1,
+          "durationNumerator": 1,
+          "durationDenominator": 4,
+          "staff": 1,
+          "voice": 0,
+          "origin": 0,
+          "pitchName": "C",
+          "pitchOctave": 4,
+          "baseDuration": 2,
+          "dotCount": 0,
+          "tieStart": false,
+          "tieStop": false,
+          "articulations": []
+        },
+        {
+          "id": "0d769ccb-f15a-5c96-aba0-81c7cd20cec8",
+          "eventType": "note",
+          "startNumerator": 1,
+          "startDenominator": 4,
+          "durationNumerator": 1,
+          "durationDenominator": 4,
+          "staff": 1,
+          "voice": 0,
+          "origin": 0,
+          "pitchName": "D",
+          "pitchOctave": 4,
+          "baseDuration": 2,
+          "dotCount": 0,
+          "tieStart": false,
+          "tieStop": false,
+          "articulations": []
+        },
+        {
+          "id": "00179e90-0566-548b-99dd-f2f12e3c98ee",
+          "eventType": "note",
+          "startNumerator": 1,
+          "startDenominator": 2,
+          "durationNumerator": 1,
+          "durationDenominator": 4,
+          "staff": 1,
+          "voice": 0,
+          "origin": 0,
+          "pitchName": "E",
+          "pitchOctave": 4,
+          "baseDuration": 2,
+          "dotCount": 0,
+          "tieStart": false,
+          "tieStop": false,
+          "articulations": []
+        },
+        {
+          "id": "c826bc96-4e92-58d0-af7c-a5125471b9b1",
+          "eventType": "note",
+          "startNumerator": 3,
+          "startDenominator": 4,
+          "durationNumerator": 1,
+          "durationDenominator": 4,
+          "staff": 1,
+          "voice": 0,
+          "origin": 0,
+          "pitchName": "A",
+          "pitchOctave": 4,
+          "baseDuration": 2,
+          "dotCount": 0,
+          "tieStart": true,
+          "tieStop": false,
+          "articulations": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "chordSymbol": {
+        "mainText": "F",
+        "subText": ""
+      },
+      "events": [
+        {
+          "id": "6f3c837c-3d02-526c-ad7a-a25439fa4c2a",
+          "eventType": "note",
+          "startNumerator": 0,
+          "startDenominator": 1,
+          "durationNumerator": 1,
+          "durationDenominator": 4,
+          "staff": 1,
+          "voice": 0,
+          "origin": 0,
+          "pitchName": "A",
+          "pitchOctave": 4,
+          "baseDuration": 2,
+          "dotCount": 0,
+          "tieStart": false,
+          "tieStop": true,
+          "articulations": []
+        },
+        {
+          "id": "94702509-d816-519a-b004-079f41231d99",
+          "eventType": "rest",
+          "startNumerator": 1,
+          "startDenominator": 4,
+          "durationNumerator": 3,
+          "durationDenominator": 4,
+          "staff": 1,
+          "voice": 0,
+          "origin": 0
+        }
+      ]
+    }
+  ],
+  "slurs": [
+    {
+      "id": "5c30b72f-145c-520c-82b0-e9c399d51d47",
+      "startNoteId": "aedda2c1-f008-5d8b-81a4-635c19e35585",
+      "endNoteId": "00179e90-0566-548b-99dd-f2f12e3c98ee",
+      "placement": 0
+    }
+  ],
+  "dynamics": [],
+  "hairpins": []
+}

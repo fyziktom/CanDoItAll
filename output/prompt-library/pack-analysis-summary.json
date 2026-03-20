@@ -1,0 +1,253 @@
+{
+  "total_packs": 21,
+  "total_text_files": 756,
+  "pack_stats": {
+    "bundle-with-set-face-business-people.zip": {
+      "text_files": 2,
+      "promptish_files": 0,
+      "docish_files": 0,
+      "checklists": 0,
+      "readmes": 0
+    },
+    "codex-training-pack.zip": {
+      "text_files": 94,
+      "promptish_files": 1,
+      "docish_files": 4,
+      "checklists": 1,
+      "readmes": 0
+    },
+    "codex_notation_pack_v2": {
+      "text_files": 27,
+      "promptish_files": 10,
+      "docish_files": 10,
+      "checklists": 1,
+      "readmes": 1
+    },
+    "codex_notation_pack_v3": {
+      "text_files": 29,
+      "promptish_files": 13,
+      "docish_files": 6,
+      "checklists": 2,
+      "readmes": 3
+    },
+    "codex_prompts_musicxml_midi_fix": {
+      "text_files": 6,
+      "promptish_files": 1,
+      "docish_files": 0,
+      "checklists": 0,
+      "readmes": 1
+    },
+    "codex_prompts_productization": {
+      "text_files": 13,
+      "promptish_files": 1,
+      "docish_files": 0,
+      "checklists": 0,
+      "readmes": 1
+    },
+    "harmonic-assistant-chatgpt-pro-package": {
+      "text_files": 43,
+      "promptish_files": 12,
+      "docish_files": 19,
+      "checklists": 3,
+      "readmes": 4
+    },
+    "harmonic-assistant-codex-automation-bundle-v2_1": {
+      "text_files": 27,
+      "promptish_files": 11,
+      "docish_files": 5,
+      "checklists": 2,
+      "readmes": 2
+    },
+    "irdrums_hit_engine_refinement_package.zip": {
+      "text_files": 32,
+      "promptish_files": 11,
+      "docish_files": 18,
+      "checklists": 1,
+      "readmes": 1
+    },
+    "offline-entitlements-kit.zip": {
+      "text_files": 17,
+      "promptish_files": 0,
+      "docish_files": 7,
+      "checklists": 0,
+      "readmes": 2
+    },
+    "pdmx-harmonic-analysis-codex-bundle-v1.zip": {
+      "text_files": 27,
+      "promptish_files": 10,
+      "docish_files": 5,
+      "checklists": 2,
+      "readmes": 1
+    },
+    "pdmx-song-grouping-codex-bundle-v1": {
+      "text_files": 37,
+      "promptish_files": 11,
+      "docish_files": 11,
+      "checklists": 1,
+      "readmes": 1
+    },
+    "piano-audio-codex-bundle-v1_0.zip": {
+      "text_files": 43,
+      "promptish_files": 14,
+      "docish_files": 11,
+      "checklists": 4,
+      "readmes": 2
+    },
+    "piezo_dual_firmware_codex_package.zip": {
+      "text_files": 29,
+      "promptish_files": 10,
+      "docish_files": 16,
+      "checklists": 1,
+      "readmes": 1
+    },
+    "piezo_hit_detector_refinement_package.zip": {
+      "text_files": 32,
+      "promptish_files": 9,
+      "docish_files": 20,
+      "checklists": 1,
+      "readmes": 1
+    },
+    "refactor_todo": {
+      "text_files": 5,
+      "promptish_files": 0,
+      "docish_files": 0,
+      "checklists": 0,
+      "readmes": 0
+    },
+    "zyphonote-codex-canvas-calendar-prompts.zip": {
+      "text_files": 12,
+      "promptish_files": 12,
+      "docish_files": 0,
+      "checklists": 1,
+      "readmes": 1
+    },
+    "zyphonote-learning-pack-codex-pack.zip": {
+      "text_files": 32,
+      "promptish_files": 10,
+      "docish_files": 0,
+      "checklists": 8,
+      "readmes": 1
+    },
+    "zyphonote-repository-versioning-codex-pack": {
+      "text_files": 44,
+      "promptish_files": 11,
+      "docish_files": 0,
+      "checklists": 9,
+      "readmes": 1
+    },
+    "zyphonote-repository-versioning-codex-pack.zip": {
+      "text_files": 44,
+      "promptish_files": 11,
+      "docish_files": 0,
+      "checklists": 9,
+      "readmes": 1
+    },
+    "zyphonote-wasm-migration-agent-pack.zip": {
+      "text_files": 161,
+      "promptish_files": 40,
+      "docish_files": 66,
+      "checklists": 30,
+      "readmes": 3
+    }
+  },
+  "top_headings": [
+    [
+      "goal",
+      43
+    ],
+    [
+      "tasks",
+      39
+    ],
+    [
+      "acceptance criteria",
+      39
+    ],
+    [
+      "validation",
+      22
+    ],
+    [
+      "consequence",
+      19
+    ],
+    [
+      "verified files",
+      18
+    ],
+    [
+      "verified behavior",
+      18
+    ],
+    [
+      "mitigation",
+      17
+    ],
+    [
+      "constraints",
+      17
+    ],
+    [
+      "problem",
+      16
+    ],
+    [
+      "objective",
+      15
+    ],
+    [
+      "inputs to read",
+      15
+    ]
+  ],
+  "top_keywords": [
+    [
+      "review",
+      293
+    ],
+    [
+      "tests",
+      276
+    ],
+    [
+      "checklist",
+      257
+    ],
+    [
+      "goal",
+      245
+    ],
+    [
+      "validation",
+      206
+    ],
+    [
+      "audit",
+      191
+    ],
+    [
+      "branch",
+      190
+    ],
+    [
+      "workflow",
+      159
+    ],
+    [
+      "playwright",
+      119
+    ],
+    [
+      "phase",
+      117
+    ],
+    [
+      "mission",
+      104
+    ],
+    [
+      "architecture",
+      101
+    ]
+  ]
+}
