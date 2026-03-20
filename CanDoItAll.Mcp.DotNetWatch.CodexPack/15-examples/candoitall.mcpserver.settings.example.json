@@ -1,0 +1,86 @@
+{
+  "Server": {
+    "Name": "CanDoItAll.Mcp.DotNetWatch",
+    "WorkspaceRoot": ".",
+    "SolutionPath": "CanDoItAll.sln"
+  },
+  "DefaultApp": {
+    "ProjectPath": "src/CanDoItAll.Web/CanDoItAll.Web.csproj",
+    "WorkingDirectory": "src/CanDoItAll.Web",
+    "Mode": "WatchRun",
+    "Configuration": "Debug",
+    "Framework": null,
+    "LaunchProfile": null,
+    "Arguments": [],
+    "Urls": [
+      "https://localhost:7010",
+      "http://localhost:5010"
+    ],
+    "EnvironmentOverlay": {
+      "ASPNETCORE_ENVIRONMENT": "Development"
+    }
+  },
+  "Health": {
+    "Enabled": true,
+    "Urls": [
+      "https://localhost:7010/health"
+    ],
+    "TimeoutMs": 2000,
+    "PollIntervalMs": 500,
+    "StableSuccessCount": 2,
+    "AcceptInsecureLocalhostHttps": true,
+    "AllowedHosts": [
+      "localhost",
+      "127.0.0.1",
+      "::1"
+    ]
+  },
+  "Build": {
+    "DefaultTargetPath": "CanDoItAll.sln",
+    "DefaultWhenAppRunning": "StopAndResume",
+    "DefaultTimeoutMs": 1800000,
+    "ExtraArguments": []
+  },
+  "Tests": {
+    "DefaultTargetPath": "CanDoItAll.sln",
+    "DefaultWhenAppRunning": "StopAndResume",
+    "DefaultTimeoutMs": 1800000,
+    "RunnerPreference": "Auto",
+    "DefaultFilter": null,
+    "Projects": []
+  },
+  "Logs": {
+    "BufferCapacity": 5000,
+    "PersistToFile": true,
+    "Folder": ".mcp-state/logs",
+    "MaxFileSizeMb": 50,
+    "RedactionEnabled": true,
+    "IncludeSystemEvents": true
+  },
+  "Process": {
+    "GracefulStopTimeoutMs": 5000,
+    "ForceKillAfterMs": 10000,
+    "CleanupStaleManagedProcessesOnStartup": true,
+    "RegistryPath": ".mcp-state/process-registry.json",
+    "UsePollingFileWatcher": false
+  },
+  "Waits": {
+    "DefaultAppWaitTimeoutMs": 120000,
+    "DefaultOperationWaitTimeoutMs": 1800000,
+    "DefaultPollIntervalMs": 500,
+    "DefaultQuietPeriodMs": 2000
+  },
+  "Security": {
+    "AllowedProjectRoots": [
+      "src",
+      "tests"
+    ],
+    "AllowExternalHealthHosts": false,
+    "AllowedEnvironmentKeys": [
+      "ASPNETCORE_ENVIRONMENT",
+      "ASPNETCORE_URLS",
+      "DOTNET_ENVIRONMENT",
+      "DOTNET_USE_POLLING_FILE_WATCHER"
+    ]
+  }
+}

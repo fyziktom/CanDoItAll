@@ -1,0 +1,33 @@
+ValidationId,Area,Scenario,Preconditions,Steps,ExpectedResult,Automation,Priority
+VAL-001,Bootstrap,MCP host běží ve stdio režimu bez kontaminace stdout,Čisté lokální prostředí,.NET host startuje server; otestuj handshake a poté zapiš interní log,"Handshake funguje a stdout obsahuje jen MCP protokol, žádné textové logy",Auto,P0
+VAL-002,Bootstrap,Invalidní SolutionPath zablokuje start,Nastavení obsahuje neexistující solution,Spusť server,Server fail-fast skončí s akční chybou ve stderr/file logu,Auto,P0
+VAL-003,Workspace,workspace_info vrací metadata,Platná konfigurace,Zavolej workspace_info,"Vrátí solution path, default app, test projects, active sessions a supported tools",Auto,P0
+VAL-004,App Start,WatchRun start a ready signal,Výchozí app projekt je kompilovatelný a má health endpoint,Zavolej app_start s mode=WatchRun a poté app_wait(condition=Healthy),"Vrátí sessionId, app se rozběhne a health probe je successful",Auto,P0
+VAL-005,App Start,RunOnce start bez watch,Výchozí app projekt je kompilovatelný,Zavolej app_start s mode=RunOnce,Server spustí dotnet run a vrátí sessionId; status přejde do Running/Healthy,Auto,P1
+VAL-006,App Start,Opakovaný kompatibilní start reusne session,Již běží kompatibilní session,Zavolej znovu app_start s reuseIfCompatible=true,Vrátí existing session bez nového procesu,Auto,P0
+VAL-007,App Start,Nekompatibilní start vrátí konflikt,Již běží nekompatibilní session,Zavolej app_start s conflictPolicy=Fail,Server vrátí Conflict outcome se summary rozdílů,Auto,P0
+VAL-008,App Stop,Stop ukončí celý strom procesů,Běží session s child procesy,Zavolej app_stop,Parent i child procesy skončí a porty se uvolní,Auto,P0
+VAL-009,Logs,Inkrementální čtení přes cursor,Běží session a logy přibývají,"Zavolej app_logs bez cursoru, poté s vráceným cursor",Druhý call vrátí jen nové položky a nextCursor je větší,Auto,P0
+VAL-010,Waits,Wait na healthy skončí bez sleepů klienta,Běží startující app,"Zavolej app_wait(condition=Healthy, timeout=120s)",Tool vrátí Success nebo Timeout s diagnostikou,Auto,P0
+VAL-011,Waits,QuietSinceCursor pozná dokončený restart,Běží watch session,"Udělej změnu souboru; vezmi cursor; zavolej app_wait(condition=QuietSinceCursor, quietPeriodMs=2000)",Wait skončí až po ustálení logů po restartu/build,Auto,P0
+VAL-012,Waits,Timeout semantics,Běží session bez health endpointu,"Zavolej app_wait(condition=Healthy, timeout=5s)",Dostaneš Timeout outcome s posledním statusem a citací logů,Auto,P1
+VAL-013,Build,Build se StopAndResume při běžící watch session,Běží WatchRun session,Zavolej solution_build(whenAppRunning=StopAndResume) a operation_wait,"Session se zastaví, build proběhne, app se obnoví a výsledky jsou propojené",Auto,P0
+VAL-014,Build,Build s policy Fail vrátí actionable error,Běží app session,Zavolej solution_build(whenAppRunning=Fail),Vrátí se RunningSessionConflict bez vedlejších efektů,Auto,P1
+VAL-015,Build,Build failure předá přesné chyby,V solution je kompilace rozbitá,Spusť solution_build,"Operation skončí Failed, logy obsahují compiler diagnostics a resume policy se vyhodnotí",Auto,P0
+VAL-016,Tests,tests_run používá dotnet test a ne watch test,Platná konfigurace test projektu,Spusť tests_run,Proces command line obsahuje dotnet test; tool nevolá dotnet watch test,Auto,P0
+VAL-017,Tests,Runner detection VSTest vs MTP,"Varianta A bez global.json, varianta B s MTP runner",Spusť tests_run v obou variantách,Server správně popíše detekovaný runner v result summary,Auto,P1
+VAL-018,Tests,Tests se StopAndResume při běžící app,Běží watch session,Spusť tests_run(whenAppRunning=StopAndResume),App se po testech obnoví a result obsahuje test summary + resume outcome,Auto,P0
+VAL-019,Recovery,Neočekávaný exit procesu,Běží session; proces je externě ukončen,Killni child nebo parent process mimo server,app_status přejde do ExitedUnexpectedly/Failed a wait se ukončí,Auto,P0
+VAL-020,Recovery,Cleanup stale procesů při bootstrapu,V registru je starý proces a ten stále běží,Restartuj MCP server s cleanup policy,Stale proces je ukončen a akce je zalogována,Auto,P0
+VAL-021,Diagnostics,Port in use je rozpoznán,Obsad port aplikace jiným procesem,Spusť app_start a poté diagnose_start_failure,Vrátí category PortInUse a doporučené kroky,Auto,P1
+VAL-022,Diagnostics,Health timeout je rozpoznán,"App startuje, ale health endpoint neodpoví v limitu","Spusť app_start a wait healthy timeout, poté diagnose_start_failure",Vrátí category HealthTimeout a relevantní log citace,Auto,P1
+VAL-023,Security,Path guard blokuje projekt mimo workspace,Pokoušíš se spustit projectPath mimo root,Zavolej app_start s cizí cestou,Server vrátí ValidationError a nic nespustí,Auto,P0
+VAL-024,Security,Server nepíše procesní logy na stdout,Běží dlouhá app session,Sleduj stdout serveru během běhu,Na stdout není nic mimo MCP komunikaci,Auto,P0
+VAL-025,Observability,Korelační ID je konzistentní,Běží build nebo app session,Získej status a logy,Entries i response summary nesou stejné correlationId,Auto,P1
+VAL-026,Watch,Rude edit v non-interactive režimu nenechá session viset,Běží WatchRun a udělá se změna vyžadující restart,Změň startup signaturu nebo jiný rude edit,"Session buď restartuje, nebo explicitně selže s akčním stavem, nezůstane v tichém deadlocku",Semi,P1
+VAL-027,Watch,Launch browser je potlačen,Výchozí app je webová,Spusť WatchRun,dotnet watch neotevře prohlížeč samovolně,Auto,P1
+VAL-028,Watch,Excluded folders nevyvolají restart,Konfigurace exclusion je aktivní,Změň soubor v .mcp-state nebo playwright-report,Watch nereaguje restartem,Semi,P2
+VAL-029,Cross-platform,Windows kill tree,Windows runner,Spusť process tree fixture a zavolej stop,Všechny child procesy skončí,Auto,P0
+VAL-030,Cross-platform,Unix kill tree,Linux/macOS runner,Spusť process tree fixture a zavolej stop,Všechny child procesy skončí,Auto,P0
+VAL-031,UX,Busy workspace vrátí akční chybovou zprávu,Běží mutující operace,Zavolej kolidující mutující tool,"Odpověď vysvětlí, jaký operation/session drží lock a jak dál pokračovat",Auto,P1
+VAL-032,Runbook,Runbook pokrývá troubleshooting scénáře,Balík dokumentace je hotový,Projdi runbook proti známým selháním,Všechny prioritní scénáře mají krok za krokem postup,Manual,P1

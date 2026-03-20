@@ -1,0 +1,55 @@
+TaskId,Phase,Area,Title,Priority,EstimateDays,DependsOn,DefinitionOfDone
+BL-001,0,Repo discovery,Najít CanDoItAll.sln a potvrdit workspace root,Must,1,,Repo discovery note
+BL-002,0,Repo discovery,Identifikovat výchozí startup web/app projekt,Must,1,BL-001,Discovery output
+BL-003,0,Repo discovery,Identifikovat health endpoint nebo navrhnout jeho doplnění,Must,1,BL-002,Discovery output
+BL-004,0,Repo discovery,Najít test projekty a runner setup,Must,1,BL-001,Discovery output
+BL-005,0,Repo discovery,Zjistit package management model (CPM vs PackageReference),Should,0.5,BL-001,Discovery output
+BL-006,1,Skeleton,Přidat projekt CanDoItAll.Mcp.DotNetWatch do solution,Must,0.5,BL-001,Project added
+BL-007,1,Skeleton,Nastavit net10.0 a základní package reference,Must,0.5,BL-006,Project builds
+BL-008,1,Skeleton,Implementovat Program.cs se stdio hostem,Must,0.5,BL-007,Host starts
+BL-009,1,Skeleton,Nastavit logging jen na stderr/file,Must,0.5,BL-008,No stdout noise
+BL-010,1,Skeleton,Přidat options binding a root validator,Must,1,BL-008,Validation works
+BL-011,1,Skeleton,Implementovat minimal workspace_info tool,Must,0.5,BL-010,Tool works
+BL-012,2,Runtime,Zavést AppSession model a session store,Must,1,BL-011,Domain model
+BL-013,2,Runtime,Implementovat WorkspaceExecutionLock,Must,0.5,BL-011,Mutation serialization
+BL-014,2,Runtime,Implementovat ProcessSupervisor s async stdout/stderr capture,Must,2,BL-012,Process start/exit/log capture
+BL-015,2,Runtime,Implementovat Windows/Unix kill tree abstraction,Must,1.5,BL-014,Cross-platform stop
+BL-016,2,Runtime,Implementovat RingLogBuffer a cursor model,Must,1,BL-014,Incremental logs
+BL-017,2,Runtime,Implementovat AppRuntimeManager,Must,2,BL-012;BL-014;BL-016,App runtime service
+BL-018,2,Runtime,Implementovat candoitall_app_start,Must,1,BL-017,Tool ready
+BL-019,2,Runtime,Implementovat candoitall_app_stop,Must,0.5,BL-017,Tool ready
+BL-020,2,Runtime,Implementovat candoitall_app_status,Must,0.5,BL-017,Tool ready
+BL-021,2,Runtime,Implementovat candoitall_app_logs,Must,0.5,BL-016;BL-017,Tool ready
+BL-022,3,Waits,Implementovat URL parser a observed URLs extraction,Should,1,BL-016;BL-017,Status enrichment
+BL-023,3,Waits,Implementovat HttpHealthProbe,Must,1.5,BL-010;BL-017,Health snapshots
+BL-024,3,Waits,Implementovat WaitEngine,Must,2,BL-016;BL-017;BL-023,App waits
+BL-025,3,Waits,Implementovat candoitall_app_wait,Must,0.5,BL-024,Tool ready
+BL-026,4,Operations,Zavést OperationRecord a OperationRegistry,Must,1,BL-013;BL-016,Operation model
+BL-027,4,Operations,Implementovat build preemption policy layer,Must,1.5,BL-013;BL-017;BL-026,StopAndResume support
+BL-028,4,Operations,Implementovat BuildOperationRunner,Must,1.5,BL-026;BL-027,Build operation
+BL-029,4,Operations,Implementovat runner detection pro dotnet test,Must,1,BL-004;BL-026,Runner summary
+BL-030,4,Operations,Implementovat TestOperationRunner bez dotnet watch test,Must,1.5,BL-026;BL-027;BL-029,Test operation
+BL-031,4,Operations,Implementovat candoitall_solution_build,Must,0.5,BL-028,Tool ready
+BL-032,4,Operations,Implementovat candoitall_tests_run,Must,0.5,BL-030,Tool ready
+BL-033,4,Operations,Implementovat candoitall_operation_status,Must,0.5,BL-026,Tool ready
+BL-034,4,Operations,Implementovat candoitall_operation_wait,Must,0.5,BL-026,Tool ready
+BL-035,4,Operations,Implementovat candoitall_operation_logs,Must,0.5,BL-026,Tool ready
+BL-036,5,Recovery,Implementovat StaleProcessRegistry a persisted records,Must,1.5,BL-014;BL-015,Registry ready
+BL-037,5,Recovery,Implementovat startup cleanup stale procesů,Must,1,BL-036,Bootstrap cleanup
+BL-038,5,Recovery,Implementovat candoitall_cleanup_stale_processes,Must,0.5,BL-036,Tool ready
+BL-039,5,Recovery,Implementovat StartFailureDiagnoser,Should,1.5,BL-016;BL-017;BL-023;BL-026,Diagnostics ready
+BL-040,5,Recovery,Implementovat candoitall_diagnose_start_failure,Should,0.5,BL-039,Tool ready
+BL-041,5,Observability,"Přidat correlation IDs, system events a file NDJSON logger",Must,1,BL-016;BL-026,Traceability
+BL-042,5,Security,Implementovat PathGuard a env whitelist filtering,Must,1,BL-010,Security boundary
+BL-043,5,Security,Implementovat LogRedactor,Must,1,BL-041,Safe outputs
+BL-044,6,Tests,Vytvořit unit test project a první coverage pro config/security,Must,1,BL-006,Unit tests
+BL-045,6,Tests,Vytvořit integration test project a fixture harness,Must,1.5,BL-006,Harness ready
+BL-046,6,Tests,Přidat HappyPathWebApp fixture,Must,1,BL-045,Fixture ready
+BL-047,6,Tests,Přidat SlowStartWebApp fixture,Should,1,BL-045,Fixture ready
+BL-048,6,Tests,Přidat CompileErrorApp fixture,Should,1,BL-045,Fixture ready
+BL-049,6,Tests,Přidat ProcessTreeFixture,Must,1,BL-045,Fixture ready
+BL-050,6,Tests,Automatizovat P0 validation matrix scénáře,Must,2,BL-044;BL-045;BL-046;BL-049,P0 automation
+BL-051,7,Hardening,Spustit failure injection plan a opravit nálezy,Must,1.5,BL-050,Stability improved
+BL-052,7,Hardening,"Dokončit runbook, compatibility matrix a references",Should,1,BL-050,Docs ready
+BL-053,7,Hardening,Projít release readiness checklist,Must,0.5,BL-051;BL-052,Release gate
+BL-054,7,Hardening,Vyladit watch exclusions v hostované app části solution,Should,0.5,BL-003,Reduced noisy restarts

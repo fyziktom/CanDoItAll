@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <DefaultItemExcludes>
+      $(DefaultItemExcludes);
+      .mcp-state/**;
+      playwright-report/**;
+      test-results/**;
+      TestResults/**;
+      artifacts/**;
+      coverage/**;
+      screenshots/**;
+    </DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

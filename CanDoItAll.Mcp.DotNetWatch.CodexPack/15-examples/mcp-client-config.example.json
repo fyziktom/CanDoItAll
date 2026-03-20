@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "candoitall-dev": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "src/CanDoItAll.Mcp.DotNetWatch/CanDoItAll.Mcp.DotNetWatch.csproj",
+        "--",
+        "--settings",
+        "CanDoItAll.Mcp.DotNetWatch.settings.json"
+      ],
+      "cwd": "."
+    }
+  }
+}
