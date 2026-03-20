@@ -51,6 +51,14 @@ public sealed class CanvasWorkbenchNode
 
     public int ProgressPercent { get; set; }
 
+    public string MarkerIcon { get; set; } = string.Empty;
+
+    public string MarkerTone { get; set; } = string.Empty;
+
+    public string MarkerLabel { get; set; } = string.Empty;
+
+    public int Priority { get; set; }
+
     public bool IsRequired { get; set; }
 
     public bool IsCollapsible { get; set; }
@@ -172,6 +180,12 @@ public sealed class CanvasWorkbenchAction
     public string Description { get; set; } = string.Empty;
 
     public string Icon { get; set; } = string.Empty;
+
+    public string MenuLabel { get; set; } = string.Empty;
+
+    public string MenuSize { get; set; } = "normal";
+
+    public string SubmenuLayout { get; set; } = string.Empty;
 
     public string Tone { get; set; } = "neutral";
 

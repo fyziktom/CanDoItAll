@@ -49,6 +49,9 @@
         return {
             ...action,
             description: action?.description || "",
+            menuLabel: action?.menuLabel || "",
+            menuSize: action?.menuSize || "normal",
+            submenuLayout: action?.submenuLayout || "",
             requiresInput: !!action?.requiresInput,
             createMode: action?.createMode || "command",
             objectSubtype: action?.objectSubtype || "",
@@ -98,7 +101,11 @@
                 inlineText: node?.inlineText || "",
                 inlineTextPlaceholder: node?.inlineTextPlaceholder || "Write note",
                 progressMode: node?.progressMode || "na",
-                progressPercent: normalizeProgressPercent(node?.progressPercent)
+                progressPercent: normalizeProgressPercent(node?.progressPercent),
+                markerIcon: node?.markerIcon || "",
+                markerTone: node?.markerTone || "",
+                markerLabel: node?.markerLabel || "",
+                priority: typeof node?.priority === "number" ? clamp(Math.round(node.priority), 0, 6) : 0
             })) : [],
             links: Array.isArray(surface?.links) ? surface.links : [],
             uiState: {
@@ -589,8 +596,8 @@
         }
 
         const nextZoom = zoom || state.ui.zoom;
-        const marginX = Math.min(176, Math.max(72, rect.width * 0.16));
-        const marginY = Math.min(160, Math.max(64, rect.height * 0.16));
+        const marginX = Math.max(160, rect.width * 0.5);
+        const marginY = Math.max(140, rect.height * 0.5);
         const contentWidth = (bounds.maxX - bounds.minX) * nextZoom;
         const contentHeight = (bounds.maxY - bounds.minY) * nextZoom;
 
@@ -786,15 +793,105 @@
         return marker;
     }
 
+    function resolveProgressDisplay(progressMode, progressPercent) {
+        const percent = normalizeProgressPercent(progressPercent);
+        const normalizedMode = (progressMode || "na").toLowerCase();
+        if (normalizedMode === "complete" || percent >= 100) {
+            return { mode: "complete", angle: 360, centerText: "\u2713", title: "Done" };
+        }
+
+        if (normalizedMode === "started") {
+            return { mode: "started", angle: 42, centerText: "\u25B6", title: "Started" };
+        }
+
+        if (normalizedMode === "progress") {
+            return { mode: "progress", angle: round((percent / 100) * 360), centerText: "", title: `${percent}% complete` };
+        }
+
+        return { mode: "na", angle: 360, centerText: "-", title: "Not applicable" };
+    }
+
+    function createProgressBadge(document, progressMode, progressPercent, extraClassName) {
+        const display = resolveProgressDisplay(progressMode, progressPercent);
+        const marker = createElement(document, "span", `cw-node__progress is-${display.mode}${extraClassName ? ` ${extraClassName}` : ""}`);
+        marker.style.setProperty("--cw-progress-angle", `${display.angle}deg`);
+        marker.title = display.title;
+        marker.appendChild(createElement(document, "span", "cw-node__progress-center", display.centerText));
+        return marker;
+    }
+
+    function resolveMarkerGlyph(markerIcon) {
+        switch ((markerIcon || "").toLowerCase()) {
+            case "question":
+                return "?";
+            case "alert":
+                return "!";
+            case "thumbs-up":
+                return "\uD83D\uDC4D";
+            case "thumbs-down":
+                return "\uD83D\uDC4E";
+            case "pause":
+                return "\u23F8";
+            case "stop":
+                return "\u25A0";
+            case "money":
+                return "$";
+            case "car":
+                return "\uD83D\uDE97";
+            case "idea":
+                return "\u2726";
+            case "risk":
+                return "\u26A0";
+            default:
+                return "";
+        }
+    }
+
+    function createMarkerBadge(state, node) {
+        const glyph = resolveMarkerGlyph(node?.markerIcon);
+        if (!glyph) {
+            return null;
+        }
+
+        const tone = (node?.markerTone || "accent").toLowerCase();
+        const badge = createElement(state.document, "span", `cw-node__badge cw-node__marker tone-${tone}`, glyph);
+        badge.title = node?.markerLabel || "Marker";
+        return badge;
+    }
+
+    function createPriorityBadge(state, node) {
+        const priority = clamp(Math.round(node?.priority || 0), 0, 6);
+        if (priority <= 0) {
+            return null;
+        }
+
+        const badge = createElement(state.document, "span", `cw-node__badge cw-node__priority is-level-${priority}`, `${priority}`);
+        badge.title = `Priority ${priority}`;
+        return badge;
+    }
+
+    function appendNodeIndicators(state, node, container) {
+        container.appendChild(createProgressBadge(state.document, node?.progressMode, node?.progressPercent, ""));
+        const markerBadge = createMarkerBadge(state, node);
+        if (markerBadge) {
+            container.appendChild(markerBadge);
+        }
+
+        const priorityBadge = createPriorityBadge(state, node);
+        if (priorityBadge) {
+            container.appendChild(priorityBadge);
+        }
+    }
+
     function renderInlineTextNode(state, node, nodeElement) {
         nodeElement.classList.add("is-inline-text");
         const surface = createElement(state.document, "div", "cw-node__surface");
         const noteText = node.inlineText || node.title || node.leadText || "Write note";
         surface.appendChild(createElement(state.document, "p", "cw-note-node__text", noteText));
 
-        if (node.statusPill || node.progressMode) {
+        if (node.statusPill || node.progressMode || node.markerIcon || node.priority > 0) {
             const meta = createElement(state.document, "div", "cw-note-node__meta");
-            meta.appendChild(createProgressMarker(state, node));
+            appendNodeIndicators(state, node, meta);
             if (node.statusPill) {
                 meta.appendChild(createElement(state.document, "span", "cw-node__chip tone-accent", node.statusPill));
             }
@@ -815,7 +912,7 @@
         header.appendChild(eyebrow);
 
         const rightMeta = createElement(state.document, "div", "cw-chip-row");
-        rightMeta.appendChild(createProgressMarker(state, node));
+        appendNodeIndicators(state, node, rightMeta);
         if (node.durationLabel) {
             rightMeta.appendChild(createElement(state.document, "span", "cw-node__pill", node.durationLabel));
         }
@@ -1191,6 +1288,137 @@
         };
     }
 
+    function resolveMenuLabel(action) {
+        if (action?.menuLabel) {
+            return action.menuLabel;
+        }
+
+        const label = action?.label || action?.actionId || "Item";
+        const parts = label.split(/\s+/).filter(Boolean);
+        return parts[0] || label;
+    }
+
+    function getActionMetrics(action) {
+        if ((action?.menuSize || "").toLowerCase() === "compact") {
+            return { halfWidth: 24, halfHeight: 22 };
+        }
+
+        return { halfWidth: 37, halfHeight: 34 };
+    }
+
+    function resolveActionGlyph(icon) {
+        switch ((icon || "").toLowerCase()) {
+            case "open":
+                return "\u2197";
+            case "link":
+            case "plug":
+                return "\u21C4";
+            case "qa":
+            case "use":
+                return "\u2713";
+            case "test":
+                return "\u2697";
+            case "fork":
+                return "\u2442";
+            case "skip":
+                return "\u00BB";
+            case "note":
+                return "\u270E";
+            case "choice":
+                return "\u25C6";
+            case "phase":
+                return "\u25ED";
+            case "date":
+                return "\u25F7";
+            case "feature":
+                return "\u25C8";
+            case "arch":
+                return "\u25A3";
+            case "build":
+                return "\u2B22";
+            case "rev":
+                return "\u21BA";
+            case "prompt":
+                return "\u2736";
+            case "research":
+                return "\u2315";
+            case "money":
+                return "$";
+            case "market":
+                return "\u25CE";
+            case "ops":
+                return "\u2699";
+            case "ship":
+                return "\u21E2";
+            case "risk":
+                return "\u26A0";
+            case "audit":
+                return "\u2714";
+            case "support":
+                return "\u2630";
+            case "flow":
+                return "\u27F6";
+            case "session":
+                return "\u25C9";
+            case "step":
+                return "\u2192";
+            case "repo":
+                return "\u2318";
+            case "file":
+                return "\u25A4";
+            case "image":
+                return "\u25A7";
+            case "video":
+                return "\u25B6";
+            case "shield":
+                return "\u26E8";
+            case "evidence":
+                return "\u25C9";
+            case "frame":
+                return "\u25AD";
+            case "clear":
+                return "\u00D7";
+            case "progress":
+                return "\u25D4";
+            case "marker":
+                return "\u2736";
+            case "priority":
+                return "#";
+            default:
+                return (icon || "").slice(0, 1).toUpperCase() || "\u25CF";
+        }
+    }
+
+    function createMenuActionIcon(state, action) {
+        const iconKey = (action?.icon || "").toLowerCase();
+        const iconContainer = createElement(state.document, "span", "cw-context-menu__icon");
+
+        if (iconKey.startsWith("progress-")) {
+            const token = iconKey.substring("progress-".length);
+            const progressMode = token === "na" ? "na" : token === "started" ? "started" : (Number(token) >= 100 ? "complete" : "progress");
+            const progressPercent = Number.isFinite(Number(token)) ? Number(token) : 0;
+            iconContainer.appendChild(createProgressBadge(state.document, progressMode, progressPercent, "cw-node__progress--menu"));
+            return iconContainer;
+        }
+
+        if (iconKey.startsWith("marker-")) {
+            const markerIcon = iconKey.substring("marker-".length);
+            const markerBadge = createElement(state.document, "span", `cw-node__badge cw-node__marker tone-${(action?.tone || "accent").toLowerCase()} cw-node__badge--menu`, resolveMarkerGlyph(markerIcon) || "\u2736");
+            iconContainer.appendChild(markerBadge);
+            return iconContainer;
+        }
+
+        if (iconKey.startsWith("priority-")) {
+            const priority = clamp(Math.round(Number(iconKey.substring("priority-".length)) || 0), 0, 6);
+            const priorityBadge = createElement(state.document, "span", `cw-node__badge cw-node__priority is-level-${priority} cw-node__badge--menu`, `${priority}`);
+            iconContainer.appendChild(priorityBadge);
+            return iconContainer;
+        }
+
+        iconContainer.appendChild(createElement(state.document, "span", "cw-context-menu__glyph", resolveActionGlyph(iconKey)));
+        return iconContainer;
+    }
+
     function getRadialOffsets(count, baseRadius, ringStep) {
         if (count <= 0) {
             return [];
@@ -1203,8 +1431,8 @@
         const offsets = [];
         let remaining = count;
         let ringIndex = 0;
-        const radiusStart = typeof baseRadius === "number" ? baseRadius : 96;
-        const radiusStep = typeof ringStep === "number" ? ringStep : 84;
+        const radiusStart = typeof baseRadius === "number" ? baseRadius : 84;
+        const radiusStep = typeof ringStep === "number" ? ringStep : 62;
 
         while (remaining > 0) {
             const ringCapacity = ringIndex === 0
@@ -1228,12 +1456,37 @@
         return offsets;
     }
 
-    function getContextMenuLayerBounds(originOffset, offsets, radius) {
-        const actionHalfWidth = 58;
-        const actionHalfHeight = 54;
-        const coreHalf = 44;
-        const coreLabelAllowance = 34;
-        const padding = 14;
+    function getCompactRingOffsets(count, radius, startAngle) {
+        if (count <= 0) {
+            return [];
+        }
+
+        const offsets = [];
+        const resolvedRadius = typeof radius === "number" ? radius : 72;
+        const resolvedStartAngle = typeof startAngle === "number" ? startAngle : -90;
+        for (let index = 0; index < count; index++) {
+            const angle = ((resolvedStartAngle + ((360 / count) * index)) * Math.PI) / 180;
+            offsets.push({
+                x: Math.cos(angle) * resolvedRadius,
+                y: Math.sin(angle) * resolvedRadius
+            });
+        }
+
+        return offsets;
+    }
+
+    function resolveContextMenuOffsets(actions, baseRadius, ringStep, layout) {
+        if ((layout || "").toLowerCase() === "compact-ring") {
+            return getCompactRingOffsets(actions.length, typeof baseRadius === "number" ? baseRadius : 72, -90);
+        }
+
+        return getRadialOffsets(actions.length, baseRadius, ringStep);
+    }
+
+    function getContextMenuLayerBounds(originOffset, offsets, radius, actions) {
+        const coreHalf = 38;
+        const coreLabelAllowance = 30;
+        const padding = 16;
         const bounds = {
             minX: originOffset.x - radius,
             maxX: originOffset.x + radius,
@@ -1246,13 +1499,15 @@
         bounds.minY = Math.min(bounds.minY, originOffset.y - coreHalf);
         bounds.maxY = Math.max(bounds.maxY, originOffset.y + coreHalf + coreLabelAllowance);
 
-        for (const offset of offsets || []) {
+        for (let index = 0; index < (offsets || []).length; index++) {
+            const offset = offsets[index];
+            const metrics = getActionMetrics(actions?.[index]);
             const centerX = originOffset.x + offset.x;
             const centerY = originOffset.y + offset.y;
-            bounds.minX = Math.min(bounds.minX, centerX - actionHalfWidth);
-            bounds.maxX = Math.max(bounds.maxX, centerX + actionHalfWidth);
-            bounds.minY = Math.min(bounds.minY, centerY - actionHalfHeight);
-            bounds.maxY = Math.max(bounds.maxY, centerY + actionHalfHeight);
+            bounds.minX = Math.min(bounds.minX, centerX - metrics.halfWidth);
+            bounds.maxX = Math.max(bounds.maxX, centerX + metrics.halfWidth);
+            bounds.minY = Math.min(bounds.minY, centerY - metrics.halfHeight);
+            bounds.maxY = Math.max(bounds.maxY, centerY + metrics.halfHeight);
         }
 
         bounds.minX -= padding;
@@ -1298,10 +1553,10 @@
         };
     }
 
-    function positionContextMenu(state, center, offsets) {
+    function positionContextMenu(state, center, offsets, actions) {
         const hostRect = state.host.getBoundingClientRect();
-        const radius = getContextMenuOrbitRadius(offsets || []);
-        const bounds = getContextMenuLayerBounds({ x: 0, y: 0 }, offsets || [], radius);
+        const radius = getContextMenuOrbitRadius(offsets || [], actions || []);
+        const bounds = getContextMenuLayerBounds({ x: 0, y: 0 }, offsets || [], radius, actions || []);
         const x = round(clamp(center.x, -bounds.minX, Math.max(-bounds.minX, hostRect.width - bounds.maxX)));
         const y = round(clamp(center.y, -bounds.minY, Math.max(-bounds.minY, hostRect.height - bounds.maxY)));
         state.contextMenu.style.left = `${x}px`;
@@ -1309,11 +1564,13 @@
         return { x, y };
     }
 
-    function getContextMenuOrbitRadius(offsets) {
-        let radius = 92;
+    function getContextMenuOrbitRadius(offsets, actions) {
+        let radius = 76;
 
-        for (const offset of offsets || []) {
-            radius = Math.max(radius, Math.hypot(offset.x, offset.y) + 58);
+        for (let index = 0; index < (offsets || []).length; index++) {
+            const offset = offsets[index];
+            const metrics = getActionMetrics(actions?.[index]);
+            radius = Math.max(radius, Math.hypot(offset.x, offset.y) + Math.max(metrics.halfWidth, metrics.halfHeight) + 12);
         }
 
         return radius;
@@ -1376,17 +1633,19 @@
         closeContextMenuLayersFrom(state, deepestContainingLayer + 1);
     }
 
-    function resolveSubmenuOrigin(parentLayer, offset) {
+    function resolveSubmenuOrigin(parentLayer, offset, layout) {
         const length = Math.hypot(offset.x, offset.y) || 1;
-        const outwardDistance = Math.max(108, round(parentLayer.radius * 0.34));
+        const outwardDistance = (layout || "").toLowerCase() === "compact-ring"
+            ? Math.max(92, round(parentLayer.radius * 0.26))
+            : Math.max(108, round(parentLayer.radius * 0.34));
         return {
             x: round(parentLayer.originOffset.x + offset.x + ((offset.x / length) * outwardDistance)),
             y: round(parentLayer.originOffset.y + offset.y + ((offset.y / length) * outwardDistance))
         };
     }
 
-    function clampLayerOriginToHost(state, originOffset, offsets, radius) {
-        const bounds = getContextMenuLayerBounds(originOffset, offsets || [], radius);
+    function clampLayerOriginToHost(state, originOffset, offsets, radius, actions) {
+        const bounds = getContextMenuLayerBounds(originOffset, offsets || [], radius, actions || []);
         const shift = clampLayerBoundsToHost(state, bounds);
         return {
             x: round(originOffset.x + shift.x),
@@ -1395,15 +1654,15 @@
     }
 
     function createContextMenuLayer(state, options) {
-        const layer = createElement(state.document, "div", `cw-context-menu__layer${options.depth > 0 ? " is-submenu" : ""}`);
+        const layer = createElement(state.document, "div", `cw-context-menu__layer ${options.depth > 0 ? "is-submenu" : "is-root"}`);
         layer.style.zIndex = `${options.depth + 1}`;
 
-        const orbit = createElement(state.document, "div", `cw-context-menu__orbit${options.depth > 0 ? " is-submenu" : ""}`);
+        const orbit = createElement(state.document, "div", `cw-context-menu__orbit ${options.depth > 0 ? "is-submenu" : "is-root"}`);
         orbit.style.setProperty("--cw-orbit-x", `${options.originOffset.x}px`);
         orbit.style.setProperty("--cw-orbit-y", `${options.originOffset.y}px`);
         orbit.addEventListener("pointerdown", event => event.stopPropagation());
 
-        const core = createElement(state.document, "div", `cw-context-menu__core${options.depth > 0 ? " is-submenu" : ""}`);
+        const core = createElement(state.document, "div", `cw-context-menu__core ${options.depth > 0 ? "is-submenu" : "is-root"}`);
         core.appendChild(createElement(state.document, "span", "cw-context-menu__core-dot"));
         core.appendChild(createElement(state.document, "span", "cw-context-menu__core-label", options.label || "Canvas"));
         orbit.appendChild(core);
@@ -1862,9 +2121,15 @@
 
         closeContextMenuLayersFrom(state, nextDepth);
 
-        const submenuOffsets = getRadialOffsets((action.children || []).length, 82, 70);
-        const submenuRadius = getContextMenuOrbitRadius(submenuOffsets);
-        const submenuOrigin = clampLayerOriginToHost(state, resolveSubmenuOrigin(parentLayer, offset), submenuOffsets, submenuRadius);
+        const submenuLayout = action.submenuLayout || "";
+        const submenuOffsets = resolveContextMenuOffsets(action.children || [], submenuLayout === "compact-ring" ? 74 : 80, submenuLayout === "compact-ring" ? 0 : 64, submenuLayout);
+        const submenuRadius = getContextMenuOrbitRadius(submenuOffsets, action.children || []);
+        const submenuOrigin = clampLayerOriginToHost(
+            state,
+            resolveSubmenuOrigin(parentLayer, offset, submenuLayout),
+            submenuOffsets,
+            submenuRadius,
+            action.children || []);
 
         const submenuLayer = createContextMenuLayer(state, {
             depth: nextDepth,
@@ -1882,8 +2147,9 @@
             clientY: options.clientY,
             placementKind: options.placementKind,
             depth: nextDepth,
-            baseRadius: 82,
-            ringStep: 70
+            baseRadius: submenuLayout === "compact-ring" ? 74 : 80,
+            ringStep: submenuLayout === "compact-ring" ? 0 : 64,
+            submenuLayout
         });
 
         state.contextMenu.appendChild(submenuLayer.element);
@@ -1891,16 +2157,21 @@
     }
 
     function renderContextMenuLayer(state, layerState, options) {
-        const offsets = options.offsets || getRadialOffsets(options.actions.length, options.baseRadius, options.ringStep);
-        layerState.radius = getContextMenuOrbitRadius(offsets);
+        const offsets = options.offsets || resolveContextMenuOffsets(options.actions, options.baseRadius, options.ringStep, options.submenuLayout);
+        layerState.radius = getContextMenuOrbitRadius(offsets, options.actions);
         layerState.orbit.style.setProperty("--cw-orbit-size", `${round(layerState.radius * 2)}px`);
         options.actions.forEach((action, index) => {
             const offset = offsets[index];
-            const button = createElement(state.document, "button", `cw-context-menu__action tone-${action.tone || "neutral"}`);
+            const button = createElement(
+                state.document,
+                "button",
+                `cw-context-menu__action tone-${action.tone || "neutral"}${(action.menuSize || "").toLowerCase() === "compact" ? " is-compact" : ""}`);
             button.type = "button";
             button.dataset.actionId = action.actionId || "";
             button.dataset.layerDepth = `${options.depth || 0}`;
+            button.dataset.menuSize = action.menuSize || "normal";
             button.title = action.description || action.label || action.actionId || "action";
+            button.setAttribute("aria-label", action.label || action.actionId || "action");
             button.style.setProperty("--cw-menu-x", `${round(offset.x)}px`);
             button.style.setProperty("--cw-menu-y", `${round(offset.y)}px`);
             button.addEventListener("pointerdown", event => event.stopPropagation());
@@ -1917,10 +2188,10 @@
                 executeContextAction(state, options.node, action, options.clientX, options.clientY, options.placementKind);
             });
 
-            button.appendChild(createElement(state.document, "span", "cw-context-menu__icon", action.icon || action.label || "action"));
-            button.appendChild(createElement(state.document, "strong", "cw-context-menu__label", action.label || action.actionId));
+            button.appendChild(createMenuActionIcon(state, action));
+            button.appendChild(createElement(state.document, "strong", "cw-context-menu__label", resolveMenuLabel(action)));
             if (action.children?.length) {
-                button.appendChild(createElement(state.document, "span", "cw-context-menu__caret", "+"));
+                button.appendChild(createElement(state.document, "span", "cw-context-menu__caret", "\u203A"));
                 button.classList.add("has-children");
             }
 
@@ -1941,8 +2212,8 @@
         deferHostFocus(state);
         const hostPoint = getHostPoint(state, options.clientX, options.clientY);
         state.contextMenu.style.display = "block";
-        const rootOffsets = getRadialOffsets(actions.length);
-        const rootCenter = positionContextMenu(state, hostPoint, rootOffsets);
+        const rootOffsets = resolveContextMenuOffsets(actions, 84, 62, "");
+        const rootCenter = positionContextMenu(state, hostPoint, rootOffsets, actions);
         state.contextMenuState = {
             node: options.node || null,
             actions,
@@ -1965,8 +2236,9 @@
             clientY: options.clientY,
             placementKind: options.placementKind || (options.node ? "child" : "canvas"),
             depth: 0,
-            baseRadius: 96,
-            ringStep: 84
+            baseRadius: 84,
+            ringStep: 62,
+            submenuLayout: ""
         });
         state.contextMenu.appendChild(rootLayer.element);
         state.contextMenuState.layers.push(rootLayer);

@@ -12,7 +12,13 @@ public static class ProjectWorkbenchSchemaInitializer
         ("ObjectSubtype", """TEXT NOT NULL DEFAULT ''"""),
         ("MediaRelativePath", """TEXT NOT NULL DEFAULT ''"""),
         ("MediaContentType", """TEXT NOT NULL DEFAULT ''"""),
-        ("MediaOriginalFileName", """TEXT NOT NULL DEFAULT ''""")
+        ("MediaOriginalFileName", """TEXT NOT NULL DEFAULT ''"""),
+        ("ProgressMode", """TEXT NOT NULL DEFAULT ''"""),
+        ("ProgressPercent", """INTEGER NOT NULL DEFAULT -1"""),
+        ("MarkerIcon", """TEXT NOT NULL DEFAULT ''"""),
+        ("MarkerTone", """TEXT NOT NULL DEFAULT ''"""),
+        ("MarkerLabel", """TEXT NOT NULL DEFAULT ''"""),
+        ("Priority", """INTEGER NOT NULL DEFAULT 0""")
     ];
 
     private static readonly string[] RequiredTables =
@@ -41,6 +47,12 @@ public static class ProjectWorkbenchSchemaInitializer
             "MediaRelativePath" TEXT NOT NULL DEFAULT '',
             "MediaContentType" TEXT NOT NULL DEFAULT '',
             "MediaOriginalFileName" TEXT NOT NULL DEFAULT '',
+            "ProgressMode" TEXT NOT NULL DEFAULT '',
+            "ProgressPercent" INTEGER NOT NULL DEFAULT -1,
+            "MarkerIcon" TEXT NOT NULL DEFAULT '',
+            "MarkerTone" TEXT NOT NULL DEFAULT '',
+            "MarkerLabel" TEXT NOT NULL DEFAULT '',
+            "Priority" INTEGER NOT NULL DEFAULT 0,
             "ParentNodeKey" TEXT NULL,
             "PositionX" REAL NOT NULL,
             "PositionY" REAL NOT NULL,

@@ -290,3 +290,32 @@ This checklist tracks the post-migration repair pass requested on 2026-03-19 for
   - `output/playwright/structure-collision-mixed-current.png`
   - `output/playwright/structure-collision-note-chain-canvas.png`
   - `output/playwright/structure-collision-blocks-full.png`
+
+## Eighth-pass QA findings
+
+- Inline text notes were still taking selection state logically, but their yellow surface override masked the selected border and halo.
+- Node-level context menus still lacked dedicated metadata tools for progress, markers, and priorities, even though the domain now persists those fields.
+- The radial menu still used duplicated text, oversized hexes, and a light first-layer backdrop that reduced readability against the canvas.
+- The viewport clamp still left too little free space around the graph, which made it harder to bring edge nodes back to the visual center.
+
+## Eighth-pass execution checklist
+
+### Selection and node metadata
+
+- [x] Restore visible selected highlighting for inline simple-note nodes.
+- [x] Add node-level `Progress` radial actions with compact 0-100 presets, plus `Started` and `N/A`.
+- [x] Add node-level `Marker` radial actions with fast visual note icons.
+- [x] Add node-level `Priority` radial actions with numbered badges.
+- [x] Keep newly created nodes defaulted to `0%` progress.
+
+### Radial menu readability
+
+- [x] Replace duplicated icon/text rendering with a single icon above a single short label.
+- [x] Shrink first-layer radial actions and compact submenu actions so the menu is easier to scan and reach.
+- [x] Add a stronger backdrop to the first radial layer, not only to submenus.
+
+### Canvas movement and regression coverage
+
+- [x] Increase viewport pan freedom so edge nodes can be brought to the center more easily.
+- [x] Extend browser regression coverage for inline-note highlight plus progress, marker, and priority radial flows.
+- [x] Re-run manual Playwright QA with screenshots for the new metadata menus and node badges.

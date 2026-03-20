@@ -243,6 +243,7 @@ internal static class ProjectStructureCanvasCatalog
         {
             ActionId = $"group-{group.Key}",
             Label = group.Label,
+            MenuLabel = group.Label,
             Description = group.Description,
             Icon = group.Icon,
             Tone = group.Tone,
@@ -260,6 +261,7 @@ internal static class ProjectStructureCanvasCatalog
         {
             ActionId = definition.ActionId,
             Label = definition.Label,
+            MenuLabel = ResolveCreateMenuLabel(definition),
             Description = definition.Description,
             Icon = definition.Icon,
             Tone = definition.Tone,
@@ -277,4 +279,48 @@ internal static class ProjectStructureCanvasCatalog
             FilePrompt = definition.FilePrompt,
             SupportsDragDrop = definition.RequiresFile
         };
+
+    private static string ResolveCreateMenuLabel(ProjectStructureCreateLeafDefinition definition)
+        => definition.ActionId switch
+        {
+            "add-test-plan" => "Plan",
+            "add-test-evidence" => "Evidence",
+            "add-secret-reference" => "Secret",
+            "add-prompt-session" => "Session",
+            "add-prompt-flow" => "Flow",
+            "add-prompt-step" => "Step",
+            "add-image-asset" => "Image",
+            "add-video-asset" => "Video",
+            "add-link" => "Link",
+            "add-file" => "File",
+            "add-validation-run" => "Validation",
+            _ => TrimMenuLabel(definition.Label)
+        };
+
+    private static string TrimMenuLabel(string label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return "Item";
+        }
+
+        var normalized = label.Trim();
+        if (normalized.EndsWith(" block", StringComparison.OrdinalIgnoreCase))
+        {
+            return normalized[..^6];
+        }
+
+        if (normalized.Contains(' ', StringComparison.Ordinal))
+        {
+            var parts = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return parts.Length == 0 ? normalized : parts[^1] switch
+            {
+                "plan" => parts[0],
+                "block" => parts[0],
+                _ => parts[0]
+            };
+        }
+
+        return normalized;
+    }
 }

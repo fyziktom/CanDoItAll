@@ -38,6 +38,12 @@ public sealed class ProjectObjectRecord : IProjectObject
     public string MediaRelativePath { get; set; } = string.Empty;
     public string MediaContentType { get; set; } = string.Empty;
     public string MediaOriginalFileName { get; set; } = string.Empty;
+    public string ProgressMode { get; set; } = string.Empty;
+    public int ProgressPercent { get; set; } = -1;
+    public string MarkerIcon { get; set; } = string.Empty;
+    public string MarkerTone { get; set; } = string.Empty;
+    public string MarkerLabel { get; set; } = string.Empty;
+    public int Priority { get; set; }
     public string? ParentNodeKey { get; set; }
     public double PositionX { get; set; }
     public double PositionY { get; set; }
@@ -65,6 +71,10 @@ internal sealed class ProjectObjectRecordConfiguration : IEntityTypeConfiguratio
         builder.Property(item => item.MediaRelativePath).HasMaxLength(800);
         builder.Property(item => item.MediaContentType).HasMaxLength(160);
         builder.Property(item => item.MediaOriginalFileName).HasMaxLength(260);
+        builder.Property(item => item.ProgressMode).HasMaxLength(32);
+        builder.Property(item => item.MarkerIcon).HasMaxLength(80);
+        builder.Property(item => item.MarkerTone).HasMaxLength(40);
+        builder.Property(item => item.MarkerLabel).HasMaxLength(120);
         builder.Property(item => item.ParentNodeKey).HasMaxLength(160);
         builder.HasIndex(item => new { item.ProjectId, item.NodeKey }).IsUnique();
     }
@@ -132,7 +142,13 @@ public sealed record ProjectStructureNode(
     double X,
     double Y,
     ProjectObjectVisualProfile VisualProfile,
-    IReadOnlyList<string> Badges);
+    IReadOnlyList<string> Badges,
+    string ProgressMode,
+    int ProgressPercent,
+    string MarkerIcon,
+    string MarkerTone,
+    string MarkerLabel,
+    int Priority);
 
 public sealed record ProjectStructureLink(string SourceId, string TargetId, ProjectObjectLinkKind Kind, bool IsUserAuthored);
 
@@ -306,6 +322,8 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
             MediaRelativePath = media?.RelativePath ?? string.Empty,
             MediaContentType = media?.ContentType ?? string.Empty,
             MediaOriginalFileName = media?.OriginalFileName ?? string.Empty,
+            ProgressMode = "progress",
+            ProgressPercent = 0,
             ParentNodeKey = request.ParentNodeKey,
             PositionX = position.Item1,
             PositionY = position.Item2,
@@ -354,6 +372,8 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
                 Route = $"/projects/{projectId}/structure",
                 ExternalArtifactKind = seed.ObjectType.ToString(),
                 ObjectSubtype = seed.ObjectSubtype?.Trim() ?? string.Empty,
+                ProgressMode = "progress",
+                ProgressPercent = 0,
                 PositionX = position.Item1,
                 PositionY = position.Item2,
                 StartUtc = seed.StartUtc,
@@ -452,6 +472,117 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
         foreach (var node in nodes)
         {
             node.Status = status.Trim();
+            var progress = ResolveStatusBackedProgress(status);
+            node.ProgressMode = progress.Mode;
+            node.ProgressPercent = progress.Percent;
+            node.UpdatedAtUtc = clock.GetUtcNow();
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return nodes.Count;
+    }
+
+    public async Task<int> UpdateObjectProgressAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string progressMode,
+        int progressPercent,
+        CancellationToken cancellationToken = default)
+    {
+        if (nodeKeys.Count == 0)
+        {
+            return 0;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var normalizedKeys = nodeKeys.Where(key => !string.IsNullOrWhiteSpace(key)).Distinct(StringComparer.Ordinal).ToList();
+        if (normalizedKeys.Count == 0)
+        {
+            return 0;
+        }
+
+        var nodes = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == projectId && normalizedKeys.Contains(item.NodeKey))
+            .ToListAsync(cancellationToken);
+
+        var normalizedMode = NormalizeProgressMode(progressMode);
+        var normalizedPercent = Math.Clamp(progressPercent, 0, 100);
+        foreach (var node in nodes)
+        {
+            node.ProgressMode = normalizedMode;
+            node.ProgressPercent = normalizedPercent;
+            node.UpdatedAtUtc = clock.GetUtcNow();
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return nodes.Count;
+    }
+
+    public async Task<int> UpdateObjectMarkerAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string markerIcon,
+        string markerTone,
+        string markerLabel,
+        CancellationToken cancellationToken = default)
+    {
+        if (nodeKeys.Count == 0)
+        {
+            return 0;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var normalizedKeys = nodeKeys.Where(key => !string.IsNullOrWhiteSpace(key)).Distinct(StringComparer.Ordinal).ToList();
+        if (normalizedKeys.Count == 0)
+        {
+            return 0;
+        }
+
+        var nodes = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == projectId && normalizedKeys.Contains(item.NodeKey))
+            .ToListAsync(cancellationToken);
+
+        foreach (var node in nodes)
+        {
+            node.MarkerIcon = markerIcon?.Trim() ?? string.Empty;
+            node.MarkerTone = markerTone?.Trim() ?? string.Empty;
+            node.MarkerLabel = markerLabel?.Trim() ?? string.Empty;
+            node.UpdatedAtUtc = clock.GetUtcNow();
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return nodes.Count;
+    }
+
+    public async Task<int> UpdateObjectPriorityAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        int priority,
+        CancellationToken cancellationToken = default)
+    {
+        if (nodeKeys.Count == 0)
+        {
+            return 0;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var normalizedKeys = nodeKeys.Where(key => !string.IsNullOrWhiteSpace(key)).Distinct(StringComparer.Ordinal).ToList();
+        if (normalizedKeys.Count == 0)
+        {
+            return 0;
+        }
+
+        var nodes = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == projectId && normalizedKeys.Contains(item.NodeKey))
+            .ToListAsync(cancellationToken);
+
+        var normalizedPriority = Math.Clamp(priority, 0, 6);
+        foreach (var node in nodes)
+        {
+            node.Priority = normalizedPriority;
             node.UpdatedAtUtc = clock.GetUtcNow();
         }
 
@@ -992,7 +1123,13 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
             record.PositionX,
             record.PositionY,
             profile,
-            badges);
+            badges,
+            string.IsNullOrWhiteSpace(record.ProgressMode) ? string.Empty : NormalizeProgressMode(record.ProgressMode),
+            record.ProgressPercent,
+            record.MarkerIcon,
+            record.MarkerTone,
+            record.MarkerLabel,
+            record.Priority);
     }
 
     private static string ResolveSubtypeBadge(ProjectObjectType objectType, string objectSubtype) => objectType switch
@@ -1035,6 +1172,64 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
             ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => (1100, 620 + (index * 140)),
             _ => (420 + ((index % 3) * 220), 820 + ((index / 3) * 140))
         };
+
+    private static string NormalizeProgressMode(string? progressMode)
+        => (progressMode?.Trim() ?? string.Empty).ToLowerInvariant() switch
+        {
+            "complete" => "complete",
+            "started" => "started",
+            "progress" => "progress",
+            "na" => "na",
+            _ => "progress"
+        };
+
+    private static (string Mode, int Percent) ResolveStatusBackedProgress(string? status)
+    {
+        var normalizedStatus = status?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedStatus) ||
+            normalizedStatus.Contains("n/a", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("not applicable", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("skip", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("na", 0);
+        }
+
+        if (normalizedStatus.Contains("done", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("complete", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("approved", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("used", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("ready", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("final", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("complete", 100);
+        }
+
+        if (normalizedStatus.Contains("review", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("validation", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("testing", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("qa", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("progress", 78);
+        }
+
+        if (normalizedStatus.Contains("active", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("in progress", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("running", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("blocked", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("progress", 62);
+        }
+
+        if (normalizedStatus.Contains("planned", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("draft", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("pending", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Contains("queued", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("progress", 28);
+        }
+
+        return ("progress", 48);
+    }
 
     private static ProjectObjectVisualProfile ResolveProjectBlockVisualProfile(string objectSubtype)
         => objectSubtype switch

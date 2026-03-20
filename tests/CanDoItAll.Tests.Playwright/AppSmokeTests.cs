@@ -112,6 +112,8 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
     {
         await using var context = await fixture.Browser.NewContextAsync();
         var page = await context.NewPageAsync();
+        var artifactsDir = @"C:\repositories\CanDoItAll\output\playwright";
+        Directory.CreateDirectory(artifactsDir);
 
         await CreateProjectAsync(page, "Playwright Canvas Repair", "Discovery");
 
@@ -129,6 +131,10 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         Assert.Contains("Assurance", radialLabels);
         Assert.Contains("Open", radialLabels);
         Assert.Contains("Connect", radialLabels);
+        Assert.Contains("Progress", radialLabels);
+        Assert.Contains("Marker", radialLabels);
+        Assert.Contains("Priority", radialLabels);
+        await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-root-menu-metadata.png"), FullPage = true });
         await page.Locator(".cw-context-menu__action[data-action-id='group-assets']").HoverAsync(new() { Force = true });
         await page.WaitForSelectorAsync(".cw-context-menu__orbit.is-submenu");
         var submenuBackdrop = await page.EvaluateAsync<string?>(
@@ -179,6 +185,12 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await noteEditor.PressAsync("Enter");
         await page.WaitForFunctionAsync("() => !document.querySelector('.cw-note-editor__input')");
         await page.WaitForSelectorAsync("text=Child note from keyboard");
+        await ClickCanvasNodeAsync(page, ".cw-node:has-text('Child note from keyboard')");
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const surface = document.querySelector('.cw-node.is-inline-text.is-selected .cw-node__surface');
+                return !!surface && getComputedStyle(surface).boxShadow.includes('0px 0px 0px 4px');
+            }");
 
         await page.WaitForFunctionAsync("() => document.querySelectorAll('.cw-node').length > 1");
         await page.Locator(".cw-node[data-node-id^='project:'] .cw-node__collapse").ClickAsync();
@@ -200,6 +212,43 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await noteEditor.PressAsync("Enter");
         await page.WaitForFunctionAsync("() => !document.querySelector('.cw-note-editor__input')");
         await page.WaitForSelectorAsync("text=Edited child note");
+
+        var nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Edited child note')");
+        Assert.Contains("Progress", nodeLabels);
+        Assert.Contains("Marker", nodeLabels);
+        Assert.Contains("Priority", nodeLabels);
+        await page.Locator(".cw-context-menu__action[data-action-id='progress']").WaitForAsync();
+        await page.EvaluateAsync(
+            @"() => document.querySelector('.cw-context-menu__action[data-action-id=""progress""]')
+                ?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }))");
+        await page.Locator(".cw-context-menu__action[data-action-id='progress:0']").WaitForAsync();
+        await page.Locator(".cw-context-menu__action[data-action-id='progress:started']").WaitForAsync();
+        await page.Locator(".cw-context-menu__action[data-action-id='progress:100']").WaitForAsync();
+        await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-progress-submenu-metadata.png"), FullPage = true });
+        await page.Locator(".cw-context-menu__action[data-action-id='progress:30']").ClickAsync(new() { Force = true });
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-node.is-selected .cw-node__progress')?.getAttribute('title')?.includes('30%') === true");
+
+        nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Edited child note')");
+        Assert.Contains("Marker", nodeLabels);
+        await page.Locator(".cw-context-menu__action[data-action-id='marker']").WaitForAsync();
+        await page.EvaluateAsync(
+            @"() => document.querySelector('.cw-context-menu__action[data-action-id=""marker""]')
+                ?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }))");
+        await page.Locator(".cw-context-menu__action[data-action-id='marker:question']").WaitForAsync();
+        await page.Locator(".cw-context-menu__action[data-action-id='marker:money']").ClickAsync(new() { Force = true });
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-node.is-selected .cw-node__marker')?.textContent?.includes('$') === true");
+
+        nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Edited child note')");
+        Assert.Contains("Priority", nodeLabels);
+        await page.Locator(".cw-context-menu__action[data-action-id='priority']").WaitForAsync();
+        await page.EvaluateAsync(
+            @"() => document.querySelector('.cw-context-menu__action[data-action-id=""priority""]')
+                ?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }))");
+        await page.Locator(".cw-context-menu__action[data-action-id='priority:1']").WaitForAsync();
+        await page.Locator(".cw-context-menu__action[data-action-id='priority:6']").WaitForAsync();
+        await page.Locator(".cw-context-menu__action[data-action-id='priority:2']").ClickAsync(new() { Force = true });
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-node.is-selected .cw-node__priority')?.textContent?.trim() === '2'");
+        await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-badges-selected.png"), FullPage = true });
 
         await page.Keyboard.PressAsync("Enter");
         await noteEditor.WaitForAsync();
@@ -250,8 +299,8 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
 
         groupLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Sibling note from Enter')");
         Assert.Contains("Progress", groupLabels);
-        await page.Locator(".cw-context-menu__action[data-action-id='group-progress']").HoverAsync(new() { Force = true });
-        await page.Locator(".cw-context-menu__action[data-action-id='group-mark-done']").ClickAsync();
+        await page.Locator(".cw-context-menu__action[data-action-id='progress']").HoverAsync(new() { Force = true });
+        await page.Locator(".cw-context-menu__action[data-action-id='progress:100']").ClickAsync(new() { Force = true });
         await page.WaitForFunctionAsync("() => document.querySelectorAll('.cw-node.is-selected .cw-node__progress.is-complete').length >= 2");
 
         await OpenCanvasCreateComposerAsync(page, ".cw-node[data-node-id^='project:']", "Link", "add-link");
@@ -354,6 +403,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         Assert.True(maximized.BodyLock);
         Assert.InRange(Math.Abs(maximized.HostWidth - maximized.ViewportWidth), 0, 1);
         Assert.InRange(Math.Abs(maximized.HostHeight - maximized.ViewportHeight), 0, 1);
+        await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-centered-pan.png"), FullPage = true });
     }
 
     private async Task<Guid> CreateProjectAsync(IPage page, string projectName, string phase)
