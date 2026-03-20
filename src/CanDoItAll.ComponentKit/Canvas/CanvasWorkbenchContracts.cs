@@ -120,6 +120,8 @@ public sealed class CanvasWorkbenchUiState
 
     public double PanY { get; set; } = 110;
 
+    public double MenuActionScale { get; set; } = 1;
+
     public bool IsMaximized { get; set; }
 
     public string ActiveInspectorTab { get; set; } = string.Empty;

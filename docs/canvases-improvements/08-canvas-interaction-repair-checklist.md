@@ -319,3 +319,60 @@ This checklist tracks the post-migration repair pass requested on 2026-03-19 for
 - [x] Increase viewport pan freedom so edge nodes can be brought to the center more easily.
 - [x] Extend browser regression coverage for inline-note highlight plus progress, marker, and priority radial flows.
 - [x] Re-run manual Playwright QA with screenshots for the new metadata menus and node badges.
+
+## Ninth-pass QA findings
+
+- The smaller radial hexes improved reach, but icon and text placement still needed tighter fitting so longer one-word labels stayed readable without spilling past the hex edges.
+- The canvas toolbar still lacked a direct tuning surface for radial menu size, which made it harder to validate the new compact sizing interactively.
+- Marker and progress preset rings needed separate sizing treatment from the base action ring:
+  - marker presets needed a larger target
+  - progress presets needed both a larger target and a calmer gray background treatment so the progress icon stayed legible
+- Fast progress editing still needed a true node-local shortcut from the rendered progress badge rather than only from the right-click root ring.
+- Grouped frames still needed live confirmation that dragging the frame itself moved the enclosed nodes with it.
+
+## Ninth-pass execution checklist
+
+### Radial menu readability and tuning
+
+- [x] Tighten icon/text layout inside the smaller radial hexes so labels shrink and ellipsize instead of spilling.
+- [x] Add a `Settings` button next to `Help` in the canvas toolbar.
+- [x] Add an in-canvas settings modal for right-click menu item size with a live preview tile.
+- [x] Persist menu-size tuning through shared canvas UI state.
+
+### Metadata submenu tuning
+
+- [x] Increase marker submenu items relative to the base compact preset size.
+- [x] Increase progress submenu items relative to the base compact preset size.
+- [x] Restyle progress preset items to gray-tone backgrounds for better icon contrast.
+- [x] Allow double-left-click on a node progress badge to open the progress submenu directly.
+- [x] Harden submenu hover/open behavior so second-layer menus appear reliably from the hovered parent item.
+
+### Group frame interaction
+
+- [x] Make bordered group frames draggable by their frame label/handles.
+- [x] Move enclosed nodes together with the dragged group frame.
+- [x] Keep frame position, enclosed node position, and selection state in sync after the drag completes.
+
+## Ninth-pass closure notes
+
+- Shared canvas state now carries a persisted `MenuActionScale`, and the workbench toolbar exposes it through a new `Settings` modal with a live radial preview.
+- Radial actions now fit their content more defensibly:
+  - icons sit slightly higher
+  - labels have more center-line width
+  - text scales down and ellipsizes before overflowing
+- Preset submenu sizing is now differentiated by intent:
+  - progress presets are larger and use gray-tone backgrounds
+  - marker presets are larger than the base compact preset ring
+  - priority presets stay smaller for denser numeric access
+- Progress badges on rendered nodes now open the progress preset ring directly on double-click.
+- Group frames are now draggable from the frame surface itself, and the enclosed nodes move as a unit with the frame.
+- Verification for this pass:
+  - `dotnet build src/CanDoItAll.Web/CanDoItAll.Web.csproj --no-restore -v minimal`
+  - `dotnet test tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --no-restore -v minimal /p:BuildProjectReferences=false -m:1`
+  - `dotnet test CanDoItAll.slnx --no-restore -v minimal /p:BuildProjectReferences=false -m:1`
+  - manual Playwright MCP review on `https://127.0.0.1:7271/projects/1C26421C-5F7E-41A9-9850-2F7B7F2B9C9F/structure`
+- Manual screenshots reviewed for this pass:
+  - `output/playwright/structure-radial-menu-tuned-pass9.png`
+  - `output/playwright/structure-progress-submenu-badge-pass9.png`
+  - `output/playwright/structure-frame-drag-pass9.png`
+  - `output/playwright/structure-settings-modal-pass9.png`

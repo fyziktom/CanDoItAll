@@ -134,7 +134,28 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         Assert.Contains("Progress", radialLabels);
         Assert.Contains("Marker", radialLabels);
         Assert.Contains("Priority", radialLabels);
+        var defaultOpenActionMetrics = await ReadContextMenuActionMetricsAsync(page, "open");
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-root-menu-metadata.png"), FullPage = true });
+        await page.Keyboard.PressAsync("Escape");
+
+        await page.GetByRole(AriaRole.Button, new() { Name = "Settings" }).ClickAsync();
+        await page.GetByRole(AriaRole.Dialog, new() { Name = "Canvas settings" }).WaitForAsync();
+        await page.EvaluateAsync(
+            @"() => {
+                const input = document.querySelector('input[aria-label=""Canvas menu item size""]');
+                if (!input) {
+                    return;
+                }
+
+                input.value = '120';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }");
+        await page.WaitForTimeoutAsync(250);
+        await page.GetByRole(AriaRole.Button, new() { Name = "Close settings" }).ClickAsync();
+
+        radialLabels = await OpenCanvasContextMenuAsync(page, ".cw-node[data-node-id^='project:']");
+        var scaledOpenActionMetrics = await ReadContextMenuActionMetricsAsync(page, "open");
+        Assert.True(scaledOpenActionMetrics.Width >= defaultOpenActionMetrics.Width + 6, $"Expected the menu scale setting to enlarge root actions. Before={defaultOpenActionMetrics.Width}, after={scaledOpenActionMetrics.Width}.");
         await page.Locator(".cw-context-menu__action[data-action-id='group-assets']").HoverAsync(new() { Force = true });
         await page.WaitForSelectorAsync(".cw-context-menu__orbit.is-submenu");
         var submenuBackdrop = await page.EvaluateAsync<string?>(
@@ -171,9 +192,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         var rootMenuBounds = await ReadContextMenuBoundsAsync(page);
         Assert.True(rootMenuBounds.MinLeft >= 0, $"Expected the radial menu to stay inside the left viewport edge, but minLeft was {rootMenuBounds.MinLeft}.");
         Assert.True(rootMenuBounds.MaxRight <= rootMenuBounds.ViewportWidth, $"Expected the radial menu to stay inside the right viewport edge, but maxRight was {rootMenuBounds.MaxRight} of {rootMenuBounds.ViewportWidth}.");
-        await page.EvaluateAsync(
-            @"() => document.querySelector('.cw-context-menu__action[data-action-id=""group-blocks""]')
-                ?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }))");
+        await page.Locator(".cw-context-menu__action[data-action-id='group-blocks']").HoverAsync(new() { Force = true });
         await page.Locator(".cw-context-menu__action[data-action-id='add-block-feature']").WaitForAsync();
         await page.Locator(".cw-context-menu__action[data-action-id='add-block-support']").WaitForAsync();
         await page.Keyboard.PressAsync("Escape");
@@ -224,9 +243,24 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.Locator(".cw-context-menu__action[data-action-id='progress:0']").WaitForAsync();
         await page.Locator(".cw-context-menu__action[data-action-id='progress:started']").WaitForAsync();
         await page.Locator(".cw-context-menu__action[data-action-id='progress:100']").WaitForAsync();
+        var progressMetrics = await ReadContextMenuActionMetricsAsync(page, "progress:30");
+        var progressBackground = await page.EvaluateAsync<string>(
+            @"() => getComputedStyle(document.querySelector('.cw-context-menu__action[data-action-id=""progress:30""]')).backgroundImage");
+        Assert.DoesNotContain("16, 185, 129", progressBackground, StringComparison.Ordinal);
+        Assert.DoesNotContain("56, 189, 248", progressBackground, StringComparison.Ordinal);
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-progress-submenu-metadata.png"), FullPage = true });
         await page.Locator(".cw-context-menu__action[data-action-id='progress:30']").ClickAsync(new() { Force = true });
         await page.WaitForFunctionAsync("() => document.querySelector('.cw-node.is-selected .cw-node__progress')?.getAttribute('title')?.includes('30%') === true");
+
+        var progressBadge = page.Locator(".cw-node.is-selected .cw-node__progress").First;
+        var progressBadgeBounds = await progressBadge.BoundingBoxAsync();
+        Assert.NotNull(progressBadgeBounds);
+        await page.Mouse.ClickAsync(
+            progressBadgeBounds!.X + (progressBadgeBounds.Width / 2),
+            progressBadgeBounds.Y + (progressBadgeBounds.Height / 2),
+            new() { ClickCount = 2 });
+        await page.Locator(".cw-context-menu__action[data-action-id='progress:100']").WaitForAsync();
+        await page.Keyboard.PressAsync("Escape");
 
         nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Edited child note')");
         Assert.Contains("Marker", nodeLabels);
@@ -235,6 +269,8 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
             @"() => document.querySelector('.cw-context-menu__action[data-action-id=""marker""]')
                 ?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }))");
         await page.Locator(".cw-context-menu__action[data-action-id='marker:question']").WaitForAsync();
+        var markerMetrics = await ReadContextMenuActionMetricsAsync(page, "marker:question");
+        Assert.True(markerMetrics.Width >= progressMetrics.Width - 2, $"Expected marker presets to stay comparable to progress preset size. Marker={markerMetrics.Width}, progress={progressMetrics.Width}.");
         await page.Locator(".cw-context-menu__action[data-action-id='marker:money']").ClickAsync(new() { Force = true });
         await page.WaitForFunctionAsync("() => document.querySelector('.cw-node.is-selected .cw-node__marker')?.textContent?.includes('$') === true");
 
@@ -246,6 +282,9 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
                 ?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }))");
         await page.Locator(".cw-context-menu__action[data-action-id='priority:1']").WaitForAsync();
         await page.Locator(".cw-context-menu__action[data-action-id='priority:6']").WaitForAsync();
+        var priorityMetrics = await ReadContextMenuActionMetricsAsync(page, "priority:2");
+        Assert.True(progressMetrics.Width > priorityMetrics.Width, $"Expected progress presets to be larger than priority presets. Progress={progressMetrics.Width}, priority={priorityMetrics.Width}.");
+        Assert.True(markerMetrics.Width > priorityMetrics.Width, $"Expected marker presets to be larger than priority presets. Marker={markerMetrics.Width}, priority={priorityMetrics.Width}.");
         await page.Locator(".cw-context-menu__action[data-action-id='priority:2']").ClickAsync(new() { Force = true });
         await page.WaitForFunctionAsync("() => document.querySelector('.cw-node.is-selected .cw-node__priority')?.textContent?.trim() === '2'");
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-badges-selected.png"), FullPage = true });
@@ -296,6 +335,21 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.Locator(".cw-context-menu__action[data-action-id='group-frame']").ClickAsync();
         await page.WaitForSelectorAsync(".cw-group-frame");
         Assert.True(await page.Locator(".cw-group-frame").CountAsync() > 0);
+        var beforeFrameDrag = await ReadSelectedNodePositionsAsync(page);
+        var frameLabel = page.Locator(".cw-group-frame__label").First;
+        var frameLabelBounds = await frameLabel.BoundingBoxAsync();
+        Assert.NotNull(frameLabelBounds);
+        await page.Mouse.MoveAsync(frameLabelBounds!.X + (frameLabelBounds.Width / 2), frameLabelBounds.Y + (frameLabelBounds.Height / 2));
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(frameLabelBounds.X + (frameLabelBounds.Width / 2) + 72, frameLabelBounds.Y + (frameLabelBounds.Height / 2) + 48, new() { Steps = 10 });
+        await page.Mouse.UpAsync();
+        var afterFrameDrag = await ReadNodePositionsAsync(page, beforeFrameDrag.Select(node => node.Id).ToArray());
+        foreach (var before in beforeFrameDrag)
+        {
+            var after = afterFrameDrag.Single(node => string.Equals(node.Id, before.Id, StringComparison.Ordinal));
+            Assert.True(Math.Abs(after.Left - before.Left) >= 24, $"Expected node '{before.Id}' to move horizontally when dragging the group border.");
+            Assert.True(Math.Abs(after.Top - before.Top) >= 16, $"Expected node '{before.Id}' to move vertically when dragging the group border.");
+        }
 
         groupLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Sibling note from Enter')");
         Assert.Contains("Progress", groupLabels);
@@ -628,6 +682,22 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
                 };
             }");
 
+    private static Task<CanvasMenuActionMetrics> ReadContextMenuActionMetricsAsync(IPage page, string actionId)
+        => page.EvaluateAsync<CanvasMenuActionMetrics>(
+            @"requestedActionId => {
+                const action = document.querySelector(`.cw-context-menu__action[data-action-id=""${requestedActionId}""]`);
+                if (!action) {
+                    return { width: 0, height: 0 };
+                }
+
+                const rect = action.getBoundingClientRect();
+                return {
+                    width: Math.round(rect.width),
+                    height: Math.round(rect.height)
+                };
+            }",
+            actionId);
+
     private static async Task AssertNoCanvasNodeOverlapsAsync(IPage page, string phase)
     {
         await page.WaitForFunctionAsync(
@@ -734,6 +804,13 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         public int MaxRight { get; set; }
 
         public int ViewportWidth { get; set; }
+    }
+
+    private sealed class CanvasMenuActionMetrics
+    {
+        public int Width { get; set; }
+
+        public int Height { get; set; }
     }
 
     private sealed class CanvasNodeOverlap

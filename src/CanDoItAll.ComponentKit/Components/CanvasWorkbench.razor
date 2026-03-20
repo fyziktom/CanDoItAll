@@ -1,4 +1,5 @@
 @implements IAsyncDisposable
+@using System.Globalization
 @using System.Text.Json
 @using CanDoItAll.ComponentKit.Canvas
 @inject IJSRuntime JsRuntime
@@ -30,6 +31,7 @@
                 <button type="button" class="cw-toolbar-action" aria-label="Fit canvas" @onclick="FitViewAsync">Fit</button>
                 <button type="button" class="cw-toolbar-action" aria-label="Toggle maximize" @onclick="ToggleMaximizeAsync">@(isMaximized ? "Dock" : "Max")</button>
                 <button type="button" class="cw-toolbar-action" aria-label="Toggle help" @onclick="ToggleHelp">Help</button>
+                <button type="button" class="cw-toolbar-action" aria-label="Toggle settings" @onclick="ToggleSettings">Settings</button>
 
                 <div class="cw-zoom-rail">
                     <button type="button" class="cw-toolbar-action cw-toolbar-action--ghost" aria-label="Zoom out" @onclick="ZoomOutAsync">-</button>
@@ -86,6 +88,60 @@
                 </div>
             </div>
         }
+
+        @if (settingsOpen)
+        {
+            <div class="cw-help-overlay">
+                <div class="cw-help-card cw-settings-card" role="dialog" aria-modal="false" aria-label="Canvas settings">
+                    <div class="cw-help-card__header">
+                        <div>
+                            <p class="cw-help-kicker">Canvas settings</p>
+                            <h3>Radial menu tuning</h3>
+                        </div>
+
+                        <button type="button" class="cw-toolbar-action" aria-label="Close settings" @onclick="ToggleSettings">Close</button>
+                    </div>
+
+                    <div class="cw-settings-grid">
+                        <div class="cw-settings-group">
+                            <div>
+                                <p class="cw-settings-label">Menu item size</p>
+                                <p class="cw-panel-copy">Tune the right-click hex size and keep the preview aligned with the live canvas menu.</p>
+                            </div>
+
+                            <div class="cw-zoom-rail cw-settings-rail">
+                                <button type="button" class="cw-toolbar-action cw-toolbar-action--ghost" aria-label="Decrease menu item size" @onclick="DecreaseMenuScaleAsync">-</button>
+                                <input class="cw-zoom-slider"
+                                       type="range"
+                                       min="80"
+                                       max="140"
+                                       step="5"
+                                       value="@menuScalePercent"
+                                       aria-label="Canvas menu item size"
+                                       @oninput="HandleMenuScaleChangedAsync" />
+                                <button type="button" class="cw-toolbar-action cw-toolbar-action--ghost" aria-label="Increase menu item size" @onclick="IncreaseMenuScaleAsync">+</button>
+                                <span class="cw-zoom-pill">@($"{menuScalePercent}%")</span>
+                            </div>
+                        </div>
+
+                        <div class="cw-settings-preview">
+                            <p class="cw-settings-label">Preview</p>
+                            <div class="cw-menu-preview-shell" style="@PreviewMenuScaleStyle">
+                                <div class="cw-menu-preview-orbit">
+                                    <div class="cw-menu-preview-core">
+                                        <span class="cw-menu-preview-core-dot"></span>
+                                    </div>
+                                    <div class="cw-menu-preview-item tone-accent">
+                                        <span class="cw-menu-preview-item__icon">↗</span>
+                                        <span class="cw-menu-preview-item__label">Open</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 </div>
 
@@ -96,8 +152,10 @@
     private DotNetObjectReference<CanvasWorkbench>? objectReference;
     private bool initialized;
     private bool helpOpen;
+    private bool settingsOpen;
     private bool isMaximized;
     private int zoomPercent = 100;
+    private int menuScalePercent = 100;
     private bool surfaceSyncPending = true;
     private string? pendingDataKey;
     private string? pendingUiStateKey;
@@ -133,6 +191,7 @@
     {
         isMaximized = Surface.UiState.IsMaximized;
         zoomPercent = ClampZoomPercent(Surface.UiState.Zoom);
+        menuScalePercent = ClampMenuScalePercent(Surface.UiState.MenuActionScale);
         pendingDataKey = SerializeSurfaceData(Surface);
         pendingUiStateKey = Surface.UiState.ToJson();
 
@@ -213,6 +272,7 @@
         clientUiStateKey = state.ToJson();
         appliedUiStateKey = clientUiStateKey;
         zoomPercent = ClampZoomPercent(state.Zoom);
+        menuScalePercent = ClampMenuScalePercent(state.MenuActionScale);
         await StateChanged.InvokeAsync(clientUiStateKey);
         await InvokeAsync(StateHasChanged);
     }
@@ -225,7 +285,22 @@
     }
 
     private void ToggleHelp()
-        => helpOpen = !helpOpen;
+    {
+        helpOpen = !helpOpen;
+        if (helpOpen)
+        {
+            settingsOpen = false;
+        }
+    }
+
+    private void ToggleSettings()
+    {
+        settingsOpen = !settingsOpen;
+        if (settingsOpen)
+        {
+            helpOpen = false;
+        }
+    }
 
     private async Task ToggleMaximizeAsync()
     {
@@ -270,6 +345,10 @@
 
     private Task ZoomOutAsync() => SetZoomPercentAsync(Math.Max(55, zoomPercent - 10));
 
+    private Task IncreaseMenuScaleAsync() => SetMenuScalePercentAsync(Math.Min(140, menuScalePercent + 5));
+
+    private Task DecreaseMenuScaleAsync() => SetMenuScalePercentAsync(Math.Max(80, menuScalePercent - 5));
+
     private async Task HandleZoomChangedAsync(ChangeEventArgs args)
     {
         if (args.Value is null || !int.TryParse(args.Value.ToString(), out var parsed))
@@ -286,6 +365,25 @@
         if (initialized)
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setZoomPercent", host, zoomPercent);
+        }
+    }
+
+    private async Task HandleMenuScaleChangedAsync(ChangeEventArgs args)
+    {
+        if (args.Value is null || !int.TryParse(args.Value.ToString(), out var parsed))
+        {
+            return;
+        }
+
+        await SetMenuScalePercentAsync(parsed);
+    }
+
+    private async Task SetMenuScalePercentAsync(int value)
+    {
+        menuScalePercent = Math.Clamp(value, 80, 140);
+        if (initialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMenuScalePercent", host, menuScalePercent);
         }
     }
 
@@ -325,6 +423,12 @@
 
     private static int ClampZoomPercent(double zoom)
         => (int)Math.Round(Math.Clamp(zoom, 0.55, 1.75) * 100);
+
+    private static int ClampMenuScalePercent(double scale)
+        => (int)Math.Round(Math.Clamp(scale, 0.8, 1.4) * 100);
+
+    private string PreviewMenuScaleStyle
+        => $"--cw-preview-menu-scale:{(menuScalePercent / 100d).ToString("0.##", CultureInfo.InvariantCulture)};";
 
     private string SerializeSurfaceData(CanvasWorkbenchSurface surface)
         => JsonSerializer.Serialize(
