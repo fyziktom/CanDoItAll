@@ -58,8 +58,13 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Create next to source", cut.Markup);
             Assert.Contains("Architecture note", cut.Markup);
             Assert.Contains("Tracks the first implementation idea", cut.Markup);
+            Assert.Contains("Assets", cut.Markup);
             Assert.Contains(">Link<", cut.Markup);
+            Assert.Contains(">Image<", cut.Markup);
+            Assert.Contains(">Video<", cut.Markup);
             Assert.Contains(">Secret<", cut.Markup);
+            Assert.Contains(">Feature block<", cut.Markup);
+            Assert.Contains(">Support block<", cut.Markup);
             Assert.Contains(">Test plan<", cut.Markup);
         });
     }

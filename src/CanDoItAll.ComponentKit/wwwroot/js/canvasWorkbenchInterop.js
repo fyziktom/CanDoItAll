@@ -51,12 +51,18 @@
             description: action?.description || "",
             requiresInput: !!action?.requiresInput,
             createMode: action?.createMode || "command",
+            objectSubtype: action?.objectSubtype || "",
             titleLabel: action?.titleLabel || "Title",
             titlePlaceholder: action?.titlePlaceholder || "",
             subtitleLabel: action?.subtitleLabel || "Subtitle",
             subtitlePlaceholder: action?.subtitlePlaceholder || "",
             notesLabel: action?.notesLabel || "Notes",
-            notesPlaceholder: action?.notesPlaceholder || ""
+            notesPlaceholder: action?.notesPlaceholder || "",
+            requiresFile: !!action?.requiresFile,
+            acceptedFileTypes: action?.acceptedFileTypes || "",
+            filePrompt: action?.filePrompt || "Drop a file here or choose one.",
+            supportsDragDrop: action?.supportsDragDrop !== false,
+            children: Array.isArray(action?.children) ? action.children.map(normalizeAction) : []
         };
     }
 
@@ -203,23 +209,13 @@
         let x = panX;
         let y = panY;
 
-        if (contentWidth + (marginX * 2) <= rect.width) {
-            x = (rect.width - contentWidth) / 2 - (bounds.minX * nextZoom);
-        }
-        else {
-            const minPanX = rect.width - marginX - (bounds.maxX * nextZoom);
-            const maxPanX = marginX - (bounds.minX * nextZoom);
-            x = clamp(panX, minPanX, maxPanX);
-        }
+        const minPanX = rect.width - marginX - (bounds.maxX * nextZoom);
+        const maxPanX = marginX - (bounds.minX * nextZoom);
+        const minPanY = rect.height - marginY - (bounds.maxY * nextZoom);
+        const maxPanY = marginY - (bounds.minY * nextZoom);
 
-        if (contentHeight + (marginY * 2) <= rect.height) {
-            y = (rect.height - contentHeight) / 2 - (bounds.minY * nextZoom);
-        }
-        else {
-            const minPanY = rect.height - marginY - (bounds.maxY * nextZoom);
-            const maxPanY = marginY - (bounds.minY * nextZoom);
-            y = clamp(panY, minPanY, maxPanY);
-        }
+        x = clamp(panX, Math.min(minPanX, maxPanX), Math.max(minPanX, maxPanX));
+        y = clamp(panY, Math.min(minPanY, maxPanY), Math.max(minPanY, maxPanY));
 
         return { x: round(x), y: round(y) };
     }
@@ -248,6 +244,18 @@
         state.scene.style.transform = `translate(${state.ui.panX}px, ${state.ui.panY}px) scale(${state.ui.zoom})`;
     }
 
+    function getLinkAnchorPoint(state, node, side) {
+        const position = getNodePosition(state, node);
+        const size = getNodeSize(node);
+        const inset = Math.min(28, size.width * 0.11);
+        return {
+            x: side === "right"
+                ? position.x + (size.width / 2) - inset
+                : position.x - (size.width / 2) + inset,
+            y: position.y
+        };
+    }
+
     function renderLinks(state, visibleNodes) {
         state.links.innerHTML = "";
         const visible = new Set(visibleNodes.map(node => node.id));
@@ -265,13 +273,17 @@
 
             const sourcePosition = getNodePosition(state, source);
             const targetPosition = getNodePosition(state, target);
-            const controlOffset = Math.max(92, Math.abs(targetPosition.x - sourcePosition.x) * 0.38);
+            const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
+            const targetSide = sourceSide === "right" ? "left" : "right";
+            const sourceAnchor = getLinkAnchorPoint(state, source, sourceSide);
+            const targetAnchor = getLinkAnchorPoint(state, target, targetSide);
+            const controlOffset = Math.max(92, Math.abs(targetAnchor.x - sourceAnchor.x) * 0.38);
             const path = createSvgElement(state.document, "path");
             path.setAttribute("d", [
-                `M ${sourcePosition.x} ${sourcePosition.y}`,
-                `C ${sourcePosition.x + controlOffset} ${sourcePosition.y}`,
-                `${targetPosition.x - controlOffset} ${targetPosition.y}`,
-                `${targetPosition.x} ${targetPosition.y}`
+                `M ${sourceAnchor.x} ${sourceAnchor.y}`,
+                `C ${sourceAnchor.x + (sourceSide === "right" ? controlOffset : -controlOffset)} ${sourceAnchor.y}`,
+                `${targetAnchor.x + (targetSide === "right" ? controlOffset : -controlOffset)} ${targetAnchor.y}`,
+                `${targetAnchor.x} ${targetAnchor.y}`
             ].join(" "));
             path.setAttribute("fill", "none");
             path.setAttribute("stroke", link.isUserAuthored ? "rgba(14, 165, 233, 0.78)" : "rgba(100, 116, 139, 0.4)");
@@ -371,7 +383,7 @@
         surface.appendChild(footer);
 
         if (node.isCollapsible) {
-            const collapse = createElement(state.document, "button", "cw-node__collapse", state.collapsedIds.has(node.id) ? "+" : "−");
+            const collapse = createElement(state.document, "button", "cw-node__collapse", state.collapsedIds.has(node.id) ? "+" : "-");
             collapse.type = "button";
             collapse.dataset.nodeId = node.id;
             collapse.addEventListener("click", event => {
@@ -512,6 +524,7 @@
     function clearContextMenu(state) {
         state.contextMenu.innerHTML = "";
         state.contextMenu.style.display = "none";
+        state.contextMenuState = null;
     }
 
     function closeComposer(state, options) {
@@ -603,6 +616,10 @@
     }
 
     function isCreateAction(action) {
+        if (action?.children?.length) {
+            return false;
+        }
+
         return !!action?.requiresInput ||
             (action?.createMode && action.createMode !== "command") ||
             (action?.actionId || "").startsWith("add-");
@@ -619,12 +636,14 @@
             title: "",
             subtitle: "",
             notes: "",
+            objectSubtype: action.objectSubtype || "",
+            uploadedFile: null,
             placementKind: placementKind || (sourceNode ? "child" : "canvas"),
             createMode: action.createMode || (action.requiresInput ? "dialog" : "command")
         };
     }
 
-    function getRadialOffsets(count) {
+    function getRadialOffsets(count, baseRadius, ringStep) {
         if (count <= 0) {
             return [];
         }
@@ -636,12 +655,14 @@
         const offsets = [];
         let remaining = count;
         let ringIndex = 0;
+        const radiusStart = typeof baseRadius === "number" ? baseRadius : 96;
+        const radiusStep = typeof ringStep === "number" ? ringStep : 84;
 
         while (remaining > 0) {
             const ringCapacity = ringIndex === 0
                 ? Math.min(remaining, 6)
                 : Math.min(remaining, 12 + ((ringIndex - 1) * 6));
-            const radius = 96 + (ringIndex * 84);
+            const radius = radiusStart + (ringIndex * radiusStep);
             const startAngle = ringIndex % 2 === 0 ? -90 : -75;
 
             for (let index = 0; index < ringCapacity; index++) {
@@ -669,11 +690,27 @@
         return extent;
     }
 
-    function positionContextMenu(state, center, offsets) {
+    function positionContextMenu(state, center, offsets, actions) {
         const hostRect = state.host.getBoundingClientRect();
-        const extent = getContextMenuExtent(offsets || []);
+        let extent = getContextMenuExtent(offsets || []);
+        if ((actions || []).some(action => Array.isArray(action.children) && action.children.length > 0)) {
+            extent += 182;
+        }
+
         state.contextMenu.style.left = `${round(clamp(center.x, extent, Math.max(extent, hostRect.width - extent)))}px`;
         state.contextMenu.style.top = `${round(clamp(center.y, extent, Math.max(extent, hostRect.height - extent)))}px`;
+    }
+
+    function resolveQuickCreateSourceNode(state) {
+        const selectedId = state.ui.selectedNodeIds[0];
+        if (selectedId && state.lookups.byId.has(selectedId)) {
+            return state.lookups.byId.get(selectedId);
+        }
+
+        return state.surface.nodes.find(node => (node.family || "").toLowerCase() === "root")
+            || state.surface.nodes.find(node => !node.parentId)
+            || state.surface.nodes[0]
+            || null;
     }
 
     function submitCreateRequest(state, payload, options) {
@@ -691,17 +728,45 @@
         state.dotNetRef.invokeMethodAsync("OnNodeEdited", JSON.stringify(payload));
     }
 
+    function readFileAsUpload(file) {
+        return new Promise((resolve, reject) => {
+            if (!file) {
+                resolve(null);
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                const result = typeof reader.result === "string" ? reader.result : "";
+                const separatorIndex = result.indexOf(",");
+                resolve({
+                    fileName: file.name || "upload.bin",
+                    contentType: file.type || "application/octet-stream",
+                    base64Data: separatorIndex >= 0 ? result.substring(separatorIndex + 1) : result
+                });
+            };
+            reader.onerror = () => reject(reader.error || new Error("Failed to read file."));
+            reader.readAsDataURL(file);
+        });
+    }
+
     function commitComposer(state) {
         if (!state.composer) {
             return;
         }
 
         if (state.composer.kind === "create") {
+            if (state.composer.requiresFile && !state.composer.uploadedFile) {
+                return;
+            }
+
             submitCreateRequest(state, {
                 ...state.composer.request,
                 title: state.composer.titleInput.value.trim(),
                 subtitle: state.composer.subtitleInput.value.trim(),
-                notes: state.composer.notesInput.value.trim()
+                notes: state.composer.notesInput.value.trim(),
+                objectSubtype: state.composer.request.objectSubtype || "",
+                uploadedFile: state.composer.uploadedFile || null
             }, { focusHost: true });
             closeComposer(state);
             return;
@@ -770,6 +835,22 @@
         return { composer, card };
     }
 
+    function updateComposerFileState(composer) {
+        if (!composer) {
+            return;
+        }
+
+        if (composer.fileSummary) {
+            composer.fileSummary.textContent = composer.uploadedFile
+                ? `${composer.uploadedFile.fileName} ready`
+                : (composer.filePrompt || "Drop a file here or choose one.");
+        }
+
+        if (composer.createButton) {
+            composer.createButton.disabled = !!composer.requiresFile && !composer.uploadedFile;
+        }
+    }
+
     function openCreateComposer(state, action, request) {
         clearContextMenu(state);
         closeComposer(state, { focusHost: false });
@@ -803,6 +884,70 @@
         notesField.appendChild(notesInput);
         fields.appendChild(notesField);
 
+        let uploadedFile = request?.uploadedFile || null;
+        let fileSummary = null;
+        let fileInput = null;
+        if (action.requiresFile) {
+            const uploadField = createElement(state.document, "div", "cw-canvas-composer__upload");
+            const uploadTitle = createElement(state.document, "span", "cw-canvas-composer__upload-title", action.filePrompt || "Drop a file here or choose one.");
+            uploadField.appendChild(uploadTitle);
+
+            const dropZone = createElement(state.document, "label", "cw-canvas-composer__dropzone");
+            dropZone.tabIndex = 0;
+            fileInput = createElement(state.document, "input", "cw-canvas-composer__file-input");
+            fileInput.type = "file";
+            if (action.acceptedFileTypes) {
+                fileInput.accept = action.acceptedFileTypes;
+            }
+
+            const dropHeadline = createElement(state.document, "strong", null, "Choose file");
+            const dropCopy = createElement(state.document, "span", null, action.supportsDragDrop ? "Click or drop a file here." : "Click to choose a file.");
+            fileSummary = createElement(state.document, "small", "cw-canvas-composer__upload-summary", "");
+            dropZone.appendChild(fileInput);
+            dropZone.appendChild(dropHeadline);
+            dropZone.appendChild(dropCopy);
+            dropZone.appendChild(fileSummary);
+            uploadField.appendChild(dropZone);
+            fields.appendChild(uploadField);
+
+            const assignUpload = async file => {
+                uploadedFile = await readFileAsUpload(file);
+                if (state.composer) {
+                    state.composer.uploadedFile = uploadedFile;
+                    updateComposerFileState(state.composer);
+                }
+            };
+
+            fileInput.addEventListener("change", async event => {
+                const file = event.target?.files?.[0];
+                if (!file) {
+                    return;
+                }
+
+                await assignUpload(file);
+            });
+
+            if (action.supportsDragDrop) {
+                ["dragenter", "dragover"].forEach(eventName => dropZone.addEventListener(eventName, event => {
+                    event.preventDefault();
+                    dropZone.classList.add("is-dragover");
+                }));
+                ["dragleave", "dragend"].forEach(eventName => dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.remove("is-dragover");
+                }));
+                dropZone.addEventListener("drop", async event => {
+                    event.preventDefault();
+                    dropZone.classList.remove("is-dragover");
+                    const file = event.dataTransfer?.files?.[0];
+                    if (!file) {
+                        return;
+                    }
+
+                    await assignUpload(file);
+                });
+            }
+        }
+
         const actions = createElement(state.document, "div", "cw-canvas-composer__actions");
         const cancel = createElement(state.document, "button", "cw-button");
         cancel.type = "button";
@@ -830,11 +975,18 @@
             anchorWorld: request ? { x: request.x || 0, y: request.y || 0 } : { x: 0, y: 0 },
             titleInput,
             subtitleInput,
-            notesInput
+            notesInput,
+            createButton: create,
+            requiresFile: !!action.requiresFile,
+            uploadedFile,
+            fileSummary,
+            fileInput,
+            filePrompt: action.filePrompt || "Drop a file here or choose one."
         };
 
         window.requestAnimationFrame(() => {
             layoutComposer(state);
+            updateComposerFileState(state.composer);
             titleInput.focus();
             titleInput.select();
         });
@@ -933,14 +1085,18 @@
         });
     }
 
-    function executeContextAction(state, node, action, clientX, clientY) {
+    function executeContextAction(state, node, action, clientX, clientY, placementKind) {
+        if (action?.children?.length) {
+            return;
+        }
+
         if (isCreateAction(action) || !node) {
             const request = buildCreateRequest(
                 state,
                 action,
                 node,
                 node ? getNodePosition(state, node) : getWorldPoint(state, clientX, clientY),
-                node ? "child" : "canvas");
+                placementKind || (node ? "child" : "canvas"));
 
             if (action.requiresInput) {
                 openCreateComposer(state, action, request);
@@ -957,41 +1113,112 @@
         state.dotNetRef.invokeMethodAsync("OnContextAction", node.id, action.actionId, round(position.x), round(position.y));
     }
 
-    function showContextMenu(state, node, clientX, clientY) {
+    function renderContextMenuLayer(state, layer, options) {
+        const offsets = getRadialOffsets(options.actions.length, options.baseRadius, options.ringStep);
+        options.actions.forEach((action, index) => {
+            const offset = offsets[index];
+            const menuX = round((options.originOffset?.x || 0) + offset.x);
+            const menuY = round((options.originOffset?.y || 0) + offset.y);
+            const button = createElement(state.document, "button", `cw-context-menu__action tone-${action.tone || "neutral"}`);
+            button.type = "button";
+            button.dataset.actionId = action.actionId || "";
+            button.title = action.description || action.label || action.actionId || "action";
+            button.style.setProperty("--cw-menu-x", `${menuX}px`);
+            button.style.setProperty("--cw-menu-y", `${menuY}px`);
+            button.addEventListener("pointerdown", event => event.stopPropagation());
+            button.addEventListener("pointerenter", () => {
+                if (!action.children?.length) {
+                    if (state.contextMenuState?.submenuLayer) {
+                        state.contextMenuState.submenuLayer.remove();
+                        state.contextMenuState.submenuLayer = null;
+                    }
+                    return;
+                }
+
+                const submenuOrigin = {
+                    x: round(menuX * 1.18),
+                    y: round(menuY * 1.18)
+                };
+                if (state.contextMenuState?.submenuLayer) {
+                    state.contextMenuState.submenuLayer.remove();
+                }
+
+                const submenuLayer = createElement(state.document, "div", "cw-context-menu__layer is-submenu");
+                const submenuCore = createElement(state.document, "div", "cw-context-menu__core is-submenu");
+                submenuCore.style.setProperty("--cw-menu-x", `${submenuOrigin.x}px`);
+                submenuCore.style.setProperty("--cw-menu-y", `${submenuOrigin.y}px`);
+                submenuCore.appendChild(createElement(state.document, "span", "cw-context-menu__core-dot"));
+                submenuCore.appendChild(createElement(state.document, "span", "cw-context-menu__core-label", action.label || "More"));
+                submenuLayer.appendChild(submenuCore);
+                renderContextMenuLayer(state, submenuLayer, {
+                    actions: action.children,
+                    node: options.node,
+                    clientX: options.clientX,
+                    clientY: options.clientY,
+                    placementKind: options.placementKind,
+                    originOffset: submenuOrigin,
+                    baseRadius: 82,
+                    ringStep: 70
+                });
+                state.contextMenu.appendChild(submenuLayer);
+                state.contextMenuState.submenuLayer = submenuLayer;
+            });
+            button.addEventListener("click", event => {
+                event.stopPropagation();
+                executeContextAction(state, options.node, action, options.clientX, options.clientY, options.placementKind);
+            });
+
+            button.appendChild(createElement(state.document, "span", "cw-context-menu__icon", action.icon || action.label || "action"));
+            button.appendChild(createElement(state.document, "strong", "cw-context-menu__label", action.label || action.actionId));
+            if (action.children?.length) {
+                button.appendChild(createElement(state.document, "span", "cw-context-menu__caret", "+"));
+                button.classList.add("has-children");
+            }
+
+            layer.appendChild(button);
+        });
+
+        return offsets;
+    }
+
+    function showContextMenu(state, options) {
         clearContextMenu(state);
-        const actions = getContextActions(state, node);
+        const actions = options.actions || getContextActions(state, options.node);
         if (!actions.length) {
             return;
         }
 
         ensureHostFocus(state);
-        const hostPoint = getHostPoint(state, clientX, clientY);
-        const offsets = getRadialOffsets(actions.length);
+        const hostPoint = getHostPoint(state, options.clientX, options.clientY);
         state.contextMenu.style.display = "block";
-        positionContextMenu(state, hostPoint, offsets);
+        const rootOffsets = getRadialOffsets(actions.length);
+        positionContextMenu(state, hostPoint, rootOffsets, actions);
+        state.contextMenuState = {
+            node: options.node || null,
+            actions,
+            clientX: options.clientX,
+            clientY: options.clientY,
+            placementKind: options.placementKind || (options.node ? "child" : "canvas"),
+            submenuLayer: null
+        };
 
         const core = createElement(state.document, "div", "cw-context-menu__core");
         core.appendChild(createElement(state.document, "span", "cw-context-menu__core-dot"));
-        core.appendChild(createElement(state.document, "span", "cw-context-menu__core-label", node?.title || "Canvas"));
+        core.appendChild(createElement(state.document, "span", "cw-context-menu__core-label", options.label || options.node?.title || "Canvas"));
         state.contextMenu.appendChild(core);
 
-        actions.forEach((action, index) => {
-            const button = createElement(state.document, "button", `cw-context-menu__action tone-${action.tone || "neutral"}`);
-            button.type = "button";
-            button.dataset.actionId = action.actionId || "";
-            button.title = action.description || action.label || action.actionId || "action";
-            button.style.setProperty("--cw-menu-x", `${round(offsets[index].x)}px`);
-            button.style.setProperty("--cw-menu-y", `${round(offsets[index].y)}px`);
-            button.addEventListener("pointerdown", event => event.stopPropagation());
-            button.addEventListener("click", event => {
-                event.stopPropagation();
-                executeContextAction(state, node, action, clientX, clientY);
-            });
-
-            button.appendChild(createElement(state.document, "span", "cw-context-menu__icon", action.icon || action.label || "action"));
-            button.appendChild(createElement(state.document, "strong", "cw-context-menu__label", action.label || action.actionId));
-            state.contextMenu.appendChild(button);
+        const rootLayer = createElement(state.document, "div", "cw-context-menu__layer");
+        renderContextMenuLayer(state, rootLayer, {
+            actions,
+            node: options.node || null,
+            clientX: options.clientX,
+            clientY: options.clientY,
+            placementKind: options.placementKind || (options.node ? "child" : "canvas"),
+            originOffset: { x: 0, y: 0 },
+            baseRadius: 96,
+            ringStep: 84
         });
+        state.contextMenu.appendChild(rootLayer);
     }
 
     function startPan(state, event) {
@@ -1151,6 +1378,21 @@
             position.y + halfHeight <= rect.height - safeMargin;
     }
 
+    function centerNodeElementInViewport(state, nodeId) {
+        const element = state.nodeLayer?.querySelector?.(`.cw-node[data-node-id="${nodeId}"]`);
+        if (!element) {
+            return false;
+        }
+
+        const hostRect = state.host.getBoundingClientRect();
+        const nodeRect = element.getBoundingClientRect();
+        const deltaX = (hostRect.left + (hostRect.width / 2)) - (nodeRect.left + (nodeRect.width / 2));
+        const deltaY = (hostRect.top + (hostRect.height / 2)) - (nodeRect.top + (nodeRect.height / 2));
+        state.ui.panX = round(state.ui.panX + deltaX);
+        state.ui.panY = round(state.ui.panY + deltaY);
+        return true;
+    }
+
     function ensureNodeVisible(state, nodeId, options) {
         const node = state.lookups.byId.get(nodeId);
         if (!node) {
@@ -1177,6 +1419,76 @@
         state.links.setAttribute("height", `${Math.max(rect.height, 1)}`);
         setPan(state, state.ui.panX, state.ui.panY);
         layoutComposer(state);
+    }
+
+    function findContainingBlockOverride(state) {
+        let current = state.shell?.parentElement || null;
+        while (current) {
+            const style = window.getComputedStyle(current);
+            if (style.transform !== "none" ||
+                style.perspective !== "none" ||
+                style.filter !== "none" ||
+                style.backdropFilter !== "none" ||
+                style.webkitBackdropFilter !== "none") {
+                return current;
+            }
+
+            current = current.parentElement;
+        }
+
+        return null;
+    }
+
+    function suspendContainingBlock(state) {
+        if (state.containingBlockOverride) {
+            return;
+        }
+
+        const element = findContainingBlockOverride(state);
+        if (!element) {
+            return;
+        }
+
+        state.containingBlockOverride = {
+            element,
+            filter: element.style.filter,
+            backdropFilter: element.style.backdropFilter,
+            webkitBackdropFilter: element.style.webkitBackdropFilter
+        };
+        element.style.filter = "none";
+        element.style.backdropFilter = "none";
+        element.style.webkitBackdropFilter = "none";
+    }
+
+    function restoreContainingBlock(state) {
+        if (!state.containingBlockOverride) {
+            return;
+        }
+
+        const override = state.containingBlockOverride;
+        override.element.style.filter = override.filter || "";
+        override.element.style.backdropFilter = override.backdropFilter || "";
+        override.element.style.webkitBackdropFilter = override.webkitBackdropFilter || "";
+        state.containingBlockOverride = null;
+    }
+
+    function setMaximized(state, isMaximized) {
+        state.ui.isMaximized = !!isMaximized;
+        if (isMaximized) {
+            suspendContainingBlock(state);
+        }
+        else {
+            restoreContainingBlock(state);
+        }
+
+        state.document.body.classList.toggle("cw-body-lock", !!isMaximized);
+        state.document.documentElement.classList.toggle("cw-body-lock", !!isMaximized);
+        if (state.shell) {
+            state.shell.classList.toggle("is-maximized", !!isMaximized);
+        }
+
+        resize(state);
+        render(state);
     }
 
     function fitView(state) {
@@ -1207,15 +1519,12 @@
             return;
         }
 
-        const rect = state.host.getBoundingClientRect();
-        const position = getNodePosition(state, node);
-        setPan(
-            state,
-            (rect.width / 2) - (position.x * state.ui.zoom),
-            (rect.height / 2) - (position.y * state.ui.zoom));
         state.selectedIds = toSelectionSet([nodeId]);
         state.ui.selectedNodeIds = [nodeId];
         render(state);
+        if (centerNodeElementInViewport(state, nodeId)) {
+            render(state);
+        }
         ensureHostFocus(state);
         publishSelection(state);
         publishState(state);
@@ -1301,6 +1610,7 @@
                 }
 
                 if (targetNode) {
+                    const isMultiToggle = (event.ctrlKey || event.metaKey) && event.shiftKey;
                     if (event.button === 0 &&
                         !event.altKey &&
                         !event.ctrlKey &&
@@ -1310,8 +1620,9 @@
                         return;
                     }
 
-                    if (event.ctrlKey || event.metaKey) {
+                    if (isMultiToggle) {
                         toggleSelection(state, targetNode.id);
+                        return;
                     }
                     else if (!state.selectedIds.has(targetNode.id) || state.selectedIds.size > 1) {
                         state.selectedIds = toSelectionSet([targetNode.id]);
@@ -1389,7 +1700,12 @@
                     setSelection(state, [targetNode.id], true);
                 }
 
-                showContextMenu(state, targetNode, event.clientX, event.clientY);
+                showContextMenu(state, {
+                    node: targetNode,
+                    clientX: event.clientX,
+                    clientY: event.clientY,
+                    placementKind: targetNode ? "child" : "canvas"
+                });
             },
             keyDown: event => {
                 const target = event.target;
@@ -1501,6 +1817,7 @@
 
         return {
             host,
+            shell: host.closest(".cw-workbench-shell"),
             document: host.ownerDocument,
             dotNetRef,
             surface: normalizedSurface,
@@ -1515,8 +1832,10 @@
             nodeLayer: null,
             marquee: null,
             contextMenu: null,
+            contextMenuState: null,
             composer: null,
             pendingCreate: null,
+            containingBlockOverride: null,
             resizeObserver: null,
             lastPointerTarget: null,
             recentDoubleActivationAt: 0,
@@ -1538,6 +1857,7 @@
             closeComposer(state, { focusHost: false });
         }
 
+        setMaximized(state, !!state.ui.isMaximized);
         resize(state);
         const selectedNodeId = state.ui.selectedNodeIds[0] || null;
         const shouldRevealSelection = !!selectedNodeId &&
@@ -1563,6 +1883,7 @@
             const state = hydrateState(host, dotNetRef, surface);
             buildWorkbench(state);
             attachEvents(state);
+            setMaximized(state, !!state.ui.isMaximized);
             if (typeof window.ResizeObserver === "function") {
                 state.resizeObserver = new window.ResizeObserver(() => {
                     resize(state);
@@ -1614,9 +1935,34 @@
 
             openCreateComposer(state, action, request || {});
         },
+        openQuickCreateMenu(host, anchorElement) {
+            const state = host.__canvasWorkbenchState;
+            if (!state || !anchorElement) {
+                return;
+            }
+
+            const sourceNode = resolveQuickCreateSourceNode(state);
+            const rect = anchorElement.getBoundingClientRect();
+            showContextMenu(state, {
+                node: sourceNode,
+                actions: state.surface.chrome.quickCreateActions || [],
+                clientX: rect.left + (rect.width / 2),
+                clientY: rect.top + (rect.height / 2),
+                placementKind: sourceNode ? "child" : "canvas",
+                label: sourceNode?.title || "Quick create"
+            });
+        },
         getState(host) {
             const state = host.__canvasWorkbenchState;
             return state ? serializeState(state) : JSON.stringify({});
+        },
+        setMaximized(host, isMaximized) {
+            const state = host.__canvasWorkbenchState;
+            if (!state) {
+                return;
+            }
+
+            setMaximized(state, isMaximized);
         },
         resize(host) {
             const state = host.__canvasWorkbenchState;
@@ -1648,6 +1994,7 @@
                 host.removeEventListener("keydown", state.handlers.keyDown);
             }
 
+            setMaximized(state, false);
             clear(host);
             delete host.__canvasWorkbenchState;
         }

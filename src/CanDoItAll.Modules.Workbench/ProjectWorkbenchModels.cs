@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
@@ -33,6 +34,10 @@ public sealed class ProjectObjectRecord : IProjectObject
     public string Route { get; set; } = string.Empty;
     public string ExternalArtifactKind { get; set; } = string.Empty;
     public Guid? ExternalArtifactId { get; set; }
+    public string ObjectSubtype { get; set; } = string.Empty;
+    public string MediaRelativePath { get; set; } = string.Empty;
+    public string MediaContentType { get; set; } = string.Empty;
+    public string MediaOriginalFileName { get; set; } = string.Empty;
     public string? ParentNodeKey { get; set; }
     public double PositionX { get; set; }
     public double PositionY { get; set; }
@@ -56,6 +61,10 @@ internal sealed class ProjectObjectRecordConfiguration : IEntityTypeConfiguratio
         builder.Property(item => item.Notes).HasColumnType("TEXT");
         builder.Property(item => item.Route).HasMaxLength(800);
         builder.Property(item => item.ExternalArtifactKind).HasMaxLength(120);
+        builder.Property(item => item.ObjectSubtype).HasMaxLength(120);
+        builder.Property(item => item.MediaRelativePath).HasMaxLength(800);
+        builder.Property(item => item.MediaContentType).HasMaxLength(160);
+        builder.Property(item => item.MediaOriginalFileName).HasMaxLength(260);
         builder.Property(item => item.ParentNodeKey).HasMaxLength(160);
         builder.HasIndex(item => new { item.ProjectId, item.NodeKey }).IsUnique();
     }
@@ -109,6 +118,7 @@ public sealed record ProjectStructureNode(
     string Id,
     string? ParentId,
     ProjectObjectType ObjectType,
+    string ObjectSubtype,
     string Title,
     string Subtitle,
     string Status,
@@ -116,6 +126,9 @@ public sealed record ProjectStructureNode(
     string Route,
     string ArtifactKind,
     Guid? ArtifactId,
+    string MediaRelativePath,
+    string MediaContentType,
+    string MediaOriginalFileName,
     double X,
     double Y,
     ProjectObjectVisualProfile VisualProfile,
@@ -158,7 +171,9 @@ public sealed record ProjectObjectCreateRequest(
     double? X = null,
     double? Y = null,
     DateTimeOffset? StartUtc = null,
-    DateTimeOffset? EndUtc = null);
+    DateTimeOffset? EndUtc = null,
+    string? ObjectSubtype = null,
+    ProjectObjectMediaPayload? Media = null);
 
 public sealed record ProjectObjectSeedRequest(
     ProjectObjectType ObjectType,
@@ -166,7 +181,13 @@ public sealed record ProjectObjectSeedRequest(
     string Subtitle,
     string Notes,
     DateTimeOffset? StartUtc = null,
-    DateTimeOffset? EndUtc = null);
+    DateTimeOffset? EndUtc = null,
+    string? ObjectSubtype = null);
+
+public sealed record ProjectObjectMediaPayload(
+    string FileName,
+    string ContentType,
+    string Base64Data);
 
 public sealed record ProjectCanvasContextActionRequest(
     string? NodeId,
@@ -179,6 +200,13 @@ public sealed record ProjectNodeMoveRequest(
     double X,
     double Y);
 
+internal sealed record SavedMediaDescriptor(
+    string RelativePath,
+    string Route,
+    string ContentType,
+    string OriginalFileName,
+    string ArtifactKind);
+
 /* codex-capsule
 kind: service
 name: ProjectWorkbenchService
@@ -190,7 +218,7 @@ tests: integration:ProjectWorkbenchServiceTests
 inputs: project id, command requests, graph mutations
 outputs: ProjectStructureSurface, ProjectCalendarSurface, ArtifactReference
 */
-public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbContextFactory, IClock clock) : IProjectWorkbenchSeedService
+public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbContextFactory, IClock clock, IFileStore fileStore) : IProjectWorkbenchSeedService
 {
     public async Task<ProjectStructureSurface> GetStructureAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
@@ -245,7 +273,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
                 item.ExternalArtifactKind,
                 item.ExternalArtifactId,
                 item.ObjectType,
-                ResolveVisualProfile(item.ObjectType, item.Status).AccentColor))
+                ResolveVisualProfile(item.ObjectType, item.ObjectSubtype, item.Status).AccentColor))
             .ToList();
 
         return new ProjectCalendarSurface(project.Id, project.Name, events, preferredView, viewState);
@@ -259,6 +287,9 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
         var position = request.X.HasValue && request.Y.HasValue
             ? (request.X.Value, request.Y.Value)
             : GetDefaultPosition(request.ObjectType, existingCount + 1);
+        var media = await SaveMediaAsync(projectId, request.ObjectType, request.Media, cancellationToken);
+        var route = media?.Route ?? $"/projects/{projectId}/structure";
+        var artifactKind = media?.ArtifactKind ?? request.ObjectType.ToString();
 
         var record = new ProjectObjectRecord
         {
@@ -269,8 +300,12 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
             Subtitle = request.Subtitle?.Trim() ?? string.Empty,
             Status = "Draft",
             Notes = request.Notes?.Trim() ?? string.Empty,
-            Route = $"/projects/{projectId}/structure",
-            ExternalArtifactKind = request.ObjectType.ToString(),
+            Route = route,
+            ExternalArtifactKind = artifactKind,
+            ObjectSubtype = request.ObjectSubtype?.Trim() ?? string.Empty,
+            MediaRelativePath = media?.RelativePath ?? string.Empty,
+            MediaContentType = media?.ContentType ?? string.Empty,
+            MediaOriginalFileName = media?.OriginalFileName ?? string.Empty,
             ParentNodeKey = request.ParentNodeKey,
             PositionX = position.Item1,
             PositionY = position.Item2,
@@ -318,6 +353,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
                 Notes = seed.Notes?.Trim() ?? string.Empty,
                 Route = $"/projects/{projectId}/structure",
                 ExternalArtifactKind = seed.ObjectType.ToString(),
+                ObjectSubtype = seed.ObjectSubtype?.Trim() ?? string.Empty,
                 PositionX = position.Item1,
                 PositionY = position.Item2,
                 StartUtc = seed.StartUtc,
@@ -335,7 +371,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
     async Task IProjectWorkbenchSeedService.SeedProjectObjectsAsync(Guid projectId, IReadOnlyCollection<ProjectObjectSeedDraft> seeds, CancellationToken cancellationToken)
         => await SeedProjectObjectsAsync(
             projectId,
-            seeds.Select(seed => new ProjectObjectSeedRequest(seed.ObjectType, seed.Title, seed.Subtitle, seed.Notes, seed.StartUtc, seed.EndUtc)).ToList(),
+            seeds.Select(seed => new ProjectObjectSeedRequest(seed.ObjectType, seed.Title, seed.Subtitle, seed.Notes, seed.StartUtc, seed.EndUtc, null)).ToList(),
             cancellationToken);
 
     public async Task LinkObjectsAsync(Guid projectId, string sourceNodeKey, string targetNodeKey, ProjectObjectLinkKind linkKind, CancellationToken cancellationToken = default)
@@ -508,6 +544,50 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
             projectId,
             node.NodeKey,
             TabKind: tabKind);
+    }
+
+    private async Task<SavedMediaDescriptor?> SaveMediaAsync(
+        Guid projectId,
+        ProjectObjectType objectType,
+        ProjectObjectMediaPayload? media,
+        CancellationToken cancellationToken)
+    {
+        if (media is null || string.IsNullOrWhiteSpace(media.Base64Data) || string.IsNullOrWhiteSpace(media.FileName))
+        {
+            return null;
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(media.Base64Data);
+        }
+        catch
+        {
+            return null;
+        }
+
+        var extension = Path.GetExtension(media.FileName);
+        var safeExtension = string.IsNullOrWhiteSpace(extension)
+            ? objectType == ProjectObjectType.ImageAsset ? ".png" : ".bin"
+            : extension;
+        var safeFileName = $"{SanitizeSlug(Path.GetFileNameWithoutExtension(media.FileName))}-{Guid.NewGuid():N}{safeExtension}";
+        var category = objectType switch
+        {
+            ProjectObjectType.ImageAsset => "project-media/images",
+            ProjectObjectType.VideoAsset => "project-media/videos",
+            _ => "project-media/files"
+        };
+        var relativePath = Path.Combine("managed-files", category, projectId.ToString("N"), safeFileName)
+            .Replace('\\', '/');
+        await fileStore.SaveBytesAsync(relativePath, bytes, cancellationToken);
+
+        return new SavedMediaDescriptor(
+            relativePath,
+            $"/{relativePath}",
+            media.ContentType,
+            media.FileName,
+            objectType.ToString());
     }
 
     private async Task SyncGraphAsync(AppDbContext dbContext, Guid projectId, CancellationToken cancellationToken)
@@ -837,7 +917,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
 
     private static ProjectStructureNode MapStructureNode(ProjectObjectRecord record)
     {
-        var profile = ResolveVisualProfile(record.ObjectType, record.Status);
+        var profile = ResolveVisualProfile(record.ObjectType, record.ObjectSubtype, record.Status);
         var badges = new List<string>();
         if (record.IsSystemManaged)
         {
@@ -849,10 +929,21 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
             badges.Add("Scheduled");
         }
 
+        if (!string.IsNullOrWhiteSpace(record.ObjectSubtype))
+        {
+            badges.Add(ResolveSubtypeBadge(record.ObjectType, record.ObjectSubtype));
+        }
+
+        if (!string.IsNullOrWhiteSpace(record.MediaOriginalFileName))
+        {
+            badges.Add("Uploaded");
+        }
+
         return new ProjectStructureNode(
             record.NodeKey,
             record.ParentNodeKey,
             record.ObjectType,
+            record.ObjectSubtype,
             record.Title,
             record.Subtitle,
             record.Status,
@@ -860,19 +951,31 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
             record.Route,
             record.ExternalArtifactKind,
             record.ExternalArtifactId,
+            record.MediaRelativePath,
+            record.MediaContentType,
+            record.MediaOriginalFileName,
             record.PositionX,
             record.PositionY,
             profile,
             badges);
     }
 
-    private static ProjectObjectVisualProfile ResolveVisualProfile(ProjectObjectType objectType, string status) => objectType switch
+    private static string ResolveSubtypeBadge(ProjectObjectType objectType, string objectSubtype) => objectType switch
+    {
+        ProjectObjectType.ProjectBlock => ResolveBlockSubtypeLabel(objectSubtype),
+        _ => objectSubtype
+    };
+
+    private static ProjectObjectVisualProfile ResolveVisualProfile(ProjectObjectType objectType, string objectSubtype, string status) => objectType switch
     {
         ProjectObjectType.ProjectRoot => new("hex", "#0f172a", "PR", "Project"),
         ProjectObjectType.Phase => new("pill", "#2563eb", "PH", "Phase"),
         ProjectObjectType.Milestone => new("diamond", "#d97706", "MS", "Milestone"),
+        ProjectObjectType.ProjectBlock => ResolveProjectBlockVisualProfile(objectSubtype),
         ProjectObjectType.Repository => new("rect", "#0891b2", "RE", "Repo"),
         ProjectObjectType.File => new("rect", "#14b8a6", "FI", "File"),
+        ProjectObjectType.ImageAsset => new("rect", "#ec4899", "IM", "Image"),
+        ProjectObjectType.VideoAsset => new("rect", "#7c3aed", "VD", "Video"),
         ProjectObjectType.Link => new("circle", "#38bdf8", "LN", "Link"),
         ProjectObjectType.Connector => new("circle", "#8b5cf6", "CN", "Connector"),
         ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession => new("hex", "#0f766e", "PF", "Prompt"),
@@ -889,13 +992,74 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
         {
             ProjectObjectType.ProjectRoot => (140, 240),
             ProjectObjectType.Phase => (420, 120 + (index * 150)),
-            ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.Link or ProjectObjectType.Connector or ProjectObjectType.SecretReference => (760, 100 + (index * 120)),
+            ProjectObjectType.ProjectBlock => (760, 420 + (index * 110)),
+            ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector or ProjectObjectType.SecretReference => (760, 100 + (index * 120)),
             ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession => (1080, 100 + (index * 150)),
             ProjectObjectType.PromptStep => (1400, 100 + (index * 120)),
             ProjectObjectType.ValidationRun => (780, 580 + (index * 120)),
             ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => (1100, 620 + (index * 140)),
             _ => (420 + ((index % 3) * 220), 820 + ((index / 3) * 140))
         };
+
+    private static ProjectObjectVisualProfile ResolveProjectBlockVisualProfile(string objectSubtype)
+        => objectSubtype switch
+        {
+            "feature" => new("hex", "#2563eb", "FB", "Feature"),
+            "architecture" => new("hex", "#4f46e5", "AR", "Architecture"),
+            "implementation" => new("hex", "#0f766e", "IM", "Implementation"),
+            "revision" => new("hex", "#f97316", "RB", "Revision"),
+            "testing" => new("hex", "#7c3aed", "TB", "Testing"),
+            "prompting" => new("hex", "#0f766e", "PB", "Prompting"),
+            "financial" => new("hex", "#16a34a", "FN", "Financial"),
+            "marketing" => new("hex", "#db2777", "MK", "Marketing"),
+            "research" => new("hex", "#0891b2", "RS", "Research"),
+            "delivery" => new("hex", "#d97706", "DL", "Delivery"),
+            "operations" => new("hex", "#475569", "OP", "Operations"),
+            "risk" => new("hex", "#dc2626", "RK", "Risk"),
+            "compliance" => new("hex", "#7c2d12", "CP", "Compliance"),
+            "support" => new("hex", "#0284c7", "SP", "Support"),
+            _ => new("hex", "#334155", "BL", "Block")
+        };
+
+    private static string ResolveBlockSubtypeLabel(string objectSubtype) => objectSubtype switch
+    {
+        "feature" => "Feature block",
+        "architecture" => "Architecture block",
+        "implementation" => "Implementation block",
+        "revision" => "Revision block",
+        "testing" => "Testing block",
+        "prompting" => "Prompting block",
+        "financial" => "Financial block",
+        "marketing" => "Marketing block",
+        "research" => "Research block",
+        "delivery" => "Delivery block",
+        "operations" => "Operations block",
+        "risk" => "Risk block",
+        "compliance" => "Compliance block",
+        "support" => "Support block",
+        _ => "Project block"
+    };
+
+    private static string SanitizeSlug(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "asset";
+        }
+
+        var builder = new string(value
+            .Trim()
+            .ToLowerInvariant()
+            .Select(character => char.IsLetterOrDigit(character) ? character : '-')
+            .ToArray());
+
+        while (builder.Contains("--", StringComparison.Ordinal))
+        {
+            builder = builder.Replace("--", "-", StringComparison.Ordinal);
+        }
+
+        return builder.Trim('-');
+    }
 
     private static ProjectObjectType MapResourceKind(ResourceKind resourceKind) => resourceKind switch
     {

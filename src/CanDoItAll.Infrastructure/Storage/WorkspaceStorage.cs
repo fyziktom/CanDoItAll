@@ -21,6 +21,8 @@ public interface IFileStore
 {
     Task<string> SaveTextAsync(string relativePath, string content, CancellationToken cancellationToken = default);
 
+    Task<string> SaveBytesAsync(string relativePath, byte[] content, CancellationToken cancellationToken = default);
+
     Task<string?> ReadTextAsync(string relativePath, CancellationToken cancellationToken = default);
 }
 
@@ -75,6 +77,19 @@ public sealed class LocalFileStore(IWorkspacePathResolver resolver) : IFileStore
         }
 
         await File.WriteAllTextAsync(fullPath, content, cancellationToken);
+        return fullPath;
+    }
+
+    public async Task<string> SaveBytesAsync(string relativePath, byte[] content, CancellationToken cancellationToken = default)
+    {
+        var fullPath = Path.Combine(resolver.ResolveWorkspaceRoot(), relativePath);
+        var directory = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        await File.WriteAllBytesAsync(fullPath, content, cancellationToken);
         return fullPath;
     }
 

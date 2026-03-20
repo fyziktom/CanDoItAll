@@ -63,7 +63,10 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.Locator(".cw-workbench-shell").WaitForAsync();
         await page.GetByLabel("Canvas zoom").WaitForAsync();
         await page.GetByLabel("Open quick create actions").ClickAsync();
-        await page.Locator(".cw-create-rail").GetByRole(AriaRole.Button, new() { Name = "Note", Exact = true }).WaitForAsync();
+        await page.Locator(".cw-context-menu__action[data-action-id='add-note']").WaitForAsync();
+        await page.HoverAsync(".cw-context-menu__action[data-action-id='group-assets']");
+        await page.Locator(".cw-context-menu__action[data-action-id='add-image-asset']").WaitForAsync();
+        await page.Keyboard.PressAsync("Escape");
         await page.GetByRole(AriaRole.Button, new() { Name = "Help" }).ClickAsync();
         await page.GetByRole(AriaRole.Dialog, new() { Name = "Canvas shortcuts and gestures" }).WaitForAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Close help" }).ClickAsync();
@@ -118,10 +121,18 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await canvasHost.FocusAsync();
 
         var radialLabels = await OpenCanvasContextMenuAsync(page, ".cw-node[data-node-id^='project:']");
-        Assert.Contains("Link", radialLabels);
-        Assert.Contains("Secret", radialLabels);
-        Assert.Contains("Session", radialLabels);
-        Assert.True(radialLabels.Length >= 15, $"Expected the project-node radial menu to expose the broad create palette, got {radialLabels.Length} actions.");
+        Assert.Contains("Assets", radialLabels);
+        Assert.Contains("Blocks", radialLabels);
+        Assert.Contains("Prompts", radialLabels);
+        Assert.Contains("Assurance", radialLabels);
+        Assert.Contains("Open", radialLabels);
+        Assert.Contains("Connect", radialLabels);
+        await page.HoverAsync(".cw-context-menu__action[data-action-id='group-assets']");
+        await page.Locator(".cw-context-menu__action[data-action-id='add-image-asset']").WaitForAsync();
+        await page.Locator(".cw-context-menu__action[data-action-id='add-video-asset']").WaitForAsync();
+        await page.HoverAsync(".cw-context-menu__action[data-action-id='group-blocks']");
+        await page.Locator(".cw-context-menu__action[data-action-id='add-block-feature']").WaitForAsync();
+        await page.Locator(".cw-context-menu__action[data-action-id='add-block-support']").WaitForAsync();
         await page.Keyboard.PressAsync("Escape");
 
         await page.Keyboard.PressAsync("Tab");
@@ -161,6 +172,65 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.Locator(".cw-canvas-composer__actions").GetByRole(AriaRole.Button, new() { Name = "Link", Exact = true }).ClickAsync();
         await page.WaitForSelectorAsync("text=API reference");
         await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node.is-selected .cw-node__title')).some(node => node.textContent?.includes('API reference'))");
+
+        await OpenCanvasCreateComposerAsync(page, ".cw-node[data-node-id^='project:']", "Image", "add-image-asset");
+        await page.WaitForSelectorAsync("text=Drop an image here or choose one.");
+        var imageUploadReady = await page.EvaluateAsync<bool>(
+            @"async () => {
+                const dropZone = document.querySelector('.cw-canvas-composer__dropzone');
+                if (!dropZone) {
+                    return false;
+                }
+
+                const base64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jmioAAAAASUVORK5CYII=';
+                const binary = atob(base64);
+                const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+                const file = new File([bytes], 'playwright-drop-image.png', { type: 'image/png' });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+
+                for (const eventName of ['dragenter', 'dragover']) {
+                    dropZone.dispatchEvent(new DragEvent(eventName, { bubbles: true, cancelable: true, dataTransfer }));
+                }
+
+                dropZone.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
+                await new Promise(resolve => setTimeout(resolve, 200));
+                return document.querySelector('.cw-canvas-composer__upload-summary')?.textContent?.includes('playwright-drop-image.png') === true;
+            }");
+        Assert.True(imageUploadReady, "Expected drag/drop image upload to populate the create dialog.");
+
+        await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("Playwright dropped image");
+        await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("Regression media check");
+        await page.Locator(".cw-canvas-composer__textarea").FillAsync("Created through the drag and drop upload path");
+        await page.Locator(".cw-canvas-composer__actions").GetByRole(AriaRole.Button, new() { Name = "Image", Exact = true }).ClickAsync();
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-media-preview')?.tagName === 'IMG'");
+        await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node.is-selected .cw-node__title')).some(node => node.textContent?.includes('Playwright dropped image'))");
+
+        await ClickCanvasNodeAsync(page, ".cw-node:not([data-node-id^='project:'])");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Focus root" }).ClickAsync();
+        var focusState = await ReadCanvasFocusStateAsync(page);
+        Assert.StartsWith("project:", focusState.SelectedId, StringComparison.Ordinal);
+        Assert.InRange(Math.Abs(focusState.DeltaX), 0, 2);
+        Assert.InRange(Math.Abs(focusState.DeltaY), 0, 2);
+
+        if (await page.EvaluateAsync<bool>("() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') === true"))
+        {
+            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle maximize" }).ClickAsync();
+            await page.WaitForFunctionAsync("() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') !== true");
+        }
+
+        var docked = await ReadCanvasViewportStateAsync(page);
+        Assert.False(docked.IsMaximized);
+        Assert.False(docked.BodyLock);
+        Assert.True(docked.HostWidth < docked.ViewportWidth, $"Expected docked host width to be smaller than viewport. Host={docked.HostWidth}, viewport={docked.ViewportWidth}.");
+
+        await page.GetByRole(AriaRole.Button, new() { Name = "Toggle maximize" }).ClickAsync();
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') === true");
+        var maximized = await ReadCanvasViewportStateAsync(page);
+        Assert.True(maximized.IsMaximized);
+        Assert.True(maximized.BodyLock);
+        Assert.InRange(Math.Abs(maximized.HostWidth - maximized.ViewportWidth), 0, 1);
+        Assert.InRange(Math.Abs(maximized.HostHeight - maximized.ViewportHeight), 0, 1);
     }
 
     private async Task<Guid> CreateProjectAsync(IPage page, string projectName, string phase)
@@ -211,6 +281,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
 
     private static async Task OpenCanvasCreateComposerAsync(IPage page, string selector, string label, string? actionId = null)
     {
+        var groupActionId = ResolveGroupedAction(actionId);
         var composerOpened = await page.EvaluateAsync<bool>(
             @"args => {
                 const node = document.querySelector(args.selector);
@@ -234,10 +305,20 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
                     .find(button => button.dataset.actionId === args.actionId)
                     || Array.from(document.querySelectorAll('.cw-context-menu__action'))
                         .find(button => button.textContent?.includes(args.label));
-                action?.click();
+                if (!action && args.groupActionId) {
+                    const group = Array.from(document.querySelectorAll('.cw-context-menu__action'))
+                        .find(button => button.dataset.actionId === args.groupActionId);
+                    group?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+                }
+
+                const resolvedAction = Array.from(document.querySelectorAll('.cw-context-menu__action'))
+                    .find(button => button.dataset.actionId === args.actionId)
+                    || Array.from(document.querySelectorAll('.cw-context-menu__action'))
+                        .find(button => button.textContent?.includes(args.label));
+                resolvedAction?.click();
                 return !!document.querySelector('.cw-canvas-composer__input');
             }",
-            new { selector, label, actionId });
+            new { selector, label, actionId, groupActionId });
 
         Assert.True(composerOpened, $"Expected the radial menu action '{label}' to open the in-canvas composer.");
     }
@@ -269,4 +350,71 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
             }",
             selector);
     }
+
+    private static Task<CanvasFocusState> ReadCanvasFocusStateAsync(IPage page)
+        => page.EvaluateAsync<CanvasFocusState>(
+            @"() => {
+                const host = document.querySelector('.cw-canvas-host');
+                const selected = document.querySelector('.cw-node.is-selected');
+                if (!host || !selected) {
+                    return { selectedId: null, deltaX: 9999, deltaY: 9999 };
+                }
+
+                const hostRect = host.getBoundingClientRect();
+                const selectedRect = selected.getBoundingClientRect();
+                return {
+                    selectedId: selected.getAttribute('data-node-id'),
+                    deltaX: Math.round((selectedRect.left + (selectedRect.width / 2)) - (hostRect.left + (hostRect.width / 2))),
+                    deltaY: Math.round((selectedRect.top + (selectedRect.height / 2)) - (hostRect.top + (hostRect.height / 2)))
+                };
+            }");
+
+    private static Task<CanvasViewportState> ReadCanvasViewportStateAsync(IPage page)
+        => page.EvaluateAsync<CanvasViewportState>(
+            @"() => {
+                const shell = document.querySelector('.cw-workbench-shell');
+                const host = document.querySelector('.cw-canvas-host');
+                return {
+                    isMaximized: shell?.classList.contains('is-maximized') === true,
+                    bodyLock: document.body.classList.contains('cw-body-lock'),
+                    hostWidth: host?.getBoundingClientRect().width ?? 0,
+                    hostHeight: host?.getBoundingClientRect().height ?? 0,
+                    viewportWidth: window.innerWidth,
+                    viewportHeight: window.innerHeight
+                };
+            }");
+
+    private sealed class CanvasFocusState
+    {
+        public string? SelectedId { get; set; }
+
+        public int DeltaX { get; set; }
+
+        public int DeltaY { get; set; }
+    }
+
+    private sealed class CanvasViewportState
+    {
+        public bool IsMaximized { get; set; }
+
+        public bool BodyLock { get; set; }
+
+        public double HostWidth { get; set; }
+
+        public double HostHeight { get; set; }
+
+        public double ViewportWidth { get; set; }
+
+        public double ViewportHeight { get; set; }
+    }
+
+    private static string? ResolveGroupedAction(string? actionId) => actionId switch
+    {
+        null or "" => null,
+        var value when value.StartsWith("add-block-", StringComparison.Ordinal) => "group-blocks",
+        "add-prompt-flow" or "add-prompt-session" or "add-prompt-step" => "group-prompts",
+        "add-repository" or "add-file" or "add-image-asset" or "add-video-asset" or "add-link" or "add-connector" or "add-secret-reference" => "group-assets",
+        "add-validation-run" or "add-test-plan" or "add-test-evidence" => "group-assurance",
+        _ => null
+    };
 }

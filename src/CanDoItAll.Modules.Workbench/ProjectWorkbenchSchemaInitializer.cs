@@ -7,6 +7,14 @@ namespace CanDoItAll.Modules.Workbench;
 
 public static class ProjectWorkbenchSchemaInitializer
 {
+    private static readonly (string Name, string Definition)[] RequiredProjectObjectColumns =
+    [
+        ("ObjectSubtype", """TEXT NOT NULL DEFAULT ''"""),
+        ("MediaRelativePath", """TEXT NOT NULL DEFAULT ''"""),
+        ("MediaContentType", """TEXT NOT NULL DEFAULT ''"""),
+        ("MediaOriginalFileName", """TEXT NOT NULL DEFAULT ''""")
+    ];
+
     private static readonly string[] RequiredTables =
     [
         "Workbench_ProjectObjects",
@@ -29,6 +37,10 @@ public static class ProjectWorkbenchSchemaInitializer
             "Route" TEXT NOT NULL,
             "ExternalArtifactKind" TEXT NOT NULL,
             "ExternalArtifactId" TEXT NULL,
+            "ObjectSubtype" TEXT NOT NULL DEFAULT '',
+            "MediaRelativePath" TEXT NOT NULL DEFAULT '',
+            "MediaContentType" TEXT NOT NULL DEFAULT '',
+            "MediaOriginalFileName" TEXT NOT NULL DEFAULT '',
             "ParentNodeKey" TEXT NULL,
             "PositionX" REAL NOT NULL,
             "PositionY" REAL NOT NULL,
@@ -83,6 +95,7 @@ public static class ProjectWorkbenchSchemaInitializer
         var existingTables = await ReadExistingTablesAsync(dbContext, cancellationToken);
         if (RequiredTables.All(existingTables.Contains))
         {
+            await EnsureProjectObjectColumnsAsync(dbContext, cancellationToken);
             return;
         }
 
@@ -90,6 +103,8 @@ public static class ProjectWorkbenchSchemaInitializer
         {
             await dbContext.Database.ExecuteSqlRawAsync(statement, cancellationToken);
         }
+
+        await EnsureProjectObjectColumnsAsync(dbContext, cancellationToken);
     }
 
     private static async Task<HashSet<string>> ReadExistingTablesAsync(AppDbContext dbContext, CancellationToken cancellationToken)
@@ -123,6 +138,56 @@ public static class ProjectWorkbenchSchemaInitializer
             }
 
             return existingTables;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static async Task EnsureProjectObjectColumnsAsync(AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        var existingColumns = await ReadExistingColumnsAsync(dbContext, "Workbench_ProjectObjects", cancellationToken);
+        foreach (var requiredColumn in RequiredProjectObjectColumns)
+        {
+            if (existingColumns.Contains(requiredColumn.Name))
+            {
+                continue;
+            }
+
+            await dbContext.Database.ExecuteSqlRawAsync(
+                $"""ALTER TABLE "Workbench_ProjectObjects" ADD COLUMN "{requiredColumn.Name}" {requiredColumn.Definition};""",
+                cancellationToken);
+        }
+    }
+
+    private static async Task<HashSet<string>> ReadExistingColumnsAsync(AppDbContext dbContext, string tableName, CancellationToken cancellationToken)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != ConnectionState.Open;
+        if (shouldCloseConnection)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"""PRAGMA table_info("{tableName}");""";
+            var existingColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                if (!reader.IsDBNull(1))
+                {
+                    existingColumns.Add(reader.GetString(1));
+                }
+            }
+
+            return existingColumns;
         }
         finally
         {

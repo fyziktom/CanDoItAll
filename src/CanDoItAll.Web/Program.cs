@@ -3,6 +3,7 @@ using CanDoItAll.Components;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Readiness;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.Automation;
 using CanDoItAll.Modules.Factory;
@@ -19,6 +20,7 @@ using CanDoItAll.Web.Components;
 using CanDoItAll.Web.Composition;
 using CanDoItAll.Web.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 var detailedErrorsEnabled = builder.Configuration.GetValue<bool?>("DetailedErrors") ?? builder.Environment.IsDevelopment();
@@ -55,6 +57,12 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseHttpsRedirection();
 app.UseAntiforgery();
 app.MapStaticAssets();
+var workspaceResolver = app.Services.GetRequiredService<IWorkspacePathResolver>();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(workspaceResolver.ResolveManagedFilesRoot()),
+    RequestPath = "/managed-files"
+});
 
 if (app.Environment.IsDevelopment())
 {

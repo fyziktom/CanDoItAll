@@ -171,6 +171,8 @@ public sealed class CanvasWorkbenchAction
 
     public string CreateMode { get; set; } = "command";
 
+    public string ObjectSubtype { get; set; } = string.Empty;
+
     public string TitleLabel { get; set; } = "Title";
 
     public string TitlePlaceholder { get; set; } = string.Empty;
@@ -182,6 +184,16 @@ public sealed class CanvasWorkbenchAction
     public string NotesLabel { get; set; } = "Notes";
 
     public string NotesPlaceholder { get; set; } = string.Empty;
+
+    public bool RequiresFile { get; set; }
+
+    public string AcceptedFileTypes { get; set; } = string.Empty;
+
+    public string FilePrompt { get; set; } = "Drop a file here or choose one.";
+
+    public bool SupportsDragDrop { get; set; } = true;
+
+    public List<CanvasWorkbenchAction> Children { get; set; } = [];
 }
 
 public sealed class CanvasWorkbenchChip
@@ -196,6 +208,15 @@ public sealed class CanvasWorkbenchPoint
     public double X { get; set; }
 
     public double Y { get; set; }
+}
+
+public sealed class CanvasWorkbenchUploadedFile
+{
+    public string FileName { get; set; } = string.Empty;
+
+    public string ContentType { get; set; } = string.Empty;
+
+    public string Base64Data { get; set; } = string.Empty;
 }
 
 public sealed class CanvasWorkbenchStat
@@ -227,7 +248,9 @@ public sealed record CanvasWorkbenchCreateActionRequest(
     string Subtitle,
     string Notes,
     string PlacementKind,
-    string CreateMode);
+    string CreateMode,
+    string ObjectSubtype,
+    CanvasWorkbenchUploadedFile? UploadedFile);
 
 public sealed record CanvasWorkbenchNodeEditRequest(
     string NodeId,

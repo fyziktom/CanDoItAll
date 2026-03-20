@@ -9,8 +9,9 @@
             <div class="cw-toolbar-group cw-toolbar-group--left">
                 <button type="button"
                         class="cw-toolbar-action cw-toolbar-action--primary"
+                        @ref="quickCreateButton"
                         aria-label="Open quick create actions"
-                        @onclick="ToggleQuickCreateRail">
+                        @onclick="OpenQuickCreateMenuAsync">
                     <span>+</span>
                 </button>
 
@@ -45,23 +46,6 @@
                 </div>
             </div>
         </div>
-
-        @if (showQuickCreateRail && Surface.Chrome.ShowQuickCreateRail && Surface.Chrome.QuickCreateActions.Count > 0)
-        {
-            <div class="cw-create-rail">
-                @foreach (var action in Surface.Chrome.QuickCreateActions)
-                {
-                    <button type="button"
-                            class="cw-create-rail__action"
-                            data-tone="@action.Tone"
-                            aria-label="@action.Label"
-                            @onclick="() => InvokeQuickCreateAsync(action)">
-                        <span>@action.Icon</span>
-                        <strong>@action.Label</strong>
-                    </button>
-                }
-            </div>
-        }
 
         <div class="cw-stage-surface">
             <div @ref="host"
@@ -108,10 +92,10 @@
 @code {
     private readonly JsonSerializerOptions serializerOptions = new(JsonSerializerDefaults.Web);
     private ElementReference host;
+    private ElementReference quickCreateButton;
     private DotNetObjectReference<CanvasWorkbench>? objectReference;
     private bool initialized;
     private bool helpOpen;
-    private bool showQuickCreateRail;
     private bool isMaximized;
     private int zoomPercent = 100;
     private bool surfaceSyncPending = true;
@@ -165,6 +149,7 @@
         if (!initialized)
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.create", host, objectReference, Surface);
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
             initialized = true;
             MarkSurfaceApplied();
             return;
@@ -176,6 +161,7 @@
         }
 
         await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.update", host, Surface);
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
         MarkSurfaceApplied();
     }
 
@@ -238,15 +224,17 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private void ToggleQuickCreateRail()
-        => showQuickCreateRail = !showQuickCreateRail;
-
     private void ToggleHelp()
         => helpOpen = !helpOpen;
 
     private async Task ToggleMaximizeAsync()
     {
         isMaximized = !isMaximized;
+        if (initialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
+        }
+
         await PublishUiStateAsync();
         if (initialized)
         {
@@ -266,7 +254,10 @@
 
     private async Task FocusPrimaryNodeAsync()
     {
-        var targetNodeId = Surface.UiState.SelectedNodeIds.FirstOrDefault() ?? Surface.Nodes.FirstOrDefault()?.Id;
+        var targetNodeId = Surface.Nodes.FirstOrDefault(node => string.Equals(node.Family, "root", StringComparison.OrdinalIgnoreCase))?.Id
+            ?? Surface.Nodes.FirstOrDefault(node => string.IsNullOrWhiteSpace(node.ParentId))?.Id
+            ?? Surface.UiState.SelectedNodeIds.FirstOrDefault()
+            ?? Surface.Nodes.FirstOrDefault()?.Id;
         if (!initialized || string.IsNullOrWhiteSpace(targetNodeId))
         {
             return;
@@ -298,41 +289,14 @@
         }
     }
 
-    private async Task InvokeQuickCreateAsync(CanvasWorkbenchAction action)
+    private async Task OpenQuickCreateMenuAsync()
     {
-        showQuickCreateRail = false;
-        var sourceNode = ResolveQuickCreateSourceNode();
-        var request = new CanvasWorkbenchCreateActionRequest(
-            action.ActionId,
-            sourceNode?.Id,
-            sourceNode?.X ?? 0,
-            sourceNode?.Y ?? 0,
-            sourceNode?.Id,
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            sourceNode is null ? "canvas" : "child",
-            action.CreateMode);
-
-        if (action.RequiresInput && initialized)
+        if (!initialized || !Surface.Chrome.ShowQuickCreateRail || Surface.Chrome.QuickCreateActions.Count == 0)
         {
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.openCreateComposer", host, action, request);
             return;
         }
 
-        await CreateActionInvoked.InvokeAsync(request);
-    }
-
-    private CanvasWorkbenchNode? ResolveQuickCreateSourceNode()
-    {
-        var selected = Surface.UiState.SelectedNodeIds.FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(selected))
-        {
-            return Surface.Nodes.FirstOrDefault(node => string.Equals(node.Id, selected, StringComparison.Ordinal));
-        }
-
-        return Surface.Nodes.FirstOrDefault(node => string.Equals(node.Family, "root", StringComparison.OrdinalIgnoreCase))
-            ?? Surface.Nodes.FirstOrDefault();
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.openQuickCreateMenu", host, quickCreateButton);
     }
 
     private async Task PublishUiStateAsync()
@@ -402,6 +366,7 @@
     {
         if (initialized)
         {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, false);
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.dispose", host);
         }
 
