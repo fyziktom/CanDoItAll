@@ -270,7 +270,13 @@
     inset: 4.8rem auto auto 1.25rem;
     z-index: 6;
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 5.5rem));
     gap: 0.65rem;
+    max-width: 11.7rem;
+    max-height: min(31rem, calc(100% - 7rem));
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    scrollbar-width: thin;
 }
 
 .cw-create-rail__action {
@@ -681,9 +687,9 @@
     position: absolute;
     left: 0;
     top: 0;
-    width: 5.7rem;
-    min-height: 5.1rem;
-    padding: 0.75rem 0.7rem;
+    width: 5.25rem;
+    min-height: 4.8rem;
+    padding: 0.72rem 0.62rem;
     display: grid;
     place-items: center;
     gap: 0.4rem;
@@ -730,6 +736,11 @@
     color: #064e3b;
 }
 
+.cw-context-menu__action.tone-sky {
+    background: linear-gradient(180deg, #7dd3fc, #38bdf8);
+    color: #0c4a6e;
+}
+
 .cw-context-menu__action.tone-warn {
     background: linear-gradient(180deg, #fdba74, #f97316);
     color: #7c2d12;
@@ -743,6 +754,11 @@
 .cw-context-menu__action.tone-ghost {
     background: linear-gradient(180deg, #ffffff, #f8fafc);
     color: #334155;
+}
+
+.cw-context-menu__action.tone-danger {
+    background: linear-gradient(180deg, #fb7185, #e11d48);
+    color: #fff1f2;
 }
 
 .cw-marquee {
@@ -827,9 +843,19 @@
     color: #fff;
 }
 
+.cw-button[data-tone="sky"] {
+    background: linear-gradient(135deg, #38bdf8, #0284c7);
+    color: #e0f2fe;
+}
+
 .cw-button[data-tone="warn"] {
     background: linear-gradient(135deg, #fb923c, #f97316);
     color: #fff;
+}
+
+.cw-button[data-tone="danger"] {
+    background: linear-gradient(135deg, #f43f5e, #be123c);
+    color: #fff1f2;
 }
 
 .cw-button[data-tone="ghost"] {

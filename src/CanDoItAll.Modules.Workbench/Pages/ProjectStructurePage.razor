@@ -136,10 +136,15 @@ else
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Create next to source</p>
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => OpenCreateDialogAsync(ProjectObjectType.Note))">Add note</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => OpenCreateDialogAsync(ProjectObjectType.Decision))">Add decision</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => OpenCreateDialogAsync(ProjectObjectType.Milestone))">Add milestone</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => OpenCreateDialogAsync(ProjectObjectType.Repository))">Add repository</button>
+                                @foreach (var action in BuildQuickCreateActions())
+                                {
+                                    <button type="button"
+                                            class="cw-button"
+                                            data-tone="@action.Tone"
+                                            @onclick="@(() => OpenCreateDialogAsync(ResolveCreatedObjectType(action.ActionId)))">
+                                        @action.Label
+                                    </button>
+                                }
                                 <button type="button" class="cw-button" data-tone="warn" @onclick="EnableLinkMode">Link selected</button>
                             </div>
                         </div>
@@ -188,6 +193,25 @@ else
 }
 
 @code {
+    private static readonly ProjectObjectType[] CreatableObjectTypes =
+    [
+        ProjectObjectType.Note,
+        ProjectObjectType.Decision,
+        ProjectObjectType.Milestone,
+        ProjectObjectType.Repository,
+        ProjectObjectType.File,
+        ProjectObjectType.Link,
+        ProjectObjectType.Connector,
+        ProjectObjectType.Phase,
+        ProjectObjectType.PromptFlow,
+        ProjectObjectType.PromptSession,
+        ProjectObjectType.PromptStep,
+        ProjectObjectType.ValidationRun,
+        ProjectObjectType.TestPlan,
+        ProjectObjectType.TestEvidence,
+        ProjectObjectType.SecretReference
+    ];
+
     [Parameter]
     public Guid ProjectId { get; set; }
 
@@ -196,6 +220,8 @@ else
     private CanvasWorkbench? workbenchRef;
     private List<string> selectedNodeIds = [];
     private string? linkModeSourceId;
+    private string? currentViewStateJson;
+    private Guid loadedProjectId;
 
     private IReadOnlyList<CanvasWorkbenchStat> stageStats =>
     [
@@ -216,30 +242,42 @@ else
     private ProjectStructureNode? selectedNode => selectedNodes.FirstOrDefault();
 
     protected override async Task OnParametersSetAsync()
-        => await ReloadSurfaceAsync();
+    {
+        if (loadedProjectId != ProjectId)
+        {
+            loadedProjectId = ProjectId;
+            currentViewStateJson = null;
+            selectedNodeIds = [];
+            linkModeSourceId = null;
+        }
+
+        await ReloadSurfaceAsync();
+    }
 
     private async Task ReloadSurfaceAsync(string? preferredSelectionId = null)
     {
-        surface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
-        var uiState = CanvasWorkbenchUiState.Parse(surface.ViewStateJson);
+        var reloadedSurface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
+        var uiState = !string.IsNullOrWhiteSpace(currentViewStateJson)
+            ? CanvasWorkbenchUiState.Parse(currentViewStateJson)
+            : CanvasWorkbenchUiState.Parse(reloadedSurface.ViewStateJson);
         selectedNodeIds = uiState.SelectedNodeIds.Count > 0
-            ? uiState.SelectedNodeIds.Where(id => surface.Nodes.Any(node => string.Equals(node.Id, id, StringComparison.Ordinal))).ToList()
+            ? uiState.SelectedNodeIds.Where(id => reloadedSurface.Nodes.Any(node => string.Equals(node.Id, id, StringComparison.Ordinal))).ToList()
             : [];
 
         if (!string.IsNullOrWhiteSpace(preferredSelectionId) &&
-            surface.Nodes.Any(node => string.Equals(node.Id, preferredSelectionId, StringComparison.Ordinal)))
+            reloadedSurface.Nodes.Any(node => string.Equals(node.Id, preferredSelectionId, StringComparison.Ordinal)))
         {
             selectedNodeIds = [preferredSelectionId];
             uiState.SelectedNodeIds = [preferredSelectionId];
-            surface = surface with { ViewStateJson = uiState.ToJson() };
         }
-        else if (selectedNodeIds.Count == 0 && surface.Nodes.Count > 0)
+        else if (selectedNodeIds.Count == 0 && reloadedSurface.Nodes.Count > 0)
         {
-            selectedNodeIds = [surface.Nodes[0].Id];
-            uiState.SelectedNodeIds = [surface.Nodes[0].Id];
-            surface = surface with { ViewStateJson = uiState.ToJson() };
+            selectedNodeIds = [reloadedSurface.Nodes[0].Id];
+            uiState.SelectedNodeIds = [reloadedSurface.Nodes[0].Id];
         }
 
+        surface = reloadedSurface with { ViewStateJson = uiState.ToJson() };
+        currentViewStateJson = surface.ViewStateJson;
         RefreshCanvasSurface();
     }
 
@@ -266,14 +304,7 @@ else
                 ChildNoteActionId = "add-note",
                 SiblingNoteActionId = "add-note",
                 InlineNotePlaceholder = "Write note",
-                QuickCreateActions =
-                [
-                    BuildCreateAction(ProjectObjectType.Note),
-                    BuildCreateAction(ProjectObjectType.Decision),
-                    BuildCreateAction(ProjectObjectType.Milestone),
-                    BuildCreateAction(ProjectObjectType.Repository),
-                    BuildCreateAction(ProjectObjectType.PromptSession)
-                ]
+                QuickCreateActions = BuildQuickCreateActions().ToList()
             },
             Nodes = surface.Nodes.Select(MapCanvasNode).ToList(),
             Links = surface.Links.Select(link => new CanvasWorkbenchLink
@@ -334,7 +365,7 @@ else
     {
         ProjectObjectType.Repository or ProjectObjectType.File => "sky",
         ProjectObjectType.Link or ProjectObjectType.Connector => "violet",
-        ProjectObjectType.Milestone or ProjectObjectType.TestPlan => "amber",
+        ProjectObjectType.Milestone or ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => "amber",
         ProjectObjectType.ValidationRun or ProjectObjectType.Note => "mint",
         ProjectObjectType.Decision or ProjectObjectType.SecretReference => "rose",
         _ => "neutral"
@@ -344,13 +375,16 @@ else
     {
         ProjectObjectType.ProjectRoot => "project",
         ProjectObjectType.Phase => "phase",
+        ProjectObjectType.PromptFlow => "prompt flow",
         ProjectObjectType.PromptSession => "prompt session",
         ProjectObjectType.PromptStep => "prompt step",
         ProjectObjectType.Repository => "repository",
         ProjectObjectType.File => "file",
         ProjectObjectType.Link => "link",
+        ProjectObjectType.Connector => "connector",
         ProjectObjectType.ValidationRun => "validation",
         ProjectObjectType.TestPlan => "test plan",
+        ProjectObjectType.TestEvidence => "test evidence",
         ProjectObjectType.Milestone => "milestone",
         ProjectObjectType.Decision => "decision",
         ProjectObjectType.SecretReference => "secret",
@@ -383,7 +417,7 @@ else
         return chips;
     }
 
-    private static List<CanvasWorkbenchAction> BuildContextActions(ProjectStructureNode node)
+    private List<CanvasWorkbenchAction> BuildContextActions(ProjectStructureNode node)
     {
         var actions = new List<CanvasWorkbenchAction>
         {
@@ -392,17 +426,6 @@ else
             new() { ActionId = "validate", Label = "Validate", Description = "Open project validation tooling from this node.", Icon = "qa", Tone = "mint" },
             new() { ActionId = "test", Label = "Test", Description = "Open test planning and evidence flows.", Icon = "test", Tone = "warn" }
         };
-
-        if (node.ObjectType is ProjectObjectType.ProjectRoot or ProjectObjectType.Phase or ProjectObjectType.PromptSession)
-        {
-            actions.AddRange(
-            [
-                BuildCreateAction(ProjectObjectType.Note),
-                BuildCreateAction(ProjectObjectType.Decision),
-                BuildCreateAction(ProjectObjectType.Milestone),
-                BuildCreateAction(ProjectObjectType.Repository)
-            ]);
-        }
 
         if (node.ObjectType == ProjectObjectType.PromptStep)
         {
@@ -414,6 +437,7 @@ else
             ]);
         }
 
+        actions.AddRange(BuildCreatePalette(node.ObjectType));
         return actions;
     }
 
@@ -452,9 +476,10 @@ else
 
         var uiState = CanvasWorkbenchUiState.Parse(stateJson);
         selectedNodeIds = uiState.SelectedNodeIds.ToList();
-        surface = surface with { ViewStateJson = uiState.ToJson() };
+        currentViewStateJson = uiState.ToJson();
+        surface = surface with { ViewStateJson = currentViewStateJson };
         RefreshCanvasSurface();
-        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", uiState.ToJson());
+        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
     }
 
     private Task HandleNodeOpenedAsync(string nodeId)
@@ -465,23 +490,9 @@ else
 
     private async Task HandleCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
     {
-        switch (request.ActionId)
+        if (TryResolveCreatedObjectType(request.ActionId, out var objectType))
         {
-            case "add-note":
-                await CreateObjectAsync(ProjectObjectType.Note, request);
-                break;
-            case "add-decision":
-                await CreateObjectAsync(ProjectObjectType.Decision, request);
-                break;
-            case "add-milestone":
-                await CreateObjectAsync(ProjectObjectType.Milestone, request);
-                break;
-            case "add-repository":
-                await CreateObjectAsync(ProjectObjectType.Repository, request);
-                break;
-            case "add-prompt-session":
-                await CreateObjectAsync(ProjectObjectType.PromptSession, request);
-                break;
+            await CreateObjectAsync(objectType, request);
         }
     }
 
@@ -505,23 +516,26 @@ else
 
     private async Task HandleCanvasActionAsync(string actionId, string? nodeId, double x, double y)
     {
+        if (TryResolveCreatedObjectType(actionId, out var objectType))
+        {
+            await CreateObjectAsync(
+                objectType,
+                new CanvasWorkbenchCreateActionRequest(
+                    actionId,
+                    nodeId,
+                    x,
+                    y,
+                    nodeId,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    nodeId is null ? "canvas" : "child",
+                    "command"));
+            return;
+        }
+
         switch (actionId)
         {
-            case "add-note":
-                await CreateObjectAsync(ProjectObjectType.Note, new CanvasWorkbenchCreateActionRequest(actionId, nodeId, x, y, nodeId, string.Empty, string.Empty, string.Empty, nodeId is null ? "canvas" : "child", "command"));
-                break;
-            case "add-decision":
-                await CreateObjectAsync(ProjectObjectType.Decision, new CanvasWorkbenchCreateActionRequest(actionId, nodeId, x, y, nodeId, string.Empty, string.Empty, string.Empty, nodeId is null ? "canvas" : "child", "command"));
-                break;
-            case "add-milestone":
-                await CreateObjectAsync(ProjectObjectType.Milestone, new CanvasWorkbenchCreateActionRequest(actionId, nodeId, x, y, nodeId, string.Empty, string.Empty, string.Empty, nodeId is null ? "canvas" : "child", "command"));
-                break;
-            case "add-repository":
-                await CreateObjectAsync(ProjectObjectType.Repository, new CanvasWorkbenchCreateActionRequest(actionId, nodeId, x, y, nodeId, string.Empty, string.Empty, string.Empty, nodeId is null ? "canvas" : "child", "command"));
-                break;
-            case "add-prompt-session":
-                await CreateObjectAsync(ProjectObjectType.PromptSession, new CanvasWorkbenchCreateActionRequest(actionId, nodeId, x, y, nodeId, string.Empty, string.Empty, string.Empty, nodeId is null ? "canvas" : "child", "command"));
-                break;
             case "link":
                 linkModeSourceId = nodeId;
                 break;
@@ -642,13 +656,44 @@ else
 
         var uiState = CanvasWorkbenchUiState.Parse(surface.ViewStateJson);
         uiState.SelectedNodeIds = [.. selectedNodeIds];
-        surface = surface with { ViewStateJson = uiState.ToJson() };
+        currentViewStateJson = uiState.ToJson();
+        surface = surface with { ViewStateJson = currentViewStateJson };
         RefreshCanvasSurface();
-        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", uiState.ToJson());
+        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
     }
 
     private void EnableLinkMode()
         => linkModeSourceId = selectedNode?.Id;
+
+    private IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions()
+        => BuildCreatePalette(selectedNode?.ObjectType);
+
+    private static IReadOnlyList<CanvasWorkbenchAction> BuildCreatePalette(ProjectObjectType? sourceType)
+        => CreatableObjectTypes
+            .OrderBy(objectType => ResolveCreateWeight(sourceType, objectType))
+            .ThenBy(objectType => ResolveCreateSortName(objectType), StringComparer.OrdinalIgnoreCase)
+            .Select(BuildCreateAction)
+            .ToList();
+
+    private static bool TryResolveCreatedObjectType(string actionId, out ProjectObjectType objectType)
+    {
+        foreach (var candidate in CreatableObjectTypes)
+        {
+            if (string.Equals(ResolveCreateActionId(candidate), actionId, StringComparison.Ordinal))
+            {
+                objectType = candidate;
+                return true;
+            }
+        }
+
+        objectType = default;
+        return false;
+    }
+
+    private static ProjectObjectType ResolveCreatedObjectType(string actionId)
+        => TryResolveCreatedObjectType(actionId, out var objectType)
+            ? objectType
+            : throw new InvalidOperationException($"Unknown create action '{actionId}'.");
 
     private (double? X, double? Y) ResolveCreatePlacement(ProjectStructureNode? sourceNode, ProjectStructureNode? parentNode, CanvasWorkbenchCreateActionRequest request)
     {
@@ -701,7 +746,17 @@ else
                 ProjectObjectType.Decision => "New decision",
                 ProjectObjectType.Milestone => "New milestone",
                 ProjectObjectType.Repository => "New repository",
+                ProjectObjectType.File => "New file",
+                ProjectObjectType.Link => "New link",
+                ProjectObjectType.Connector => "New connector",
+                ProjectObjectType.Phase => "New phase",
+                ProjectObjectType.PromptFlow => "Prompt flow",
                 ProjectObjectType.PromptSession => "Prompt session node",
+                ProjectObjectType.PromptStep => "Prompt step",
+                ProjectObjectType.ValidationRun => "Validation run",
+                ProjectObjectType.TestPlan => "Test plan",
+                ProjectObjectType.TestEvidence => "Test evidence",
+                ProjectObjectType.SecretReference => "Secret reference",
                 _ => objectType.ToString()
             };
 
@@ -727,72 +782,188 @@ else
     {
         ProjectObjectType.ProjectRoot => 0,
         ProjectObjectType.Phase => 1,
-        ProjectObjectType.PromptSession => 2,
+        ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession => 2,
         ProjectObjectType.PromptStep => 3,
         _ => 4
     };
 
+    private static string ResolveCreateActionId(ProjectObjectType objectType) => objectType switch
+    {
+        ProjectObjectType.Phase => "add-phase",
+        ProjectObjectType.Milestone => "add-milestone",
+        ProjectObjectType.Repository => "add-repository",
+        ProjectObjectType.File => "add-file",
+        ProjectObjectType.Link => "add-link",
+        ProjectObjectType.Connector => "add-connector",
+        ProjectObjectType.PromptFlow => "add-prompt-flow",
+        ProjectObjectType.PromptSession => "add-prompt-session",
+        ProjectObjectType.PromptStep => "add-prompt-step",
+        ProjectObjectType.ValidationRun => "add-validation-run",
+        ProjectObjectType.TestPlan => "add-test-plan",
+        ProjectObjectType.TestEvidence => "add-test-evidence",
+        ProjectObjectType.Note => "add-note",
+        ProjectObjectType.Decision => "add-decision",
+        ProjectObjectType.SecretReference => "add-secret-reference",
+        _ => $"add-{objectType.ToString().ToLowerInvariant()}"
+    };
+
+    private static int ResolveCreateWeight(ProjectObjectType? sourceType, ProjectObjectType candidate)
+    {
+        ProjectObjectType[] ordered = sourceType switch
+        {
+            ProjectObjectType.ProjectRoot or ProjectObjectType.Phase or null =>
+            [
+                ProjectObjectType.Phase,
+                ProjectObjectType.Milestone,
+                ProjectObjectType.Note,
+                ProjectObjectType.Decision,
+                ProjectObjectType.Repository,
+                ProjectObjectType.File,
+                ProjectObjectType.Link,
+                ProjectObjectType.Connector,
+                ProjectObjectType.PromptSession,
+                ProjectObjectType.PromptFlow,
+                ProjectObjectType.PromptStep,
+                ProjectObjectType.ValidationRun,
+                ProjectObjectType.TestPlan,
+                ProjectObjectType.TestEvidence,
+                ProjectObjectType.SecretReference
+            ],
+            ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep =>
+            [
+                ProjectObjectType.PromptStep,
+                ProjectObjectType.Note,
+                ProjectObjectType.Decision,
+                ProjectObjectType.PromptSession,
+                ProjectObjectType.PromptFlow,
+                ProjectObjectType.Link,
+                ProjectObjectType.File,
+                ProjectObjectType.ValidationRun,
+                ProjectObjectType.TestPlan,
+                ProjectObjectType.TestEvidence,
+                ProjectObjectType.Repository,
+                ProjectObjectType.Connector,
+                ProjectObjectType.Milestone,
+                ProjectObjectType.SecretReference,
+                ProjectObjectType.Phase
+            ],
+            ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.Link or ProjectObjectType.Connector or ProjectObjectType.SecretReference =>
+            [
+                ProjectObjectType.File,
+                ProjectObjectType.Link,
+                ProjectObjectType.Connector,
+                ProjectObjectType.Note,
+                ProjectObjectType.Decision,
+                ProjectObjectType.Repository,
+                ProjectObjectType.SecretReference,
+                ProjectObjectType.ValidationRun,
+                ProjectObjectType.TestPlan,
+                ProjectObjectType.TestEvidence,
+                ProjectObjectType.Milestone,
+                ProjectObjectType.PromptFlow,
+                ProjectObjectType.PromptSession,
+                ProjectObjectType.PromptStep,
+                ProjectObjectType.Phase
+            ],
+            ProjectObjectType.ValidationRun or ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence =>
+            [
+                ProjectObjectType.ValidationRun,
+                ProjectObjectType.TestPlan,
+                ProjectObjectType.TestEvidence,
+                ProjectObjectType.Note,
+                ProjectObjectType.Decision,
+                ProjectObjectType.Link,
+                ProjectObjectType.File,
+                ProjectObjectType.Repository,
+                ProjectObjectType.Connector,
+                ProjectObjectType.SecretReference,
+                ProjectObjectType.Milestone,
+                ProjectObjectType.PromptFlow,
+                ProjectObjectType.PromptSession,
+                ProjectObjectType.PromptStep,
+                ProjectObjectType.Phase
+            ],
+            _ =>
+            [
+                ProjectObjectType.Note,
+                ProjectObjectType.Decision,
+                ProjectObjectType.Milestone,
+                ProjectObjectType.Link,
+                ProjectObjectType.File,
+                ProjectObjectType.Repository,
+                ProjectObjectType.Connector,
+                ProjectObjectType.PromptFlow,
+                ProjectObjectType.PromptSession,
+                ProjectObjectType.PromptStep,
+                ProjectObjectType.ValidationRun,
+                ProjectObjectType.TestPlan,
+                ProjectObjectType.TestEvidence,
+                ProjectObjectType.SecretReference,
+                ProjectObjectType.Phase
+            ]
+        };
+
+        var index = Array.IndexOf(ordered, candidate);
+        return index >= 0 ? index : 100;
+    }
+
+    private static string ResolveCreateSortName(ProjectObjectType objectType) => objectType switch
+    {
+        ProjectObjectType.TestPlan => "Test plan",
+        ProjectObjectType.TestEvidence => "Test evidence",
+        ProjectObjectType.PromptFlow => "Prompt flow",
+        ProjectObjectType.PromptSession => "Prompt session",
+        ProjectObjectType.PromptStep => "Prompt step",
+        ProjectObjectType.SecretReference => "Secret",
+        _ => objectType.ToString()
+    };
+
     private static CanvasWorkbenchAction BuildCreateAction(ProjectObjectType objectType) => objectType switch
     {
-        ProjectObjectType.Note => new CanvasWorkbenchAction
-        {
-            ActionId = "add-note",
-            Label = "Note",
-            Description = "Create a note on the canvas and capture the first details immediately.",
-            Icon = "note",
-            Tone = "neutral",
-            RequiresInput = true,
-            CreateMode = "dialog"
-        },
-        ProjectObjectType.Decision => new CanvasWorkbenchAction
-        {
-            ActionId = "add-decision",
-            Label = "Decision",
-            Description = "Add a decision node next to the current source and record its context.",
-            Icon = "choice",
-            Tone = "accent",
-            RequiresInput = true,
-            CreateMode = "dialog"
-        },
-        ProjectObjectType.Milestone => new CanvasWorkbenchAction
-        {
-            ActionId = "add-milestone",
-            Label = "Milestone",
-            Description = "Create a milestone node and enter the initial delivery details.",
-            Icon = "date",
-            Tone = "warn",
-            RequiresInput = true,
-            CreateMode = "dialog"
-        },
-        ProjectObjectType.Repository => new CanvasWorkbenchAction
-        {
-            ActionId = "add-repository",
-            Label = "Repo",
-            Description = "Add a repository or code artifact node from inside the canvas.",
-            Icon = "repo",
-            Tone = "mint",
-            RequiresInput = true,
-            CreateMode = "dialog"
-        },
-        ProjectObjectType.PromptSession => new CanvasWorkbenchAction
-        {
-            ActionId = "add-prompt-session",
-            Label = "Prompt",
-            Description = "Create a linked prompt session node and enter its basic metadata.",
-            Icon = "flow",
-            Tone = "accent",
-            RequiresInput = true,
-            CreateMode = "dialog"
-        },
-        _ => new CanvasWorkbenchAction
-        {
-            ActionId = $"add-{objectType.ToString().ToLowerInvariant()}",
-            Label = objectType.ToString(),
-            Description = "Create a related node.",
-            Icon = "node",
-            Tone = "neutral",
-            RequiresInput = true,
-            CreateMode = "dialog"
-        }
+        ProjectObjectType.Note => CreateDialogAction(objectType, "Note", "Capture a lightweight note and keep the mindmap moving.", "note", "neutral", "Headline", "Name the note", "Tag", "Optional context tag", "Text", "Write the note"),
+        ProjectObjectType.Decision => CreateDialogAction(objectType, "Decision", "Record a decision with the first rationale while you are still in the canvas.", "choice", "accent", "Decision", "Name the decision", "Status", "Approved, draft, blocked...", "Rationale", "Why this decision exists"),
+        ProjectObjectType.Milestone => CreateDialogAction(objectType, "Milestone", "Add a milestone node and capture the delivery target immediately.", "date", "warn", "Milestone", "Name the milestone", "Target", "Date or target window", "Outcome", "Describe the milestone outcome"),
+        ProjectObjectType.Repository => CreateDialogAction(objectType, "Repo", "Add a repository or code artifact next to the current source.", "repo", "mint", "Repo name", "frontend-app", "Owner / path", "team/repository", "Purpose", "What this repo is for"),
+        ProjectObjectType.File => CreateDialogAction(objectType, "File", "Register a concrete file or document node without leaving the canvas.", "file", "mint", "File name", "appsettings.json", "Path", "src/Module/File.cs", "Purpose", "What lives in this file"),
+        ProjectObjectType.Link => CreateDialogAction(objectType, "Link", "Create a link node and capture the address immediately.", "link", "sky", "Label", "API reference", "Address", "https://...", "Usage", "How this link is used"),
+        ProjectObjectType.Connector => CreateDialogAction(objectType, "Connector", "Describe the integration or handoff point represented by this node.", "plug", "accent", "Connector", "CI pipeline", "System", "Source or target system", "Handshake", "What the connector does"),
+        ProjectObjectType.Phase => CreateDialogAction(objectType, "Phase", "Spin out a new phase branch from any point in the graph.", "phase", "primary", "Phase", "Discovery", "Goal", "What this phase should achieve", "Focus", "Scope for this phase"),
+        ProjectObjectType.PromptFlow => CreateDialogAction(objectType, "Flow", "Map a reusable prompt flow from the active node.", "flow", "accent", "Flow name", "Review flow", "Goal", "What the flow should produce", "Prompt strategy", "Describe the flow shape"),
+        ProjectObjectType.PromptSession => CreateDialogAction(objectType, "Session", "Create a prompt session node and capture the first run context.", "flow", "accent", "Session name", "Prompt session", "Phase", "Discovery / review / test", "Intent", "What this session should do"),
+        ProjectObjectType.PromptStep => CreateDialogAction(objectType, "Step", "Create a prompt step node from anywhere in the structure graph.", "step", "accent", "Step title", "Gather context", "Branch label", "Optional branch or lane", "Prompt", "What this step should ask or do"),
+        ProjectObjectType.ValidationRun => CreateDialogAction(objectType, "Validation", "Capture a validation run and its acceptance criteria immediately.", "qa", "mint", "Validation", "Contract check", "Type", "Review, lint, runtime...", "Criteria", "What success means"),
+        ProjectObjectType.TestPlan => CreateDialogAction(objectType, "Test plan", "Create a test plan node and note the coverage target.", "test", "warn", "Plan name", "Regression sweep", "Phase", "Execution", "Coverage goal", "What this plan must cover"),
+        ProjectObjectType.TestEvidence => CreateDialogAction(objectType, "Evidence", "Log the evidence item or result that supports a test plan.", "evidence", "warn", "Evidence", "Screenshot bundle", "Source", "Run, file, or system", "Result", "What this evidence proves"),
+        ProjectObjectType.SecretReference => CreateDialogAction(objectType, "Secret", "Track a secret reference without exposing the secret value itself.", "shield", "danger", "Secret name", "API_KEY reference", "Vault / key", "Vault path or identifier", "Usage", "Where this secret is needed"),
+        _ => CreateDialogAction(objectType, objectType.ToString(), "Create a related node.", "node", "neutral", "Title", "", "Subtitle", "", "Notes", "")
     };
+
+    private static CanvasWorkbenchAction CreateDialogAction(
+        ProjectObjectType objectType,
+        string label,
+        string description,
+        string icon,
+        string tone,
+        string titleLabel,
+        string titlePlaceholder,
+        string subtitleLabel,
+        string subtitlePlaceholder,
+        string notesLabel,
+        string notesPlaceholder)
+        => new()
+        {
+            ActionId = ResolveCreateActionId(objectType),
+            Label = label,
+            Description = description,
+            Icon = icon,
+            Tone = tone,
+            RequiresInput = true,
+            CreateMode = "dialog",
+            TitleLabel = titleLabel,
+            TitlePlaceholder = titlePlaceholder,
+            SubtitleLabel = subtitleLabel,
+            SubtitlePlaceholder = subtitlePlaceholder,
+            NotesLabel = notesLabel,
+            NotesPlaceholder = notesPlaceholder
+        };
 }

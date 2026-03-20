@@ -117,33 +117,50 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await ClickCanvasNodeAsync(page, ".cw-node[data-node-id^='project:']");
         await canvasHost.FocusAsync();
 
+        var radialLabels = await OpenCanvasContextMenuAsync(page, ".cw-node[data-node-id^='project:']");
+        Assert.Contains("Link", radialLabels);
+        Assert.Contains("Secret", radialLabels);
+        Assert.Contains("Session", radialLabels);
+        Assert.True(radialLabels.Length >= 15, $"Expected the project-node radial menu to expose the broad create palette, got {radialLabels.Length} actions.");
+        await page.Keyboard.PressAsync("Escape");
+
         await page.Keyboard.PressAsync("Tab");
         var noteEditor = page.Locator(".cw-note-editor__input");
         await noteEditor.WaitForAsync();
         await noteEditor.FillAsync("Child note from keyboard");
         await noteEditor.PressAsync("Enter");
         await page.WaitForSelectorAsync("text=Child note from keyboard");
+        await page.WaitForFunctionAsync("() => !!document.querySelector('.cw-node.is-selected.is-inline-text')");
+
+        await page.Keyboard.PressAsync("Tab");
+        await noteEditor.WaitForAsync();
+        await noteEditor.FillAsync("Second child note");
+        await noteEditor.PressAsync("Enter");
+        await page.WaitForSelectorAsync("text=Second child note");
+        await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node.is-selected .cw-note-node__text')).some(node => node.textContent?.includes('Second child note'))");
 
         await ClickCanvasNodeAsync(page, ".cw-node.is-inline-text", clickCount: 2);
         await noteEditor.WaitForAsync();
         await noteEditor.FillAsync("Edited child note");
         await noteEditor.PressAsync("Enter");
         await page.WaitForSelectorAsync("text=Edited child note");
+        await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node.is-selected .cw-note-node__text')).some(node => node.textContent?.includes('Edited child note'))");
 
-        await ClickCanvasNodeAsync(page, ".cw-node[data-node-id^='project:']");
-        await canvasHost.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
         await noteEditor.WaitForAsync();
         await noteEditor.FillAsync("Sibling note from Enter");
         await noteEditor.PressAsync("Enter");
         await page.WaitForSelectorAsync("text=Sibling note from Enter");
+        await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node.is-selected .cw-note-node__text')).some(node => node.textContent?.includes('Sibling note from Enter'))");
 
-        await OpenCanvasCreateComposerAsync(page, ".cw-node[data-node-id^='project:']", "Decision");
-        await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("Decision from menu");
-        await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("Captured in dialog");
-        await page.Locator(".cw-canvas-composer__textarea").FillAsync("Initial decision notes");
-        await page.Locator(".cw-canvas-composer__actions").GetByRole(AriaRole.Button, new() { Name = "Decision", Exact = true }).ClickAsync();
-        await page.WaitForSelectorAsync("text=Decision from menu");
+        await OpenCanvasCreateComposerAsync(page, ".cw-node[data-node-id^='project:']", "Link", "add-link");
+        await page.WaitForSelectorAsync("text=Address");
+        await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("API reference");
+        await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("https://example.test/api");
+        await page.Locator(".cw-canvas-composer__textarea").FillAsync("Reference for downstream build steps");
+        await page.Locator(".cw-canvas-composer__actions").GetByRole(AriaRole.Button, new() { Name = "Link", Exact = true }).ClickAsync();
+        await page.WaitForSelectorAsync("text=API reference");
+        await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node.is-selected .cw-node__title')).some(node => node.textContent?.includes('API reference'))");
     }
 
     private async Task<Guid> CreateProjectAsync(IPage page, string projectName, string phase)
@@ -192,7 +209,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
             });
     }
 
-    private static async Task OpenCanvasCreateComposerAsync(IPage page, string selector, string label)
+    private static async Task OpenCanvasCreateComposerAsync(IPage page, string selector, string label, string? actionId = null)
     {
         var composerOpened = await page.EvaluateAsync<bool>(
             @"args => {
@@ -214,12 +231,42 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
                 }));
 
                 const action = Array.from(document.querySelectorAll('.cw-context-menu__action'))
-                    .find(button => button.textContent?.includes(args.label));
+                    .find(button => button.dataset.actionId === args.actionId)
+                    || Array.from(document.querySelectorAll('.cw-context-menu__action'))
+                        .find(button => button.textContent?.includes(args.label));
                 action?.click();
                 return !!document.querySelector('.cw-canvas-composer__input');
             }",
-            new { selector, label });
+            new { selector, label, actionId });
 
         Assert.True(composerOpened, $"Expected the radial menu action '{label}' to open the in-canvas composer.");
+    }
+
+    private static async Task<string[]> OpenCanvasContextMenuAsync(IPage page, string selector)
+    {
+        return await page.EvaluateAsync<string[]>(
+            @"selector => {
+                const node = document.querySelector(selector);
+                if (!node) {
+                    return [];
+                }
+
+                const rect = node.getBoundingClientRect();
+                const x = rect.left + (rect.width / 2);
+                const y = rect.top + (rect.height / 2);
+                node.dispatchEvent(new MouseEvent('contextmenu', {
+                    bubbles: true,
+                    cancelable: true,
+                    button: 2,
+                    buttons: 2,
+                    clientX: x,
+                    clientY: y
+                }));
+
+                return Array.from(document.querySelectorAll('.cw-context-menu__label'))
+                    .map(label => label.textContent?.trim() || '')
+                    .filter(Boolean);
+            }",
+            selector);
     }
 }

@@ -50,7 +50,13 @@
             ...action,
             description: action?.description || "",
             requiresInput: !!action?.requiresInput,
-            createMode: action?.createMode || "command"
+            createMode: action?.createMode || "command",
+            titleLabel: action?.titleLabel || "Title",
+            titlePlaceholder: action?.titlePlaceholder || "",
+            subtitleLabel: action?.subtitleLabel || "Subtitle",
+            subtitlePlaceholder: action?.subtitlePlaceholder || "",
+            notesLabel: action?.notesLabel || "Notes",
+            notesPlaceholder: action?.notesPlaceholder || ""
         };
     }
 
@@ -517,8 +523,21 @@
         state.composer.element.remove();
         state.composer = null;
         if (focusHost) {
+            deferHostFocus(state);
+        }
+    }
+
+    function ensureHostFocus(state) {
+        try {
+            state.host.focus({ preventScroll: true });
+        }
+        catch {
             state.host.focus();
         }
+    }
+
+    function deferHostFocus(state) {
+        window.requestAnimationFrame(() => ensureHostFocus(state));
     }
 
     function resolveComposerAnchor(state) {
@@ -615,39 +634,56 @@
         }
 
         const offsets = [];
-        const innerCount = Math.min(count, 6);
-        const innerRadius = 96;
-        const startAngle = -90;
+        let remaining = count;
+        let ringIndex = 0;
 
-        for (let index = 0; index < innerCount; index++) {
-            const angle = ((startAngle + ((360 / innerCount) * index)) * Math.PI) / 180;
-            offsets.push({
-                x: Math.cos(angle) * innerRadius,
-                y: Math.sin(angle) * innerRadius
-            });
-        }
+        while (remaining > 0) {
+            const ringCapacity = ringIndex === 0
+                ? Math.min(remaining, 6)
+                : Math.min(remaining, 12 + ((ringIndex - 1) * 6));
+            const radius = 96 + (ringIndex * 84);
+            const startAngle = ringIndex % 2 === 0 ? -90 : -75;
 
-        const remaining = count - innerCount;
-        const outerRadius = 164;
-        for (let index = 0; index < remaining; index++) {
-            const angle = ((startAngle + (45 * index)) * Math.PI) / 180;
-            offsets.push({
-                x: Math.cos(angle) * outerRadius,
-                y: Math.sin(angle) * outerRadius
-            });
+            for (let index = 0; index < ringCapacity; index++) {
+                const angle = ((startAngle + ((360 / ringCapacity) * index)) * Math.PI) / 180;
+                offsets.push({
+                    x: Math.cos(angle) * radius,
+                    y: Math.sin(angle) * radius
+                });
+            }
+
+            remaining -= ringCapacity;
+            ringIndex += 1;
         }
 
         return offsets;
     }
 
-    function positionContextMenu(state, center) {
-        const hostRect = state.host.getBoundingClientRect();
-        const radius = 154;
-        state.contextMenu.style.left = `${round(clamp(center.x, radius, Math.max(radius, hostRect.width - radius)))}px`;
-        state.contextMenu.style.top = `${round(clamp(center.y, radius, Math.max(radius, hostRect.height - radius)))}px`;
+    function getContextMenuExtent(offsets) {
+        let extent = 136;
+
+        for (const offset of offsets) {
+            extent = Math.max(extent, Math.max(Math.abs(offset.x), Math.abs(offset.y)) + 68);
+        }
+
+        return extent;
     }
 
-    function submitCreateRequest(state, payload) {
+    function positionContextMenu(state, center, offsets) {
+        const hostRect = state.host.getBoundingClientRect();
+        const extent = getContextMenuExtent(offsets || []);
+        state.contextMenu.style.left = `${round(clamp(center.x, extent, Math.max(extent, hostRect.width - extent)))}px`;
+        state.contextMenu.style.top = `${round(clamp(center.y, extent, Math.max(extent, hostRect.height - extent)))}px`;
+    }
+
+    function submitCreateRequest(state, payload, options) {
+        state.pendingCreate = {
+            actionId: payload?.actionId || "",
+            sourceNodeId: payload?.sourceNodeId || null,
+            placementKind: payload?.placementKind || "child",
+            requestedAt: Date.now(),
+            focusHost: options?.focusHost !== false
+        };
         state.dotNetRef.invokeMethodAsync("OnCreateAction", JSON.stringify(payload));
     }
 
@@ -666,7 +702,7 @@
                 title: state.composer.titleInput.value.trim(),
                 subtitle: state.composer.subtitleInput.value.trim(),
                 notes: state.composer.notesInput.value.trim()
-            });
+            }, { focusHost: true });
             closeComposer(state);
             return;
         }
@@ -688,7 +724,7 @@
                 notes: text,
                 placementKind: state.composer.placementKind,
                 createMode: "quick-note"
-            });
+            }, { focusHost: true });
         }
         else if (state.composer.kind === "note-edit") {
             submitNodeEdit(state, {
@@ -742,25 +778,28 @@
         const fields = createElement(state.document, "div", "cw-canvas-composer__fields");
 
         const titleField = createElement(state.document, "label", "cw-canvas-composer__field");
-        titleField.appendChild(createElement(state.document, "span", null, "Title"));
+        titleField.appendChild(createElement(state.document, "span", null, action.titleLabel || "Title"));
         const titleInput = createElement(state.document, "input", "cw-canvas-composer__input");
         titleInput.type = "text";
         titleInput.value = request?.title || "";
+        titleInput.placeholder = action.titlePlaceholder || "";
         titleField.appendChild(titleInput);
         fields.appendChild(titleField);
 
         const subtitleField = createElement(state.document, "label", "cw-canvas-composer__field");
-        subtitleField.appendChild(createElement(state.document, "span", null, "Subtitle"));
+        subtitleField.appendChild(createElement(state.document, "span", null, action.subtitleLabel || "Subtitle"));
         const subtitleInput = createElement(state.document, "input", "cw-canvas-composer__input");
         subtitleInput.type = "text";
         subtitleInput.value = request?.subtitle || "";
+        subtitleInput.placeholder = action.subtitlePlaceholder || "";
         subtitleField.appendChild(subtitleInput);
         fields.appendChild(subtitleField);
 
         const notesField = createElement(state.document, "label", "cw-canvas-composer__field");
-        notesField.appendChild(createElement(state.document, "span", null, "Notes"));
+        notesField.appendChild(createElement(state.document, "span", null, action.notesLabel || "Notes"));
         const notesInput = createElement(state.document, "textarea", "cw-canvas-composer__textarea");
         notesInput.value = request?.notes || "";
+        notesInput.placeholder = action.notesPlaceholder || "";
         notesField.appendChild(notesInput);
         fields.appendChild(notesField);
 
@@ -908,7 +947,7 @@
                 return;
             }
 
-            submitCreateRequest(state, request);
+            submitCreateRequest(state, request, { focusHost: true });
             clearContextMenu(state);
             return;
         }
@@ -925,19 +964,22 @@
             return;
         }
 
+        ensureHostFocus(state);
         const hostPoint = getHostPoint(state, clientX, clientY);
+        const offsets = getRadialOffsets(actions.length);
         state.contextMenu.style.display = "block";
-        positionContextMenu(state, hostPoint);
+        positionContextMenu(state, hostPoint, offsets);
 
         const core = createElement(state.document, "div", "cw-context-menu__core");
         core.appendChild(createElement(state.document, "span", "cw-context-menu__core-dot"));
         core.appendChild(createElement(state.document, "span", "cw-context-menu__core-label", node?.title || "Canvas"));
         state.contextMenu.appendChild(core);
 
-        const offsets = getRadialOffsets(actions.length);
         actions.forEach((action, index) => {
             const button = createElement(state.document, "button", `cw-context-menu__action tone-${action.tone || "neutral"}`);
             button.type = "button";
+            button.dataset.actionId = action.actionId || "";
+            button.title = action.description || action.label || action.actionId || "action";
             button.style.setProperty("--cw-menu-x", `${round(offsets[index].x)}px`);
             button.style.setProperty("--cw-menu-y", `${round(offsets[index].y)}px`);
             button.addEventListener("pointerdown", event => event.stopPropagation());
@@ -1095,6 +1137,40 @@
         }
     }
 
+    function isNodeVisibleInViewport(state, node, margin) {
+        const rect = state.host.getBoundingClientRect();
+        const position = worldToHostPoint(state, getNodePosition(state, node));
+        const size = getNodeSize(node);
+        const halfWidth = (size.width * state.ui.zoom) / 2;
+        const halfHeight = (size.height * state.ui.zoom) / 2;
+        const safeMargin = typeof margin === "number" ? margin : 92;
+
+        return position.x - halfWidth >= safeMargin &&
+            position.x + halfWidth <= rect.width - safeMargin &&
+            position.y - halfHeight >= safeMargin &&
+            position.y + halfHeight <= rect.height - safeMargin;
+    }
+
+    function ensureNodeVisible(state, nodeId, options) {
+        const node = state.lookups.byId.get(nodeId);
+        if (!node) {
+            return false;
+        }
+
+        const forceCenter = !!options?.forceCenter;
+        if (!forceCenter && isNodeVisibleInViewport(state, node, options?.margin)) {
+            return false;
+        }
+
+        const rect = state.host.getBoundingClientRect();
+        const position = getNodePosition(state, node);
+        setPan(
+            state,
+            (rect.width / 2) - (position.x * state.ui.zoom),
+            (rect.height / 2) - (position.y * state.ui.zoom));
+        return true;
+    }
+
     function resize(state) {
         const rect = state.host.getBoundingClientRect();
         state.links.setAttribute("width", `${Math.max(rect.width, 1)}`);
@@ -1140,6 +1216,7 @@
         state.selectedIds = toSelectionSet([nodeId]);
         state.ui.selectedNodeIds = [nodeId];
         render(state);
+        ensureHostFocus(state);
         publishSelection(state);
         publishState(state);
     }
@@ -1206,7 +1283,7 @@
                 }
 
                 clearContextMenu(state);
-                state.host.focus();
+                ensureHostFocus(state);
 
                 if (event.button === 2) {
                     return;
@@ -1361,9 +1438,19 @@
                         break;
                     case "Escape":
                         event.preventDefault();
-                        clearContextMenu(state);
-                        closeComposer(state);
-                        setSelection(state, [], true);
+                        {
+                            const hadContextMenu = state.contextMenu?.style.display !== "none";
+                            const hadComposer = !!state.composer;
+                            clearContextMenu(state);
+                            closeComposer(state);
+                            if (!hadContextMenu && !hadComposer) {
+                                setSelection(state, [], true);
+                            }
+                            else {
+                                render(state);
+                                ensureHostFocus(state);
+                            }
+                        }
                         break;
                 }
             }
@@ -1429,6 +1516,7 @@
             marquee: null,
             contextMenu: null,
             composer: null,
+            pendingCreate: null,
             resizeObserver: null,
             lastPointerTarget: null,
             recentDoubleActivationAt: 0,
@@ -1437,6 +1525,9 @@
     }
 
     function refresh(state, surface) {
+        const previousNodeIds = new Set((state.surface?.nodes || []).map(node => node.id));
+        const previousSelectedId = state.ui?.selectedNodeIds?.[0] || null;
+        const pendingCreate = state.pendingCreate;
         state.surface = normalizeSurface(surface);
         state.lookups = buildNodeLookup(state.surface.nodes);
         state.ui = state.surface.uiState;
@@ -1448,7 +1539,23 @@
         }
 
         resize(state);
+        const selectedNodeId = state.ui.selectedNodeIds[0] || null;
+        const shouldRevealSelection = !!selectedNodeId &&
+            (!!pendingCreate || (!!selectedNodeId && selectedNodeId !== previousSelectedId));
+        if (shouldRevealSelection) {
+            const isNewNode = !previousNodeIds.has(selectedNodeId);
+            ensureNodeVisible(state, selectedNodeId, { forceCenter: isNewNode });
+        }
+
         render(state);
+
+        if (pendingCreate) {
+            if (pendingCreate.focusHost) {
+                deferHostFocus(state);
+            }
+
+            state.pendingCreate = null;
+        }
     }
 
     root.canvasWorkbench = {

@@ -170,6 +170,18 @@ public sealed class CanvasWorkbenchAction
     public bool RequiresInput { get; set; }
 
     public string CreateMode { get; set; } = "command";
+
+    public string TitleLabel { get; set; } = "Title";
+
+    public string TitlePlaceholder { get; set; } = string.Empty;
+
+    public string SubtitleLabel { get; set; } = "Subtitle";
+
+    public string SubtitlePlaceholder { get; set; } = string.Empty;
+
+    public string NotesLabel { get; set; } = "Notes";
+
+    public string NotesPlaceholder { get; set; } = string.Empty;
 }
 
 public sealed class CanvasWorkbenchChip

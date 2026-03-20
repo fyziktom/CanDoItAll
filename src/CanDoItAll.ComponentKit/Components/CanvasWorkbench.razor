@@ -115,8 +115,11 @@
     private bool isMaximized;
     private int zoomPercent = 100;
     private bool surfaceSyncPending = true;
-    private string? pendingSurfaceKey;
-    private string? appliedSurfaceKey;
+    private string? pendingDataKey;
+    private string? pendingUiStateKey;
+    private string? appliedDataKey;
+    private string? appliedUiStateKey;
+    private string? clientUiStateKey;
 
     [Parameter, EditorRequired]
     public CanvasWorkbenchSurface Surface { get; set; } = default!;
@@ -146,8 +149,14 @@
     {
         isMaximized = Surface.UiState.IsMaximized;
         zoomPercent = ClampZoomPercent(Surface.UiState.Zoom);
-        pendingSurfaceKey = JsonSerializer.Serialize(Surface, serializerOptions);
-        surfaceSyncPending = !string.Equals(appliedSurfaceKey, pendingSurfaceKey, StringComparison.Ordinal);
+        pendingDataKey = SerializeSurfaceData(Surface);
+        pendingUiStateKey = Surface.UiState.ToJson();
+
+        var dataChanged = !string.Equals(appliedDataKey, pendingDataKey, StringComparison.Ordinal);
+        var uiMatchesLatestClientState = string.Equals(clientUiStateKey, pendingUiStateKey, StringComparison.Ordinal);
+        var uiChangedOutsideClient = !string.Equals(appliedUiStateKey, pendingUiStateKey, StringComparison.Ordinal) && !uiMatchesLatestClientState;
+
+        surfaceSyncPending = dataChanged || uiChangedOutsideClient;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -157,8 +166,7 @@
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.create", host, objectReference, Surface);
             initialized = true;
-            appliedSurfaceKey = pendingSurfaceKey;
-            surfaceSyncPending = false;
+            MarkSurfaceApplied();
             return;
         }
 
@@ -168,8 +176,7 @@
         }
 
         await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.update", host, Surface);
-        appliedSurfaceKey = pendingSurfaceKey;
-        surfaceSyncPending = false;
+        MarkSurfaceApplied();
     }
 
     [JSInvokable]
@@ -217,8 +224,10 @@
     {
         var state = CanvasWorkbenchUiState.Parse(stateJson);
         state.IsMaximized = isMaximized;
+        clientUiStateKey = state.ToJson();
+        appliedUiStateKey = clientUiStateKey;
         zoomPercent = ClampZoomPercent(state.Zoom);
-        await StateChanged.InvokeAsync(state.ToJson());
+        await StateChanged.InvokeAsync(clientUiStateKey);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -352,6 +361,25 @@
 
     private static int ClampZoomPercent(double zoom)
         => (int)Math.Round(Math.Clamp(zoom, 0.55, 1.75) * 100);
+
+    private string SerializeSurfaceData(CanvasWorkbenchSurface surface)
+        => JsonSerializer.Serialize(
+            new
+            {
+                surface.SurfaceId,
+                surface.Mode,
+                surface.Nodes,
+                surface.Links,
+                surface.Chrome
+            },
+            serializerOptions);
+
+    private void MarkSurfaceApplied()
+    {
+        appliedDataKey = pendingDataKey;
+        appliedUiStateKey = pendingUiStateKey;
+        surfaceSyncPending = false;
+    }
 
     public async Task OpenCreateDialogAsync(CanvasWorkbenchAction action, CanvasWorkbenchCreateActionRequest request)
     {
