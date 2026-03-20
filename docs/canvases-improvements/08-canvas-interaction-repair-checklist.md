@@ -207,3 +207,41 @@ This checklist tracks the post-migration repair pass requested on 2026-03-19 for
   - `dotnet test CanDoItAll.slnx --no-restore -v minimal /p:BuildProjectReferences=false`
   - Playwright project passes against the live local runtime by setting `CANDOITALL_PLAYWRIGHT_BASEURL=http://127.0.0.1:5032`
   - manual Playwright MCP review confirmed the submenu backdrop, submenu persistence, typed `Link` modal, and restored inline note flow
+
+## Sixth-pass QA findings
+
+- The collapse toggle needed one more live-runtime confirmation because earlier browser reports showed the branch affordance ignoring clicks.
+- The file-picker click path for image creation needed proof from the refreshed build, not only from drag/drop and automated tests.
+- The root radial menu was still clipping against the left viewport edge in the live app, which meant the placement math still underestimated the real menu footprint.
+- Aggressive wheel-based zoom-out needed one more browser check with repeated synthetic wheel input to confirm the trackpoint-style down-scroll no longer oscillated.
+
+## Sixth-pass execution checklist
+
+### Canvas interaction repairs
+
+- [x] Re-verify the `+` / `-` branch toggle against the refreshed browser runtime.
+- [x] Re-verify that clicking the image chooser surface opens the native file dialog path.
+- [x] Fix root radial menu placement so all root actions remain fully inside the visible canvas bounds.
+- [x] Re-check repeated wheel zoom-out at high delta so the viewport stabilizes instead of bouncing.
+
+### Regression coverage
+
+- [x] Add a browser regression that fails if the root radial menu clips past the viewport edge.
+- [x] Re-run the Playwright project after the menu-placement repair.
+
+## Sixth-pass closure notes
+
+- Root radial menu placement now clamps against the actual layer footprint instead of a rough scalar extent, which keeps the full action ring visible even when the source node is near the window edge.
+- Live browser QA on `https://localhost:7271` confirmed:
+  - collapse reduces the canvas to the root node and switches the branch affordance to `+`
+  - clicking the image chooser surface opens the native file chooser path
+  - root right-click actions stay fully inside the viewport after the placement repair
+  - repeated wheel zoom-out settles cleanly at `55%` without the previous bounce-back loop
+- Verification for this pass:
+  - `dotnet build src/CanDoItAll.Web/CanDoItAll.Web.csproj --no-restore -v minimal`
+  - `dotnet test tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --no-restore -v minimal /p:BuildProjectReferences=false`
+  - manual Playwright MCP screenshots reviewed:
+    - `output/playwright/structure-menu-clamped-fixed.png`
+    - `output/playwright/structure-collapse-working-final.png`
+    - `output/playwright/structure-image-picker-modal-final.png`
+    - `output/playwright/structure-zoom-wheel-stable-final.png`

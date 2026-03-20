@@ -422,6 +422,12 @@ body.cw-body-lock {
     transform-origin: 0 0;
 }
 
+.cw-workbench__frame-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
 .cw-workbench__links {
     position: absolute;
     inset: 0;
@@ -543,6 +549,63 @@ body.cw-body-lock {
     align-items: start;
 }
 
+.cw-group-frame {
+    position: absolute;
+    border: 2px dashed rgba(109, 40, 217, 0.38);
+    border-radius: 1.9rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.04));
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.4) inset,
+        0 18px 36px rgba(15, 23, 42, 0.08);
+}
+
+.cw-group-frame.tone-accent {
+    border-color: rgba(109, 40, 217, 0.4);
+}
+
+.cw-group-frame.tone-mint {
+    border-color: rgba(5, 150, 105, 0.42);
+}
+
+.cw-group-frame.tone-sky {
+    border-color: rgba(2, 132, 199, 0.4);
+}
+
+.cw-group-frame.tone-warn {
+    border-color: rgba(249, 115, 22, 0.44);
+}
+
+.cw-group-frame__label {
+    position: absolute;
+    left: 1rem;
+    top: -0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 1.8rem;
+    padding: 0.2rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.88);
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.18);
+}
+
+.cw-group-frame__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.45rem;
+    min-height: 1.45rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    font-size: 0.68rem;
+}
+
 .cw-node__eyebrow {
     display: flex;
     align-items: center;
@@ -595,6 +658,57 @@ body.cw-body-lock {
 .cw-node[data-family="root"] .cw-node__chip {
     background: rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.92);
+}
+
+.cw-node__progress {
+    --cw-progress-angle: 0deg;
+    position: relative;
+    width: 1.85rem;
+    height: 1.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: conic-gradient(#10b981 var(--cw-progress-angle), rgba(148, 163, 184, 0.26) 0);
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+    flex: 0 0 auto;
+}
+
+.cw-node__progress::after {
+    content: "";
+    position: absolute;
+    inset: 0.28rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.96);
+}
+
+.cw-node[data-family="root"] .cw-node__progress::after {
+    background: rgba(15, 23, 42, 0.9);
+}
+
+.cw-node__progress.is-na {
+    background: conic-gradient(rgba(148, 163, 184, 0.28) 360deg, rgba(148, 163, 184, 0.28) 0);
+}
+
+.cw-node__progress.is-complete {
+    background: conic-gradient(#10b981 360deg, #10b981 0);
+}
+
+.cw-node__progress-center {
+    position: relative;
+    z-index: 1;
+    color: #0f172a;
+    font-size: 0.8rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.cw-node__progress.is-na .cw-node__progress-center {
+    color: #64748b;
+}
+
+.cw-node[data-family="root"] .cw-node__progress-center {
+    color: #e2e8f0;
 }
 
 .cw-node__title {
@@ -1136,9 +1250,11 @@ body.cw-body-lock {
 
 .cw-canvas-composer__file-input {
     position: absolute;
-    inset: 0;
+    width: 1px;
+    height: 1px;
+    inset: auto;
     opacity: 0;
-    cursor: pointer;
+    pointer-events: none;
 }
 
 .cw-canvas-composer__actions {

@@ -66,6 +66,23 @@
         };
     }
 
+    function normalizeGroupFrame(frame) {
+        return {
+            id: frame?.id || "",
+            label: frame?.label || "Group",
+            tone: frame?.tone || "accent",
+            anchorNodeIds: Array.isArray(frame?.anchorNodeIds) ? frame.anchorNodeIds.filter(Boolean) : []
+        };
+    }
+
+    function normalizeProgressPercent(value) {
+        if (typeof value !== "number" || Number.isNaN(value)) {
+            return 0;
+        }
+
+        return clamp(Math.round(value), 0, 100);
+    }
+
     function normalizeSurface(surface) {
         return {
             surfaceId: surface?.surfaceId || "canvas-surface",
@@ -79,13 +96,16 @@
                 contextActions: Array.isArray(node.contextActions) ? node.contextActions.map(normalizeAction) : [],
                 isInlineTextNode: !!node?.isInlineTextNode,
                 inlineText: node?.inlineText || "",
-                inlineTextPlaceholder: node?.inlineTextPlaceholder || "Write note"
+                inlineTextPlaceholder: node?.inlineTextPlaceholder || "Write note",
+                progressMode: node?.progressMode || "na",
+                progressPercent: normalizeProgressPercent(node?.progressPercent)
             })) : [],
             links: Array.isArray(surface?.links) ? surface.links : [],
             uiState: {
                 version: surface?.uiState?.version || "canvas-workbench.v1",
                 selectedNodeIds: Array.isArray(surface?.uiState?.selectedNodeIds) ? [...surface.uiState.selectedNodeIds] : [],
                 collapsedNodeIds: Array.isArray(surface?.uiState?.collapsedNodeIds) ? [...surface.uiState.collapsedNodeIds] : [],
+                groupFrames: Array.isArray(surface?.uiState?.groupFrames) ? surface.uiState.groupFrames.map(normalizeGroupFrame) : [],
                 manualPositions: surface?.uiState?.manualPositions || {},
                 zoom: typeof surface?.uiState?.zoom === "number" ? clamp(surface.uiState.zoom, 0.55, 1.75) : 1,
                 panX: typeof surface?.uiState?.panX === "number" ? surface.uiState.panX : 90,
@@ -95,6 +115,7 @@
             },
             chrome: {
                 quickCreateActions: Array.isArray(surface?.chrome?.quickCreateActions) ? surface.chrome.quickCreateActions.map(normalizeAction) : [],
+                groupContextActions: Array.isArray(surface?.chrome?.groupContextActions) ? surface.chrome.groupContextActions.map(normalizeAction) : [],
                 showQuickCreateRail: surface?.chrome?.showQuickCreateRail !== false,
                 childNoteActionId: surface?.chrome?.childNoteActionId || "",
                 siblingNoteActionId: surface?.chrome?.siblingNoteActionId || "",
@@ -231,6 +252,7 @@
             version: state.ui.version || "canvas-workbench.v1",
             selectedNodeIds: [...state.selectedIds],
             collapsedNodeIds: [...state.collapsedIds],
+            groupFrames: Array.isArray(state.ui.groupFrames) ? state.ui.groupFrames.map(normalizeGroupFrame) : [],
             manualPositions: state.ui.manualPositions || {},
             zoom: round(state.ui.zoom),
             panX: round(state.ui.panX),
@@ -294,6 +316,72 @@
         }
     }
 
+    function getExpandedFrameNodeIds(state, frame) {
+        const expanded = new Set();
+        const queue = [...(frame?.anchorNodeIds || [])];
+
+        while (queue.length > 0) {
+            const nodeId = queue.shift();
+            if (!nodeId || expanded.has(nodeId) || !state.lookups.byId.has(nodeId)) {
+                continue;
+            }
+
+            expanded.add(nodeId);
+            const children = state.lookups.children.get(nodeId) || [];
+            for (const childId of children) {
+                queue.push(childId);
+            }
+        }
+
+        return [...expanded];
+    }
+
+    function renderGroupFrames(state, visibleNodes) {
+        if (!state.frameLayer) {
+            return;
+        }
+
+        state.frameLayer.innerHTML = "";
+        const visibleLookup = new Map(visibleNodes.map(node => [node.id, node]));
+
+        for (const frame of state.ui.groupFrames || []) {
+            const memberNodes = getExpandedFrameNodeIds(state, frame)
+                .map(nodeId => visibleLookup.get(nodeId))
+                .filter(Boolean);
+            if (!memberNodes.length) {
+                continue;
+            }
+
+            let minX = Number.POSITIVE_INFINITY;
+            let maxX = Number.NEGATIVE_INFINITY;
+            let minY = Number.POSITIVE_INFINITY;
+            let maxY = Number.NEGATIVE_INFINITY;
+
+            for (const node of memberNodes) {
+                const position = getNodePosition(state, node);
+                const size = getNodeSize(node);
+                minX = Math.min(minX, position.x - (size.width / 2));
+                maxX = Math.max(maxX, position.x + (size.width / 2));
+                minY = Math.min(minY, position.y - (size.height / 2));
+                maxY = Math.max(maxY, position.y + (size.height / 2));
+            }
+
+            const paddingX = 38;
+            const paddingY = 42;
+            const frameElement = createElement(state.document, "div", `cw-group-frame tone-${frame.tone || "accent"}`);
+            frameElement.dataset.frameId = frame.id || "";
+            frameElement.style.left = `${round(minX - paddingX)}px`;
+            frameElement.style.top = `${round(minY - paddingY)}px`;
+            frameElement.style.width = `${round((maxX - minX) + (paddingX * 2))}px`;
+            frameElement.style.height = `${round((maxY - minY) + (paddingY * 2))}px`;
+
+            const label = createElement(state.document, "div", "cw-group-frame__label", frame.label || "Group border");
+            label.appendChild(createElement(state.document, "span", "cw-group-frame__count", `${memberNodes.length}`));
+            frameElement.appendChild(label);
+            state.frameLayer.appendChild(frameElement);
+        }
+    }
+
     function resolveChipToneClass(tone) {
         switch ((tone || "").toLowerCase()) {
             case "success":
@@ -311,15 +399,36 @@
         }
     }
 
+    function createProgressMarker(state, node) {
+        const percent = normalizeProgressPercent(node?.progressPercent);
+        const normalizedMode = (node?.progressMode || "na").toLowerCase();
+        const isComplete = normalizedMode === "complete" || percent >= 100;
+        const mode = isComplete ? "complete" : (normalizedMode === "progress" ? "progress" : "na");
+        const marker = createElement(state.document, "span", `cw-node__progress is-${mode}`);
+        marker.style.setProperty("--cw-progress-angle", `${round((percent / 100) * 360)}deg`);
+        marker.title = isComplete
+            ? "Done"
+            : mode === "progress"
+                ? `${percent}% complete`
+                : "Not applicable";
+
+        const center = createElement(state.document, "span", "cw-node__progress-center", isComplete ? "✓" : (mode === "na" ? "-" : ""));
+        marker.appendChild(center);
+        return marker;
+    }
+
     function renderInlineTextNode(state, node, nodeElement) {
         nodeElement.classList.add("is-inline-text");
         const surface = createElement(state.document, "div", "cw-node__surface");
         const noteText = node.inlineText || node.title || node.leadText || "Write note";
         surface.appendChild(createElement(state.document, "p", "cw-note-node__text", noteText));
 
-        if (node.statusPill) {
+        if (node.statusPill || node.progressMode) {
             const meta = createElement(state.document, "div", "cw-note-node__meta");
-            meta.appendChild(createElement(state.document, "span", "cw-node__chip tone-accent", node.statusPill));
+            meta.appendChild(createProgressMarker(state, node));
+            if (node.statusPill) {
+                meta.appendChild(createElement(state.document, "span", "cw-node__chip tone-accent", node.statusPill));
+            }
             surface.appendChild(meta);
         }
 
@@ -337,6 +446,7 @@
         header.appendChild(eyebrow);
 
         const rightMeta = createElement(state.document, "div", "cw-chip-row");
+        rightMeta.appendChild(createProgressMarker(state, node));
         if (node.durationLabel) {
             rightMeta.appendChild(createElement(state.document, "span", "cw-node__pill", node.durationLabel));
         }
@@ -386,6 +496,8 @@
             const collapse = createElement(state.document, "button", "cw-node__collapse", state.collapsedIds.has(node.id) ? "+" : "-");
             collapse.type = "button";
             collapse.dataset.nodeId = node.id;
+            collapse.addEventListener("pointerdown", event => event.stopPropagation());
+            collapse.addEventListener("pointerup", event => event.stopPropagation());
             collapse.addEventListener("click", event => {
                 event.stopPropagation();
                 toggleCollapse(state, node.id);
@@ -602,12 +714,17 @@
     function render(state) {
         applySceneTransform(state);
         const visibleNodes = getVisibleNodes(state);
+        renderGroupFrames(state, visibleNodes);
         renderLinks(state, visibleNodes);
         renderNodes(state, visibleNodes);
         layoutComposer(state);
     }
 
     function getContextActions(state, node) {
+        if (node && state.selectedIds.size > 1 && state.selectedIds.has(node.id)) {
+            return state.surface.chrome.groupContextActions || [];
+        }
+
         if (node) {
             return node.contextActions || [];
         }
@@ -680,25 +797,82 @@
         return offsets;
     }
 
-    function getContextMenuExtent(offsets) {
-        let extent = 136;
+    function getContextMenuLayerBounds(originOffset, offsets, radius) {
+        const actionHalfWidth = 58;
+        const actionHalfHeight = 54;
+        const coreHalf = 44;
+        const coreLabelAllowance = 34;
+        const padding = 14;
+        const bounds = {
+            minX: originOffset.x - radius,
+            maxX: originOffset.x + radius,
+            minY: originOffset.y - radius,
+            maxY: originOffset.y + radius
+        };
 
-        for (const offset of offsets) {
-            extent = Math.max(extent, Math.max(Math.abs(offset.x), Math.abs(offset.y)) + 68);
+        bounds.minX = Math.min(bounds.minX, originOffset.x - coreHalf);
+        bounds.maxX = Math.max(bounds.maxX, originOffset.x + coreHalf);
+        bounds.minY = Math.min(bounds.minY, originOffset.y - coreHalf);
+        bounds.maxY = Math.max(bounds.maxY, originOffset.y + coreHalf + coreLabelAllowance);
+
+        for (const offset of offsets || []) {
+            const centerX = originOffset.x + offset.x;
+            const centerY = originOffset.y + offset.y;
+            bounds.minX = Math.min(bounds.minX, centerX - actionHalfWidth);
+            bounds.maxX = Math.max(bounds.maxX, centerX + actionHalfWidth);
+            bounds.minY = Math.min(bounds.minY, centerY - actionHalfHeight);
+            bounds.maxY = Math.max(bounds.maxY, centerY + actionHalfHeight);
         }
 
-        return extent;
+        bounds.minX -= padding;
+        bounds.maxX += padding;
+        bounds.minY -= padding;
+        bounds.maxY += padding;
+        return bounds;
     }
 
-    function positionContextMenu(state, center, offsets, actions) {
-        const hostRect = state.host.getBoundingClientRect();
-        let extent = getContextMenuExtent(offsets || []);
-        if ((actions || []).some(action => Array.isArray(action.children) && action.children.length > 0)) {
-            extent += 182;
+    function clampLayerBoundsToHost(state, bounds) {
+        const rootCenter = state.contextMenuState?.rootCenter;
+        if (!rootCenter) {
+            return { x: 0, y: 0 };
         }
 
-        const x = round(clamp(center.x, extent, Math.max(extent, hostRect.width - extent)));
-        const y = round(clamp(center.y, extent, Math.max(extent, hostRect.height - extent)));
+        const hostRect = state.host.getBoundingClientRect();
+        const visibleMinX = -rootCenter.x;
+        const visibleMaxX = hostRect.width - rootCenter.x;
+        const visibleMinY = -rootCenter.y;
+        const visibleMaxY = hostRect.height - rootCenter.y;
+        let shiftX = 0;
+        let shiftY = 0;
+
+        if (bounds.minX < visibleMinX) {
+            shiftX += visibleMinX - bounds.minX;
+        }
+
+        if (bounds.maxX > visibleMaxX) {
+            shiftX -= bounds.maxX - visibleMaxX;
+        }
+
+        if (bounds.minY < visibleMinY) {
+            shiftY += visibleMinY - bounds.minY;
+        }
+
+        if (bounds.maxY > visibleMaxY) {
+            shiftY -= bounds.maxY - visibleMaxY;
+        }
+
+        return {
+            x: round(shiftX),
+            y: round(shiftY)
+        };
+    }
+
+    function positionContextMenu(state, center, offsets) {
+        const hostRect = state.host.getBoundingClientRect();
+        const radius = getContextMenuOrbitRadius(offsets || []);
+        const bounds = getContextMenuLayerBounds({ x: 0, y: 0 }, offsets || [], radius);
+        const x = round(clamp(center.x, -bounds.minX, Math.max(-bounds.minX, hostRect.width - bounds.maxX)));
+        const y = round(clamp(center.y, -bounds.minY, Math.max(-bounds.minY, hostRect.height - bounds.maxY)));
         state.contextMenu.style.left = `${x}px`;
         state.contextMenu.style.top = `${y}px`;
         return { x, y };
@@ -777,6 +951,15 @@
         return {
             x: round(parentLayer.originOffset.x + offset.x + ((offset.x / length) * outwardDistance)),
             y: round(parentLayer.originOffset.y + offset.y + ((offset.y / length) * outwardDistance))
+        };
+    }
+
+    function clampLayerOriginToHost(state, originOffset, offsets, radius) {
+        const bounds = getContextMenuLayerBounds(originOffset, offsets || [], radius);
+        const shift = clampLayerBoundsToHost(state, bounds);
+        return {
+            x: round(originOffset.x + shift.x),
+            y: round(originOffset.y + shift.y)
         };
     }
 
@@ -1023,6 +1206,25 @@
                 }
             };
 
+            dropZone.addEventListener("pointerdown", event => event.stopPropagation());
+            dropZone.addEventListener("click", event => {
+                event.stopPropagation();
+                if (event.target === fileInput) {
+                    return;
+                }
+
+                event.preventDefault();
+                fileInput.click();
+            });
+            dropZone.addEventListener("keydown", event => {
+                if (event.key !== "Enter" && event.key !== " ") {
+                    return;
+                }
+
+                event.preventDefault();
+                fileInput.click();
+            });
+            fileInput.addEventListener("click", event => event.stopPropagation());
             fileInput.addEventListener("change", async event => {
                 const file = event.target?.files?.[0];
                 if (!file) {
@@ -1229,16 +1431,21 @@
 
         closeContextMenuLayersFrom(state, nextDepth);
 
+        const submenuOffsets = getRadialOffsets((action.children || []).length, 82, 70);
+        const submenuRadius = getContextMenuOrbitRadius(submenuOffsets);
+        const submenuOrigin = clampLayerOriginToHost(state, resolveSubmenuOrigin(parentLayer, offset), submenuOffsets, submenuRadius);
+
         const submenuLayer = createContextMenuLayer(state, {
             depth: nextDepth,
             label: action.label || "More",
-            originOffset: resolveSubmenuOrigin(parentLayer, offset),
+            originOffset: submenuOrigin,
             ownerActionId: action.actionId,
             ownerDepth: parentLayer.depth
         });
 
         renderContextMenuLayer(state, submenuLayer, {
             actions: action.children || [],
+            offsets: submenuOffsets,
             node: options.node,
             clientX: options.clientX,
             clientY: options.clientY,
@@ -1253,7 +1460,7 @@
     }
 
     function renderContextMenuLayer(state, layerState, options) {
-        const offsets = getRadialOffsets(options.actions.length, options.baseRadius, options.ringStep);
+        const offsets = options.offsets || getRadialOffsets(options.actions.length, options.baseRadius, options.ringStep);
         layerState.radius = getContextMenuOrbitRadius(offsets);
         layerState.orbit.style.setProperty("--cw-orbit-size", `${round(layerState.radius * 2)}px`);
         options.actions.forEach((action, index) => {
@@ -1304,7 +1511,7 @@
         const hostPoint = getHostPoint(state, options.clientX, options.clientY);
         state.contextMenu.style.display = "block";
         const rootOffsets = getRadialOffsets(actions.length);
-        const rootCenter = positionContextMenu(state, hostPoint, rootOffsets, actions);
+        const rootCenter = positionContextMenu(state, hostPoint, rootOffsets);
         state.contextMenuState = {
             node: options.node || null,
             actions,
@@ -1644,6 +1851,64 @@
         publishState(state);
     }
 
+    function normalizeWheelDelta(event) {
+        let delta = event.deltaY;
+        switch (event.deltaMode) {
+            case 1:
+                delta *= 16;
+                break;
+            case 2:
+                delta *= window.innerHeight || 800;
+                break;
+        }
+
+        return delta;
+    }
+
+    function applyWheelZoom(state, event) {
+        const hostPoint = getHostPoint(state, event.clientX, event.clientY);
+        const normalizedDelta = normalizeWheelDelta(event);
+        if (!normalizedDelta) {
+            return;
+        }
+
+        const wheelZoom = state.wheelZoom || { accumulator: 0, direction: 0, lastTimestamp: 0 };
+        const direction = Math.sign(normalizedDelta);
+        const magnitude = Math.abs(normalizedDelta);
+        const now = typeof event.timeStamp === "number" ? event.timeStamp : Date.now();
+        if ((now - wheelZoom.lastTimestamp) > 140) {
+            wheelZoom.accumulator = 0;
+            wheelZoom.direction = 0;
+        }
+
+        if (wheelZoom.direction &&
+            direction !== wheelZoom.direction &&
+            magnitude < Math.max(8, Math.abs(wheelZoom.accumulator) * 0.6)) {
+            wheelZoom.lastTimestamp = now;
+            state.wheelZoom = wheelZoom;
+            return;
+        }
+
+        if (wheelZoom.direction && direction !== wheelZoom.direction) {
+            wheelZoom.accumulator = 0;
+        }
+
+        wheelZoom.direction = direction;
+        wheelZoom.lastTimestamp = now;
+        wheelZoom.accumulator += normalizedDelta;
+
+        const threshold = 24;
+        if (Math.abs(wheelZoom.accumulator) < threshold) {
+            state.wheelZoom = wheelZoom;
+            return;
+        }
+
+        const stepCount = Math.max(1, Math.floor(Math.abs(wheelZoom.accumulator) / threshold));
+        wheelZoom.accumulator -= stepCount * threshold * direction;
+        state.wheelZoom = wheelZoom;
+        setZoomPercent(state, (state.ui.zoom * 100) + (-direction * stepCount * 4), hostPoint);
+    }
+
     function setZoomPercent(state, percent, anchorPoint) {
         const nextZoom = clamp((percent || 100) / 100, 0.55, 1.75);
         const rect = state.host.getBoundingClientRect();
@@ -1739,7 +2004,11 @@
                         toggleSelection(state, targetNode.id);
                         return;
                     }
-                    else if (!state.selectedIds.has(targetNode.id) || state.selectedIds.size > 1) {
+
+                    const isGroupDrag = (event.ctrlKey || event.metaKey) &&
+                        state.selectedIds.size > 1 &&
+                        state.selectedIds.has(targetNode.id);
+                    if (!state.selectedIds.has(targetNode.id) || (state.selectedIds.size > 1 && !isGroupDrag)) {
                         state.selectedIds = toSelectionSet([targetNode.id]);
                         state.ui.selectedNodeIds = [targetNode.id];
                         render(state);
@@ -1801,9 +2070,7 @@
             },
             wheel: event => {
                 event.preventDefault();
-                const hostPoint = getHostPoint(state, event.clientX, event.clientY);
-                const delta = event.deltaY > 0 ? -10 : 10;
-                setZoomPercent(state, (state.ui.zoom * 100) + delta, hostPoint);
+                applyWheelZoom(state, event);
             },
             contextMenu: event => {
                 if (isOverlayTarget(event.target)) {
@@ -1812,7 +2079,10 @@
 
                 event.preventDefault();
                 const targetNode = hitTestNode(state, event.target);
-                if (targetNode) {
+                const isGroupSelection = !!targetNode &&
+                    state.selectedIds.size > 1 &&
+                    state.selectedIds.has(targetNode.id);
+                if (targetNode && !isGroupSelection) {
                     setSelection(state, [targetNode.id], true);
                 }
 
@@ -1820,12 +2090,21 @@
                     node: targetNode,
                     clientX: event.clientX,
                     clientY: event.clientY,
-                    placementKind: targetNode ? "child" : "canvas"
+                    placementKind: targetNode ? "child" : "canvas",
+                    label: isGroupSelection ? `${state.selectedIds.size} selected` : undefined
                 });
             },
             keyDown: event => {
                 const target = event.target;
                 const tagName = target?.tagName?.toLowerCase?.() || "";
+                const isCanvasKeyTarget = !target ||
+                    target === state.document.body ||
+                    target === state.document.documentElement ||
+                    state.host.contains(target);
+                if (!isCanvasKeyTarget) {
+                    return;
+                }
+
                 const isEditable = tagName === "input" || tagName === "textarea" || target?.isContentEditable;
                 if (isEditable) {
                     if (event.key === "Escape") {
@@ -1895,7 +2174,7 @@
         state.host.addEventListener("dblclick", state.handlers.doubleClick);
         state.host.addEventListener("wheel", state.handlers.wheel, { passive: false });
         state.host.addEventListener("contextmenu", state.handlers.contextMenu);
-        state.host.addEventListener("keydown", state.handlers.keyDown);
+        state.document.addEventListener("keydown", state.handlers.keyDown);
     }
 
     function buildWorkbench(state) {
@@ -1904,6 +2183,7 @@
 
         const backdrop = createElement(state.document, "div", "cw-workbench__backdrop");
         const scene = createElement(state.document, "div", "cw-workbench__scene");
+        const frameLayer = createElement(state.document, "div", "cw-workbench__frame-layer");
         const links = createSvgElement(state.document, "svg", "cw-workbench__links");
         const nodeLayer = createElement(state.document, "div", "cw-workbench__node-layer");
         const marquee = createElement(state.document, "div", "cw-marquee");
@@ -1921,6 +2201,7 @@
             }
         });
 
+        scene.appendChild(frameLayer);
         scene.appendChild(links);
         scene.appendChild(nodeLayer);
         state.host.appendChild(backdrop);
@@ -1929,6 +2210,7 @@
         state.host.appendChild(contextMenu);
 
         state.scene = scene;
+        state.frameLayer = frameLayer;
         state.links = links;
         state.nodeLayer = nodeLayer;
         state.marquee = marquee;
@@ -1953,6 +2235,7 @@
             helpOpen: false,
             interaction: null,
             scene: null,
+            frameLayer: null,
             links: null,
             nodeLayer: null,
             marquee: null,
@@ -1964,6 +2247,7 @@
             resizeObserver: null,
             lastPointerTarget: null,
             recentDoubleActivationAt: 0,
+            wheelZoom: null,
             publishStateDebounced: debounce(stateJson => dotNetRef.invokeMethodAsync("OnStateChanged", stateJson), 140)
         };
     }
@@ -2116,7 +2400,7 @@
                 host.removeEventListener("dblclick", state.handlers.doubleClick);
                 host.removeEventListener("wheel", state.handlers.wheel);
                 host.removeEventListener("contextmenu", state.handlers.contextMenu);
-                host.removeEventListener("keydown", state.handlers.keyDown);
+                state.document.removeEventListener("keydown", state.handlers.keyDown);
             }
 
             setMaximized(state, false);

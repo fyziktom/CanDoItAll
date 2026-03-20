@@ -62,10 +62,15 @@ else
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Multi-select</p>
                             <h3 class="cw-panel-title">@($"{selectedNodes.Count} nodes selected")</h3>
-                            <p class="cw-panel-copy">Batch movement is available on the canvas. The inspector stays readable by showing the current selection set and the bulk-safe actions.</p>
+                            <p class="cw-panel-copy">Batch movement is available on the canvas. The inspector stays readable by showing the current selection set, shared progress controls, and the adaptive border actions.</p>
                             <div class="cw-button-row">
                                 <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearSelectionAsync">Clear selection</button>
                                 <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => SelectNodeAsync(selectedNodes[0].Id))">Focus first</button>
+                                <button type="button" class="cw-button" data-tone="sky" @onclick="CreateSelectionBorderAsync">Border</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearSelectionBordersAsync">Clear border</button>
+                                <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplySelectionStatusAsync("In progress"))'>In progress</button>
+                                <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplySelectionStatusAsync("Done"))'>Done</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplySelectionStatusAsync("N/A"))'>N/A</button>
                             </div>
                         </div>
 
@@ -333,7 +338,8 @@ else
                 ChildNoteActionId = "add-note",
                 SiblingNoteActionId = "add-note",
                 InlineNotePlaceholder = "Write note",
-                QuickCreateActions = BuildQuickCreateActions().ToList()
+                QuickCreateActions = BuildQuickCreateActions().ToList(),
+                GroupContextActions = BuildGroupContextActions().ToList()
             },
             Nodes = surface.Nodes.Select(MapCanvasNode).ToList(),
             Links = surface.Links.Select(link => new CanvasWorkbenchLink
@@ -352,6 +358,7 @@ else
         var hasChildren = surface?.Nodes.Any(candidate => string.Equals(candidate.ParentId, node.Id, StringComparison.Ordinal)) ?? false;
         var inlineText = string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes;
         var isInlineTextNode = node.ObjectType == ProjectObjectType.Note && string.IsNullOrWhiteSpace(node.Subtitle);
+        var progress = ResolveProgress(node);
 
         return new CanvasWorkbenchNode
         {
@@ -369,6 +376,8 @@ else
             PaletteKey = ResolvePalette(node),
             DurationLabel = node.Badges.Contains("Scheduled", StringComparer.Ordinal) ? "Scheduled" : string.Empty,
             StatusPill = node.Status,
+            ProgressMode = progress.Mode,
+            ProgressPercent = progress.Percent,
             IsRequired = node.ObjectType is ProjectObjectType.ProjectRoot or ProjectObjectType.Phase or ProjectObjectType.PromptSession,
             IsCollapsible = hasChildren,
             IsInlineTextNode = isInlineTextNode,
@@ -472,6 +481,62 @@ else
         return actions;
     }
 
+    private static IReadOnlyList<CanvasWorkbenchAction> BuildGroupContextActions()
+        =>
+        [
+            new CanvasWorkbenchAction
+            {
+                ActionId = "group-frame",
+                Label = "Border",
+                Description = "Create a living border around the selected branches.",
+                Icon = "frame",
+                Tone = "sky"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = "group-clear-frame",
+                Label = "Clear border",
+                Description = "Remove borders that currently contain the selected nodes.",
+                Icon = "clear",
+                Tone = "ghost"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = "group-progress",
+                Label = "Progress",
+                Description = "Update the shared progress marker for the selection.",
+                Icon = "progress",
+                Tone = "mint",
+                Children =
+                [
+                    new CanvasWorkbenchAction
+                    {
+                        ActionId = "group-mark-in-progress",
+                        Label = "In progress",
+                        Description = "Show partial clockwise progress.",
+                        Icon = "run",
+                        Tone = "warn"
+                    },
+                    new CanvasWorkbenchAction
+                    {
+                        ActionId = "group-mark-done",
+                        Label = "Done",
+                        Description = "Mark the selection complete with the check marker.",
+                        Icon = "done",
+                        Tone = "mint"
+                    },
+                    new CanvasWorkbenchAction
+                    {
+                        ActionId = "group-mark-na",
+                        Label = "N/A",
+                        Description = "Show the neutral not-applicable state.",
+                        Icon = "na",
+                        Tone = "ghost"
+                    }
+                ]
+            }
+        ];
+
     private async Task HandleSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
     {
         if (!string.IsNullOrWhiteSpace(linkModeSourceId) &&
@@ -495,7 +560,7 @@ else
             await ProjectWorkbenchService.MoveObjectAsync(ProjectId, position.NodeId, position.X, position.Y);
         }
 
-        await ReloadSurfaceAsync(selectedNodeIds.FirstOrDefault());
+        await ReloadSurfaceAsync();
     }
 
     private async Task HandleCanvasStateChangedAsync(string stateJson)
@@ -589,6 +654,21 @@ else
                 break;
             case "open":
                 await HandleNodeOpenedAsync(nodeId ?? string.Empty);
+                break;
+            case "group-frame":
+                await CreateSelectionBorderAsync();
+                break;
+            case "group-clear-frame":
+                await ClearSelectionBordersAsync();
+                break;
+            case "group-mark-in-progress":
+                await ApplySelectionStatusAsync("In progress");
+                break;
+            case "group-mark-done":
+                await ApplySelectionStatusAsync("Done");
+                break;
+            case "group-mark-na":
+                await ApplySelectionStatusAsync("N/A");
                 break;
         }
     }
@@ -719,6 +799,93 @@ else
     private IReadOnlyList<ProjectStructureInspectorCreateGroup> BuildInspectorCreateGroups(ProjectObjectType? sourceType)
         => ProjectStructureCanvasCatalog.BuildInspectorCreateGroups(sourceType);
 
+    private async Task ApplySelectionStatusAsync(string status)
+    {
+        var mutableNodeIds = selectedNodes
+            .Where(IsCanvasStatusMutable)
+            .Select(node => node.Id)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (mutableNodeIds.Count == 0)
+        {
+            return;
+        }
+
+        await ProjectWorkbenchService.UpdateObjectStatusesAsync(ProjectId, mutableNodeIds, status);
+        await ReloadSurfaceAsync();
+    }
+
+    private async Task CreateSelectionBorderAsync()
+    {
+        if (surface is null || selectedNodeIds.Count < 2)
+        {
+            return;
+        }
+
+        var uiState = ResolveEditableUiState();
+        var normalizedSelection = selectedNodeIds
+            .Where(id => surface.Nodes.Any(node => string.Equals(node.Id, id, StringComparison.Ordinal)))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (normalizedSelection.Count < 2)
+        {
+            return;
+        }
+
+        var frames = uiState.GroupFrames
+            .Where(frame => !FrameMatchesSelection(frame, normalizedSelection, surface.Nodes))
+            .ToList();
+        frames.Add(new CanvasWorkbenchGroupFrame
+        {
+            Id = $"frame-{Guid.NewGuid():N}",
+            Label = BuildSelectionFrameLabel(),
+            Tone = "sky",
+            AnchorNodeIds = normalizedSelection
+        });
+
+        uiState.GroupFrames = frames;
+        await PersistCanvasUiStateAsync(uiState);
+    }
+
+    private async Task ClearSelectionBordersAsync()
+    {
+        if (surface is null || selectedNodeIds.Count == 0)
+        {
+            return;
+        }
+
+        var uiState = ResolveEditableUiState();
+        var retainedFrames = uiState.GroupFrames
+            .Where(frame => !FrameMatchesSelection(frame, selectedNodeIds, surface.Nodes))
+            .ToList();
+        if (retainedFrames.Count == uiState.GroupFrames.Count)
+        {
+            return;
+        }
+
+        uiState.GroupFrames = retainedFrames;
+        await PersistCanvasUiStateAsync(uiState);
+    }
+
+    private CanvasWorkbenchUiState ResolveEditableUiState()
+        => CanvasWorkbenchUiState.Parse(currentViewStateJson ?? surface?.ViewStateJson);
+
+    private async Task PersistCanvasUiStateAsync(CanvasWorkbenchUiState uiState)
+    {
+        if (surface is null)
+        {
+            return;
+        }
+
+        uiState.SelectedNodeIds = [.. selectedNodeIds];
+        ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
+        currentViewStateJson = uiState.ToJson();
+        surface = surface with { ViewStateJson = currentViewStateJson };
+        RefreshCanvasSurface();
+        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
+        await InvokeAsync(StateHasChanged);
+    }
+
     private (double? X, double? Y) ResolveCreatePlacement(ProjectStructureNode? sourceNode, ProjectStructureNode? parentNode, CanvasWorkbenchCreateActionRequest request)
     {
         if (request.X > 0 && request.Y > 0 && string.Equals(request.PlacementKind, "canvas", StringComparison.OrdinalIgnoreCase))
@@ -777,6 +944,62 @@ else
                 ? request.Title.Trim()
                 : string.Empty;
 
+    private string BuildSelectionFrameLabel()
+        => selectedNodes.Count == 1
+            ? selectedNodes[0].Title
+            : $"{selectedNodes.Count} nodes";
+
+    private static bool IsCanvasStatusMutable(ProjectStructureNode node)
+        => node.Id.StartsWith("custom:", StringComparison.Ordinal);
+
+    private static (string Mode, int Percent) ResolveProgress(ProjectStructureNode node)
+    {
+        var status = node.Status?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(status) ||
+            status.Contains("n/a", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("not applicable", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("skip", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("na", 0);
+        }
+
+        if (status.Contains("done", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("complete", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("approved", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("used", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("ready", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("final", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("complete", 100);
+        }
+
+        if (status.Contains("review", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("validation", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("testing", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("qa", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("progress", 78);
+        }
+
+        if (status.Contains("active", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("in progress", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("running", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("blocked", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("progress", 62);
+        }
+
+        if (status.Contains("planned", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("draft", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("pending", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("queued", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("progress", 28);
+        }
+
+        return ("progress", 48);
+    }
+
     private static string BuildSimpleNoteTitle(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -786,6 +1009,48 @@ else
 
         var normalized = text.Trim();
         return normalized.Length <= 64 ? normalized : $"{normalized[..61]}...";
+    }
+
+    private static bool FrameMatchesSelection(CanvasWorkbenchGroupFrame frame, IReadOnlyList<string> selectedIds, IReadOnlyList<ProjectStructureNode> nodes)
+    {
+        if (selectedIds.Count == 0 || frame.AnchorNodeIds.Count == 0)
+        {
+            return false;
+        }
+
+        var frameMembers = ExpandFrameMembers(frame.AnchorNodeIds, nodes);
+        return selectedIds.All(frameMembers.Contains);
+    }
+
+    private static HashSet<string> ExpandFrameMembers(IReadOnlyList<string> anchorNodeIds, IReadOnlyList<ProjectStructureNode> nodes)
+    {
+        var childrenByParent = nodes
+            .Where(node => !string.IsNullOrWhiteSpace(node.ParentId))
+            .GroupBy(node => node.ParentId!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Select(node => node.Id).ToList(), StringComparer.Ordinal);
+        var expanded = new HashSet<string>(StringComparer.Ordinal);
+        var queue = new Queue<string>(anchorNodeIds.Where(id => !string.IsNullOrWhiteSpace(id)));
+
+        while (queue.Count > 0)
+        {
+            var nodeId = queue.Dequeue();
+            if (!expanded.Add(nodeId))
+            {
+                continue;
+            }
+
+            if (!childrenByParent.TryGetValue(nodeId, out var children))
+            {
+                continue;
+            }
+
+            foreach (var child in children)
+            {
+                queue.Enqueue(child);
+            }
+        }
+
+        return expanded;
     }
 
     private static int ResolveOutlineWeight(ProjectObjectType objectType) => objectType switch

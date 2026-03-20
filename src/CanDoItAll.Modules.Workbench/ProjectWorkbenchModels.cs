@@ -424,6 +424,41 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
         return MapStructureNode(node);
     }
 
+    public async Task<int> UpdateObjectStatusesAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string status,
+        CancellationToken cancellationToken = default)
+    {
+        if (nodeKeys.Count == 0 || string.IsNullOrWhiteSpace(status))
+        {
+            return 0;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var normalizedKeys = nodeKeys.Where(key => !string.IsNullOrWhiteSpace(key)).Distinct(StringComparer.Ordinal).ToList();
+        if (normalizedKeys.Count == 0)
+        {
+            return 0;
+        }
+
+        var nodes = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == projectId &&
+                !item.IsSystemManaged &&
+                normalizedKeys.Contains(item.NodeKey))
+            .ToListAsync(cancellationToken);
+
+        foreach (var node in nodes)
+        {
+            node.Status = status.Trim();
+            node.UpdatedAtUtc = clock.GetUtcNow();
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return nodes.Count;
+    }
+
     public async Task SaveViewStateAsync(Guid projectId, string surfaceKind, string stateJson, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);

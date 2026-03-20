@@ -47,6 +47,10 @@ public sealed class CanvasWorkbenchNode
 
     public string StatusPill { get; set; } = string.Empty;
 
+    public string ProgressMode { get; set; } = "na";
+
+    public int ProgressPercent { get; set; }
+
     public bool IsRequired { get; set; }
 
     public bool IsCollapsible { get; set; }
@@ -97,6 +101,8 @@ public sealed class CanvasWorkbenchUiState
     public List<string> SelectedNodeIds { get; set; } = [];
 
     public List<string> CollapsedNodeIds { get; set; } = [];
+
+    public List<CanvasWorkbenchGroupFrame> GroupFrames { get; set; } = [];
 
     public Dictionary<string, CanvasWorkbenchPoint> ManualPositions { get; set; } = [];
 
@@ -153,6 +159,8 @@ public sealed class CanvasWorkbenchChrome
     public string InlineNotePlaceholder { get; set; } = "Write note";
 
     public List<CanvasWorkbenchAction> QuickCreateActions { get; set; } = [];
+
+    public List<CanvasWorkbenchAction> GroupContextActions { get; set; } = [];
 }
 
 public sealed class CanvasWorkbenchAction
@@ -208,6 +216,17 @@ public sealed class CanvasWorkbenchPoint
     public double X { get; set; }
 
     public double Y { get; set; }
+}
+
+public sealed class CanvasWorkbenchGroupFrame
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string Label { get; set; } = "Group";
+
+    public string Tone { get; set; } = "accent";
+
+    public List<string> AnchorNodeIds { get; set; } = [];
 }
 
 public sealed class CanvasWorkbenchUploadedFile
