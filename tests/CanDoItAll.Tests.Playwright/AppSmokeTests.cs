@@ -192,6 +192,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await noteEditor.PressAsync("Enter");
         await page.WaitForFunctionAsync("() => !document.querySelector('.cw-note-editor__input')");
         await page.WaitForSelectorAsync("text=Second child note");
+        await AssertNoCanvasNodeOverlapsAsync(page, "after chained child-note creation");
 
         await ClickCanvasNodeAsync(page, ".cw-node.is-inline-text", clickCount: 2);
         await noteEditor.WaitForAsync();
@@ -206,6 +207,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await noteEditor.PressAsync("Enter");
         await page.WaitForFunctionAsync("() => !document.querySelector('.cw-note-editor__input')");
         await page.WaitForSelectorAsync("text=Sibling note from Enter");
+        await AssertNoCanvasNodeOverlapsAsync(page, "after sibling-note creation");
 
         await ClickCanvasNodeAsync(page, ".cw-node:has-text('Edited child note')");
         await page.Keyboard.DownAsync("Control");
@@ -309,6 +311,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.Locator(".cw-canvas-composer__actions").GetByRole(AriaRole.Button, new() { Name = "Image", Exact = true }).ClickAsync();
         await page.WaitForFunctionAsync("() => document.querySelector('.cw-media-preview')?.tagName === 'IMG'");
         await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node.is-selected .cw-node__title')).some(node => node.textContent?.includes('Playwright dropped image'))");
+        await AssertNoCanvasNodeOverlapsAsync(page, "after mixed note/link/image creation");
 
         await ClickCanvasNodeAsync(page, ".cw-node.is-inline-text");
         await page.GetByRole(AriaRole.Button, new() { Name = "Focus root" }).ClickAsync();
@@ -575,6 +578,72 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
                 };
             }");
 
+    private static async Task AssertNoCanvasNodeOverlapsAsync(IPage page, string phase)
+    {
+        await page.WaitForFunctionAsync(
+            @"tolerance => {
+                const nodes = Array.from(document.querySelectorAll('.cw-node'));
+                for (let index = 0; index < nodes.length; index++) {
+                    const first = nodes[index].getBoundingClientRect();
+                    for (let compareIndex = index + 1; compareIndex < nodes.length; compareIndex++) {
+                        const second = nodes[compareIndex].getBoundingClientRect();
+                        const left = Math.max(first.left + tolerance, second.left + tolerance);
+                        const right = Math.min(first.right - tolerance, second.right - tolerance);
+                        const top = Math.max(first.top + tolerance, second.top + tolerance);
+                        const bottom = Math.min(first.bottom - tolerance, second.bottom - tolerance);
+                        if (right > left && bottom > top) {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }",
+            6,
+            new() { Timeout = 10_000 });
+
+        var overlaps = await page.EvaluateAsync<CanvasNodeOverlap[]>(
+            @"tolerance => {
+                const nodes = Array.from(document.querySelectorAll('.cw-node')).map(node => {
+                    const rect = node.getBoundingClientRect();
+                    const title = node.querySelector('.cw-node__title, .cw-note-node__text')?.textContent?.trim() || node.getAttribute('data-node-id') || 'node';
+                    return {
+                        id: node.getAttribute('data-node-id') || '',
+                        title,
+                        left: rect.left,
+                        right: rect.right,
+                        top: rect.top,
+                        bottom: rect.bottom
+                    };
+                });
+
+                const overlaps = [];
+                for (let index = 0; index < nodes.length; index++) {
+                    const first = nodes[index];
+                    for (let compareIndex = index + 1; compareIndex < nodes.length; compareIndex++) {
+                        const second = nodes[compareIndex];
+                        const left = Math.max(first.left + tolerance, second.left + tolerance);
+                        const right = Math.min(first.right - tolerance, second.right - tolerance);
+                        const top = Math.max(first.top + tolerance, second.top + tolerance);
+                        const bottom = Math.min(first.bottom - tolerance, second.bottom - tolerance);
+                        if (right > left && bottom > top) {
+                            overlaps.push({
+                                firstTitle: first.title,
+                                secondTitle: second.title
+                            });
+                        }
+                    }
+                }
+
+                return overlaps;
+            }",
+            6);
+
+        Assert.True(
+            overlaps.Length == 0,
+            $"{phase} still has overlapping nodes: {string.Join(", ", overlaps.Select(overlap => $"{overlap.FirstTitle} <-> {overlap.SecondTitle}"))}");
+    }
+
     private sealed class CanvasFocusState
     {
         public string? SelectedId { get; set; }
@@ -615,6 +684,13 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         public int MaxRight { get; set; }
 
         public int ViewportWidth { get; set; }
+    }
+
+    private sealed class CanvasNodeOverlap
+    {
+        public string FirstTitle { get; set; } = string.Empty;
+
+        public string SecondTitle { get; set; } = string.Empty;
     }
 
     private sealed class CanvasSubmenuMetrics

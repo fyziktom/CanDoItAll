@@ -132,7 +132,7 @@
         return new Set((collapsedNodeIds || []).filter(Boolean));
     }
 
-    function getNodeSize(node) {
+    function getDefaultNodeSize(node) {
         if (node.isInlineTextNode) {
             return { width: 228, height: 108 };
         }
@@ -147,6 +147,15 @@
             default:
                 return { width: 256, height: 190 };
         }
+    }
+
+    function getNodeSize(state, node) {
+        const measured = state?.measuredNodeSizes?.get(node.id);
+        if (measured?.width > 0 && measured?.height > 0) {
+            return measured;
+        }
+
+        return getDefaultNodeSize(node);
     }
 
     function buildNodeLookup(nodes) {
@@ -184,11 +193,367 @@
         return state.surface.nodes.filter(node => isNodeVisible(state, node.id));
     }
 
-    function getNodePosition(state, node) {
+    function getBaseNodePosition(state, node) {
         const manual = state.ui.manualPositions?.[node.id];
         return manual && typeof manual.x === "number" && typeof manual.y === "number"
             ? { x: manual.x, y: manual.y }
             : { x: node.x, y: node.y };
+    }
+
+    function getNodeDepth(state, nodeId, cache) {
+        if (cache.has(nodeId)) {
+            return cache.get(nodeId);
+        }
+
+        const node = state.lookups.byId.get(nodeId);
+        if (!node || !node.parentId) {
+            cache.set(nodeId, 0);
+            return 0;
+        }
+
+        const depth = getNodeDepth(state, node.parentId, cache) + 1;
+        cache.set(nodeId, depth);
+        return depth;
+    }
+
+    function getNodeMobility(state, node) {
+        if ((node.family || "").toLowerCase() === "root") {
+            return 0.04;
+        }
+
+        if (node.isRequired) {
+            return 0.18;
+        }
+
+        if (state.ui.manualPositions?.[node.id]) {
+            return 0.42;
+        }
+
+        return 1;
+    }
+
+    function buildResolvedLayoutKey(state, visibleNodes) {
+        return visibleNodes.map(node => {
+            const base = getBaseNodePosition(state, node);
+            return [
+                node.id,
+                node.parentId || "",
+                round(base.x),
+                round(base.y),
+                node.family || "",
+                node.isInlineTextNode ? "1" : "0"
+            ].join("|");
+        }).join(";");
+    }
+
+    function buildLayoutItems(state, visibleNodes) {
+        const depthCache = new Map();
+        const basePositions = new Map();
+        for (const node of visibleNodes) {
+            basePositions.set(node.id, getBaseNodePosition(state, node));
+        }
+
+        return visibleNodes.map(node => {
+            const base = basePositions.get(node.id);
+            const parentBase = node.parentId ? basePositions.get(node.parentId) : null;
+            const horizontalDelta = parentBase ? (base.x - parentBase.x) : 0;
+            const verticalDelta = parentBase ? (base.y - parentBase.y) : 0;
+            return {
+                id: node.id,
+                node,
+                parentId: node.parentId || null,
+                size: getNodeSize(state, node),
+                base,
+                depth: getNodeDepth(state, node.id, depthCache),
+                preferredSideX: horizontalDelta >= 0 ? 1 : -1,
+                preferredSideY: Math.abs(verticalDelta) > 4 ? Math.sign(verticalDelta) : 1,
+                mobility: getNodeMobility(state, node)
+            };
+        });
+    }
+
+    function getCollisionPaddingX(first, second) {
+        let padding = 28;
+        if (first.parentId === second.id || second.parentId === first.id) {
+            padding += 26;
+        }
+        else if (first.parentId && first.parentId === second.parentId) {
+            padding += 12;
+        }
+
+        if ((first.node.family || "").toLowerCase() === "root" || (second.node.family || "").toLowerCase() === "root") {
+            padding += 18;
+        }
+
+        return padding;
+    }
+
+    function getCollisionPaddingY(first, second) {
+        let padding = 24;
+        if (first.parentId && first.parentId === second.parentId) {
+            padding += 16;
+        }
+
+        return padding;
+    }
+
+    function getOverlapDelta(first, second, firstPosition, secondPosition) {
+        const deltaX = secondPosition.x - firstPosition.x;
+        const deltaY = secondPosition.y - firstPosition.y;
+        const overlapX = ((first.size.width + second.size.width) / 2) + getCollisionPaddingX(first, second) - Math.abs(deltaX);
+        const overlapY = ((first.size.height + second.size.height) / 2) + getCollisionPaddingY(first, second) - Math.abs(deltaY);
+        return { deltaX, deltaY, overlapX, overlapY };
+    }
+
+    function chooseCollisionAxis(first, second, overlap) {
+        if (first.parentId === second.id || second.parentId === first.id) {
+            return "x";
+        }
+
+        if (first.parentId && first.parentId === second.parentId) {
+            return overlap.overlapY <= (overlap.overlapX * 1.35) ? "y" : "x";
+        }
+
+        return overlap.overlapX <= overlap.overlapY ? "x" : "y";
+    }
+
+    function resolveCollisionDirection(first, second, axis, overlap) {
+        const delta = axis === "x" ? overlap.deltaX : overlap.deltaY;
+        if (Math.abs(delta) > 0.5) {
+            return Math.sign(delta);
+        }
+
+        if (axis === "x") {
+            if (first.parentId === second.id) {
+                return -(first.preferredSideX || 1);
+            }
+
+            if (second.parentId === first.id) {
+                return second.preferredSideX || 1;
+            }
+
+            const baseDeltaX = second.base.x - first.base.x;
+            if (Math.abs(baseDeltaX) > 0.5) {
+                return Math.sign(baseDeltaX);
+            }
+        }
+        else {
+            const baseDeltaY = second.base.y - first.base.y;
+            if (Math.abs(baseDeltaY) > 0.5) {
+                return Math.sign(baseDeltaY);
+            }
+        }
+
+        return first.id.localeCompare(second.id) <= 0 ? 1 : -1;
+    }
+
+    function applyCollisionSeparation(first, second, firstPosition, secondPosition, axis, amount, direction) {
+        if (amount <= 0) {
+            return false;
+        }
+
+        const totalMobility = Math.max(0.001, first.mobility + second.mobility);
+        const firstShare = second.mobility <= 0 ? 0 : (first.mobility / totalMobility);
+        const secondShare = first.mobility <= 0 ? 0 : (second.mobility / totalMobility);
+        const firstDelta = amount * (secondShare || 0);
+        const secondDelta = amount * (firstShare || 0);
+
+        if (axis === "x") {
+            if (first.mobility > 0) {
+                firstPosition.x -= direction * firstDelta;
+            }
+
+            if (second.mobility > 0) {
+                secondPosition.x += direction * secondDelta;
+            }
+        }
+        else {
+            if (first.mobility > 0) {
+                firstPosition.y -= direction * firstDelta;
+            }
+
+            if (second.mobility > 0) {
+                secondPosition.y += direction * secondDelta;
+            }
+        }
+
+        return firstDelta > 0 || secondDelta > 0;
+    }
+
+    function enforceParentClearance(itemsById, positions) {
+        let moved = false;
+
+        for (const item of itemsById.values()) {
+            if (!item.parentId || !positions.has(item.parentId)) {
+                continue;
+            }
+
+            const parent = itemsById.get(item.parentId);
+            if (!parent) {
+                continue;
+            }
+
+            const parentPosition = positions.get(parent.id);
+            const itemPosition = positions.get(item.id);
+            const preferredSide = item.preferredSideX || 1;
+            const requiredDistance = ((parent.size.width + item.size.width) / 2) + 42;
+            const targetX = parentPosition.x + (preferredSide * requiredDistance);
+
+            if (preferredSide > 0 && itemPosition.x < targetX) {
+                itemPosition.x = targetX;
+                moved = true;
+            }
+            else if (preferredSide < 0 && itemPosition.x > targetX) {
+                itemPosition.x = targetX;
+                moved = true;
+            }
+        }
+
+        return moved;
+    }
+
+    function enforceSiblingSpacing(itemsById, positions) {
+        const groups = new Map();
+        for (const item of itemsById.values()) {
+            if (!item.parentId || !positions.has(item.parentId)) {
+                continue;
+            }
+
+            if (!groups.has(item.parentId)) {
+                groups.set(item.parentId, []);
+            }
+
+            groups.get(item.parentId).push(item);
+        }
+
+        let moved = false;
+        for (const siblings of groups.values()) {
+            siblings.sort((first, second) => {
+                const firstPosition = positions.get(first.id);
+                const secondPosition = positions.get(second.id);
+                if (Math.abs(firstPosition.y - secondPosition.y) > 0.5) {
+                    return firstPosition.y - secondPosition.y;
+                }
+
+                return first.base.y - second.base.y;
+            });
+
+            for (let index = 1; index < siblings.length; index++) {
+                const previous = siblings[index - 1];
+                const current = siblings[index];
+                const previousPosition = positions.get(previous.id);
+                const currentPosition = positions.get(current.id);
+                const horizontalGap = Math.abs(currentPosition.x - previousPosition.x);
+                const requiredHorizontalGap = ((previous.size.width + current.size.width) / 2) + 24;
+                if (horizontalGap >= requiredHorizontalGap) {
+                    continue;
+                }
+
+                const requiredVerticalGap = ((previous.size.height + current.size.height) / 2) + 28;
+                const currentGap = currentPosition.y - previousPosition.y;
+                if (currentGap < requiredVerticalGap) {
+                    currentPosition.y = previousPosition.y + requiredVerticalGap;
+                    moved = true;
+                }
+            }
+
+            const desiredCenter = siblings.reduce((total, item) => total + item.base.y, 0) / Math.max(1, siblings.length);
+            const actualCenter = siblings.reduce((total, item) => total + positions.get(item.id).y, 0) / Math.max(1, siblings.length);
+            const shift = clamp(desiredCenter - actualCenter, -44, 44);
+            if (Math.abs(shift) <= 0.5) {
+                continue;
+            }
+
+            for (const item of siblings) {
+                if (item.mobility <= 0) {
+                    continue;
+                }
+
+                positions.get(item.id).y += shift * 0.18 * item.mobility;
+                moved = true;
+            }
+        }
+
+        return moved;
+    }
+
+    function relaxTowardBase(items, positions) {
+        let moved = false;
+
+        for (const item of items) {
+            if (item.mobility <= 0) {
+                continue;
+            }
+
+            const position = positions.get(item.id);
+            const nextX = position.x + ((item.base.x - position.x) * 0.12 * item.mobility);
+            const nextY = position.y + ((item.base.y - position.y) * 0.16 * item.mobility);
+            if (Math.abs(nextX - position.x) > 0.4 || Math.abs(nextY - position.y) > 0.4) {
+                position.x = nextX;
+                position.y = nextY;
+                moved = true;
+            }
+        }
+
+        return moved;
+    }
+
+    function computeResolvedNodePositions(state, visibleNodes) {
+        const items = buildLayoutItems(state, visibleNodes);
+        const positions = new Map(items.map(item => [item.id, { x: item.base.x, y: item.base.y }]));
+        const itemsById = new Map(items.map(item => [item.id, item]));
+
+        for (let iteration = 0; iteration < 14; iteration++) {
+            let moved = false;
+            moved = enforceParentClearance(itemsById, positions) || moved;
+            moved = enforceSiblingSpacing(itemsById, positions) || moved;
+
+            for (let index = 0; index < items.length; index++) {
+                for (let compareIndex = index + 1; compareIndex < items.length; compareIndex++) {
+                    const first = items[index];
+                    const second = items[compareIndex];
+                    const firstPosition = positions.get(first.id);
+                    const secondPosition = positions.get(second.id);
+                    const overlap = getOverlapDelta(first, second, firstPosition, secondPosition);
+                    if (overlap.overlapX <= 0 || overlap.overlapY <= 0) {
+                        continue;
+                    }
+
+                    const axis = chooseCollisionAxis(first, second, overlap);
+                    const direction = resolveCollisionDirection(first, second, axis, overlap);
+                    const amount = (axis === "x" ? overlap.overlapX : overlap.overlapY) + 10;
+                    moved = applyCollisionSeparation(first, second, firstPosition, secondPosition, axis, amount, direction) || moved;
+                }
+            }
+
+            moved = relaxTowardBase(items, positions) || moved;
+            if (!moved) {
+                break;
+            }
+        }
+
+        enforceParentClearance(itemsById, positions);
+        enforceSiblingSpacing(itemsById, positions);
+        return positions;
+    }
+
+    function ensureLayoutPositions(state, visibleNodes) {
+        const nodes = Array.isArray(visibleNodes) ? visibleNodes : getVisibleNodes(state);
+        const key = buildResolvedLayoutKey(state, nodes);
+        if (state.layoutPositions && state.layoutKey === key) {
+            return state.layoutPositions;
+        }
+
+        state.layoutPositions = computeResolvedNodePositions(state, nodes);
+        state.layoutKey = key;
+        return state.layoutPositions;
+    }
+
+    function getNodePosition(state, node, visibleNodes) {
+        const resolved = ensureLayoutPositions(state, visibleNodes).get(node.id);
+        return resolved
+            ? { x: resolved.x, y: resolved.y }
+            : getBaseNodePosition(state, node);
     }
 
     function getSceneBounds(state, visibleNodes) {
@@ -197,14 +562,16 @@
             return null;
         }
 
+        ensureLayoutPositions(state, nodes);
+
         let minX = Number.POSITIVE_INFINITY;
         let maxX = Number.NEGATIVE_INFINITY;
         let minY = Number.POSITIVE_INFINITY;
         let maxY = Number.NEGATIVE_INFINITY;
 
         for (const node of nodes) {
-            const position = getNodePosition(state, node);
-            const size = getNodeSize(node);
+            const position = getNodePosition(state, node, nodes);
+            const size = getNodeSize(state, node);
             minX = Math.min(minX, position.x - (size.width / 2));
             maxX = Math.max(maxX, position.x + (size.width / 2));
             minY = Math.min(minY, position.y - (size.height / 2));
@@ -268,7 +635,7 @@
 
     function getLinkAnchorPoint(state, node, side) {
         const position = getNodePosition(state, node);
-        const size = getNodeSize(node);
+            const size = getNodeSize(state, node);
         const inset = Math.min(28, size.width * 0.11);
         return {
             x: side === "right"
@@ -280,6 +647,7 @@
 
     function renderLinks(state, visibleNodes) {
         state.links.innerHTML = "";
+        ensureLayoutPositions(state, visibleNodes);
         const visible = new Set(visibleNodes.map(node => node.id));
 
         for (const link of state.surface.links) {
@@ -293,8 +661,8 @@
                 continue;
             }
 
-            const sourcePosition = getNodePosition(state, source);
-            const targetPosition = getNodePosition(state, target);
+            const sourcePosition = getNodePosition(state, source, visibleNodes);
+            const targetPosition = getNodePosition(state, target, visibleNodes);
             const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
             const targetSide = sourceSide === "right" ? "left" : "right";
             const sourceAnchor = getLinkAnchorPoint(state, source, sourceSide);
@@ -342,6 +710,7 @@
         }
 
         state.frameLayer.innerHTML = "";
+        ensureLayoutPositions(state, visibleNodes);
         const visibleLookup = new Map(visibleNodes.map(node => [node.id, node]));
 
         for (const frame of state.ui.groupFrames || []) {
@@ -358,8 +727,8 @@
             let maxY = Number.NEGATIVE_INFINITY;
 
             for (const node of memberNodes) {
-                const position = getNodePosition(state, node);
-                const size = getNodeSize(node);
+                const position = getNodePosition(state, node, visibleNodes);
+                const size = getNodeSize(state, node);
                 minX = Math.min(minX, position.x - (size.width / 2));
                 maxX = Math.max(maxX, position.x + (size.width / 2));
                 minY = Math.min(minY, position.y - (size.height / 2));
@@ -510,9 +879,10 @@
 
     function renderNodes(state, visibleNodes) {
         state.nodeLayer.innerHTML = "";
+        ensureLayoutPositions(state, visibleNodes);
 
         for (const node of visibleNodes) {
-            const position = getNodePosition(state, node);
+            const position = getNodePosition(state, node, visibleNodes);
             const nodeElement = createElement(state.document, "div", "cw-node");
             nodeElement.dataset.nodeId = node.id;
             nodeElement.dataset.family = node.family || "item";
@@ -537,6 +907,65 @@
 
             state.nodeLayer.appendChild(nodeElement);
         }
+    }
+
+    function invalidateMeasuredLayout(state) {
+        state.layoutPositions = null;
+        state.layoutKey = "";
+    }
+
+    function measureRenderedNodeSizes(state) {
+        if (!state.nodeLayer) {
+            return false;
+        }
+
+        const zoom = Math.max(state.ui.zoom || 1, 0.01);
+        const nextSizes = new Map(state.measuredNodeSizes);
+        let changed = false;
+
+        for (const element of state.nodeLayer.querySelectorAll(".cw-node")) {
+            const nodeId = element.dataset.nodeId;
+            if (!nodeId) {
+                continue;
+            }
+
+            const rect = element.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) {
+                continue;
+            }
+
+            const measured = {
+                width: round(rect.width / zoom),
+                height: round(rect.height / zoom)
+            };
+            const previous = nextSizes.get(nodeId);
+            if (!previous ||
+                Math.abs(previous.width - measured.width) > 1 ||
+                Math.abs(previous.height - measured.height) > 1) {
+                nextSizes.set(nodeId, measured);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            state.measuredNodeSizes = nextSizes;
+            invalidateMeasuredLayout(state);
+        }
+
+        return changed;
+    }
+
+    function scheduleNodeMeasurement(state) {
+        if (state.measureLayoutFrame) {
+            return;
+        }
+
+        state.measureLayoutFrame = window.requestAnimationFrame(() => {
+            state.measureLayoutFrame = 0;
+            if (measureRenderedNodeSizes(state)) {
+                render(state);
+            }
+        });
     }
 
     function getHostPoint(state, clientX, clientY) {
@@ -712,12 +1141,14 @@
     }
 
     function render(state) {
-        applySceneTransform(state);
         const visibleNodes = getVisibleNodes(state);
+        ensureLayoutPositions(state, visibleNodes);
+        applySceneTransform(state);
         renderGroupFrames(state, visibleNodes);
         renderLinks(state, visibleNodes);
         renderNodes(state, visibleNodes);
         layoutComposer(state);
+        scheduleNodeMeasurement(state);
     }
 
     function getContextActions(state, node) {
@@ -1687,7 +2118,7 @@
     function isNodeVisibleInViewport(state, node, margin) {
         const rect = state.host.getBoundingClientRect();
         const position = worldToHostPoint(state, getNodePosition(state, node));
-        const size = getNodeSize(node);
+        const size = getNodeSize(state, node);
         const halfWidth = (size.width * state.ui.zoom) / 2;
         const halfHeight = (size.height * state.ui.zoom) / 2;
         const safeMargin = typeof margin === "number" ? margin : 92;
@@ -2248,6 +2679,10 @@
             lastPointerTarget: null,
             recentDoubleActivationAt: 0,
             wheelZoom: null,
+            measuredNodeSizes: new Map(),
+            layoutPositions: null,
+            layoutKey: "",
+            measureLayoutFrame: 0,
             publishStateDebounced: debounce(stateJson => dotNetRef.invokeMethodAsync("OnStateChanged", stateJson), 140)
         };
     }
@@ -2256,11 +2691,17 @@
         const previousNodeIds = new Set((state.surface?.nodes || []).map(node => node.id));
         const previousSelectedId = state.ui?.selectedNodeIds?.[0] || null;
         const pendingCreate = state.pendingCreate;
+        if (state.measureLayoutFrame) {
+            window.cancelAnimationFrame(state.measureLayoutFrame);
+            state.measureLayoutFrame = 0;
+        }
+
         state.surface = normalizeSurface(surface);
         state.lookups = buildNodeLookup(state.surface.nodes);
         state.ui = state.surface.uiState;
         state.selectedIds = toSelectionSet(state.ui.selectedNodeIds);
         state.collapsedIds = toCollapsedSet(state.ui.collapsedNodeIds);
+        invalidateMeasuredLayout(state);
         clearContextMenu(state);
         if (state.composer?.nodeId && !state.lookups.byId.has(state.composer.nodeId)) {
             closeComposer(state, { focusHost: false });
@@ -2390,6 +2831,11 @@
 
             if (state.resizeObserver) {
                 state.resizeObserver.disconnect();
+            }
+
+            if (state.measureLayoutFrame) {
+                window.cancelAnimationFrame(state.measureLayoutFrame);
+                state.measureLayoutFrame = 0;
             }
 
             if (state.handlers) {

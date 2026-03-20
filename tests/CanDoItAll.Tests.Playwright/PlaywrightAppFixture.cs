@@ -133,7 +133,14 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
     private async Task<bool> IsRuntimeReadyAsync(TimeSpan timeout)
     {
-        using var client = new HttpClient { Timeout = timeout };
+        using var handler = new HttpClientHandler();
+        if (Uri.TryCreate(BaseUrl, UriKind.Absolute, out var baseUri) &&
+            string.Equals(baseUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+        }
+
+        using var client = new HttpClient(handler) { Timeout = timeout };
 
         try
         {

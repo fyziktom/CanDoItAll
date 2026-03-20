@@ -245,3 +245,48 @@ This checklist tracks the post-migration repair pass requested on 2026-03-19 for
     - `output/playwright/structure-collapse-working-final.png`
     - `output/playwright/structure-image-picker-modal-final.png`
     - `output/playwright/structure-zoom-wheel-stable-final.png`
+
+## Seventh-pass QA findings
+
+- Dense mixed create flows could still produce visual overlap because the collision solver used fixed node boxes while real rendered cards grow with richer content such as link descriptions and uploaded media metadata.
+- The failure was most visible after the structure browser regression created a mixed cluster of:
+  - inline notes
+  - a typed link card
+  - an uploaded image card
+- The canvas needed proof across more than one pattern:
+  - dense mixed cards
+  - keyboard note chaining
+  - stacked typed blocks with a taller link card
+
+## Seventh-pass execution checklist
+
+### Collision-safe node layout
+
+- [x] Switch the collision solver from fixed node sizes to measured rendered node sizes.
+- [x] Invalidate cached layout positions when measured card dimensions change.
+- [x] Re-render once measured sizes settle so links, frames, and node placement use the real card geometry.
+- [x] Keep the new measurement loop lifecycle-safe across surface refresh and dispose.
+
+### Regression and QA
+
+- [x] Extend the browser regression so the structure flow fails when any canvas nodes still overlap after dense create sequences.
+- [x] Re-run the structure Playwright regression after the collision repair.
+- [x] Re-run the Playwright suite serially against the live runtime.
+- [x] Capture and review manual screenshots for multiple collision scenarios.
+
+## Seventh-pass closure notes
+
+- The shared canvas now measures the actual rendered `.cw-node` rectangles, converts them back into world-space sizes, and feeds those measurements into the collision solver instead of relying on rough family defaults.
+- Layout cache invalidation is now tied to measured size changes, so richer cards like `Link` and `Image` reflow away from neighbors as soon as their true height is known.
+- Manual Playwright MCP QA confirmed zero node-node overlaps in three different scenarios:
+  - mixed project root + notes + link + image
+  - repeated `Tab` / `Enter` note chaining
+  - typed planning blocks plus a link card
+- Verification for this pass:
+  - `dotnet test tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --no-restore -v minimal /p:BuildProjectReferences=false --filter "Structure_canvas_supports_inline_note_creation_editing_and_context_create_dialogs"`
+  - `dotnet test tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --no-restore -v minimal /p:BuildProjectReferences=false -m:1`
+  - `dotnet test CanDoItAll.slnx --no-restore -v minimal /p:BuildProjectReferences=false -m:1`
+- Manual screenshots reviewed:
+  - `output/playwright/structure-collision-mixed-current.png`
+  - `output/playwright/structure-collision-note-chain-canvas.png`
+  - `output/playwright/structure-collision-blocks-full.png`
