@@ -114,6 +114,9 @@
     private bool showQuickCreateRail;
     private bool isMaximized;
     private int zoomPercent = 100;
+    private bool surfaceSyncPending = true;
+    private string? pendingSurfaceKey;
+    private string? appliedSurfaceKey;
 
     [Parameter, EditorRequired]
     public CanvasWorkbenchSurface Surface { get; set; } = default!;
@@ -131,6 +134,9 @@
     public EventCallback<CanvasWorkbenchCreateActionRequest> CreateActionInvoked { get; set; }
 
     [Parameter]
+    public EventCallback<CanvasWorkbenchNodeEditRequest> NodeEdited { get; set; }
+
+    [Parameter]
     public EventCallback<string> NodeOpened { get; set; }
 
     [Parameter]
@@ -140,6 +146,8 @@
     {
         isMaximized = Surface.UiState.IsMaximized;
         zoomPercent = ClampZoomPercent(Surface.UiState.Zoom);
+        pendingSurfaceKey = JsonSerializer.Serialize(Surface, serializerOptions);
+        surfaceSyncPending = !string.Equals(appliedSurfaceKey, pendingSurfaceKey, StringComparison.Ordinal);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -149,10 +157,19 @@
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.create", host, objectReference, Surface);
             initialized = true;
+            appliedSurfaceKey = pendingSurfaceKey;
+            surfaceSyncPending = false;
+            return;
+        }
+
+        if (!surfaceSyncPending)
+        {
             return;
         }
 
         await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.update", host, Surface);
+        appliedSurfaceKey = pendingSurfaceKey;
+        surfaceSyncPending = false;
     }
 
     [JSInvokable]
@@ -174,8 +191,22 @@
         => ContextActionRequested.InvokeAsync(new CanvasWorkbenchContextActionRequest(nodeId, actionId, x, y));
 
     [JSInvokable]
-    public Task OnCreateAction(string actionId, string? sourceNodeId, double x, double y)
-        => CreateActionInvoked.InvokeAsync(new CanvasWorkbenchCreateActionRequest(actionId, sourceNodeId, x, y));
+    public Task OnCreateAction(string requestJson)
+    {
+        var request = Deserialize<CanvasWorkbenchCreateActionRequest>(requestJson);
+        return request is null
+            ? Task.CompletedTask
+            : CreateActionInvoked.InvokeAsync(request);
+    }
+
+    [JSInvokable]
+    public Task OnNodeEdited(string requestJson)
+    {
+        var request = Deserialize<CanvasWorkbenchNodeEditRequest>(requestJson);
+        return request is null
+            ? Task.CompletedTask
+            : NodeEdited.InvokeAsync(request);
+    }
 
     [JSInvokable]
     public Task OnNodeOpened(string nodeId)
@@ -208,6 +239,10 @@
     {
         isMaximized = !isMaximized;
         await PublishUiStateAsync();
+        if (initialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.resize", host);
+        }
     }
 
     private async Task FitViewAsync()
@@ -258,11 +293,25 @@
     {
         showQuickCreateRail = false;
         var sourceNode = ResolveQuickCreateSourceNode();
-        await CreateActionInvoked.InvokeAsync(new CanvasWorkbenchCreateActionRequest(
+        var request = new CanvasWorkbenchCreateActionRequest(
             action.ActionId,
             sourceNode?.Id,
             sourceNode?.X ?? 0,
-            sourceNode?.Y ?? 0));
+            sourceNode?.Y ?? 0,
+            sourceNode?.Id,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            sourceNode is null ? "canvas" : "child",
+            action.CreateMode);
+
+        if (action.RequiresInput && initialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.openCreateComposer", host, action, request);
+            return;
+        }
+
+        await CreateActionInvoked.InvokeAsync(request);
     }
 
     private CanvasWorkbenchNode? ResolveQuickCreateSourceNode()
@@ -303,6 +352,23 @@
 
     private static int ClampZoomPercent(double zoom)
         => (int)Math.Round(Math.Clamp(zoom, 0.55, 1.75) * 100);
+
+    public async Task OpenCreateDialogAsync(CanvasWorkbenchAction action, CanvasWorkbenchCreateActionRequest request)
+    {
+        if (!initialized)
+        {
+            await CreateActionInvoked.InvokeAsync(request);
+            return;
+        }
+
+        if (action.RequiresInput)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.openCreateComposer", host, action, request);
+            return;
+        }
+
+        await CreateActionInvoked.InvokeAsync(request);
+    }
 
     public async ValueTask DisposeAsync()
     {

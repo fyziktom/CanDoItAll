@@ -55,6 +55,12 @@ public sealed class CanvasWorkbenchNode
 
     public bool IsPreviewOnly { get; set; }
 
+    public bool IsInlineTextNode { get; set; }
+
+    public string InlineText { get; set; } = string.Empty;
+
+    public string InlineTextPlaceholder { get; set; } = "Write note";
+
     public double X { get; set; }
 
     public double Y { get; set; }
@@ -79,6 +85,11 @@ public sealed class CanvasWorkbenchLink
 
 public sealed class CanvasWorkbenchUiState
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public const string CurrentVersion = "canvas-workbench.v1";
 
     public string Version { get; set; } = CurrentVersion;
@@ -108,7 +119,7 @@ public sealed class CanvasWorkbenchUiState
 
         try
         {
-            return JsonSerializer.Deserialize<CanvasWorkbenchUiState>(json) ?? new CanvasWorkbenchUiState();
+            return JsonSerializer.Deserialize<CanvasWorkbenchUiState>(json, SerializerOptions) ?? new CanvasWorkbenchUiState();
         }
         catch
         {
@@ -116,7 +127,7 @@ public sealed class CanvasWorkbenchUiState
         }
     }
 
-    public string ToJson() => JsonSerializer.Serialize(this);
+    public string ToJson() => JsonSerializer.Serialize(this, SerializerOptions);
 }
 
 public sealed class CanvasWorkbenchChrome
@@ -135,6 +146,12 @@ public sealed class CanvasWorkbenchChrome
 
     public bool ShowQuickCreateRail { get; set; } = true;
 
+    public string? ChildNoteActionId { get; set; }
+
+    public string? SiblingNoteActionId { get; set; }
+
+    public string InlineNotePlaceholder { get; set; } = "Write note";
+
     public List<CanvasWorkbenchAction> QuickCreateActions { get; set; } = [];
 }
 
@@ -144,9 +161,15 @@ public sealed class CanvasWorkbenchAction
 
     public string Label { get; set; } = string.Empty;
 
+    public string Description { get; set; } = string.Empty;
+
     public string Icon { get; set; } = string.Empty;
 
     public string Tone { get; set; } = "neutral";
+
+    public bool RequiresInput { get; set; }
+
+    public string CreateMode { get; set; } = "command";
 }
 
 public sealed class CanvasWorkbenchChip
@@ -186,7 +209,18 @@ public sealed record CanvasWorkbenchCreateActionRequest(
     string ActionId,
     string? SourceNodeId,
     double X,
-    double Y);
+    double Y,
+    string? ParentNodeId,
+    string Title,
+    string Subtitle,
+    string Notes,
+    string PlacementKind,
+    string CreateMode);
+
+public sealed record CanvasWorkbenchNodeEditRequest(
+    string NodeId,
+    string Title,
+    string Notes);
 
 public sealed record CanvasWorkbenchNodePositionChange(
     string NodeId,

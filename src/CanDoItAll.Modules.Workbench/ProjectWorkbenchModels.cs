@@ -112,6 +112,7 @@ public sealed record ProjectStructureNode(
     string Title,
     string Subtitle,
     string Status,
+    string Notes,
     string Route,
     string ArtifactKind,
     Guid? ArtifactId,
@@ -360,6 +361,31 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
         node.PositionY = y;
         node.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<ProjectStructureNode?> UpdateObjectAsync(
+        Guid projectId,
+        string nodeKey,
+        string title,
+        string subtitle,
+        string notes,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var node = await dbContext.Set<ProjectObjectRecord>()
+            .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey, cancellationToken);
+        if (node is null)
+        {
+            return null;
+        }
+
+        node.Title = string.IsNullOrWhiteSpace(title) ? node.Title : title.Trim();
+        node.Subtitle = subtitle?.Trim() ?? string.Empty;
+        node.Notes = notes?.Trim() ?? string.Empty;
+        node.UpdatedAtUtc = clock.GetUtcNow();
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return MapStructureNode(node);
     }
 
     public async Task SaveViewStateAsync(Guid projectId, string surfaceKind, string stateJson, CancellationToken cancellationToken = default)
@@ -830,6 +856,7 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
             record.Title,
             record.Subtitle,
             record.Status,
+            record.Notes,
             record.Route,
             record.ExternalArtifactKind,
             record.ExternalArtifactId,

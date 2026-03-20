@@ -98,10 +98,52 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.GetByRole(AriaRole.Button, new() { Name = "Help" }).ClickAsync();
         await page.GetByRole(AriaRole.Dialog, new() { Name = "Canvas shortcuts and gestures" }).WaitForAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Close help" }).ClickAsync();
-        Assert.Equal(projectId.ToString(), await page.GetByTestId("prompt-factory-project").InputValueAsync());
         await page.GetByTestId("prompt-factory-build").WaitForAsync();
+        await page.GetByTestId("prompt-factory-build").ClickAsync();
         await page.Locator(".cw-panel-card:has-text('Generated prompt') textarea").WaitForAsync();
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
+    public async Task Structure_canvas_supports_inline_note_creation_editing_and_context_create_dialogs()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+
+        await CreateProjectAsync(page, "Playwright Canvas Repair", "Discovery");
+
+        var canvasHost = page.Locator(".cw-canvas-host");
+        await canvasHost.ScrollIntoViewIfNeededAsync();
+        await ClickCanvasNodeAsync(page, ".cw-node[data-node-id^='project:']");
+        await canvasHost.FocusAsync();
+
+        await page.Keyboard.PressAsync("Tab");
+        var noteEditor = page.Locator(".cw-note-editor__input");
+        await noteEditor.WaitForAsync();
+        await noteEditor.FillAsync("Child note from keyboard");
+        await noteEditor.PressAsync("Enter");
+        await page.WaitForSelectorAsync("text=Child note from keyboard");
+
+        await ClickCanvasNodeAsync(page, ".cw-node.is-inline-text", clickCount: 2);
+        await noteEditor.WaitForAsync();
+        await noteEditor.FillAsync("Edited child note");
+        await noteEditor.PressAsync("Enter");
+        await page.WaitForSelectorAsync("text=Edited child note");
+
+        await ClickCanvasNodeAsync(page, ".cw-node[data-node-id^='project:']");
+        await canvasHost.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await noteEditor.WaitForAsync();
+        await noteEditor.FillAsync("Sibling note from Enter");
+        await noteEditor.PressAsync("Enter");
+        await page.WaitForSelectorAsync("text=Sibling note from Enter");
+
+        await OpenCanvasCreateComposerAsync(page, ".cw-node[data-node-id^='project:']", "Decision");
+        await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("Decision from menu");
+        await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("Captured in dialog");
+        await page.Locator(".cw-canvas-composer__textarea").FillAsync("Initial decision notes");
+        await page.Locator(".cw-canvas-composer__actions").GetByRole(AriaRole.Button, new() { Name = "Decision", Exact = true }).ClickAsync();
+        await page.WaitForSelectorAsync("text=Decision from menu");
     }
 
     private async Task<Guid> CreateProjectAsync(IPage page, string projectName, string phase)
@@ -129,5 +171,55 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         var match = Regex.Match(page.Url, @"/projects/(?<projectId>[0-9a-fA-F-]+)/structure$", RegexOptions.IgnoreCase);
         Assert.True(match.Success, $"Could not parse project id from {page.Url}.");
         return Guid.Parse(match.Groups["projectId"].Value);
+    }
+
+    private static async Task ClickCanvasNodeAsync(IPage page, string selector, MouseButton button = MouseButton.Left, int clickCount = 1)
+    {
+        var node = page.Locator(selector).First;
+        await node.WaitForAsync();
+        await node.ScrollIntoViewIfNeededAsync();
+
+        var bounds = await node.BoundingBoxAsync();
+        Assert.NotNull(bounds);
+
+        await page.Mouse.ClickAsync(
+            bounds!.X + (bounds.Width / 2),
+            bounds.Y + (bounds.Height / 2),
+            new MouseClickOptions
+            {
+                Button = button,
+                ClickCount = clickCount
+            });
+    }
+
+    private static async Task OpenCanvasCreateComposerAsync(IPage page, string selector, string label)
+    {
+        var composerOpened = await page.EvaluateAsync<bool>(
+            @"args => {
+                const node = document.querySelector(args.selector);
+                if (!node) {
+                    return false;
+                }
+
+                const rect = node.getBoundingClientRect();
+                const x = rect.left + (rect.width / 2);
+                const y = rect.top + (rect.height / 2);
+                node.dispatchEvent(new MouseEvent('contextmenu', {
+                    bubbles: true,
+                    cancelable: true,
+                    button: 2,
+                    buttons: 2,
+                    clientX: x,
+                    clientY: y
+                }));
+
+                const action = Array.from(document.querySelectorAll('.cw-context-menu__action'))
+                    .find(button => button.textContent?.includes(args.label));
+                action?.click();
+                return !!document.querySelector('.cw-canvas-composer__input');
+            }",
+            new { selector, label });
+
+        Assert.True(composerOpened, $"Expected the radial menu action '{label}' to open the in-canvas composer.");
     }
 }

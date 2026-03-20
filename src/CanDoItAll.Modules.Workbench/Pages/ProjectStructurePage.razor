@@ -33,10 +33,12 @@ else
                               Stats="stageStats">
             <Canvas>
                 <CanvasWorkbench Surface="canvasSurface"
+                                 @ref="workbenchRef"
                                  SelectionChanged="HandleSelectionChangedAsync"
                                  NodesMoved="HandleNodesMovedAsync"
                                  ContextActionRequested="HandleContextActionAsync"
                                  CreateActionInvoked="HandleCreateActionAsync"
+                                 NodeEdited="HandleNodeEditedAsync"
                                  NodeOpened="HandleNodeOpenedAsync"
                                  StateChanged="HandleCanvasStateChangedAsync" />
             </Canvas>
@@ -134,10 +136,10 @@ else
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Create next to source</p>
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => CreateRelatedObjectAsync(ProjectObjectType.Note))">Add note</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => CreateRelatedObjectAsync(ProjectObjectType.Decision))">Add decision</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => CreateRelatedObjectAsync(ProjectObjectType.Milestone))">Add milestone</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => CreateRelatedObjectAsync(ProjectObjectType.Repository))">Add repository</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => OpenCreateDialogAsync(ProjectObjectType.Note))">Add note</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => OpenCreateDialogAsync(ProjectObjectType.Decision))">Add decision</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => OpenCreateDialogAsync(ProjectObjectType.Milestone))">Add milestone</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => OpenCreateDialogAsync(ProjectObjectType.Repository))">Add repository</button>
                                 <button type="button" class="cw-button" data-tone="warn" @onclick="EnableLinkMode">Link selected</button>
                             </div>
                         </div>
@@ -191,6 +193,7 @@ else
 
     private ProjectStructureSurface? surface;
     private CanvasWorkbenchSurface? canvasSurface;
+    private CanvasWorkbench? workbenchRef;
     private List<string> selectedNodeIds = [];
     private string? linkModeSourceId;
 
@@ -249,10 +252,7 @@ else
         }
 
         var uiState = CanvasWorkbenchUiState.Parse(surface.ViewStateJson);
-        if (selectedNodeIds.Count > 0)
-        {
-            uiState.SelectedNodeIds = [.. selectedNodeIds];
-        }
+        uiState.SelectedNodeIds = [.. selectedNodeIds];
 
         canvasSurface = new CanvasWorkbenchSurface
         {
@@ -263,13 +263,16 @@ else
             {
                 HintText = "Click to select, Alt-drag to marquee, drag to move, and right-click for typed project actions.",
                 FocusActionLabel = "Focus root",
+                ChildNoteActionId = "add-note",
+                SiblingNoteActionId = "add-note",
+                InlineNotePlaceholder = "Write note",
                 QuickCreateActions =
                 [
-                    new CanvasWorkbenchAction { ActionId = "add-note", Label = "Note", Icon = "note", Tone = "neutral" },
-                    new CanvasWorkbenchAction { ActionId = "add-decision", Label = "Decision", Icon = "choice", Tone = "accent" },
-                    new CanvasWorkbenchAction { ActionId = "add-milestone", Label = "Milestone", Icon = "date", Tone = "warn" },
-                    new CanvasWorkbenchAction { ActionId = "add-repository", Label = "Repo", Icon = "repo", Tone = "mint" },
-                    new CanvasWorkbenchAction { ActionId = "add-prompt-session", Label = "Prompt", Icon = "flow", Tone = "accent" }
+                    BuildCreateAction(ProjectObjectType.Note),
+                    BuildCreateAction(ProjectObjectType.Decision),
+                    BuildCreateAction(ProjectObjectType.Milestone),
+                    BuildCreateAction(ProjectObjectType.Repository),
+                    BuildCreateAction(ProjectObjectType.PromptSession)
                 ]
             },
             Nodes = surface.Nodes.Select(MapCanvasNode).ToList(),
@@ -287,6 +290,8 @@ else
     {
         var family = ResolveFamily(node.ObjectType);
         var hasChildren = surface?.Nodes.Any(candidate => string.Equals(candidate.ParentId, node.Id, StringComparison.Ordinal)) ?? false;
+        var inlineText = string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes;
+        var isInlineTextNode = node.ObjectType == ProjectObjectType.Note && string.IsNullOrWhiteSpace(node.Subtitle);
 
         return new CanvasWorkbenchNode
         {
@@ -306,6 +311,9 @@ else
             StatusPill = node.Status,
             IsRequired = node.ObjectType is ProjectObjectType.ProjectRoot or ProjectObjectType.Phase or ProjectObjectType.PromptSession,
             IsCollapsible = hasChildren && family is "root" or "group",
+            IsInlineTextNode = isInlineTextNode,
+            InlineText = inlineText,
+            InlineTextPlaceholder = "Write note",
             X = node.X,
             Y = node.Y,
             Chips = BuildHeaderChips(node),
@@ -350,9 +358,11 @@ else
     };
 
     private static string BuildLeadText(ProjectStructureNode node)
-        => string.IsNullOrWhiteSpace(node.Subtitle)
-            ? $"Status: {node.Status}"
-            : node.Subtitle;
+        => node.ObjectType == ProjectObjectType.Note
+            ? (string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes)
+            : string.IsNullOrWhiteSpace(node.Subtitle)
+                ? $"Status: {node.Status}"
+                : node.Subtitle;
 
     private static List<CanvasWorkbenchChip> BuildHeaderChips(ProjectStructureNode node)
         => node.Badges.Select(badge => new CanvasWorkbenchChip { Text = badge, Tone = "accent" }).ToList();
@@ -377,20 +387,20 @@ else
     {
         var actions = new List<CanvasWorkbenchAction>
         {
-            new() { ActionId = "open", Label = "Open", Icon = "open", Tone = "accent" },
-            new() { ActionId = "link", Label = "Link", Icon = "link", Tone = "neutral" },
-            new() { ActionId = "validate", Label = "Validate", Icon = "qa", Tone = "mint" },
-            new() { ActionId = "test", Label = "Test", Icon = "test", Tone = "warn" }
+            new() { ActionId = "open", Label = "Open", Description = "Open the linked artifact or routed workspace.", Icon = "open", Tone = "accent" },
+            new() { ActionId = "link", Label = "Link", Description = "Use the selected node as the source for a dependency link.", Icon = "link", Tone = "neutral" },
+            new() { ActionId = "validate", Label = "Validate", Description = "Open project validation tooling from this node.", Icon = "qa", Tone = "mint" },
+            new() { ActionId = "test", Label = "Test", Description = "Open test planning and evidence flows.", Icon = "test", Tone = "warn" }
         };
 
         if (node.ObjectType is ProjectObjectType.ProjectRoot or ProjectObjectType.Phase or ProjectObjectType.PromptSession)
         {
             actions.AddRange(
             [
-                new CanvasWorkbenchAction { ActionId = "add-note", Label = "Note", Icon = "note", Tone = "neutral" },
-                new CanvasWorkbenchAction { ActionId = "add-decision", Label = "Decision", Icon = "choice", Tone = "accent" },
-                new CanvasWorkbenchAction { ActionId = "add-milestone", Label = "Milestone", Icon = "date", Tone = "warn" },
-                new CanvasWorkbenchAction { ActionId = "add-repository", Label = "Repo", Icon = "repo", Tone = "mint" }
+                BuildCreateAction(ProjectObjectType.Note),
+                BuildCreateAction(ProjectObjectType.Decision),
+                BuildCreateAction(ProjectObjectType.Milestone),
+                BuildCreateAction(ProjectObjectType.Repository)
             ]);
         }
 
@@ -398,9 +408,9 @@ else
         {
             actions.AddRange(
             [
-                new CanvasWorkbenchAction { ActionId = "branch", Label = "Branch", Icon = "fork", Tone = "accent" },
-                new CanvasWorkbenchAction { ActionId = "mark-used", Label = "Used", Icon = "use", Tone = "mint" },
-                new CanvasWorkbenchAction { ActionId = "skip", Label = "Skip", Icon = "skip", Tone = "warn" }
+                new CanvasWorkbenchAction { ActionId = "branch", Label = "Branch", Description = "Create a prompt follow-up from this step.", Icon = "fork", Tone = "accent" },
+                new CanvasWorkbenchAction { ActionId = "mark-used", Label = "Used", Description = "Mark this prompt step as consumed.", Icon = "use", Tone = "mint" },
+                new CanvasWorkbenchAction { ActionId = "skip", Label = "Skip", Description = "Skip the selected prompt step.", Icon = "skip", Tone = "warn" }
             ]);
         }
 
@@ -420,6 +430,7 @@ else
         }
 
         selectedNodeIds = args.SelectedNodeIds.ToList();
+        await PersistSelectionAsync();
     }
 
     private async Task HandleNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
@@ -453,26 +464,63 @@ else
         => await HandleCanvasActionAsync(request.ActionId, request.NodeId, request.X, request.Y);
 
     private async Task HandleCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
-        => await HandleCanvasActionAsync(request.ActionId, request.SourceNodeId, request.X, request.Y);
+    {
+        switch (request.ActionId)
+        {
+            case "add-note":
+                await CreateObjectAsync(ProjectObjectType.Note, request);
+                break;
+            case "add-decision":
+                await CreateObjectAsync(ProjectObjectType.Decision, request);
+                break;
+            case "add-milestone":
+                await CreateObjectAsync(ProjectObjectType.Milestone, request);
+                break;
+            case "add-repository":
+                await CreateObjectAsync(ProjectObjectType.Repository, request);
+                break;
+            case "add-prompt-session":
+                await CreateObjectAsync(ProjectObjectType.PromptSession, request);
+                break;
+        }
+    }
+
+    private async Task HandleNodeEditedAsync(CanvasWorkbenchNodeEditRequest request)
+    {
+        var targetNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.NodeId, StringComparison.Ordinal));
+        if (targetNode is null || targetNode.ObjectType != ProjectObjectType.Note)
+        {
+            return;
+        }
+
+        await ProjectWorkbenchService.UpdateObjectAsync(
+            ProjectId,
+            targetNode.Id,
+            BuildSimpleNoteTitle(request.Notes),
+            string.Empty,
+            request.Notes);
+
+        await ReloadSurfaceAsync(targetNode.Id);
+    }
 
     private async Task HandleCanvasActionAsync(string actionId, string? nodeId, double x, double y)
     {
         switch (actionId)
         {
             case "add-note":
-                await CreateObjectAsync(ProjectObjectType.Note, nodeId, x, y);
+                await CreateObjectAsync(ProjectObjectType.Note, new CanvasWorkbenchCreateActionRequest(actionId, nodeId, x, y, nodeId, string.Empty, string.Empty, string.Empty, nodeId is null ? "canvas" : "child", "command"));
                 break;
             case "add-decision":
-                await CreateObjectAsync(ProjectObjectType.Decision, nodeId, x, y);
+                await CreateObjectAsync(ProjectObjectType.Decision, new CanvasWorkbenchCreateActionRequest(actionId, nodeId, x, y, nodeId, string.Empty, string.Empty, string.Empty, nodeId is null ? "canvas" : "child", "command"));
                 break;
             case "add-milestone":
-                await CreateObjectAsync(ProjectObjectType.Milestone, nodeId, x, y);
+                await CreateObjectAsync(ProjectObjectType.Milestone, new CanvasWorkbenchCreateActionRequest(actionId, nodeId, x, y, nodeId, string.Empty, string.Empty, string.Empty, nodeId is null ? "canvas" : "child", "command"));
                 break;
             case "add-repository":
-                await CreateObjectAsync(ProjectObjectType.Repository, nodeId, x, y);
+                await CreateObjectAsync(ProjectObjectType.Repository, new CanvasWorkbenchCreateActionRequest(actionId, nodeId, x, y, nodeId, string.Empty, string.Empty, string.Empty, nodeId is null ? "canvas" : "child", "command"));
                 break;
             case "add-prompt-session":
-                await CreateObjectAsync(ProjectObjectType.PromptSession, nodeId, x, y);
+                await CreateObjectAsync(ProjectObjectType.PromptSession, new CanvasWorkbenchCreateActionRequest(actionId, nodeId, x, y, nodeId, string.Empty, string.Empty, string.Empty, nodeId is null ? "canvas" : "child", "command"));
                 break;
             case "link":
                 linkModeSourceId = nodeId;
@@ -515,26 +563,53 @@ else
         }
     }
 
-    private Task CreateRelatedObjectAsync(ProjectObjectType objectType)
-        => CreateObjectAsync(objectType, selectedNode?.Id, null, null);
-
-    private async Task CreateObjectAsync(ProjectObjectType objectType, string? sourceNodeId, double? x, double? y)
+    private async Task CreateObjectAsync(ProjectObjectType objectType, CanvasWorkbenchCreateActionRequest request)
     {
-        var sourceNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, sourceNodeId, StringComparison.Ordinal));
-        var placement = ResolveCreatePlacement(sourceNode, x, y);
+        var sourceNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.SourceNodeId, StringComparison.Ordinal));
+        var parentNodeId = ResolveParentNodeId(sourceNode, request);
+        var parentNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, parentNodeId, StringComparison.Ordinal));
+        var placement = ResolveCreatePlacement(sourceNode, parentNode, request);
+        var title = ResolveCreatedTitle(objectType, request);
+        var subtitle = request.Subtitle?.Trim() ?? string.Empty;
+        var notes = ResolveCreatedNotes(objectType, request);
 
         var created = await ProjectWorkbenchService.CreateObjectAsync(
             ProjectId,
             new ProjectObjectCreateRequest(
                 objectType,
-                ResolveCreatedTitle(objectType),
-                sourceNode is null ? "Canvas-created object" : $"Related to {sourceNode.Title}",
-                string.Empty,
-                sourceNode?.Id ?? $"project:{ProjectId}",
+                title,
+                subtitle,
+                notes,
+                parentNodeId ?? $"project:{ProjectId}",
                 placement.X,
                 placement.Y));
 
         await ReloadSurfaceAsync(created.Id);
+    }
+
+    private async Task OpenCreateDialogAsync(ProjectObjectType objectType)
+    {
+        var action = BuildCreateAction(objectType);
+        var sourceNode = selectedNode;
+        var request = new CanvasWorkbenchCreateActionRequest(
+            action.ActionId,
+            sourceNode?.Id,
+            sourceNode?.X ?? 0,
+            sourceNode?.Y ?? 0,
+            sourceNode?.Id,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            sourceNode is null ? "canvas" : "child",
+            action.CreateMode);
+
+        if (workbenchRef is not null)
+        {
+            await workbenchRef.OpenCreateDialogAsync(action, request);
+            return;
+        }
+
+        await CreateObjectAsync(objectType, request);
     }
 
     private async Task SelectNodeAsync(string nodeId)
@@ -575,30 +650,78 @@ else
     private void EnableLinkMode()
         => linkModeSourceId = selectedNode?.Id;
 
-    private (double? X, double? Y) ResolveCreatePlacement(ProjectStructureNode? sourceNode, double? x, double? y)
+    private (double? X, double? Y) ResolveCreatePlacement(ProjectStructureNode? sourceNode, ProjectStructureNode? parentNode, CanvasWorkbenchCreateActionRequest request)
     {
-        if (sourceNode is null)
+        if (request.X > 0 && request.Y > 0 && string.Equals(request.PlacementKind, "canvas", StringComparison.OrdinalIgnoreCase))
         {
-            return (x, y);
+            return (request.X, request.Y);
         }
 
-        var existingChildren = surface?.Nodes.Count(node => string.Equals(node.ParentId, sourceNode.Id, StringComparison.Ordinal)) ?? 0;
+        if (string.Equals(request.PlacementKind, "sibling", StringComparison.OrdinalIgnoreCase) && sourceNode is not null)
+        {
+            var existingSiblings = surface?.Nodes.Count(node => string.Equals(node.ParentId, sourceNode.ParentId, StringComparison.Ordinal)) ?? 0;
+            return (
+                sourceNode.X + ((existingSiblings % 2) * 24),
+                sourceNode.Y + 132);
+        }
+
+        var anchorNode = parentNode ?? sourceNode;
+        if (anchorNode is null)
+        {
+            return (request.X, request.Y);
+        }
+
+        var existingChildren = surface?.Nodes.Count(node => string.Equals(node.ParentId, anchorNode.Id, StringComparison.Ordinal)) ?? 0;
         var column = existingChildren % 3;
         var row = existingChildren / 3;
         return (
-            sourceNode.X + 240 + (column * 46),
-            sourceNode.Y - 70 + (row * 118));
+            anchorNode.X + 240 + (column * 46),
+            anchorNode.Y - 70 + (row * 118));
     }
 
-    private static string ResolveCreatedTitle(ProjectObjectType objectType) => objectType switch
+    private static string? ResolveParentNodeId(ProjectStructureNode? sourceNode, CanvasWorkbenchCreateActionRequest request)
     {
-        ProjectObjectType.Note => "New note",
-        ProjectObjectType.Decision => "New decision",
-        ProjectObjectType.Milestone => "New milestone",
-        ProjectObjectType.Repository => "New repository",
-        ProjectObjectType.PromptSession => "Prompt session node",
-        _ => objectType.ToString()
-    };
+        if (!string.IsNullOrWhiteSpace(request.ParentNodeId))
+        {
+            return request.ParentNodeId;
+        }
+
+        return string.Equals(request.PlacementKind, "sibling", StringComparison.OrdinalIgnoreCase)
+            ? sourceNode?.ParentId
+            : sourceNode?.Id;
+    }
+
+    private static string ResolveCreatedTitle(ProjectObjectType objectType, CanvasWorkbenchCreateActionRequest request)
+        => !string.IsNullOrWhiteSpace(request.Title)
+            ? request.Title.Trim()
+            : objectType switch
+            {
+                ProjectObjectType.Note when string.Equals(request.CreateMode, "quick-note", StringComparison.OrdinalIgnoreCase) => BuildSimpleNoteTitle(request.Notes),
+                ProjectObjectType.Note => "New note",
+                ProjectObjectType.Decision => "New decision",
+                ProjectObjectType.Milestone => "New milestone",
+                ProjectObjectType.Repository => "New repository",
+                ProjectObjectType.PromptSession => "Prompt session node",
+                _ => objectType.ToString()
+            };
+
+    private static string ResolveCreatedNotes(ProjectObjectType objectType, CanvasWorkbenchCreateActionRequest request)
+        => !string.IsNullOrWhiteSpace(request.Notes)
+            ? request.Notes.Trim()
+            : objectType == ProjectObjectType.Note && !string.IsNullOrWhiteSpace(request.Title)
+                ? request.Title.Trim()
+                : string.Empty;
+
+    private static string BuildSimpleNoteTitle(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return "New note";
+        }
+
+        var normalized = text.Trim();
+        return normalized.Length <= 64 ? normalized : $"{normalized[..61]}...";
+    }
 
     private static int ResolveOutlineWeight(ProjectObjectType objectType) => objectType switch
     {
@@ -607,5 +730,69 @@ else
         ProjectObjectType.PromptSession => 2,
         ProjectObjectType.PromptStep => 3,
         _ => 4
+    };
+
+    private static CanvasWorkbenchAction BuildCreateAction(ProjectObjectType objectType) => objectType switch
+    {
+        ProjectObjectType.Note => new CanvasWorkbenchAction
+        {
+            ActionId = "add-note",
+            Label = "Note",
+            Description = "Create a note on the canvas and capture the first details immediately.",
+            Icon = "note",
+            Tone = "neutral",
+            RequiresInput = true,
+            CreateMode = "dialog"
+        },
+        ProjectObjectType.Decision => new CanvasWorkbenchAction
+        {
+            ActionId = "add-decision",
+            Label = "Decision",
+            Description = "Add a decision node next to the current source and record its context.",
+            Icon = "choice",
+            Tone = "accent",
+            RequiresInput = true,
+            CreateMode = "dialog"
+        },
+        ProjectObjectType.Milestone => new CanvasWorkbenchAction
+        {
+            ActionId = "add-milestone",
+            Label = "Milestone",
+            Description = "Create a milestone node and enter the initial delivery details.",
+            Icon = "date",
+            Tone = "warn",
+            RequiresInput = true,
+            CreateMode = "dialog"
+        },
+        ProjectObjectType.Repository => new CanvasWorkbenchAction
+        {
+            ActionId = "add-repository",
+            Label = "Repo",
+            Description = "Add a repository or code artifact node from inside the canvas.",
+            Icon = "repo",
+            Tone = "mint",
+            RequiresInput = true,
+            CreateMode = "dialog"
+        },
+        ProjectObjectType.PromptSession => new CanvasWorkbenchAction
+        {
+            ActionId = "add-prompt-session",
+            Label = "Prompt",
+            Description = "Create a linked prompt session node and enter its basic metadata.",
+            Icon = "flow",
+            Tone = "accent",
+            RequiresInput = true,
+            CreateMode = "dialog"
+        },
+        _ => new CanvasWorkbenchAction
+        {
+            ActionId = $"add-{objectType.ToString().ToLowerInvariant()}",
+            Label = objectType.ToString(),
+            Description = "Create a related node.",
+            Icon = "node",
+            Tone = "neutral",
+            RequiresInput = true,
+            CreateMode = "dialog"
+        }
     };
 }

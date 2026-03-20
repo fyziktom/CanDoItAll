@@ -128,4 +128,50 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.Contains("Workbench_ProjectObjectLinks", tableNames);
         Assert.Contains("Workbench_ViewStates", tableNames);
     }
+
+    [Fact]
+    public async Task UpdateObjectAsync_persists_inline_note_text_for_custom_nodes()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var saveResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Workbench Inline Note",
+            Description = "Exercise inline note updates.",
+            Objective = "Persist canvas-authored note text.",
+            CurrentPhase = "Discovery"
+        });
+
+        Assert.True(saveResult.IsSuccess);
+
+        var created = await workbench.CreateObjectAsync(
+            saveResult.Value,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "New note",
+                string.Empty,
+                "Original text",
+                $"project:{saveResult.Value}",
+                320,
+                240));
+
+        var updated = await workbench.UpdateObjectAsync(
+            saveResult.Value,
+            created.Id,
+            "Updated inline note",
+            string.Empty,
+            "Updated inline note text");
+
+        Assert.NotNull(updated);
+        Assert.Equal("Updated inline note", updated!.Title);
+        Assert.Equal("Updated inline note text", updated.Notes);
+
+        var surface = await workbench.GetStructureAsync(saveResult.Value);
+        var note = Assert.Single(surface.Nodes.Where(node => node.Id == created.Id));
+        Assert.Equal("Updated inline note", note.Title);
+        Assert.Equal("Updated inline note text", note.Notes);
+    }
 }

@@ -418,6 +418,10 @@
     width: 15rem;
 }
 
+.cw-node.is-inline-text {
+    width: 14.25rem;
+}
+
 .cw-node__surface {
     position: relative;
     display: grid;
@@ -471,6 +475,29 @@
 
 .cw-node.is-collapsed .cw-node__surface {
     opacity: 0.9;
+}
+
+.cw-node.is-inline-text .cw-node__surface {
+    gap: 0.55rem;
+    padding: 0.95rem 1rem;
+    border-radius: 1.35rem;
+    background: linear-gradient(180deg, rgba(255, 251, 235, 0.98), rgba(254, 243, 199, 0.95));
+    border-color: rgba(245, 158, 11, 0.24);
+    box-shadow: 0 14px 28px rgba(217, 119, 6, 0.14);
+}
+
+.cw-note-node__text {
+    margin: 0;
+    color: #7c2d12;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.45;
+    letter-spacing: -0.01em;
+}
+
+.cw-note-node__meta {
+    display: flex;
+    justify-content: flex-end;
 }
 
 .cw-node__header,
@@ -610,31 +637,112 @@
 .cw-context-menu {
     position: absolute;
     z-index: 9;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+.cw-context-menu__core {
+    position: absolute;
     display: grid;
-    gap: 0.55rem;
-    width: 11rem;
+    place-items: center;
+    width: 4.9rem;
+    height: 4.9rem;
+    transform: translate(-50%, -50%);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.9);
+    box-shadow: 0 22px 42px rgba(15, 23, 42, 0.26);
+}
+
+.cw-context-menu__core-dot {
+    position: absolute;
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #fbbf24, #f97316);
+    box-shadow: 0 0 0 0.4rem rgba(251, 191, 36, 0.14);
+}
+
+.cw-context-menu__core-label {
+    position: absolute;
+    bottom: -1.8rem;
+    min-width: max-content;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.9);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .cw-context-menu__action {
-    min-height: 3rem;
-    padding: 0.8rem 0.9rem;
-    border-radius: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    clip-path: polygon(8% 0, 92% 0, 100% 50%, 92% 100%, 8% 100%, 0 50%);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 5.7rem;
+    min-height: 5.1rem;
+    padding: 0.75rem 0.7rem;
+    display: grid;
+    place-items: center;
+    gap: 0.4rem;
+    text-align: center;
+    border-radius: 0;
+    transform: translate(calc(-50% + var(--cw-menu-x, 0px)), calc(-50% + var(--cw-menu-y, 0px)));
+    clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0 50%);
     background: rgba(255, 255, 255, 0.98);
+    pointer-events: auto;
+    box-shadow: 0 20px 34px rgba(15, 23, 42, 0.16);
 }
 
-.cw-context-menu__action span {
-    color: var(--cw-muted);
-    font-size: 0.7rem;
-    text-transform: uppercase;
+.cw-context-menu__action:hover {
+    transform: translate(calc(-50% + var(--cw-menu-x, 0px)), calc(-50% + var(--cw-menu-y, 0px))) scale(1.03);
+}
+
+.cw-context-menu__icon {
+    display: block;
+    color: inherit;
+    font-size: 0.68rem;
+    font-weight: 800;
     letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 
-.cw-context-menu__action strong {
-    font-size: 0.76rem;
+.cw-context-menu__label {
+    display: block;
+    font-size: 0.74rem;
+    line-height: 1.2;
+}
+
+.cw-context-menu__action.tone-neutral {
+    background: linear-gradient(180deg, #f8fafc, #e2e8f0);
+    color: #0f172a;
+}
+
+.cw-context-menu__action.tone-accent {
+    background: linear-gradient(180deg, #c4b5fd, #8b5cf6);
+    color: #fff;
+}
+
+.cw-context-menu__action.tone-mint {
+    background: linear-gradient(180deg, #6ee7b7, #10b981);
+    color: #064e3b;
+}
+
+.cw-context-menu__action.tone-warn {
+    background: linear-gradient(180deg, #fdba74, #f97316);
+    color: #7c2d12;
+}
+
+.cw-context-menu__action.tone-primary {
+    background: linear-gradient(180deg, #1f2937, #111827);
+    color: #fff;
+}
+
+.cw-context-menu__action.tone-ghost {
+    background: linear-gradient(180deg, #ffffff, #f8fafc);
+    color: #334155;
 }
 
 .cw-marquee {
@@ -795,6 +903,119 @@
     margin-top: 0.3rem;
     color: var(--cw-text);
     font-size: 1rem;
+}
+
+.cw-canvas-composer {
+    position: absolute;
+    z-index: 10;
+    width: min(22rem, calc(100% - 2rem));
+}
+
+.cw-canvas-composer.is-note {
+    width: min(15rem, calc(100% - 2rem));
+}
+
+.cw-canvas-composer__card {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1rem;
+    border-radius: 1.45rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 28px 46px rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(10px);
+}
+
+.cw-canvas-composer.is-note .cw-canvas-composer__card {
+    padding: 0.9rem;
+    border-radius: 1.35rem;
+    background: linear-gradient(180deg, rgba(255, 251, 235, 0.98), rgba(254, 243, 199, 0.96));
+    border-color: rgba(245, 158, 11, 0.24);
+}
+
+.cw-canvas-composer__kicker {
+    margin: 0;
+    color: var(--cw-muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.cw-canvas-composer__title {
+    margin: 0;
+    color: var(--cw-text);
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+.cw-canvas-composer__fields {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.cw-canvas-composer__field {
+    display: grid;
+    gap: 0.35rem;
+    color: var(--cw-text);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.cw-canvas-composer__input,
+.cw-canvas-composer__textarea,
+.cw-note-editor__input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--cw-text);
+    padding: 0.8rem 0.9rem;
+    font: inherit;
+}
+
+.cw-canvas-composer__textarea {
+    min-height: 7rem;
+    resize: vertical;
+}
+
+.cw-canvas-composer__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.cw-canvas-composer__copy {
+    margin: 0;
+    color: var(--cw-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.cw-note-editor {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.cw-note-editor__input {
+    border-radius: 1.1rem;
+    background: rgba(255, 255, 255, 0.86);
+    color: #7c2d12;
+    font-weight: 700;
+}
+
+.cw-note-editor__hint {
+    margin: 0;
+    color: rgba(124, 45, 18, 0.76);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 @media (max-width: 1180px) {

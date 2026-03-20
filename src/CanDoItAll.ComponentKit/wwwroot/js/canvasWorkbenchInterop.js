@@ -45,6 +45,15 @@
         return Math.round(value * 100) / 100;
     }
 
+    function normalizeAction(action) {
+        return {
+            ...action,
+            description: action?.description || "",
+            requiresInput: !!action?.requiresInput,
+            createMode: action?.createMode || "command"
+        };
+    }
+
     function normalizeSurface(surface) {
         return {
             surfaceId: surface?.surfaceId || "canvas-surface",
@@ -55,7 +64,10 @@
                 y: typeof node.y === "number" ? node.y : 120,
                 chips: Array.isArray(node.chips) ? node.chips : [],
                 footerChips: Array.isArray(node.footerChips) ? node.footerChips : [],
-                contextActions: Array.isArray(node.contextActions) ? node.contextActions : []
+                contextActions: Array.isArray(node.contextActions) ? node.contextActions.map(normalizeAction) : [],
+                isInlineTextNode: !!node?.isInlineTextNode,
+                inlineText: node?.inlineText || "",
+                inlineTextPlaceholder: node?.inlineTextPlaceholder || "Write note"
             })) : [],
             links: Array.isArray(surface?.links) ? surface.links : [],
             uiState: {
@@ -70,8 +82,11 @@
                 activeInspectorTab: surface?.uiState?.activeInspectorTab || ""
             },
             chrome: {
-                quickCreateActions: Array.isArray(surface?.chrome?.quickCreateActions) ? surface.chrome.quickCreateActions : [],
-                showQuickCreateRail: surface?.chrome?.showQuickCreateRail !== false
+                quickCreateActions: Array.isArray(surface?.chrome?.quickCreateActions) ? surface.chrome.quickCreateActions.map(normalizeAction) : [],
+                showQuickCreateRail: surface?.chrome?.showQuickCreateRail !== false,
+                childNoteActionId: surface?.chrome?.childNoteActionId || "",
+                siblingNoteActionId: surface?.chrome?.siblingNoteActionId || "",
+                inlineNotePlaceholder: surface?.chrome?.inlineNotePlaceholder || "Write note"
             }
         };
     }
@@ -85,6 +100,10 @@
     }
 
     function getNodeSize(node) {
+        if (node.isInlineTextNode) {
+            return { width: 228, height: 108 };
+        }
+
         switch ((node.family || "item").toLowerCase()) {
             case "root":
                 return { width: 288, height: 210 };
@@ -128,11 +147,81 @@
         return true;
     }
 
+    function getVisibleNodes(state) {
+        return state.surface.nodes.filter(node => isNodeVisible(state, node.id));
+    }
+
     function getNodePosition(state, node) {
         const manual = state.ui.manualPositions?.[node.id];
         return manual && typeof manual.x === "number" && typeof manual.y === "number"
             ? { x: manual.x, y: manual.y }
             : { x: node.x, y: node.y };
+    }
+
+    function getSceneBounds(state, visibleNodes) {
+        const nodes = Array.isArray(visibleNodes) ? visibleNodes : getVisibleNodes(state);
+        if (!nodes.length) {
+            return null;
+        }
+
+        let minX = Number.POSITIVE_INFINITY;
+        let maxX = Number.NEGATIVE_INFINITY;
+        let minY = Number.POSITIVE_INFINITY;
+        let maxY = Number.NEGATIVE_INFINITY;
+
+        for (const node of nodes) {
+            const position = getNodePosition(state, node);
+            const size = getNodeSize(node);
+            minX = Math.min(minX, position.x - (size.width / 2));
+            maxX = Math.max(maxX, position.x + (size.width / 2));
+            minY = Math.min(minY, position.y - (size.height / 2));
+            maxY = Math.max(maxY, position.y + (size.height / 2));
+        }
+
+        return { minX, maxX, minY, maxY };
+    }
+
+    function clampPanToScene(state, panX, panY, zoom) {
+        const bounds = getSceneBounds(state);
+        const rect = state.host.getBoundingClientRect();
+        if (!bounds || rect.width <= 0 || rect.height <= 0) {
+            return { x: panX, y: panY };
+        }
+
+        const nextZoom = zoom || state.ui.zoom;
+        const marginX = Math.min(176, Math.max(72, rect.width * 0.16));
+        const marginY = Math.min(160, Math.max(64, rect.height * 0.16));
+        const contentWidth = (bounds.maxX - bounds.minX) * nextZoom;
+        const contentHeight = (bounds.maxY - bounds.minY) * nextZoom;
+
+        let x = panX;
+        let y = panY;
+
+        if (contentWidth + (marginX * 2) <= rect.width) {
+            x = (rect.width - contentWidth) / 2 - (bounds.minX * nextZoom);
+        }
+        else {
+            const minPanX = rect.width - marginX - (bounds.maxX * nextZoom);
+            const maxPanX = marginX - (bounds.minX * nextZoom);
+            x = clamp(panX, minPanX, maxPanX);
+        }
+
+        if (contentHeight + (marginY * 2) <= rect.height) {
+            y = (rect.height - contentHeight) / 2 - (bounds.minY * nextZoom);
+        }
+        else {
+            const minPanY = rect.height - marginY - (bounds.maxY * nextZoom);
+            const maxPanY = marginY - (bounds.minY * nextZoom);
+            y = clamp(panY, minPanY, maxPanY);
+        }
+
+        return { x: round(x), y: round(y) };
+    }
+
+    function setPan(state, panX, panY, zoom) {
+        const clamped = clampPanToScene(state, panX, panY, zoom);
+        state.ui.panX = clamped.x;
+        state.ui.panY = clamped.y;
     }
 
     function serializeState(state) {
@@ -204,6 +293,91 @@
         }
     }
 
+    function renderInlineTextNode(state, node, nodeElement) {
+        nodeElement.classList.add("is-inline-text");
+        const surface = createElement(state.document, "div", "cw-node__surface");
+        const noteText = node.inlineText || node.title || node.leadText || "Write note";
+        surface.appendChild(createElement(state.document, "p", "cw-note-node__text", noteText));
+
+        if (node.statusPill) {
+            const meta = createElement(state.document, "div", "cw-note-node__meta");
+            meta.appendChild(createElement(state.document, "span", "cw-node__chip tone-accent", node.statusPill));
+            surface.appendChild(meta);
+        }
+
+        nodeElement.appendChild(surface);
+    }
+
+    function renderStandardNode(state, node, nodeElement) {
+        const surface = createElement(state.document, "div", "cw-node__surface");
+        const header = createElement(state.document, "div", "cw-node__header");
+        const eyebrow = createElement(state.document, "div", "cw-node__eyebrow");
+        const icon = createElement(state.document, "span", "cw-node__icon", node.icon || node.kind || "node");
+        const kicker = createElement(state.document, "span", "cw-node__kicker", node.kind || node.family || "item");
+        eyebrow.appendChild(icon);
+        eyebrow.appendChild(kicker);
+        header.appendChild(eyebrow);
+
+        const rightMeta = createElement(state.document, "div", "cw-chip-row");
+        if (node.durationLabel) {
+            rightMeta.appendChild(createElement(state.document, "span", "cw-node__pill", node.durationLabel));
+        }
+
+        if (node.statusPill) {
+            rightMeta.appendChild(createElement(state.document, "span", "cw-node__pill", node.statusPill));
+        }
+
+        header.appendChild(rightMeta);
+        surface.appendChild(header);
+        surface.appendChild(createElement(state.document, "h3", "cw-node__title", node.title || "Untitled"));
+
+        if (node.subtitle) {
+            surface.appendChild(createElement(state.document, "p", "cw-node__subtitle", node.subtitle));
+        }
+
+        if (node.leadText) {
+            surface.appendChild(createElement(state.document, "p", "cw-node__lead", node.leadText));
+        }
+
+        if (node.chips.length > 0) {
+            const chipRow = createElement(state.document, "div", "cw-node__chips");
+            for (const chip of node.chips) {
+                chipRow.appendChild(createElement(state.document, "span", resolveChipToneClass(chip.tone), chip.text));
+            }
+
+            surface.appendChild(chipRow);
+        }
+
+        const footer = createElement(state.document, "div", "cw-node__footer");
+        const footerLeft = createElement(state.document, "div", "cw-chip-row");
+        footerLeft.appendChild(createElement(state.document, "span", "cw-node__chip", node.isRequired ? "required" : "optional"));
+        if (node.branchLabel) {
+            footerLeft.appendChild(createElement(state.document, "span", "cw-node__chip", node.branchLabel));
+        }
+
+        footer.appendChild(footerLeft);
+        const footerRight = createElement(state.document, "div", "cw-chip-row");
+        for (const chip of node.footerChips) {
+            footerRight.appendChild(createElement(state.document, "span", resolveChipToneClass(chip.tone), chip.text));
+        }
+
+        footer.appendChild(footerRight);
+        surface.appendChild(footer);
+
+        if (node.isCollapsible) {
+            const collapse = createElement(state.document, "button", "cw-node__collapse", state.collapsedIds.has(node.id) ? "+" : "−");
+            collapse.type = "button";
+            collapse.dataset.nodeId = node.id;
+            collapse.addEventListener("click", event => {
+                event.stopPropagation();
+                toggleCollapse(state, node.id);
+            });
+            surface.appendChild(collapse);
+        }
+
+        nodeElement.appendChild(surface);
+    }
+
     function renderNodes(state, visibleNodes) {
         state.nodeLayer.innerHTML = "";
 
@@ -224,84 +398,15 @@
                 nodeElement.classList.add("is-collapsed");
             }
 
-            const surface = createElement(state.document, "div", "cw-node__surface");
-            const header = createElement(state.document, "div", "cw-node__header");
-            const eyebrow = createElement(state.document, "div", "cw-node__eyebrow");
-            const icon = createElement(state.document, "span", "cw-node__icon", node.icon || node.kind || "node");
-            const kicker = createElement(state.document, "span", "cw-node__kicker", node.kind || node.family || "item");
-            eyebrow.appendChild(icon);
-            eyebrow.appendChild(kicker);
-            header.appendChild(eyebrow);
-
-            const rightMeta = createElement(state.document, "div", "cw-chip-row");
-            if (node.durationLabel) {
-                rightMeta.appendChild(createElement(state.document, "span", "cw-node__pill", node.durationLabel));
+            if (node.isInlineTextNode) {
+                renderInlineTextNode(state, node, nodeElement);
+            }
+            else {
+                renderStandardNode(state, node, nodeElement);
             }
 
-            if (node.statusPill) {
-                rightMeta.appendChild(createElement(state.document, "span", "cw-node__pill", node.statusPill));
-            }
-
-            header.appendChild(rightMeta);
-            surface.appendChild(header);
-
-            const title = createElement(state.document, "h3", "cw-node__title", node.title || "Untitled");
-            surface.appendChild(title);
-
-            if (node.subtitle) {
-                surface.appendChild(createElement(state.document, "p", "cw-node__subtitle", node.subtitle));
-            }
-
-            if (node.leadText) {
-                surface.appendChild(createElement(state.document, "p", "cw-node__lead", node.leadText));
-            }
-
-            if (node.chips.length > 0) {
-                const chipRow = createElement(state.document, "div", "cw-node__chips");
-                for (const chip of node.chips) {
-                    chipRow.appendChild(createElement(state.document, "span", resolveChipToneClass(chip.tone), chip.text));
-                }
-
-                surface.appendChild(chipRow);
-            }
-
-            const footer = createElement(state.document, "div", "cw-node__footer");
-            const footerLeft = createElement(state.document, "div", "cw-chip-row");
-            footerLeft.appendChild(createElement(state.document, "span", "cw-node__chip", node.isRequired ? "required" : "optional"));
-            if (node.branchLabel) {
-                footerLeft.appendChild(createElement(state.document, "span", "cw-node__chip", node.branchLabel));
-            }
-
-            footer.appendChild(footerLeft);
-            const footerRight = createElement(state.document, "div", "cw-chip-row");
-            for (const chip of node.footerChips) {
-                footerRight.appendChild(createElement(state.document, "span", resolveChipToneClass(chip.tone), chip.text));
-            }
-
-            footer.appendChild(footerRight);
-            surface.appendChild(footer);
-
-            if (node.isCollapsible) {
-                const collapse = createElement(state.document, "button", "cw-node__collapse", state.collapsedIds.has(node.id) ? "+" : "−");
-                collapse.type = "button";
-                collapse.dataset.nodeId = node.id;
-                collapse.addEventListener("click", event => {
-                    event.stopPropagation();
-                    toggleCollapse(state, node.id);
-                });
-                surface.appendChild(collapse);
-            }
-
-            nodeElement.appendChild(surface);
             state.nodeLayer.appendChild(nodeElement);
         }
-    }
-
-    function render(state) {
-        applySceneTransform(state);
-        const visibleNodes = state.surface.nodes.filter(node => isNodeVisible(state, node.id));
-        renderLinks(state, visibleNodes);
-        renderNodes(state, visibleNodes);
     }
 
     function getHostPoint(state, clientX, clientY) {
@@ -309,6 +414,13 @@
         return {
             x: clientX - rect.left,
             y: clientY - rect.top
+        };
+    }
+
+    function worldToHostPoint(state, point) {
+        return {
+            x: (point.x * state.ui.zoom) + state.ui.panX,
+            y: (point.y * state.ui.zoom) + state.ui.panY
         };
     }
 
@@ -327,6 +439,10 @@
         }
 
         return state.lookups.byId.get(nodeElement.dataset.nodeId) || null;
+    }
+
+    function isOverlayTarget(target) {
+        return !!target?.closest?.(".cw-context-menu, .cw-canvas-composer");
     }
 
     function publishSelection(state) {
@@ -392,12 +508,414 @@
         state.contextMenu.style.display = "none";
     }
 
+    function closeComposer(state, options) {
+        const focusHost = options?.focusHost !== false;
+        if (!state.composer?.element) {
+            return;
+        }
+
+        state.composer.element.remove();
+        state.composer = null;
+        if (focusHost) {
+            state.host.focus();
+        }
+    }
+
+    function resolveComposerAnchor(state) {
+        if (!state.composer) {
+            return null;
+        }
+
+        if (state.composer.nodeId) {
+            const node = state.lookups.byId.get(state.composer.nodeId);
+            if (node) {
+                return worldToHostPoint(state, getNodePosition(state, node));
+            }
+        }
+
+        if (state.composer.anchorWorld) {
+            return worldToHostPoint(state, state.composer.anchorWorld);
+        }
+
+        return state.composer.anchorHost || null;
+    }
+
+    function layoutComposer(state) {
+        if (!state.composer?.element) {
+            return;
+        }
+
+        const anchor = resolveComposerAnchor(state);
+        if (!anchor) {
+            return;
+        }
+
+        const element = state.composer.element;
+        const hostRect = state.host.getBoundingClientRect();
+        const composerRect = element.getBoundingClientRect();
+        const margin = 18;
+        let left = anchor.x - (composerRect.width / 2);
+        let top = anchor.y + 24;
+
+        if (state.composer.kind === "note-create" || state.composer.kind === "note-edit") {
+            top = anchor.y - (composerRect.height / 2);
+        }
+
+        left = clamp(left, margin, Math.max(margin, hostRect.width - composerRect.width - margin));
+        top = clamp(top, margin, Math.max(margin, hostRect.height - composerRect.height - margin));
+        element.style.left = `${round(left)}px`;
+        element.style.top = `${round(top)}px`;
+    }
+
+    function render(state) {
+        applySceneTransform(state);
+        const visibleNodes = getVisibleNodes(state);
+        renderLinks(state, visibleNodes);
+        renderNodes(state, visibleNodes);
+        layoutComposer(state);
+    }
+
     function getContextActions(state, node) {
         if (node) {
             return node.contextActions || [];
         }
 
         return state.surface.chrome.quickCreateActions || [];
+    }
+
+    function isCreateAction(action) {
+        return !!action?.requiresInput ||
+            (action?.createMode && action.createMode !== "command") ||
+            (action?.actionId || "").startsWith("add-");
+    }
+
+    function buildCreateRequest(state, action, sourceNode, worldPoint, placementKind) {
+        const point = worldPoint || (sourceNode ? getNodePosition(state, sourceNode) : { x: 0, y: 0 });
+        return {
+            actionId: action.actionId,
+            sourceNodeId: sourceNode?.id || null,
+            parentNodeId: sourceNode?.id || null,
+            x: round(point.x),
+            y: round(point.y),
+            title: "",
+            subtitle: "",
+            notes: "",
+            placementKind: placementKind || (sourceNode ? "child" : "canvas"),
+            createMode: action.createMode || (action.requiresInput ? "dialog" : "command")
+        };
+    }
+
+    function getRadialOffsets(count) {
+        if (count <= 0) {
+            return [];
+        }
+
+        if (count === 1) {
+            return [{ x: 0, y: 0 }];
+        }
+
+        const offsets = [];
+        const innerCount = Math.min(count, 6);
+        const innerRadius = 96;
+        const startAngle = -90;
+
+        for (let index = 0; index < innerCount; index++) {
+            const angle = ((startAngle + ((360 / innerCount) * index)) * Math.PI) / 180;
+            offsets.push({
+                x: Math.cos(angle) * innerRadius,
+                y: Math.sin(angle) * innerRadius
+            });
+        }
+
+        const remaining = count - innerCount;
+        const outerRadius = 164;
+        for (let index = 0; index < remaining; index++) {
+            const angle = ((startAngle + (45 * index)) * Math.PI) / 180;
+            offsets.push({
+                x: Math.cos(angle) * outerRadius,
+                y: Math.sin(angle) * outerRadius
+            });
+        }
+
+        return offsets;
+    }
+
+    function positionContextMenu(state, center) {
+        const hostRect = state.host.getBoundingClientRect();
+        const radius = 154;
+        state.contextMenu.style.left = `${round(clamp(center.x, radius, Math.max(radius, hostRect.width - radius)))}px`;
+        state.contextMenu.style.top = `${round(clamp(center.y, radius, Math.max(radius, hostRect.height - radius)))}px`;
+    }
+
+    function submitCreateRequest(state, payload) {
+        state.dotNetRef.invokeMethodAsync("OnCreateAction", JSON.stringify(payload));
+    }
+
+    function submitNodeEdit(state, payload) {
+        state.dotNetRef.invokeMethodAsync("OnNodeEdited", JSON.stringify(payload));
+    }
+
+    function commitComposer(state) {
+        if (!state.composer) {
+            return;
+        }
+
+        if (state.composer.kind === "create") {
+            submitCreateRequest(state, {
+                ...state.composer.request,
+                title: state.composer.titleInput.value.trim(),
+                subtitle: state.composer.subtitleInput.value.trim(),
+                notes: state.composer.notesInput.value.trim()
+            });
+            closeComposer(state);
+            return;
+        }
+
+        const text = state.composer.textInput.value.trim();
+        if (!text) {
+            return;
+        }
+
+        if (state.composer.kind === "note-create") {
+            submitCreateRequest(state, {
+                actionId: state.composer.actionId,
+                sourceNodeId: state.composer.sourceNodeId,
+                parentNodeId: state.composer.parentNodeId,
+                x: round(state.composer.anchorWorld.x),
+                y: round(state.composer.anchorWorld.y),
+                title: text,
+                subtitle: "",
+                notes: text,
+                placementKind: state.composer.placementKind,
+                createMode: "quick-note"
+            });
+        }
+        else if (state.composer.kind === "note-edit") {
+            submitNodeEdit(state, {
+                nodeId: state.composer.nodeId,
+                title: text,
+                notes: text
+            });
+        }
+
+        closeComposer(state);
+    }
+
+    function decorateComposerShell(state, title, kicker, variant) {
+        const composer = createElement(state.document, "div", `cw-canvas-composer ${variant ? `is-${variant}` : ""}`);
+        composer.addEventListener("pointerdown", event => event.stopPropagation());
+        composer.addEventListener("keydown", event => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeComposer(state);
+                return;
+            }
+
+            if (event.key === "Enter" && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+                const tagName = event.target?.tagName?.toLowerCase?.() || "";
+                if (variant === "note" || tagName !== "textarea") {
+                    event.preventDefault();
+                    commitComposer(state);
+                }
+            }
+        });
+
+        const card = createElement(state.document, "div", "cw-canvas-composer__card");
+        if (kicker) {
+            card.appendChild(createElement(state.document, "p", "cw-canvas-composer__kicker", kicker));
+        }
+
+        if (title) {
+            card.appendChild(createElement(state.document, "h3", "cw-canvas-composer__title", title));
+        }
+
+        composer.appendChild(card);
+        state.host.appendChild(composer);
+        return { composer, card };
+    }
+
+    function openCreateComposer(state, action, request) {
+        clearContextMenu(state);
+        closeComposer(state, { focusHost: false });
+
+        const shell = decorateComposerShell(state, `Create ${action.label || "item"}`, action.label || "Create", "dialog");
+        const fields = createElement(state.document, "div", "cw-canvas-composer__fields");
+
+        const titleField = createElement(state.document, "label", "cw-canvas-composer__field");
+        titleField.appendChild(createElement(state.document, "span", null, "Title"));
+        const titleInput = createElement(state.document, "input", "cw-canvas-composer__input");
+        titleInput.type = "text";
+        titleInput.value = request?.title || "";
+        titleField.appendChild(titleInput);
+        fields.appendChild(titleField);
+
+        const subtitleField = createElement(state.document, "label", "cw-canvas-composer__field");
+        subtitleField.appendChild(createElement(state.document, "span", null, "Subtitle"));
+        const subtitleInput = createElement(state.document, "input", "cw-canvas-composer__input");
+        subtitleInput.type = "text";
+        subtitleInput.value = request?.subtitle || "";
+        subtitleField.appendChild(subtitleInput);
+        fields.appendChild(subtitleField);
+
+        const notesField = createElement(state.document, "label", "cw-canvas-composer__field");
+        notesField.appendChild(createElement(state.document, "span", null, "Notes"));
+        const notesInput = createElement(state.document, "textarea", "cw-canvas-composer__textarea");
+        notesInput.value = request?.notes || "";
+        notesField.appendChild(notesInput);
+        fields.appendChild(notesField);
+
+        const actions = createElement(state.document, "div", "cw-canvas-composer__actions");
+        const cancel = createElement(state.document, "button", "cw-button");
+        cancel.type = "button";
+        cancel.textContent = "Cancel";
+        cancel.addEventListener("click", () => closeComposer(state));
+        actions.appendChild(cancel);
+
+        const create = createElement(state.document, "button", "cw-button");
+        create.type = "button";
+        create.dataset.tone = "accent";
+        create.textContent = action.label || "Create";
+        create.addEventListener("click", () => commitComposer(state));
+        actions.appendChild(create);
+
+        shell.card.appendChild(fields);
+        if (action.description) {
+            shell.card.appendChild(createElement(state.document, "p", "cw-canvas-composer__copy", action.description));
+        }
+        shell.card.appendChild(actions);
+
+        state.composer = {
+            kind: "create",
+            element: shell.composer,
+            request: request || {},
+            anchorWorld: request ? { x: request.x || 0, y: request.y || 0 } : { x: 0, y: 0 },
+            titleInput,
+            subtitleInput,
+            notesInput
+        };
+
+        window.requestAnimationFrame(() => {
+            layoutComposer(state);
+            titleInput.focus();
+            titleInput.select();
+        });
+    }
+
+    function openInlineNoteComposer(state, options) {
+        closeComposer(state, { focusHost: false });
+        clearContextMenu(state);
+
+        const shell = decorateComposerShell(state, "", "", "note");
+        const noteEditor = createElement(state.document, "div", "cw-note-editor");
+        const textInput = createElement(state.document, "input", "cw-note-editor__input");
+        textInput.type = "text";
+        textInput.value = options.value || "";
+        textInput.placeholder = options.placeholder || state.surface.chrome.inlineNotePlaceholder || "Write note";
+        noteEditor.appendChild(textInput);
+        noteEditor.appendChild(createElement(state.document, "p", "cw-note-editor__hint", "Enter saves. Escape cancels."));
+        shell.card.appendChild(noteEditor);
+
+        state.composer = {
+            kind: options.kind,
+            element: shell.composer,
+            actionId: options.actionId || "",
+            sourceNodeId: options.sourceNodeId || null,
+            parentNodeId: options.parentNodeId || null,
+            placementKind: options.placementKind || "child",
+            nodeId: options.nodeId || null,
+            anchorWorld: options.anchorWorld,
+            textInput
+        };
+
+        window.requestAnimationFrame(() => {
+            layoutComposer(state);
+            textInput.focus();
+            textInput.select();
+        });
+    }
+
+    function buildChildNotePlacement(position, childCount) {
+        const column = childCount % 3;
+        const row = Math.floor(childCount / 3);
+        return {
+            x: round(position.x + 240 + (column * 46)),
+            y: round(position.y - 70 + (row * 118))
+        };
+    }
+
+    function buildSiblingNotePlacement(position, siblingCount) {
+        return {
+            x: round(position.x + ((siblingCount % 2) * 24)),
+            y: round(position.y + 132)
+        };
+    }
+
+    function openKeyboardNoteComposer(state, placementKind) {
+        const selectedId = state.ui.selectedNodeIds[0];
+        if (!selectedId) {
+            return;
+        }
+
+        const node = state.lookups.byId.get(selectedId);
+        if (!node) {
+            return;
+        }
+
+        const isSibling = placementKind === "sibling";
+        const actionId = isSibling ? state.surface.chrome.siblingNoteActionId : state.surface.chrome.childNoteActionId;
+        if (!actionId) {
+            return;
+        }
+
+        const position = getNodePosition(state, node);
+        const anchorWorld = isSibling
+            ? buildSiblingNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.parentId && candidate.id !== node.id).length)
+            : buildChildNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.id).length);
+
+        openInlineNoteComposer(state, {
+            kind: "note-create",
+            actionId,
+            sourceNodeId: node.id,
+            parentNodeId: isSibling ? (node.parentId || node.id) : node.id,
+            placementKind,
+            anchorWorld,
+            value: "",
+            placeholder: node.inlineTextPlaceholder || state.surface.chrome.inlineNotePlaceholder || "Write note"
+        });
+    }
+
+    function openExistingNoteEditor(state, node) {
+        openInlineNoteComposer(state, {
+            kind: "note-edit",
+            nodeId: node.id,
+            anchorWorld: getNodePosition(state, node),
+            value: node.inlineText || node.title || "",
+            placeholder: node.inlineTextPlaceholder || state.surface.chrome.inlineNotePlaceholder || "Write note"
+        });
+    }
+
+    function executeContextAction(state, node, action, clientX, clientY) {
+        if (isCreateAction(action) || !node) {
+            const request = buildCreateRequest(
+                state,
+                action,
+                node,
+                node ? getNodePosition(state, node) : getWorldPoint(state, clientX, clientY),
+                node ? "child" : "canvas");
+
+            if (action.requiresInput) {
+                openCreateComposer(state, action, request);
+                return;
+            }
+
+            submitCreateRequest(state, request);
+            clearContextMenu(state);
+            return;
+        }
+
+        clearContextMenu(state);
+        const position = getNodePosition(state, node);
+        state.dotNetRef.invokeMethodAsync("OnContextAction", node.id, action.actionId, round(position.x), round(position.y));
     }
 
     function showContextMenu(state, node, clientX, clientY) {
@@ -408,30 +926,30 @@
         }
 
         const hostPoint = getHostPoint(state, clientX, clientY);
-        state.contextMenu.style.display = "grid";
-        state.contextMenu.style.left = `${hostPoint.x + 10}px`;
-        state.contextMenu.style.top = `${hostPoint.y + 10}px`;
+        state.contextMenu.style.display = "block";
+        positionContextMenu(state, hostPoint);
 
-        for (const action of actions) {
-            const button = createElement(state.document, "button", "cw-context-menu__action");
+        const core = createElement(state.document, "div", "cw-context-menu__core");
+        core.appendChild(createElement(state.document, "span", "cw-context-menu__core-dot"));
+        core.appendChild(createElement(state.document, "span", "cw-context-menu__core-label", node?.title || "Canvas"));
+        state.contextMenu.appendChild(core);
+
+        const offsets = getRadialOffsets(actions.length);
+        actions.forEach((action, index) => {
+            const button = createElement(state.document, "button", `cw-context-menu__action tone-${action.tone || "neutral"}`);
             button.type = "button";
-            const label = createElement(state.document, "strong", null, action.label || action.actionId);
-            const icon = createElement(state.document, "span", null, action.icon || action.tone || "action");
-            button.appendChild(label);
-            button.appendChild(icon);
-            button.addEventListener("click", () => {
-                clearContextMenu(state);
-                if (node) {
-                    const position = getNodePosition(state, node);
-                    state.dotNetRef.invokeMethodAsync("OnContextAction", node.id, action.actionId, round(position.x), round(position.y));
-                }
-                else {
-                    const world = getWorldPoint(state, clientX, clientY);
-                    state.dotNetRef.invokeMethodAsync("OnCreateAction", action.actionId, null, round(world.x), round(world.y));
-                }
+            button.style.setProperty("--cw-menu-x", `${round(offsets[index].x)}px`);
+            button.style.setProperty("--cw-menu-y", `${round(offsets[index].y)}px`);
+            button.addEventListener("pointerdown", event => event.stopPropagation());
+            button.addEventListener("click", event => {
+                event.stopPropagation();
+                executeContextAction(state, node, action, clientX, clientY);
             });
+
+            button.appendChild(createElement(state.document, "span", "cw-context-menu__icon", action.icon || action.label || "action"));
+            button.appendChild(createElement(state.document, "strong", "cw-context-menu__label", action.label || action.actionId));
             state.contextMenu.appendChild(button);
-        }
+        });
     }
 
     function startPan(state, event) {
@@ -467,7 +985,9 @@
         if (!state.selectedIds.has(nodeId)) {
             state.selectedIds = toSelectionSet([nodeId]);
             state.ui.selectedNodeIds = [nodeId];
+            render(state);
             publishSelection(state);
+            publishState(state);
         }
     }
 
@@ -545,8 +1065,7 @@
         const deltaX = event.clientX - state.interaction.startClientX;
         const deltaY = event.clientY - state.interaction.startClientY;
         state.interaction.moved = state.interaction.moved || Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1;
-        state.ui.panX = round(state.interaction.panX + deltaX);
-        state.ui.panY = round(state.interaction.panY + deltaY);
+        setPan(state, state.interaction.panX + deltaX, state.interaction.panY + deltaY);
         render(state);
     }
 
@@ -569,9 +1088,6 @@
                 if (interaction.moved) {
                     publishState(state);
                 }
-                else {
-                    setSelection(state, [], true);
-                }
                 break;
             case "marquee":
                 applyMarqueeSelection(state);
@@ -583,36 +1099,28 @@
         const rect = state.host.getBoundingClientRect();
         state.links.setAttribute("width", `${Math.max(rect.width, 1)}`);
         state.links.setAttribute("height", `${Math.max(rect.height, 1)}`);
+        setPan(state, state.ui.panX, state.ui.panY);
+        layoutComposer(state);
     }
 
     function fitView(state) {
-        const visibleNodes = state.surface.nodes.filter(node => isNodeVisible(state, node.id));
+        const visibleNodes = getVisibleNodes(state);
         if (!visibleNodes.length) {
             return;
         }
 
-        let minX = Number.POSITIVE_INFINITY;
-        let maxX = Number.NEGATIVE_INFINITY;
-        let minY = Number.POSITIVE_INFINITY;
-        let maxY = Number.NEGATIVE_INFINITY;
-
-        for (const node of visibleNodes) {
-            const position = getNodePosition(state, node);
-            const size = getNodeSize(node);
-            minX = Math.min(minX, position.x - (size.width / 2));
-            maxX = Math.max(maxX, position.x + (size.width / 2));
-            minY = Math.min(minY, position.y - (size.height / 2));
-            maxY = Math.max(maxY, position.y + (size.height / 2));
-        }
-
+        const bounds = getSceneBounds(state, visibleNodes);
         const rect = state.host.getBoundingClientRect();
         const padding = 120;
-        const width = Math.max(maxX - minX, 320);
-        const height = Math.max(maxY - minY, 240);
+        const width = Math.max(bounds.maxX - bounds.minX, 320);
+        const height = Math.max(bounds.maxY - bounds.minY, 240);
         const zoom = clamp(Math.min((rect.width - padding) / width, (rect.height - padding) / height), 0.55, 1.75);
         state.ui.zoom = zoom;
-        state.ui.panX = round((rect.width / 2) - ((minX + (width / 2)) * zoom));
-        state.ui.panY = round((rect.height / 2) - ((minY + (height / 2)) * zoom));
+        setPan(
+            state,
+            (rect.width / 2) - ((bounds.minX + (width / 2)) * zoom),
+            (rect.height / 2) - ((bounds.minY + (height / 2)) * zoom),
+            zoom);
         render(state);
         publishState(state);
     }
@@ -625,8 +1133,10 @@
 
         const rect = state.host.getBoundingClientRect();
         const position = getNodePosition(state, node);
-        state.ui.panX = round((rect.width / 2) - (position.x * state.ui.zoom));
-        state.ui.panY = round((rect.height / 2) - (position.y * state.ui.zoom));
+        setPan(
+            state,
+            (rect.width / 2) - (position.x * state.ui.zoom),
+            (rect.height / 2) - (position.y * state.ui.zoom));
         state.selectedIds = toSelectionSet([nodeId]);
         state.ui.selectedNodeIds = [nodeId];
         render(state);
@@ -641,8 +1151,11 @@
         const worldX = (anchor.x - state.ui.panX) / state.ui.zoom;
         const worldY = (anchor.y - state.ui.panY) / state.ui.zoom;
         state.ui.zoom = nextZoom;
-        state.ui.panX = round(anchor.x - (worldX * nextZoom));
-        state.ui.panY = round(anchor.y - (worldY * nextZoom));
+        setPan(
+            state,
+            anchor.x - (worldX * nextZoom),
+            anchor.y - (worldY * nextZoom),
+            nextZoom);
         render(state);
         publishState(state);
     }
@@ -652,42 +1165,90 @@
         state.dotNetRef.invokeMethodAsync("OnHelpToggled", state.helpOpen);
     }
 
+    function isManualDoubleActivation(state, nodeId) {
+        const now = Date.now();
+        const isRepeatedTarget = state.lastPointerTarget?.nodeId === nodeId;
+        const isRapidRepeat = !!state.lastPointerTarget && (now - state.lastPointerTarget.timestamp) <= 340;
+        state.lastPointerTarget = { nodeId, timestamp: now };
+        return isRepeatedTarget && isRapidRepeat;
+    }
+
+    function handleNodeDoubleActivation(state, node) {
+        state.recentDoubleActivationAt = Date.now();
+        state.selectedIds = toSelectionSet([node.id]);
+        state.ui.selectedNodeIds = [node.id];
+        render(state);
+        publishSelection(state);
+        publishState(state);
+
+        if (node.isInlineTextNode) {
+            openExistingNoteEditor(state, node);
+            return;
+        }
+
+        if (node.isCollapsible) {
+            toggleCollapse(state, node.id);
+            return;
+        }
+
+        state.dotNetRef.invokeMethodAsync("OnNodeOpened", node.id);
+    }
+
     function attachEvents(state) {
         state.handlers = {
             pointerDown: event => {
-            clearContextMenu(state);
-            state.host.focus();
+                if (isOverlayTarget(event.target)) {
+                    return;
+                }
 
-            if (event.button === 2) {
-                return;
-            }
+                if (state.composer) {
+                    closeComposer(state, { focusHost: false });
+                }
 
-            if (event.button === 1) {
+                clearContextMenu(state);
+                state.host.focus();
+
+                if (event.button === 2) {
+                    return;
+                }
+
+                if (event.button === 1) {
+                    startPan(state, event);
+                    return;
+                }
+
+                const targetNode = hitTestNode(state, event.target);
+                if (event.altKey) {
+                    startMarquee(state, event);
+                    return;
+                }
+
+                if (targetNode) {
+                    if (event.button === 0 &&
+                        !event.altKey &&
+                        !event.ctrlKey &&
+                        !event.metaKey &&
+                        isManualDoubleActivation(state, targetNode.id)) {
+                        handleNodeDoubleActivation(state, targetNode);
+                        return;
+                    }
+
+                    if (event.ctrlKey || event.metaKey) {
+                        toggleSelection(state, targetNode.id);
+                    }
+                    else if (!state.selectedIds.has(targetNode.id) || state.selectedIds.size > 1) {
+                        state.selectedIds = toSelectionSet([targetNode.id]);
+                        state.ui.selectedNodeIds = [targetNode.id];
+                        render(state);
+                        publishSelection(state);
+                        publishState(state);
+                    }
+
+                    startDrag(state, event, targetNode.id);
+                    return;
+                }
+
                 startPan(state, event);
-                return;
-            }
-
-            const targetNode = hitTestNode(state, event.target);
-            if (event.altKey) {
-                startMarquee(state, event);
-                return;
-            }
-
-            if (targetNode) {
-                if (event.ctrlKey || event.metaKey) {
-                    toggleSelection(state, targetNode.id);
-                }
-                else if (!state.selectedIds.has(targetNode.id) || state.selectedIds.size > 1) {
-                    state.selectedIds = toSelectionSet([targetNode.id]);
-                    state.ui.selectedNodeIds = [targetNode.id];
-                    publishSelection(state);
-                }
-
-                startDrag(state, event, targetNode.id);
-                return;
-            }
-
-            startPan(state, event);
             },
             pointerMove: event => {
                 if (!state.interaction) {
@@ -709,8 +1270,21 @@
             pointerUp: () => finishInteraction(state),
             blur: () => finishInteraction(state),
             doubleClick: event => {
+                if (state.recentDoubleActivationAt && (Date.now() - state.recentDoubleActivationAt) <= 340) {
+                    return;
+                }
+
+                if (isOverlayTarget(event.target)) {
+                    return;
+                }
+
                 const targetNode = hitTestNode(state, event.target);
                 if (!targetNode) {
+                    return;
+                }
+
+                if (targetNode.isInlineTextNode) {
+                    openExistingNoteEditor(state, targetNode);
                     return;
                 }
 
@@ -728,6 +1302,10 @@
                 setZoomPercent(state, (state.ui.zoom * 100) + delta, hostPoint);
             },
             contextMenu: event => {
+                if (isOverlayTarget(event.target)) {
+                    return;
+                }
+
                 event.preventDefault();
                 const targetNode = hitTestNode(state, event.target);
                 if (targetNode) {
@@ -737,6 +1315,30 @@
                 showContextMenu(state, targetNode, event.clientX, event.clientY);
             },
             keyDown: event => {
+                const target = event.target;
+                const tagName = target?.tagName?.toLowerCase?.() || "";
+                const isEditable = tagName === "input" || tagName === "textarea" || target?.isContentEditable;
+                if (isEditable) {
+                    if (event.key === "Escape") {
+                        event.preventDefault();
+                        closeComposer(state);
+                    }
+
+                    return;
+                }
+
+                if (event.key === "Tab" && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                    event.preventDefault();
+                    openKeyboardNoteComposer(state, "child");
+                    return;
+                }
+
+                if (event.key === "Enter" && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                    event.preventDefault();
+                    openKeyboardNoteComposer(state, "sibling");
+                    return;
+                }
+
                 switch (event.key) {
                     case "+":
                     case "=":
@@ -760,6 +1362,7 @@
                     case "Escape":
                         event.preventDefault();
                         clearContextMenu(state);
+                        closeComposer(state);
                         setSelection(state, [], true);
                         break;
                 }
@@ -788,6 +1391,7 @@
         const contextMenu = createElement(state.document, "div", "cw-context-menu");
         contextMenu.style.display = "none";
         marquee.style.display = "none";
+        contextMenu.addEventListener("pointerdown", event => event.stopPropagation());
 
         scene.appendChild(links);
         scene.appendChild(nodeLayer);
@@ -824,6 +1428,10 @@
             nodeLayer: null,
             marquee: null,
             contextMenu: null,
+            composer: null,
+            resizeObserver: null,
+            lastPointerTarget: null,
+            recentDoubleActivationAt: 0,
             publishStateDebounced: debounce(stateJson => dotNetRef.invokeMethodAsync("OnStateChanged", stateJson), 140)
         };
     }
@@ -834,8 +1442,13 @@
         state.ui = state.surface.uiState;
         state.selectedIds = toSelectionSet(state.ui.selectedNodeIds);
         state.collapsedIds = toCollapsedSet(state.ui.collapsedNodeIds);
-        render(state);
+        clearContextMenu(state);
+        if (state.composer?.nodeId && !state.lookups.byId.has(state.composer.nodeId)) {
+            closeComposer(state, { focusHost: false });
+        }
+
         resize(state);
+        render(state);
     }
 
     root.canvasWorkbench = {
@@ -843,6 +1456,14 @@
             const state = hydrateState(host, dotNetRef, surface);
             buildWorkbench(state);
             attachEvents(state);
+            if (typeof window.ResizeObserver === "function") {
+                state.resizeObserver = new window.ResizeObserver(() => {
+                    resize(state);
+                    render(state);
+                });
+                state.resizeObserver.observe(host);
+            }
+
             host.__canvasWorkbenchState = state;
             render(state);
         },
@@ -878,6 +1499,14 @@
 
             setZoomPercent(state, zoomPercent);
         },
+        openCreateComposer(host, action, request) {
+            const state = host.__canvasWorkbenchState;
+            if (!state || !action) {
+                return;
+            }
+
+            openCreateComposer(state, action, request || {});
+        },
         getState(host) {
             const state = host.__canvasWorkbenchState;
             return state ? serializeState(state) : JSON.stringify({});
@@ -895,6 +1524,10 @@
             const state = host.__canvasWorkbenchState;
             if (!state) {
                 return;
+            }
+
+            if (state.resizeObserver) {
+                state.resizeObserver.disconnect();
             }
 
             if (state.handlers) {
