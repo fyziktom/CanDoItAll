@@ -3,5 +3,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <DefaultItemExcludes>
+      $(DefaultItemExcludes);
+      .mcp-state/**;
+      .artifacts/**;
+      playwright-report/**;
+      test-results/**;
+      TestResults/**;
+      coverage/**;
+      screenshots/**;
+    </DefaultItemExcludes>
   </PropertyGroup>
 </Project>

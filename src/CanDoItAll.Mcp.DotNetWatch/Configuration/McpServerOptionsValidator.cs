@@ -1,0 +1,123 @@
+using Microsoft.Extensions.Options;
+
+namespace CanDoItAll.Mcp.DotNetWatch.Configuration;
+
+public sealed class McpServerOptionsValidator : IValidateOptions<McpServerOptions>
+{
+    public ValidateOptionsResult Validate(string? name, McpServerOptions options)
+    {
+        List<string> failures = [];
+
+        var workspaceRoot = ResolvePath(Environment.CurrentDirectory, options.Server.WorkspaceRoot);
+        if (!Directory.Exists(workspaceRoot))
+        {
+            failures.Add($"Workspace root '{workspaceRoot}' does not exist.");
+        }
+
+        var solutionPath = ResolvePath(workspaceRoot, options.Server.SolutionPath);
+        if (!File.Exists(solutionPath))
+        {
+            failures.Add($"Solution path '{solutionPath}' does not exist.");
+        }
+
+        var defaultProjectPath = ResolvePath(workspaceRoot, options.DefaultApp.ProjectPath);
+        if (!File.Exists(defaultProjectPath))
+        {
+            failures.Add($"Default app project path '{defaultProjectPath}' does not exist.");
+        }
+
+        if (options.Process.GracefulStopTimeoutMs <= 0)
+        {
+            failures.Add("Process:GracefulStopTimeoutMs must be greater than zero.");
+        }
+
+        if (options.Process.ForceKillAfterMs < options.Process.GracefulStopTimeoutMs)
+        {
+            failures.Add("Process:ForceKillAfterMs must be greater than or equal to Process:GracefulStopTimeoutMs.");
+        }
+
+        if (options.Logs.BufferCapacity <= 0)
+        {
+            failures.Add("Logs:BufferCapacity must be greater than zero.");
+        }
+
+        if (options.Health.Enabled && options.Health.Urls.Length == 0)
+        {
+            failures.Add("Health:Urls must contain at least one value when Health:Enabled is true.");
+        }
+
+        if (options.Health.TimeoutMs <= 0 || options.Health.PollIntervalMs <= 0)
+        {
+            failures.Add("Health timeouts and poll intervals must be positive.");
+        }
+
+        if (options.Waits.DefaultAppWaitTimeoutMs <= 0 || options.Waits.DefaultOperationWaitTimeoutMs <= 0 || options.Waits.DefaultPollIntervalMs <= 0)
+        {
+            failures.Add("Wait defaults must be positive.");
+        }
+
+        foreach (var allowedRoot in options.Security.AllowedProjectRoots)
+        {
+            var resolvedRoot = ResolvePath(workspaceRoot, allowedRoot);
+            if (!resolvedRoot.StartsWith(workspaceRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                failures.Add($"Allowed project root '{allowedRoot}' resolves outside the workspace.");
+            }
+        }
+
+        if (options.Security.AllowedEnvironmentKeys.Any(static key => key.Contains('*')))
+        {
+            failures.Add("Security:AllowedEnvironmentKeys cannot contain wildcard entries.");
+        }
+
+        var logFolder = ResolvePath(workspaceRoot, options.Logs.Folder);
+        try
+        {
+            Directory.CreateDirectory(logFolder);
+        }
+        catch (Exception ex)
+        {
+            failures.Add($"Log folder '{logFolder}' could not be created: {ex.Message}");
+        }
+
+        var registryPath = ResolvePath(workspaceRoot, options.Process.RegistryPath);
+        try
+        {
+            var registryDirectory = Path.GetDirectoryName(registryPath);
+            if (!string.IsNullOrWhiteSpace(registryDirectory))
+            {
+                Directory.CreateDirectory(registryDirectory);
+            }
+        }
+        catch (Exception ex)
+        {
+            failures.Add($"Registry path '{registryPath}' is not writable: {ex.Message}");
+        }
+
+        foreach (var healthUrl in options.Health.Urls)
+        {
+            if (!Uri.TryCreate(healthUrl, UriKind.Absolute, out var uri))
+            {
+                failures.Add($"Health URL '{healthUrl}' is not a valid absolute URI.");
+                continue;
+            }
+
+            if (!options.Security.AllowExternalHealthHosts &&
+                !options.Health.AllowedHosts.Contains(uri.Host, StringComparer.OrdinalIgnoreCase))
+            {
+                failures.Add($"Health URL host '{uri.Host}' is not allowed.");
+            }
+        }
+
+        return failures.Count == 0
+            ? ValidateOptionsResult.Success
+            : ValidateOptionsResult.Fail(failures);
+    }
+
+    private static string ResolvePath(string basePath, string path)
+    {
+        return Path.IsPathRooted(path)
+            ? Path.GetFullPath(path)
+            : Path.GetFullPath(Path.Combine(basePath, path));
+    }
+}
