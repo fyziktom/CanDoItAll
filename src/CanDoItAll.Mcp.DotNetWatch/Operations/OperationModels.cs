@@ -7,6 +7,7 @@ namespace CanDoItAll.Mcp.DotNetWatch.Operations;
 public sealed partial class OperationRecord
 {
     private readonly object _gate = new();
+    private readonly List<OperationArtifactData> _artifacts = [];
 
     public OperationRecord(
         string operationId,
@@ -171,6 +172,7 @@ public sealed partial class OperationRecord
 
             return new OperationStatusData(
                 OperationId,
+                CorrelationId,
                 OperationType,
                 State,
                 StartedUtc,
@@ -183,7 +185,17 @@ public sealed partial class OperationRecord
                 LogBuffer.CurrentSequence,
                 OperationType == OperationType.Test
                     ? new TestSummaryData(TotalTests, PassedTests, FailedTests, SkippedTests)
-                    : null);
+                    : null,
+                _artifacts.ToArray());
+        }
+    }
+
+    public void SetArtifacts(IEnumerable<OperationArtifactData> artifacts)
+    {
+        lock (_gate)
+        {
+            _artifacts.Clear();
+            _artifacts.AddRange(artifacts);
         }
     }
 
@@ -229,6 +241,16 @@ public sealed class OperationRegistry
         {
             return _operations.Values
                 .Where(operation => operation.State is OperationState.Queued or OperationState.Running)
+                .OrderByDescending(static operation => operation.StartedUtc)
+                .ToList();
+        }
+    }
+
+    public IReadOnlyList<OperationRecord> GetAllOperations()
+    {
+        lock (_gate)
+        {
+            return _operations.Values
                 .OrderByDescending(static operation => operation.StartedUtc)
                 .ToList();
         }

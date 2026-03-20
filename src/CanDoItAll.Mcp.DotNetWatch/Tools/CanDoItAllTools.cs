@@ -17,7 +17,7 @@ public sealed class CanDoItAllTools(SessionCoordinator coordinator, ILogger<CanD
     {
         return ExecuteAsync("candoitall_workspace_info", _ =>
         {
-            var data = coordinator.GetWorkspaceInfo(includeConfigSnapshot);
+            var data = coordinator.GetWorkspaceInfo(includeHistory, includeConfigSnapshot);
             return Task.FromResult(data);
         });
     }
@@ -26,8 +26,8 @@ public sealed class CanDoItAllTools(SessionCoordinator coordinator, ILogger<CanD
     [Description("Starts the configured CanDoItAll web app under dotnet watch or dotnet run and returns the managed session metadata.")]
     public Task<ToolEnvelope<AppStartData>> AppStartAsync(
         string? projectPath = null,
-        AppRunMode mode = AppRunMode.WatchRun,
-        string configurationName = "Debug",
+        AppRunMode? mode = null,
+        string? configurationName = null,
         string? framework = null,
         string? launchProfile = null,
         string? workingDirectory = null,
@@ -116,13 +116,13 @@ public sealed class CanDoItAllTools(SessionCoordinator coordinator, ILogger<CanD
     [Description("Starts a managed dotnet build operation against the solution or a specified target and applies the configured app preemption policy.")]
     public Task<ToolEnvelope<OperationStartData>> SolutionBuildAsync(
         string? targetPath = null,
-        string configurationName = "Debug",
+        string? configurationName = null,
         string? framework = null,
         string[]? arguments = null,
         Dictionary<string, string?>? environmentOverlay = null,
-        WhenAppRunningPolicy whenAppRunning = WhenAppRunningPolicy.StopAndResume,
+        WhenAppRunningPolicy? whenAppRunning = null,
         bool waitForCompletion = false,
-        int timeoutMs = 1800000,
+        int? timeoutMs = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAsync("candoitall_solution_build", _ => coordinator.StartBuildAsync(
@@ -132,8 +132,8 @@ public sealed class CanDoItAllTools(SessionCoordinator coordinator, ILogger<CanD
             arguments ?? [],
             environmentOverlay,
             whenAppRunning,
+            timeoutMs.HasValue ? TimeSpan.FromMilliseconds(timeoutMs.Value) : null,
             waitForCompletion,
-            TimeSpan.FromMilliseconds(timeoutMs),
             cancellationToken));
     }
 
@@ -141,15 +141,16 @@ public sealed class CanDoItAllTools(SessionCoordinator coordinator, ILogger<CanD
     [Description("Starts a managed dotnet test operation without using dotnet watch test.")]
     public Task<ToolEnvelope<OperationStartData>> TestsRunAsync(
         string? targetPath = null,
-        string configurationName = "Debug",
+        string? configurationName = null,
         string? framework = null,
         string? filter = null,
         string[]? arguments = null,
+        Dictionary<string, string?>? environmentOverlay = null,
         bool collectCoverage = false,
-        WhenAppRunningPolicy whenAppRunning = WhenAppRunningPolicy.StopAndResume,
-        string runnerPreference = "Auto",
+        WhenAppRunningPolicy? whenAppRunning = null,
+        string? runnerPreference = null,
         bool waitForCompletion = false,
-        int timeoutMs = 1800000,
+        int? timeoutMs = null,
         CancellationToken cancellationToken = default)
     {
         var effectiveArguments = arguments?.ToList() ?? [];
@@ -165,11 +166,11 @@ public sealed class CanDoItAllTools(SessionCoordinator coordinator, ILogger<CanD
             framework,
             filter,
             effectiveArguments,
-            environmentOverlay: null,
+            environmentOverlay,
             whenAppRunning,
             runnerPreference,
+            timeoutMs.HasValue ? TimeSpan.FromMilliseconds(timeoutMs.Value) : null,
             waitForCompletion,
-            TimeSpan.FromMilliseconds(timeoutMs),
             cancellationToken));
     }
 

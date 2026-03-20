@@ -29,10 +29,12 @@ public enum AppWaitCondition
 {
     None,
     Running,
+    Ready,
     Healthy,
     Stopped,
     QuietSinceCursor,
-    LogMatch
+    LogMatch,
+    RestartCompleted
 }
 
 public enum WhenAppRunningPolicy
@@ -105,17 +107,24 @@ public sealed record ToolEnvelope<T>(
 
 public sealed record ToolError(string Code, string Message, object? Details = null);
 
-public sealed record DefaultAppInfo(string ProjectPath, AppRunMode Mode, IReadOnlyList<string> HealthUrls);
+public sealed record DefaultAppInfo(string ProjectPath, string ProjectPathRelative, AppRunMode Mode, IReadOnlyList<string> HealthUrls);
+
+public sealed record WorkspacePathInfo(string AbsolutePath, string RelativePath);
+
+public sealed record WorkspaceHistoryData(
+    IReadOnlyList<AppStatusData> RecentAppSessions,
+    IReadOnlyList<OperationStatusData> RecentOperations);
 
 public sealed record WorkspaceInfoData(
-    string WorkspaceRoot,
-    string SolutionPath,
+    WorkspacePathInfo WorkspaceRoot,
+    WorkspacePathInfo SolutionPath,
     DefaultAppInfo DefaultApp,
-    IReadOnlyList<string> TestProjects,
+    IReadOnlyList<WorkspacePathInfo> TestProjects,
     AppStatusData? ActiveAppSession,
     IReadOnlyList<OperationStatusData> ActiveOperations,
     IReadOnlyList<string> SupportedPolicies,
-    IReadOnlyDictionary<string, object?>? ConfigSnapshot);
+    IReadOnlyDictionary<string, object?>? ConfigSnapshot,
+    WorkspaceHistoryData? History);
 
 public sealed record HealthData(
     string Status,
@@ -126,6 +135,7 @@ public sealed record HealthData(
 
 public sealed record AppStatusData(
     string SessionId,
+    string CorrelationId,
     AppLifecycleState State,
     AppRunMode Mode,
     string ProjectPath,
@@ -142,6 +152,7 @@ public sealed record AppStatusData(
 
 public sealed record AppStartData(
     string SessionId,
+    string CorrelationId,
     bool Reused,
     AppRunMode Mode,
     AppLifecycleState State,
@@ -153,6 +164,7 @@ public sealed record AppStartData(
 
 public sealed record AppStopData(
     string SessionId,
+    string CorrelationId,
     bool Stopped,
     AppLifecycleState FinalState,
     bool Graceful,
@@ -161,6 +173,7 @@ public sealed record AppStopData(
 
 public sealed record AppWaitData(
     string SessionId,
+    string CorrelationId,
     AppWaitCondition Condition,
     bool Satisfied,
     bool TimedOut,
@@ -182,8 +195,11 @@ public sealed record AppPreemptionData(
     string? StoppedSessionId,
     bool ResumePlanned);
 
+public sealed record OperationArtifactData(string Kind, string Path, string RelativePath);
+
 public sealed record OperationStartData(
     string OperationId,
+    string CorrelationId,
     OperationType OperationType,
     OperationState State,
     string TargetPath,
@@ -204,6 +220,7 @@ public sealed record TestSummaryData(
 
 public sealed record OperationStatusData(
     string OperationId,
+    string CorrelationId,
     OperationType OperationType,
     OperationState State,
     DateTimeOffset StartedUtc,
@@ -214,17 +231,21 @@ public sealed record OperationStatusData(
     string? Runner,
     ResumeOutcomeData ResumeOutcome,
     long LastCursor,
-    TestSummaryData? TestSummary);
+    TestSummaryData? TestSummary,
+    IReadOnlyList<OperationArtifactData> Artifacts);
 
 public sealed record OperationWaitData(
     string OperationId,
+    string CorrelationId,
     bool Completed,
     bool TimedOut,
     OperationState State,
     long ElapsedMs,
     int? ExitCode,
     string Summary,
-    ResumeOutcomeData ResumeOutcome);
+    ResumeOutcomeData ResumeOutcome,
+    TestSummaryData? TestSummary,
+    IReadOnlyList<OperationArtifactData> Artifacts);
 
 public sealed record OperationLogsData(
     string OperationId,

@@ -8,7 +8,15 @@ public sealed class WorkspaceExecutionLock
 
     public async Task<MutationLease> AcquireMutationAsync(string reason, CancellationToken cancellationToken)
     {
-        await _semaphore.WaitAsync(cancellationToken);
+        if (!await _semaphore.WaitAsync(0, cancellationToken))
+        {
+            var currentHolder = GetCurrentHolder() ?? "unknown";
+            throw new ToolInvocationException(
+                "OperationInProgress",
+                $"Workspace is busy with '{currentHolder}'. Wait for it to finish or inspect its status/logs before starting another mutating tool.",
+                new { currentHolder });
+        }
+
         lock (_gate)
         {
             _currentHolder = reason;

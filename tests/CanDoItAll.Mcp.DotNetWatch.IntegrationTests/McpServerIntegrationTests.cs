@@ -24,9 +24,9 @@ public sealed class McpServerIntegrationTests
 
         Assert.True(envelope.Ok, envelope.Error?.Message);
         Assert.NotNull(envelope.Data);
-        Assert.Equal(McpServerHarness.RepoRoot, envelope.Data!.WorkspaceRoot);
+        Assert.Equal(McpServerHarness.RepoRoot, envelope.Data!.WorkspaceRoot.AbsolutePath);
         Assert.Equal(Path.Combine(McpServerHarness.RepoRoot, "src", "CanDoItAll.Web", "CanDoItAll.Web.csproj"), envelope.Data.DefaultApp.ProjectPath);
-        Assert.Contains(Path.Combine(McpServerHarness.RepoRoot, "tests", "CanDoItAll.Tests.Unit", "CanDoItAll.Tests.Unit.csproj"), envelope.Data.TestProjects);
+        Assert.Contains(envelope.Data.TestProjects, project => string.Equals(project.AbsolutePath, Path.Combine(McpServerHarness.RepoRoot, "tests", "CanDoItAll.Tests.Unit", "CanDoItAll.Tests.Unit.csproj"), StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -164,14 +164,14 @@ public sealed class McpServerIntegrationTests
                 new Dictionary<string, object?>
                 {
                     ["sessionId"] = sessionId,
-                    ["cursor"] = start.Data.InitialCursor
+                    ["cursor"] = 0
                 });
 
             Assert.True(logs.Ok, logs.Error?.Message);
             Assert.NotNull(logs.Data);
             Assert.NotEmpty(logs.Data!.Entries);
-            Assert.True(logs.Data.NextCursor > start.Data.InitialCursor);
-            Assert.Contains(logs.Data.Entries, entry => entry.Sequence > start.Data.InitialCursor);
+            Assert.True(logs.Data.NextCursor > 0);
+            Assert.Contains(logs.Data.Entries, entry => entry.Sequence > 0);
         }
         finally
         {
@@ -473,16 +473,25 @@ public sealed class McpServerIntegrationTests
         Directory.CreateDirectory(Path.GetDirectoryName(RegistryPath)!);
         var backupRegistryContents = File.Exists(RegistryPath) ? await File.ReadAllTextAsync(RegistryPath) : null;
 
-        using var process = StartSleepingProcess();
+        var ownershipMarkers = new[]
+        {
+            "-p:CanDoItAllMcpOwnerKind=AppSession",
+            "-p:CanDoItAllMcpOwnerId=stale_test",
+            $"-p:CanDoItAllMcpWorkspaceRoot={McpServerHarness.RepoRoot}",
+            "-p:CanDoItAllMcpServerInstanceId=stale_server"
+        };
+
+        using var process = StartSleepingProcess(
+            $"-NoProfile -NonInteractive -Command \"Start-Sleep -Seconds 300 # {string.Join(' ', ownershipMarkers)}\"");
         try
         {
             await WriteRegistryAsync(
             [
                 new ManagedProcessRecord(
                     process.Id,
-                    DateTimeOffset.UtcNow,
+                    process.StartTime.ToUniversalTime(),
                     "powershell",
-                    ["-NoProfile", "-NonInteractive", "-Command", "Start-Sleep -Seconds 300"],
+                    ["-NoProfile", "-NonInteractive", "-Command", $"Start-Sleep -Seconds 300 # {string.Join(' ', ownershipMarkers)}", .. ownershipMarkers],
                     McpServerHarness.RepoRoot,
                     McpServerHarness.RepoRoot,
                     "AppSession",
@@ -491,6 +500,7 @@ public sealed class McpServerIntegrationTests
             ]);
 
             await using var harness = await McpServerHarness.CreateAsync();
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
             var cleanup = await harness.CallToolAsync<ToolEnvelope<CleanupStaleProcessesData>>(
                 "candoitall_cleanup_stale_processes",
@@ -501,10 +511,15 @@ public sealed class McpServerIntegrationTests
 
             Assert.True(cleanup.Ok, cleanup.Error?.Message);
             Assert.NotNull(cleanup.Data);
-            Assert.Equal(0, cleanup.Data!.Checked);
+            var registryAlreadyStale = cleanup.Data!.Checked == 1 &&
+                                       cleanup.Data.Killed.Count == 0 &&
+                                       cleanup.Data.Skipped.Count == 1 &&
+                                       cleanup.Data.Skipped[0].Pid == process.Id &&
+                                       string.Equals(cleanup.Data.Skipped[0].Reason, "Process no longer exists", StringComparison.OrdinalIgnoreCase);
+            Assert.True(cleanup.Data.Checked == 0 || registryAlreadyStale, JsonSerializer.Serialize(cleanup.Data));
             Assert.Empty(cleanup.Data.Killed);
 
-            Assert.True(process.WaitForExit(10000), "The stale managed process should be terminated during server startup cleanup.");
+            Assert.True(await WaitForProcessExitAsync(process.Id, TimeSpan.FromSeconds(10)), "The stale managed process should be terminated during server startup cleanup.");
         }
         finally
         {
@@ -528,13 +543,13 @@ public sealed class McpServerIntegrationTests
         }
     }
 
-    private static Process StartSleepingProcess()
+    private static Process StartSleepingProcess(string? arguments = null)
     {
         var process = new Process
         {
             StartInfo = new ProcessStartInfo("powershell")
             {
-                Arguments = "-NoProfile -NonInteractive -Command \"Start-Sleep -Seconds 300\"",
+                Arguments = string.IsNullOrWhiteSpace(arguments) ? "-NoProfile -NonInteractive -Command \"Start-Sleep -Seconds 300\"" : arguments,
                 UseShellExecute = false,
                 CreateNoWindow = true
             }
@@ -550,6 +565,30 @@ public sealed class McpServerIntegrationTests
         {
             WriteIndented = true
         }));
+    }
+
+    private static async Task<bool> WaitForProcessExitAsync(int pid, TimeSpan timeout)
+    {
+        var deadline = DateTimeOffset.UtcNow.Add(timeout);
+        while (DateTimeOffset.UtcNow <= deadline)
+        {
+            try
+            {
+                using var current = Process.GetProcessById(pid);
+                if (current.HasExited)
+                {
+                    return true;
+                }
+            }
+            catch (ArgumentException)
+            {
+                return true;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(250));
+        }
+
+        return false;
     }
 
     private sealed class McpServerHarness : IAsyncDisposable

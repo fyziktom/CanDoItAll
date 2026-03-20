@@ -1,5 +1,11 @@
 # Implementation Prompts
 
+Status on 2026-03-20:
+
+- Prompt 1 executed and validated.
+- Prompt 2 executed and validated.
+- Prompt 3 executed and validated.
+
 ## Prompt 1: Safety blockers
 
 ```text

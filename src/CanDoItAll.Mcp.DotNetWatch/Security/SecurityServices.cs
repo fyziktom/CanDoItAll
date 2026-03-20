@@ -43,7 +43,7 @@ public sealed class PathGuard(RuntimeConfiguration configuration)
 
     public void EnsureInsideWorkspace(string path)
     {
-        if (!path.StartsWith(configuration.WorkspaceRoot, StringComparison.OrdinalIgnoreCase))
+        if (!IsPathUnderRoot(path, configuration.WorkspaceRoot))
         {
             throw new ToolInvocationException("PathOutsideWorkspace", $"Path '{path}' resolves outside the workspace.", new { path });
         }
@@ -51,10 +51,17 @@ public sealed class PathGuard(RuntimeConfiguration configuration)
 
     public void EnsureAllowedProject(string path)
     {
-        if (!configuration.AllowedProjectRoots.Any(root => path.StartsWith(root, StringComparison.OrdinalIgnoreCase)))
+        if (!configuration.AllowedProjectRoots.Any(root => IsPathUnderRoot(path, root)))
         {
             throw new ToolInvocationException("SecurityViolation", $"Path '{path}' is not inside an allowed project root.", new { path, allowedRoots = configuration.AllowedProjectRoots });
         }
+    }
+
+    private static bool IsPathUnderRoot(string path, string root)
+    {
+        var normalizedRoot = Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar;
+        var normalizedPath = Path.TrimEndingDirectorySeparator(path) + Path.DirectorySeparatorChar;
+        return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
     }
 }
 

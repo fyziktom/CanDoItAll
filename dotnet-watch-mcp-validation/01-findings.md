@@ -1,5 +1,28 @@
 # Findings
 
+## Resolution status
+
+Status on 2026-03-20: resolved.
+
+Current validation state:
+
+- `tests/CanDoItAll.Mcp.DotNetWatch.Tests`: 11/11 green
+- `tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests`: 19/19 green
+
+Resolved outcomes:
+
+- `ContinueIfSafe` is implemented and no longer throws `UnsupportedPolicy`.
+- `app_start(waitFor=...)` now surfaces unsatisfied wait outcomes.
+- stale cleanup verifies ownership markers and avoids unrelated processes.
+- graceful-then-force shutdown is split into Windows and Unix-aware terminators.
+- wait semantics cover `Ready`, `RestartCompleted`, stable health, quiet baseline, and quiet plus health coordination.
+- `workspace_info` returns relative paths, optional history, and redacted config snapshots.
+- `tests_run` accepts `environmentOverlay`, auto-detects the runner, reports artifacts, and build operations no longer report a runner.
+- config-backed behavior such as log rotation and config-driven defaults is enforced.
+- validation coverage now includes bootstrap fail-fast, stdout discipline, session reuse/conflict, quiet wait, build failure plus resume, `dotnet test` proof, stale-cleanup safety, correlation consistency, and actionable busy-workspace behavior.
+
+The audit findings below are preserved as historical review notes from the pre-repair state.
+
 ## Summary verdict
 
 The new dotnet watch MCP server is partially implemented, but it does not yet satisfy the CodexPack contract or its validation matrix.

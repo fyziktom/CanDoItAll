@@ -27,9 +27,11 @@ public sealed partial class AppSession
     public AppSession(
         string sessionId,
         AppStartTemplate template,
+        string correlationId,
         RingLogBuffer logBuffer)
     {
         SessionId = sessionId;
+        CorrelationId = correlationId;
         ProjectPath = template.ProjectPath;
         WorkingDirectory = template.WorkingDirectory;
         Mode = template.Mode;
@@ -47,6 +49,8 @@ public sealed partial class AppSession
     }
 
     public string SessionId { get; }
+
+    public string CorrelationId { get; }
 
     public string ProjectPath { get; }
 
@@ -217,6 +221,7 @@ public sealed partial class AppSession
         {
             return new AppStatusData(
                 SessionId,
+                CorrelationId,
                 State,
                 Mode,
                 ProjectPath,
@@ -274,6 +279,7 @@ public sealed partial class AppSession
 
 public sealed class AppRuntimeManager(
     RuntimeConfiguration configuration,
+    ServerInstanceIdentity serverInstanceIdentity,
     EnvironmentOverlayFilter environmentOverlayFilter,
     ProcessSupervisor processSupervisor,
     ILogger<AppRuntimeManager> logger)
@@ -341,8 +347,8 @@ public sealed class AppRuntimeManager(
         }
 
         var sessionId = $"app_{Guid.NewGuid():N}";
-        var session = new AppSession(sessionId, template, new RingLogBuffer(configuration.LogBufferCapacity));
         var correlationId = $"corr_{Guid.NewGuid():N}";
+        var session = new AppSession(sessionId, template, correlationId, new RingLogBuffer(configuration.LogBufferCapacity));
 
         lock (_gate)
         {
@@ -388,7 +394,7 @@ public sealed class AppRuntimeManager(
         if (process is null)
         {
             session.MarkStopped(session.LastExitCode, "Session is already stopped.");
-            return new AppStopData(session.SessionId, true, AppLifecycleState.Stopped, true, [], session.LogBuffer.CurrentSequence);
+            return new AppStopData(session.SessionId, session.CorrelationId, true, AppLifecycleState.Stopped, true, [], session.LogBuffer.CurrentSequence);
         }
 
         session.MarkStopping(reason);
@@ -405,7 +411,7 @@ public sealed class AppRuntimeManager(
             _lastSession = session;
         }
 
-        return new AppStopData(session.SessionId, true, AppLifecycleState.Stopped, stopResult.Graceful, stopResult.KilledPids, session.LogBuffer.CurrentSequence);
+        return new AppStopData(session.SessionId, session.CorrelationId, true, AppLifecycleState.Stopped, stopResult.Graceful, stopResult.KilledPids, session.LogBuffer.CurrentSequence);
     }
 
     private ManagedProcessStartInfo BuildProcessStartInfo(AppStartTemplate template, AppSession session, string correlationId)
@@ -415,6 +421,7 @@ public sealed class AppRuntimeManager(
             template.EnvironmentOverlay.ToDictionary(static pair => pair.Key, static pair => (string?)pair.Value, StringComparer.OrdinalIgnoreCase),
             configuration.UsePollingFileWatcher);
 
+        var ownershipMarkers = ManagedProcessMarkers.CreateApplicationArguments("app", session.SessionId, configuration.WorkspaceRoot, serverInstanceIdentity.Id);
         string[] arguments;
         if (template.Mode == AppRunMode.WatchRun)
         {
@@ -431,9 +438,10 @@ public sealed class AppRuntimeManager(
                 watchArguments.Add(template.LaunchProfile);
             }
 
-            if (template.Arguments.Count > 0)
+            if (ownershipMarkers.Count > 0 || template.Arguments.Count > 0)
             {
                 watchArguments.Add("--");
+                watchArguments.AddRange(ownershipMarkers);
                 watchArguments.AddRange(template.Arguments);
             }
 
@@ -454,9 +462,10 @@ public sealed class AppRuntimeManager(
                 runArguments.Add(template.LaunchProfile);
             }
 
-            if (template.Arguments.Count > 0)
+            if (ownershipMarkers.Count > 0 || template.Arguments.Count > 0)
             {
                 runArguments.Add("--");
+                runArguments.AddRange(ownershipMarkers);
                 runArguments.AddRange(template.Arguments);
             }
 

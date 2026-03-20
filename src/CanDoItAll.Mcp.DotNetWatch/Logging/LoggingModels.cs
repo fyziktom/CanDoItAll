@@ -107,8 +107,31 @@ public sealed class FileLogStore(RuntimeConfiguration configuration)
 
         lock (fileLock)
         {
+            RotateIfNeeded(path);
             File.AppendAllText(path, JsonSerializer.Serialize(entry, _serializerOptions) + Environment.NewLine);
         }
+    }
+
+    private void RotateIfNeeded(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        var fileInfo = new FileInfo(path);
+        if (fileInfo.Length < configuration.MaxLogFileSizeBytes)
+        {
+            return;
+        }
+
+        var rotatedPath = $"{path}.1";
+        if (File.Exists(rotatedPath))
+        {
+            File.Delete(rotatedPath);
+        }
+
+        File.Move(path, rotatedPath);
     }
 
     private static string Sanitize(string value)

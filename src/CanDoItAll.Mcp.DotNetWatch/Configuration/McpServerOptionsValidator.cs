@@ -41,6 +41,11 @@ public sealed class McpServerOptionsValidator : IValidateOptions<McpServerOption
             failures.Add("Logs:BufferCapacity must be greater than zero.");
         }
 
+        if (options.Logs.MaxFileSizeMb <= 0)
+        {
+            failures.Add("Logs:MaxFileSizeMb must be greater than zero.");
+        }
+
         if (options.Health.Enabled && options.Health.Urls.Length == 0)
         {
             failures.Add("Health:Urls must contain at least one value when Health:Enabled is true.");

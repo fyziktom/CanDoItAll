@@ -1,5 +1,12 @@
 # Repair Plan
 
+Status on 2026-03-20:
+
+- Phase 1 completed.
+- Phase 2 completed.
+- Phase 3 completed.
+- Phase 4 completed.
+
 ## Phase 1: Safety and contract blockers
 
 Priority: release-blocking

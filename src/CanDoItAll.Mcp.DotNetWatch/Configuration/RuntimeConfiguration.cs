@@ -48,6 +48,7 @@ public sealed class RuntimeConfiguration
         LogBufferCapacity = options.Logs.BufferCapacity;
         PersistLogsToFile = options.Logs.PersistToFile;
         LogFolder = ResolvePath(WorkspaceRoot, options.Logs.Folder);
+        MaxLogFileSizeBytes = Math.Max(1, options.Logs.MaxFileSizeMb) * 1024L * 1024L;
         RedactionEnabled = options.Logs.RedactionEnabled;
         IncludeSystemEventsInLogs = options.Logs.IncludeSystemEvents;
 
@@ -122,6 +123,8 @@ public sealed class RuntimeConfiguration
 
     public string LogFolder { get; }
 
+    public long MaxLogFileSizeBytes { get; }
+
     public bool RedactionEnabled { get; }
 
     public bool IncludeSystemEventsInLogs { get; }
@@ -156,26 +159,39 @@ public sealed class RuntimeConfiguration
         {
             ["serverName"] = ServerName,
             ["workspaceRoot"] = WorkspaceRoot,
+            ["workspaceRootRelative"] = ".",
             ["solutionPath"] = SolutionPath,
+            ["solutionPathRelative"] = GetRelativePath(SolutionPath),
             ["defaultApp"] = new Dictionary<string, object?>
             {
                 ["projectPath"] = DefaultApp.ProjectPath,
+                ["projectPathRelative"] = GetRelativePath(DefaultApp.ProjectPath),
                 ["workingDirectory"] = DefaultApp.WorkingDirectory,
+                ["workingDirectoryRelative"] = GetRelativePath(DefaultApp.WorkingDirectory),
                 ["mode"] = DefaultApp.Mode.ToString(),
                 ["configuration"] = DefaultApp.Configuration,
                 ["framework"] = DefaultApp.Framework,
                 ["launchProfile"] = DefaultApp.LaunchProfile,
                 ["arguments"] = DefaultApp.Arguments,
                 ["urls"] = DefaultApp.Urls,
-                ["environmentOverlay"] = DefaultApp.EnvironmentOverlay
+                ["environmentOverlay"] = DefaultApp.EnvironmentOverlay.ToDictionary(static pair => pair.Key, static _ => "***redacted***", StringComparer.OrdinalIgnoreCase)
             },
             ["healthUrls"] = HealthUrls.Select(url => url.ToString()).ToArray(),
             ["buildDefaultTargetPath"] = BuildDefaultTargetPath,
+            ["buildDefaultTargetPathRelative"] = GetRelativePath(BuildDefaultTargetPath),
             ["testDefaultTargetPath"] = TestDefaultTargetPath,
+            ["testDefaultTargetPathRelative"] = string.IsNullOrWhiteSpace(TestDefaultTargetPath) ? null : GetRelativePath(TestDefaultTargetPath),
             ["testProjects"] = TestProjectPaths.ToArray(),
+            ["testProjectsRelative"] = TestProjectPaths.Select(GetRelativePath).ToArray(),
             ["allowedProjectRoots"] = AllowedProjectRoots.ToArray(),
+            ["allowedProjectRootsRelative"] = AllowedProjectRoots.Select(GetRelativePath).ToArray(),
             ["allowedEnvironmentKeys"] = AllowedEnvironmentKeys.ToArray()
         };
+    }
+
+    public string GetRelativePath(string path)
+    {
+        return Path.GetRelativePath(WorkspaceRoot, path);
     }
 
     private static string ResolvePath(string basePath, string path)
