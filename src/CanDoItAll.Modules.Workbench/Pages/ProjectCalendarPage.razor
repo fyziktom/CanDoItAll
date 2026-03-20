@@ -16,48 +16,90 @@ tests: component:ProjectCalendarPageTests, e2e:workbench-calendar
 
 @if (surface is null)
 {
-    <p class="text-sm text-slate-500">Loading project calendar...</p>
+    <PageScaffold>
+        <Header>
+            <PageHeader Eyebrow="Workbench"
+                        Title="Project calendar"
+                        Description="Loading the linked schedule surface." />
+        </Header>
+        <ChildContent>
+            <LoadingState Eyebrow="Loading"
+                          Title="Preparing the calendar"
+                          Description="The project events surface is restoring the saved view and selection state." />
+        </ChildContent>
+    </PageScaffold>
 }
 else
 {
-    <div class="space-y-6">
-        <PageHeader Eyebrow="Workbench"
-                    Title="@($"{surface.ProjectName} calendar")"
-                    Description="Review phase windows, validation activity, tests, and custom milestones in one linked schedule surface." />
+    <PageScaffold>
+        <Header>
+            <PageHeader Eyebrow="Workbench"
+                        Title="@($"{surface.ProjectName} calendar")"
+                        Description="Review phase windows, validation activity, tests, and custom milestones in one linked schedule surface." />
+        </Header>
 
-        <div class="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-            <SectionCard Title="Project calendar" Description="The JavaScript calendar wrapper owns rendering while selection, view persistence, and artifact opening stay typed in .NET.">
-                <ProjectEventsCalendar Surface="surface"
-                                       SelectedEventId="selectedEventId"
-                                       SelectedEventChanged="HandleEventSelected"
-                                       OpenEventRequested="HandleOpenEventAsync"
-                                       ViewStateChanged="HandleViewStateChangedAsync" />
-            </SectionCard>
+        <ChildContent>
+            <SummaryTiles>
+                <SummaryTile Label="Events" Value="@surface.Events.Count.ToString()" HelperText="Scheduled project items on the current calendar surface." />
+                <SummaryTile Label="Linked artifacts" Value="@surface.Events.Count(item => !string.IsNullOrWhiteSpace(item.Route)).ToString()" HelperText="Events that can open a related artifact directly." Tone="info" />
+                <SummaryTile Label="Selected item" Value="@SelectedEventLabel" HelperText="Current event focus for the detail pane." />
+                <SummaryTile Label="Statuses" Value="@surface.Events.Select(item => item.Status).Distinct(StringComparer.OrdinalIgnoreCase).Count().ToString()" HelperText="Distinct status labels in the current schedule." />
+            </SummaryTiles>
 
-            <SectionCard Title="Selected event" Description="Calendar items open their linked artifacts inside the internal workbench.">
-                @if (selectedEvent is null)
-                {
-                    <p class="text-sm text-slate-500">Select an event to inspect it and open the linked artifact.</p>
-                }
-                else
-                {
-                    <div class="space-y-4">
-                        <div>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <p class="text-sm font-semibold text-slate-900">@selectedEvent.Title</p>
-                                <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]" style="@($"background:{selectedEvent.AccentColor}18;color:{selectedEvent.AccentColor}")">@selectedEvent.ObjectType</span>
+            <div class="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+                <SectionCard Title="Project calendar" Description="The JavaScript calendar wrapper owns rendering while selection, view persistence, and artifact opening stay typed in .NET.">
+                    <ProjectEventsCalendar Surface="surface"
+                                           SelectedEventId="selectedEventId"
+                                           SelectedEventChanged="HandleEventSelected"
+                                           OpenEventRequested="HandleOpenEventAsync"
+                                           ViewStateChanged="HandleViewStateChangedAsync" />
+                </SectionCard>
+
+                <SectionCard Title="Selected event" Description="Calendar items open their linked artifacts inside the internal workbench.">
+                    @if (selectedEvent is null)
+                    {
+                        <EmptyState Eyebrow="No selection"
+                                    Title="Choose an event"
+                                    Description="Select an event on the calendar to inspect its timing, state, and linked artifact route." />
+                    }
+                    else
+                    {
+                        <div class="space-y-4">
+                            <div class="space-y-2">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <p class="text-lg font-semibold text-slate-950">@selectedEvent.Title</p>
+                                    <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]" style="@($"background:{selectedEvent.AccentColor}18;color:{selectedEvent.AccentColor}")">@selectedEvent.ObjectType</span>
+                                </div>
+                                <p class="text-sm text-slate-600">@selectedEvent.Status</p>
                             </div>
-                            <p class="mt-1 text-xs text-slate-500">@selectedEvent.StartUtc.LocalDateTime:g -> @selectedEvent.EndUtc.LocalDateTime:g</p>
-                            <p class="mt-1 text-xs text-slate-500">@selectedEvent.Status</p>
+
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <div class="rounded-[1.2rem] bg-slate-50 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Start</p>
+                                    <p class="mt-2 text-sm font-semibold text-slate-950">@selectedEvent.StartUtc.LocalDateTime:g</p>
+                                </div>
+                                <div class="rounded-[1.2rem] bg-slate-50 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">End</p>
+                                    <p class="mt-2 text-sm font-semibold text-slate-950">@selectedEvent.EndUtc.LocalDateTime:g</p>
+                                </div>
+                            </div>
+
+                            <div class="rounded-[1.2rem] bg-slate-50 px-4 py-3">
+                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Route</p>
+                                <p class="mt-2 break-all text-sm text-slate-700">@selectedEvent.Route</p>
+                            </div>
+
+                            <button type="button"
+                                    class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                                    @onclick="() => Navigation.NavigateTo(selectedEvent.Route)">
+                                Open linked artifact
+                            </button>
                         </div>
-                        <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="() => Navigation.NavigateTo(selectedEvent.Route)">
-                            Open linked artifact
-                        </button>
-                    </div>
-                }
-            </SectionCard>
-        </div>
-    </div>
+                    }
+                </SectionCard>
+            </div>
+        </ChildContent>
+    </PageScaffold>
 }
 
 @code {
@@ -68,6 +110,7 @@ else
     private Guid? selectedEventId;
 
     private ProjectCalendarEvent? selectedEvent => surface?.Events.FirstOrDefault(item => item.Id == selectedEventId);
+    private string SelectedEventLabel => selectedEvent?.ObjectType.ToString() ?? "None";
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 

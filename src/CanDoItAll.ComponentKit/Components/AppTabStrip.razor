@@ -1,6 +1,6 @@
 @using CanDoItAll.SharedKernel
 
-<div class="space-y-3 rounded-[1.75rem] border border-white/80 bg-white/75 p-3 shadow-lg shadow-slate-200/40 backdrop-blur">
+<div class="space-y-3 rounded-[1.5rem] border border-white/80 bg-white/80 p-3 shadow-lg shadow-slate-200/40 backdrop-blur @(Compact ? "lg:p-3" : "lg:p-4")">
     <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div class="flex min-w-0 flex-wrap gap-2">
             @foreach (var tab in InlineTabs)
@@ -33,7 +33,7 @@
                                         @onclick="() => Activate.InvokeAsync(tab.TabId)">
                                     <span class="min-w-0">
                                         <span class="block truncate font-semibold text-slate-900">@tab.Title</span>
-                                        <span class="block truncate text-xs text-slate-500">@tab.TabGroup · @tab.Route</span>
+                                        <span class="block truncate text-xs text-slate-500">@tab.TabGroup / @tab.Route</span>
                                     </span>
                                     @if (tab.IsSleeping)
                                     {
@@ -62,7 +62,7 @@
                                         @onclick="() => ReopenRecent.InvokeAsync(recent.TabId)">
                                     <span class="min-w-0">
                                         <span class="block truncate font-semibold text-slate-900">@recent.Title</span>
-                                        <span class="block truncate text-xs text-slate-500">@recent.TabGroup · @recent.Route</span>
+                                        <span class="block truncate text-xs text-slate-500">@recent.TabGroup / @recent.Route</span>
                                     </span>
                                     <span class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">restore</span>
                                 </button>
@@ -74,7 +74,7 @@
         </div>
     </div>
 
-    @if (ActiveTab is not null)
+    @if (ShowActiveSummary && ActiveTab is not null)
     {
         <div class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
             <div class="min-w-0">
@@ -129,6 +129,12 @@
 
     [Parameter]
     public string? ActiveTabId { get; set; }
+
+    [Parameter]
+    public bool ShowActiveSummary { get; set; } = true;
+
+    [Parameter]
+    public bool Compact { get; set; }
 
     [Parameter]
     public EventCallback<string> Activate { get; set; }

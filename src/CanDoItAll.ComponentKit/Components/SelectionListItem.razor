@@ -1,0 +1,90 @@
+<div class="@ResolveContainerClass()">
+    <div class="flex items-start gap-3">
+        <button type="button"
+                class="min-w-0 flex-1 text-left"
+                data-testid="@DataTestId"
+                @onclick="HandleSelectAsync">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="min-w-0 space-y-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <p class="truncate text-sm font-semibold text-slate-950">@Title</p>
+                        @if (!string.IsNullOrWhiteSpace(Eyebrow))
+                        {
+                            <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">@Eyebrow</span>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Meta))
+                    {
+                        <p class="text-xs text-slate-500">@Meta</p>
+                    }
+                </div>
+
+                @if (Status is not null)
+                {
+                    <div class="shrink-0">
+                        @Status
+                    </div>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Summary))
+            {
+                <p class="mt-3 text-sm leading-6 text-slate-600">@Summary</p>
+            }
+
+            @if (ChildContent is not null)
+            {
+                <div class="mt-3">
+                    @ChildContent
+                </div>
+            }
+        </button>
+
+        @if (Actions is not null)
+        {
+            <div class="shrink-0">
+                @Actions
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    [Parameter]
+    public string? Eyebrow { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Meta { get; set; }
+
+    [Parameter]
+    public string? Summary { get; set; }
+
+    [Parameter]
+    public string? DataTestId { get; set; }
+
+    [Parameter]
+    public RenderFragment? Status { get; set; }
+
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public EventCallback OnSelect { get; set; }
+
+    private Task HandleSelectAsync() => OnSelect.InvokeAsync();
+
+    private string ResolveContainerClass()
+        => IsSelected
+            ? "rounded-[1.4rem] border border-sky-300 bg-sky-50/80 p-4 shadow-sm shadow-sky-100"
+            : "rounded-[1.4rem] border border-slate-200 bg-slate-50/90 p-4 transition hover:border-slate-300 hover:bg-slate-50";
+}

@@ -1,13 +1,5 @@
 @page "/resources"
-@* codex-capsule
-kind: page
-name: ResourcesPage
-summary: Registers typed resources, secret references, and validation metadata for projects.
-owns: resource-list, resource-editor, connector-metadata
-deps: ResourcesService, ProjectsService, SecretService
-risks: wrong-project-link, secret-reference-mismatch
-tests: component:ResourcesPageTests, e2e:resources-smoke
-*@
+@using CanDoItAll.ComponentKit.Components
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Security
 @inject ResourcesService ResourcesService
@@ -16,270 +8,355 @@ tests: component:ResourcesPageTests, e2e:resources-smoke
 
 <PageTitle>Resources</PageTitle>
 
-<div class="space-y-6">
-    <PageHeader Eyebrow="Resources"
-                Title="Typed project resources"
-                Description="Register repositories, folders, scripts, links, and secret-backed connectors through one generalized resource model." />
+<PageScaffold>
+    <Header>
+        <PageHeader Eyebrow="Resources"
+                    Title="Typed project resources"
+                    Description="Register repositories, folders, scripts, links, and secret-backed connectors through one shared registry.">
+            <Actions>
+                <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">New resource</button>
+            </Actions>
+        </PageHeader>
+    </Header>
 
-    <div class="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-        <SectionCard Title="Registered resources" Description="Every entry below is backed by the resource registry instead of hardcoded page-local state.">
-            <div class="space-y-3">
-                <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">
-                    New resource
-                </button>
+    <ChildContent>
+        <SummaryTiles>
+            <SummaryTile Label="Resources" Value="@resources.Count.ToString()" HelperText="Registered resources across all projects." />
+            <SummaryTile Label="Visible" Value="@FilteredResources.Count.ToString()" HelperText="Resources matching the current filters." Tone="info" />
+            <SummaryTile Label="Projects" Value="@resources.Select(item => item.ProjectId).Distinct().Count().ToString()" HelperText="Projects currently represented in the registry." />
+            <SummaryTile Label="Validated" Value="@resources.Count(item => item.ValidationStatus == ResourceValidationStatus.Valid).ToString()" HelperText="Entries already marked valid." Tone="success" />
+        </SummaryTiles>
 
-                @foreach (var resource in resources)
-                {
-                    <button type="button" class="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left" @onclick="() => EditAsync(resource.Id)">
-                        <span>
-                            <span class="block text-sm font-semibold text-slate-900">@resource.Name</span>
-                            <span class="block text-xs text-slate-500">@resource.ProjectName - @resource.ResourceKind</span>
-                            <span class="block truncate text-xs text-slate-500">@resource.LocationOrIdentifier</span>
-                        </span>
-                        <StatusBadge Tone="@ResolveTone(resource.ValidationStatus)" Text="@resource.ValidationStatus.ToString()" />
-                    </button>
-                }
-            </div>
-        </SectionCard>
-
-        <SectionCard Title="Resource editor" Description="Secrets stay referenced, not duplicated, and validation/indexing capabilities remain explicit flags.">
-            <EditForm Model="editor" OnValidSubmit="SaveAsync">
-                <div class="space-y-4">
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Project</label>
-                            <InputSelect @bind-Value="editor.ProjectId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-project-select">
-                                <option value="">Select a project</option>
-                                @foreach (var project in projects)
-                                {
-                                    <option value="@project.Id">@project.Name</option>
-                                }
-                            </InputSelect>
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Kind</label>
-                            <InputSelect @bind-Value="editor.ResourceKind" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-kind-select">
+        <ListDetailShell ListPaneWidth="25rem">
+            <ListHeader>
+                <ListPanelHeader Title="Resource registry"
+                                 Description="Select a resource to continue editing it, or start a new typed entry."
+                                 Count="@($"{FilteredResources.Count} item(s)")">
+                    <Filters>
+                        <FilterBar ResultText="@($"{FilteredResources.Count} matching resource(s)")">
+                            <input @bind="resourceSearch" @bind:event="oninput" class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700" placeholder="Search resources" />
+                            <InputSelect @bind-Value="kindFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                                <option value="">All kinds</option>
                                 @foreach (var kind in Enum.GetValues<ResourceKind>())
                                 {
-                                    <option value="@kind">@kind</option>
+                                    <option value="@kind.ToString()">@kind</option>
                                 }
                             </InputSelect>
+                            <InputSelect @bind-Value="validationFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                                <option value="">All validation states</option>
+                                @foreach (var status in Enum.GetValues<ResourceValidationStatus>())
+                                {
+                                    <option value="@status.ToString()">@status</option>
+                                }
+                            </InputSelect>
+                            <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ResetFilters">Reset</button>
+                        </FilterBar>
+                    </Filters>
+                </ListPanelHeader>
+            </ListHeader>
+
+            <ListContent>
+                @if (FilteredResources.Count == 0)
+                {
+                    <EmptyState Eyebrow="No resources"
+                                Title="Register the first typed resource"
+                                Description="Resources appear here once they have been saved through the shared editor.">
+                        <Actions>
+                            <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">New resource</button>
+                        </Actions>
+                    </EmptyState>
+                }
+                else
+                {
+                    <div class="space-y-3">
+                        @foreach (var resource in FilteredResources)
+                        {
+                            <SelectionListItem Title="@resource.Name"
+                                               Eyebrow="@resource.ResourceKind.ToString()"
+                                               Meta="@BuildResourceMeta(resource)"
+                                               Summary="@resource.LocationOrIdentifier"
+                                               IsSelected="@(editor.Id == resource.Id)"
+                                               OnSelect="@(() => EditAsync(resource.Id))">
+                                <Status>
+                                    <StatusBadge Tone="@ResolveTone(resource.ValidationStatus)" Text="@resource.ValidationStatus.ToString()" />
+                                </Status>
+                            </SelectionListItem>
+                        }
+                    </div>
+                }
+            </ListContent>
+
+            <DetailHeader>
+                <div class="space-y-3">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="space-y-1">
+                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Resource editor</p>
+                            <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
+                            <p class="text-sm leading-6 text-slate-600">Keep ownership, connector location, and validation state together in one predictable detail pane.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <StatusBadge Tone="@ResolveTone(editor.ValidationStatus)" Text="@editor.ValidationStatus.ToString()" />
+                            <StatusBadge Tone="neutral" Text="@editor.ResourceKind.ToString()" />
+                            @if (!string.IsNullOrWhiteSpace(SelectedProjectName))
+                            {
+                                <StatusBadge Tone="info" Text="@SelectedProjectName" />
+                            }
                         </div>
                     </div>
 
-                    <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm text-sky-800">
+                    <div class="rounded-[1.35rem] border border-sky-200 bg-sky-50/70 px-4 py-3 text-sm leading-6 text-sky-900">
                         <p class="font-semibold text-sky-950">@Descriptor.DisplayName</p>
                         <p class="mt-1">@Descriptor.Summary</p>
                     </div>
-
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
-                            <InputText @bind-Value="editor.Name" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-name-input" />
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Linked secret</label>
-                            <InputSelect @bind-Value="editor.LinkedSecretId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                                <option value="">None</option>
-                                @foreach (var secret in secrets)
-                                {
-                                    <option value="@secret.Id">@secret.Name</option>
-                                }
-                            </InputSelect>
-                        </div>
-                    </div>
-
-                    @switch (editor.ResourceKind)
-                    {
-                        case ResourceKind.Repository:
-                            <div class="grid gap-4 md:grid-cols-3">
-                                <div class="md:col-span-2">
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Repository URL</label>
-                                    <InputText @bind-Value="editor.RepositoryUrl" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
-                                </div>
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Default branch</label>
-                                    <InputText @bind-Value="editor.DefaultBranch" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                </div>
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Relative path</label>
-                                <InputText @bind-Value="editor.RelativePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                            </div>
-                            break;
-                        case ResourceKind.Folder:
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Folder path</label>
-                                    <InputText @bind-Value="editor.FolderPath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
-                                </div>
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
-                                    <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                </div>
-                            </div>
-                            break;
-                        case ResourceKind.File:
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">File path</label>
-                                    <InputText @bind-Value="editor.FilePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
-                                </div>
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
-                                    <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                </div>
-                            </div>
-                            break;
-                        case ResourceKind.WebLink:
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div class="md:col-span-2">
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">URL</label>
-                                    <InputText @bind-Value="editor.WebUrl" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
-                                </div>
-                                <div class="md:col-span-2">
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Title hint</label>
-                                    <InputText @bind-Value="editor.UrlTitleHint" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                </div>
-                            </div>
-                            break;
-                        case ResourceKind.Ftp:
-                            <div class="grid gap-4 md:grid-cols-4">
-                                <div class="md:col-span-2">
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Host</label>
-                                    <InputText @bind-Value="editor.Host" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
-                                </div>
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Port</label>
-                                    <InputNumber @bind-Value="editor.Port" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                </div>
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">User</label>
-                                    <InputText @bind-Value="editor.UserName" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                </div>
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Remote path</label>
-                                <InputText @bind-Value="editor.RemotePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                            </div>
-                            break;
-                        case ResourceKind.Ssh:
-                            <div class="grid gap-4 md:grid-cols-4">
-                                <div class="md:col-span-2">
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Host</label>
-                                    <InputText @bind-Value="editor.Host" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
-                                </div>
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Port</label>
-                                    <InputNumber @bind-Value="editor.Port" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                </div>
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">User</label>
-                                    <InputText @bind-Value="editor.UserName" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                </div>
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
-                                <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                            </div>
-                            break;
-                        case ResourceKind.PowerShellScript:
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Script path</label>
-                                    <InputText @bind-Value="editor.ScriptPath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
-                                </div>
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
-                                    <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                </div>
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Arguments</label>
-                                <InputText @bind-Value="editor.ScriptArguments" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                            </div>
-                            break;
-                        case ResourceKind.DockerCompose:
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Compose file</label>
-                                    <InputText @bind-Value="editor.ComposeFilePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
-                                </div>
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Service name</label>
-                                    <InputText @bind-Value="editor.ComposeService" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                </div>
-                            </div>
-                            break;
-                        case ResourceKind.SecretLink:
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Secret purpose</label>
-                                <InputText @bind-Value="editor.SecretPurpose" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
-                            </div>
-                            break;
-                        case ResourceKind.PromptLink:
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Prompt reference</label>
-                                    <InputText @bind-Value="editor.PromptReference" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
-                                </div>
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Prompt title hint</label>
-                                    <InputText @bind-Value="editor.PromptTitleHint" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                </div>
-                            </div>
-                            break;
-                    }
-
-                    <div class="rounded-2xl bg-slate-50 px-4 py-3 text-xs text-slate-600">
-                        Stored identifier: @PreviewLocation
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-                        <InputTextArea @bind-Value="editor.Description" class="min-h-20 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                    </div>
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Validation</label>
-                            <InputSelect @bind-Value="editor.ValidationStatus" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                                @foreach (var status in Enum.GetValues<ResourceValidationStatus>())
-                                {
-                                    <option value="@status">@status</option>
-                                }
-                            </InputSelect>
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Sensitivity</label>
-                            <InputSelect @bind-Value="editor.Sensitivity" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                                @foreach (var sensitivity in Enum.GetValues<ResourceSensitivity>())
-                                {
-                                    <option value="@sensitivity">@sensitivity</option>
-                                }
-                            </InputSelect>
-                        </div>
-                    </div>
-                    <div class="grid gap-3 md:grid-cols-2">
-                        <label class="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="editor.SupportsPreview" /> Preview capable</label>
-                        <label class="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="editor.SupportsIndexing" /> Indexing capable</label>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2">
-                        <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" data-testid="resource-save-button">Save resource</button>
-                        <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateNewAsync">Reset</button>
-                        @if (editor.Id.HasValue)
-                        {
-                            <button type="button" class="inline-flex items-center rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700" @onclick="DeleteAsync">Delete</button>
-                        }
-                    </div>
-                    @if (!string.IsNullOrWhiteSpace(message))
-                    {
-                        <p class="text-sm text-emerald-700">@message</p>
-                    }
                 </div>
-            </EditForm>
-        </SectionCard>
-    </div>
-</div>
+            </DetailHeader>
+
+            <DetailContent>
+                <EditForm Model="editor" OnValidSubmit="SaveAsync">
+                    <div class="flex min-h-full flex-col gap-6">
+                        <FormSection Title="Identity and ownership" Description="Link the resource to the correct project and choose its typed shape before editing connector fields.">
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Project</label>
+                                    <InputSelect @bind-Value="editor.ProjectId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-project-select">
+                                        <option value="">Select a project</option>
+                                        @foreach (var project in projects)
+                                        {
+                                            <option value="@project.Id">@project.Name</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Kind</label>
+                                    <InputSelect @bind-Value="editor.ResourceKind" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-kind-select">
+                                        @foreach (var kind in Enum.GetValues<ResourceKind>())
+                                        {
+                                            <option value="@kind">@kind</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
+                                    <InputText @bind-Value="editor.Name" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-name-input" />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Linked secret</label>
+                                    <InputSelect @bind-Value="editor.LinkedSecretId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                        <option value="">None</option>
+                                        @foreach (var secret in secrets)
+                                        {
+                                            <option value="@secret.Id">@secret.Name</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                            </div>
+                        </FormSection>
+
+                        <FormSection Title="Location and connector details" Description="The typed editor only shows the fields that matter for the selected resource kind.">
+                            @switch (editor.ResourceKind)
+                            {
+                                case ResourceKind.Repository:
+                                    <div class="grid gap-4 md:grid-cols-3">
+                                        <div class="md:col-span-2">
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Repository URL</label>
+                                            <InputText @bind-Value="editor.RepositoryUrl" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Default branch</label>
+                                            <InputText @bind-Value="editor.DefaultBranch" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-sm font-medium text-slate-700">Relative path</label>
+                                        <InputText @bind-Value="editor.RelativePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    </div>
+                                    break;
+                                case ResourceKind.Folder:
+                                    <div class="grid gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Folder path</label>
+                                            <InputText @bind-Value="editor.FolderPath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
+                                            <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        </div>
+                                    </div>
+                                    break;
+                                case ResourceKind.File:
+                                    <div class="grid gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">File path</label>
+                                            <InputText @bind-Value="editor.FilePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
+                                            <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        </div>
+                                    </div>
+                                    break;
+                                case ResourceKind.WebLink:
+                                    <div class="grid gap-4">
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">URL</label>
+                                            <InputText @bind-Value="editor.WebUrl" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Title hint</label>
+                                            <InputText @bind-Value="editor.UrlTitleHint" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        </div>
+                                    </div>
+                                    break;
+                                case ResourceKind.Ftp:
+                                    <div class="grid gap-4 md:grid-cols-4">
+                                        <div class="md:col-span-2">
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Host</label>
+                                            <InputText @bind-Value="editor.Host" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Port</label>
+                                            <InputNumber @bind-Value="editor.Port" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">User</label>
+                                            <InputText @bind-Value="editor.UserName" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-sm font-medium text-slate-700">Remote path</label>
+                                        <InputText @bind-Value="editor.RemotePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    </div>
+                                    break;
+                                case ResourceKind.Ssh:
+                                    <div class="grid gap-4 md:grid-cols-4">
+                                        <div class="md:col-span-2">
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Host</label>
+                                            <InputText @bind-Value="editor.Host" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Port</label>
+                                            <InputNumber @bind-Value="editor.Port" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">User</label>
+                                            <InputText @bind-Value="editor.UserName" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
+                                        <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    </div>
+                                    break;
+                                case ResourceKind.PowerShellScript:
+                                    <div class="grid gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Script path</label>
+                                            <InputText @bind-Value="editor.ScriptPath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
+                                            <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-sm font-medium text-slate-700">Arguments</label>
+                                        <InputText @bind-Value="editor.ScriptArguments" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    </div>
+                                    break;
+                                case ResourceKind.DockerCompose:
+                                    <div class="grid gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Compose file</label>
+                                            <InputText @bind-Value="editor.ComposeFilePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Service name</label>
+                                            <InputText @bind-Value="editor.ComposeService" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        </div>
+                                    </div>
+                                    break;
+                                case ResourceKind.SecretLink:
+                                    <div>
+                                        <label class="mb-1 block text-sm font-medium text-slate-700">Secret purpose</label>
+                                        <InputText @bind-Value="editor.SecretPurpose" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                    </div>
+                                    break;
+                                case ResourceKind.PromptLink:
+                                    <div class="grid gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Prompt reference</label>
+                                            <InputText @bind-Value="editor.PromptReference" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-slate-700">Prompt title hint</label>
+                                            <InputText @bind-Value="editor.PromptTitleHint" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        </div>
+                                    </div>
+                                    break;
+                            }
+
+                            <div class="rounded-[1.2rem] bg-white px-4 py-3">
+                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Stored identifier preview</p>
+                                <p class="mt-2 break-all text-sm text-slate-700">@PreviewLocation</p>
+                            </div>
+                        </FormSection>
+
+                        <FormSection Title="Metadata and capabilities" Description="Keep validation, sensitivity, and handling flags explicit on every resource record.">
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
+                                <InputTextArea @bind-Value="editor.Description" class="min-h-24 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                            </div>
+
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Validation</label>
+                                    <InputSelect @bind-Value="editor.ValidationStatus" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                        @foreach (var status in Enum.GetValues<ResourceValidationStatus>())
+                                        {
+                                            <option value="@status">@status</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Sensitivity</label>
+                                    <InputSelect @bind-Value="editor.Sensitivity" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                        @foreach (var sensitivity in Enum.GetValues<ResourceSensitivity>())
+                                        {
+                                            <option value="@sensitivity">@sensitivity</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-3 md:grid-cols-2">
+                                <label class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="editor.SupportsPreview" /> Preview capable</label>
+                                <label class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="editor.SupportsIndexing" /> Indexing capable</label>
+                            </div>
+                        </FormSection>
+
+                        <StickyActionFooter StatusLabel="Resource save state" StatusMessage="@message" StatusTone="success">
+                            <SecondaryActions>
+                                <button type="button" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateNewAsync">Reset</button>
+                            </SecondaryActions>
+                            <PrimaryActions>
+                                <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" data-testid="resource-save-button">Save resource</button>
+                            </PrimaryActions>
+                            <DangerActions>
+                                @if (editor.Id.HasValue)
+                                {
+                                    <button type="button" class="inline-flex items-center rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700" @onclick="DeleteAsync">Delete</button>
+                                }
+                            </DangerActions>
+                        </StickyActionFooter>
+                    </div>
+                </EditForm>
+            </DetailContent>
+        </ListDetailShell>
+    </ChildContent>
+</PageScaffold>
 
 @code {
     [SupplyParameterFromQuery(Name = "resourceId")]
@@ -293,8 +370,23 @@ tests: component:ResourcesPageTests, e2e:resources-smoke
     private IReadOnlyList<SecretListItem> secrets = [];
     private ResourceEditorModel editor = new();
     private string? message;
+    private string resourceSearch = string.Empty;
+    private string kindFilter = string.Empty;
+    private string validationFilter = string.Empty;
 
     private ResourceDescriptor Descriptor => ResourceDescriptorRegistry.Get(editor.ResourceKind);
+
+    private IReadOnlyList<ResourceSummary> FilteredResources => resources
+        .Where(resource =>
+            (string.IsNullOrWhiteSpace(resourceSearch) ||
+             resource.Name.Contains(resourceSearch, StringComparison.OrdinalIgnoreCase) ||
+             resource.ProjectName.Contains(resourceSearch, StringComparison.OrdinalIgnoreCase) ||
+             resource.LocationOrIdentifier.Contains(resourceSearch, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(kindFilter) || string.Equals(resource.ResourceKind.ToString(), kindFilter, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(validationFilter) || string.Equals(resource.ValidationStatus.ToString(), validationFilter, StringComparison.OrdinalIgnoreCase)))
+        .OrderBy(resource => resource.ProjectName)
+        .ThenBy(resource => resource.Name)
+        .ToList();
 
     private string PreviewLocation => editor.ResourceKind switch
     {
@@ -311,6 +403,10 @@ tests: component:ResourcesPageTests, e2e:resources-smoke
         _ => editor.LocationOrIdentifier
     };
 
+    private string EditorTitle => editor.Id.HasValue ? editor.Name : "New resource";
+
+    private string? SelectedProjectName => projects.FirstOrDefault(project => project.Id == editor.ProjectId)?.Name;
+
     protected override async Task OnParametersSetAsync() => await LoadAsync(ResourceIdQuery, ProjectIdQuery);
 
     private async Task LoadAsync(Guid? resourceId = null, Guid? projectId = null)
@@ -318,9 +414,7 @@ tests: component:ResourcesPageTests, e2e:resources-smoke
         resources = await ResourcesService.ListAsync();
         projects = await ProjectsService.ListAsync();
         secrets = await SecretService.ListForPickerAsync();
-        editor = resourceId.HasValue
-            ? await ResourcesService.GetAsync(resourceId.Value)
-            : new ResourceEditorModel { ProjectId = projectId };
+        editor = resourceId.HasValue ? await ResourcesService.GetAsync(resourceId.Value) : new ResourceEditorModel { ProjectId = projectId };
     }
 
     private Task CreateNewAsync()
@@ -358,6 +452,15 @@ tests: component:ResourcesPageTests, e2e:resources-smoke
         await LoadAsync(null, ProjectIdQuery);
         message = "Resource deleted.";
     }
+
+    private void ResetFilters()
+    {
+        resourceSearch = string.Empty;
+        kindFilter = string.Empty;
+        validationFilter = string.Empty;
+    }
+
+    private static string BuildResourceMeta(ResourceSummary resource) => $"{resource.ProjectName} / {resource.ResourceKind}";
 
     private static string ResolveTone(ResourceValidationStatus status) => status switch
     {

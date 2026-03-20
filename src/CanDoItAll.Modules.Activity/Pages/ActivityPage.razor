@@ -15,84 +15,121 @@ tests: component:ActivityPageTests, e2e:activity-smoke
 
 <PageTitle>Activity</PageTitle>
 
-<div class="space-y-6">
-    <PageHeader Eyebrow="Activity"
-                Title="Activity timeline and search"
-                Description="Review recent actions across projects, prompts, validations, test evidence, and background workflows from one searchable timeline." />
+<PageScaffold>
+    <Header>
+        <PageHeader Eyebrow="Activity"
+                    Title="Activity timeline and search"
+                    Description="Review recent actions across projects, prompts, validations, test evidence, and background workflows from one searchable timeline." />
+    </Header>
 
-    <div class="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
-        <SectionCard Title="Search" Description="Cross-entity search is backed by the relational search index and routes back into the internal workbench.">
-            <div class="space-y-4">
-                <EditForm Model="this" OnSubmit="SearchAsync">
-                    <div class="flex gap-2">
-                        <InputText @bind-Value="query" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" placeholder="Search projects, prompts, resources, validations, and tests" />
-                        <button type="submit" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Search</button>
-                    </div>
-                </EditForm>
-
-                @if (results.Count == 0)
+    <ChildContent>
+        <ListDetailShell ListPaneWidth="22rem">
+            <ListHeader>
+                <ListPanelHeader Title="Search"
+                                 Description="Cross-entity search is backed by the relational index and routes back into the workbench."
+                                 Count="@($"{results.Count} result(s)")">
+                    <Filters>
+                        <FilterBar ResultText="@(hasSearched ? $"{results.Count} result(s)" : "Search is ready")">
+                            <EditForm Model="this" OnSubmit="SearchAsync" class="flex min-w-0 flex-1 flex-wrap gap-2">
+                                <InputText @bind-Value="query" class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" placeholder="Search projects, prompts, resources, validations, and tests" />
+                                <button type="submit" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Search</button>
+                                <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ClearSearch">Clear</button>
+                            </EditForm>
+                        </FilterBar>
+                    </Filters>
+                </ListPanelHeader>
+            </ListHeader>
+            <ListContent>
+                @if (!hasSearched)
                 {
-                    <p class="text-sm text-slate-500">Search the indexed records to jump directly into the workbench.</p>
+                    <EmptyState Eyebrow="Search ready"
+                                Title="No query yet"
+                                Description="Search the indexed records to jump directly into the right workbench surface without scanning the full timeline." />
+                }
+                else if (results.Count == 0)
+                {
+                    <EmptyState Eyebrow="No results"
+                                Title="Nothing matched this query"
+                                Description="Try a broader project, prompt, resource, validation, or test term and search again." />
                 }
                 else
                 {
-                    <div class="space-y-2">
+                    <div class="space-y-3">
                         @foreach (var result in results)
                         {
-                            <button type="button"
-                                    class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left"
-                                    @onclick="() => OpenResult(result)">
-                                <span class="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">@result.Category</span>
-                                <span class="mt-1 block text-sm font-semibold text-slate-900">@result.Title</span>
-                                <span class="mt-1 block text-xs text-slate-500">@result.Summary</span>
-                            </button>
+                            <SelectionListItem Title="@result.Title"
+                                               Eyebrow="@result.Category"
+                                               Summary="@result.Summary"
+                                               OnSelect="@(() => OpenResult(result))" />
                         }
                     </div>
                 }
-            </div>
-        </SectionCard>
-
-        <SectionCard Title="Recent timeline" Description="Major module actions are recorded here so the application has a durable operational history.">
-            <div class="space-y-3">
+            </ListContent>
+            <DetailHeader>
+                <div class="space-y-1">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Recent timeline</p>
+                    <h2 class="text-xl font-semibold text-slate-950">Workspace history</h2>
+                    <p class="text-sm leading-6 text-slate-600">Major module actions are grouped by date so recent work is easier to scan and reopen.</p>
+                </div>
+            </DetailHeader>
+            <DetailContent>
                 @if (items.Count == 0)
                 {
-                    <p class="text-sm text-slate-500">No activity recorded yet.</p>
+                    <EmptyState Eyebrow="No activity"
+                                Title="The timeline is empty"
+                                Description="Actions will appear here once projects, prompts, validations, tests, or automation runs have been recorded." />
                 }
                 else
                 {
-                    @foreach (var item in items)
-                    {
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                            <div class="flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">@item.Category · @item.Action</p>
-                                    <p class="mt-1 text-sm font-semibold text-slate-900">@item.Title</p>
+                    <div class="space-y-6">
+                        @foreach (var group in GroupedItems)
+                        {
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">@group.Key.ToString("MMM d, yyyy")</span>
                                 </div>
-                                <span class="text-xs text-slate-500">@item.CreatedAtUtc.LocalDateTime:g</span>
-                            </div>
-                            @if (!string.IsNullOrWhiteSpace(item.Description))
-                            {
-                                <p class="mt-3 text-sm leading-6 text-slate-600">@item.Description</p>
-                            }
-                            <div class="mt-3 flex items-center justify-between gap-3">
-                                <span class="text-xs text-slate-500">Actor: @item.Actor</span>
-                                @if (!string.IsNullOrWhiteSpace(item.Route))
+                                @foreach (var item in group)
                                 {
-                                    <button type="button" class="text-xs font-semibold text-sky-700" @onclick="() => Navigation.NavigateTo(item.Route!)">Open</button>
+                                    <div class="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4">
+                                        <div class="flex flex-wrap items-start justify-between gap-3">
+                                            <div>
+                                                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">@item.Category / @item.Action</p>
+                                                <p class="mt-1 text-sm font-semibold text-slate-900">@item.Title</p>
+                                            </div>
+                                            <span class="text-xs text-slate-500">@item.CreatedAtUtc.LocalDateTime:g</span>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                                        {
+                                            <p class="mt-3 text-sm leading-6 text-slate-600">@item.Description</p>
+                                        }
+                                        <div class="mt-3 flex items-center justify-between gap-3">
+                                            <span class="text-xs text-slate-500">Actor: @item.Actor</span>
+                                            @if (!string.IsNullOrWhiteSpace(item.Route))
+                                            {
+                                                <button type="button" class="text-xs font-semibold text-sky-700" @onclick="() => Navigation.NavigateTo(item.Route!)">Open</button>
+                                            }
+                                        </div>
+                                    </div>
                                 }
                             </div>
-                        </div>
-                    }
+                        }
+                    </div>
                 }
-            </div>
-        </SectionCard>
-    </div>
-</div>
+            </DetailContent>
+        </ListDetailShell>
+    </ChildContent>
+</PageScaffold>
 
 @code {
     private string query = string.Empty;
+    private bool hasSearched;
     private IReadOnlyList<ActivityTimelineItem> items = [];
     private IReadOnlyList<SearchResult> results = [];
+
+    private IReadOnlyList<IGrouping<DateTime, ActivityTimelineItem>> GroupedItems => items
+        .OrderByDescending(item => item.CreatedAtUtc)
+        .GroupBy(item => item.CreatedAtUtc.LocalDateTime.Date)
+        .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -101,7 +138,15 @@ tests: component:ActivityPageTests, e2e:activity-smoke
 
     private async Task SearchAsync()
     {
-        results = await ActivityService.SearchAsync(query);
+        hasSearched = !string.IsNullOrWhiteSpace(query);
+        results = hasSearched ? await ActivityService.SearchAsync(query) : [];
+    }
+
+    private void ClearSearch()
+    {
+        query = string.Empty;
+        hasSearched = false;
+        results = [];
     }
 
     private void OpenResult(SearchResult result)

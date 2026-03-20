@@ -1,145 +1,208 @@
 @page "/prompt-gallery"
-@* codex-capsule
-kind: page
-name: PromptGalleryPage
-summary: Manages saved prompts, immutable versions, collections, tags, and prompt usage history.
-owns: prompt-list, prompt-editor, version-history
-deps: PromptsService
-risks: wrong-version-context, collection-drift
-tests: component:PromptGalleryPageTests, e2e:prompt-gallery-smoke
-*@
+@using CanDoItAll.ComponentKit.Components
 @inject PromptsService PromptsService
 
 <PageTitle>Prompt Gallery</PageTitle>
 
-<div class="space-y-6">
-    <PageHeader Eyebrow="Prompt Library"
-                Title="Prompt gallery and versions"
-                Description="Manage prompt drafts, immutable versions, collections, tags, and clone flows before the factory wizard writes into this library." />
+<PageScaffold>
+    <Header>
+        <PageHeader Eyebrow="Prompt Library"
+                    Title="Prompt gallery and versions"
+                    Description="Manage prompt drafts, immutable versions, collections, tags, and clone flows through one shared library layout.">
+            <Actions>
+                <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">New prompt</button>
+                <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateCollectionAsync">Add collection</button>
+            </Actions>
+        </PageHeader>
+    </Header>
 
-    <div class="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <SectionCard Title="Saved prompts" Description="Draft and final prompts are persisted separately from version history.">
-            <div class="space-y-3">
-                <div class="flex flex-wrap gap-2">
-                    <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">
-                        New prompt
-                    </button>
-                    <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateCollectionAsync">
-                        Add collection
-                    </button>
-                </div>
+    <ChildContent>
+        <SummaryTiles>
+            <SummaryTile Label="Prompts" Value="@prompts.Count.ToString()" HelperText="Saved prompt artifacts." />
+            <SummaryTile Label="Final" Value="@prompts.Count(item => item.Status == PromptArtifactStatus.Final).ToString()" HelperText="Prompts with at least one finalized version." Tone="success" />
+            <SummaryTile Label="Collections" Value="@collections.Count.ToString()" HelperText="Available prompt groupings." />
+            <SummaryTile Label="Versions" Value="@prompts.Sum(item => item.VersionCount).ToString()" HelperText="Immutable prompt versions stored in the library." Tone="info" />
+        </SummaryTiles>
 
-                @foreach (var prompt in prompts)
-                {
-                    <button type="button" class="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left" @onclick="() => EditAsync(prompt.Id)">
-                        <span>
-                            <span class="block text-sm font-semibold text-slate-900">@prompt.Title</span>
-                            <span class="block text-xs text-slate-500">@prompt.Phase - @prompt.CollectionName</span>
-                            <span class="block text-xs text-slate-500">@prompt.Tags</span>
-                        </span>
-                        <StatusBadge Tone="@(prompt.Status == PromptArtifactStatus.Final ? "success" : "info")" Text="@($"{prompt.Status} v{prompt.VersionCount}")" />
-                    </button>
-                }
-            </div>
-        </SectionCard>
-
-        <SectionCard Title="Prompt editor" Description="Finalizing a prompt creates a new immutable version instead of overwriting prior output.">
-            <EditForm Model="editor" OnValidSubmit="SaveDraftAsync">
-                <div class="space-y-4">
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Title</label>
-                            <InputText @bind-Value="editor.Title" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Phase</label>
-                            <InputText @bind-Value="editor.Phase" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                        </div>
-                    </div>
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Collection</label>
-                            <InputSelect @bind-Value="editor.CollectionId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                                <option value="">None</option>
-                                @foreach (var collection in collections)
+        <ListDetailShell ListPaneWidth="25rem">
+            <ListHeader>
+                <ListPanelHeader Title="Saved prompts" Description="Select a prompt to edit it, review versions, or inspect recent usage." Count="@($"{FilteredPrompts.Count} prompt(s)")">
+                    <Filters>
+                        <FilterBar ResultText="@($"{FilteredPrompts.Count} matching prompt(s)")">
+                            <input @bind="promptSearch" @bind:event="oninput" class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700" placeholder="Search prompts" />
+                            <InputSelect @bind-Value="statusFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                                <option value="">All statuses</option>
+                                @foreach (var status in Enum.GetValues<PromptArtifactStatus>())
                                 {
-                                    <option value="@collection.Id">@collection.Name</option>
+                                    <option value="@status.ToString()">@status</option>
                                 }
                             </InputSelect>
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Tags</label>
-                            <InputText @bind-Value="editor.TagsCsv" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                        </div>
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Draft text</label>
-                        <InputTextArea @bind-Value="editor.DraftText" class="min-h-64 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-sm" />
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Finalization reason</label>
-                        <InputText @bind-Value="editor.FinalizationReason" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Save draft</button>
-                        <button type="button" class="inline-flex items-center rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700" @onclick="FinalizeAsync">Create final version</button>
-                        @if (editor.Id.HasValue)
+                            <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ResetFilters">Reset</button>
+                        </FilterBar>
+                    </Filters>
+                </ListPanelHeader>
+            </ListHeader>
+
+            <ListContent>
+                @if (FilteredPrompts.Count == 0)
+                {
+                    <EmptyState Eyebrow="No prompts" Title="Create the first prompt" Description="Prompt drafts appear here after they have been saved into the shared library." />
+                }
+                else
+                {
+                    <div class="space-y-3">
+                        @foreach (var prompt in FilteredPrompts)
                         {
-                            <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CloneAsync">Clone</button>
+                            <SelectionListItem Title="@prompt.Title"
+                                               Eyebrow="@prompt.Status.ToString()"
+                                               Meta="@BuildPromptMeta(prompt)"
+                                               Summary="@prompt.Tags"
+                                               IsSelected="@(editor.Id == prompt.Id)"
+                                               OnSelect="@(() => EditAsync(prompt.Id))">
+                                <Status>
+                                    <StatusBadge Tone="@(prompt.Status == PromptArtifactStatus.Final ? "success" : "info")" Text="@($"v{prompt.VersionCount}")" />
+                                </Status>
+                            </SelectionListItem>
                         }
                     </div>
-                    @if (!string.IsNullOrWhiteSpace(message))
-                    {
-                        <p class="text-sm text-emerald-700">@message</p>
-                    }
-                </div>
-            </EditForm>
+                }
+            </ListContent>
 
-            @if (editor.Versions.Count > 0)
-            {
-                <div class="mt-6 grid gap-4 xl:grid-cols-2">
-                    <SectionCard Title="Versions" Description="Each finalization event appends a new immutable version.">
-                        <div class="space-y-2">
-                            @foreach (var version in editor.Versions)
-                            {
-                                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-                                    <div class="flex items-center justify-between gap-3">
-                                        <span class="font-semibold">Version @version.VersionNumber</span>
-                                        <span class="text-xs text-slate-500">@version.CreatedAtUtc.LocalDateTime:g</span>
-                                    </div>
-                                    <p class="mt-1 text-xs text-slate-500">@version.CreationReason</p>
-                                </div>
-                            }
+            <DetailHeader>
+                <div class="space-y-3">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="space-y-1">
+                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Prompt editor</p>
+                            <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
+                            <p class="text-sm leading-6 text-slate-600">Draft editing, immutable versions, and recent usage stay together in one detail pane.</p>
                         </div>
-                    </SectionCard>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <StatusBadge Tone="@EditorStatusTone" Text="@EditorStatusLabel" />
+                            <StatusBadge Tone="neutral" Text="@($"{editor.Versions.Count} version(s)")" />
+                            <StatusBadge Tone="info" Text="@($"{editor.UsageHistory.Count} usage record(s)")" />
+                        </div>
+                    </div>
 
-                    <SectionCard Title="Usage history" Description="Recent prompt usage stays tied to the prompt artifact and specific version where possible.">
-                        <div class="space-y-2">
-                            @if (editor.UsageHistory.Count == 0)
-                            {
-                                <p class="text-sm text-slate-500">No usage records yet.</p>
-                            }
-                            else
-                            {
-                                @foreach (var usage in editor.UsageHistory)
+                    <SecondaryTabs Items="DetailTabs" SelectedKey="@detailTab" SelectedKeyChanged="HandleDetailTabChanged" />
+                </div>
+            </DetailHeader>
+
+            <DetailContent>
+                <EditForm Model="editor" OnValidSubmit="SaveDraftAsync">
+                    <div class="flex min-h-full flex-col gap-6">
+                        @if (string.Equals(detailTab, "overview", StringComparison.Ordinal))
+                        {
+                            <FormSection Title="Prompt identity" Description="Keep the prompt title, collection, and tags close to the draft itself.">
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <div>
+                                        <label class="mb-1 block text-sm font-medium text-slate-700">Title</label>
+                                        <InputText @bind-Value="editor.Title" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-sm font-medium text-slate-700">Phase</label>
+                                        <InputText @bind-Value="editor.Phase" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    </div>
+                                </div>
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <div>
+                                        <label class="mb-1 block text-sm font-medium text-slate-700">Collection</label>
+                                        <InputSelect @bind-Value="editor.CollectionId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                            <option value="">None</option>
+                                            @foreach (var collection in collections)
+                                            {
+                                                <option value="@collection.Id">@collection.Name</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-sm font-medium text-slate-700">Tags</label>
+                                        <InputText @bind-Value="editor.TagsCsv" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    </div>
+                                </div>
+                            </FormSection>
+
+                            <FormSection Title="Draft content" Description="The editable draft remains separate from immutable finalized versions.">
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Draft text</label>
+                                    <InputTextArea @bind-Value="editor.DraftText" class="min-h-80 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-sm" />
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-slate-700">Finalization reason</label>
+                                    <InputText @bind-Value="editor.FinalizationReason" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                </div>
+                            </FormSection>
+                        }
+                        else if (string.Equals(detailTab, "versions", StringComparison.Ordinal))
+                        {
+                            <FormSection Title="Version history" Description="Each finalization appends a new immutable version instead of overwriting earlier output.">
+                                @if (editor.Versions.Count == 0)
                                 {
-                                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <span class="font-semibold">@usage.ProviderName</span>
-                                            <span class="text-xs text-slate-500">@usage.CreatedAtUtc.LocalDateTime:g</span>
-                                        </div>
-                                        <p class="mt-1 text-xs text-slate-500">@usage.RepositoryName - @usage.CommitSha</p>
-                                        <p class="mt-2 text-xs text-slate-500">@usage.UsageNote</p>
+                                    <EmptyState Eyebrow="No versions" Title="No finalized versions yet" Description="Create the first final version when the draft is ready for reuse." />
+                                }
+                                else
+                                {
+                                    <div class="space-y-3">
+                                        @foreach (var version in editor.Versions)
+                                        {
+                                            <div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+                                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                                    <p class="text-sm font-semibold text-slate-950">Version @version.VersionNumber</p>
+                                                    <p class="text-xs text-slate-500">@version.CreatedAtUtc.LocalDateTime:g</p>
+                                                </div>
+                                                <p class="mt-2 text-sm leading-6 text-slate-600">@version.CreationReason</p>
+                                            </div>
+                                        }
                                     </div>
                                 }
-                            }
-                        </div>
-                    </SectionCard>
-                </div>
-            }
-        </SectionCard>
-    </div>
-</div>
+                            </FormSection>
+                        }
+                        else
+                        {
+                            <FormSection Title="Usage history" Description="Recent prompt usage remains tied to the prompt artifact and recorded commit context.">
+                                @if (editor.UsageHistory.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No usage" Title="No usage records yet" Description="Usage entries will appear here after the prompt is used in a recorded workflow." />
+                                }
+                                else
+                                {
+                                    <div class="space-y-3">
+                                        @foreach (var usage in editor.UsageHistory)
+                                        {
+                                            <div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+                                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                                    <p class="text-sm font-semibold text-slate-950">@usage.ProviderName</p>
+                                                    <p class="text-xs text-slate-500">@usage.CreatedAtUtc.LocalDateTime:g</p>
+                                                </div>
+                                                <p class="mt-2 text-sm text-slate-600">@usage.RepositoryName / @usage.CommitSha</p>
+                                                <p class="mt-3 text-sm leading-6 text-slate-600">@usage.UsageNote</p>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </FormSection>
+                        }
+
+                        <StickyActionFooter StatusLabel="Prompt library" StatusMessage="@message" StatusTone="success">
+                            <SecondaryActions>
+                                <button type="button" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateNewAsync">Reset</button>
+                            </SecondaryActions>
+                            <PrimaryActions>
+                                <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Save draft</button>
+                                <button type="button" class="inline-flex items-center rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700" @onclick="FinalizeAsync">Create final version</button>
+                            </PrimaryActions>
+                            <DangerActions>
+                                @if (editor.Id.HasValue)
+                                {
+                                    <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CloneAsync">Clone</button>
+                                }
+                            </DangerActions>
+                        </StickyActionFooter>
+                    </div>
+                </EditForm>
+            </DetailContent>
+        </ListDetailShell>
+    </ChildContent>
+</PageScaffold>
 
 @code {
     [SupplyParameterFromQuery(Name = "promptId")]
@@ -149,6 +212,33 @@ tests: component:PromptGalleryPageTests, e2e:prompt-gallery-smoke
     private IReadOnlyList<PromptCollectionSummary> collections = [];
     private PromptEditorModel editor = new();
     private string? message;
+    private string promptSearch = string.Empty;
+    private string statusFilter = string.Empty;
+    private string detailTab = "overview";
+
+    private IReadOnlyList<PromptSummary> FilteredPrompts => prompts
+        .Where(prompt =>
+            (string.IsNullOrWhiteSpace(promptSearch) ||
+             prompt.Title.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ||
+             prompt.Phase.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ||
+             prompt.Tags.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ||
+             (prompt.CollectionName?.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+            (string.IsNullOrWhiteSpace(statusFilter) || string.Equals(prompt.Status.ToString(), statusFilter, StringComparison.OrdinalIgnoreCase)))
+        .OrderByDescending(prompt => prompt.UpdatedAtUtc)
+        .ToList();
+
+    private IReadOnlyList<SecondaryTabItem> DetailTabs =>
+    [
+        new("overview", "Overview"),
+        new("versions", "Versions", editor.Versions.Count.ToString()),
+        new("usage", "Usage", editor.UsageHistory.Count.ToString())
+    ];
+
+    private string EditorTitle => string.IsNullOrWhiteSpace(editor.Title) ? "New prompt" : editor.Title;
+
+    private string EditorStatusTone => editor.Versions.Count > 0 ? "success" : "info";
+
+    private string EditorStatusLabel => editor.Versions.Count > 0 ? "Finalized" : "Draft only";
 
     protected override async Task OnParametersSetAsync() => await LoadAsync(PromptIdQuery);
 
@@ -157,12 +247,14 @@ tests: component:PromptGalleryPageTests, e2e:prompt-gallery-smoke
         prompts = await PromptsService.ListAsync();
         collections = await PromptsService.ListCollectionsAsync();
         editor = promptId.HasValue ? await PromptsService.GetAsync(promptId.Value) : new PromptEditorModel();
+        detailTab = "overview";
     }
 
     private Task CreateNewAsync()
     {
         editor = new PromptEditorModel();
         message = null;
+        detailTab = "overview";
         return Task.CompletedTask;
     }
 
@@ -177,6 +269,7 @@ tests: component:PromptGalleryPageTests, e2e:prompt-gallery-smoke
     {
         editor = await PromptsService.GetAsync(id);
         message = null;
+        detailTab = "overview";
     }
 
     private async Task SaveDraftAsync()
@@ -198,6 +291,7 @@ tests: component:PromptGalleryPageTests, e2e:prompt-gallery-smoke
         if (result.IsSuccess)
         {
             editor = await PromptsService.GetAsync(result.Value);
+            detailTab = "versions";
         }
     }
 
@@ -214,6 +308,22 @@ tests: component:PromptGalleryPageTests, e2e:prompt-gallery-smoke
         {
             editor = await PromptsService.GetAsync(cloneId.Value);
             message = "Prompt cloned into a new draft.";
+            detailTab = "overview";
         }
     }
+
+    private Task HandleDetailTabChanged(string key)
+    {
+        detailTab = key;
+        return Task.CompletedTask;
+    }
+
+    private void ResetFilters()
+    {
+        promptSearch = string.Empty;
+        statusFilter = string.Empty;
+    }
+
+    private static string BuildPromptMeta(PromptSummary prompt)
+        => $"{prompt.Phase} / {(string.IsNullOrWhiteSpace(prompt.CollectionName) ? "No collection" : prompt.CollectionName)}";
 }

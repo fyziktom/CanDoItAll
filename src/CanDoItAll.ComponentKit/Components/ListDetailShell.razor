@@ -1,0 +1,56 @@
+<div class="grid gap-5 xl:grid-cols-[minmax(0,var(--list-pane-width))_minmax(0,1fr)]" style="@($"--list-pane-width:{ListPaneWidth};")">
+    <section class="@ResolvePaneClass(ListPaneClass)">
+        @if (ListHeader is not null)
+        {
+            <div class="border-b border-slate-200 px-5 py-4">
+                @ListHeader
+            </div>
+        }
+
+        <div class="flex-1 px-5 py-5">
+            @ListContent
+        </div>
+    </section>
+
+    <section class="@ResolvePaneClass(DetailPaneClass)">
+        @if (DetailHeader is not null)
+        {
+            <div class="border-b border-slate-200 px-5 py-4">
+                @DetailHeader
+            </div>
+        }
+
+        <div class="flex-1 px-5 py-5">
+            @DetailContent
+        </div>
+    </section>
+</div>
+
+@code {
+    [Parameter]
+    public string ListPaneWidth { get; set; } = "24rem";
+
+    [Parameter]
+    public string? ListPaneClass { get; set; }
+
+    [Parameter]
+    public string? DetailPaneClass { get; set; }
+
+    [Parameter]
+    public RenderFragment? ListHeader { get; set; }
+
+    [Parameter]
+    public RenderFragment? ListContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? DetailHeader { get; set; }
+
+    [Parameter]
+    public RenderFragment? DetailContent { get; set; }
+
+    private static string ResolvePaneClass(string? customClass)
+    {
+        var baseClass = "flex min-h-[28rem] min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/90 shadow-sm shadow-slate-200/60";
+        return string.IsNullOrWhiteSpace(customClass) ? baseClass : $"{baseClass} {customClass}";
+    }
+}

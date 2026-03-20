@@ -1,0 +1,68 @@
+<div class="sticky bottom-0 z-10 -mx-5 mt-6 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
+    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div class="space-y-1">
+            @if (!string.IsNullOrWhiteSpace(StatusLabel))
+            {
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">@StatusLabel</p>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(StatusMessage))
+            {
+                <p class="@ResolveStatusClass()">@StatusMessage</p>
+            }
+        </div>
+
+        <div class="flex flex-wrap items-center justify-end gap-2">
+            @if (SecondaryActions is not null)
+            {
+                @SecondaryActions
+            }
+
+            @if (PrimaryActions is not null)
+            {
+                @PrimaryActions
+            }
+
+            @if (DangerActions is not null)
+            {
+                <div class="ml-0 flex flex-wrap items-center gap-2 md:ml-3 md:border-l md:border-slate-200 md:pl-3">
+                    @DangerActions
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? StatusLabel { get; set; }
+
+    [Parameter]
+    public string? StatusMessage { get; set; }
+
+    [Parameter]
+    public string StatusTone { get; set; } = "neutral";
+
+    [Parameter]
+    public RenderFragment? PrimaryActions { get; set; }
+
+    [Parameter]
+    public RenderFragment? SecondaryActions { get; set; }
+
+    [Parameter]
+    public RenderFragment? DangerActions { get; set; }
+
+    private string ResolveStatusClass()
+    {
+        var toneClass = StatusTone.ToLowerInvariant() switch
+        {
+            "success" => "text-emerald-700",
+            "warning" => "text-amber-700",
+            "danger" => "text-rose-700",
+            "info" => "text-sky-700",
+            _ => "text-slate-600"
+        };
+
+        return $"text-sm {toneClass}";
+    }
+}
