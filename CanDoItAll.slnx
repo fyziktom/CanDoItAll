@@ -22,6 +22,7 @@
     <Project Path="src/CanDoItAll.Web/CanDoItAll.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.DotNetWatch.Tests/CanDoItAll.Mcp.DotNetWatch.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj" />

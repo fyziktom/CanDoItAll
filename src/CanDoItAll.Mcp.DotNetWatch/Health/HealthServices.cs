@@ -12,9 +12,15 @@ public sealed record HealthSnapshot(
     string? LastUrl,
     string? Summary,
     int? WatchIteration,
+    int? RuntimePid,
     IReadOnlyList<string> ActiveUrls);
 
-public sealed record RuntimeProbePayload(bool IsReady, string? Summary, int? WatchIteration, IReadOnlyList<string>? ActiveUrls);
+public sealed record RuntimeProbePayload(
+    bool IsReady,
+    string? Summary,
+    int? WatchIteration,
+    int? RuntimePid,
+    IReadOnlyList<string>? ActiveUrls);
 
 public sealed class HttpHealthProbe(RuntimeConfiguration configuration, HttpProbeService probeService, ILogger<HttpHealthProbe> logger)
 {
@@ -60,6 +66,7 @@ public sealed class HttpHealthProbe(RuntimeConfiguration configuration, HttpProb
                         url.ToString(),
                         payload.Summary ?? "Ready",
                         payload.WatchIteration,
+                        payload.RuntimePid,
                         payload.ActiveUrls ?? []);
                 }
 
@@ -72,6 +79,6 @@ public sealed class HttpHealthProbe(RuntimeConfiguration configuration, HttpProb
             }
         }
 
-        return new HealthSnapshot("Unhealthy", false, null, lastFailure, lastUrl, "Health probe did not succeed.", null, []);
+        return new HealthSnapshot("Unhealthy", false, null, lastFailure, lastUrl, "Health probe did not succeed.", null, null, []);
     }
 }

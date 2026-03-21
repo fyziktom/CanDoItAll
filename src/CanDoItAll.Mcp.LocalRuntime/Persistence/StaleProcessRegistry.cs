@@ -8,10 +8,11 @@ using CanDoItAll.Mcp.LocalRuntime.Processes;
 namespace CanDoItAll.Mcp.LocalRuntime.Persistence;
 
 public class StaleProcessRegistry(
-    LocalProcessRuntimeOptions options,
-    ServerInstanceIdentity serverInstanceIdentity,
-    IProcessCommandRunner commandRunner,
-    ILogger<StaleProcessRegistry> logger)
+LocalProcessRuntimeOptions options,
+ServerInstanceIdentity serverInstanceIdentity,
+ServerInstanceRegistry serverInstanceRegistry,
+IProcessCommandRunner commandRunner,
+ILogger<StaleProcessRegistry> logger)
 {
     private static readonly TimeSpan StartTimeTolerance = TimeSpan.FromSeconds(60);
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -61,19 +62,26 @@ public class StaleProcessRegistry(
             List<CleanupSkippedProcessData> skipped = [];
             List<ManagedProcessRecord> remaining = [];
 
-            foreach (var record in records)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
+foreach (var record in records)
+{
+cancellationToken.ThrowIfCancellationRequested();
 
-                if (string.Equals(record.RegisteredByServerInstanceId, serverInstanceIdentity.Id, StringComparison.OrdinalIgnoreCase))
+if (string.Equals(record.RegisteredByServerInstanceId, serverInstanceIdentity.Id, StringComparison.OrdinalIgnoreCase))
                 {
                     skipped.Add(new CleanupSkippedProcessData(record.Pid, "Owned by current server instance"));
-                    remaining.Add(record);
-                    continue;
-                }
+remaining.Add(record);
+continue;
+}
 
-                Process? process = null;
-                try
+if (await serverInstanceRegistry.IsLiveInstanceAsync(record.RegisteredByServerInstanceId, cancellationToken))
+{
+skipped.Add(new CleanupSkippedProcessData(record.Pid, "Owned by another live server instance"));
+remaining.Add(record);
+continue;
+}
+
+Process? process = null;
+try
                 {
                     process = Process.GetProcessById(record.Pid);
                     if (process.HasExited)

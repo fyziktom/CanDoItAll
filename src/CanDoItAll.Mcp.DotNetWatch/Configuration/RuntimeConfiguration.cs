@@ -58,6 +58,7 @@ public sealed class RuntimeConfiguration
         ForceKillAfter = TimeSpan.FromMilliseconds(options.Process.ForceKillAfterMs);
         CleanupStaleManagedProcessesOnStartup = options.Process.CleanupStaleManagedProcessesOnStartup;
         RegistryPath = ResolvePath(WorkspaceRoot, options.Process.RegistryPath);
+        ServerInstanceDirectory = Path.Combine(Path.GetDirectoryName(RegistryPath) ?? Path.Combine(WorkspaceRoot, ".mcp-state"), "server-instances");
         UsePollingFileWatcher = options.Process.UsePollingFileWatcher;
 
         DefaultAppWaitTimeout = TimeSpan.FromMilliseconds(options.Waits.DefaultAppWaitTimeoutMs);
@@ -75,6 +76,8 @@ public sealed class RuntimeConfiguration
         {
             Directory.CreateDirectory(registryDirectory);
         }
+
+        Directory.CreateDirectory(ServerInstanceDirectory);
     }
 
     public string ServerName { get; }
@@ -139,6 +142,8 @@ public sealed class RuntimeConfiguration
 
     public string RegistryPath { get; }
 
+    public string ServerInstanceDirectory { get; }
+
     public bool UsePollingFileWatcher { get; }
 
     public TimeSpan DefaultAppWaitTimeout { get; }
@@ -179,6 +184,7 @@ public sealed class RuntimeConfiguration
         {
             WorkspaceRoot = WorkspaceRoot,
             RegistryPath = RegistryPath,
+            ServerInstanceDirectory = ServerInstanceDirectory,
             GracefulStopTimeout = GracefulStopTimeout,
             ForceKillAfter = ForceKillAfter
         };

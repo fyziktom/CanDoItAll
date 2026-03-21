@@ -12,6 +12,8 @@ public sealed record LocalProcessRuntimeOptions
 
     public string RegistryPath { get; init; } = Path.Combine(".mcp-state", "process-registry.json");
 
+    public string ServerInstanceDirectory { get; init; } = Path.Combine(".mcp-state", "server-instances");
+
     public TimeSpan GracefulStopTimeout { get; init; } = TimeSpan.FromSeconds(1);
 
     public TimeSpan ForceKillAfter { get; init; } = TimeSpan.FromSeconds(5);

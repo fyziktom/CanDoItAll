@@ -114,7 +114,8 @@ public sealed class SessionCoordinator(
             session.ProjectPath,
             status.ObservedUrls,
             session.LogBuffer.CurrentSequence,
-            status.LastKnownPid);
+            status.LastKnownPid,
+            status.Watch);
     }
 
     public Task<AppStopData> StopAppAsync(string? sessionId, string reason, bool force, CancellationToken cancellationToken)
@@ -173,7 +174,11 @@ public sealed class SessionCoordinator(
             : new Regex(logPattern, caseInsensitive ? RegexOptions.IgnoreCase | RegexOptions.CultureInvariant : RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
         LogEntry? matchedLogEntry = null;
         var quietCursor = cursor ?? session.LogBuffer.CurrentSequence;
-        var restartBaselineVersion = session.ToStatusData().SessionVersion;
+        var baselineStatus = session.ToStatusData();
+        var restartBaselineVersion = baselineStatus.SessionVersion;
+        var baselineLastRestartUtc = baselineStatus.LastRestartUtc;
+        var baselineConfirmedIteration = baselineStatus.Watch?.ConfirmedWatchIteration;
+        var baselineRuntimePid = baselineStatus.Watch?.RuntimePid;
 
         while (DateTimeOffset.UtcNow <= deadline)
         {
@@ -183,62 +188,85 @@ public sealed class SessionCoordinator(
             if (condition == AppWaitCondition.Running &&
                 status.State is AppLifecycleState.Running or AppLifecycleState.Healthy or AppLifecycleState.Restarting)
             {
-                return CreateAppWaitResult(session.SessionId, status.CorrelationId, condition, startedAt, true, false, status.State, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+                return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
             }
 
             if (condition == AppWaitCondition.Ready)
             {
-                if (status.State == AppLifecycleState.Healthy ||
-                    (status.ObservedUrls.Count > 0 && status.State is AppLifecycleState.Running or AppLifecycleState.Healthy))
+                if (status.State == AppLifecycleState.Healthy && !IsWatchPending(status))
                 {
-                    return CreateAppWaitResult(session.SessionId, status.CorrelationId, condition, startedAt, true, false, status.State, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+                    return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+                }
+
+                if (!configuration.HealthEnabled &&
+                    !IsWatchPending(status) &&
+                    status.ObservedUrls.Count > 0 &&
+                    status.State is AppLifecycleState.Running or AppLifecycleState.Healthy)
+                {
+                    return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
                 }
             }
 
             if (condition is AppWaitCondition.Healthy or AppWaitCondition.Ready)
             {
+                if (status.State == AppLifecycleState.Healthy && !IsWatchPending(status))
+                {
+                    return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+                }
+
                 var healthResult = await EvaluateHealthAsync(session, condition == AppWaitCondition.Ready, cancellationToken);
                 if (healthResult.IsSatisfied)
                 {
-                    return CreateAppWaitResult(session.SessionId, status.CorrelationId, condition, startedAt, true, false, AppLifecycleState.Healthy, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+                    status = session.ToStatusData();
+                    return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
                 }
             }
 
             if (condition == AppWaitCondition.Stopped &&
                 status.State is AppLifecycleState.Stopped or AppLifecycleState.ExitedUnexpectedly or AppLifecycleState.Failed)
             {
-                return CreateAppWaitResult(session.SessionId, status.CorrelationId, condition, startedAt, true, false, status.State, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+                return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
             }
 
             if (condition == AppWaitCondition.RestartCompleted &&
-                status.SessionVersion > restartBaselineVersion &&
-                status.State is AppLifecycleState.Running or AppLifecycleState.Healthy)
+                HasRestartCompleted(status, restartBaselineVersion, baselineLastRestartUtc, baselineConfirmedIteration, baselineRuntimePid))
             {
-                return CreateAppWaitResult(session.SessionId, status.CorrelationId, condition, startedAt, true, false, status.State, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+                if (!configuration.HealthEnabled || status.State == AppLifecycleState.Healthy)
+                {
+                    return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+                }
+
+                var restartHealth = await EvaluateHealthAsync(session, readyCanUseObservedUrl: false, cancellationToken);
+                if (restartHealth.IsSatisfied)
+                {
+                    status = session.ToStatusData();
+                    return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+                }
             }
 
-            if (condition == AppWaitCondition.QuietSinceCursor)
+            if (condition is AppWaitCondition.QuietSinceCursor or AppWaitCondition.WatchSettled)
             {
-                var entriesAfterCursor = session.LogBuffer.GetAfter(quietCursor);
-                var mostRecentEntry = entriesAfterCursor.LastOrDefault();
-                var quietSatisfied = mostRecentEntry is null
-                    ? DateTimeOffset.UtcNow - startedAt >= quietPeriod
-                    : DateTimeOffset.UtcNow - mostRecentEntry.TimestampUtc >= quietPeriod;
+                var quietSatisfied = HasQuietPeriodElapsed(session, quietCursor, quietPeriod, startedAt, requirePostCursorActivity: cursor.HasValue);
 
                 if (quietSatisfied)
                 {
-                    if (!configuration.HealthEnabled || status.State == AppLifecycleState.Healthy)
-                    {
-                        return CreateAppWaitResult(session.SessionId, status.CorrelationId, condition, startedAt, true, false, status.State, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
-                    }
-
-                    if (status.State is AppLifecycleState.Running or AppLifecycleState.Restarting)
+                    if (configuration.HealthEnabled &&
+                        status.State is AppLifecycleState.Running or AppLifecycleState.Restarting or AppLifecycleState.Healthy)
                     {
                         var healthResult = await EvaluateHealthAsync(session, false, cancellationToken);
                         if (healthResult.IsSatisfied)
                         {
-                            return CreateAppWaitResult(session.SessionId, status.CorrelationId, condition, startedAt, true, false, AppLifecycleState.Healthy, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+                            status = session.ToStatusData();
                         }
+                    }
+
+                    var watchSettled = !IsWatchPending(status);
+                    if (watchSettled &&
+                        (!configuration.HealthEnabled ||
+                         status.State == AppLifecycleState.Healthy ||
+                         (condition == AppWaitCondition.WatchSettled && status.State == AppLifecycleState.Running)))
+                    {
+                        return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
                     }
                 }
             }
@@ -248,7 +276,7 @@ public sealed class SessionCoordinator(
                 matchedLogEntry = session.LogBuffer.GetAfter(cursor ?? 0).FirstOrDefault(entry => regex.IsMatch(entry.Text));
                 if (matchedLogEntry is not null)
                 {
-                    return CreateAppWaitResult(session.SessionId, status.CorrelationId, condition, startedAt, true, false, status.State, matchedLogEntry, null, matchedLogEntry.Sequence);
+                    return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, matchedLogEntry.Sequence);
                 }
             }
 
@@ -256,7 +284,7 @@ public sealed class SessionCoordinator(
                 status.State is AppLifecycleState.Failed or AppLifecycleState.ExitedUnexpectedly)
             {
                 var hint = $"Session moved to '{status.State}' while waiting for '{condition}'.";
-                return CreateAppWaitResult(session.SessionId, status.CorrelationId, condition, startedAt, false, false, status.State, matchedLogEntry, hint, session.LogBuffer.CurrentSequence);
+                return CreateAppWaitResult(status, condition, startedAt, false, false, matchedLogEntry, hint, session.LogBuffer.CurrentSequence);
             }
 
             await Task.Delay(pollInterval, cancellationToken);
@@ -264,12 +292,22 @@ public sealed class SessionCoordinator(
 
         var currentStatus = session.ToStatusData();
         var timeoutHint = CreateTimeoutHint(condition);
-        if (condition is AppWaitCondition.Healthy or AppWaitCondition.Ready)
+        if (condition is AppWaitCondition.Healthy or AppWaitCondition.Ready or AppWaitCondition.WatchSettled or AppWaitCondition.RestartCompleted)
         {
-            session.MarkHealthFailure(new HealthSnapshot("Unhealthy", false, null, DateTimeOffset.UtcNow, null, timeoutHint, null, []));
+            session.MarkHealthFailure(new HealthSnapshot(
+                "Unhealthy",
+                false,
+                currentStatus.Health?.LastSuccessUtc,
+                DateTimeOffset.UtcNow,
+                currentStatus.Health?.LastUrl,
+                timeoutHint,
+                currentStatus.Watch?.ConfirmedWatchIteration,
+                currentStatus.Watch?.RuntimePid,
+                currentStatus.ObservedUrls));
+            currentStatus = session.ToStatusData();
         }
 
-        return CreateAppWaitResult(session.SessionId, currentStatus.CorrelationId, condition, startedAt, false, true, currentStatus.State, matchedLogEntry, timeoutHint, session.LogBuffer.CurrentSequence);
+        return CreateAppWaitResult(currentStatus, condition, startedAt, false, true, matchedLogEntry, timeoutHint, session.LogBuffer.CurrentSequence);
     }
 
     public Task<OperationStartData> StartBuildAsync(
@@ -464,6 +502,7 @@ public sealed class SessionCoordinator(
         _ = Task.Run(async () =>
         {
             await using var heldLease = lease;
+            var artifactsRoot = Path.Combine(configuration.WorkspaceRoot, ".mcp-state", "artifacts", operationId);
             var environment = environmentOverlayFilter.Merge(
                 new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -482,15 +521,17 @@ public sealed class SessionCoordinator(
                 commandArguments.Add(framework);
             }
 
+            commandArguments.Add("--artifacts-path");
+            commandArguments.Add(artifactsRoot);
             commandArguments.AddRange(ManagedProcessMarkers.CreateMsBuildPropertyArguments("operation", operationId, configuration.WorkspaceRoot, serverInstanceIdentity.Id));
             commandArguments.AddRange(arguments);
 
-            var artifactsRoot = Path.Combine(configuration.WorkspaceRoot, ".mcp-state", "artifacts", operationId);
             if (operationType == OperationType.Test && !commandArguments.Contains("--results-directory", StringComparer.OrdinalIgnoreCase))
             {
-                Directory.CreateDirectory(artifactsRoot);
+                var resultsDirectory = Path.Combine(artifactsRoot, "test-results");
+                Directory.CreateDirectory(resultsDirectory);
                 commandArguments.Add("--results-directory");
-                commandArguments.Add(artifactsRoot);
+                commandArguments.Add(resultsDirectory);
             }
 
             try
@@ -607,12 +648,12 @@ public sealed class SessionCoordinator(
     private async Task<(bool IsSatisfied, bool IsReady)> EvaluateHealthAsync(AppSession session, bool readyCanUseObservedUrl, CancellationToken cancellationToken)
     {
         var status = session.ToStatusData();
-        if (status.State == AppLifecycleState.Healthy)
+        if (status.State == AppLifecycleState.Healthy && !IsWatchPending(status))
         {
             return (true, true);
         }
 
-        if (readyCanUseObservedUrl && status.ObservedUrls.Count > 0 && !configuration.HealthEnabled)
+        if (readyCanUseObservedUrl && status.ObservedUrls.Count > 0 && !configuration.HealthEnabled && !IsWatchPending(status))
         {
             return (true, true);
         }
@@ -630,6 +671,12 @@ public sealed class SessionCoordinator(
             {
                 session.MarkHealthFailure(probe);
                 return (false, false);
+            }
+
+            if (!session.ConfirmsCurrentGeneration(probe))
+            {
+                session.MarkHealthObserved(probe, CreatePendingGenerationSummary(session.ToStatusData().Watch, probe));
+                return (false, true);
             }
 
             successes++;
@@ -739,6 +786,8 @@ public sealed class SessionCoordinator(
             AppWaitCondition.Healthy => "Health probe did not succeed within timeout.",
             AppWaitCondition.Ready => "Application did not become ready within timeout.",
             AppWaitCondition.QuietSinceCursor => "Application logs did not settle within the requested quiet period.",
+            AppWaitCondition.WatchSettled => "The active dotnet watch generation did not settle within timeout.",
+            AppWaitCondition.RestartCompleted => "The active dotnet watch restart did not complete within timeout.",
             _ => $"Wait condition '{condition}' was not satisfied within timeout."
         };
     }
@@ -762,27 +811,88 @@ public sealed class SessionCoordinator(
     }
 
     private static AppWaitData CreateAppWaitResult(
-        string sessionId,
-        string correlationId,
+        AppStatusData status,
         AppWaitCondition condition,
         DateTimeOffset startedAt,
         bool satisfied,
         bool timedOut,
-        AppLifecycleState observedState,
         LogEntry? matchedLogEntry,
         string? diagnosticHint,
         long finalCursor)
     {
         return new AppWaitData(
-            sessionId,
-            correlationId,
+            status.SessionId,
+            status.CorrelationId,
             condition,
             satisfied,
             timedOut,
             (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds,
-            observedState,
+            status.State,
             finalCursor,
             matchedLogEntry,
-            diagnosticHint);
+            diagnosticHint,
+            status.Health,
+            status.Watch);
     }
+
+    private static bool HasQuietPeriodElapsed(AppSession session, long cursor, TimeSpan quietPeriod, DateTimeOffset startedAt, bool requirePostCursorActivity)
+    {
+        var entriesAfterCursor = session.LogBuffer.GetAfter(cursor);
+        if (requirePostCursorActivity && entriesAfterCursor.Count == 0)
+        {
+            return false;
+        }
+
+        var mostRecentEntry = entriesAfterCursor.LastOrDefault();
+        return mostRecentEntry is null
+            ? DateTimeOffset.UtcNow - startedAt >= quietPeriod
+            : DateTimeOffset.UtcNow - mostRecentEntry.TimestampUtc >= quietPeriod;
+    }
+
+    private static bool HasRestartCompleted(
+        AppStatusData status,
+        int baselineVersion,
+        DateTimeOffset? baselineLastRestartUtc,
+        int? baselineConfirmedIteration,
+        int? baselineRuntimePid)
+    {
+        if (IsWatchPending(status))
+        {
+            return false;
+        }
+
+        var confirmedIterationAdvanced = status.Watch?.ConfirmedWatchIteration is int confirmedIteration &&
+                                         (!baselineConfirmedIteration.HasValue || confirmedIteration > baselineConfirmedIteration.Value);
+        var runtimePidChanged = status.Watch?.RuntimePid is int runtimePid &&
+                                baselineRuntimePid.HasValue &&
+                                runtimePid != baselineRuntimePid.Value;
+        var restartUtcAdvanced = status.LastRestartUtc.HasValue &&
+                                 (!baselineLastRestartUtc.HasValue || status.LastRestartUtc > baselineLastRestartUtc);
+
+        return status.SessionVersion > baselineVersion ||
+               confirmedIterationAdvanced ||
+               runtimePidChanged ||
+               restartUtcAdvanced;
+    }
+
+    private static bool IsWatchPending(AppStatusData status)
+        => status.Watch?.PendingChange == true;
+
+    private static string CreatePendingGenerationSummary(WatchStatusData? watch, HealthSnapshot probe)
+    {
+        if (watch?.ExpectedWatchIteration is int expectedIteration &&
+            probe.WatchIteration is int confirmedIteration &&
+            confirmedIteration < expectedIteration)
+        {
+            return $"Runtime is still on watch iteration {confirmedIteration}; waiting for {expectedIteration}.";
+        }
+
+        if (watch?.LastHotReloadOutcome == HotReloadOutcome.RestartRequired)
+        {
+            return "Watch has not yet confirmed the replacement runtime generation.";
+        }
+
+        return "Waiting for the active dotnet watch generation to become healthy.";
+    }
+
 }
