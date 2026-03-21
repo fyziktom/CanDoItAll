@@ -624,7 +624,7 @@ Measure or reason explicitly about:
 - critical hot paths,
 - allocations or payload size,
 - latency or scheduling impact,
-- changes that could degrade mobile, browser, or embedded environments."
+- changes that could degrade the main runtime environment or user-facing responsiveness."
 48655845-7a4a-590d-89a0-5930fe1d0200,regression-proof-required,Validation: Regression Proof Required,validation-review,Validation,Requires explicit proof that the old bug or risk is now locked down.,"evidence, proof, regression","bugfix, refactor, review, validation, testing","bugfix-with-regression-lock, safe-refactor, validation-audit, test-strategy-and-automation, senior-code-review","verification, delivery",,no,yes,target_bug_or_risk,"## Regression Proof
 Provide regression proof for {{target_bug_or_risk}}.
 

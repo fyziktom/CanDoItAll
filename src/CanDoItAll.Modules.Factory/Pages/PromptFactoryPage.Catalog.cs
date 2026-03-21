@@ -347,24 +347,29 @@ public partial class PromptFactoryPage
         switch (actionId)
         {
             case "clear:components":
+                RememberHistoryCheckpoint();
                 editor.SelectedBlockIds.Clear();
                 editor.ComponentCustomizations.Clear();
                 editor.HasCustomizedBlocks = false;
                 await FocusCanvasNodeAsync("session-root", "Prompt components cleared.");
                 return true;
             case "clear:flow":
+                RememberHistoryCheckpoint();
                 editor.FlowTemplateId = null;
                 await FocusCanvasNodeAsync("session-root", "Flow selection cleared.");
                 return true;
             case "clear:blueprint":
+                RememberHistoryCheckpoint();
                 editor.BlueprintId = null;
                 await FocusCanvasNodeAsync("session-root", "Blueprint selection cleared.");
                 return true;
             case "clear:inputs":
+                RememberHistoryCheckpoint();
                 editor.SessionAttachments.Clear();
                 await FocusCanvasNodeAsync("session-root", "Prompt inputs cleared.");
                 return true;
             case "reset:session":
+                RememberHistoryCheckpoint();
                 editor.BlueprintId = null;
                 editor.FlowTemplateId = null;
                 editor.SelectedBlockIds.Clear();
@@ -404,6 +409,7 @@ public partial class PromptFactoryPage
             return;
         }
 
+        RememberHistoryCheckpoint();
         if (!editor.SelectedBlockIds.Contains(block.Id))
         {
             editor.SelectedBlockIds.Add(block.Id);
@@ -455,6 +461,7 @@ public partial class PromptFactoryPage
             return;
         }
 
+        RememberHistoryCheckpoint();
         editor.SelectedBlockIds.Remove(block.Id);
         editor.ComponentCustomizations.RemoveAll(item => item.BlockId == block.Id);
         if (editor.SelectedBlockIds.Count == 0)
@@ -468,6 +475,7 @@ public partial class PromptFactoryPage
 
     private async Task RemoveInputByIdAsync(string attachmentId)
     {
+        RememberHistoryCheckpoint();
         var removed = editor.SessionAttachments.RemoveAll(item => string.Equals(item.Id, attachmentId, StringComparison.OrdinalIgnoreCase)) > 0;
         if (!removed)
         {
@@ -480,6 +488,7 @@ public partial class PromptFactoryPage
 
     private async Task AddInputAsync(string inputKind, CanvasWorkbenchCreateActionRequest request)
     {
+        RememberHistoryCheckpoint();
         var draft = new PromptSessionAttachmentSummary
         {
             Kind = inputKind,
@@ -505,6 +514,7 @@ public partial class PromptFactoryPage
             return;
         }
 
+        RememberHistoryCheckpoint();
         editor.BlueprintId = blueprint.Id;
         if (blueprint.RecommendedFlowTemplateId.HasValue)
         {
@@ -526,8 +536,9 @@ public partial class PromptFactoryPage
             return;
         }
 
+        RememberHistoryCheckpoint();
         editor.FlowTemplateId = flow.Id;
-        editor.SelectedBlockIds = flow.BlockIds.ToList();
+        editor.SelectedBlockIds = (await PromptFactoryService.GetRecommendedBlockIdsAsync(editor.BlueprintId, flow.Id, editor.Phase)).ToList();
         editor.HasCustomizedBlocks = false;
         TrimComponentCustomizations();
         await FocusCanvasNodeAsync(FlowCanvasNodeId, $"Flow '{flow.Name}' selected.");

@@ -363,6 +363,7 @@ public sealed record PromptRunNodeSummary(
     PromptRunNodeState State,
     Guid? PromptArtifactId,
     Guid? ParentNodeId,
+    Guid? PromptBlockDefinitionId,
     string Notes);
 
 public sealed class PromptBlockEditorModel

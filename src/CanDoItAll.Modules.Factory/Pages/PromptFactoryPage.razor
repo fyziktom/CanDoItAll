@@ -23,10 +23,32 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
 <PageTitle>Prompt Factory</PageTitle>
 
-<div class="space-y-6">
+<div class="space-y-6" @onkeydown:window="HandleWindowKeyDownAsync">
     <PageHeader Eyebrow="Prompt Factory"
                 Title="Prompt session workbench"
                 Description="Operate the prompt flow from the shared canvas stage, edit steps from the mirrored inspector, and keep governance, preview, and send actions in supporting panels." />
+
+    <div class="pf-command-row">
+        <div class="pf-history-actions">
+            <button type="button"
+                    class="cw-button"
+                    data-tone="ghost"
+                    data-testid="prompt-factory-undo"
+                    disabled="@(!CanUndo)"
+                    @onclick="UndoAsync">
+                Undo
+            </button>
+            <button type="button"
+                    class="cw-button"
+                    data-tone="ghost"
+                    data-testid="prompt-factory-redo"
+                    disabled="@(!CanRedo)"
+                    @onclick="RedoAsync">
+                Redo
+            </button>
+        </div>
+        <span class="pf-history-hint">Ctrl/Cmd + Z / Ctrl/Cmd + Shift + Z / Ctrl/Cmd + Y</span>
+    </div>
 
     <div class="pf-step-rail">
         @for (var index = 0; index < wizardSteps.Length; index++)
@@ -1432,6 +1454,36 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
     }
 </div>
 
+@if (showPromptPreviewDialog)
+{
+    <div class="pf-prompt-modal-backdrop" @onclick="ClosePromptPreviewDialogAsync">
+        <div class="pf-prompt-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-label="Built prompt preview"
+             data-testid="prompt-factory-prompt-modal"
+             @onclick:stopPropagation="true">
+            <div class="pf-prompt-modal__header">
+                <div>
+                    <p class="cw-panel-kicker">Build result</p>
+                    <h3 class="cw-panel-title">Final prompt</h3>
+                    <p class="cw-panel-copy">Build uses the selected flow and opens the assembled prompt here so it can be copied immediately.</p>
+                </div>
+                <button type="button" class="cw-button" data-tone="ghost" @onclick="ClosePromptPreviewDialogAsync">Close</button>
+            </div>
+
+            <textarea class="cw-textarea pf-prompt-preview"
+                      readonly
+                      data-testid="prompt-factory-prompt-modal-text">@editor.GeneratedPrompt</textarea>
+
+            <div class="cw-button-row">
+                <button type="button" class="cw-button" data-tone="accent" @onclick="CopyAsync">Copy prompt</button>
+                <button type="button" class="cw-button" data-tone="ghost" @onclick="ClosePromptPreviewDialogAsync">Done</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private static readonly string[] wizardSteps = ["Context", "Governance", "Assembly", "Review"];
 
@@ -1517,6 +1569,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         HydrateCanvasSelection();
         RefreshCanvasSurface();
         SyncSelectedPromptNodeDraft();
+        showPromptPreviewDialog = ShowPromptPreviewQuery && !string.IsNullOrWhiteSpace(editor.GeneratedPrompt);
     }
 
     private void HydrateCanvasSelection(string? preferredCanvasNodeId = null)
@@ -1859,6 +1912,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private async Task ApplyRecommendationsAsync()
     {
+        RememberHistoryCheckpoint();
         editor.SelectedBlockIds = (await PromptFactoryService.GetRecommendedBlockIdsAsync(editor.BlueprintId, editor.FlowTemplateId, editor.Phase)).ToList();
         editor.HasCustomizedBlocks = false;
         RefreshCanvasSurface();
@@ -1885,6 +1939,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private async Task BuildAsync()
     {
+        RememberHistoryCheckpoint();
         var result = await PromptFactoryService.BuildAsync(editor);
         if (result.IsFailure)
         {
@@ -1897,7 +1952,11 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         HydrateCanvasSelection(editor.Nodes.Count > 0 ? $"node:{editor.Nodes[0].Id:N}" : "session-root");
         RefreshCanvasSurface();
         SyncSelectedPromptNodeDraft();
-        NavigateToSession(editor.SessionId);
+        showPromptPreviewDialog = !string.IsNullOrWhiteSpace(editor.GeneratedPrompt);
+        if (editor.SessionId.HasValue && SessionIdQuery != editor.SessionId)
+        {
+            NavigateToSession(editor.SessionId, showPromptPreview: true);
+        }
         SetMessage("Prompt built.");
     }
 
@@ -1961,6 +2020,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private async Task BranchAsync(Guid nodeId)
     {
+        RememberHistoryCheckpoint();
         var result = await PromptFactoryService.BranchNodeAsync(nodeId);
         if (result.IsFailure)
         {
@@ -1983,6 +2043,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
             return;
         }
 
+        RememberHistoryCheckpoint();
         var saveResult = await PromptFactoryService.UpdateNodeAsync(selectedPromptNode.Id, selectedPromptNodeTitle, selectedPromptNodeNotes);
         if (saveResult.IsFailure)
         {
@@ -1990,7 +2051,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
             return;
         }
 
-        await SetPromptNodeStateAsync(selectedPromptNode.Id, selectedPromptNodeState, suppressMessage: true);
+        await SetPromptNodeStateAsync(selectedPromptNode.Id, selectedPromptNodeState, suppressMessage: true, captureHistory: false);
         editor = await PromptFactoryService.GetEditorAsync(editor.SessionId, editor.PromptRunId);
         HydrateCanvasSelection($"node:{selectedPromptNode.Id:N}");
         RefreshCanvasSurface();
@@ -1998,8 +2059,13 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         SetMessage("Prompt step saved.");
     }
 
-    private async Task SetPromptNodeStateAsync(Guid nodeId, PromptRunNodeState state, bool suppressMessage = false)
+    private async Task SetPromptNodeStateAsync(Guid nodeId, PromptRunNodeState state, bool suppressMessage = false, bool captureHistory = true)
     {
+        if (captureHistory)
+        {
+            RememberHistoryCheckpoint();
+        }
+
         var result = await PromptFactoryService.SetNodeStateAsync(nodeId, state);
         if (result.IsFailure)
         {
@@ -2188,6 +2254,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private void ToggleBlock(Guid id, bool isSelected)
     {
+        RememberHistoryCheckpoint();
         editor.HasCustomizedBlocks = true;
         if (isSelected)
         {
@@ -2205,6 +2272,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private void ToggleResource(Guid id, bool isSelected)
     {
+        RememberHistoryCheckpoint();
         if (isSelected)
         {
             if (!editor.SelectedResourceIds.Contains(id))
@@ -2286,11 +2354,18 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         templateEditor.SelectedBlockIds.Remove(id);
     }
 
-    private void NavigateToSession(Guid? sessionId)
+    private void NavigateToSession(Guid? sessionId, bool showPromptPreview = false)
     {
-        if (sessionId.HasValue && SessionIdQuery != sessionId)
+        if (!sessionId.HasValue)
         {
-            Navigation.NavigateTo($"/prompt-factory?sessionId={sessionId.Value}");
+            return;
+        }
+
+        var targetRoute = BuildPromptFactoryRoute(sessionId.Value, showPromptPreview);
+        var absoluteTargetRoute = Navigation.ToAbsoluteUri(targetRoute).ToString();
+        if (!string.Equals(Navigation.Uri, absoluteTargetRoute, StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo(targetRoute);
         }
     }
 

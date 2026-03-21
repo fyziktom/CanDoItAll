@@ -21,4 +21,4 @@ Measure or reason explicitly about:
 - critical hot paths,
 - allocations or payload size,
 - latency or scheduling impact,
-- changes that could degrade mobile, browser, or embedded environments.
+- changes that could degrade the main runtime environment or user-facing responsiveness.
