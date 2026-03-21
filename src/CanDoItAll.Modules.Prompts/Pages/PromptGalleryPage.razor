@@ -1,4 +1,5 @@
 @page "/prompt-gallery"
+@using System.Text.Json
 @using CanDoItAll.ComponentKit.Components
 @inject PromptsService PromptsService
 
@@ -22,7 +23,57 @@
             <SummaryTile Label="Final" Value="@prompts.Count(item => item.Status == PromptArtifactStatus.Final).ToString()" HelperText="Prompts with at least one finalized version." Tone="success" />
             <SummaryTile Label="Collections" Value="@collections.Count.ToString()" HelperText="Available prompt groupings." />
             <SummaryTile Label="Versions" Value="@prompts.Sum(item => item.VersionCount).ToString()" HelperText="Immutable prompt versions stored in the library." Tone="info" />
+            <SummaryTile Label="Components" Value="@libraryCatalog.ComponentCount.ToString()" HelperText="Imported prompt components available in the wizard." Tone="accent" />
+            <SummaryTile Label="Flows" Value="@libraryCatalog.FlowCount.ToString()" HelperText="Imported flow templates available in the wizard." Tone="info" />
+            <SummaryTile Label="Blueprints" Value="@libraryCatalog.BlueprintCount.ToString()" HelperText="Imported blueprints available in the wizard." Tone="success" />
         </SummaryTiles>
+
+        <section class="grid gap-6 xl:grid-cols-3">
+            <div class="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Imported components</p>
+                <h2 class="mt-2 text-lg font-semibold text-slate-950">Library groups</h2>
+                <div class="mt-4 space-y-3">
+                    @foreach (var group in libraryCatalog.Groups.OrderBy(item => item.Order))
+                    {
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <p class="text-sm font-semibold text-slate-950">@group.Name</p>
+                            <p class="mt-1 text-xs leading-5 text-slate-600">@group.Purpose</p>
+                            <p class="mt-2 text-xs font-semibold text-slate-500">@($"{group.ComponentCount} component(s)")</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Imported flows</p>
+                <h2 class="mt-2 text-lg font-semibold text-slate-950">Prompt flow templates</h2>
+                <div class="mt-4 space-y-3">
+                    @foreach (var flow in libraryCatalog.Flows.OrderBy(item => item.OrderIndex))
+                    {
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <p class="text-sm font-semibold text-slate-950">@flow.Name</p>
+                            <p class="mt-1 text-xs leading-5 text-slate-600">@flow.Summary</p>
+                            <p class="mt-2 text-xs font-semibold text-slate-500">@($"{flow.AgentSequence.Count} agent step(s) · {flow.BlockKeys.Count} block(s)")</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Imported blueprints</p>
+                <h2 class="mt-2 text-lg font-semibold text-slate-950">Prompt blueprints</h2>
+                <div class="mt-4 space-y-3">
+                    @foreach (var blueprint in libraryCatalog.Blueprints.OrderBy(item => item.OrderIndex))
+                    {
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <p class="text-sm font-semibold text-slate-950">@blueprint.Name</p>
+                            <p class="mt-1 text-xs leading-5 text-slate-600">@blueprint.Guidance</p>
+                            <p class="mt-2 text-xs font-semibold text-slate-500">@($"{blueprint.PromptType} · flow: {blueprint.RecommendedFlowKey}")</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
 
         <ListDetailShell ListPaneWidth="25rem">
             <ListHeader>
@@ -30,6 +81,20 @@
                     <Filters>
                         <FilterBar ResultText="@($"{FilteredPrompts.Count} matching prompt(s)")">
                             <input @bind="promptSearch" @bind:event="oninput" class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700" placeholder="Search prompts" />
+                            <InputSelect @bind-Value="collectionFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                                <option value="">All collections</option>
+                                @foreach (var collection in collections)
+                                {
+                                    <option value="@collection.Name">@collection.Name</option>
+                                }
+                            </InputSelect>
+                            <InputSelect @bind-Value="phaseFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                                <option value="">All phases</option>
+                                @foreach (var phase in prompts.Select(item => item.Phase).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(item => item))
+                                {
+                                    <option value="@phase">@phase</option>
+                                }
+                            </InputSelect>
                             <InputSelect @bind-Value="statusFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
                                 <option value="">All statuses</option>
                                 @foreach (var status in Enum.GetValues<PromptArtifactStatus>())
@@ -210,9 +275,12 @@
 
     private IReadOnlyList<PromptSummary> prompts = [];
     private IReadOnlyList<PromptCollectionSummary> collections = [];
+    private PromptLibraryPageCatalog libraryCatalog = new();
     private PromptEditorModel editor = new();
     private string? message;
     private string promptSearch = string.Empty;
+    private string collectionFilter = string.Empty;
+    private string phaseFilter = string.Empty;
     private string statusFilter = string.Empty;
     private string detailTab = "overview";
 
@@ -223,6 +291,8 @@
              prompt.Phase.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ||
              prompt.Tags.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ||
              (prompt.CollectionName?.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+            (string.IsNullOrWhiteSpace(collectionFilter) || string.Equals(prompt.CollectionName, collectionFilter, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(phaseFilter) || string.Equals(prompt.Phase, phaseFilter, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrWhiteSpace(statusFilter) || string.Equals(prompt.Status.ToString(), statusFilter, StringComparison.OrdinalIgnoreCase)))
         .OrderByDescending(prompt => prompt.UpdatedAtUtc)
         .ToList();
@@ -246,6 +316,7 @@
     {
         prompts = await PromptsService.ListAsync();
         collections = await PromptsService.ListCollectionsAsync();
+        libraryCatalog = LoadPromptLibraryCatalog();
         editor = promptId.HasValue ? await PromptsService.GetAsync(promptId.Value) : new PromptEditorModel();
         detailTab = "overview";
     }
@@ -321,9 +392,124 @@
     private void ResetFilters()
     {
         promptSearch = string.Empty;
+        collectionFilter = string.Empty;
+        phaseFilter = string.Empty;
         statusFilter = string.Empty;
     }
 
     private static string BuildPromptMeta(PromptSummary prompt)
         => $"{prompt.Phase} / {(string.IsNullOrWhiteSpace(prompt.CollectionName) ? "No collection" : prompt.CollectionName)}";
+
+    private static PromptLibraryPageCatalog LoadPromptLibraryCatalog()
+    {
+        var root = ResolvePromptLibraryRoot();
+        if (root is null)
+        {
+            return new PromptLibraryPageCatalog();
+        }
+
+        var groups = ReadJson<List<PromptLibraryPageGroup>>(Path.Combine(root, "group-catalog.json"));
+        var flows = ReadJson<List<PromptLibraryPageFlow>>(Path.Combine(root, "factory-prompt-flow-templates.seed.json"));
+        var blueprints = ReadJson<List<PromptLibraryPageBlueprint>>(Path.Combine(root, "factory-prompt-blueprints.seed.json"));
+        return new PromptLibraryPageCatalog
+        {
+            Groups = groups,
+            Flows = flows,
+            Blueprints = blueprints,
+            ComponentCount = groups.Sum(item => item.ComponentCount),
+            FlowCount = flows.Count,
+            BlueprintCount = blueprints.Count
+        };
+    }
+
+    private static string? ResolvePromptLibraryRoot()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(Directory.GetCurrentDirectory(), "output", "prompt-library"),
+            Path.Combine(AppContext.BaseDirectory, "output", "prompt-library"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "output", "prompt-library")
+        };
+
+        return candidates
+            .Select(Path.GetFullPath)
+            .FirstOrDefault(Directory.Exists);
+    }
+
+    private static T ReadJson<T>(string path) where T : new()
+    {
+        if (!File.Exists(path))
+        {
+            return new T();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<T>(File.ReadAllText(path), new JsonSerializerOptions(JsonSerializerDefaults.Web)
+            {
+                PropertyNameCaseInsensitive = true
+            }) ?? new T();
+        }
+        catch
+        {
+            return new T();
+        }
+    }
+
+    private sealed class PromptLibraryPageCatalog
+    {
+        public List<PromptLibraryPageGroup> Groups { get; set; } = [];
+
+        public List<PromptLibraryPageFlow> Flows { get; set; } = [];
+
+        public List<PromptLibraryPageBlueprint> Blueprints { get; set; } = [];
+
+        public int ComponentCount { get; set; }
+
+        public int FlowCount { get; set; }
+
+        public int BlueprintCount { get; set; }
+    }
+
+    private sealed class PromptLibraryPageGroup
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string Purpose { get; set; } = string.Empty;
+
+        public int Order { get; set; }
+
+        public int ComponentCount { get; set; }
+    }
+
+    private sealed class PromptLibraryPageFlow
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string Summary { get; set; } = string.Empty;
+
+        public int OrderIndex { get; set; }
+
+        public List<string> BlockKeys { get; set; } = [];
+
+        public List<PromptLibraryPageFlowAgent> AgentSequence { get; set; } = [];
+    }
+
+    private sealed class PromptLibraryPageFlowAgent
+    {
+        public int Order { get; set; }
+    }
+
+    private sealed class PromptLibraryPageBlueprint
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string PromptType { get; set; } = string.Empty;
+
+        public string Guidance { get; set; } = string.Empty;
+
+        public string RecommendedFlowKey { get; set; } = string.Empty;
+
+        public int OrderIndex { get; set; }
+    }
 }

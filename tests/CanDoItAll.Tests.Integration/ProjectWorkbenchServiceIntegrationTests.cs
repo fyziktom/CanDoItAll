@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Infrastructure.Persistence;
@@ -170,8 +171,109 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.Equal("Updated inline note text", updated.Notes);
 
         var surface = await workbench.GetStructureAsync(saveResult.Value);
-        var note = Assert.Single(surface.Nodes.Where(node => node.Id == created.Id));
+        var note = Assert.Single(surface.Nodes, node => node.Id == created.Id);
         Assert.Equal("Updated inline note", note.Title);
         Assert.Equal("Updated inline note text", note.Notes);
+    }
+
+    [Fact]
+    public async Task CreateObjectAsync_links_prompt_flow_nodes_to_blank_prompt_sessions()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var promptFactory = scope.ServiceProvider.GetRequiredService<PromptFactoryService>();
+
+        var saveResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Prompt Flow Node",
+            Description = "Exercise prompt-flow linking from project structure.",
+            Objective = "Create a reusable prompt flow from the project canvas.",
+            CurrentPhase = "Discovery"
+        });
+
+        Assert.True(saveResult.IsSuccess);
+
+        var created = await workbench.CreateObjectAsync(
+            saveResult.Value,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.PromptFlow,
+                "Feature intake flow",
+                "Capture the feature framing",
+                "Created from the project structure canvas.",
+                $"project:{saveResult.Value}",
+                480,
+                320));
+
+        Assert.StartsWith("/prompt-factory?sessionId=", created.Route, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("prompt-session", created.ArtifactKind);
+        Assert.True(created.ArtifactId.HasValue);
+
+        var editor = await promptFactory.GetEditorAsync(created.ArtifactId.Value);
+        Assert.Equal(saveResult.Value, editor.ProjectId);
+        Assert.Equal("Feature intake flow", editor.SessionName);
+        Assert.Equal("Discovery", editor.Phase);
+        Assert.Null(editor.FlowTemplateId);
+        Assert.Empty(editor.SelectedBlockIds);
+        Assert.Empty(editor.Nodes);
+
+        var surface = await workbench.GetStructureAsync(saveResult.Value);
+        var flowNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+        Assert.Equal(created.Route, flowNode.Route);
+        Assert.Equal("prompt-session", flowNode.ArtifactKind);
+    }
+
+    [Fact]
+    public async Task ExecuteNodeCommandAsync_wizard_repairs_legacy_prompt_flow_routes()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var saveResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Prompt Flow Repair",
+            Description = "Repair prompt-flow routing for legacy structure nodes.",
+            Objective = "Open the prompt wizard from project structure even when the node predates the feature.",
+            CurrentPhase = "Execution"
+        });
+
+        Assert.True(saveResult.IsSuccess);
+
+        var created = await workbench.CreateObjectAsync(
+            saveResult.Value,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.PromptFlow,
+                "Repairable flow",
+                "Legacy route",
+                "Simulate an existing prompt flow node.",
+                $"project:{saveResult.Value}",
+                520,
+                280));
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var record = await dbContext.Set<ProjectObjectRecord>()
+                .FirstAsync(item => item.ProjectId == saveResult.Value && item.NodeKey == created.Id);
+            record.Route = $"/projects/{saveResult.Value}/structure";
+            record.ExternalArtifactKind = ProjectObjectType.PromptFlow.ToString();
+            record.ExternalArtifactId = null;
+            await dbContext.SaveChangesAsync();
+        }
+
+        var artifact = await workbench.ExecuteNodeCommandAsync(saveResult.Value, created.Id, ProjectStructureCommandKind.Wizard);
+
+        Assert.NotNull(artifact);
+        Assert.StartsWith("/prompt-factory?sessionId=", artifact!.Route, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("prompt-session", artifact.Kind);
+
+        var surface = await workbench.GetStructureAsync(saveResult.Value);
+        var flowNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+        Assert.StartsWith("/prompt-factory?sessionId=", flowNode.Route, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("prompt-session", flowNode.ArtifactKind);
+        Assert.True(flowNode.ArtifactId.HasValue);
     }
 }

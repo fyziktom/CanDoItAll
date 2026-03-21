@@ -8,13 +8,16 @@
     <div class="cw-workbench-frame">
         <div class="cw-toolbar">
             <div class="cw-toolbar-group cw-toolbar-group--left">
-                <button type="button"
-                        class="cw-toolbar-action cw-toolbar-action--primary"
-                        @ref="quickCreateButton"
-                        aria-label="Open quick create actions"
-                        @onclick="OpenQuickCreateMenuAsync">
-                    <span>+</span>
-                </button>
+                @if (Surface.Chrome.ShowQuickCreateRail && Surface.Chrome.QuickCreateActions.Count > 0)
+                {
+                    <button type="button"
+                            class="cw-toolbar-action cw-toolbar-action--primary"
+                            @ref="quickCreateButton"
+                            aria-label="Open quick create actions"
+                            @onclick="OpenQuickCreateMenuAsync">
+                        <span>+</span>
+                    </button>
+                }
 
                 @if (Surface.Chrome.ShowFocusAction)
                 {
@@ -37,7 +40,7 @@
                     <button type="button" class="cw-toolbar-action cw-toolbar-action--ghost" aria-label="Zoom out" @onclick="ZoomOutAsync">-</button>
                     <input class="cw-zoom-slider"
                            type="range"
-                           min="55"
+                           min="15"
                            max="175"
                            step="5"
                            value="@zoomPercent"
@@ -146,6 +149,8 @@
 </div>
 
 @code {
+    private const int MinZoomPercent = 15;
+    private const int MaxZoomPercent = 175;
     private readonly JsonSerializerOptions serializerOptions = new(JsonSerializerDefaults.Web);
     private ElementReference host;
     private ElementReference quickCreateButton;
@@ -209,6 +214,10 @@
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.create", host, objectReference, Surface);
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
+            if (ShouldAutoFitInitialView())
+            {
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.fitView", host);
+            }
             initialized = true;
             MarkSurfaceApplied();
             return;
@@ -341,9 +350,9 @@
         await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.focusNode", host, targetNodeId);
     }
 
-    private Task ZoomInAsync() => SetZoomPercentAsync(Math.Min(175, zoomPercent + 10));
+    private Task ZoomInAsync() => SetZoomPercentAsync(Math.Min(MaxZoomPercent, zoomPercent + 10));
 
-    private Task ZoomOutAsync() => SetZoomPercentAsync(Math.Max(55, zoomPercent - 10));
+    private Task ZoomOutAsync() => SetZoomPercentAsync(Math.Max(MinZoomPercent, zoomPercent - 10));
 
     private Task IncreaseMenuScaleAsync() => SetMenuScalePercentAsync(Math.Min(140, menuScalePercent + 5));
 
@@ -361,7 +370,7 @@
 
     private async Task SetZoomPercentAsync(int value)
     {
-        zoomPercent = Math.Clamp(value, 55, 175);
+        zoomPercent = Math.Clamp(value, MinZoomPercent, MaxZoomPercent);
         if (initialized)
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setZoomPercent", host, zoomPercent);
@@ -422,7 +431,7 @@
     }
 
     private static int ClampZoomPercent(double zoom)
-        => (int)Math.Round(Math.Clamp(zoom, 0.55, 1.75) * 100);
+        => (int)Math.Round(Math.Clamp(zoom, MinZoomPercent / 100d, MaxZoomPercent / 100d) * 100);
 
     private static int ClampMenuScalePercent(double scale)
         => (int)Math.Round(Math.Clamp(scale, 0.8, 1.4) * 100);
@@ -449,6 +458,25 @@
         surfaceSyncPending = false;
     }
 
+    private bool ShouldAutoFitInitialView()
+    {
+        if (Surface.Nodes.Count == 0)
+        {
+            return false;
+        }
+
+        if (Surface.UiState.ManualPositions.Count > 0)
+        {
+            return false;
+        }
+
+        var usesDefaultViewport = Math.Abs(Surface.UiState.Zoom - 1d) < 0.001d
+            && Math.Abs(Surface.UiState.PanX - 90d) < 0.001d
+            && Math.Abs(Surface.UiState.PanY - 110d) < 0.001d;
+
+        return usesDefaultViewport;
+    }
+
     public async Task OpenCreateDialogAsync(CanvasWorkbenchAction action, CanvasWorkbenchCreateActionRequest request)
     {
         if (!initialized)
@@ -470,8 +498,17 @@
     {
         if (initialized)
         {
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, false);
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.dispose", host);
+            try
+            {
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, false);
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.dispose", host);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+            catch (JSException)
+            {
+            }
         }
 
         objectReference?.Dispose();

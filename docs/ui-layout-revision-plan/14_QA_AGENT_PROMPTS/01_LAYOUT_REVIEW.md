@@ -11,6 +11,8 @@ Review the phase-1 implementation for layout quality and user-flow clarity.
 - form sectioning
 - sticky action behavior
 - responsive behavior
+- route-level filter completeness on migrated list/detail pages
+- missing top-level create actions on admin/settings-style pages
 
 ## Pages To Review
 
@@ -32,6 +34,7 @@ Review the phase-1 implementation for layout quality and user-flow clarity.
 3. Do similar pages now share the same structure?
 4. Is any page still visibly assembled from one-off layout decisions?
 5. Does the shell help the page, or still compete with it?
+6. Did the route keep the filters and quick actions required for real task throughput, not just the new visual shell?
 
 ## Required Output
 

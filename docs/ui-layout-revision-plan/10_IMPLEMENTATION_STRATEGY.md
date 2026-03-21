@@ -1,5 +1,24 @@
 # Implementation Strategy
 
+## Execution Status Update (2026-03-20)
+
+The recommended phase order was largely followed.
+
+Completed in code:
+
+- Phase 1: shell foundations
+- Phase 2: shared composition components
+- Phase 3: high-value standard pages
+- Phase 4: medium-complexity standard pages
+- Phase 5: protected-route shell adoption
+
+Phase 6 and Phase 7 remained necessary after the first pass because live QA exposed rollout gaps that were not obvious from code inspection alone:
+
+- stale Tailwind output made several desktop layouts appear unfinished even though Razor markup had already been migrated
+- resources, test lab, prompt gallery, and settings still needed missing filters or create affordances
+- protected structure-canvas interactions required interop fixes during real browser validation
+- a later protected-route QA pass also showed that focus-workbench routes still needed shell hardening after adoption: the desktop menu must remain present while docked, maximize must escape inner shell cards, and the radial menu needed another density/zoom sweep
+
 ## Strategy Summary
 
 Phase 1 should be executed as a controlled sequence, not as broad parallel cleanup.
@@ -24,6 +43,7 @@ Required outputs:
 
 - route-to-shell-mode map
 - protected-area checklist attached to the implementation task
+- explicit reminder to rebuild Tailwind output before visual QA
 
 ### Phase 1: Global Shell Foundations
 
@@ -119,6 +139,8 @@ Goals:
 - apply the quieter `FocusWorkbench` shell mode
 - widen the working area
 - remove redundant surrounding chrome
+- keep the persistent desktop main menu visible while the workbench is docked
+- ensure maximize/dock uses a true viewport overlay rather than an inner-card expansion
 
 Important rule:
 
@@ -132,6 +154,11 @@ Goals:
 - standardize status chip treatment
 - verify button hierarchy and destructive action placement
 - remove obvious remaining one-off page-local layout patterns
+- finish radial-menu density tuning on the shared canvases
+- remove duplicated submenu labels where the icon already carries the payload
+- increase the zoom-out floor enough for large structure maps to stay reviewable
+- make picker-based media uploads visibly distinct on the canvas itself, not only in the inspector
+- treat file-chooser upload as incomplete until reselecting the created node shows the same file preview and file name again
 
 ### Phase 7: QA Sweep
 
@@ -141,6 +168,7 @@ Goals:
 - responsive review
 - protected-area regression review
 - accessibility sanity pass
+- live Tailwind/CSS verification so screenshots reflect the real shipped styles
 
 ## Dependency-Aware Sequencing
 
@@ -163,6 +191,11 @@ Protected routes should benefit from the new shell mode without becoming test-he
 3. Do not expand scope into canvas internals.
 4. Do not rewrite services to make the layout work.
 5. Do not replace everything at once when a route-by-route migration is safer.
+6. Rebuild `Tailwind/output.css` before any visual signoff or browser screenshot review.
+7. Treat live Playwright review as mandatory for protected routes and desktop list/detail pages.
+8. Do not accept protected-route maximize work as complete until the live host bounds are verified at `left=0`, `top=0`, and viewport-sized.
+9. Treat missing desktop navigation on a docked focus-workbench route as a blocking regression.
+10. Do not accept picker-upload work from code inspection alone; the uploaded node must be visible on the canvas and the inspector must reopen the same media preview on reselection.
 
 ## Suggested Page Migration Batch
 
@@ -212,4 +245,3 @@ Purpose:
 Purpose:
 
 - apply the quiet-shell treatment after the shell model is stable
-

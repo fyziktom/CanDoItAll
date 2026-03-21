@@ -1,5 +1,7 @@
 (function () {
     const root = window.CanDoItAll = window.CanDoItAll || {};
+    const MIN_ZOOM = 0.15;
+    const MAX_ZOOM = 1.75;
 
     function clear(element) {
         while (element.firstChild) {
@@ -27,6 +29,23 @@
         }
 
         return element;
+    }
+
+    function normalizeInputField(field) {
+        return {
+            key: field?.key || "",
+            label: field?.label || field?.key || "Value",
+            placeholder: field?.placeholder || "",
+            inputMode: field?.inputMode || "text",
+            isRequired: !!field?.isRequired
+        };
+    }
+
+    function normalizeInputValue(value) {
+        return {
+            key: value?.key || "",
+            value: value?.value || ""
+        };
     }
 
     function clamp(value, min, max) {
@@ -61,10 +80,14 @@
             subtitlePlaceholder: action?.subtitlePlaceholder || "",
             notesLabel: action?.notesLabel || "Notes",
             notesPlaceholder: action?.notesPlaceholder || "",
+            showDefaultTextFields: action?.showDefaultTextFields !== false,
+            submitLabel: action?.submitLabel || action?.label || "Create",
             requiresFile: !!action?.requiresFile,
             acceptedFileTypes: action?.acceptedFileTypes || "",
             filePrompt: action?.filePrompt || "Drop a file here or choose one.",
             supportsDragDrop: action?.supportsDragDrop !== false,
+            inputFields: Array.isArray(action?.inputFields) ? action.inputFields.map(normalizeInputField) : [],
+            defaultInputValues: Array.isArray(action?.defaultInputValues) ? action.defaultInputValues.map(normalizeInputValue) : [],
             children: Array.isArray(action?.children) ? action.children.map(normalizeAction) : []
         };
     }
@@ -108,6 +131,11 @@
                 isInlineTextNode: !!node?.isInlineTextNode,
                 inlineText: node?.inlineText || "",
                 inlineTextPlaceholder: node?.inlineTextPlaceholder || "Write note",
+                mediaKind: node?.mediaKind || "",
+                mediaPreviewUrl: node?.mediaPreviewUrl || "",
+                mediaPreviewAlt: node?.mediaPreviewAlt || node?.title || "",
+                mediaContentType: node?.mediaContentType || "",
+                mediaFileName: node?.mediaFileName || "",
                 progressMode: node?.progressMode || "na",
                 progressPercent: normalizeProgressPercent(node?.progressPercent),
                 markerIcon: node?.markerIcon || "",
@@ -122,7 +150,7 @@
                 collapsedNodeIds: Array.isArray(surface?.uiState?.collapsedNodeIds) ? [...surface.uiState.collapsedNodeIds] : [],
                 groupFrames: Array.isArray(surface?.uiState?.groupFrames) ? surface.uiState.groupFrames.map(normalizeGroupFrame) : [],
                 manualPositions: surface?.uiState?.manualPositions || {},
-                zoom: typeof surface?.uiState?.zoom === "number" ? clamp(surface.uiState.zoom, 0.55, 1.75) : 1,
+                zoom: typeof surface?.uiState?.zoom === "number" ? clamp(surface.uiState.zoom, MIN_ZOOM, MAX_ZOOM) : 1,
                 panX: typeof surface?.uiState?.panX === "number" ? surface.uiState.panX : 90,
                 panY: typeof surface?.uiState?.panY === "number" ? surface.uiState.panY : 110,
                 menuActionScale: normalizeMenuActionScale(surface?.uiState?.menuActionScale),
@@ -903,7 +931,22 @@
     }
 
     function appendNodeIndicators(state, node, container) {
-        container.appendChild(createProgressBadge(state.document, node?.progressMode, node?.progressPercent, ""));
+        const progressBadge = createProgressBadge(state.document, node?.progressMode, node?.progressPercent, "");
+        const openProgressMetadata = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            state.recentDoubleActivationAt = Date.now();
+            openNodeMetadataMenu(state, node, "progress", progressBadge);
+        };
+        progressBadge.addEventListener("pointerdown", event => {
+            if (event.button !== 0 || event.detail < 2) {
+                return;
+            }
+
+            openProgressMetadata(event);
+        });
+        progressBadge.addEventListener("dblclick", openProgressMetadata);
+        container.appendChild(progressBadge);
         const markerBadge = createMarkerBadge(state, node);
         if (markerBadge) {
             container.appendChild(markerBadge);
@@ -933,6 +976,32 @@
         nodeElement.appendChild(surface);
     }
 
+    function createNodeMedia(state, node) {
+        if (!node?.mediaKind || !node?.mediaPreviewUrl) {
+            return null;
+        }
+
+        const media = createElement(state.document, `div`, `cw-node__media cw-node__media--${node.mediaKind}`);
+        if (node.mediaKind === "image") {
+            const image = createElement(state.document, "img", "cw-node__media-image");
+            image.src = node.mediaPreviewUrl;
+            image.alt = node.mediaPreviewAlt || node.title || node.mediaFileName || "Uploaded image";
+            image.loading = "lazy";
+            image.decoding = "async";
+            image.draggable = false;
+            media.appendChild(image);
+        }
+        else if (node.mediaKind === "video") {
+            const placeholder = createElement(state.document, "div", "cw-node__media-video");
+            placeholder.appendChild(createElement(state.document, "span", "cw-node__media-video-icon", "\u25B6"));
+            placeholder.appendChild(createElement(state.document, "span", "cw-node__media-video-label", "Preview"));
+            media.appendChild(placeholder);
+        }
+
+        media.appendChild(createElement(state.document, "span", "cw-node__media-badge", node.mediaKind === "image" ? "Image" : "Video"));
+        return media;
+    }
+
     function renderStandardNode(state, node, nodeElement) {
         const surface = createElement(state.document, "div", "cw-node__surface");
         const header = createElement(state.document, "div", "cw-node__header");
@@ -955,6 +1024,11 @@
 
         header.appendChild(rightMeta);
         surface.appendChild(header);
+        const media = createNodeMedia(state, node);
+        if (media) {
+            surface.appendChild(media);
+        }
+
         surface.appendChild(createElement(state.document, "h3", "cw-node__title", node.title || "Untitled"));
 
         if (node.subtitle) {
@@ -1328,6 +1402,9 @@
             notes: "",
             objectSubtype: action.objectSubtype || "",
             uploadedFile: null,
+            inputValues: Array.isArray(action?.defaultInputValues)
+                ? action.defaultInputValues.map(item => ({ key: item.key || "", value: item.value || "" }))
+                : [],
             placementKind: placementKind || (sourceNode ? "child" : "canvas"),
             createMode: action.createMode || (action.requiresInput ? "dialog" : "command")
         };
@@ -1371,12 +1448,12 @@
         switch (resolveMenuActionVariant(action)) {
             case "progress-preset":
             case "marker-preset":
-                return { halfWidth: round(27 * scale), halfHeight: round(24 * scale) };
+                return { halfWidth: round(34 * scale), halfHeight: round(29 * scale) };
             case "priority-preset":
             case "compact":
-                return { halfWidth: round(24 * scale), halfHeight: round(22 * scale) };
+                return { halfWidth: round(29 * scale), halfHeight: round(25 * scale) };
             default:
-                return { halfWidth: round(37 * scale), halfHeight: round(34 * scale) };
+                return { halfWidth: round(46 * scale), halfHeight: round(40 * scale) };
         }
     }
 
@@ -1405,12 +1482,14 @@
         }
 
         window.requestAnimationFrame(() => {
-            const maxWidth = Math.max(18, button.clientWidth * 0.72);
-            const minFontSize = variant === "normal" ? 8 : 6.6;
-            const maxHeight = Math.max(12, button.clientHeight * 0.24);
+            const maxWidthRatio = variant === "normal" ? 0.82 : variant === "compact" ? 0.74 : 0.78;
+            const maxHeightRatio = variant === "normal" ? 0.33 : variant === "compact" ? 0.26 : 0.29;
+            const maxWidth = Math.max(20, button.clientWidth * maxWidthRatio);
+            const minFontSize = variant === "normal" ? 9.25 : variant === "compact" ? 7.4 : 7.7;
+            const maxHeight = Math.max(14, button.clientHeight * maxHeightRatio);
             label.style.maxWidth = `${round(maxWidth)}px`;
 
-            let fontSize = parseFloat(window.getComputedStyle(label).fontSize) || (variant === "normal" ? 9.5 : 7.6);
+            let fontSize = parseFloat(window.getComputedStyle(label).fontSize) || (variant === "normal" ? 11.5 : 8.4);
             while (fontSize > minFontSize &&
                 (label.scrollWidth > (maxWidth + 0.5) || label.scrollHeight > (maxHeight + 0.5))) {
                 fontSize -= 0.25;
@@ -1530,6 +1609,10 @@
 
         iconContainer.appendChild(createElement(state.document, "span", "cw-context-menu__glyph", resolveActionGlyph(iconKey)));
         return iconContainer;
+    }
+
+    function resolveMenuActionAriaLabel(action) {
+        return action?.label || action?.menuLabel || action?.actionId || "Canvas action";
     }
 
     function getRadialOffsets(count, baseRadius, ringStep) {
@@ -1876,12 +1959,25 @@
                 return;
             }
 
+            const inputValues = Array.isArray(state.composer.inputFieldEntries)
+                ? state.composer.inputFieldEntries.map(entry => ({
+                    key: entry.key,
+                    value: (entry.input.value || "").trim()
+                }))
+                : [];
+            const hasMissingRequiredInputs = Array.isArray(state.composer.inputFieldEntries) &&
+                state.composer.inputFieldEntries.some(entry => entry.isRequired && !(entry.input.value || "").trim());
+            if (hasMissingRequiredInputs) {
+                return;
+            }
+
             submitCreateRequest(state, {
                 ...state.composer.request,
-                title: state.composer.titleInput.value.trim(),
-                subtitle: state.composer.subtitleInput.value.trim(),
-                notes: state.composer.notesInput.value.trim(),
+                title: state.composer.titleInput ? state.composer.titleInput.value.trim() : "",
+                subtitle: state.composer.subtitleInput ? state.composer.subtitleInput.value.trim() : "",
+                notes: state.composer.notesInput ? state.composer.notesInput.value.trim() : "",
                 objectSubtype: state.composer.request.objectSubtype || "",
+                inputValues,
                 uploadedFile: state.composer.uploadedFile || null
             }, { focusHost: true });
             closeComposer(state);
@@ -1963,7 +2059,9 @@
         }
 
         if (composer.createButton) {
-            composer.createButton.disabled = !!composer.requiresFile && !composer.uploadedFile;
+            const hasMissingRequiredInputs = Array.isArray(composer.inputFieldEntries) &&
+                composer.inputFieldEntries.some(entry => entry.isRequired && !(entry.input.value || "").trim());
+            composer.createButton.disabled = (!!composer.requiresFile && !composer.uploadedFile) || hasMissingRequiredInputs;
         }
     }
 
@@ -1973,32 +2071,85 @@
 
         const shell = decorateComposerShell(state, `Create ${action.label || "item"}`, action.label || "Create", "dialog");
         const fields = createElement(state.document, "div", "cw-canvas-composer__fields");
+        const showDefaultTextFields = action.showDefaultTextFields !== false;
+        let titleInput = null;
+        let subtitleInput = null;
+        let notesInput = null;
 
-        const titleField = createElement(state.document, "label", "cw-canvas-composer__field");
-        titleField.appendChild(createElement(state.document, "span", null, action.titleLabel || "Title"));
-        const titleInput = createElement(state.document, "input", "cw-canvas-composer__input");
-        titleInput.type = "text";
-        titleInput.value = request?.title || "";
-        titleInput.placeholder = action.titlePlaceholder || "";
-        titleField.appendChild(titleInput);
-        fields.appendChild(titleField);
+        if (showDefaultTextFields) {
+            const titleField = createElement(state.document, "label", "cw-canvas-composer__field");
+            titleField.appendChild(createElement(state.document, "span", null, action.titleLabel || "Title"));
+            titleInput = createElement(state.document, "input", "cw-canvas-composer__input");
+            titleInput.type = "text";
+            titleInput.value = request?.title || "";
+            titleInput.placeholder = action.titlePlaceholder || "";
+            titleField.appendChild(titleInput);
+            fields.appendChild(titleField);
 
-        const subtitleField = createElement(state.document, "label", "cw-canvas-composer__field");
-        subtitleField.appendChild(createElement(state.document, "span", null, action.subtitleLabel || "Subtitle"));
-        const subtitleInput = createElement(state.document, "input", "cw-canvas-composer__input");
-        subtitleInput.type = "text";
-        subtitleInput.value = request?.subtitle || "";
-        subtitleInput.placeholder = action.subtitlePlaceholder || "";
-        subtitleField.appendChild(subtitleInput);
-        fields.appendChild(subtitleField);
+            const subtitleField = createElement(state.document, "label", "cw-canvas-composer__field");
+            subtitleField.appendChild(createElement(state.document, "span", null, action.subtitleLabel || "Subtitle"));
+            subtitleInput = createElement(state.document, "input", "cw-canvas-composer__input");
+            subtitleInput.type = "text";
+            subtitleInput.value = request?.subtitle || "";
+            subtitleInput.placeholder = action.subtitlePlaceholder || "";
+            subtitleField.appendChild(subtitleInput);
+            fields.appendChild(subtitleField);
 
-        const notesField = createElement(state.document, "label", "cw-canvas-composer__field");
-        notesField.appendChild(createElement(state.document, "span", null, action.notesLabel || "Notes"));
-        const notesInput = createElement(state.document, "textarea", "cw-canvas-composer__textarea");
-        notesInput.value = request?.notes || "";
-        notesInput.placeholder = action.notesPlaceholder || "";
-        notesField.appendChild(notesInput);
-        fields.appendChild(notesField);
+            const notesField = createElement(state.document, "label", "cw-canvas-composer__field");
+            notesField.appendChild(createElement(state.document, "span", null, action.notesLabel || "Notes"));
+            notesInput = createElement(state.document, "textarea", "cw-canvas-composer__textarea");
+            notesInput.value = request?.notes || "";
+            notesInput.placeholder = action.notesPlaceholder || "";
+            notesField.appendChild(notesInput);
+            fields.appendChild(notesField);
+        }
+
+        const inputValueLookup = new Map();
+        const initialInputValues = Array.isArray(request?.inputValues) && request.inputValues.length
+            ? request.inputValues
+            : (Array.isArray(action?.defaultInputValues) ? action.defaultInputValues : []);
+        for (const item of initialInputValues) {
+            if (!item?.key) {
+                continue;
+            }
+
+            inputValueLookup.set(item.key, item.value || "");
+        }
+
+        const inputFieldEntries = [];
+        for (const field of action.inputFields || []) {
+            const fieldWrapper = createElement(state.document, "label", "cw-canvas-composer__field");
+            fieldWrapper.appendChild(createElement(
+                state.document,
+                "span",
+                null,
+                `${field.label || field.key || "Value"}${field.isRequired ? " *" : ""}`));
+
+            const inputMode = (field.inputMode || "text").toLowerCase();
+            const isMultiline = inputMode === "textarea" || inputMode === "multiline";
+            const input = createElement(
+                state.document,
+                isMultiline ? "textarea" : "input",
+                isMultiline ? "cw-canvas-composer__textarea" : "cw-canvas-composer__input");
+            if (!isMultiline) {
+                input.type = inputMode === "url" ? "url" : "text";
+            }
+
+            input.value = inputValueLookup.get(field.key) || "";
+            input.placeholder = field.placeholder || "";
+            fieldWrapper.appendChild(input);
+            fields.appendChild(fieldWrapper);
+            input.addEventListener("input", () => {
+                if (state.composer) {
+                    updateComposerFileState(state.composer);
+                }
+            });
+            inputFieldEntries.push({
+                key: field.key,
+                input,
+                isRequired: !!field.isRequired
+            });
+        }
 
         let uploadedFile = request?.uploadedFile || null;
         let fileSummary = null;
@@ -2093,7 +2244,7 @@
         const create = createElement(state.document, "button", "cw-button");
         create.type = "button";
         create.dataset.tone = "accent";
-        create.textContent = action.label || "Create";
+        create.textContent = action.submitLabel || action.label || "Create";
         create.addEventListener("click", () => commitComposer(state));
         actions.appendChild(create);
 
@@ -2111,6 +2262,7 @@
             titleInput,
             subtitleInput,
             notesInput,
+            inputFieldEntries,
             createButton: create,
             requiresFile: !!action.requiresFile,
             uploadedFile,
@@ -2122,8 +2274,13 @@
         window.requestAnimationFrame(() => {
             layoutComposer(state);
             updateComposerFileState(state.composer);
-            titleInput.focus();
-            titleInput.select();
+            const firstInput = inputFieldEntries[0]?.input || titleInput || subtitleInput || notesInput;
+            if (firstInput) {
+                firstInput.focus();
+                if (typeof firstInput.select === "function") {
+                    firstInput.select();
+                }
+            }
         });
     }
 
@@ -2327,8 +2484,8 @@
             button.dataset.actionId = action.actionId || "";
             button.dataset.layerDepth = `${options.depth || 0}`;
             button.dataset.menuSize = action.menuSize || "normal";
-            button.title = action.description || action.label || action.actionId || "action";
-            button.setAttribute("aria-label", action.label || action.actionId || "action");
+            button.title = action.description || resolveMenuActionAriaLabel(action);
+            button.setAttribute("aria-label", resolveMenuActionAriaLabel(action));
             button.style.setProperty("--cw-menu-x", `${round(offset.x)}px`);
             button.style.setProperty("--cw-menu-y", `${round(offset.y)}px`);
             if (variant === "progress-preset") {
@@ -2362,15 +2519,20 @@
             });
 
             button.appendChild(createMenuActionIcon(state, action));
-            const label = createElement(state.document, "strong", "cw-context-menu__label", resolveMenuLabel(action));
-            button.appendChild(label);
+            let label = null;
+            if (variant !== "priority-preset") {
+                label = createElement(state.document, "strong", "cw-context-menu__label", resolveMenuLabel(action));
+                button.appendChild(label);
+            }
             if (action.children?.length) {
                 button.appendChild(createElement(state.document, "span", "cw-context-menu__caret", "\u203A"));
                 button.classList.add("has-children");
             }
 
             layerState.orbit.appendChild(button);
-            fitContextMenuLabel(button, label, variant);
+            if (label) {
+                fitContextMenuLabel(button, label, variant);
+            }
             layerState.actionEntries.set(action.actionId || `index-${index}`, {
                 action,
                 offset,
@@ -2750,7 +2912,7 @@
         const padding = 120;
         const width = Math.max(bounds.maxX - bounds.minX, 320);
         const height = Math.max(bounds.maxY - bounds.minY, 240);
-        const zoom = clamp(Math.min((rect.width - padding) / width, (rect.height - padding) / height), 0.55, 1.75);
+        const zoom = clamp(Math.min((rect.width - padding) / width, (rect.height - padding) / height), MIN_ZOOM, MAX_ZOOM);
         state.ui.zoom = zoom;
         setPan(
             state,
@@ -2838,7 +3000,7 @@
     }
 
     function setZoomPercent(state, percent, anchorPoint) {
-        const nextZoom = clamp((percent || 100) / 100, 0.55, 1.75);
+        const nextZoom = clamp((percent || 100) / 100, MIN_ZOOM, MAX_ZOOM);
         const rect = state.host.getBoundingClientRect();
         const anchor = anchorPoint || { x: rect.width / 2, y: rect.height / 2 };
         const worldX = (anchor.x - state.ui.panX) / state.ui.zoom;
@@ -2984,6 +3146,7 @@
 
                 switch (state.interaction.kind) {
                     case "drag":
+                    case "frame-drag":
                         updateDrag(state, event);
                         break;
                     case "pan":
@@ -3242,14 +3405,24 @@
         setMaximized(state, !!state.ui.isMaximized);
         resize(state);
         const selectedNodeId = state.ui.selectedNodeIds[0] || null;
+        const selectedNode = selectedNodeId ? state.lookups.byId.get(selectedNodeId) : null;
         const shouldRevealSelection = !!selectedNodeId &&
             (!!pendingCreate || (!!selectedNodeId && selectedNodeId !== previousSelectedId));
-        if (shouldRevealSelection) {
+        const shouldRestoreVisibleSelection = !!selectedNodeId &&
+            !!selectedNode &&
+            !isNodeVisibleInViewport(state, selectedNode, 72);
+        if (shouldRevealSelection || shouldRestoreVisibleSelection) {
             const isNewNode = !previousNodeIds.has(selectedNodeId);
-            ensureNodeVisible(state, selectedNodeId, { forceCenter: isNewNode });
+            ensureNodeVisible(state, selectedNodeId, { forceCenter: isNewNode || shouldRestoreVisibleSelection });
         }
 
         render(state);
+        if (selectedNodeId &&
+            state.lookups.byId.has(selectedNodeId) &&
+            !isNodeVisibleInViewport(state, state.lookups.byId.get(selectedNodeId), 72)) {
+            ensureNodeVisible(state, selectedNodeId, { forceCenter: true });
+            render(state);
+        }
 
         if (pendingCreate) {
             if (pendingCreate.focusHost) {
@@ -3364,6 +3537,10 @@
             render(state);
         },
         dispose(host) {
+            if (!host) {
+                return;
+            }
+
             const state = host.__canvasWorkbenchState;
             if (!state) {
                 return;

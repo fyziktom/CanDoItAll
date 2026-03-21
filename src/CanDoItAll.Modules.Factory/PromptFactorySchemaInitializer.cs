@@ -15,6 +15,7 @@ public static class PromptFactorySchemaInitializer
             """
             CREATE TABLE IF NOT EXISTS "Factory_PromptBlocks" (
                 "Id" TEXT NOT NULL CONSTRAINT "PK_Factory_PromptBlocks" PRIMARY KEY,
+                "Key" TEXT NOT NULL DEFAULT '',
                 "Name" TEXT NOT NULL,
                 "BlockKind" INTEGER NOT NULL,
                 "Summary" TEXT NOT NULL DEFAULT '',
@@ -22,28 +23,45 @@ public static class PromptFactorySchemaInitializer
                 "IsRecommendedByDefault" INTEGER NOT NULL DEFAULT 0,
                 "PromptTypeRules" TEXT NOT NULL DEFAULT '',
                 "BlueprintRules" TEXT NOT NULL DEFAULT '',
-                "PhaseRules" TEXT NOT NULL DEFAULT ''
+                "PhaseRules" TEXT NOT NULL DEFAULT '',
+                "GroupKey" TEXT NOT NULL DEFAULT '',
+                "TagsJson" TEXT NOT NULL DEFAULT '[]',
+                "StackTagsJson" TEXT NOT NULL DEFAULT '[]',
+                "TemplateTokensJson" TEXT NOT NULL DEFAULT '[]',
+                "ToolboxEligible" INTEGER NOT NULL DEFAULT 0,
+                "OrderIndex" INTEGER NOT NULL DEFAULT 0,
+                "CatalogSource" TEXT NOT NULL DEFAULT ''
             );
             """,
         ["Factory_PromptFlowTemplates"] =
             """
             CREATE TABLE IF NOT EXISTS "Factory_PromptFlowTemplates" (
                 "Id" TEXT NOT NULL CONSTRAINT "PK_Factory_PromptFlowTemplates" PRIMARY KEY,
+                "Key" TEXT NOT NULL DEFAULT '',
                 "Name" TEXT NOT NULL,
                 "Summary" TEXT NOT NULL DEFAULT '',
                 "BlockIdsJson" TEXT NOT NULL DEFAULT '[]',
-                "PromptTypeRules" TEXT NOT NULL DEFAULT ''
+                "BlockKeysJson" TEXT NOT NULL DEFAULT '[]',
+                "AgentSequenceJson" TEXT NOT NULL DEFAULT '[]',
+                "PromptTypeRules" TEXT NOT NULL DEFAULT '',
+                "OrderIndex" INTEGER NOT NULL DEFAULT 0,
+                "CatalogSource" TEXT NOT NULL DEFAULT ''
             );
             """,
         ["Factory_PromptBlueprints"] =
             """
             CREATE TABLE IF NOT EXISTS "Factory_PromptBlueprints" (
                 "Id" TEXT NOT NULL CONSTRAINT "PK_Factory_PromptBlueprints" PRIMARY KEY,
+                "Key" TEXT NOT NULL DEFAULT '',
                 "Name" TEXT NOT NULL,
                 "PromptType" TEXT NOT NULL DEFAULT '',
                 "Summary" TEXT NOT NULL DEFAULT '',
                 "Guidance" TEXT NOT NULL DEFAULT '',
-                "RecommendedFlowTemplateId" TEXT NULL
+                "RecommendedFlowTemplateId" TEXT NULL,
+                "RecommendedFlowKey" TEXT NOT NULL DEFAULT '',
+                "RecommendedBlockKeysJson" TEXT NOT NULL DEFAULT '[]',
+                "OrderIndex" INTEGER NOT NULL DEFAULT 0,
+                "CatalogSource" TEXT NOT NULL DEFAULT ''
             );
             """,
         ["Factory_PromptRuns"] =
@@ -95,6 +113,8 @@ public static class PromptFactorySchemaInitializer
                 "GeneratedPrompt" TEXT NOT NULL DEFAULT '',
                 "WarningSummary" TEXT NOT NULL DEFAULT '',
                 "CanvasUiStateJson" TEXT NOT NULL DEFAULT '{{}}',
+                "ComponentCustomizationsJson" TEXT NOT NULL DEFAULT '[]',
+                "SessionAttachmentsJson" TEXT NOT NULL DEFAULT '[]',
                 "WizardStepIndex" INTEGER NOT NULL DEFAULT 0,
                 "HasCustomizedBlocks" INTEGER NOT NULL DEFAULT 0,
                 "UpdatedAtUtc" TEXT NOT NULL DEFAULT '0001-01-01T00:00:00+00:00'
@@ -106,6 +126,7 @@ public static class PromptFactorySchemaInitializer
     {
         ["Factory_PromptBlocks"] =
         [
+            new("Key", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "Key" TEXT NOT NULL DEFAULT '';"""),
             new("Name", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "Name" TEXT NOT NULL DEFAULT '';"""),
             new("BlockKind", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "BlockKind" INTEGER NOT NULL DEFAULT 0;"""),
             new("Summary", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "Summary" TEXT NOT NULL DEFAULT '';"""),
@@ -113,22 +134,39 @@ public static class PromptFactorySchemaInitializer
             new("IsRecommendedByDefault", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "IsRecommendedByDefault" INTEGER NOT NULL DEFAULT 0;"""),
             new("PromptTypeRules", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "PromptTypeRules" TEXT NOT NULL DEFAULT '';"""),
             new("BlueprintRules", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "BlueprintRules" TEXT NOT NULL DEFAULT '';"""),
-            new("PhaseRules", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "PhaseRules" TEXT NOT NULL DEFAULT '';""")
+            new("PhaseRules", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "PhaseRules" TEXT NOT NULL DEFAULT '';"""),
+            new("GroupKey", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "GroupKey" TEXT NOT NULL DEFAULT '';"""),
+            new("TagsJson", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "TagsJson" TEXT NOT NULL DEFAULT '[]';"""),
+            new("StackTagsJson", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "StackTagsJson" TEXT NOT NULL DEFAULT '[]';"""),
+            new("TemplateTokensJson", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "TemplateTokensJson" TEXT NOT NULL DEFAULT '[]';"""),
+            new("ToolboxEligible", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "ToolboxEligible" INTEGER NOT NULL DEFAULT 0;"""),
+            new("OrderIndex", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "OrderIndex" INTEGER NOT NULL DEFAULT 0;"""),
+            new("CatalogSource", """ALTER TABLE "Factory_PromptBlocks" ADD COLUMN "CatalogSource" TEXT NOT NULL DEFAULT '';""")
         ],
         ["Factory_PromptFlowTemplates"] =
         [
+            new("Key", """ALTER TABLE "Factory_PromptFlowTemplates" ADD COLUMN "Key" TEXT NOT NULL DEFAULT '';"""),
             new("Name", """ALTER TABLE "Factory_PromptFlowTemplates" ADD COLUMN "Name" TEXT NOT NULL DEFAULT '';"""),
             new("Summary", """ALTER TABLE "Factory_PromptFlowTemplates" ADD COLUMN "Summary" TEXT NOT NULL DEFAULT '';"""),
             new("BlockIdsJson", """ALTER TABLE "Factory_PromptFlowTemplates" ADD COLUMN "BlockIdsJson" TEXT NOT NULL DEFAULT '[]';"""),
-            new("PromptTypeRules", """ALTER TABLE "Factory_PromptFlowTemplates" ADD COLUMN "PromptTypeRules" TEXT NOT NULL DEFAULT '';""")
+            new("BlockKeysJson", """ALTER TABLE "Factory_PromptFlowTemplates" ADD COLUMN "BlockKeysJson" TEXT NOT NULL DEFAULT '[]';"""),
+            new("AgentSequenceJson", """ALTER TABLE "Factory_PromptFlowTemplates" ADD COLUMN "AgentSequenceJson" TEXT NOT NULL DEFAULT '[]';"""),
+            new("PromptTypeRules", """ALTER TABLE "Factory_PromptFlowTemplates" ADD COLUMN "PromptTypeRules" TEXT NOT NULL DEFAULT '';"""),
+            new("OrderIndex", """ALTER TABLE "Factory_PromptFlowTemplates" ADD COLUMN "OrderIndex" INTEGER NOT NULL DEFAULT 0;"""),
+            new("CatalogSource", """ALTER TABLE "Factory_PromptFlowTemplates" ADD COLUMN "CatalogSource" TEXT NOT NULL DEFAULT '';""")
         ],
         ["Factory_PromptBlueprints"] =
         [
+            new("Key", """ALTER TABLE "Factory_PromptBlueprints" ADD COLUMN "Key" TEXT NOT NULL DEFAULT '';"""),
             new("Name", """ALTER TABLE "Factory_PromptBlueprints" ADD COLUMN "Name" TEXT NOT NULL DEFAULT '';"""),
             new("PromptType", """ALTER TABLE "Factory_PromptBlueprints" ADD COLUMN "PromptType" TEXT NOT NULL DEFAULT '';"""),
             new("Summary", """ALTER TABLE "Factory_PromptBlueprints" ADD COLUMN "Summary" TEXT NOT NULL DEFAULT '';"""),
             new("Guidance", """ALTER TABLE "Factory_PromptBlueprints" ADD COLUMN "Guidance" TEXT NOT NULL DEFAULT '';"""),
-            new("RecommendedFlowTemplateId", """ALTER TABLE "Factory_PromptBlueprints" ADD COLUMN "RecommendedFlowTemplateId" TEXT NULL;""")
+            new("RecommendedFlowTemplateId", """ALTER TABLE "Factory_PromptBlueprints" ADD COLUMN "RecommendedFlowTemplateId" TEXT NULL;"""),
+            new("RecommendedFlowKey", """ALTER TABLE "Factory_PromptBlueprints" ADD COLUMN "RecommendedFlowKey" TEXT NOT NULL DEFAULT '';"""),
+            new("RecommendedBlockKeysJson", """ALTER TABLE "Factory_PromptBlueprints" ADD COLUMN "RecommendedBlockKeysJson" TEXT NOT NULL DEFAULT '[]';"""),
+            new("OrderIndex", """ALTER TABLE "Factory_PromptBlueprints" ADD COLUMN "OrderIndex" INTEGER NOT NULL DEFAULT 0;"""),
+            new("CatalogSource", """ALTER TABLE "Factory_PromptBlueprints" ADD COLUMN "CatalogSource" TEXT NOT NULL DEFAULT '';""")
         ],
         ["Factory_PromptRuns"] =
         [
@@ -168,12 +206,14 @@ public static class PromptFactorySchemaInitializer
             new("CommitSha", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "CommitSha" TEXT NOT NULL DEFAULT '';"""),
             new("SelectedBlockIdsJson", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "SelectedBlockIdsJson" TEXT NOT NULL DEFAULT '[]';"""),
 new("SelectedResourceIdsJson", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "SelectedResourceIdsJson" TEXT NOT NULL DEFAULT '[]';"""),
-new("GeneratedPrompt", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "GeneratedPrompt" TEXT NOT NULL DEFAULT '';"""),
-new("WarningSummary", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "WarningSummary" TEXT NOT NULL DEFAULT '';"""),
-new("CanvasUiStateJson", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "CanvasUiStateJson" TEXT NOT NULL DEFAULT '{{}}';"""),
-new("WizardStepIndex", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "WizardStepIndex" INTEGER NOT NULL DEFAULT 0;"""),
-new("HasCustomizedBlocks", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "HasCustomizedBlocks" INTEGER NOT NULL DEFAULT 0;"""),
-new("UpdatedAtUtc", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "UpdatedAtUtc" TEXT NOT NULL DEFAULT '0001-01-01T00:00:00+00:00';""")
+            new("GeneratedPrompt", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "GeneratedPrompt" TEXT NOT NULL DEFAULT '';"""),
+            new("WarningSummary", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "WarningSummary" TEXT NOT NULL DEFAULT '';"""),
+            new("CanvasUiStateJson", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "CanvasUiStateJson" TEXT NOT NULL DEFAULT '{{}}';"""),
+            new("ComponentCustomizationsJson", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "ComponentCustomizationsJson" TEXT NOT NULL DEFAULT '[]';"""),
+            new("SessionAttachmentsJson", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "SessionAttachmentsJson" TEXT NOT NULL DEFAULT '[]';"""),
+            new("WizardStepIndex", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "WizardStepIndex" INTEGER NOT NULL DEFAULT 0;"""),
+            new("HasCustomizedBlocks", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "HasCustomizedBlocks" INTEGER NOT NULL DEFAULT 0;"""),
+            new("UpdatedAtUtc", """ALTER TABLE "Factory_PromptBuildSessions" ADD COLUMN "UpdatedAtUtc" TEXT NOT NULL DEFAULT '0001-01-01T00:00:00+00:00';""")
         ]
     };
 
