@@ -156,6 +156,44 @@ public sealed partial class PromptFactoryService(
         };
     }
 
+    public async Task<Guid> CreateBlankProjectSessionAsync(
+        Guid projectId,
+        string? sessionName,
+        string? phase = null,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureSchemaAsync(cancellationToken);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var project = await projectsService.GetAsync(projectId, cancellationToken);
+        var settings = await workspaceService.GetSettingsAsync(cancellationToken);
+        var effectivePhase = string.IsNullOrWhiteSpace(phase)
+            ? project.CurrentPhase
+            : phase.Trim();
+
+        var session = new PromptBuildSession
+        {
+            Name = string.IsNullOrWhiteSpace(sessionName)
+                ? BuildSessionName(project.Name, effectivePhase)
+                : sessionName.Trim(),
+            ProjectId = projectId,
+            Phase = effectivePhase,
+            ProviderProfileId = settings.DefaultProviderProfileId,
+            SelectedBlockIdsJson = "[]",
+            SelectedResourceIdsJson = "[]",
+            GeneratedPrompt = string.Empty,
+            WarningSummary = string.Empty,
+            CanvasUiStateJson = "{}",
+            ComponentCustomizationsJson = "[]",
+            SessionAttachmentsJson = "[]",
+            UpdatedAtUtc = clock.GetUtcNow()
+        };
+
+        await dbContext.Set<PromptBuildSession>().AddAsync(session, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return session.Id;
+    }
+
     public async Task<IReadOnlyList<PromptBlockSummary>> ListBlocksAsync(CancellationToken cancellationToken = default)
     {
         await EnsureSeedsAsync(cancellationToken);

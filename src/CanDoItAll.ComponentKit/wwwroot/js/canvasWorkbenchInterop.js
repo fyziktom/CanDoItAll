@@ -3537,6 +3537,10 @@
             render(state);
         },
         dispose(host) {
+            if (!host) {
+                return;
+            }
+
             const state = host.__canvasWorkbenchState;
             if (!state) {
                 return;

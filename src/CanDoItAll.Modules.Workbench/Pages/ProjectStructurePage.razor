@@ -159,9 +159,9 @@ else
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Node actions</p>
                             <div class="cw-button-row">
-                                @foreach (var command in Enum.GetValues<ProjectStructureCommandKind>())
+                                @foreach (var command in ResolveInspectorCommands(selectedNode))
                                 {
-                                    <button type="button" class="cw-button" data-tone="primary" @onclick="@(() => ExecuteCommandAsync(command))">@command</button>
+                                    <button type="button" class="cw-button" data-tone="primary" @onclick="@(() => ExecuteCommandAsync(command))">@ResolveCommandLabel(command)</button>
                                 }
                                 <button type="button" class="cw-button" data-tone="ghost" @onclick="EnableLinkMode">Connect selected</button>
                             </div>
@@ -495,6 +495,19 @@ else
             new() { ActionId = "test", Label = "Test", MenuLabel = "Test", Description = "Open test planning and evidence flows.", Icon = "test", Tone = "warn" }
         };
 
+        if (node.ObjectType == ProjectObjectType.PromptFlow)
+        {
+            actions.Insert(1, new CanvasWorkbenchAction
+            {
+                ActionId = "wizard",
+                Label = "Wizard",
+                MenuLabel = "Wizard",
+                Description = "Open the detailed prompt wizard for this flow.",
+                Icon = "flow",
+                Tone = "sky"
+            });
+        }
+
         if (node.ObjectType == ProjectObjectType.PromptStep)
         {
             actions.AddRange(
@@ -786,6 +799,9 @@ else
             case "open":
                 await HandleNodeOpenedAsync(nodeId ?? string.Empty);
                 break;
+            case "wizard":
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Wizard, nodeId);
+                break;
             case "group-frame":
                 await CreateSelectionBorderAsync();
                 break;
@@ -895,6 +911,37 @@ else
         selectedNodeIds.Clear();
         await PersistSelectionAsync();
     }
+
+    private static IReadOnlyList<ProjectStructureCommandKind> ResolveInspectorCommands(ProjectStructureNode node)
+    {
+        var commands = new List<ProjectStructureCommandKind> { ProjectStructureCommandKind.Open };
+
+        if (node.ObjectType == ProjectObjectType.PromptFlow)
+        {
+            commands.Add(ProjectStructureCommandKind.Wizard);
+        }
+
+        if (node.ObjectType == ProjectObjectType.PromptStep)
+        {
+            commands.AddRange(
+            [
+                ProjectStructureCommandKind.Branch,
+                ProjectStructureCommandKind.MarkUsed,
+                ProjectStructureCommandKind.Skip
+            ]);
+        }
+
+        commands.Add(ProjectStructureCommandKind.Validate);
+        commands.Add(ProjectStructureCommandKind.Test);
+        return commands;
+    }
+
+    private static string ResolveCommandLabel(ProjectStructureCommandKind command)
+        => command switch
+        {
+            ProjectStructureCommandKind.MarkUsed => "Mark used",
+            _ => command.ToString()
+        };
 
     private async Task PersistSelectionAsync()
     {

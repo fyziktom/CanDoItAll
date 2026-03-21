@@ -14,6 +14,7 @@ namespace CanDoItAll.Modules.Workbench;
 public enum ProjectStructureCommandKind
 {
     Open,
+    Wizard,
     Branch,
     Validate,
     Test,
@@ -234,7 +235,11 @@ tests: integration:ProjectWorkbenchServiceTests
 inputs: project id, command requests, graph mutations
 outputs: ProjectStructureSurface, ProjectCalendarSurface, ArtifactReference
 */
-public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbContextFactory, IClock clock, IFileStore fileStore) : IProjectWorkbenchSeedService
+public sealed class ProjectWorkbenchService(
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    IClock clock,
+    IFileStore fileStore,
+    PromptFactoryService promptFactoryService) : IProjectWorkbenchSeedService
 {
     public async Task<ProjectStructureSurface> GetStructureAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
@@ -337,6 +342,11 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
         if (!string.IsNullOrWhiteSpace(request.ParentNodeKey))
         {
             await UpsertLinkAsync(dbContext, projectId, request.ParentNodeKey, record.NodeKey, ProjectObjectLinkKind.BelongsTo, isSystemManaged: false, cancellationToken);
+        }
+
+        if (request.ObjectType == ProjectObjectType.PromptFlow)
+        {
+            await EnsurePromptFlowWizardAsync(dbContext, projectId, record, cancellationToken);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -625,6 +635,14 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
             return null;
         }
 
+        if (node.ObjectType == ProjectObjectType.PromptFlow &&
+            commandKind is ProjectStructureCommandKind.Open or ProjectStructureCommandKind.Wizard)
+        {
+            var artifact = await EnsurePromptFlowWizardAsync(dbContext, projectId, node, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return artifact;
+        }
+
         if (string.Equals(node.ExternalArtifactKind, "prompt-node", StringComparison.OrdinalIgnoreCase) &&
             node.ExternalArtifactId.HasValue)
         {
@@ -681,6 +699,35 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
             ProjectStructureCommandKind.Open => BuildArtifactReference(node, projectId),
             _ => BuildArtifactReference(node, projectId)
         };
+    }
+
+    private async Task<ArtifactReference?> EnsurePromptFlowWizardAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        ProjectObjectRecord node,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(node.Route) &&
+            node.Route.StartsWith("/prompt-factory", StringComparison.OrdinalIgnoreCase))
+        {
+            node.ExternalArtifactKind = "prompt-session";
+            if (!node.ExternalArtifactId.HasValue &&
+                TryResolvePromptFactorySessionId(node.Route, out var existingSessionId))
+            {
+                node.ExternalArtifactId = existingSessionId;
+            }
+
+            node.UpdatedAtUtc = clock.GetUtcNow();
+            return BuildArtifactReference(node, projectId);
+        }
+
+        var phase = await ResolvePromptFlowPhaseAsync(dbContext, projectId, node, cancellationToken);
+        var sessionId = await promptFactoryService.CreateBlankProjectSessionAsync(projectId, node.Title, phase, cancellationToken);
+        node.Route = $"/prompt-factory?sessionId={sessionId}";
+        node.ExternalArtifactKind = "prompt-session";
+        node.ExternalArtifactId = sessionId;
+        node.UpdatedAtUtc = clock.GetUtcNow();
+        return BuildArtifactReference(node, projectId);
     }
 
     private static ArtifactReference? BuildArtifactReference(ProjectObjectRecord node, Guid projectId)
@@ -1289,6 +1336,61 @@ public sealed class ProjectWorkbenchService(IDbContextFactory<AppDbContext> dbCo
         }
 
         return builder.Trim('-');
+    }
+
+    private static bool TryResolvePromptFactorySessionId(string route, out Guid sessionId)
+    {
+        sessionId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(route))
+        {
+            return false;
+        }
+
+        const string marker = "sessionId=";
+        var start = route.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (start < 0)
+        {
+            return false;
+        }
+
+        start += marker.Length;
+        var end = route.IndexOf('&', start);
+        var rawValue = end >= start ? route[start..end] : route[start..];
+        return Guid.TryParse(rawValue, out sessionId);
+    }
+
+    private static async Task<string> ResolvePromptFlowPhaseAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        ProjectObjectRecord node,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(node.ParentNodeKey))
+        {
+            var records = await dbContext.Set<ProjectObjectRecord>()
+                .Where(item => item.ProjectId == projectId)
+                .ToDictionaryAsync(item => item.NodeKey, cancellationToken);
+            var currentParentKey = node.ParentNodeKey;
+            var visited = new HashSet<string>(StringComparer.Ordinal);
+
+            while (!string.IsNullOrWhiteSpace(currentParentKey) &&
+                   visited.Add(currentParentKey) &&
+                   records.TryGetValue(currentParentKey, out var parentNode))
+            {
+                if (parentNode.ObjectType == ProjectObjectType.Phase &&
+                    !string.IsNullOrWhiteSpace(parentNode.Title))
+                {
+                    return parentNode.Title.Trim();
+                }
+
+                currentParentKey = parentNode.ParentNodeKey;
+            }
+        }
+
+        return (await dbContext.Set<Project>()
+            .Where(item => item.Id == projectId)
+            .Select(item => item.CurrentPhase)
+            .FirstOrDefaultAsync(cancellationToken))?.Trim() ?? string.Empty;
     }
 
     private static ProjectObjectType MapResourceKind(ResourceKind resourceKind) => resourceKind switch
