@@ -55,6 +55,8 @@
 - Does the shared radial menu use the available hex space well enough that icons/labels are not visibly undersized or clipped?
 - Does the priority submenu show numeric presets without duplicate text labels?
 - Can the user zoom out to at least `15%` on the shared workbench surfaces?
+- Does a picker-selected image upload create a node that is visibly media-backed on the canvas, not just listed as uploaded in text?
+- After reselecting that uploaded node, does the inspector reopen the same file preview and original file name?
 - Do the following tests still pass?
   - `ProjectStructurePageTests`
   - `PromptFactoryPageTests`

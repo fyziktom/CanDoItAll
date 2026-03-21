@@ -157,6 +157,8 @@ Goals:
 - finish radial-menu density tuning on the shared canvases
 - remove duplicated submenu labels where the icon already carries the payload
 - increase the zoom-out floor enough for large structure maps to stay reviewable
+- make picker-based media uploads visibly distinct on the canvas itself, not only in the inspector
+- treat file-chooser upload as incomplete until reselecting the created node shows the same file preview and file name again
 
 ### Phase 7: QA Sweep
 
@@ -193,6 +195,7 @@ Protected routes should benefit from the new shell mode without becoming test-he
 7. Treat live Playwright review as mandatory for protected routes and desktop list/detail pages.
 8. Do not accept protected-route maximize work as complete until the live host bounds are verified at `left=0`, `top=0`, and viewport-sized.
 9. Treat missing desktop navigation on a docked focus-workbench route as a blocking regression.
+10. Do not accept picker-upload work from code inspection alone; the uploaded node must be visible on the canvas and the inspector must reopen the same media preview on reselection.
 
 ## Suggested Page Migration Batch
 

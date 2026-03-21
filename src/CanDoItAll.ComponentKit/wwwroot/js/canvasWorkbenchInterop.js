@@ -110,6 +110,11 @@
                 isInlineTextNode: !!node?.isInlineTextNode,
                 inlineText: node?.inlineText || "",
                 inlineTextPlaceholder: node?.inlineTextPlaceholder || "Write note",
+                mediaKind: node?.mediaKind || "",
+                mediaPreviewUrl: node?.mediaPreviewUrl || "",
+                mediaPreviewAlt: node?.mediaPreviewAlt || node?.title || "",
+                mediaContentType: node?.mediaContentType || "",
+                mediaFileName: node?.mediaFileName || "",
                 progressMode: node?.progressMode || "na",
                 progressPercent: normalizeProgressPercent(node?.progressPercent),
                 markerIcon: node?.markerIcon || "",
@@ -950,6 +955,32 @@
         nodeElement.appendChild(surface);
     }
 
+    function createNodeMedia(state, node) {
+        if (!node?.mediaKind || !node?.mediaPreviewUrl) {
+            return null;
+        }
+
+        const media = createElement(state.document, `div`, `cw-node__media cw-node__media--${node.mediaKind}`);
+        if (node.mediaKind === "image") {
+            const image = createElement(state.document, "img", "cw-node__media-image");
+            image.src = node.mediaPreviewUrl;
+            image.alt = node.mediaPreviewAlt || node.title || node.mediaFileName || "Uploaded image";
+            image.loading = "lazy";
+            image.decoding = "async";
+            image.draggable = false;
+            media.appendChild(image);
+        }
+        else if (node.mediaKind === "video") {
+            const placeholder = createElement(state.document, "div", "cw-node__media-video");
+            placeholder.appendChild(createElement(state.document, "span", "cw-node__media-video-icon", "\u25B6"));
+            placeholder.appendChild(createElement(state.document, "span", "cw-node__media-video-label", "Preview"));
+            media.appendChild(placeholder);
+        }
+
+        media.appendChild(createElement(state.document, "span", "cw-node__media-badge", node.mediaKind === "image" ? "Image" : "Video"));
+        return media;
+    }
+
     function renderStandardNode(state, node, nodeElement) {
         const surface = createElement(state.document, "div", "cw-node__surface");
         const header = createElement(state.document, "div", "cw-node__header");
@@ -972,6 +1003,11 @@
 
         header.appendChild(rightMeta);
         surface.appendChild(header);
+        const media = createNodeMedia(state, node);
+        if (media) {
+            surface.appendChild(media);
+        }
+
         surface.appendChild(createElement(state.document, "h3", "cw-node__title", node.title || "Untitled"));
 
         if (node.subtitle) {
@@ -1388,12 +1424,12 @@
         switch (resolveMenuActionVariant(action)) {
             case "progress-preset":
             case "marker-preset":
-                return { halfWidth: round(30 * scale), halfHeight: round(26 * scale) };
+                return { halfWidth: round(34 * scale), halfHeight: round(29 * scale) };
             case "priority-preset":
             case "compact":
-                return { halfWidth: round(25 * scale), halfHeight: round(23 * scale) };
+                return { halfWidth: round(29 * scale), halfHeight: round(25 * scale) };
             default:
-                return { halfWidth: round(40 * scale), halfHeight: round(36 * scale) };
+                return { halfWidth: round(46 * scale), halfHeight: round(40 * scale) };
         }
     }
 
@@ -1422,12 +1458,14 @@
         }
 
         window.requestAnimationFrame(() => {
-            const maxWidth = Math.max(18, button.clientWidth * 0.72);
-            const minFontSize = variant === "normal" ? 8 : 6.6;
-            const maxHeight = Math.max(12, button.clientHeight * 0.24);
+            const maxWidthRatio = variant === "normal" ? 0.82 : variant === "compact" ? 0.74 : 0.78;
+            const maxHeightRatio = variant === "normal" ? 0.33 : variant === "compact" ? 0.26 : 0.29;
+            const maxWidth = Math.max(20, button.clientWidth * maxWidthRatio);
+            const minFontSize = variant === "normal" ? 9.25 : variant === "compact" ? 7.4 : 7.7;
+            const maxHeight = Math.max(14, button.clientHeight * maxHeightRatio);
             label.style.maxWidth = `${round(maxWidth)}px`;
 
-            let fontSize = parseFloat(window.getComputedStyle(label).fontSize) || (variant === "normal" ? 9.5 : 7.6);
+            let fontSize = parseFloat(window.getComputedStyle(label).fontSize) || (variant === "normal" ? 11.5 : 8.4);
             while (fontSize > minFontSize &&
                 (label.scrollWidth > (maxWidth + 0.5) || label.scrollHeight > (maxHeight + 0.5))) {
                 fontSize -= 0.25;

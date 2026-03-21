@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 
@@ -381,13 +382,27 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         [
             new FilePayload
             {
-                Name = "playwright-picker-image.png",
-                MimeType = "image/png",
-                Buffer = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jmioAAAAASUVORK5CYII=")
+                Name = "playwright-picker-image.svg",
+                MimeType = "image/svg+xml",
+                Buffer = Encoding.UTF8.GetBytes("""
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90">
+                      <rect width="120" height="90" rx="18" fill="#ec4899" />
+                      <circle cx="60" cy="45" r="24" fill="#111827" />
+                      <text x="60" y="52" text-anchor="middle" font-size="18" font-family="Arial" fill="#ffffff">QA</text>
+                    </svg>
+                    """)
             }
         ]);
-        await page.WaitForFunctionAsync("() => document.querySelector('.cw-canvas-composer__upload-summary')?.textContent?.includes('playwright-picker-image.png') === true");
-        await page.Locator(".cw-canvas-composer__actions").GetByRole(AriaRole.Button, new() { Name = "Cancel" }).ClickAsync();
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-canvas-composer__upload-summary')?.textContent?.includes('playwright-picker-image.svg') === true");
+        await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("Picker uploaded image");
+        await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("Chooser flow media check");
+        await page.Locator(".cw-canvas-composer__textarea").FillAsync("Created through the file chooser upload path");
+        await page.Locator(".cw-canvas-composer__actions").GetByRole(AriaRole.Button, new() { Name = "Image", Exact = true }).ClickAsync();
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-node.is-selected .cw-node__media-image') instanceof HTMLImageElement");
+        await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node.is-selected .cw-node__title')).some(node => node.textContent?.includes('Picker uploaded image'))");
+        await ClickCanvasNodeAsync(page, ".cw-node:has-text('Picker uploaded image')");
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-inspector-shell .cw-media-preview')?.tagName === 'IMG'");
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-inspector-shell')?.textContent?.includes('playwright-picker-image.svg') === true");
 
         await OpenCanvasCreateComposerAsync(page, ".cw-node[data-node-id^='project:']", "Image", "add-image-asset");
         await page.WaitForSelectorAsync("text=Drop an image here or choose one.");

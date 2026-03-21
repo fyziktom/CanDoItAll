@@ -73,6 +73,16 @@ public sealed class CanvasWorkbenchNode
 
     public string InlineTextPlaceholder { get; set; } = "Write note";
 
+    public string MediaKind { get; set; } = string.Empty;
+
+    public string MediaPreviewUrl { get; set; } = string.Empty;
+
+    public string MediaPreviewAlt { get; set; } = string.Empty;
+
+    public string MediaContentType { get; set; } = string.Empty;
+
+    public string MediaFileName { get; set; } = string.Empty;
+
     public double X { get; set; }
 
     public double Y { get; set; }

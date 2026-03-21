@@ -16,6 +16,7 @@ Review only the protected workbench routes and their surrounding shell behavior.
 - persistent desktop navigation while docked
 - viewport-anchored maximize behavior
 - radial-menu density, submenu clarity, and zoom-floor reach
+- picker-upload visibility on canvas and preview persistence in the inspector
 
 ## Required Verification
 
@@ -34,6 +35,7 @@ Review only the protected workbench routes and their surrounding shell behavior.
 7. Does maximize start at the actual viewport origin instead of an inner shell wrapper?
 8. Do the radial-menu hexes use their space well, and is the numeric priority submenu free of duplicate text?
 9. Can the operator zoom out far enough to review a large map without resorting to browser zoom?
+10. Does the file-chooser image flow create a visibly media-backed node on the canvas, and does reselecting it reopen the same uploaded preview in the inspector?
 
 ## Required Output
 
