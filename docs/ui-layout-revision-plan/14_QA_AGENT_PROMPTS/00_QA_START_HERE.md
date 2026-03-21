@@ -29,6 +29,8 @@ You are reviewing a completed phase-1 UI layout implementation.
 - run the app from a live runtime before accepting screenshots
 - rebuild Tailwind output before visual signoff
 - do not accept a screenshot as valid evidence if the page is still using stale generated CSS
+- on protected workbench routes, do not accept a screenshot as valid if the desktop main menu is missing while the page is docked
+- on protected workbench routes, do not accept maximize evidence unless the workbench visibly covers the live app viewport rather than sitting inside an inner card or offset shell wrapper
 
 ## Required Output Style
 

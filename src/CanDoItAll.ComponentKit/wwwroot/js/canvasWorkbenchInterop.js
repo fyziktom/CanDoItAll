@@ -1,5 +1,7 @@
 (function () {
     const root = window.CanDoItAll = window.CanDoItAll || {};
+    const MIN_ZOOM = 0.15;
+    const MAX_ZOOM = 1.75;
 
     function clear(element) {
         while (element.firstChild) {
@@ -122,7 +124,7 @@
                 collapsedNodeIds: Array.isArray(surface?.uiState?.collapsedNodeIds) ? [...surface.uiState.collapsedNodeIds] : [],
                 groupFrames: Array.isArray(surface?.uiState?.groupFrames) ? surface.uiState.groupFrames.map(normalizeGroupFrame) : [],
                 manualPositions: surface?.uiState?.manualPositions || {},
-                zoom: typeof surface?.uiState?.zoom === "number" ? clamp(surface.uiState.zoom, 0.55, 1.75) : 1,
+                zoom: typeof surface?.uiState?.zoom === "number" ? clamp(surface.uiState.zoom, MIN_ZOOM, MAX_ZOOM) : 1,
                 panX: typeof surface?.uiState?.panX === "number" ? surface.uiState.panX : 90,
                 panY: typeof surface?.uiState?.panY === "number" ? surface.uiState.panY : 110,
                 menuActionScale: normalizeMenuActionScale(surface?.uiState?.menuActionScale),
@@ -1386,12 +1388,12 @@
         switch (resolveMenuActionVariant(action)) {
             case "progress-preset":
             case "marker-preset":
-                return { halfWidth: round(27 * scale), halfHeight: round(24 * scale) };
+                return { halfWidth: round(30 * scale), halfHeight: round(26 * scale) };
             case "priority-preset":
             case "compact":
-                return { halfWidth: round(24 * scale), halfHeight: round(22 * scale) };
+                return { halfWidth: round(25 * scale), halfHeight: round(23 * scale) };
             default:
-                return { halfWidth: round(37 * scale), halfHeight: round(34 * scale) };
+                return { halfWidth: round(40 * scale), halfHeight: round(36 * scale) };
         }
     }
 
@@ -1545,6 +1547,10 @@
 
         iconContainer.appendChild(createElement(state.document, "span", "cw-context-menu__glyph", resolveActionGlyph(iconKey)));
         return iconContainer;
+    }
+
+    function resolveMenuActionAriaLabel(action) {
+        return action?.label || action?.menuLabel || action?.actionId || "Canvas action";
     }
 
     function getRadialOffsets(count, baseRadius, ringStep) {
@@ -2342,8 +2348,8 @@
             button.dataset.actionId = action.actionId || "";
             button.dataset.layerDepth = `${options.depth || 0}`;
             button.dataset.menuSize = action.menuSize || "normal";
-            button.title = action.description || action.label || action.actionId || "action";
-            button.setAttribute("aria-label", action.label || action.actionId || "action");
+            button.title = action.description || resolveMenuActionAriaLabel(action);
+            button.setAttribute("aria-label", resolveMenuActionAriaLabel(action));
             button.style.setProperty("--cw-menu-x", `${round(offset.x)}px`);
             button.style.setProperty("--cw-menu-y", `${round(offset.y)}px`);
             if (variant === "progress-preset") {
@@ -2377,15 +2383,20 @@
             });
 
             button.appendChild(createMenuActionIcon(state, action));
-            const label = createElement(state.document, "strong", "cw-context-menu__label", resolveMenuLabel(action));
-            button.appendChild(label);
+            let label = null;
+            if (variant !== "priority-preset") {
+                label = createElement(state.document, "strong", "cw-context-menu__label", resolveMenuLabel(action));
+                button.appendChild(label);
+            }
             if (action.children?.length) {
                 button.appendChild(createElement(state.document, "span", "cw-context-menu__caret", "\u203A"));
                 button.classList.add("has-children");
             }
 
             layerState.orbit.appendChild(button);
-            fitContextMenuLabel(button, label, variant);
+            if (label) {
+                fitContextMenuLabel(button, label, variant);
+            }
             layerState.actionEntries.set(action.actionId || `index-${index}`, {
                 action,
                 offset,
@@ -2765,7 +2776,7 @@
         const padding = 120;
         const width = Math.max(bounds.maxX - bounds.minX, 320);
         const height = Math.max(bounds.maxY - bounds.minY, 240);
-        const zoom = clamp(Math.min((rect.width - padding) / width, (rect.height - padding) / height), 0.55, 1.75);
+        const zoom = clamp(Math.min((rect.width - padding) / width, (rect.height - padding) / height), MIN_ZOOM, MAX_ZOOM);
         state.ui.zoom = zoom;
         setPan(
             state,
@@ -2853,7 +2864,7 @@
     }
 
     function setZoomPercent(state, percent, anchorPoint) {
-        const nextZoom = clamp((percent || 100) / 100, 0.55, 1.75);
+        const nextZoom = clamp((percent || 100) / 100, MIN_ZOOM, MAX_ZOOM);
         const rect = state.host.getBoundingClientRect();
         const anchor = anchorPoint || { x: rect.width / 2, y: rect.height / 2 };
         const worldX = (anchor.x - state.ui.panX) / state.ui.zoom;

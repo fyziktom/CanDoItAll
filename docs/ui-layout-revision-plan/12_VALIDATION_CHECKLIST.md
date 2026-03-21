@@ -20,6 +20,7 @@
 - Does the page follow the shared page scaffold?
 - Are list/detail pages using the same structural pattern?
 - Are long forms broken into named sections?
+- On protected focus-workbench routes, is the desktop main menu still visible while the workbench is docked?
 
 ## Responsive Validation
 
@@ -49,6 +50,11 @@
 - Does dragging a structure group border move the selected nodes with it?
 - Does double-clicking a structure progress badge reopen the progress preset menu?
 - Do maximize/dock transitions still preserve usable canvas dimensions?
+- In maximized mode, does the workbench host start at `left=0`, `top=0`, and match the viewport size instead of expanding inside an inner content card?
+- Are maximized screenshots rejected if underlying shell cards or support rails still bleed through?
+- Does the shared radial menu use the available hex space well enough that icons/labels are not visibly undersized or clipped?
+- Does the priority submenu show numeric presets without duplicate text labels?
+- Can the user zoom out to at least `15%` on the shared workbench surfaces?
 - Do the following tests still pass?
   - `ProjectStructurePageTests`
   - `PromptFactoryPageTests`
@@ -72,3 +78,4 @@
 - Are empty and no-results states clearly distinct?
 - Do migrated filter bars expose the same expected task shortcuts on resources, test lab, and prompt gallery?
 - Do settings and admin pages expose the missing top-level create actions without forcing deep drill-in first?
+- On shared canvas routes, do toolbar actions remain uniquely targetable by accessible labels after shell/navigation changes?

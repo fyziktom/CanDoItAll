@@ -27,6 +27,9 @@ The following QA findings changed the practical rollout status:
 - final UI QA must rebuild Tailwind output before accepting screenshots as valid
 - resources, test lab, prompt gallery, and settings still needed several route-level finishing actions after the first migration pass
 - protected structure-canvas regressions were found in shared interop during live validation and had to be fixed before signoff
+- a follow-up protected-route QA pass found that the desktop main menu had dropped from focus-workbench routes while docked, which is not acceptable for structure or prompt-factory pages
+- maximize evidence is only valid when the workbench host anchors to the live viewport at `(0,0)` and covers the actual app view instead of expanding inside an inner card
+- radial-menu density also needed a second polish pass: larger icon/text use inside the hexes, no duplicate text in the numeric priority submenu, and a much lower zoom floor for large maps
 
 Live review evidence now exists in `output/playwright/` and should be treated as part of the handoff context.
 

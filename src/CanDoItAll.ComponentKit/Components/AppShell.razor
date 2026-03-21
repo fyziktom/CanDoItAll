@@ -2,13 +2,11 @@
 
 <div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_24%),linear-gradient(180deg,_#f8fbff_0%,_#edf3fb_100%)] text-slate-900">
     <div class="mx-auto flex min-h-screen max-w-[1840px] gap-4 px-3 py-3 sm:px-4 lg:px-5">
-        @if (Mode == AppShellMode.StandardPage)
-        {
-            <aside class="hidden w-72 shrink-0 rounded-[2rem] border border-white/70 bg-slate-950 p-5 text-slate-100 shadow-2xl shadow-slate-900/10 xl:block">
+        <aside class="hidden shrink-0 overflow-y-auto rounded-[2rem] border border-white/70 bg-slate-950 text-slate-100 shadow-2xl shadow-slate-900/10 xl:block @(Mode == AppShellMode.FocusWorkbench ? "w-64 p-4" : "w-72 p-5")">
                 <div class="mb-7 space-y-4">
                     <div class="space-y-1">
                         <p class="text-xs font-semibold uppercase tracking-[0.35em] text-sky-300">CanDoItAll</p>
-                        <h1 class="text-2xl font-semibold tracking-tight text-white">Local delivery workbench</h1>
+                        <h1 class="@(Mode == AppShellMode.FocusWorkbench ? "text-xl" : "text-2xl") font-semibold tracking-tight text-white">Local delivery workbench</h1>
                         <p class="text-sm leading-6 text-slate-400">Projects, prompts, validation, scheduling, and evidence in one recoverable workspace.</p>
                     </div>
 
@@ -89,11 +87,10 @@
                         }
                     </div>
                 }
-            </aside>
-        }
+        </aside>
 
         <main class="flex min-w-0 flex-1 flex-col gap-4">
-            <details class="rounded-[1.5rem] border border-white/80 bg-white/90 px-4 py-3 shadow-lg shadow-slate-200/40 backdrop-blur @(Mode == AppShellMode.FocusWorkbench ? string.Empty : "xl:hidden")">
+            <details class="rounded-[1.5rem] border border-white/80 bg-white/90 px-4 py-3 shadow-lg shadow-slate-200/40 backdrop-blur xl:hidden">
                 <summary class="cursor-pointer list-none text-sm font-semibold text-slate-900">
                     Workspace navigation
                 </summary>
@@ -191,9 +188,18 @@
                          ReopenRecent="ReopenRecentTab" />
 
             <div class="@(ShowRightRail ? "grid gap-4 2xl:grid-cols-[minmax(0,1fr)_20rem]" : "block")">
-                <section class="min-w-0 rounded-[1.85rem] border border-white/80 bg-white/92 shadow-xl shadow-slate-200/60 backdrop-blur @(Mode == AppShellMode.FocusWorkbench ? "p-4 lg:p-5" : "p-5 lg:p-6")">
-                    @Body
-                </section>
+                @if (Mode == AppShellMode.FocusWorkbench)
+                {
+                    <div class="min-w-0">
+                        @Body
+                    </div>
+                }
+                else
+                {
+                    <section class="min-w-0 rounded-[1.85rem] border border-white/80 bg-white/92 p-5 shadow-xl shadow-slate-200/60 backdrop-blur lg:p-6">
+                        @Body
+                    </section>
+                }
 
                 @if (ShowRightRail)
                 {

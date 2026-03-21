@@ -17,6 +17,7 @@ Phase 6 and Phase 7 remained necessary after the first pass because live QA expo
 - stale Tailwind output made several desktop layouts appear unfinished even though Razor markup had already been migrated
 - resources, test lab, prompt gallery, and settings still needed missing filters or create affordances
 - protected structure-canvas interactions required interop fixes during real browser validation
+- a later protected-route QA pass also showed that focus-workbench routes still needed shell hardening after adoption: the desktop menu must remain present while docked, maximize must escape inner shell cards, and the radial menu needed another density/zoom sweep
 
 ## Strategy Summary
 
@@ -138,6 +139,8 @@ Goals:
 - apply the quieter `FocusWorkbench` shell mode
 - widen the working area
 - remove redundant surrounding chrome
+- keep the persistent desktop main menu visible while the workbench is docked
+- ensure maximize/dock uses a true viewport overlay rather than an inner-card expansion
 
 Important rule:
 
@@ -151,6 +154,9 @@ Goals:
 - standardize status chip treatment
 - verify button hierarchy and destructive action placement
 - remove obvious remaining one-off page-local layout patterns
+- finish radial-menu density tuning on the shared canvases
+- remove duplicated submenu labels where the icon already carries the payload
+- increase the zoom-out floor enough for large structure maps to stay reviewable
 
 ### Phase 7: QA Sweep
 
@@ -185,6 +191,8 @@ Protected routes should benefit from the new shell mode without becoming test-he
 5. Do not replace everything at once when a route-by-route migration is safer.
 6. Rebuild `Tailwind/output.css` before any visual signoff or browser screenshot review.
 7. Treat live Playwright review as mandatory for protected routes and desktop list/detail pages.
+8. Do not accept protected-route maximize work as complete until the live host bounds are verified at `left=0`, `top=0`, and viewport-sized.
+9. Treat missing desktop navigation on a docked focus-workbench route as a blocking regression.
 
 ## Suggested Page Migration Batch
 

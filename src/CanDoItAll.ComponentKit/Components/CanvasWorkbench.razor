@@ -37,7 +37,7 @@
                     <button type="button" class="cw-toolbar-action cw-toolbar-action--ghost" aria-label="Zoom out" @onclick="ZoomOutAsync">-</button>
                     <input class="cw-zoom-slider"
                            type="range"
-                           min="55"
+                           min="15"
                            max="175"
                            step="5"
                            value="@zoomPercent"
@@ -146,6 +146,8 @@
 </div>
 
 @code {
+    private const int MinZoomPercent = 15;
+    private const int MaxZoomPercent = 175;
     private readonly JsonSerializerOptions serializerOptions = new(JsonSerializerDefaults.Web);
     private ElementReference host;
     private ElementReference quickCreateButton;
@@ -341,9 +343,9 @@
         await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.focusNode", host, targetNodeId);
     }
 
-    private Task ZoomInAsync() => SetZoomPercentAsync(Math.Min(175, zoomPercent + 10));
+    private Task ZoomInAsync() => SetZoomPercentAsync(Math.Min(MaxZoomPercent, zoomPercent + 10));
 
-    private Task ZoomOutAsync() => SetZoomPercentAsync(Math.Max(55, zoomPercent - 10));
+    private Task ZoomOutAsync() => SetZoomPercentAsync(Math.Max(MinZoomPercent, zoomPercent - 10));
 
     private Task IncreaseMenuScaleAsync() => SetMenuScalePercentAsync(Math.Min(140, menuScalePercent + 5));
 
@@ -361,7 +363,7 @@
 
     private async Task SetZoomPercentAsync(int value)
     {
-        zoomPercent = Math.Clamp(value, 55, 175);
+        zoomPercent = Math.Clamp(value, MinZoomPercent, MaxZoomPercent);
         if (initialized)
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setZoomPercent", host, zoomPercent);
@@ -422,7 +424,7 @@
     }
 
     private static int ClampZoomPercent(double zoom)
-        => (int)Math.Round(Math.Clamp(zoom, 0.55, 1.75) * 100);
+        => (int)Math.Round(Math.Clamp(zoom, MinZoomPercent / 100d, MaxZoomPercent / 100d) * 100);
 
     private static int ClampMenuScalePercent(double scale)
         => (int)Math.Round(Math.Clamp(scale, 0.8, 1.4) * 100);

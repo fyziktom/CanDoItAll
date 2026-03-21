@@ -6,6 +6,10 @@
 - Similar pages now feel structurally consistent
 - Primary navigation still works on smaller screens
 - Protected workbench routes retained behavior
+- Docked protected workbench routes still show the desktop main menu
+- Maximized protected workbench routes anchor to the viewport correctly
+- Radial-menu spacing and the numeric priority submenu were reviewed from screenshots, not assumed from code
+- The shared workbench zoom floor was validated on a live large-map view
 - Migrated filters/actions were checked on resources, test lab, prompt gallery, and settings
 - Required component and Playwright tests passed
 - No major route lost deep-link or selected-state behavior

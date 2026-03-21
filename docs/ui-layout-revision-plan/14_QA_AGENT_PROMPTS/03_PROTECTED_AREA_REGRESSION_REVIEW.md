@@ -13,6 +13,9 @@ Review only the protected workbench routes and their surrounding shell behavior.
 - available width
 - duplicate chrome reduction
 - preservation of internal workbench behavior
+- persistent desktop navigation while docked
+- viewport-anchored maximize behavior
+- radial-menu density, submenu clarity, and zoom-floor reach
 
 ## Required Verification
 
@@ -27,6 +30,10 @@ Review only the protected workbench routes and their surrounding shell behavior.
 3. Did any test selector or route assumption break unexpectedly?
 4. Is the global right rail correctly reduced on protected routes?
 5. Do group-border dragging, progress-badge editing, and maximize/dock transitions still behave correctly in the live browser?
+6. Does the docked route still retain the main desktop menu?
+7. Does maximize start at the actual viewport origin instead of an inner shell wrapper?
+8. Do the radial-menu hexes use their space well, and is the numeric priority submenu free of duplicate text?
+9. Can the operator zoom out far enough to review a large map without resorting to browser zoom?
 
 ## Required Output
 

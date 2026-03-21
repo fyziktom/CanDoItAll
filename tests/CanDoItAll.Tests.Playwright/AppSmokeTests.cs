@@ -61,13 +61,14 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.WaitForURLAsync("**/projects/*/structure");
         await page.WaitForSelectorAsync("text=Structure canvas");
         await page.Locator(".cw-workbench-shell").WaitForAsync();
+        await page.GetByRole(AriaRole.Heading, new() { Name = "Local delivery workbench" }).WaitForAsync();
         await page.GetByLabel("Canvas zoom").WaitForAsync();
         await page.GetByLabel("Open quick create actions").ClickAsync();
         await page.Locator(".cw-context-menu__action[data-action-id='add-note']").WaitForAsync();
         await page.Locator(".cw-context-menu__action[data-action-id='group-assets']").HoverAsync(new() { Force = true });
         await page.Locator(".cw-context-menu__action[data-action-id='add-image-asset']").WaitForAsync();
         await page.Keyboard.PressAsync("Escape");
-        await page.GetByRole(AriaRole.Button, new() { Name = "Help" }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Toggle help", Exact = true }).ClickAsync();
         await page.GetByRole(AriaRole.Dialog, new() { Name = "Canvas shortcuts and gestures" }).WaitForAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Close help" }).ClickAsync();
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
@@ -97,8 +98,9 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.WaitForSelectorAsync("text=Prompt session workbench");
         await page.GetByTestId("prompt-factory-project").SelectOptionAsync(projectId.ToString());
         await page.Locator(".cw-workbench-shell").WaitForAsync();
+        await page.GetByRole(AriaRole.Heading, new() { Name = "Local delivery workbench" }).WaitForAsync();
         await page.GetByLabel("Canvas zoom").WaitForAsync();
-        await page.GetByRole(AriaRole.Button, new() { Name = "Help" }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Toggle help", Exact = true }).ClickAsync();
         await page.GetByRole(AriaRole.Dialog, new() { Name = "Canvas shortcuts and gestures" }).WaitForAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Close help" }).ClickAsync();
         await page.GetByTestId("prompt-factory-build").WaitForAsync();
@@ -138,7 +140,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-root-menu-metadata.png"), FullPage = true });
         await page.Keyboard.PressAsync("Escape");
 
-        await page.GetByRole(AriaRole.Button, new() { Name = "Settings" }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Toggle settings", Exact = true }).ClickAsync();
         await page.GetByRole(AriaRole.Dialog, new() { Name = "Canvas settings" }).WaitForAsync();
         await page.EvaluateAsync(
             @"() => {
@@ -283,8 +285,13 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.Locator(".cw-context-menu__action[data-action-id='priority:1']").WaitForAsync();
         await page.Locator(".cw-context-menu__action[data-action-id='priority:6']").WaitForAsync();
         var priorityMetrics = await ReadContextMenuActionMetricsAsync(page, "priority:2");
+        var priorityPresetLabelCount = await page.EvaluateAsync<int>(
+            @"() => Array.from(document.querySelectorAll('.cw-context-menu__action.is-priority-preset .cw-context-menu__label'))
+                .filter(label => (label.textContent || '').trim().length > 0)
+                .length");
         Assert.True(progressMetrics.Width > priorityMetrics.Width, $"Expected progress presets to be larger than priority presets. Progress={progressMetrics.Width}, priority={priorityMetrics.Width}.");
         Assert.True(markerMetrics.Width > priorityMetrics.Width, $"Expected marker presets to be larger than priority presets. Marker={markerMetrics.Width}, priority={priorityMetrics.Width}.");
+        Assert.Equal(0, priorityPresetLabelCount);
         await page.Locator(".cw-context-menu__action[data-action-id='priority:2']").ClickAsync(new() { Force = true });
         await page.WaitForFunctionAsync("() => document.querySelector('.cw-node.is-selected .cw-node__priority')?.textContent?.trim() === '2'");
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-badges-selected.png"), FullPage = true });
@@ -455,6 +462,8 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         var maximized = await ReadCanvasViewportStateAsync(page);
         Assert.True(maximized.IsMaximized);
         Assert.True(maximized.BodyLock);
+        Assert.InRange(Math.Abs(maximized.HostLeft), 0, 1);
+        Assert.InRange(Math.Abs(maximized.HostTop), 0, 1);
         Assert.InRange(Math.Abs(maximized.HostWidth - maximized.ViewportWidth), 0, 1);
         Assert.InRange(Math.Abs(maximized.HostHeight - maximized.ViewportHeight), 0, 1);
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-centered-pan.png"), FullPage = true });
@@ -630,6 +639,8 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
                 return {
                     isMaximized: shell?.classList.contains('is-maximized') === true,
                     bodyLock: document.body.classList.contains('cw-body-lock'),
+                    hostLeft: host?.getBoundingClientRect().left ?? 0,
+                    hostTop: host?.getBoundingClientRect().top ?? 0,
                     hostWidth: host?.getBoundingClientRect().width ?? 0,
                     hostHeight: host?.getBoundingClientRect().height ?? 0,
                     viewportWidth: window.innerWidth,
@@ -778,6 +789,10 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         public bool IsMaximized { get; set; }
 
         public bool BodyLock { get; set; }
+
+        public double HostLeft { get; set; }
+
+        public double HostTop { get; set; }
 
         public double HostWidth { get; set; }
 
