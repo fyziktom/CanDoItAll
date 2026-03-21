@@ -1,6 +1,4 @@
 using System.Text.RegularExpressions;
-using CanDoItAll.Mcp.DotNetWatch.Logging;
-using CanDoItAll.Mcp.DotNetWatch.Processes;
 
 namespace CanDoItAll.Mcp.DotNetWatch.Operations;
 

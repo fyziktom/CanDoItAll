@@ -1,3 +1,7 @@
+using CanDoItAll.Mcp.Core.Contracts;
+using CanDoItAll.Mcp.Core.Observability;
+using CanDoItAll.Mcp.LocalRuntime.Persistence;
+
 namespace CanDoItAll.Mcp.DotNetWatch;
 
 public enum AppRunMode
@@ -70,42 +74,6 @@ public enum DiagnosticCategory
     ProcessExitedEarly,
     Unknown
 }
-
-public sealed record ToolEnvelope<T>(
-    bool Ok,
-    string Tool,
-    DateTimeOffset TimestampUtc,
-    string CorrelationId,
-    T? Data,
-    IReadOnlyList<string> Warnings,
-    ToolError? Error)
-{
-    public static ToolEnvelope<T> Success(string tool, string correlationId, T data, IReadOnlyList<string>? warnings = null)
-    {
-        return new ToolEnvelope<T>(
-            true,
-            tool,
-            DateTimeOffset.UtcNow,
-            correlationId,
-            data,
-            warnings ?? [],
-            null);
-    }
-
-    public static ToolEnvelope<T> Failure(string tool, string correlationId, ToolError error)
-    {
-        return new ToolEnvelope<T>(
-            false,
-            tool,
-            DateTimeOffset.UtcNow,
-            correlationId,
-            default,
-            [],
-            error);
-    }
-}
-
-public sealed record ToolError(string Code, string Message, object? Details = null);
 
 public sealed record DefaultAppInfo(string ProjectPath, string ProjectPathRelative, AppRunMode Mode, IReadOnlyList<string> HealthUrls);
 
@@ -180,12 +148,12 @@ public sealed record AppWaitData(
     long ElapsedMs,
     AppLifecycleState ObservedState,
     long FinalCursor,
-    Logging.LogEntry? MatchedLogEntry,
+    LogEntry? MatchedLogEntry,
     string? DiagnosticHint);
 
 public sealed record AppLogsData(
     string SessionId,
-    IReadOnlyList<Logging.LogEntry> Entries,
+    IReadOnlyList<LogEntry> Entries,
     long NextCursor,
     bool Truncated,
     int TotalAvailableAfterCursor);
@@ -249,20 +217,10 @@ public sealed record OperationWaitData(
 
 public sealed record OperationLogsData(
     string OperationId,
-    IReadOnlyList<Logging.LogEntry> Entries,
+    IReadOnlyList<LogEntry> Entries,
     long NextCursor,
     bool Truncated,
     int TotalAvailableAfterCursor);
-
-public sealed record CleanupKilledProcessData(int Pid, string OwnerKind, string OwnerId);
-
-public sealed record CleanupSkippedProcessData(int Pid, string Reason);
-
-public sealed record CleanupStaleProcessesData(
-    int Checked,
-    IReadOnlyList<CleanupKilledProcessData> Killed,
-    IReadOnlyList<CleanupSkippedProcessData> Skipped,
-    bool DryRun);
 
 public sealed record DiagnosticEvidence(long Sequence, string Text);
 
@@ -274,10 +232,3 @@ public sealed record DiagnoseStartFailureData(
     string Summary,
     IReadOnlyList<string> RecommendedActions,
     IReadOnlyList<DiagnosticEvidence> Evidence);
-
-public sealed class ToolInvocationException(string code, string message, object? details = null) : Exception(message)
-{
-    public string Code { get; } = code;
-
-    public object? Details { get; } = details;
-}

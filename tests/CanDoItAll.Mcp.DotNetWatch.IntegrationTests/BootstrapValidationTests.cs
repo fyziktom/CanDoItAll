@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using CanDoItAll.Mcp.Core.Contracts;
+using CanDoItAll.Mcp.DotNetWatch;
 
 namespace CanDoItAll.Mcp.DotNetWatch.IntegrationTests;
 

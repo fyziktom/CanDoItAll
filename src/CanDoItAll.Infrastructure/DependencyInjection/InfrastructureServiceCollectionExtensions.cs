@@ -80,6 +80,16 @@ public static class InfrastructureServiceCollectionExtensions
     private static void ConfigureDb(DbContextOptionsBuilder optionsBuilder, IHostEnvironment environment, DatabaseOptions databaseOptions)
     {
         var provider = databaseOptions.Provider.Trim().ToLowerInvariant();
+        if (provider is "inmemory" or "memory")
+        {
+            var databaseName = string.IsNullOrWhiteSpace(databaseOptions.ConnectionString)
+                ? "candoitall"
+                : databaseOptions.ConnectionString.Trim();
+
+            optionsBuilder.UseInMemoryDatabase(databaseName);
+            return;
+        }
+
         if (provider is "postgres" or "postgresql")
         {
             var connectionString = string.IsNullOrWhiteSpace(databaseOptions.ConnectionString)

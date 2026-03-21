@@ -1,0 +1,104 @@
+{
+  "Server": {
+    "Name": "CanDoItAll.Mcp.SshOps",
+    "StateDirectory": ".mcp-state/sshops",
+    "LogDirectory": ".mcp-state/sshops/logs",
+    "MaxBundleBytes": 67108864,
+    "AllowDangerousRawExec": true
+  },
+  "Transport": {
+    "Backend": "sshnet",
+    "ConnectTimeoutSeconds": 20,
+    "CommandTimeoutSeconds": 300,
+    "UploadTimeoutSeconds": 300
+  },
+  "Security": {
+    "RequireHostKeyPinningInProduction": false,
+    "RedactSecretsInLogs": true,
+    "DenyAgentForwarding": true,
+    "DenyPasswordAuthentication": false
+  },
+  "Defaults": {
+    "RemoteStateRoot": "/home/pi/candoitall/.mcp-state",
+    "StacksRoot": "/home/pi/candoitall/stacks",
+    "SecretsRoot": "/home/pi/candoitall/secrets",
+    "AllowedRoots": [
+      "/home/pi/candoitall"
+    ],
+    "ComposeApplyTimeoutSeconds": 900,
+    "HttpWaitTimeoutSeconds": 180,
+    "CertWaitTimeoutSeconds": 600,
+    "PostgresWaitTimeoutSeconds": 120,
+    "OperationPollIntervalSeconds": 5
+  },
+  "RemoteJobs": {
+    "Root": "/home/pi/candoitall/.mcp-state/jobs",
+    "DefaultDetachedThresholdSeconds": 20,
+    "RetentionDays": 14,
+    "GracefulCancelSeconds": 10
+  },
+  "Revisions": {
+    "Enabled": true,
+    "KeepLast": 20,
+    "BackupBeforeOverwrite": true
+  },
+  "Redaction": {
+    "Patterns": [
+      "BEGIN OPENSSH PRIVATE KEY",
+      "root",
+      "POSTGRES_PASSWORD=",
+      "IPFS_SWARM_KEY"
+    ],
+    "ReplaceWith": "***REDACTED***"
+  },
+  "Targets": [
+    {
+      "Name": "rpi3-test",
+      "Host": "10.190.32.143",
+      "Port": 22,
+      "User": "pi",
+      "Sudo": {
+        "Mode": "sudo-n",
+        "Command": "sudo -n"
+      },
+      "Auth": {
+        "PasswordEnv": "CANDOITALL_RPI3_TEST_SSH_PASSWORD"
+      },
+      "HostKeyVerification": {
+        "Mode": "fingerprintSha256",
+        "Value": "SHA256:4+ZMz+d0UnVPYr0nbBq7rcCyf65FILJmG3K+E1t9jxM"
+      },
+      "Paths": {
+        "RemoteStateRoot": "/home/pi/candoitall/.mcp-state",
+        "StacksRoot": "/home/pi/candoitall/stacks",
+        "SecretsRoot": "/home/pi/candoitall/secrets",
+        "AllowedRoots": [
+          "/home/pi/candoitall"
+        ]
+      },
+      "Docker": {
+        "ComposeCommand": "docker compose",
+        "RequiredNetworks": [
+          "proxy"
+        ],
+        "DefaultLoggingDriver": "local"
+      },
+      "Traefik": {
+        "StackName": "infra-traefik",
+        "ResolverName": "local-selfsigned"
+      },
+      "Validation": {
+        "PublicAppHost": "10.190.32.143",
+        "DefaultHealthPath": "/health",
+        "CertificateDomains": [
+          "10.190.32.143"
+        ]
+      },
+      "Guards": {
+        "AllowBootstrap": true,
+        "AllowComposeExec": true,
+        "AllowRawExec": true
+      }
+    }
+  ]
+}

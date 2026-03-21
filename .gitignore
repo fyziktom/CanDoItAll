@@ -58,8 +58,8 @@ nunit-*.xml
 # Node
 node_modules/
 
-output/manager
-output/playwright
+
+output
 .mcp-state/
 .playwright
 .playwright-cli

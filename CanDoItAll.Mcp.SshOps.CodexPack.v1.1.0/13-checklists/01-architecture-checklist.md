@@ -1,0 +1,22 @@
+# Checklist architektury
+
+- [ ] Server je součást solution `CanDoItAll`.
+- [ ] Cílový projekt se jmenuje `CanDoItAll.Mcp.SshOps`.
+- [ ] Host běží přes official MCP C# SDK a stdio.
+- [ ] `Program.cs` neobsahuje business logiku.
+- [ ] stdout je vyhrazen pouze pro MCP protokol.
+- [ ] Logování jde na stderr / soubor, ne na stdout.
+- [ ] Existuje `ISshTransport` abstrahující backend.
+- [ ] MVP implementace používá `SshNetTransport`.
+- [ ] Všechny mutující operace jdou přes koordinátor.
+- [ ] Locking je minimálně per target.
+- [ ] Shared infra stack má samostatný lock.
+- [ ] Existuje detached remote job runner.
+- [ ] Operation journal je persistentní.
+- [ ] Tooly jsou doménově orientované, ne jen shell passthrough.
+- [ ] Raw exec je defaultně vypnutý.
+- [ ] Konfigurace targetů je validovaná při startu.
+- [ ] Secret resolver nikdy neloguje tajné hodnoty.
+- [ ] Path guard hlídá allow-listed roots.
+- [ ] Host key pinning je podporovaný a doporučený default.
+- [ ] Rollback strategie je navržená alespoň pro file/compose deploye.

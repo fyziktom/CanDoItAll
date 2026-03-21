@@ -2,9 +2,7 @@ using System.Text.RegularExpressions;
 using CanDoItAll.Mcp.DotNetWatch.Configuration;
 using CanDoItAll.Mcp.DotNetWatch.Diagnostics;
 using CanDoItAll.Mcp.DotNetWatch.Health;
-using CanDoItAll.Mcp.DotNetWatch.Logging;
 using CanDoItAll.Mcp.DotNetWatch.Operations;
-using CanDoItAll.Mcp.DotNetWatch.Processes;
 using CanDoItAll.Mcp.DotNetWatch.Security;
 
 namespace CanDoItAll.Mcp.DotNetWatch.Runtime;
@@ -20,7 +18,7 @@ public sealed class SessionCoordinator(
     PathGuard pathGuard,
     EnvironmentOverlayFilter environmentOverlayFilter,
     StartFailureDiagnoser diagnoser,
-    Persistence.StaleProcessRegistry staleProcessRegistry,
+    StaleProcessRegistry staleProcessRegistry,
     IProcessTreeTerminator processTreeTerminator,
     ILogger<SessionCoordinator> logger)
 {

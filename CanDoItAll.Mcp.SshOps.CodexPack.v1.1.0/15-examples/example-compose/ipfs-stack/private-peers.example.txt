@@ -1,0 +1,2 @@
+/ip4/10.0.10.11/tcp/4001/p2p/12D3KooWExamplePeerOne
+/ip4/10.0.10.12/tcp/4001/p2p/12D3KooWExamplePeerTwo

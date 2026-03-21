@@ -1,0 +1,46 @@
+id,area,tool,scenario,preconditions,action,expected_status,acceptance,priority
+FND-VAL-001,SharedFoundation,n/a,Current-state inventory completed,Repo available,Audit CanDoItAll.Mcp.DotNetWatch and compare with SSH pack,success,"Inventory lists extract-now, later, and keep-local decisions",P0
+FND-VAL-002,SharedFoundation,n/a,CanDoItAll.Mcp.Core created,Solution updated,Build shared core project,success,Project builds with no forbidden solution dependencies,P0
+FND-VAL-003,SharedFoundation,n/a,CanDoItAll.Mcp.LocalRuntime created,Solution updated,Build local runtime project,success,Project builds and depends only on Core plus allowed packages,P0
+FND-VAL-004,SharedFoundation,n/a,Tool envelope compatibility preserved,DotNetWatch refactor done,Compare serialized tool response snapshots before/after,success,No breaking drift in required fields for existing dotnetwatch tools,P0
+FND-VAL-005,SharedFoundation,candoitall_app_logs,Shared log buffer behaves identically,DotNetWatch refactor done,Run log append/read smoke scenario,success,"Cursor, truncation and redaction behavior match expected baseline",P0
+FND-VAL-006,SharedFoundation,candoitall_app_start,DotNetWatch app lifecycle regression,DotNetWatch refactor done,"Start app, wait healthy, stop app",success,Lifecycle and state transitions remain deterministic,P0
+FND-VAL-007,SharedFoundation,candoitall_solution_build,Build/test operations still track status and logs,DotNetWatch refactor done,Run build and test smoke flow,success,"Operation status, wait and logs remain functional",P0
+FND-VAL-008,SharedFoundation,candoitall_cleanup_stale_processes,Stale cleanup still works via LocalRuntime,Synthetic stale registry entry,Run cleanup dry-run then real cleanup,success,Ownership markers and cleanup semantics still hold,P1
+FND-VAL-009,SharedFoundation,targets_list,SSH skeleton consumes shared envelope,SSH project scaffolded,Invoke targets_list,success,Response uses shared contract types and error handling,P0
+FND-VAL-010,SharedFoundation,n/a,Forbidden dependency blocked,Architecture rules defined,Review project references,success,"Shared libs do not reference Web, Infrastructure or SSH-specific packages",P0
+VAL-001,Connectivity,target_test,Happy path SSH connect,Valid target config and host online,Run target_test,success,"Returns fingerprint, OS summary, writable roots, correlationId",P0
+VAL-002,Connectivity,target_test,Invalid private key,Wrong env key,Run target_test,validation_error,Clear auth failure without leaking key content,P0
+VAL-003,Security,target_test,Host key mismatch,Configured fingerprint differs,Run target_test,host_key_mismatch,Connection refused before any mutation,P0
+VAL-004,Security,fs_apply_bundle,Path traversal denied,Bundle target path contains ../,Run fs_apply_bundle,path_not_allowed,No remote write occurs,P0
+VAL-005,Security,dangerous_raw_exec,Raw exec disabled by default,Default config,Run dangerous_raw_exec,policy_blocked,Tool denied with policy explanation,P0
+VAL-006,Bootstrap,host_bootstrap_prepare,Install Docker on clean Ubuntu,Fresh host,Run bootstrap,success/operation,Docker and compose available; user added if configured,P1
+VAL-007,Bootstrap,host_bootstrap_prepare,Port conflict on 80,Another service binds 80,Run bootstrap/apply Traefik,precondition_failed,Conflict detected with actionable summary,P1
+VAL-008,Files,fs_apply_bundle,Atomic bundle apply,Valid tar bundle,Apply bundle,success,Revision created; symlink and live path updated atomically,P1
+VAL-009,Files,fs_restore_backup,Restore prior backup,Existing backup id,Restore backup,success,Files restored and audit trail recorded,P1
+VAL-010,Compose,compose_validate,Valid compose stack,Compose exists,Validate,success,Normalized config summary returned,P1
+VAL-011,Compose,compose_validate,Invalid YAML,Broken compose file,Validate,compose_invalid,Parser output included in diagnostics,P0
+VAL-012,Compose,compose_apply,Long image pull,Large images / cold cache,Apply,running then success,Detached job created; wait/log polling works,P0
+VAL-013,Compose,compose_apply,Concurrent mutation blocked,Another compose apply already running,Run second mutation,target_locked,No race; first op continues,P0
+VAL-014,Compose,compose_ps,Service unhealthy,Health check failing,Run compose_ps,degraded,Per-service health surfaced,P1
+VAL-015,Traefik,compose_apply,Traefik deploy to shared proxy network,Proxy network exists,Apply infra stack,success,Traefik container healthy on proxy network,P1
+VAL-016,Traefik,http_probe,HTTP to HTTPS redirect,Router configured,Probe http URL,success,Redirect chain visible and expected,P2
+VAL-017,Traefik,cert_check,Certificate issued via staging,Valid staging resolver,Check cert,success,"Issuer, SAN, notBefore, notAfter returned",P1
+VAL-018,Traefik,cert_check,ACME storage permission wrong,acme.json mode not 600,Run cert flow,validation_error or degraded,Actionable fix suggested,P1
+VAL-019,Traefik,compose_apply,Dashboard exposed publicly,Insecure labels accidentally set,Validate/apply,policy_blocked or degraded,Public dashboard exposure detected,P0
+VAL-020,PostgreSQL,postgres_ready,DB healthy internal only,DB service healthy,Run postgres_ready,success,Readiness confirmed without public port publishing,P1
+VAL-021,PostgreSQL,postgres_ready,Wrong credentials,Secret mismatch,Run postgres_ready,auth_failed,Failure redacted and actionable,P1
+VAL-022,IPFS,ipfs_private_validate,Private swarm valid,Swarm key and bootstrap list configured,Validate,success,Confirms private mode and no public bootstrap peers,P0
+VAL-023,IPFS,ipfs_private_validate,Public bootstrap peers still present,Default peers not removed,Validate,validation_error,Lists unexpected peers,P0
+VAL-024,IPFS,ipfs_status,RPC API accidentally public,API port published,Run audit/validate,policy_blocked or degraded,Public exposure flagged,P0
+VAL-025,Operations,operation_wait,Reconnect during long op,Client disconnect mid-deploy,Poll status later,success,Operation journal persists and wait resumes,P0
+VAL-026,Operations,operation_cancel,Cancel supported op,Long op running,Cancel,canceled or not_supported,Deterministic outcome with status trail,P2
+VAL-027,Rollback,stack_rollback,Rollback after failed deploy,Prior revision exists,Rollback stack,success,Previous files and compose state restored,P0
+VAL-028,Rollback,stack_rollback,Rollback without revision,No backup exists,Rollback,not_found,No partial mutation occurs,P1
+VAL-029,Observability,compose_logs,Secret redaction in logs,Logs contain password/token,Read logs,success,Sensitive segments masked,P0
+VAL-030,Governance,targets_list,Target catalog summary,Multiple targets configured,List targets,success,Only non-sensitive metadata returned,P2
+VAL-031,Governance,target_audit,Audit report completeness,Running target,Audit target,success,"Includes docker, ports, firewall, disk, versions",P1
+VAL-032,Networking,docker_network_ensure,Create missing external proxy network,Network absent,Ensure network,success,Idempotent creation with inspect summary,P1
+VAL-033,Networking,http_wait,Wait for app readiness after restart,App boot slow,Wait on /health,success,Backoff and timeout behavior documented,P1
+VAL-034,Security,fs_read_text,Read denied outside roots,Path outside allowlist,Read file,path_not_allowed,No content returned,P0
+VAL-035,Security,compose_exec,Command whitelist enforcement,Disallowed shell requested,Exec command,policy_blocked,Only structured allowed exec patterns permitted,P0

@@ -1,3 +1,9 @@
+global using CanDoItAll.Mcp.Core.Concurrency;
+global using CanDoItAll.Mcp.Core.Contracts;
+global using CanDoItAll.Mcp.Core.Identity;
+global using CanDoItAll.Mcp.Core.Observability;
+global using CanDoItAll.Mcp.LocalRuntime.Persistence;
+global using CanDoItAll.Mcp.LocalRuntime.Processes;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;
 global using Microsoft.Extensions.Hosting;
