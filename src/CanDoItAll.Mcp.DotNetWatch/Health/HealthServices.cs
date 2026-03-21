@@ -70,6 +70,20 @@ public sealed class HttpHealthProbe(RuntimeConfiguration configuration, HttpProb
                         payload.ActiveUrls ?? []);
                 }
 
+                if (TryInterpretGenericHealthPayload(result.Body, out var genericSummary))
+                {
+                    return new HealthSnapshot(
+                        "Healthy",
+                        true,
+                        DateTimeOffset.UtcNow,
+                        null,
+                        url.ToString(),
+                        genericSummary,
+                        payload?.WatchIteration,
+                        payload?.RuntimePid,
+                        payload?.ActiveUrls is { Count: > 0 } activeUrls ? activeUrls : [url.ToString()]);
+                }
+
                 lastFailure = DateTimeOffset.UtcNow;
             }
             catch (Exception ex)
@@ -80,5 +94,38 @@ public sealed class HttpHealthProbe(RuntimeConfiguration configuration, HttpProb
         }
 
         return new HealthSnapshot("Unhealthy", false, null, lastFailure, lastUrl, "Health probe did not succeed.", null, null, []);
+    }
+
+    private static bool TryInterpretGenericHealthPayload(string body, out string summary)
+    {
+        summary = "Ready";
+
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            if (document.RootElement.ValueKind is not JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            var root = document.RootElement;
+            if (root.TryGetProperty("status", out var statusProperty) &&
+                statusProperty.ValueKind is JsonValueKind.String)
+            {
+                var statusValue = statusProperty.GetString();
+                if (string.Equals(statusValue, "ok", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(statusValue, "healthy", StringComparison.OrdinalIgnoreCase))
+                {
+                    summary = statusValue!;
+                    return true;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        return false;
     }
 }

@@ -18,14 +18,14 @@
     ],
     "EnvironmentOverlay": {
       "ASPNETCORE_ENVIRONMENT": "Development",
-      "DOTNET_ENVIRONMENT": "Development"
+      "DOTNET_ENVIRONMENT": "Development",
+      "DOTNET_CLI_UI_LANGUAGE": "en"
     }
   },
   "Health": {
     "Enabled": true,
     "Urls": [
-      "https://localhost:7271/_dev/runtime",
-      "http://localhost:5032/_dev/runtime"
+      "https://localhost:7271/_dev/runtime"
     ],
     "TimeoutMs": 5000,
     "PollIntervalMs": 500,
@@ -91,7 +91,8 @@
       "ASPNETCORE_URLS",
       "DOTNET_ENVIRONMENT",
       "DOTNET_USE_POLLING_FILE_WATCHER",
-      "DetailedErrors"
+      "DetailedErrors",
+      "DOTNET_CLI_UI_LANGUAGE"
     ]
   }
 }
