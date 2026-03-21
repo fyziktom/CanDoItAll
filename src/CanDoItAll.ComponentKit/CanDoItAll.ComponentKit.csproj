@@ -19,5 +19,4 @@
     <ProjectReference Include="..\CanDoItAll.Components\CanDoItAll.Components.csproj" />
     <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
   </ItemGroup>
-
 </Project>
