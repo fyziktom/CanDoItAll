@@ -85,8 +85,9 @@ try
         pull: false,
         build: false,
         removeOrphans: true,
-        executionMode: "sync");
-    tracker.Expect(composeApply.Ok, "compose_apply", composeApply.Summary);
+        executionMode: "sync",
+        postWaitPolicy: new ComposeWaitPolicy(["db"], 90));
+    tracker.Expect(composeApply.Ok, "compose_apply", DescribeEnvelope(composeApply));
 
     var postgresReady = await tools.PostgresReadyAsync(targetName, composeFilePath, projectName, scratchRoot, "db", "postgres", "postgres", timeoutSeconds: 180);
     tracker.Expect(postgresReady.Ok && postgresReady.Data?.Ready == true, "postgres_ready", postgresReady.Summary);

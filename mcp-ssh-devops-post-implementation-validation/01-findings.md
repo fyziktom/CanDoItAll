@@ -4,9 +4,9 @@ Status date: 2026-03-21
 
 Update after implementation and remote re-validation:
 
-- Resolved and validated on `rpi3-test`: compose-command compatibility, failure-status mapping, `compose_exec` policy, elevated-path write hardening, bootstrap ownership, `target_audit` compose/network honesty, `compose_ps` service-state handling, remote HTTP probe duration, `ipfs_status` gateway semantics, `stack_rollback` last-known-good behavior, and detached-job start/cancel semantics.
+- Resolved and validated on `rpi3-test`: compose-command compatibility, failure-status mapping, `compose_exec` policy, elevated-path write hardening, bootstrap ownership, `target_audit` compose/network honesty, `compose_ps` service-state handling, enforced `compose_apply.postWaitPolicy`, remote HTTP probe duration, `ipfs_status` gateway semantics, `stack_rollback` last-known-good behavior, and detached-job start/cancel semantics.
 - Addressed through a scripted harness: the repo now contains `RemoteValidationRunner` and `RemoteJobDiagnostic` under this folder.
-- Remaining follow-up items after the repaired pass: `postWaitPolicy` is still advisory, `FileLogStore` is still not integrated into SshOps runtime flow, some config knobs remain only partially wired, and `RemotePathGuard` is still lexical rather than symlink-aware.
+- Remaining follow-up items after the repaired pass: `FileLogStore` is still not integrated into SshOps runtime flow, some config knobs remain only partially wired, and `RemotePathGuard` is still lexical rather than symlink-aware.
 
 Method:
 

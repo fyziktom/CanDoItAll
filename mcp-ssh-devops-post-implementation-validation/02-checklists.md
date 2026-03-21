@@ -10,7 +10,7 @@
 - [x] Improve `target_audit` so compose readiness and required Docker networks are surfaced honestly.
 - [x] Make `compose_ps` return degraded status when service state/health is unhealthy.
 - [x] Repair `ipfs_status` gateway reachability semantics.
-- [ ] Stop advertising `postWaitPolicy` as if it were implemented, or implement it.
+- [x] Stop advertising `postWaitPolicy` as if it were implemented, or implement it.
 - [x] Add a scripted validation harness for the main validation matrix scenarios.
 
 ## Remote validation checklist

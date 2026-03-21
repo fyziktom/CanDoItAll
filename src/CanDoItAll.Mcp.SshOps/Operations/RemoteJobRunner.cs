@@ -15,7 +15,8 @@ public sealed record RemoteJobStartRequest(
     string CancelSummary,
     IReadOnlyList<string> Command,
     string? WorkingDirectory = null,
-    bool UseSudo = false);
+    bool UseSudo = false,
+    string? TimeoutSummary = null);
 
 public sealed record RemoteJobStartResult(
     string OperationId,
@@ -307,6 +308,7 @@ public sealed class RemoteJobRunner(
             SUCCESS_SUMMARY={{QuoteShell(request.SuccessSummary)}}
             FAILURE_SUMMARY={{QuoteShell(request.FailureSummary)}}
             CANCEL_SUMMARY={{QuoteShell(request.CancelSummary)}}
+            TIMEOUT_SUMMARY={{QuoteShell(request.TimeoutSummary ?? request.FailureSummary)}}
 
             write_text() {
               printf '%s' "$2" > "$1"
@@ -326,6 +328,9 @@ public sealed class RemoteJobRunner(
               if [ "$EXIT_CODE" -eq 0 ]; then
                 write_text "$JOB_DIR/state" "succeeded"
                 write_text "$JOB_DIR/summary" "$SUCCESS_SUMMARY"
+              elif [ "$EXIT_CODE" -eq 124 ]; then
+                write_text "$JOB_DIR/state" "timedout"
+                write_text "$JOB_DIR/summary" "$TIMEOUT_SUMMARY"
               elif [ "$EXIT_CODE" -eq 130 ]; then
                 write_text "$JOB_DIR/state" "cancelled"
                 write_text "$JOB_DIR/summary" "$CANCEL_SUMMARY"

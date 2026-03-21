@@ -3,7 +3,7 @@
 Status on 2026-03-21:
 
 - Phase 1 completed.
-- Phase 2 substantially completed. `postWaitPolicy` remains a follow-up item.
+- Phase 2 completed.
 - Phase 3 completed.
 - Phase 4 completed.
 
@@ -42,8 +42,7 @@ Exit criteria:
 
 Outcome:
 
-- Completed for the repaired items.
-- Remaining follow-up: `postWaitPolicy` is still advisory rather than enforced server-side.
+- Completed and revalidated on `rpi3-test`, including enforced `compose_apply.postWaitPolicy`.
 
 ## Phase 3: Remote validation harness
 

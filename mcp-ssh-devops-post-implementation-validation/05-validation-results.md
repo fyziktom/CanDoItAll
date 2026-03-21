@@ -23,9 +23,11 @@ dotnet output/remote-job-diagnostic/RemoteJobDiagnostic.dll
 Highlights:
 
 - Compose tools now work on a host that only has `docker-compose 1.25.5`.
+- `compose_apply.postWaitPolicy` is now enforced and was validated live by waiting for the PostgreSQL service to become healthy.
 - `compose_logs` correctly degrades behavior for legacy compose by ignoring unsupported `--since` and warning.
 - `stack_rollback(strategy="last-known-good")` restores a working stack after a deliberate bad compose change.
 - Detached operations now keep a stable PID, report `running`, and transition to `cancelled` through `operation_cancel`.
+- Detached operations now preserve explicit `timedout` state when the wrapped command exits with timeout code `124`.
 - Root-owned-path support is materially improved through sudo-aware directory creation and upload fallback.
 
 Validated tools:
@@ -61,7 +63,6 @@ Validated tools:
 
 Known remaining follow-up:
 
-- `compose_apply.postWaitPolicy` is still not enforced by the server.
 - Shared `FileLogStore` integration is still absent from runtime flow.
 - Some config knobs still need behavior-level wiring.
 - Path-guarding is still lexical and does not resolve remote symlinks.

@@ -152,11 +152,15 @@ public sealed partial class TargetCoordinator
             composeArgs.Add("--remove-orphans");
         }
 
+        var normalizedPostWaitPolicy = NormalizeComposeWaitPolicy(postWaitPolicy);
         var resolvedExecutionMode = ResolveExecutionMode(executionMode);
         var data = new ComposeApplyData(stackName, resolvedExecutionMode, backupRevisionId);
 
         if (resolvedExecutionMode == "detached")
         {
+            var detachedCommand = normalizedPostWaitPolicy is null
+                ? BuildComposeCommand(composeCommand, target.Name, validatedComposeFile, projectName, composeArgs)
+                : ["bash", "-lc", BuildComposeApplyScript(composeCommand, target.Name, validatedComposeFile, projectName, composeArgs, normalizedPostWaitPolicy)];
             var operation = await remoteJobRunner.StartAsync(
                 target,
                 new RemoteJobStartRequest(
@@ -166,8 +170,9 @@ public sealed partial class TargetCoordinator
                     SuccessSummary: $"Stack '{stackName}' apply completed.",
                     FailureSummary: $"Stack '{stackName}' apply failed.",
                     CancelSummary: $"Stack '{stackName}' apply was cancelled.",
-                    Command: BuildComposeCommand(composeCommand, target.Name, validatedComposeFile, projectName, composeArgs),
-                    WorkingDirectory: validatedWorkingDirectory),
+                    Command: detachedCommand,
+                    WorkingDirectory: validatedWorkingDirectory,
+                    TimeoutSummary: $"Stack '{stackName}' apply timed out while waiting for the post-apply policy."),
                 cancellationToken);
 
             SaveOperationMetadata(new OperationTrackingMetadata(operation.OperationId, target.Name, "target", "compose_apply", DateTimeOffset.UtcNow));
@@ -177,17 +182,30 @@ public sealed partial class TargetCoordinator
                 operationId: operation.OperationId,
                 status: "accepted",
                 summary: "Compose apply started in detached mode.",
-                nextSuggestedTools: ["operation_wait", "compose_ps", "http_wait"]);
+                nextSuggestedTools: normalizedPostWaitPolicy is null ? ["operation_wait", "compose_ps", "http_wait"] : ["operation_wait"]);
         }
 
-        var result = await ExecuteComposeCommandAsync(
-            target,
-            validatedComposeFile,
-            projectName,
-            composeArgs,
-            new RemoteExecutionOptions(WorkingDirectory: validatedWorkingDirectory, Timeout: runtimeConfiguration.DefaultComposeApplyTimeout),
-            cancellationToken);
-        EnsureSuccess(result, "ValidationFailed", $"Compose apply failed for stack '{stackName}'.");
+        RemoteCommandResult result;
+        if (normalizedPostWaitPolicy is null)
+        {
+            result = await ExecuteComposeCommandAsync(
+                target,
+                validatedComposeFile,
+                projectName,
+                composeArgs,
+                new RemoteExecutionOptions(WorkingDirectory: validatedWorkingDirectory, Timeout: runtimeConfiguration.DefaultComposeApplyTimeout),
+                cancellationToken);
+        }
+        else
+        {
+            result = await transport.ExecuteAsync(
+                target,
+                ["bash", "-lc", BuildComposeApplyScript(composeCommand, target.Name, validatedComposeFile, projectName, composeArgs, normalizedPostWaitPolicy)],
+                new RemoteExecutionOptions(WorkingDirectory: validatedWorkingDirectory, Timeout: runtimeConfiguration.DefaultComposeApplyTimeout + TimeSpan.FromSeconds(normalizedPostWaitPolicy.TimeoutSeconds)),
+                cancellationToken);
+        }
+
+        EnsureComposeApplyResult(result, stackName, normalizedPostWaitPolicy);
 
         if (runtimeConfiguration.Options.Revisions.Enabled)
         {
@@ -198,8 +216,9 @@ public sealed partial class TargetCoordinator
             data,
             target: target.Name,
             status: "success",
-            summary: $"Compose apply completed for stack '{stackName}'.",
-            warnings: postWaitPolicy is null ? null : ["Post-apply wait policy is advisory and should be enforced by calling compose_ps/http_wait explicitly."]);
+            summary: normalizedPostWaitPolicy is null
+                ? $"Compose apply completed for stack '{stackName}'."
+                : $"Compose apply completed for stack '{stackName}' and satisfied the post-apply wait policy.");
     }
 
     public async Task<SshOpsToolResult<ComposePsData>> ComposePsAsync(
@@ -507,6 +526,145 @@ public sealed partial class TargetCoordinator
         SaveRevisionManifest(manifest);
         await UploadJsonAsync(target, pathGuard.ResolveInsideStateRoot(target, $"revisions/{revisionId}/manifest.json"), manifest, cancellationToken);
         return revisionId;
+    }
+
+    private static ComposeWaitPolicy? NormalizeComposeWaitPolicy(ComposeWaitPolicy? policy)
+    {
+        if (policy is null)
+        {
+            return null;
+        }
+
+        var services = (policy.WaitForHealthyServices ?? [])
+            .Select(static service => service?.Trim())
+            .Where(static service => !string.IsNullOrWhiteSpace(service))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Cast<string>()
+            .ToArray();
+
+        if (services.Length == 0)
+        {
+            return null;
+        }
+
+        if (policy.TimeoutSeconds <= 0)
+        {
+            throw new ToolInvocationException("ValidationFailed", "Compose postWaitPolicy.TimeoutSeconds must be greater than zero.");
+        }
+
+        if (services.Any(static service => service.Any(static ch => !(char.IsLetterOrDigit(ch) || ch is '-' or '_' or '.'))))
+        {
+            throw new ToolInvocationException("ValidationFailed", "Compose postWaitPolicy.WaitForHealthyServices contains an invalid service name.");
+        }
+
+        return new ComposeWaitPolicy(services, policy.TimeoutSeconds);
+    }
+
+    private static void EnsureComposeApplyResult(RemoteCommandResult result, string stackName, ComposeWaitPolicy? postWaitPolicy)
+    {
+        if (result.ExitCode == 0)
+        {
+            return;
+        }
+
+        if (postWaitPolicy is not null && result.ExitCode == 124)
+        {
+            throw new ToolInvocationException(
+                "Timeout",
+                $"Compose apply timed out while waiting for the post-apply policy on stack '{stackName}'.",
+                new
+                {
+                    exitCode = result.ExitCode,
+                    stdout = result.StandardOutput,
+                    stderr = result.StandardError,
+                    command = result.CommandText,
+                    waitForHealthyServices = postWaitPolicy.WaitForHealthyServices,
+                    timeoutSeconds = postWaitPolicy.TimeoutSeconds
+                });
+        }
+
+        EnsureSuccess(result, "ValidationFailed", $"Compose apply failed for stack '{stackName}'.");
+    }
+
+    private static string BuildComposeApplyScript(
+        string composeCommand,
+        string targetName,
+        string composeFile,
+        string projectName,
+        IReadOnlyList<string> composeArgs,
+        ComposeWaitPolicy postWaitPolicy)
+    {
+        var script = new StringBuilder();
+        script.AppendLine("set -euo pipefail");
+        script.AppendLine(string.Join(' ', BuildComposeCommand(composeCommand, targetName, composeFile, projectName, composeArgs).Select(QuoteShell)));
+        script.AppendLine(BuildComposeServiceWaitScript(projectName, postWaitPolicy));
+        return script.ToString().ReplaceLineEndings("\n");
+    }
+
+    private static string BuildComposeServiceWaitScript(string projectName, ComposeWaitPolicy postWaitPolicy)
+    {
+        var serviceLines = string.Join("\n", postWaitPolicy.WaitForHealthyServices);
+        const string stateFormat = "{{.State.Status}}";
+        const string healthFormat = "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}";
+
+        return $$"""
+            PROJECT_NAME={{QuoteShell(projectName)}}
+            WAIT_TIMEOUT_SECONDS={{postWaitPolicy.TimeoutSeconds}}
+            WAIT_DEADLINE=$(( $(date +%s) + WAIT_TIMEOUT_SECONDS ))
+
+            while [ "$(date +%s)" -le "$WAIT_DEADLINE" ]; do
+              WAIT_PENDING=0
+              while IFS= read -r SERVICE_NAME; do
+                [ -z "$SERVICE_NAME" ] && continue
+
+                CONTAINER_ID="$(docker ps -aq --filter "label=com.docker.compose.project=$PROJECT_NAME" --filter "label=com.docker.compose.service=$SERVICE_NAME" | head -n 1)"
+                if [ -z "$CONTAINER_ID" ]; then
+                  WAIT_PENDING=1
+                  break
+                fi
+
+                SERVICE_STATE="$(docker inspect --format '{{stateFormat}}' "$CONTAINER_ID" 2>/dev/null || true)"
+                SERVICE_HEALTH="$(docker inspect --format '{{healthFormat}}' "$CONTAINER_ID" 2>/dev/null || true)"
+                if [ "$SERVICE_STATE" != "running" ]; then
+                  WAIT_PENDING=1
+                  break
+                fi
+
+                if [ "$SERVICE_HEALTH" != "none" ] && [ "$SERVICE_HEALTH" != "healthy" ]; then
+                  WAIT_PENDING=1
+                  break
+                fi
+              done <<'EOF_COMPOSE_WAIT_SERVICES'
+            {{serviceLines}}
+            EOF_COMPOSE_WAIT_SERVICES
+
+              if [ "$WAIT_PENDING" -eq 0 ]; then
+                break
+              fi
+
+              sleep 2
+            done
+
+            if [ "$WAIT_PENDING" -ne 0 ]; then
+              echo "Timed out waiting for compose services to satisfy the post-apply policy." >&2
+              while IFS= read -r SERVICE_NAME; do
+                [ -z "$SERVICE_NAME" ] && continue
+                CONTAINER_ID="$(docker ps -aq --filter "label=com.docker.compose.project=$PROJECT_NAME" --filter "label=com.docker.compose.service=$SERVICE_NAME" | head -n 1)"
+                if [ -z "$CONTAINER_ID" ]; then
+                  echo "Service '$SERVICE_NAME' has no discovered container for project '$PROJECT_NAME'." >&2
+                  continue
+                fi
+
+                SERVICE_STATE="$(docker inspect --format '{{stateFormat}}' "$CONTAINER_ID" 2>/dev/null || true)"
+                SERVICE_HEALTH="$(docker inspect --format '{{healthFormat}}' "$CONTAINER_ID" 2>/dev/null || true)"
+                echo "Service '$SERVICE_NAME' container '$CONTAINER_ID' state='$SERVICE_STATE' health='$SERVICE_HEALTH'." >&2
+              done <<'EOF_COMPOSE_WAIT_SERVICES'
+            {{serviceLines}}
+            EOF_COMPOSE_WAIT_SERVICES
+
+              exit 124
+            fi
+            """;
     }
 
     private static IReadOnlyList<ComposeServiceState> ParseComposePs(string payload)
