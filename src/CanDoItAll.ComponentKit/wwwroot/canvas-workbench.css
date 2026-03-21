@@ -1725,7 +1725,7 @@ body.cw-body-lock {
     background: rgba(15, 23, 42, 0.08);
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1360px) {
     .cw-main-grid {
         grid-template-columns: minmax(0, 1fr);
     }

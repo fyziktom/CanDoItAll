@@ -30,6 +30,20 @@
                     <Filters>
                         <FilterBar ResultText="@($"{FilteredPrompts.Count} matching prompt(s)")">
                             <input @bind="promptSearch" @bind:event="oninput" class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700" placeholder="Search prompts" />
+                            <InputSelect @bind-Value="collectionFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                                <option value="">All collections</option>
+                                @foreach (var collection in collections)
+                                {
+                                    <option value="@collection.Name">@collection.Name</option>
+                                }
+                            </InputSelect>
+                            <InputSelect @bind-Value="phaseFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                                <option value="">All phases</option>
+                                @foreach (var phase in prompts.Select(item => item.Phase).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(item => item))
+                                {
+                                    <option value="@phase">@phase</option>
+                                }
+                            </InputSelect>
                             <InputSelect @bind-Value="statusFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
                                 <option value="">All statuses</option>
                                 @foreach (var status in Enum.GetValues<PromptArtifactStatus>())
@@ -213,6 +227,8 @@
     private PromptEditorModel editor = new();
     private string? message;
     private string promptSearch = string.Empty;
+    private string collectionFilter = string.Empty;
+    private string phaseFilter = string.Empty;
     private string statusFilter = string.Empty;
     private string detailTab = "overview";
 
@@ -223,6 +239,8 @@
              prompt.Phase.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ||
              prompt.Tags.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ||
              (prompt.CollectionName?.Contains(promptSearch, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+            (string.IsNullOrWhiteSpace(collectionFilter) || string.Equals(prompt.CollectionName, collectionFilter, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(phaseFilter) || string.Equals(prompt.Phase, phaseFilter, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrWhiteSpace(statusFilter) || string.Equals(prompt.Status.ToString(), statusFilter, StringComparison.OrdinalIgnoreCase)))
         .OrderByDescending(prompt => prompt.UpdatedAtUtc)
         .ToList();
@@ -321,6 +339,8 @@
     private void ResetFilters()
     {
         promptSearch = string.Empty;
+        collectionFilter = string.Empty;
+        phaseFilter = string.Empty;
         statusFilter = string.Empty;
     }
 

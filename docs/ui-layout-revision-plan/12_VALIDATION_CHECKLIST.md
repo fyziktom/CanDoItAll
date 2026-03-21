@@ -1,5 +1,11 @@
 # Validation Checklist
 
+## Preflight Validation
+
+- Was `Tailwind/package.json` build run so `src/CanDoItAll.Components/wwwroot/css/output.css` reflects the current markup?
+- Was the app validated from a live runtime, not from static code inspection alone?
+- Were screenshots captured only after confirming the page was using the rebuilt CSS output?
+
 ## UX Validation
 
 - Is the main task obvious within one screenful?
@@ -40,6 +46,9 @@
 ## Protected-Area Regression Validation
 
 - Were protected workbench internals left behaviorally unchanged?
+- Does dragging a structure group border move the selected nodes with it?
+- Does double-clicking a structure progress badge reopen the progress preset menu?
+- Do maximize/dock transitions still preserve usable canvas dimensions?
 - Do the following tests still pass?
   - `ProjectStructurePageTests`
   - `PromptFactoryPageTests`
@@ -61,3 +70,5 @@
 - Are click targets clearly "select", "open", or "secondary action" rather than ambiguous?
 - Are save/run actions anchored and predictable?
 - Are empty and no-results states clearly distinct?
+- Do migrated filter bars expose the same expected task shortcuts on resources, test lab, and prompt gallery?
+- Do settings and admin pages expose the missing top-level create actions without forcing deep drill-in first?

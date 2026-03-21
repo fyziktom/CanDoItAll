@@ -33,6 +33,20 @@
                     <Filters>
                         <FilterBar ResultText="@($"{FilteredPlans.Count} matching plan(s)")">
                             <input @bind="planSearch" @bind:event="oninput" class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700" placeholder="Search test plans" />
+                            <InputSelect @bind-Value="projectFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                                <option value="">All projects</option>
+                                @foreach (var project in projects.OrderBy(item => item.Name))
+                                {
+                                    <option value="@project.Id.ToString()">@project.Name</option>
+                                }
+                            </InputSelect>
+                            <InputSelect @bind-Value="phaseFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                                <option value="">All phases</option>
+                                @foreach (var phase in plans.Select(item => item.Phase).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(item => item))
+                                {
+                                    <option value="@phase">@phase</option>
+                                }
+                            </InputSelect>
                             <InputSelect @bind-Value="resultFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
                                 <option value="">All latest results</option>
                                 @foreach (var status in Enum.GetValues<TestCaseStatus>())
@@ -64,7 +78,7 @@
                         {
                             <SelectionListItem Title="@plan.Title"
                                                Eyebrow="@plan.Phase"
-                                               Meta="@($"{plan.CaseCount} case(s) / {plan.EvidenceCount} evidence item(s)")"
+                                               Meta="@BuildPlanMeta(plan)"
                                                Summary="@BuildPlanSummary(plan)"
                                                IsSelected="@(editor.Id == plan.Id)"
                                                OnSelect="@(() => EditAsync(plan.Id))">
@@ -251,6 +265,8 @@
     private TestPlanEditorModel editor = new();
     private string? message;
     private string planSearch = string.Empty;
+    private string projectFilter = string.Empty;
+    private string phaseFilter = string.Empty;
     private string resultFilter = string.Empty;
     private string detailTab = "overview";
 
@@ -258,7 +274,10 @@
         .Where(plan =>
             (string.IsNullOrWhiteSpace(planSearch) ||
              plan.Title.Contains(planSearch, StringComparison.OrdinalIgnoreCase) ||
-             plan.Phase.Contains(planSearch, StringComparison.OrdinalIgnoreCase)) &&
+             plan.Phase.Contains(planSearch, StringComparison.OrdinalIgnoreCase) ||
+             ResolveProjectName(plan.ProjectId).Contains(planSearch, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(projectFilter) || string.Equals(plan.ProjectId?.ToString(), projectFilter, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(phaseFilter) || string.Equals(plan.Phase, phaseFilter, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrWhiteSpace(resultFilter) ||
              string.Equals(plan.LatestResult?.ToString(), resultFilter, StringComparison.OrdinalIgnoreCase)))
         .OrderByDescending(plan => plan.UpdatedAtUtc)
@@ -345,10 +364,20 @@
     private void ResetFilters()
     {
         planSearch = string.Empty;
+        projectFilter = string.Empty;
+        phaseFilter = string.Empty;
         resultFilter = string.Empty;
     }
 
-    private static string BuildPlanSummary(TestPlanSummary plan) => $"{plan.UpdatedAtUtc.LocalDateTime:g} / {plan.Phase}";
+    private string BuildPlanMeta(TestPlanSummary plan)
+        => $"{ResolveProjectName(plan.ProjectId)} / {plan.CaseCount} case(s) / {plan.EvidenceCount} evidence item(s)";
+
+    private static string BuildPlanSummary(TestPlanSummary plan) => $"Updated {plan.UpdatedAtUtc.LocalDateTime:g}";
+
+    private string ResolveProjectName(Guid? projectId)
+        => projectId.HasValue
+            ? projects.FirstOrDefault(project => project.Id == projectId.Value)?.Name ?? "No project"
+            : "No project";
 
     private static string ResolveStatusTone(TestCaseStatus? status) => status switch
     {

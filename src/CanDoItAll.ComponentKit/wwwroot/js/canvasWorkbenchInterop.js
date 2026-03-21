@@ -903,7 +903,22 @@
     }
 
     function appendNodeIndicators(state, node, container) {
-        container.appendChild(createProgressBadge(state.document, node?.progressMode, node?.progressPercent, ""));
+        const progressBadge = createProgressBadge(state.document, node?.progressMode, node?.progressPercent, "");
+        const openProgressMetadata = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            state.recentDoubleActivationAt = Date.now();
+            openNodeMetadataMenu(state, node, "progress", progressBadge);
+        };
+        progressBadge.addEventListener("pointerdown", event => {
+            if (event.button !== 0 || event.detail < 2) {
+                return;
+            }
+
+            openProgressMetadata(event);
+        });
+        progressBadge.addEventListener("dblclick", openProgressMetadata);
+        container.appendChild(progressBadge);
         const markerBadge = createMarkerBadge(state, node);
         if (markerBadge) {
             container.appendChild(markerBadge);
@@ -2984,6 +2999,7 @@
 
                 switch (state.interaction.kind) {
                     case "drag":
+                    case "frame-drag":
                         updateDrag(state, event);
                         break;
                     case "pan":
@@ -3242,14 +3258,24 @@
         setMaximized(state, !!state.ui.isMaximized);
         resize(state);
         const selectedNodeId = state.ui.selectedNodeIds[0] || null;
+        const selectedNode = selectedNodeId ? state.lookups.byId.get(selectedNodeId) : null;
         const shouldRevealSelection = !!selectedNodeId &&
             (!!pendingCreate || (!!selectedNodeId && selectedNodeId !== previousSelectedId));
-        if (shouldRevealSelection) {
+        const shouldRestoreVisibleSelection = !!selectedNodeId &&
+            !!selectedNode &&
+            !isNodeVisibleInViewport(state, selectedNode, 72);
+        if (shouldRevealSelection || shouldRestoreVisibleSelection) {
             const isNewNode = !previousNodeIds.has(selectedNodeId);
-            ensureNodeVisible(state, selectedNodeId, { forceCenter: isNewNode });
+            ensureNodeVisible(state, selectedNodeId, { forceCenter: isNewNode || shouldRestoreVisibleSelection });
         }
 
         render(state);
+        if (selectedNodeId &&
+            state.lookups.byId.has(selectedNodeId) &&
+            !isNodeVisibleInViewport(state, state.lookups.byId.get(selectedNodeId), 72)) {
+            ensureNodeVisible(state, selectedNodeId, { forceCenter: true });
+            render(state);
+        }
 
         if (pendingCreate) {
             if (pendingCreate.focusHost) {

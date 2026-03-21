@@ -61,3 +61,5 @@ node_modules/
 output/manager
 output/playwright
 .mcp-state/
+.playwright
+.playwright-cli
