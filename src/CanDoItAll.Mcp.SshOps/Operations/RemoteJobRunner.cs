@@ -56,24 +56,24 @@ public sealed class RemoteJobRunner(
 
         var operationId = OperationIdFactory.Create();
         var jobDirectory = pathGuard.ResolveInsideStateRoot(target, $"jobs/{operationId}");
-        await transport.EnsureDirectoryAsync(target, jobDirectory, useSudo: false, cancellationToken);
+        await EnsureWritableJobDirectoryAsync(target, jobDirectory, cancellationToken);
 
         var scriptPath = $"{jobDirectory}/run.sh";
         var scriptContent = CreateRunnerScript(target, jobDirectory, request);
         await transport.UploadBytesAsync(target, scriptPath, Encoding.UTF8.GetBytes(scriptContent), ensureParentDirectory: true, cancellationToken);
 
-        var launchScript = string.Join(
-            " && ",
-            [
-                $"cd {QuoteShell(jobDirectory)}",
-                $"chmod 700 {QuoteShell(scriptPath)}",
-                $"printf '%s' {QuoteShell("queued")} > state",
-                $"printf '%s' {QuoteShell(request.InitialSummary)} > summary",
-                $"printf '%s' {QuoteShell(request.Kind)} > kind",
-                $"printf '%s' {QuoteShell(request.CorrelationId)} > correlationId",
-                $"printf '%s' {QuoteShell(target.Name)} > target",
-                $"nohup {QuoteShell(scriptPath)} > stdout.log 2> stderr.log < /dev/null & echo $! > pid"
-            ]);
+        var launchScript = $"""
+            cd {QuoteShell(jobDirectory)}
+            chmod 700 {QuoteShell(scriptPath)}
+            printf '%s' {QuoteShell("queued")} > state
+            printf '%s' {QuoteShell(request.InitialSummary)} > summary
+            printf '%s' {QuoteShell(request.CancelSummary)} > cancelSummary
+            printf '%s' {QuoteShell(request.Kind)} > kind
+            printf '%s' {QuoteShell(request.CorrelationId)} > correlationId
+            printf '%s' {QuoteShell(target.Name)} > target
+            nohup {QuoteShell(scriptPath)} > stdout.log 2> stderr.log < /dev/null &
+            echo $! > pid
+            """.ReplaceLineEndings("\n");
 
         var launchResult = await transport.ExecuteAsync(
             target,
@@ -177,6 +177,7 @@ public sealed class RemoteJobRunner(
         TimeSpan gracePeriod,
         CancellationToken cancellationToken)
     {
+        var jobDirectory = pathGuard.ResolveInsideStateRoot(target, $"jobs/{operationId}");
         var snapshot = await GetSnapshotAsync(target, operationId, cancellationToken);
         if (snapshot.IsTerminal)
         {
@@ -188,15 +189,49 @@ public sealed class RemoteJobRunner(
             throw new ToolInvocationException("OperationNotFound", $"Operation '{operationId}' does not expose a remote process identifier.");
         }
 
-        var cancelScript = $"""
-            if kill -0 {snapshot.ProcessId.Value} 2>/dev/null; then
-              kill -TERM {snapshot.ProcessId.Value}
-              sleep {Math.Max(1, (int)Math.Ceiling(gracePeriod.TotalSeconds))}
-              if kill -0 {snapshot.ProcessId.Value} 2>/dev/null; then
-                kill -KILL {snapshot.ProcessId.Value}
+        var cancelSummary = await ReadTextIfExistsAsync(target, $"{jobDirectory}/cancelSummary", 8192, cancellationToken)
+            ?? "Operation cancelled.";
+        var graceSeconds = Math.Max(1, (int)Math.Ceiling(gracePeriod.TotalSeconds));
+        var cancelScript = $$"""
+            PID={{snapshot.ProcessId.Value}}
+            JOB_DIR={{QuoteShell(jobDirectory)}}
+            CANCEL_SUMMARY={{QuoteShell(cancelSummary)}}
+
+            terminate_children() {
+              local parent_pid="$1"
+              local child_pid
+              for child_pid in $(ps -o pid= --ppid "$parent_pid" 2>/dev/null); do
+                terminate_children "$child_pid"
+                kill -TERM "$child_pid" 2>/dev/null || true
+              done
+            }
+
+            kill_children_force() {
+              local parent_pid="$1"
+              local child_pid
+              for child_pid in $(ps -o pid= --ppid "$parent_pid" 2>/dev/null); do
+                kill_children_force "$child_pid"
+                kill -KILL "$child_pid" 2>/dev/null || true
+              done
+            }
+
+            if kill -0 "$PID" 2>/dev/null; then
+              terminate_children "$PID"
+              kill -TERM "$PID" 2>/dev/null || true
+              sleep {{graceSeconds}}
+              if kill -0 "$PID" 2>/dev/null; then
+                kill_children_force "$PID"
+                kill -KILL "$PID" 2>/dev/null || true
               fi
             fi
-            """;
+
+            END_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            printf '%s' "$END_AT" > "$JOB_DIR/endedAtUtc"
+            printf '%s' '130' > "$JOB_DIR/exitCode"
+            printf '%s' 'cancelled' > "$JOB_DIR/state"
+            printf '%s' "$CANCEL_SUMMARY" > "$JOB_DIR/summary"
+            rm -f "$JOB_DIR/pid"
+            """.ReplaceLineEndings("\n");
 
         var result = await transport.ExecuteAsync(
             target,
@@ -334,5 +369,31 @@ public sealed class RemoteJobRunner(
     private static string QuoteShell(string value)
     {
         return $"'{value.Replace("'", "'\"'\"'")}'";
+    }
+
+    private async Task EnsureWritableJobDirectoryAsync(
+        ResolvedTargetConfiguration target,
+        string jobDirectory,
+        CancellationToken cancellationToken)
+    {
+        if (string.Equals(target.Sudo.Mode, "none", StringComparison.OrdinalIgnoreCase))
+        {
+            await transport.EnsureDirectoryAsync(target, jobDirectory, useSudo: false, cancellationToken);
+            return;
+        }
+
+        var result = await transport.ExecuteAsync(
+            target,
+            [
+                "bash",
+                "-lc",
+                $"""
+                mkdir -p {QuoteShell(jobDirectory)}
+                chown {QuoteShell($"{target.User}:{target.User}")} {QuoteShell(jobDirectory)}
+                """
+            ],
+            new RemoteExecutionOptions(UseSudo: true, Timeout: runtimeConfiguration.CommandTimeout),
+            cancellationToken);
+        EnsureSuccess(result, "ValidationFailed", $"Could not prepare writable remote job directory '{jobDirectory}'.");
     }
 }

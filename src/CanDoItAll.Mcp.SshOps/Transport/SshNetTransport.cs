@@ -63,40 +63,60 @@ public sealed class SshNetTransport(
             cancellationToken);
     }
 
-    public Task EnsureDirectoryAsync(ResolvedTargetConfiguration target, string remotePath, bool useSudo, CancellationToken cancellationToken)
+    public async Task EnsureDirectoryAsync(ResolvedTargetConfiguration target, string remotePath, bool useSudo, CancellationToken cancellationToken)
     {
-        return ExecuteAsync(
+        var result = await ExecuteAsync(
             target,
             ["mkdir", "-p", remotePath],
             new RemoteExecutionOptions(UseSudo: useSudo),
             cancellationToken);
+        if (result.ExitCode != 0 && !useSudo && CanUseSudo(target) && LooksLikePermissionDenied(result))
+        {
+            result = await ExecuteAsync(
+                target,
+                ["mkdir", "-p", remotePath],
+                new RemoteExecutionOptions(UseSudo: true),
+                cancellationToken);
+        }
+
+        EnsureCommandSucceeded(result, $"Could not ensure remote directory '{remotePath}'.");
     }
 
-    public Task UploadBytesAsync(
+    public async Task UploadBytesAsync(
         ResolvedTargetConfiguration target,
         string remotePath,
         byte[] content,
         bool ensureParentDirectory,
         CancellationToken cancellationToken)
     {
-        return RunWithSftpClientAsync(
-            target,
-            async client =>
-            {
-                ConnectAndCaptureFingerprint(client, target);
-                if (ensureParentDirectory)
+        try
+        {
+            await RunWithSftpClientAsync(
+                target,
+                async client =>
                 {
-                    var parent = GetParentDirectory(remotePath);
-                    if (!string.IsNullOrWhiteSpace(parent))
+                    ConnectAndCaptureFingerprint(client, target);
+                    if (ensureParentDirectory)
                     {
-                        EnsureSftpDirectory(client, parent!);
+                        var parent = GetParentDirectory(remotePath);
+                        if (!string.IsNullOrWhiteSpace(parent))
+                        {
+                            EnsureSftpDirectory(client, parent!);
+                        }
                     }
-                }
 
-                await using var stream = new MemoryStream(content);
-                client.UploadFile(stream, remotePath, canOverride: true);
-            },
-            cancellationToken);
+                    await using var stream = new MemoryStream(content);
+                    client.UploadFile(stream, remotePath, canOverride: true);
+                },
+                cancellationToken);
+            return;
+        }
+        catch (Exception ex) when (CanUseSudo(target) && LooksLikePermissionDenied(ex))
+        {
+            logger.LogDebug(ex, "Retrying upload for {RemotePath} on target {Target} through a sudo move flow.", remotePath, target.Name);
+        }
+
+        await UploadWithSudoMoveAsync(target, remotePath, content, ensureParentDirectory, cancellationToken);
     }
 
     public Task<string> ReadTextAsync(ResolvedTargetConfiguration target, string remotePath, int maxBytes, CancellationToken cancellationToken)
@@ -162,10 +182,16 @@ public sealed class SshNetTransport(
             cancellationToken);
     }
 
-    public Task DeleteAsync(ResolvedTargetConfiguration target, string remotePath, bool recursive, bool useSudo, CancellationToken cancellationToken)
+    public async Task DeleteAsync(ResolvedTargetConfiguration target, string remotePath, bool recursive, bool useSudo, CancellationToken cancellationToken)
     {
         var flags = recursive ? new[] { "-rf", remotePath } : new[] { "-f", remotePath };
-        return ExecuteAsync(target, ["rm", .. flags], new RemoteExecutionOptions(UseSudo: useSudo), cancellationToken);
+        var result = await ExecuteAsync(target, ["rm", .. flags], new RemoteExecutionOptions(UseSudo: useSudo), cancellationToken);
+        if (result.ExitCode != 0 && !useSudo && CanUseSudo(target) && LooksLikePermissionDenied(result))
+        {
+            result = await ExecuteAsync(target, ["rm", .. flags], new RemoteExecutionOptions(UseSudo: true), cancellationToken);
+        }
+
+        EnsureCommandSucceeded(result, $"Could not delete remote path '{remotePath}'.");
     }
 
     private async Task<T> RunWithSshClientAsync<T>(
@@ -307,6 +333,96 @@ public sealed class SshNetTransport(
     private static string EscapeShellArgument(string value)
     {
         return "'" + value.Replace("'", "'\"'\"'") + "'";
+    }
+
+    private async Task UploadWithSudoMoveAsync(
+        ResolvedTargetConfiguration target,
+        string remotePath,
+        byte[] content,
+        bool ensureParentDirectory,
+        CancellationToken cancellationToken)
+    {
+        var tempPath = $"/tmp/candoitall-upload-{Guid.NewGuid():N}";
+        try
+        {
+            await RunWithSftpClientAsync(
+                target,
+                async client =>
+                {
+                    ConnectAndCaptureFingerprint(client, target);
+                    await using var stream = new MemoryStream(content);
+                    client.UploadFile(stream, tempPath, canOverride: true);
+                },
+                cancellationToken);
+
+            var parent = GetParentDirectory(remotePath);
+            var script = new List<string>();
+            if (ensureParentDirectory && !string.IsNullOrWhiteSpace(parent))
+            {
+                script.Add($"mkdir -p {EscapeShellArgument(parent!)}");
+            }
+
+            script.Add($"mv -f {EscapeShellArgument(tempPath)} {EscapeShellArgument(remotePath)}");
+            var moveResult = await ExecuteAsync(
+                target,
+                ["bash", "-lc", string.Join(" && ", script)],
+                new RemoteExecutionOptions(UseSudo: true, Timeout: runtimeConfiguration.UploadTimeout),
+                cancellationToken);
+            EnsureCommandSucceeded(moveResult, $"Could not move uploaded content into '{remotePath}'.");
+        }
+        catch
+        {
+            try
+            {
+                await ExecuteAsync(
+                    target,
+                    ["bash", "-lc", $"rm -f {EscapeShellArgument(tempPath)}"],
+                    new RemoteExecutionOptions(Timeout: TimeSpan.FromSeconds(10)),
+                    cancellationToken);
+            }
+            catch (Exception cleanupEx)
+            {
+                logger.LogDebug(cleanupEx, "Could not clean up temporary upload file {TempPath} on target {Target}.", tempPath, target.Name);
+            }
+
+            throw;
+        }
+    }
+
+    private static bool CanUseSudo(ResolvedTargetConfiguration target)
+    {
+        return !string.Equals(target.Sudo.Mode, "none", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool LooksLikePermissionDenied(RemoteCommandResult result)
+    {
+        var combined = $"{result.StandardError}\n{result.StandardOutput}";
+        return combined.Contains("Permission denied", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool LooksLikePermissionDenied(Exception exception)
+    {
+        return exception is SftpPermissionDeniedException ||
+               exception.Message.Contains("Permission denied", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void EnsureCommandSucceeded(RemoteCommandResult result, string message)
+    {
+        if (result.ExitCode == 0)
+        {
+            return;
+        }
+
+        throw new ToolInvocationException(
+            "ValidationFailed",
+            message,
+            new
+            {
+                exitCode = result.ExitCode,
+                stdout = result.StandardOutput,
+                stderr = result.StandardError,
+                command = result.CommandText
+            });
     }
 
     private static void EnsureSftpDirectory(SftpClient client, string directoryPath)

@@ -106,9 +106,11 @@ public sealed partial class TargetCoordinator
         var waitOutcome = await _waitEngine.WaitAsync(
             async ct =>
             {
-                var execResult = await transport.ExecuteAsync(
+                var execResult = await ExecuteComposeCommandAsync(
                     target,
-                    BuildComposeCommand(target, pathGuard.ResolveInsideStacksRoot(target, composeFile), projectName, ["exec", "-T", service, "pg_isready", "-U", user, "-d", database]),
+                    pathGuard.ResolveInsideStacksRoot(target, composeFile),
+                    projectName,
+                    ["exec", "-T", service, "pg_isready", "-U", user, "-d", database],
                     new RemoteExecutionOptions(WorkingDirectory: pathGuard.ResolveInsideStacksRoot(target, workingDirectory), Timeout: TimeSpan.FromSeconds(30)),
                     ct);
                 return execResult.ExitCode == 0;
@@ -242,7 +244,7 @@ public sealed partial class TargetCoordinator
         var target = targetCatalog.GetRequired(targetName);
         if (!runtimeConfiguration.Options.Server.AllowDangerousRawExec || !target.Guards.AllowRawExec)
         {
-            throw new ToolInvocationException("ValidationFailed", $"dangerous_raw_exec is disabled for target '{target.Name}'.");
+            throw new ToolInvocationException("PolicyBlocked", $"dangerous_raw_exec is disabled for target '{target.Name}'.");
         }
 
         await using var lease = await AcquireMutationLeaseAsync(target, "dangerous_raw_exec", cancellationToken);
@@ -310,6 +312,7 @@ public sealed partial class TargetCoordinator
         var bodyMarker = "__BODY__:";
         var tempFile = $"/tmp/http-probe-{Guid.NewGuid():N}.txt";
         var insecureFlag = allowInsecureTls ? "-k" : string.Empty;
+        var startedAt = DateTimeOffset.UtcNow;
         var script =
             "HTTP_STATUS=$(curl -sS " + insecureFlag + " -o " + QuoteShell(tempFile) + " -w '%{http_code}' --max-time " + Math.Max(1, timeoutSeconds) + " " + QuoteShell(url) + " 2>/dev/null || echo '000')\n" +
             "printf '" + statusLineMarker + "%s\\n' \"$HTTP_STATUS\"\n" +
@@ -324,12 +327,13 @@ public sealed partial class TargetCoordinator
         var body = captureBody ? ParseRemoteBody(result.StandardOutput, bodyMarker) : null;
         var statuses = expectedStatuses is { Length: > 0 } ? expectedStatuses : [200];
         var success = statusCode is not null && statuses.Contains(statusCode.Value);
+        var durationMs = (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds;
 
         return new HttpProbeData(
             "remote",
             url,
             statusCode,
-            0,
+            durationMs,
             success,
             success ? "HTTP probe succeeded." : result.ExitCode == 0 ? $"HTTP probe returned {statusCode}." : "Remote HTTP probe failed.",
             null,
@@ -344,7 +348,8 @@ public sealed partial class TargetCoordinator
             timeout: TimeSpan.FromSeconds(15),
             cancellationToken: cancellationToken);
 
-        return int.TryParse(result.StandardOutput.Trim(), out _);
+        return int.TryParse(result.StandardOutput.Trim(), out var statusCode) &&
+               statusCode is >= 200 and < 400;
     }
 
     private async Task<JsonDocument?> InvokeJsonApiAsync(

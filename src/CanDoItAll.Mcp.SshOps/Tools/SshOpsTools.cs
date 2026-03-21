@@ -375,7 +375,7 @@ public sealed class SshOpsTools(TargetCoordinator coordinator, ILogger<SshOpsToo
                 correlationId: correlationId,
                 error: new ToolError(ex.Code, ex.Message, ex.Details),
                 target: target,
-                status: "failed",
+                status: MapFailureStatus(ex.Code),
                 summary: ex.Message);
         }
         catch (OperationCanceledException)
@@ -393,5 +393,29 @@ public sealed class SshOpsTools(TargetCoordinator coordinator, ILogger<SshOpsToo
                 status: "failed",
                 summary: "The tool failed unexpectedly.");
         }
+    }
+
+    private static string MapFailureStatus(string code)
+    {
+        return code switch
+        {
+            "AuthenticationFailed" => "auth_failed",
+            "CertificateNotReady" => "certificate_not_ready",
+            "ComposePluginMissing" => "compose_unavailable",
+            "HostKeyMismatch" => "host_key_mismatch",
+            "OperationBusy" => "target_locked",
+            "OperationNotFound" => "not_found",
+            "PathNotAllowed" => "path_not_allowed",
+            "PolicyBlocked" => "policy_blocked",
+            "RateLimitLikely" => "rate_limit_likely",
+            "RemotePathMissing" => "not_found",
+            "RollbackRevisionNotFound" => "not_found",
+            "SudoRequired" => "sudo_required",
+            "TargetNotConfigured" => "validation_error",
+            "TargetNotFound" => "target_not_found",
+            "Timeout" => "timeout",
+            "ValidationFailed" => "validation_error",
+            _ => "failed"
+        };
     }
 }

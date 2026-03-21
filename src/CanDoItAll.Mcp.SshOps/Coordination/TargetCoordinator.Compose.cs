@@ -85,9 +85,11 @@ public sealed partial class TargetCoordinator
         EnsureDockerConfigured(target);
         var validatedComposeFile = pathGuard.ResolveInsideStacksRoot(target, composeFile);
         var validatedWorkingDirectory = pathGuard.ResolveInsideStacksRoot(target, workingDirectory);
-        var result = await transport.ExecuteAsync(
+        var result = await ExecuteComposeCommandAsync(
             target,
-            BuildComposeCommand(target, validatedComposeFile, projectName, ["config"]),
+            validatedComposeFile,
+            projectName,
+            ["config"],
             new RemoteExecutionOptions(WorkingDirectory: validatedWorkingDirectory, Timeout: runtimeConfiguration.CommandTimeout),
             cancellationToken);
 
@@ -128,8 +130,9 @@ public sealed partial class TargetCoordinator
 
         var validatedComposeFile = pathGuard.ResolveInsideStacksRoot(target, composeFile);
         var validatedWorkingDirectory = pathGuard.ResolveInsideStacksRoot(target, workingDirectory);
+        var composeCommand = await ResolveComposeCommandAsync(target, cancellationToken);
         var backupRevisionId = runtimeConfiguration.Options.Revisions.Enabled
-            ? await BackupStackDirectoryAsync(target, stackName, validatedWorkingDirectory, cancellationToken)
+            ? await SnapshotStackDirectoryAsync(target, stackName, validatedWorkingDirectory, purpose: "pre_apply", isKnownGood: false, cancellationToken)
             : null;
 
         var composeArgs = new List<string> { "up", "-d" };
@@ -163,7 +166,7 @@ public sealed partial class TargetCoordinator
                     SuccessSummary: $"Stack '{stackName}' apply completed.",
                     FailureSummary: $"Stack '{stackName}' apply failed.",
                     CancelSummary: $"Stack '{stackName}' apply was cancelled.",
-                    Command: BuildComposeCommand(target, validatedComposeFile, projectName, composeArgs),
+                    Command: BuildComposeCommand(composeCommand, target.Name, validatedComposeFile, projectName, composeArgs),
                     WorkingDirectory: validatedWorkingDirectory),
                 cancellationToken);
 
@@ -177,12 +180,19 @@ public sealed partial class TargetCoordinator
                 nextSuggestedTools: ["operation_wait", "compose_ps", "http_wait"]);
         }
 
-        var result = await transport.ExecuteAsync(
+        var result = await ExecuteComposeCommandAsync(
             target,
-            BuildComposeCommand(target, validatedComposeFile, projectName, composeArgs),
+            validatedComposeFile,
+            projectName,
+            composeArgs,
             new RemoteExecutionOptions(WorkingDirectory: validatedWorkingDirectory, Timeout: runtimeConfiguration.DefaultComposeApplyTimeout),
             cancellationToken);
         EnsureSuccess(result, "ValidationFailed", $"Compose apply failed for stack '{stackName}'.");
+
+        if (runtimeConfiguration.Options.Revisions.Enabled)
+        {
+            await SnapshotStackDirectoryAsync(target, stackName, validatedWorkingDirectory, purpose: "post_apply_known_good", isKnownGood: true, cancellationToken);
+        }
 
         return Result(
             data,
@@ -203,19 +213,40 @@ public sealed partial class TargetCoordinator
         var target = targetCatalog.GetRequired(targetName);
         EnsureDockerConfigured(target);
 
-        var result = await transport.ExecuteAsync(
-            target,
-            BuildComposeCommand(target, pathGuard.ResolveInsideStacksRoot(target, composeFile), projectName, ["ps", "--format", "json"]),
-            new RemoteExecutionOptions(WorkingDirectory: pathGuard.ResolveInsideStacksRoot(target, workingDirectory)),
-            cancellationToken);
-        EnsureSuccess(result, "ValidationFailed", "Could not read docker compose service states.");
+        var composeFilePath = pathGuard.ResolveInsideStacksRoot(target, composeFile);
+        var workingDirectoryPath = pathGuard.ResolveInsideStacksRoot(target, workingDirectory);
+        var composeCommand = await ResolveComposeCommandAsync(target, cancellationToken);
 
-        var services = ParseComposePs(result.StandardOutput);
+        var result = await ExecuteComposeCommandAsync(
+            target,
+            composeFilePath,
+            projectName,
+            ["ps", "--format", "json"],
+            new RemoteExecutionOptions(WorkingDirectory: workingDirectoryPath),
+            cancellationToken);
+
+        IReadOnlyList<ComposeServiceState> services;
+        if (IsLegacyComposeCommand(composeCommand) || (result.ExitCode != 0 && LooksLikeLegacyComposePs(result)))
+        {
+            services = await ReadLegacyComposePsAsync(target, projectName, cancellationToken);
+        }
+        else
+        {
+            EnsureSuccess(result, "ValidationFailed", "Could not read docker compose service states.");
+            services = ParseComposePs(result.StandardOutput);
+        }
+
+        var degradedServices = services.Where(IsComposeServiceDegraded).ToArray();
         return Result(
             new ComposePsData(services),
             target: target.Name,
-            status: "success",
-            summary: $"Read {services.Count} service state(s).");
+            status: degradedServices.Length > 0 ? "degraded" : "success",
+            summary: degradedServices.Length > 0
+                ? $"Read {services.Count} service state(s); {degradedServices.Length} service(s) are degraded."
+                : $"Read {services.Count} service state(s).",
+            warnings: degradedServices.Length > 0
+                ? degradedServices.Select(service => $"Service '{service.Name}' is in state '{service.State}' with health '{service.Health ?? "n/a"}'.").ToArray()
+                : null);
     }
 
     public async Task<SshOpsToolResult<ComposeLogsData>> ComposeLogsAsync(
@@ -231,12 +262,33 @@ public sealed partial class TargetCoordinator
     {
         var target = targetCatalog.GetRequired(targetName);
         EnsureDockerConfigured(target);
+        var composeCommand = await ResolveComposeCommandAsync(target, cancellationToken);
+        var isLegacyCompose = IsLegacyComposeCommand(composeCommand);
+        var warnings = new List<string>();
 
-        var args = new List<string> { "logs", "--tail", Math.Max(1, tail).ToString() };
+        var args = new List<string> { "logs" };
+        var normalizedTail = Math.Max(1, tail).ToString();
+        if (isLegacyCompose)
+        {
+            args.Add($"--tail={normalizedTail}");
+        }
+        else
+        {
+            args.Add("--tail");
+            args.Add(normalizedTail);
+        }
+
         if (sinceSeconds > 0)
         {
-            args.Add("--since");
-            args.Add($"{sinceSeconds}s");
+            if (isLegacyCompose)
+            {
+                warnings.Add($"Target '{target.Name}' uses legacy docker-compose; the '--since' filter is unsupported and was ignored.");
+            }
+            else
+            {
+                args.Add("--since");
+                args.Add($"{sinceSeconds}s");
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(service))
@@ -244,9 +296,11 @@ public sealed partial class TargetCoordinator
             args.Add(service);
         }
 
-        var result = await transport.ExecuteAsync(
+        var result = await ExecuteComposeCommandAsync(
             target,
-            BuildComposeCommand(target, pathGuard.ResolveInsideStacksRoot(target, composeFile), projectName, args),
+            pathGuard.ResolveInsideStacksRoot(target, composeFile),
+            projectName,
+            args,
             new RemoteExecutionOptions(WorkingDirectory: pathGuard.ResolveInsideStacksRoot(target, workingDirectory), Timeout: runtimeConfiguration.CommandTimeout),
             cancellationToken);
         EnsureSuccess(result, "ValidationFailed", "Could not read docker compose logs.");
@@ -255,7 +309,8 @@ public sealed partial class TargetCoordinator
             new ComposeLogsData(service, SplitLines(result.StandardOutput), Redacted: true),
             target: target.Name,
             status: "success",
-            summary: "Read docker compose logs.");
+            summary: "Read docker compose logs.",
+            warnings: warnings.Count > 0 ? warnings : null);
     }
 
     public async Task<SshOpsToolResult<ComposeExecData>> ComposeExecAsync(
@@ -277,15 +332,18 @@ public sealed partial class TargetCoordinator
         var target = targetCatalog.GetRequired(targetName);
         if (!target.Guards.AllowComposeExec)
         {
-            throw new ToolInvocationException("ValidationFailed", $"Target '{target.Name}' does not allow docker compose exec.");
+            throw new ToolInvocationException("PolicyBlocked", $"Target '{target.Name}' does not allow docker compose exec.");
         }
 
         EnsureDockerConfigured(target);
+        EnsureComposeExecCommandAllowed(command);
         var args = new List<string> { "exec", "-T", service };
         args.AddRange(command);
-        var result = await transport.ExecuteAsync(
+        var result = await ExecuteComposeCommandAsync(
             target,
-            BuildComposeCommand(target, pathGuard.ResolveInsideStacksRoot(target, composeFile), projectName, args),
+            pathGuard.ResolveInsideStacksRoot(target, composeFile),
+            projectName,
+            args,
             new RemoteExecutionOptions(WorkingDirectory: pathGuard.ResolveInsideStacksRoot(target, workingDirectory), Timeout: TimeSpan.FromSeconds(Math.Max(1, timeoutSeconds))),
             cancellationToken);
 
@@ -319,9 +377,11 @@ public sealed partial class TargetCoordinator
             args.Add("--remove-orphans");
         }
 
-        var result = await transport.ExecuteAsync(
+        var result = await ExecuteComposeCommandAsync(
             target,
-            BuildComposeCommand(target, pathGuard.ResolveInsideStacksRoot(target, composeFile), projectName, args),
+            pathGuard.ResolveInsideStacksRoot(target, composeFile),
+            projectName,
+            args,
             new RemoteExecutionOptions(WorkingDirectory: pathGuard.ResolveInsideStacksRoot(target, workingDirectory), Timeout: runtimeConfiguration.DefaultComposeApplyTimeout),
             cancellationToken);
         EnsureSuccess(result, "ValidationFailed", $"Could not stop compose project '{projectName}'.");
@@ -345,9 +405,12 @@ public sealed partial class TargetCoordinator
         await using var lease = await AcquireMutationLeaseAsync(target, "stack_rollback", cancellationToken);
         await EnsureNoRunningOperationsAsync(target, cancellationToken);
         EnsureDockerConfigured(target);
+        var composeCommand = await ResolveComposeCommandAsync(target, cancellationToken);
 
-        var manifest = LoadLatestRevisionManifest(target.Name, stackName)
-            ?? throw new ToolInvocationException("RollbackRevisionNotFound", $"No revision manifest was found for stack '{stackName}' on target '{target.Name}'.");
+        var manifest = LoadRollbackRevisionManifest(target.Name, stackName, strategy)
+            ?? throw new ToolInvocationException(
+                "RollbackRevisionNotFound",
+                $"No revision manifest matching strategy '{strategy}' was found for stack '{stackName}' on target '{target.Name}'.");
 
         if (manifest.Entries.Count == 0)
         {
@@ -365,7 +428,8 @@ public sealed partial class TargetCoordinator
             restoreScript.AppendLine($"cp -a -- {QuoteShell(entry.BackupPath)} {QuoteShell(entry.Path)}");
         }
 
-        restoreScript.AppendLine(string.Join(' ', BuildComposeCommand(target, composeFilePath, stackName, ["up", "-d", "--remove-orphans"]).Select(QuoteShell)));
+        restoreScript.AppendLine(string.Join(' ', BuildComposeCommand(composeCommand, target.Name, composeFilePath, stackName, ["up", "-d", "--remove-orphans"]).Select(QuoteShell)));
+        var restoreScriptText = restoreScript.ToString().ReplaceLineEndings("\n");
         var data = new StackRollbackData(manifest.RevisionId);
         var resolvedExecutionMode = ResolveExecutionMode(executionMode);
 
@@ -380,7 +444,7 @@ public sealed partial class TargetCoordinator
                     SuccessSummary: $"Rollback for stack '{stackName}' completed.",
                     FailureSummary: $"Rollback for stack '{stackName}' failed.",
                     CancelSummary: $"Rollback for stack '{stackName}' was cancelled.",
-                    Command: ["bash", "-lc", restoreScript.ToString()],
+                    Command: ["bash", "-lc", restoreScriptText],
                     WorkingDirectory: workingDirectory),
                 cancellationToken);
 
@@ -396,10 +460,15 @@ public sealed partial class TargetCoordinator
 
         var result = await transport.ExecuteAsync(
             target,
-            ["bash", "-lc", restoreScript.ToString()],
+            ["bash", "-lc", restoreScriptText],
             new RemoteExecutionOptions(WorkingDirectory: workingDirectory, Timeout: runtimeConfiguration.DefaultComposeApplyTimeout),
             cancellationToken);
         EnsureSuccess(result, "ValidationFailed", $"Rollback for stack '{stackName}' failed.");
+
+        if (runtimeConfiguration.Options.Revisions.Enabled)
+        {
+            await SnapshotStackDirectoryAsync(target, stackName, workingDirectory, purpose: "post_rollback_known_good", isKnownGood: true, cancellationToken);
+        }
 
         return Result(
             data,
@@ -408,10 +477,12 @@ public sealed partial class TargetCoordinator
             summary: $"Rollback for stack '{stackName}' completed.");
     }
 
-    private async Task<string> BackupStackDirectoryAsync(
+    private async Task<string> SnapshotStackDirectoryAsync(
         ResolvedTargetConfiguration target,
         string stackName,
         string workingDirectory,
+        string purpose,
+        bool isKnownGood,
         CancellationToken cancellationToken)
     {
         var stat = await transport.StatAsync(target, workingDirectory, cancellationToken);
@@ -430,7 +501,9 @@ public sealed partial class TargetCoordinator
             target.Name,
             stackName,
             DateTimeOffset.UtcNow,
-            [new RevisionEntryMetadata(workingDirectory, backupPath)]);
+            [new RevisionEntryMetadata(workingDirectory, backupPath)],
+            Purpose: purpose,
+            IsKnownGood: isKnownGood);
         SaveRevisionManifest(manifest);
         await UploadJsonAsync(target, pathGuard.ResolveInsideStateRoot(target, $"revisions/{revisionId}/manifest.json"), manifest, cancellationToken);
         return revisionId;
@@ -464,5 +537,74 @@ public sealed partial class TargetCoordinator
                 .Select(line => new ComposeServiceState(line, "unknown", null))
                 .ToArray();
         }
+    }
+
+    private async Task<IReadOnlyList<ComposeServiceState>> ReadLegacyComposePsAsync(
+        ResolvedTargetConfiguration target,
+        string projectName,
+        CancellationToken cancellationToken)
+    {
+        var projectFilter = QuoteShell($"label=com.docker.compose.project={projectName}");
+        const string inspectFormat = "{{index .Config.Labels \"com.docker.compose.service\"}}|{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{end}}";
+        var result = await RunRemoteShellAsync(
+            target,
+            $@"IDS=$(docker ps -a -q --filter {projectFilter})
+if [ -n ""$IDS"" ]; then
+  docker inspect --format '{inspectFormat}' $IDS
+fi",
+            timeout: runtimeConfiguration.CommandTimeout,
+            cancellationToken: cancellationToken);
+        EnsureSuccess(result, "ValidationFailed", "Could not read docker container state for the compose project.");
+
+        return SplitLines(result.StandardOutput)
+            .Select(ParseLegacyComposePsLine)
+            .Where(static service => !string.IsNullOrWhiteSpace(service.Name))
+            .GroupBy(static service => service.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(static group => group.First())
+            .ToArray();
+    }
+
+    private static ComposeServiceState ParseLegacyComposePsLine(string line)
+    {
+        var separatorIndex = line.IndexOf('|', StringComparison.Ordinal);
+        if (separatorIndex <= 0)
+        {
+            return new ComposeServiceState(line, "unknown", null);
+        }
+
+        var serviceName = line[..separatorIndex].Trim();
+        var remaining = line[(separatorIndex + 1)..];
+        var secondSeparatorIndex = remaining.IndexOf('|', StringComparison.Ordinal);
+        var state = secondSeparatorIndex >= 0
+            ? remaining[..secondSeparatorIndex].Trim()
+            : remaining.Trim();
+        var health = secondSeparatorIndex >= 0
+            ? remaining[(secondSeparatorIndex + 1)..].Trim()
+            : string.Empty;
+
+        return new ComposeServiceState(
+            serviceName,
+            string.IsNullOrWhiteSpace(state) ? "unknown" : state,
+            string.IsNullOrWhiteSpace(health) ? null : health);
+    }
+
+    private static bool LooksLikeLegacyComposePs(RemoteCommandResult result)
+    {
+        if (result.ExitCode == 0)
+        {
+            return false;
+        }
+
+        var combined = $"{result.StandardError}\n{result.StandardOutput}";
+        return combined.Contains("No such option: --format", StringComparison.OrdinalIgnoreCase) ||
+               combined.Contains("unknown flag: --format", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsLegacyComposeCommand(string composeCommand)
+    {
+        return string.Equals(
+            NormalizeComposeCommand(composeCommand),
+            "docker-compose",
+            StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -92,6 +92,18 @@ public sealed partial class TargetCoordinator
             {
                 warnings.Add("Docker is not installed or not reachable on the target.");
             }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(dockerData.ComposeVersion))
+                {
+                    warnings.Add("A usable Docker Compose command was not detected on the target.");
+                }
+
+                foreach (var networkName in await GetMissingRequiredNetworksAsync(target, cancellationToken))
+                {
+                    warnings.Add($"Required Docker network '{networkName}' is missing.");
+                }
+            }
         }
         else
         {
@@ -165,13 +177,15 @@ public sealed partial class TargetCoordinator
         var target = targetCatalog.GetRequired(targetName);
         if (!target.Guards.AllowBootstrap)
         {
-            throw new ToolInvocationException("ValidationFailed", $"Target '{target.Name}' does not allow host bootstrap actions.");
+            throw new ToolInvocationException("PolicyBlocked", $"Target '{target.Name}' does not allow host bootstrap actions.");
         }
 
         await using var lease = await AcquireMutationLeaseAsync(target, "host_bootstrap_prepare", cancellationToken);
         await EnsureNoRunningOperationsAsync(target, cancellationToken);
 
-        var requiresSudo = installDockerFromOfficialRepo || enableDockerOnBoot;
+        var useSudoForBootstrap = !string.Equals(target.Sudo.Mode, "none", StringComparison.OrdinalIgnoreCase) &&
+                                  (installDockerFromOfficialRepo || createBaseDirectories || createProxyNetwork || enableDockerOnBoot);
+        var requiresSudo = installDockerFromOfficialRepo || enableDockerOnBoot || useSudoForBootstrap;
         if (requiresSudo && string.Equals(target.Sudo.Mode, "none", StringComparison.OrdinalIgnoreCase))
         {
             throw new ToolInvocationException("SudoRequired", $"Target '{target.Name}' requires non-interactive sudo for the requested bootstrap mode.");
@@ -181,6 +195,10 @@ public sealed partial class TargetCoordinator
         if (createBaseDirectories)
         {
             scriptLines.Add($"mkdir -p {QuoteShell(target.RemoteStateRoot)} {QuoteShell(target.StacksRoot)} {QuoteShell(target.SecretsRoot)} {QuoteShell(target.RemoteStateRoot + "/jobs")} {QuoteShell(target.RemoteStateRoot + "/backups")} {QuoteShell(target.RemoteStateRoot + "/revisions")}");
+            if (useSudoForBootstrap)
+            {
+                scriptLines.Add($"chown {QuoteShell($"{target.User}:{target.User}")} {QuoteShell(target.RemoteStateRoot)} {QuoteShell(target.StacksRoot)} {QuoteShell(target.SecretsRoot)} {QuoteShell(target.RemoteStateRoot + "/jobs")} {QuoteShell(target.RemoteStateRoot + "/backups")} {QuoteShell(target.RemoteStateRoot + "/revisions")}");
+            }
         }
 
         if (installDockerFromOfficialRepo)
@@ -195,7 +213,10 @@ public sealed partial class TargetCoordinator
 
         if (createProxyNetwork)
         {
-            scriptLines.Add($"docker network inspect {QuoteShell("proxy")} >/dev/null 2>&1 || docker network create {QuoteShell("proxy")}");
+            foreach (var networkName in target.Docker.RequiredNetworks.DefaultIfEmpty("proxy"))
+            {
+                scriptLines.Add($"docker network inspect {QuoteShell(networkName)} >/dev/null 2>&1 || docker network create {QuoteShell(networkName)}");
+            }
         }
 
         if (scriptLines.Count == 0)
@@ -219,7 +240,7 @@ public sealed partial class TargetCoordinator
                     FailureSummary: "Bootstrap preparation failed.",
                     CancelSummary: "Bootstrap preparation was cancelled.",
                     Command: ["bash", "-lc", script],
-                    UseSudo: requiresSudo),
+                    UseSudo: useSudoForBootstrap),
                 cancellationToken);
 
             SaveOperationMetadata(new OperationTrackingMetadata(operation.OperationId, target.Name, "target", "host_bootstrap_prepare", DateTimeOffset.UtcNow));
@@ -235,7 +256,7 @@ public sealed partial class TargetCoordinator
         var result = await transport.ExecuteAsync(
             target,
             ["bash", "-lc", script],
-            new RemoteExecutionOptions(UseSudo: requiresSudo, Timeout: runtimeConfiguration.DefaultComposeApplyTimeout),
+            new RemoteExecutionOptions(UseSudo: useSudoForBootstrap, Timeout: runtimeConfiguration.DefaultComposeApplyTimeout),
             cancellationToken);
         EnsureSuccess(result, "ValidationFailed", "Bootstrap preparation failed.");
 
@@ -256,10 +277,30 @@ public sealed partial class TargetCoordinator
         }
 
         var composeVersion = await transport.ExecuteAsync(target, BuildComposeCommand(target, null, null, ["version"]), new RemoteExecutionOptions(), cancellationToken);
+        if (composeVersion.ExitCode != 0 && LooksLikeComposeCommandUnavailable(composeVersion))
+        {
+            composeVersion = await ExecuteComposeCommandAsync(target, null, null, ["version"], new RemoteExecutionOptions(), cancellationToken, throwIfUnavailable: false);
+        }
+
         return new AuditDockerData(
             Installed: true,
             Version: dockerVersion.StandardOutput.Trim(),
             ComposeVersion: composeVersion.ExitCode == 0 ? composeVersion.StandardOutput.Trim() : null);
+    }
+
+    private async Task<IReadOnlyList<string>> GetMissingRequiredNetworksAsync(ResolvedTargetConfiguration target, CancellationToken cancellationToken)
+    {
+        var missingNetworks = new List<string>();
+        foreach (var networkName in target.Docker.RequiredNetworks.Where(static value => !string.IsNullOrWhiteSpace(value)))
+        {
+            var inspectResult = await transport.ExecuteAsync(target, ["docker", "network", "inspect", networkName], new RemoteExecutionOptions(), cancellationToken);
+            if (inspectResult.ExitCode != 0)
+            {
+                missingNetworks.Add(networkName);
+            }
+        }
+
+        return missingNetworks;
     }
 
     private async Task<AuditPortData> GetPortDataAsync(ResolvedTargetConfiguration target, int port, CancellationToken cancellationToken)

@@ -18,7 +18,6 @@ public sealed partial class TargetCoordinator(
     ResourceMutationGate mutationGate,
     HttpProbeService httpProbeService,
     TlsCertificateInspector tlsCertificateInspector,
-    SecretRedactor secretRedactor,
     ILogger<TargetCoordinator> logger)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -203,16 +202,105 @@ public sealed partial class TargetCoordinator(
         }
     }
 
+    private async Task<RemoteCommandResult> ExecuteComposeCommandAsync(
+        ResolvedTargetConfiguration target,
+        string? composeFile,
+        string? projectName,
+        IReadOnlyList<string> args,
+        RemoteExecutionOptions options,
+        CancellationToken cancellationToken,
+        bool throwIfUnavailable = true)
+    {
+        EnsureDockerConfigured(target);
+
+        RemoteCommandResult? lastResult = null;
+        foreach (var composeCommand in GetComposeCommandCandidates(target.Docker.ComposeCommand))
+        {
+            var command = BuildComposeCommand(composeCommand, target.Name, composeFile, projectName, args);
+            var result = await transport.ExecuteAsync(target, command, options, cancellationToken);
+            lastResult = result;
+
+            if (result.ExitCode == 0 || !LooksLikeComposeCommandUnavailable(result))
+            {
+                return result;
+            }
+        }
+
+        if (throwIfUnavailable && lastResult is not null)
+        {
+            throw new ToolInvocationException(
+                "ComposePluginMissing",
+                $"No usable Docker Compose command was found for target '{target.Name}'.",
+                new
+                {
+                    configured = target.Docker.ComposeCommand,
+                    stderr = lastResult.StandardError,
+                    stdout = lastResult.StandardOutput
+                });
+        }
+
+        return lastResult ?? throw new ToolInvocationException("ComposePluginMissing", $"No usable Docker Compose command was found for target '{target.Name}'.");
+    }
+
+    private async Task<string> ResolveComposeCommandAsync(
+        ResolvedTargetConfiguration target,
+        CancellationToken cancellationToken)
+    {
+        EnsureDockerConfigured(target);
+
+        RemoteCommandResult? lastResult = null;
+        foreach (var composeCommand in GetComposeCommandCandidates(target.Docker.ComposeCommand))
+        {
+            var command = BuildComposeCommand(
+                composeCommand,
+                target.Name,
+                composeFile: null,
+                projectName: null,
+                args: ["version"]);
+            var result = await transport.ExecuteAsync(
+                target,
+                command,
+                new RemoteExecutionOptions(Timeout: runtimeConfiguration.CommandTimeout),
+                cancellationToken);
+            lastResult = result;
+
+            if (result.ExitCode == 0 || !LooksLikeComposeCommandUnavailable(result))
+            {
+                return composeCommand;
+            }
+        }
+
+        throw new ToolInvocationException(
+            "ComposePluginMissing",
+            $"No usable Docker Compose command was found for target '{target.Name}'.",
+            new
+            {
+                configured = target.Docker.ComposeCommand,
+                stderr = lastResult?.StandardError,
+                stdout = lastResult?.StandardOutput
+            });
+    }
+
     private static IReadOnlyList<string> BuildComposeCommand(
         ResolvedTargetConfiguration target,
         string? composeFile,
         string? projectName,
         IReadOnlyList<string> args)
     {
-        var command = target.Docker.ComposeCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+        return BuildComposeCommand(target.Docker.ComposeCommand, target.Name, composeFile, projectName, args);
+    }
+
+    private static IReadOnlyList<string> BuildComposeCommand(
+        string composeCommand,
+        string targetName,
+        string? composeFile,
+        string? projectName,
+        IReadOnlyList<string> args)
+    {
+        var command = composeCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
         if (command.Count == 0)
         {
-            throw new ToolInvocationException("ComposePluginMissing", $"Target '{target.Name}' does not define a docker compose command.");
+            throw new ToolInvocationException("ComposePluginMissing", $"Target '{targetName}' does not define a docker compose command.");
         }
 
         if (!string.IsNullOrWhiteSpace(projectName))
@@ -230,6 +318,155 @@ public sealed partial class TargetCoordinator(
         command.AddRange(args);
         return command;
     }
+
+    private static IReadOnlyList<string> GetComposeCommandCandidates(string configuredCommand)
+    {
+        var candidates = new List<string>();
+        var primary = configuredCommand.Trim();
+        if (!string.IsNullOrWhiteSpace(primary))
+        {
+            candidates.Add(primary);
+        }
+
+        if (TryGetAlternateComposeCommand(primary, out var alternate) &&
+            !candidates.Contains(alternate, StringComparer.OrdinalIgnoreCase))
+        {
+            candidates.Add(alternate);
+        }
+
+        return candidates;
+    }
+
+    private static bool TryGetAlternateComposeCommand(string configuredCommand, out string alternate)
+    {
+        var normalized = NormalizeComposeCommand(configuredCommand);
+        switch (normalized)
+        {
+            case "docker compose":
+                alternate = "docker-compose";
+                return true;
+            case "docker-compose":
+                alternate = "docker compose";
+                return true;
+            default:
+                alternate = string.Empty;
+                return false;
+        }
+    }
+
+    private static string NormalizeComposeCommand(string value)
+    {
+        return string.Join(
+            ' ',
+            value
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(static segment => segment.Trim().Trim('"').Trim('\''))
+                .Select(static segment => segment.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                    ? segment[..^4]
+                    : segment)
+                .Select(static segment => segment.ToLowerInvariant()));
+    }
+
+    private static bool LooksLikeComposeCommandUnavailable(RemoteCommandResult result)
+    {
+        if (result.ExitCode == 0)
+        {
+            return false;
+        }
+
+        var combined = $"{result.StandardError}\n{result.StandardOutput}";
+        return combined.Contains("docker: 'compose' is not a docker command", StringComparison.OrdinalIgnoreCase) ||
+               combined.Contains("unknown shorthand flag: 'p' in -p", StringComparison.OrdinalIgnoreCase) ||
+               combined.Contains("unknown shorthand flag: 'f' in -f", StringComparison.OrdinalIgnoreCase) ||
+               combined.Contains("docker-compose: command not found", StringComparison.OrdinalIgnoreCase) ||
+               combined.Contains("'docker-compose' is not recognized", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void EnsureComposeExecCommandAllowed(string[] command)
+    {
+        var executable = Path.GetFileName(command[0].Replace('\\', '/'));
+        if (string.IsNullOrWhiteSpace(executable))
+        {
+            throw new ToolInvocationException("ValidationFailed", "Compose exec requires a command executable.");
+        }
+
+        if (BlockedComposeExecCommands.Contains(executable) ||
+            command.Skip(1).Any(static arg => string.Equals(arg, "-c", StringComparison.OrdinalIgnoreCase) ||
+                                             string.Equals(arg, "-lc", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new ToolInvocationException(
+                "PolicyBlocked",
+                $"compose_exec does not allow shell or interpreter style commands ('{executable}').",
+                new { command });
+        }
+
+        if (!AllowedComposeExecCommands.Contains(executable))
+        {
+            throw new ToolInvocationException(
+                "PolicyBlocked",
+                $"compose_exec command '{executable}' is outside the allowed safe command list.",
+                new { command, allowed = AllowedComposeExecCommands.OrderBy(static value => value).ToArray() });
+        }
+    }
+
+    private static bool IsComposeServiceDegraded(ComposeServiceState service)
+    {
+        if (!string.IsNullOrWhiteSpace(service.Health) &&
+            string.Equals(service.Health, "unhealthy", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var state = service.State.Trim().ToLowerInvariant();
+        return state is "dead" or "exited" or "restarting" or "removing" or "paused" ||
+               state.StartsWith("exit", StringComparison.Ordinal) ||
+               state.Contains("unhealthy", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static readonly HashSet<string> AllowedComposeExecCommands = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "cat",
+        "curl",
+        "env",
+        "hostname",
+        "ipfs",
+        "ls",
+        "mysqladmin",
+        "pg_isready",
+        "printenv",
+        "redis-cli",
+        "sha256sum",
+        "shasum",
+        "stat",
+        "test",
+        "wget"
+    };
+
+    private static readonly HashSet<string> BlockedComposeExecCommands = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ash",
+        "bash",
+        "chmod",
+        "chown",
+        "cmd",
+        "cp",
+        "dd",
+        "dnf",
+        "mkfs",
+        "mv",
+        "node",
+        "perl",
+        "powershell",
+        "pwsh",
+        "python",
+        "python3",
+        "rm",
+        "ruby",
+        "sh",
+        "sudo",
+        "su",
+        "zsh"
+    };
 
     private OperationStatusData ToStatusData(RemoteOperationSnapshot snapshot)
     {

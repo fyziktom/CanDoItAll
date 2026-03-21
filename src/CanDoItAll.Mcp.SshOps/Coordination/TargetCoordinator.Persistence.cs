@@ -39,12 +39,12 @@ public sealed partial class TargetCoordinator
         File.WriteAllText(path, JsonSerializer.Serialize(manifest, JsonOptions));
     }
 
-    private RevisionManifestMetadata? LoadLatestRevisionManifest(string targetName, string stackName)
+    private IReadOnlyList<RevisionManifestMetadata> LoadRevisionManifests(string targetName, string stackName)
     {
         var directory = GetRevisionMetadataDirectory(targetName);
         if (!Directory.Exists(directory))
         {
-            return null;
+            return [];
         }
 
         return Directory.EnumerateFiles(directory, "*.json", SearchOption.TopDirectoryOnly)
@@ -53,7 +53,28 @@ public sealed partial class TargetCoordinator
             .Cast<RevisionManifestMetadata>()
             .Where(manifest => string.Equals(manifest.StackName, stackName, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(static manifest => manifest.CreatedAtUtc)
-            .FirstOrDefault();
+            .ToArray();
+    }
+
+    private RevisionManifestMetadata? LoadLatestRevisionManifest(string targetName, string stackName)
+    {
+        return LoadRevisionManifests(targetName, stackName).FirstOrDefault();
+    }
+
+    private RevisionManifestMetadata? LoadRollbackRevisionManifest(string targetName, string stackName, string strategy)
+    {
+        var manifests = LoadRevisionManifests(targetName, stackName);
+        if (manifests.Count == 0)
+        {
+            return null;
+        }
+
+        return strategy.Trim().ToLowerInvariant() switch
+        {
+            "latest" => manifests[0],
+            "" or "last-known-good" => manifests.FirstOrDefault(static manifest => manifest.IsKnownGood),
+            _ => throw new ToolInvocationException("ValidationFailed", $"Rollback strategy '{strategy}' is not supported.")
+        };
     }
 
     private void SaveOperationMetadata(OperationTrackingMetadata metadata)
@@ -96,7 +117,9 @@ public sealed partial class TargetCoordinator
         string TargetName,
         string StackName,
         DateTimeOffset CreatedAtUtc,
-        IReadOnlyList<RevisionEntryMetadata> Entries);
+        IReadOnlyList<RevisionEntryMetadata> Entries,
+        string Purpose = "snapshot",
+        bool IsKnownGood = false);
 
     private sealed record OperationTrackingMetadata(
         string OperationId,

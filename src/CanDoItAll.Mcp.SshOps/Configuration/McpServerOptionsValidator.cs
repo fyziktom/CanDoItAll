@@ -25,6 +25,11 @@ public sealed class McpServerOptionsValidator : IValidateOptions<McpServerOption
 
         foreach (var target in options.Targets)
         {
+            if (options.Security.DenyPasswordAuthentication && !string.IsNullOrWhiteSpace(target.Auth.PasswordEnv))
+            {
+                failures.Add($"Target '{target.Name}' cannot configure password authentication when Security.DenyPasswordAuthentication is true.");
+            }
+
             if (string.IsNullOrWhiteSpace(target.Auth.PrivateKeyEnv) &&
                 string.IsNullOrWhiteSpace(target.Auth.PasswordEnv))
             {
@@ -34,6 +39,12 @@ public sealed class McpServerOptionsValidator : IValidateOptions<McpServerOption
             if (string.IsNullOrWhiteSpace(target.HostKeyVerification.Mode))
             {
                 failures.Add($"Target '{target.Name}' must configure HostKeyVerification.Mode.");
+            }
+
+            if (options.Security.RequireHostKeyPinningInProduction &&
+                string.Equals(target.HostKeyVerification.Mode, "none", StringComparison.OrdinalIgnoreCase))
+            {
+                failures.Add($"Target '{target.Name}' cannot disable host key verification while Security.RequireHostKeyPinningInProduction is true.");
             }
 
             var hasFingerprintValues = !string.IsNullOrWhiteSpace(target.HostKeyVerification.Value) ||
