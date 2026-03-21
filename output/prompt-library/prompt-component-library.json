@@ -1709,7 +1709,7 @@
     "name": "Validation: Performance Validation Pass",
     "blockKind": "Validation",
     "summary": "Makes performance expectations explicit instead of optional.",
-    "content": "## Performance Validation\nValidate the performance impact of {{target_change}}.\n\nMeasure or reason explicitly about:\n- critical hot paths,\n- allocations or payload size,\n- latency or scheduling impact,\n- changes that could degrade mobile, browser, or embedded environments.",
+    "content": "## Performance Validation\nValidate the performance impact of {{target_change}}.\n\nMeasure or reason explicitly about:\n- critical hot paths,\n- allocations or payload size,\n- latency or scheduling impact,\n- changes that could degrade the main runtime environment or user-facing responsiveness.",
     "isRecommendedByDefault": false,
     "promptTypeRules": "performance|implementation|review|embedded|ui",
     "blueprintRules": "performance-hardening|feature-implementation|validation-audit|embedded-firmware-iteration|ui-ux-delivery",

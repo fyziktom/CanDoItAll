@@ -253,7 +253,7 @@ public sealed class WatchSupervisorService(
             UseShellExecute = false,
             CreateNoWindow = true
         };
-        foreach (var argument in WorkspaceRuntimeProcessTools.BuildWatchArgumentList(watchProjectPath, _options))
+        foreach (var argument in WorkspaceRuntimeProcessTools.BuildWatchArgumentList(workspaceRoot, watchProjectPath, _options))
         {
             startInfo.ArgumentList.Add(argument);
         }

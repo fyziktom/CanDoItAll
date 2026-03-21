@@ -57,13 +57,14 @@ public sealed partial class PromptFactoryService(
 
         var defaults = await GetSeedDefaultsAsync(cancellationToken);
         var settings = await workspaceService.GetSettingsAsync(cancellationToken);
+        var defaultBlockIds = await GetRecommendedBlockIdsAsync(defaults.BlueprintId, defaults.FlowTemplateId, null, cancellationToken);
         return new PromptFactoryEditorModel
         {
             SessionName = "Prompt session",
             BlueprintId = defaults.BlueprintId,
             FlowTemplateId = defaults.FlowTemplateId,
             ProviderProfileId = settings.DefaultProviderProfileId,
-            SelectedBlockIds = defaults.BlockIds.ToList(),
+            SelectedBlockIds = defaultBlockIds.ToList(),
             CanvasUiStateJson = "{}",
             DraftTitle = "Prompt Factory Draft",
             ComponentCustomizations = [],
@@ -242,7 +243,7 @@ public sealed partial class PromptFactoryService(
     {
         await EnsureSeedsAsync(cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var blocks = await dbContext.Set<PromptBlockDefinition>().OrderBy(item => item.Name).ToListAsync(cancellationToken);
+        var blocks = await dbContext.Set<PromptBlockDefinition>().ToListAsync(cancellationToken);
         var templates = await dbContext.Set<PromptFlowTemplate>().ToListAsync(cancellationToken);
         var blueprints = await dbContext.Set<PromptBlueprint>().ToListAsync(cancellationToken);
 
@@ -252,28 +253,107 @@ public sealed partial class PromptFactoryService(
             ? templates.FirstOrDefault(item => item.Id == flowTemplateId.Value)
             : null;
 
+        var orderedBlocks = blocks
+            .OrderBy(item => item.OrderIndex)
+            .ThenBy(item => item.BlockKind)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var blocksById = orderedBlocks.ToDictionary(item => item.Id);
+        var blocksByKey = orderedBlocks
+            .Where(item => !string.IsNullOrWhiteSpace(item.Key))
+            .GroupBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
         var recommendedIds = new HashSet<Guid>();
+        var orderedRecommendedIds = new List<Guid>();
+
+        void AddBlockId(Guid id)
+        {
+            if (!blocksById.ContainsKey(id))
+            {
+                return;
+            }
+
+            if (recommendedIds.Add(id))
+            {
+                orderedRecommendedIds.Add(id);
+            }
+        }
+
+        void AddBlockIds(IEnumerable<Guid> ids)
+        {
+            foreach (var id in ids)
+            {
+                AddBlockId(id);
+            }
+        }
+
+        void AddBlockKeys(IEnumerable<string> keys)
+        {
+            foreach (var key in keys.Where(static item => !string.IsNullOrWhiteSpace(item)))
+            {
+                if (blocksByKey.TryGetValue(key, out var block))
+                {
+                    AddBlockId(block.Id);
+                }
+            }
+        }
+
         if (selectedTemplate is not null)
         {
-            foreach (var id in DeserializeIds(selectedTemplate.BlockIdsJson))
+            AddBlockIds(DeserializeIds(selectedTemplate.BlockIdsJson));
+            AddBlockKeys(DeserializeJson<List<string>>(selectedTemplate.BlockKeysJson));
+
+            foreach (var step in DeserializeFlowAgentSeeds(selectedTemplate.AgentSequenceJson))
             {
-                recommendedIds.Add(id);
+                if (step.RoleComponentId != Guid.Empty)
+                {
+                    AddBlockId(step.RoleComponentId);
+                }
+                else
+                {
+                    AddBlockKeys([step.RoleComponentKey]);
+                }
+
+                AddBlockKeys(step.BlockKeys);
             }
         }
 
-        foreach (var block in blocks)
+        if (blueprint is not null)
         {
-            if (block.IsRecommendedByDefault ||
-                RuleMatches(block.PromptTypeRules, promptType) ||
-                RuleMatches(block.BlueprintRules, blueprint?.Key, blueprint?.Name) ||
-                RuleMatches(block.PhaseRules, phase) ||
-                RuleMatches(selectedTemplate?.PromptTypeRules, promptType))
+            AddBlockKeys(DeserializeJson<List<string>>(blueprint.RecommendedBlockKeysJson));
+        }
+
+        if (orderedRecommendedIds.Count == 0)
+        {
+            foreach (var block in orderedBlocks)
             {
-                recommendedIds.Add(block.Id);
+                var matchesPromptType = RuleMatches(block.PromptTypeRules, promptType);
+                var matchesBlueprint = RuleMatches(block.BlueprintRules, blueprint?.Key, blueprint?.Name);
+                var matchesPhase = RuleMatches(block.PhaseRules, phase);
+
+                if (blueprint is not null)
+                {
+                    if (matchesPromptType || matchesBlueprint || matchesPhase)
+                    {
+                        AddBlockId(block.Id);
+                    }
+
+                    continue;
+                }
+
+                if (matchesPromptType || matchesPhase || block.IsRecommendedByDefault)
+                {
+                    AddBlockId(block.Id);
+                }
             }
         }
 
-        return recommendedIds.ToList();
+        if (orderedRecommendedIds.Count == 0)
+        {
+            AddBlockIds(orderedBlocks.Where(item => item.IsRecommendedByDefault).Select(item => item.Id));
+        }
+
+        return orderedRecommendedIds;
     }
 
     public async Task<PromptBlockEditorModel> GetBlockEditorAsync(Guid? blockId, CancellationToken cancellationToken = default)
@@ -510,9 +590,12 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
 
         var effectiveBlockIds = await ResolveEffectiveBlockIdsAsync(model, cancellationToken);
         var blocks = await LoadResolvedBlocksAsync(effectiveBlockIds, model, model.FlowTemplateId, cancellationToken);
-        var blueprint = (await ListBlueprintsAsync(cancellationToken)).FirstOrDefault(item => item.Id == model.BlueprintId);
+        var blueprints = await ListBlueprintsAsync(cancellationToken);
+        var templates = await ListTemplatesAsync(cancellationToken);
+        var blueprint = blueprints.FirstOrDefault(item => item.Id == model.BlueprintId);
+        var flowTemplate = templates.FirstOrDefault(item => item.Id == model.FlowTemplateId);
         var warnings = BuildWarnings(model, project, selectedResources);
-        var prompt = ComposePrompt(model, project, blueprint, blocks, selectedResources);
+        var prompt = ComposePrompt(model, project, blueprint, flowTemplate, blocks, selectedResources);
 
         model.SelectedBlockIds = effectiveBlockIds.ToList();
         var sessionId = await UpsertSessionAsync(model, prompt, warnings, cancellationToken);
@@ -698,6 +781,7 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
                 item.State,
                 item.PromptArtifactId,
                 item.ParentPromptRunNodeId,
+                item.PromptBlockDefinitionId,
                 item.Notes))
             .ToListAsync(cancellationToken);
     }
@@ -905,6 +989,9 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
         var phase = string.IsNullOrWhiteSpace(model.Phase) ? project.CurrentPhase : model.Phase.Trim();
         var effectiveBlockIds = await ResolveEffectiveBlockIdsAsync(model, cancellationToken);
         var blocks = await LoadBlocksAsync(effectiveBlockIds, model.FlowTemplateId, cancellationToken);
+        var selectedFlowTemplate = model.FlowTemplateId.HasValue
+            ? await dbContext.Set<PromptFlowTemplate>().FirstOrDefaultAsync(item => item.Id == model.FlowTemplateId.Value, cancellationToken)
+            : null;
 
         session.Name = string.IsNullOrWhiteSpace(model.SessionName)
             ? BuildSessionName(project.Name, phase)
@@ -931,11 +1018,28 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
 
         if (!session.PromptRunId.HasValue)
         {
-            session.PromptRunId = await EnsureRunAsync(dbContext, model.ProjectId.Value, phase, model.FlowTemplateId, blocks, cancellationToken);
+            session.PromptRunId = await EnsureRunAsync(
+                dbContext,
+                model.ProjectId.Value,
+                phase,
+                model.FlowTemplateId,
+                selectedFlowTemplate,
+                blocks,
+                cancellationToken);
         }
         else
         {
-            await SyncRunNodesAsync(dbContext, session.PromptRunId.Value, blocks, cancellationToken);
+            var run = await dbContext.Set<PromptRun>().FirstOrDefaultAsync(item => item.Id == session.PromptRunId.Value, cancellationToken);
+            if (run is not null)
+            {
+                run.ProjectId = model.ProjectId.Value;
+                run.FlowTemplateId = model.FlowTemplateId ?? run.FlowTemplateId;
+                run.Name = BuildRunName(phase);
+                run.Phase = phase;
+                run.UpdatedAtUtc = clock.GetUtcNow();
+            }
+
+            await SyncRunNodesAsync(dbContext, session.PromptRunId.Value, blocks, selectedFlowTemplate, cancellationToken);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -947,10 +1051,11 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
         Guid projectId,
         string phase,
         Guid? flowTemplateId,
+        PromptFlowTemplate? flowTemplate,
         IReadOnlyList<PromptBlockDefinition> blocks,
         CancellationToken cancellationToken)
     {
-        var flowTemplateIdValue = flowTemplateId ?? await dbContext.Set<PromptFlowTemplate>().Select(item => item.Id).FirstAsync(cancellationToken);
+        var flowTemplateIdValue = flowTemplateId ?? flowTemplate?.Id ?? await dbContext.Set<PromptFlowTemplate>().Select(item => item.Id).FirstAsync(cancellationToken);
         var run = new PromptRun
         {
             ProjectId = projectId,
@@ -963,38 +1068,75 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
 
         await dbContext.Set<PromptRun>().AddAsync(run, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await SyncRunNodesAsync(dbContext, run.Id, blocks, cancellationToken);
+        await SyncRunNodesAsync(dbContext, run.Id, blocks, flowTemplate, cancellationToken);
         return run.Id;
     }
 
-    private static async Task SyncRunNodesAsync(AppDbContext dbContext, Guid runId, IReadOnlyList<PromptBlockDefinition> blocks, CancellationToken cancellationToken)
+    private static async Task SyncRunNodesAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        IReadOnlyList<PromptBlockDefinition> blocks,
+        PromptFlowTemplate? flowTemplate,
+        CancellationToken cancellationToken)
     {
         var nodes = await dbContext.Set<PromptRunNode>().Where(item => item.PromptRunId == runId).ToListAsync(cancellationToken);
-        dbContext.RemoveRange(nodes.Where(node => blocks.All(block => block.Id != node.PromptBlockDefinitionId)));
+        var desiredNodes = BuildRootRunNodeSeeds(blocks, flowTemplate);
+        var nodesToRemove = new HashSet<Guid>();
 
-        for (var index = 0; index < blocks.Count; index++)
+        foreach (var node in nodes.Where(item => item.ParentPromptRunNodeId is null && string.Equals(item.BranchKey, "main", StringComparison.OrdinalIgnoreCase)))
         {
-            var block = blocks[index];
-            var node = nodes.FirstOrDefault(item =>
-                item.PromptBlockDefinitionId == block.Id &&
-                item.ParentPromptRunNodeId is null &&
-                string.Equals(item.BranchKey, "main", StringComparison.OrdinalIgnoreCase));
+            if (desiredNodes.Any(desiredNode => DoesRunNodeMatchSeed(node, desiredNode)))
+            {
+                continue;
+            }
+
+            nodesToRemove.Add(node.Id);
+            foreach (var descendantId in CollectDescendantNodeIds(node.Id, nodes))
+            {
+                nodesToRemove.Add(descendantId);
+            }
+        }
+
+        if (nodesToRemove.Count > 0)
+        {
+            dbContext.RemoveRange(nodes.Where(item => nodesToRemove.Contains(item.Id)));
+        }
+
+        var remainingNodes = nodes.Where(item => !nodesToRemove.Contains(item.Id)).ToList();
+        var matchedNodeIds = new HashSet<Guid>();
+
+        for (var index = 0; index < desiredNodes.Count; index++)
+        {
+            var desiredNode = desiredNodes[index];
+            var node = remainingNodes.FirstOrDefault(item =>
+                           !matchedNodeIds.Contains(item.Id) &&
+                           DoesRunNodeMatchSeed(item, desiredNode)) ??
+                       remainingNodes.FirstOrDefault(item =>
+                           !matchedNodeIds.Contains(item.Id) &&
+                           item.ParentPromptRunNodeId is null &&
+                           string.Equals(item.BranchKey, "main", StringComparison.OrdinalIgnoreCase) &&
+                           item.Sequence == desiredNode.Sequence);
             if (node is null)
             {
                 node = new PromptRunNode
                 {
                     PromptRunId = runId,
-                    PromptBlockDefinitionId = block.Id
+                    PromptBlockDefinitionId = desiredNode.PromptBlockDefinitionId,
+                    State = PromptRunNodeState.Prepared
                 };
                 await dbContext.Set<PromptRunNode>().AddAsync(node, cancellationToken);
+                remainingNodes.Add(node);
             }
 
-            node.Title = block.Name;
+            matchedNodeIds.Add(node.Id);
+            node.PromptRunId = runId;
+            node.PromptBlockDefinitionId = desiredNode.PromptBlockDefinitionId;
+            node.ParentPromptRunNodeId = null;
+            node.Title = desiredNode.Title;
             node.BranchKey = "main";
             node.BranchLabel = "Main";
-            node.Sequence = index;
-            node.State = PromptRunNodeState.Prepared;
-            node.Notes = block.Summary;
+            node.Sequence = desiredNode.Sequence;
+            node.Notes = desiredNode.Notes;
         }
     }
 
@@ -1060,6 +1202,7 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
         PromptFactoryEditorModel model,
         ProjectEditorModel project,
         PromptBlueprintSummary? blueprint,
+        PromptFlowTemplateSummary? flowTemplate,
         IReadOnlyCollection<ResolvedPromptBlock> blocks,
         IReadOnlyCollection<ResourceSummary> resources)
     {
@@ -1075,6 +1218,7 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
             .Select(BuildAttachmentLine)
             .Where(line => !string.IsNullOrWhiteSpace(line))
             .ToList();
+        var promptAssembly = BuildPromptAssembly(flowTemplate, blocks);
 
         return $"""
         # Prompt Request
@@ -1082,6 +1226,7 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
         Prompt type: {blueprint?.PromptType ?? "General"}
         Phase: {phase}
         Project: {project.Name}
+        Flow: {flowTemplate?.Name ?? "No explicit flow template"}
 
         ## Project objective
         {project.Objective}
@@ -1092,8 +1237,8 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
         ## Guidance
         {blueprint?.Guidance ?? "Produce an implementation-ready output that respects the existing architecture and constraints."}
 
-        ## Shared prompt blocks
-        {string.Join(Environment.NewLine + Environment.NewLine, blocks.Select(block => $"### {block.Definition.Name}{Environment.NewLine}{block.RenderedContent}"))}
+        ## Prompt assembly
+        {promptAssembly}
 
         ## Stack profile
         {string.Join(Environment.NewLine, optionLines.DefaultIfEmpty("- No stack profile notes selected."))}
@@ -1108,6 +1253,240 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
         Produce a phase-aware response that explains the recommended approach, the concrete implementation steps, and the tests or verification needed to close the work safely.
         """;
     }
+
+    private static string BuildPromptAssembly(PromptFlowTemplateSummary? flowTemplate, IReadOnlyCollection<ResolvedPromptBlock> blocks)
+    {
+        if (flowTemplate is null || flowTemplate.AgentSequence.Count == 0)
+        {
+            return string.Join(
+                Environment.NewLine + Environment.NewLine,
+                blocks.Select(block => $"### {block.Definition.Name}{Environment.NewLine}{block.RenderedContent}"));
+        }
+
+        var blocksById = blocks.ToDictionary(item => item.Definition.Id);
+        var blocksByKey = blocks
+            .Where(item => !string.IsNullOrWhiteSpace(item.Definition.Key))
+            .GroupBy(item => item.Definition.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        var consumedBlockIds = new HashSet<Guid>();
+        var sections = new List<string>();
+
+        foreach (var step in flowTemplate.AgentSequence.OrderBy(item => item.Order))
+        {
+            var roleBlock = TryResolveFlowRoleBlock(step, blocksById, blocksByKey);
+            if (roleBlock is not null)
+            {
+                consumedBlockIds.Add(roleBlock.Definition.Id);
+            }
+
+            var stepBlocks = ResolveFlowStepBlocks(step, blocksByKey)
+                .DistinctBy(item => item.Definition.Id)
+                .ToList();
+            foreach (var stepBlock in stepBlocks)
+            {
+                consumedBlockIds.Add(stepBlock.Definition.Id);
+            }
+
+            var stepBlockContent = stepBlocks.Count == 0
+                ? "- No step-specific blocks were resolved."
+                : string.Join(
+                    Environment.NewLine + Environment.NewLine,
+                    stepBlocks.Select(block => $"#### {block.Definition.Name}{Environment.NewLine}{block.RenderedContent}"));
+
+            sections.Add($"""
+            ### Step {step.Order}: {BuildFlowStepTitle(roleBlock?.Definition, step.Phase)}
+            Phase: {(string.IsNullOrWhiteSpace(step.Phase) ? "general" : step.Phase)}
+            Blueprint: {(string.IsNullOrWhiteSpace(step.BlueprintKey) ? "shared-session" : step.BlueprintKey)}
+            Goal: {step.Goal}
+
+            #### Role framing
+            {(roleBlock?.RenderedContent ?? "Use the phase and goal to frame this step.")}
+
+            #### Step blocks
+            {stepBlockContent}
+            """);
+        }
+
+        var remainingBlocks = blocks
+            .Where(item => !consumedBlockIds.Contains(item.Definition.Id))
+            .OrderBy(item => item.Definition.OrderIndex)
+            .ThenBy(item => item.Definition.BlockKind)
+            .ThenBy(item => item.Definition.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (remainingBlocks.Count > 0)
+        {
+            sections.Add($"""
+            ### Flow-wide shared blocks
+            {string.Join(
+                Environment.NewLine + Environment.NewLine,
+                remainingBlocks.Select(block => $"#### {block.Definition.Name}{Environment.NewLine}{block.RenderedContent}"))}
+            """);
+        }
+
+        return string.Join(Environment.NewLine + Environment.NewLine, sections);
+    }
+
+    private static ResolvedPromptBlock? TryResolveFlowRoleBlock(
+        PromptFlowAgentSummary step,
+        IReadOnlyDictionary<Guid, ResolvedPromptBlock> blocksById,
+        IReadOnlyDictionary<string, ResolvedPromptBlock> blocksByKey)
+    {
+        if (step.RoleComponentId != Guid.Empty &&
+            blocksById.TryGetValue(step.RoleComponentId, out var roleById))
+        {
+            return roleById;
+        }
+
+        return !string.IsNullOrWhiteSpace(step.RoleComponentKey) &&
+               blocksByKey.TryGetValue(step.RoleComponentKey, out var roleByKey)
+            ? roleByKey
+            : null;
+    }
+
+    private static IEnumerable<ResolvedPromptBlock> ResolveFlowStepBlocks(
+        PromptFlowAgentSummary step,
+        IReadOnlyDictionary<string, ResolvedPromptBlock> blocksByKey)
+    {
+        foreach (var blockKey in step.BlockKeys.Where(static item => !string.IsNullOrWhiteSpace(item)))
+        {
+            if (blocksByKey.TryGetValue(blockKey, out var block))
+            {
+                yield return block;
+            }
+        }
+    }
+
+    private static string BuildFlowStepTitle(PromptBlockDefinition? roleBlock, string? phase)
+    {
+        if (roleBlock is not null && !string.IsNullOrWhiteSpace(roleBlock.Name))
+        {
+            return roleBlock.Name.StartsWith("Role: ", StringComparison.OrdinalIgnoreCase)
+                ? roleBlock.Name["Role: ".Length..]
+                : roleBlock.Name;
+        }
+
+        return string.IsNullOrWhiteSpace(phase)
+            ? "Prompt step"
+            : char.ToUpperInvariant(phase[0]) + phase[1..];
+    }
+
+    private static List<PromptRunNodeSeed> BuildRootRunNodeSeeds(IReadOnlyList<PromptBlockDefinition> blocks, PromptFlowTemplate? flowTemplate)
+    {
+        if (flowTemplate is not null)
+        {
+            var agentSequence = DeserializeFlowAgentSeeds(flowTemplate.AgentSequenceJson);
+            if (agentSequence.Count > 0)
+            {
+                var blocksById = blocks.ToDictionary(item => item.Id);
+                var blocksByKey = blocks
+                    .Where(item => !string.IsNullOrWhiteSpace(item.Key))
+                    .GroupBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+                var seeds = new List<PromptRunNodeSeed>();
+
+                foreach (var step in agentSequence)
+                {
+                    var roleBlock = step.RoleComponentId != Guid.Empty && blocksById.TryGetValue(step.RoleComponentId, out var roleById)
+                        ? roleById
+                        : (!string.IsNullOrWhiteSpace(step.RoleComponentKey) && blocksByKey.TryGetValue(step.RoleComponentKey, out var roleByKey)
+                            ? roleByKey
+                            : null);
+                    var stepBlocks = step.BlockKeys
+                        .Where(blockKey => !string.IsNullOrWhiteSpace(blockKey) && blocksByKey.ContainsKey(blockKey))
+                        .Select(blockKey => blocksByKey[blockKey])
+                        .DistinctBy(item => item.Id)
+                        .ToList();
+
+                    seeds.Add(new PromptRunNodeSeed(
+                        roleBlock?.Id ?? (step.RoleComponentId == Guid.Empty ? null : step.RoleComponentId),
+                        BuildFlowStepTitle(roleBlock, step.Phase),
+                        BuildFlowStepNotes(step, roleBlock, stepBlocks),
+                        Math.Max(0, step.Order - 1)));
+                }
+
+                if (seeds.Count > 0)
+                {
+                    return seeds;
+                }
+            }
+        }
+
+        return blocks
+            .Select((block, index) => new PromptRunNodeSeed(block.Id, block.Name, block.Summary, index))
+            .ToList();
+    }
+
+    private static string BuildFlowStepNotes(
+        PromptFlowAgentSeed step,
+        PromptBlockDefinition? roleBlock,
+        IReadOnlyList<PromptBlockDefinition> stepBlocks)
+    {
+        var details = new List<string>();
+        if (!string.IsNullOrWhiteSpace(step.Goal))
+        {
+            details.Add($"Goal: {step.Goal.Trim()}");
+        }
+
+        if (roleBlock is not null && !string.IsNullOrWhiteSpace(roleBlock.Summary))
+        {
+            details.Add(roleBlock.Summary.Trim());
+        }
+
+        if (stepBlocks.Count > 0)
+        {
+            var blockSummary = string.Join(", ", stepBlocks.Select(item => item.Name).Take(4));
+            if (stepBlocks.Count > 4)
+            {
+                blockSummary = $"{blockSummary}, +{stepBlocks.Count - 4} more";
+            }
+
+            details.Add($"Blocks: {blockSummary}");
+        }
+
+        return string.Join(" ", details);
+    }
+
+    private static List<Guid> CollectDescendantNodeIds(Guid rootNodeId, IReadOnlyCollection<PromptRunNode> nodes)
+    {
+        var descendantIds = new List<Guid>();
+        var pendingIds = new Queue<Guid>();
+        pendingIds.Enqueue(rootNodeId);
+
+        while (pendingIds.Count > 0)
+        {
+            var currentId = pendingIds.Dequeue();
+            foreach (var child in nodes.Where(item => item.ParentPromptRunNodeId == currentId))
+            {
+                descendantIds.Add(child.Id);
+                pendingIds.Enqueue(child.Id);
+            }
+        }
+
+        return descendantIds;
+    }
+
+    private static bool DoesRunNodeMatchSeed(PromptRunNode node, PromptRunNodeSeed desiredNode)
+    {
+        if (node.ParentPromptRunNodeId is not null ||
+            !string.Equals(node.BranchKey, "main", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (desiredNode.PromptBlockDefinitionId.HasValue &&
+            node.PromptBlockDefinitionId == desiredNode.PromptBlockDefinitionId.Value)
+        {
+            return true;
+        }
+
+        return node.Sequence == desiredNode.Sequence &&
+               string.Equals(node.Title, desiredNode.Title, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static List<PromptFlowAgentSeed> DeserializeFlowAgentSeeds(string json)
+        => DeserializeJson<List<PromptFlowAgentSeed>>(json)
+            .OrderBy(item => item.Order)
+            .ToList();
 
     private static string SerializeIds(IEnumerable<Guid> ids) => JsonSerializer.Serialize(ids.Distinct().ToArray(), SerializerOptions);
 
@@ -1124,6 +1503,7 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
             node.State,
             node.PromptArtifactId,
             node.ParentPromptRunNodeId,
+            node.PromptBlockDefinitionId,
             node.Notes);
 
     private static IReadOnlyList<string> SplitTokens(string? value)
@@ -1172,4 +1552,6 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
 
     private static List<string> SplitWarnings(string warningSummary)
         => warningSummary.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+    private sealed record PromptRunNodeSeed(Guid? PromptBlockDefinitionId, string Title, string Notes, int Sequence);
 }

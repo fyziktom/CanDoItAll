@@ -1,6 +1,8 @@
 using Bunit;
+using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Factory.Pages;
 using CanDoItAll.Modules.Projects;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -8,9 +10,10 @@ namespace CanDoItAll.Tests.Components;
 public sealed class PromptFactoryPageTests
 {
     [Fact]
-    public async Task Renders_canvas_workbench_and_builds_prompt_for_selected_project()
+    public async Task Preview_query_opens_built_prompt_modal()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
+        var factoryService = harness.Context.Services.GetRequiredService<PromptFactoryService>();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
 
         var project = await projectsService.GetAsync(null);
@@ -21,16 +24,26 @@ public sealed class PromptFactoryPageTests
         var saveResult = await projectsService.SaveAsync(project);
         Assert.True(saveResult.IsSuccess);
 
+        var sessionId = await factoryService.CreateBlankProjectSessionAsync(saveResult.Value!, "Component test prompt session", "review");
+        var editor = await factoryService.GetEditorAsync(sessionId);
+        var buildResult = await factoryService.BuildAsync(editor);
+        Assert.True(buildResult.IsSuccess);
+
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/prompt-factory?sessionId={sessionId}&preview=true");
         var cut = harness.Context.RenderComponent<PromptFactoryPage>();
-        cut.Find("[data-testid='prompt-factory-project']").Change(saveResult.Value!.ToString());
-        cut.Find("[data-testid='prompt-factory-build']").Click();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Prompt built.", cut.Markup);
             Assert.Contains("Prompt session workbench", cut.Markup);
-            Assert.Contains("Generated prompt", cut.Markup);
-            Assert.Contains("Prompt flow canvas", cut.Markup);
+            Assert.Single(cut.FindAll("[data-testid='prompt-factory-prompt-modal']"));
+            Assert.Contains("Final prompt", cut.Markup);
+            Assert.Contains("# Prompt Request", cut.Markup);
         });
+
+        cut.FindAll("button")
+            .First(button => button.TextContent.Contains("Close", StringComparison.OrdinalIgnoreCase))
+            .Click();
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='prompt-factory-prompt-modal']")));
     }
 }

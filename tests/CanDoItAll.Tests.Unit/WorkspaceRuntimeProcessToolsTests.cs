@@ -5,18 +5,46 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class WorkspaceRuntimeProcessToolsTests
 {
     [Fact]
-    public void BuildWatchArgumentList_uses_launch_profile_by_default()
+    public void BuildWatchArgumentList_uses_launch_profile_by_default_when_restore_inputs_are_fresh()
     {
-        var options = new ManagerOptions();
+        using var workspace = new TestWorkspace();
+        var projectPath = workspace.CreateProject(
+            @"src\CanDoItAll.Web\CanDoItAll.Web.csproj",
+            """
+            <Project Sdk="Microsoft.NET.Sdk.Web">
+              <ItemGroup>
+                <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+              </ItemGroup>
+            </Project>
+            """,
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 0, 0, DateTimeKind.Utc));
+        workspace.CreateProject(
+            @"src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj",
+            """
+            <Project Sdk="Microsoft.NET.Sdk">
+            </Project>
+            """,
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 1, 0, DateTimeKind.Utc));
+        workspace.CreateFile(
+            "Directory.Packages.props",
+            "<Project />",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 2, 0, DateTimeKind.Utc));
+        workspace.CreateAssetsFile(
+            @"src\CanDoItAll.Web\obj\project.assets.json",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 5, 0, DateTimeKind.Utc));
+        workspace.CreateAssetsFile(
+            @"src\CanDoItAll.Infrastructure\obj\project.assets.json",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 5, 0, DateTimeKind.Utc));
 
-        var arguments = WorkspaceRuntimeProcessTools.BuildWatchArgumentList(@"C:\repos\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj", options);
+        var options = new ManagerOptions();
+        var arguments = WorkspaceRuntimeProcessTools.BuildWatchArgumentList(workspace.RootPath, projectPath, options);
 
         Assert.Equal(
             [
                 "watch",
                 "--non-interactive",
                 "--project",
-                @"C:\repos\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj",
+                projectPath,
                 "--no-restore",
                 "--disable-build-servers",
                 "run",
@@ -29,25 +57,85 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     [Fact]
     public void BuildWatchArgumentList_uses_no_launch_profile_when_explicit_urls_are_configured()
     {
+        using var workspace = new TestWorkspace();
+        var projectPath = workspace.CreateProject(
+            @"src\CanDoItAll.Web\CanDoItAll.Web.csproj",
+            "<Project Sdk=\"Microsoft.NET.Sdk.Web\"></Project>",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 0, 0, DateTimeKind.Utc));
+        workspace.CreateAssetsFile(
+            @"src\CanDoItAll.Web\obj\project.assets.json",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 5, 0, DateTimeKind.Utc));
+
         var options = new ManagerOptions
         {
             WatchUrls = ["https://127.0.0.1:0", "http://127.0.0.1:0"]
         };
 
-        var arguments = WorkspaceRuntimeProcessTools.BuildWatchArgumentList(@"C:\repos\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj", options);
+        var arguments = WorkspaceRuntimeProcessTools.BuildWatchArgumentList(workspace.RootPath, projectPath, options);
 
         Assert.Equal(
             [
                 "watch",
                 "--non-interactive",
                 "--project",
-                @"C:\repos\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj",
+                projectPath,
                 "--no-restore",
                 "--disable-build-servers",
                 "run",
                 "--no-launch-profile"
             ],
             arguments);
+    }
+
+    [Fact]
+    public void BuildWatchArgumentList_omits_no_restore_when_a_referenced_project_assets_file_is_stale()
+    {
+        using var workspace = new TestWorkspace();
+        var projectPath = workspace.CreateProject(
+            @"src\CanDoItAll.Web\CanDoItAll.Web.csproj",
+            """
+            <Project Sdk="Microsoft.NET.Sdk.Web">
+              <ItemGroup>
+                <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+              </ItemGroup>
+            </Project>
+            """,
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 0, 0, DateTimeKind.Utc));
+        workspace.CreateProject(
+            @"src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj",
+            "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 6, 0, DateTimeKind.Utc));
+        workspace.CreateAssetsFile(
+            @"src\CanDoItAll.Web\obj\project.assets.json",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 5, 0, DateTimeKind.Utc));
+        workspace.CreateAssetsFile(
+            @"src\CanDoItAll.Infrastructure\obj\project.assets.json",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 5, 0, DateTimeKind.Utc));
+
+        var arguments = WorkspaceRuntimeProcessTools.BuildWatchArgumentList(workspace.RootPath, projectPath, new ManagerOptions());
+
+        Assert.DoesNotContain("--no-restore", arguments);
+    }
+
+    [Fact]
+    public void BuildWatchArgumentList_omits_no_restore_when_central_restore_inputs_changed_after_assets()
+    {
+        using var workspace = new TestWorkspace();
+        var projectPath = workspace.CreateProject(
+            @"src\CanDoItAll.Web\CanDoItAll.Web.csproj",
+            "<Project Sdk=\"Microsoft.NET.Sdk.Web\"></Project>",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 0, 0, DateTimeKind.Utc));
+        workspace.CreateAssetsFile(
+            @"src\CanDoItAll.Web\obj\project.assets.json",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 5, 0, DateTimeKind.Utc));
+        workspace.CreateFile(
+            "Directory.Packages.props",
+            "<Project />",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 6, 0, DateTimeKind.Utc));
+
+        var arguments = WorkspaceRuntimeProcessTools.BuildWatchArgumentList(workspace.RootPath, projectPath, new ManagerOptions());
+
+        Assert.DoesNotContain("--no-restore", arguments);
     }
 
     [Fact]
@@ -113,5 +201,45 @@ public sealed class WorkspaceRuntimeProcessToolsTests
         Assert.True(WorkspaceRuntimeProcessTools.IsWorkspaceOwnedProcess(watchChild, projectPath));
         Assert.True(WorkspaceRuntimeProcessTools.IsWorkspaceOwnedProcess(webProcess, projectPath));
         Assert.False(WorkspaceRuntimeProcessTools.IsWorkspaceOwnedProcess(unrelated, projectPath));
+    }
+
+    private sealed class TestWorkspace : IDisposable
+    {
+        public TestWorkspace()
+        {
+            RootPath = Path.Combine(Path.GetTempPath(), $"CanDoItAll.Tests.{Guid.NewGuid():N}");
+            Directory.CreateDirectory(RootPath);
+        }
+
+        public string RootPath { get; }
+
+        public string CreateProject(string relativePath, string content, DateTime modifiedAtUtc)
+            => CreateFile(relativePath, content, modifiedAtUtc);
+
+        public string CreateAssetsFile(string relativePath, DateTime modifiedAtUtc)
+            => CreateFile(relativePath, "{}", modifiedAtUtc);
+
+        public string CreateFile(string relativePath, string content, DateTime modifiedAtUtc)
+        {
+            var fullPath = Path.Combine(RootPath, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+            File.WriteAllText(fullPath, content);
+            File.SetLastWriteTimeUtc(fullPath, modifiedAtUtc);
+            return fullPath;
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                if (Directory.Exists(RootPath))
+                {
+                    Directory.Delete(RootPath, recursive: true);
+                }
+            }
+            catch
+            {
+            }
+        }
     }
 }

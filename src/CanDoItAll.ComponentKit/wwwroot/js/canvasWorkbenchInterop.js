@@ -1,5 +1,18 @@
 (function () {
     const root = window.CanDoItAll = window.CanDoItAll || {};
+    root.promptFactory = root.promptFactory || {
+        shouldHandleHistoryShortcut() {
+            const activeElement = document.activeElement;
+            if (!activeElement) {
+                return true;
+            }
+
+            const tagName = activeElement.tagName?.toLowerCase?.() || "";
+            return tagName !== "input" &&
+                tagName !== "textarea" &&
+                !activeElement.isContentEditable;
+        }
+    };
     const MIN_ZOOM = 0.15;
     const MAX_ZOOM = 1.75;
 
