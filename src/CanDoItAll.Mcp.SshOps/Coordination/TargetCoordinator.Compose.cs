@@ -131,12 +131,13 @@ public sealed partial class TargetCoordinator
         var validatedComposeFile = pathGuard.ResolveInsideStacksRoot(target, composeFile);
         var validatedWorkingDirectory = pathGuard.ResolveInsideStacksRoot(target, workingDirectory);
         var composeCommand = await ResolveComposeCommandAsync(target, cancellationToken);
+        var requiresLegacyPullStep = pull && IsLegacyComposeCommand(composeCommand);
         var backupRevisionId = runtimeConfiguration.Options.Revisions.Enabled
             ? await SnapshotStackDirectoryAsync(target, stackName, validatedWorkingDirectory, purpose: "pre_apply", isKnownGood: false, cancellationToken)
             : null;
 
         var composeArgs = new List<string> { "up", "-d" };
-        if (pull)
+        if (pull && !requiresLegacyPullStep)
         {
             composeArgs.Add("--pull");
             composeArgs.Add("always");
@@ -158,9 +159,9 @@ public sealed partial class TargetCoordinator
 
         if (resolvedExecutionMode == "detached")
         {
-            var detachedCommand = normalizedPostWaitPolicy is null
+            var detachedCommand = normalizedPostWaitPolicy is null && !requiresLegacyPullStep
                 ? BuildComposeCommand(composeCommand, target.Name, validatedComposeFile, projectName, composeArgs)
-                : ["bash", "-lc", BuildComposeApplyScript(composeCommand, target.Name, validatedComposeFile, projectName, composeArgs, normalizedPostWaitPolicy)];
+                : ["bash", "-lc", BuildComposeApplyScript(composeCommand, target.Name, validatedComposeFile, projectName, composeArgs, normalizedPostWaitPolicy, requiresLegacyPullStep)];
             var operation = await remoteJobRunner.StartAsync(
                 target,
                 new RemoteJobStartRequest(
@@ -186,8 +187,27 @@ public sealed partial class TargetCoordinator
         }
 
         RemoteCommandResult result;
-        if (normalizedPostWaitPolicy is null)
+        if (normalizedPostWaitPolicy is null && !requiresLegacyPullStep)
         {
+            result = await ExecuteComposeCommandAsync(
+                target,
+                validatedComposeFile,
+                projectName,
+                composeArgs,
+                new RemoteExecutionOptions(WorkingDirectory: validatedWorkingDirectory, Timeout: runtimeConfiguration.DefaultComposeApplyTimeout),
+                cancellationToken);
+        }
+        else if (normalizedPostWaitPolicy is null)
+        {
+            var pullResult = await ExecuteComposeCommandAsync(
+                target,
+                validatedComposeFile,
+                projectName,
+                ["pull"],
+                new RemoteExecutionOptions(WorkingDirectory: validatedWorkingDirectory, Timeout: runtimeConfiguration.DefaultComposeApplyTimeout),
+                cancellationToken);
+            EnsureSuccess(pullResult, "ValidationFailed", $"Compose image pull failed for stack '{stackName}'.");
+
             result = await ExecuteComposeCommandAsync(
                 target,
                 validatedComposeFile,
@@ -200,7 +220,7 @@ public sealed partial class TargetCoordinator
         {
             result = await transport.ExecuteAsync(
                 target,
-                ["bash", "-lc", BuildComposeApplyScript(composeCommand, target.Name, validatedComposeFile, projectName, composeArgs, normalizedPostWaitPolicy)],
+                ["bash", "-lc", BuildComposeApplyScript(composeCommand, target.Name, validatedComposeFile, projectName, composeArgs, normalizedPostWaitPolicy, requiresLegacyPullStep)],
                 new RemoteExecutionOptions(WorkingDirectory: validatedWorkingDirectory, Timeout: runtimeConfiguration.DefaultComposeApplyTimeout + TimeSpan.FromSeconds(normalizedPostWaitPolicy.TimeoutSeconds)),
                 cancellationToken);
         }
@@ -592,12 +612,22 @@ public sealed partial class TargetCoordinator
         string composeFile,
         string projectName,
         IReadOnlyList<string> composeArgs,
-        ComposeWaitPolicy postWaitPolicy)
+        ComposeWaitPolicy? postWaitPolicy,
+        bool requiresLegacyPullStep)
     {
         var script = new StringBuilder();
         script.AppendLine("set -euo pipefail");
+        if (requiresLegacyPullStep)
+        {
+            script.AppendLine(string.Join(' ', BuildComposeCommand(composeCommand, targetName, composeFile, projectName, ["pull"]).Select(QuoteShell)));
+        }
+
         script.AppendLine(string.Join(' ', BuildComposeCommand(composeCommand, targetName, composeFile, projectName, composeArgs).Select(QuoteShell)));
-        script.AppendLine(BuildComposeServiceWaitScript(projectName, postWaitPolicy));
+        if (postWaitPolicy is not null)
+        {
+            script.AppendLine(BuildComposeServiceWaitScript(projectName, postWaitPolicy));
+        }
+
         return script.ToString().ReplaceLineEndings("\n");
     }
 
