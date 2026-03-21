@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Management;
 using System.Runtime.Versioning;
+using System.Xml.Linq;
 
 namespace CanDoItAll.Manager;
 
@@ -8,7 +9,18 @@ public sealed record WorkspaceProcessSnapshot(int ProcessId, string Name, string
 
 public static class WorkspaceRuntimeProcessTools
 {
-    public static IReadOnlyList<string> BuildWatchArgumentList(string watchProjectPath, ManagerOptions options)
+    private static readonly string[] RestoreInputFileNames =
+    [
+        "Directory.Build.props",
+        "Directory.Build.targets",
+        "Directory.Packages.props",
+        "Packages.props",
+        "NuGet.Config",
+        "nuget.config",
+        "packages.lock.json"
+    ];
+
+    public static IReadOnlyList<string> BuildWatchArgumentList(string workspaceRoot, string watchProjectPath, ManagerOptions options)
     {
         var explicitUrls = GetExplicitWatchUrls(options);
         var arguments = new List<string>
@@ -19,7 +31,7 @@ public static class WorkspaceRuntimeProcessTools
             watchProjectPath
         };
 
-        if (options.WatchSkipRestore)
+        if (ShouldSkipRestore(workspaceRoot, watchProjectPath, options))
         {
             arguments.Add("--no-restore");
         }
@@ -72,6 +84,166 @@ public static class WorkspaceRuntimeProcessTools
                (line.Contains("Cannot open", StringComparison.OrdinalIgnoreCase) &&
                 (line.Contains("user-mapped section open", StringComparison.OrdinalIgnoreCase) ||
                  line.Contains("being used by another process", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static bool ShouldSkipRestore(string workspaceRoot, string watchProjectPath, ManagerOptions options)
+    {
+        if (!options.WatchSkipRestore || string.IsNullOrWhiteSpace(watchProjectPath) || !File.Exists(watchProjectPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var projectPaths = EnumerateRestoreProjectPaths(watchProjectPath).ToArray();
+            if (projectPaths.Length == 0)
+            {
+                return false;
+            }
+
+            var latestRestoreInputUtc = EnumerateRestoreInputFiles(workspaceRoot, projectPaths)
+                .Select(File.GetLastWriteTimeUtc)
+                .DefaultIfEmpty(DateTime.MinValue)
+                .Max();
+
+            foreach (var projectPath in projectPaths)
+            {
+                var assetsPath = Path.Combine(Path.GetDirectoryName(projectPath)!, "obj", "project.assets.json");
+                if (!File.Exists(assetsPath))
+                {
+                    return false;
+                }
+
+                var assetsTimestampUtc = File.GetLastWriteTimeUtc(assetsPath);
+                if (assetsTimestampUtc < File.GetLastWriteTimeUtc(projectPath) ||
+                    assetsTimestampUtc < latestRestoreInputUtc)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateRestoreInputFiles(string workspaceRoot, IReadOnlyList<string> projectPaths)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var projectPath in projectPaths)
+        {
+            if (seen.Add(projectPath))
+            {
+                yield return projectPath;
+            }
+
+            var projectDirectory = Path.GetDirectoryName(projectPath);
+            if (string.IsNullOrWhiteSpace(projectDirectory))
+            {
+                continue;
+            }
+
+            foreach (var directory in EnumerateDirectoriesUpToWorkspaceRoot(projectDirectory, workspaceRoot))
+            {
+                foreach (var fileName in RestoreInputFileNames)
+                {
+                    var candidatePath = Path.Combine(directory, fileName);
+                    if (File.Exists(candidatePath) && seen.Add(candidatePath))
+                    {
+                        yield return candidatePath;
+                    }
+                }
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(workspaceRoot))
+        {
+            var globalJsonPath = Path.Combine(workspaceRoot, "global.json");
+            if (File.Exists(globalJsonPath) && seen.Add(globalJsonPath))
+            {
+                yield return globalJsonPath;
+            }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateDirectoriesUpToWorkspaceRoot(string startDirectory, string workspaceRoot)
+    {
+        var current = Path.GetFullPath(startDirectory)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normalizedWorkspaceRoot = string.IsNullOrWhiteSpace(workspaceRoot)
+            ? null
+            : Path.GetFullPath(workspaceRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        while (!string.IsNullOrWhiteSpace(current))
+        {
+            yield return current;
+
+            if (normalizedWorkspaceRoot is not null &&
+                string.Equals(current, normalizedWorkspaceRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                yield break;
+            }
+
+            var parent = Directory.GetParent(current)?.FullName?
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (string.IsNullOrWhiteSpace(parent) ||
+                string.Equals(parent, current, StringComparison.OrdinalIgnoreCase))
+            {
+                yield break;
+            }
+
+            current = parent;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateRestoreProjectPaths(string watchProjectPath)
+    {
+        var pending = new Stack<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        pending.Push(Path.GetFullPath(watchProjectPath));
+
+        while (pending.Count > 0)
+        {
+            var projectPath = pending.Pop();
+            if (!seen.Add(projectPath) || !File.Exists(projectPath))
+            {
+                continue;
+            }
+
+            yield return projectPath;
+
+            var projectDirectory = Path.GetDirectoryName(projectPath);
+            if (string.IsNullOrWhiteSpace(projectDirectory))
+            {
+                continue;
+            }
+
+            XDocument document;
+            try
+            {
+                document = XDocument.Load(projectPath);
+            }
+            catch
+            {
+                continue;
+            }
+
+            foreach (var projectReference in document
+                         .Descendants()
+                         .Where(static element => element.Name.LocalName == "ProjectReference"))
+            {
+                var includePath = projectReference.Attribute("Include")?.Value;
+                if (string.IsNullOrWhiteSpace(includePath))
+                {
+                    continue;
+                }
+
+                pending.Push(Path.GetFullPath(includePath, projectDirectory));
+            }
+        }
     }
 
     public static bool IsWorkspaceOwnedProcess(WorkspaceProcessSnapshot process, string watchProjectPath)
