@@ -85,12 +85,19 @@ if (app.Environment.IsDevelopment())
             ? parsed
             : (int?)null;
 
-        var snapshot = readiness.GetSnapshot() with
-        {
-            WatchIteration = iteration
-        };
+        var snapshot = readiness.GetSnapshot();
 
-        return Results.Ok(snapshot);
+        return Results.Ok(new
+        {
+            snapshot.IsReady,
+            snapshot.EnvironmentName,
+            snapshot.Summary,
+            WatchIteration = iteration,
+            RuntimePid = Environment.ProcessId,
+            snapshot.StartedAtUtc,
+            snapshot.LastChangedAtUtc,
+            snapshot.ActiveUrls
+        });
     });
 }
 

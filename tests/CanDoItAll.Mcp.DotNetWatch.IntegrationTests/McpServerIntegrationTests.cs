@@ -28,6 +28,7 @@ public sealed class McpServerIntegrationTests
         Assert.Equal(McpServerHarness.RepoRoot, envelope.Data!.WorkspaceRoot.AbsolutePath);
         Assert.Equal(Path.Combine(McpServerHarness.RepoRoot, "src", "CanDoItAll.Web", "CanDoItAll.Web.csproj"), envelope.Data.DefaultApp.ProjectPath);
         Assert.Contains(envelope.Data.TestProjects, project => string.Equals(project.AbsolutePath, Path.Combine(McpServerHarness.RepoRoot, "tests", "CanDoItAll.Tests.Unit", "CanDoItAll.Tests.Unit.csproj"), StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(envelope.Data.TestProjects, project => string.Equals(project.AbsolutePath, Path.Combine(McpServerHarness.RepoRoot, "tests", "CanDoItAll.Mcp.DotNetWatch.IntegrationTests", "CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj"), StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -65,6 +66,11 @@ public sealed class McpServerIntegrationTests
             Assert.True(status.Ok, status.Error?.Message);
             Assert.NotNull(status.Data);
             Assert.Equal(AppLifecycleState.Healthy, status.Data!.State);
+            Assert.NotNull(status.Data.Watch);
+            Assert.NotNull(status.Data.Watch!.WatcherPid);
+            Assert.NotNull(status.Data.Watch.RuntimePid);
+            Assert.NotEqual(status.Data.Watch.WatcherPid, status.Data.Watch.RuntimePid);
+            Assert.NotNull(status.Data.Watch.ConfirmedWatchIteration);
         }
         finally
         {
@@ -451,6 +457,88 @@ public sealed class McpServerIntegrationTests
     }
 
     [Fact]
+    public async Task TestsRun_CanTarget_IntegrationProject_WhileServerIsLive()
+    {
+        await using var harness = await McpServerHarness.CreateAsync();
+
+        var start = await harness.CallToolAsync<ToolEnvelope<AppStartData>>("candoitall_app_start");
+        Assert.True(start.Ok, start.Error?.Message);
+        Assert.NotNull(start.Data);
+
+        var originalSessionId = start.Data!.SessionId;
+        string? resumedSessionId = null;
+        var integrationProjectPath = Path.Combine(McpServerHarness.RepoRoot, "tests", "CanDoItAll.Mcp.DotNetWatch.IntegrationTests", "CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj");
+
+        try
+        {
+            var healthy = await harness.CallToolAsync<ToolEnvelope<AppWaitData>>(
+                "candoitall_app_wait",
+                new Dictionary<string, object?>
+                {
+                    ["sessionId"] = originalSessionId,
+                    ["condition"] = nameof(AppWaitCondition.Healthy),
+                    ["timeoutMs"] = 180000
+                });
+
+            Assert.True(healthy.Ok, healthy.Error?.Message);
+            Assert.True(healthy.Data!.Satisfied, healthy.Data.DiagnosticHint);
+
+            var run = await harness.CallToolAsync<ToolEnvelope<OperationStartData>>(
+                "candoitall_tests_run",
+                new Dictionary<string, object?>
+                {
+                    ["targetPath"] = integrationProjectPath,
+                    ["filter"] = "FullyQualifiedName=CanDoItAll.Mcp.DotNetWatch.IntegrationTests.McpServerIntegrationTests.WorkspaceInfo_UsesCurrentRepositoryConfiguration",
+                    ["timeoutMs"] = 300000
+                });
+
+            Assert.True(run.Ok, run.Error?.Message);
+            Assert.NotNull(run.Data);
+
+            var wait = await harness.CallToolAsync<ToolEnvelope<OperationWaitData>>(
+                "candoitall_operation_wait",
+                new Dictionary<string, object?>
+                {
+                    ["operationId"] = run.Data!.OperationId,
+                    ["timeoutMs"] = 300000
+                });
+
+            Assert.True(wait.Ok, wait.Error?.Message);
+            Assert.Equal(OperationState.Completed, wait.Data!.State);
+            Assert.True(wait.Data.ResumeOutcome.Attempted);
+            Assert.True(wait.Data.ResumeOutcome.Success);
+
+            resumedSessionId = wait.Data.ResumeOutcome.SessionId;
+            Assert.False(string.IsNullOrWhiteSpace(resumedSessionId));
+
+            var resumedHealthy = await harness.CallToolAsync<ToolEnvelope<AppWaitData>>(
+                "candoitall_app_wait",
+                new Dictionary<string, object?>
+                {
+                    ["sessionId"] = resumedSessionId!,
+                    ["condition"] = nameof(AppWaitCondition.Healthy),
+                    ["timeoutMs"] = 180000
+                });
+
+            Assert.True(resumedHealthy.Ok, resumedHealthy.Error?.Message);
+            Assert.True(resumedHealthy.Data!.Satisfied, resumedHealthy.Data.DiagnosticHint);
+        }
+        finally
+        {
+            var sessionToStop = resumedSessionId ?? originalSessionId;
+            var stop = await harness.CallToolAsync<ToolEnvelope<AppStopData>>(
+                "candoitall_app_stop",
+                new Dictionary<string, object?>
+                {
+                    ["sessionId"] = sessionToStop,
+                    ["force"] = true
+                });
+
+            Assert.True(stop.Ok, stop.Error?.Message);
+        }
+    }
+
+    [Fact]
     public async Task AppStart_Rejects_PathOutsideWorkspace()
     {
         await using var harness = await McpServerHarness.CreateAsync();
@@ -614,12 +702,7 @@ public sealed class McpServerIntegrationTests
         public static string RepoRoot { get; } = ResolveRepoRoot();
 
         public static string ServerAssemblyPath { get; } = Path.Combine(
-            RepoRoot,
-            "src",
-            "CanDoItAll.Mcp.DotNetWatch",
-            "bin",
-            "Debug",
-            "net10.0",
+            AppContext.BaseDirectory,
             "CanDoItAll.Mcp.DotNetWatch.dll");
 
         public static async Task<McpServerHarness> CreateAsync()

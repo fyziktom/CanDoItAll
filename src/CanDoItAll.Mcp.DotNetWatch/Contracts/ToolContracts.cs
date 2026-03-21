@@ -38,7 +38,34 @@ public enum AppWaitCondition
     Stopped,
     QuietSinceCursor,
     LogMatch,
-    RestartCompleted
+    RestartCompleted,
+    WatchSettled
+}
+
+public enum WatchProcessingState
+{
+    Idle,
+    Starting,
+    ChangeDetected,
+    EvaluatingProjects,
+    LoadingProjects,
+    Building,
+    Launching,
+    WaitingForChanges,
+    HotReloadSucceeded,
+    RestartRequired,
+    ChildExited,
+    BuildFailed,
+    RuntimeFaulted,
+    Stopped
+}
+
+public enum HotReloadOutcome
+{
+    None,
+    Succeeded,
+    Failed,
+    RestartRequired
 }
 
 public enum WhenAppRunningPolicy
@@ -99,7 +126,22 @@ public sealed record HealthData(
     DateTimeOffset? LastSuccessUtc,
     DateTimeOffset? LastFailureUtc,
     string? LastUrl,
-    string? Summary);
+    string? Summary,
+    bool IsReady,
+    int? WatchIteration,
+    int? RuntimePid);
+
+public sealed record WatchStatusData(
+    WatchProcessingState State,
+    string Summary,
+    bool PendingChange,
+    int? WatcherPid,
+    int? RuntimePid,
+    int? ExpectedWatchIteration,
+    int? ConfirmedWatchIteration,
+    HotReloadOutcome LastHotReloadOutcome,
+    long? LastActivitySequence,
+    DateTimeOffset? LastActivityUtc);
 
 public sealed record AppStatusData(
     string SessionId,
@@ -116,7 +158,8 @@ public sealed record AppStatusData(
     DateTimeOffset? LastStopUtc,
     long LastCursor,
     HealthData? Health,
-    IReadOnlyList<string> RecentEvents);
+    IReadOnlyList<string> RecentEvents,
+    WatchStatusData? Watch);
 
 public sealed record AppStartData(
     string SessionId,
@@ -128,7 +171,8 @@ public sealed record AppStartData(
     string ProjectPath,
     IReadOnlyList<string> ObservedUrls,
     long InitialCursor,
-    int? LastKnownPid);
+    int? LastKnownPid,
+    WatchStatusData? Watch);
 
 public sealed record AppStopData(
     string SessionId,
@@ -149,7 +193,9 @@ public sealed record AppWaitData(
     AppLifecycleState ObservedState,
     long FinalCursor,
     LogEntry? MatchedLogEntry,
-    string? DiagnosticHint);
+    string? DiagnosticHint,
+    HealthData? Health,
+    WatchStatusData? Watch);
 
 public sealed record AppLogsData(
     string SessionId,

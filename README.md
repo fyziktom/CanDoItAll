@@ -58,6 +58,12 @@ Playwright needs Chromium installed once per machine:
 powershell -ExecutionPolicy Bypass -File tests\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\playwright.ps1 install chromium
 ```
 
+## DotNet Watch MCP Notes
+
+- The `CanDoItAll.Mcp.DotNetWatch` server now exposes a dedicated `watch` block on app status and wait results so an agent can see watcher PID vs runtime PID, pending generation state, and confirmed watch iteration.
+- Use `candoitall_app_wait` with `condition=WatchSettled` when you want a strong "safe to refresh" contract after a live edit instead of relying on raw log quiet periods alone.
+- Managed `build` and `test` operations now use isolated artifacts under `.mcp-state/artifacts/<operationId>/` so the live MCP server can validate its own projects without locking the default `bin/obj` graph.
+
 ## Local Data and Restore
 
 - Workbench tab state is stored in browser local storage under `candoitall.workbench.session`.

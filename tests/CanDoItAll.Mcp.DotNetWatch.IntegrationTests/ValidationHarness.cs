@@ -26,12 +26,7 @@ internal sealed class ValidationHarness : IAsyncDisposable
     public static string RepoRoot { get; } = ResolveRepoRoot();
 
     public static string ServerAssemblyPath { get; } = Path.Combine(
-        RepoRoot,
-        "src",
-        "CanDoItAll.Mcp.DotNetWatch",
-        "bin",
-        "Debug",
-        "net10.0",
+        AppContext.BaseDirectory,
         "CanDoItAll.Mcp.DotNetWatch.dll");
 
     public static string SettingsPath { get; } = Path.Combine(RepoRoot, "CanDoItAll.Mcp.DotNetWatch.settings.json");

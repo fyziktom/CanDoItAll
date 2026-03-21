@@ -103,8 +103,112 @@ public sealed class ValidationMatrixTests
             Assert.True(quiet.Ok, quiet.Error?.Message);
             Assert.True(quiet.Data!.Satisfied, quiet.Data.DiagnosticHint);
             Assert.True(quiet.Data.FinalCursor > baseline.Data.LastCursor);
+            Assert.NotNull(quiet.Data.Watch);
+            Assert.False(quiet.Data.Watch!.PendingChange);
 
             await WaitForHealthyAsync(harness, start.Data.SessionId);
+
+            await Task.Delay(TimeSpan.FromSeconds(3));
+            var trailingLogs = await harness.CallToolAsync<ToolEnvelope<AppLogsData>>(
+                "candoitall_app_logs",
+                new Dictionary<string, object?>
+                {
+                    ["sessionId"] = start.Data.SessionId,
+                    ["cursor"] = quiet.Data.FinalCursor
+                });
+
+            Assert.True(trailingLogs.Ok, trailingLogs.Error?.Message);
+            Assert.Empty(trailingLogs.Data!.Entries);
+        }
+        finally
+        {
+            if (File.Exists(tempFilePath))
+            {
+                File.Delete(tempFilePath);
+            }
+
+            await StopSessionAsync(harness, start.Data!.SessionId);
+        }
+    }
+
+    [Fact]
+    public async Task HealthyWait_DoesNotReuse_StaleState_DuringRestartRequiredChange()
+    {
+        await using var harness = await ValidationHarness.CreateAsync();
+        var tempFilePath = Path.Combine(WebProjectDirectory, "McpRestartRequiredFixture.cs");
+
+        var start = await harness.CallToolAsync<ToolEnvelope<AppStartData>>("candoitall_app_start");
+        Assert.True(start.Ok, start.Error?.Message);
+
+        try
+        {
+            await WaitForHealthyAsync(harness, start.Data!.SessionId);
+            var baseline = await harness.CallToolAsync<ToolEnvelope<AppStatusData>>(
+                "candoitall_app_status",
+                new Dictionary<string, object?> { ["sessionId"] = start.Data.SessionId });
+            var baselineCursor = baseline.Data!.LastCursor;
+
+            await File.WriteAllTextAsync(
+                tempFilePath,
+                """
+                namespace CanDoItAll.Web;
+                internal static class McpRestartRequiredFixture
+                {
+                    public const string Value = "RestartRequired";
+                }
+                """);
+
+            await WaitForWatchSettledAsync(harness, start.Data.SessionId, baselineCursor);
+            var afterAdd = await harness.CallToolAsync<ToolEnvelope<AppStatusData>>(
+                "candoitall_app_status",
+                new Dictionary<string, object?> { ["sessionId"] = start.Data.SessionId });
+
+            Assert.True(afterAdd.Ok, afterAdd.Error?.Message);
+            Assert.NotNull(afterAdd.Data);
+            Assert.True(
+                afterAdd.Data!.SessionVersion > baseline.Data.SessionVersion,
+                $"Expected the add-file generation to advance beyond baseline. Baseline={baseline.Data.SessionVersion}, AfterAdd={afterAdd.Data.SessionVersion}.");
+            File.Delete(tempFilePath);
+
+            var restartDetected = await harness.CallToolAsync<ToolEnvelope<AppWaitData>>(
+                "candoitall_app_wait",
+                new Dictionary<string, object?>
+                {
+                    ["sessionId"] = start.Data.SessionId,
+                    ["condition"] = nameof(AppWaitCondition.LogMatch),
+                    ["cursor"] = afterAdd.Data.LastCursor,
+                    ["logPattern"] = "Restart is needed to apply the changes|Building",
+                    ["timeoutMs"] = 180000
+                });
+
+            Assert.True(restartDetected.Ok, restartDetected.Error?.Message);
+            Assert.True(restartDetected.Data!.Satisfied, restartDetected.Data.DiagnosticHint);
+
+            var healthy = await harness.CallToolAsync<ToolEnvelope<AppWaitData>>(
+                "candoitall_app_wait",
+                new Dictionary<string, object?>
+                {
+                    ["sessionId"] = start.Data.SessionId,
+                    ["condition"] = nameof(AppWaitCondition.Healthy),
+                    ["timeoutMs"] = 180000
+                });
+
+            Assert.True(healthy.Ok, healthy.Error?.Message);
+            Assert.True(healthy.Data!.Satisfied, healthy.Data.DiagnosticHint);
+            Assert.NotNull(healthy.Data.Watch);
+            Assert.False(healthy.Data.Watch!.PendingChange);
+            Assert.NotNull(healthy.Data.Watch.RuntimePid);
+
+            var current = await harness.CallToolAsync<ToolEnvelope<AppStatusData>>(
+                "candoitall_app_status",
+                new Dictionary<string, object?> { ["sessionId"] = start.Data.SessionId });
+
+            Assert.True(current.Ok, current.Error?.Message);
+            Assert.NotNull(current.Data);
+            Assert.False(current.Data!.Watch!.PendingChange);
+            Assert.True(
+                current.Data.SessionVersion > afterAdd.Data.SessionVersion,
+                $"Healthy wait should only complete after the replacement runtime generation advances. Baseline={baseline.Data.SessionVersion}, AfterAdd={afterAdd.Data.SessionVersion}, Final={current.Data.SessionVersion}.");
         }
         finally
         {
@@ -345,6 +449,24 @@ public sealed class ValidationMatrixTests
 
         Assert.True(wait.Ok, wait.Error?.Message);
         Assert.True(wait.Data!.Satisfied, wait.Data.DiagnosticHint);
+    }
+
+    private static async Task WaitForWatchSettledAsync(ValidationHarness harness, string sessionId, long? cursor = null)
+    {
+        var wait = await harness.CallToolAsync<ToolEnvelope<AppWaitData>>(
+            "candoitall_app_wait",
+            new Dictionary<string, object?>
+            {
+                ["sessionId"] = sessionId,
+                ["condition"] = nameof(AppWaitCondition.WatchSettled),
+                ["cursor"] = cursor,
+                ["timeoutMs"] = 180000
+            });
+
+        Assert.True(wait.Ok, wait.Error?.Message);
+        Assert.True(wait.Data!.Satisfied, wait.Data.DiagnosticHint);
+        Assert.NotNull(wait.Data.Watch);
+        Assert.False(wait.Data.Watch!.PendingChange);
     }
 
     private static async Task StopSessionAsync(ValidationHarness harness, string sessionId)

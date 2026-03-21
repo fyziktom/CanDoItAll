@@ -48,6 +48,7 @@ builder.Services.AddSingleton(serviceProvider => new FileLogStore(serviceProvide
 builder.Services.AddSingleton<PathGuard>();
 builder.Services.AddSingleton<EnvironmentOverlayFilter>();
 builder.Services.AddSingleton<StaleProcessRegistry>();
+builder.Services.AddSingleton<ServerInstanceRegistry>();
 builder.Services.AddSingleton<IProcessCommandRunner, ProcessCommandRunner>();
         builder.Services.AddSingleton<IPlatformProcessTreeTerminator>(static serviceProvider =>
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
@@ -72,6 +73,7 @@ builder.Services.AddSingleton<StartFailureDiagnoser>();
             .WithTools<CanDoItAllTools>();
 
         using var host = builder.Build();
+        await using var registration = await host.Services.GetRequiredService<ServerInstanceRegistry>().RegisterCurrentAsync(CancellationToken.None);
         await RunStartupCleanupAsync(host.Services);
         await host.RunAsync();
     }
