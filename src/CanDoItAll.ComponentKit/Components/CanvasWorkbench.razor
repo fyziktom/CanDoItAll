@@ -8,13 +8,16 @@
     <div class="cw-workbench-frame">
         <div class="cw-toolbar">
             <div class="cw-toolbar-group cw-toolbar-group--left">
-                <button type="button"
-                        class="cw-toolbar-action cw-toolbar-action--primary"
-                        @ref="quickCreateButton"
-                        aria-label="Open quick create actions"
-                        @onclick="OpenQuickCreateMenuAsync">
-                    <span>+</span>
-                </button>
+                @if (Surface.Chrome.ShowQuickCreateRail && Surface.Chrome.QuickCreateActions.Count > 0)
+                {
+                    <button type="button"
+                            class="cw-toolbar-action cw-toolbar-action--primary"
+                            @ref="quickCreateButton"
+                            aria-label="Open quick create actions"
+                            @onclick="OpenQuickCreateMenuAsync">
+                        <span>+</span>
+                    </button>
+                }
 
                 @if (Surface.Chrome.ShowFocusAction)
                 {
@@ -211,6 +214,10 @@
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.create", host, objectReference, Surface);
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
+            if (ShouldAutoFitInitialView())
+            {
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.fitView", host);
+            }
             initialized = true;
             MarkSurfaceApplied();
             return;
@@ -451,6 +458,25 @@
         surfaceSyncPending = false;
     }
 
+    private bool ShouldAutoFitInitialView()
+    {
+        if (Surface.Nodes.Count == 0)
+        {
+            return false;
+        }
+
+        if (Surface.UiState.ManualPositions.Count > 0)
+        {
+            return false;
+        }
+
+        var usesDefaultViewport = Math.Abs(Surface.UiState.Zoom - 1d) < 0.001d
+            && Math.Abs(Surface.UiState.PanX - 90d) < 0.001d
+            && Math.Abs(Surface.UiState.PanY - 110d) < 0.001d;
+
+        return usesDefaultViewport;
+    }
+
     public async Task OpenCreateDialogAsync(CanvasWorkbenchAction action, CanvasWorkbenchCreateActionRequest request)
     {
         if (!initialized)
@@ -472,7 +498,17 @@
     {
         if (initialized)
         {
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.dispose", host);
+            try
+            {
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, false);
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.dispose", host);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+            catch (JSException)
+            {
+            }
         }
 
         objectReference?.Dispose();
