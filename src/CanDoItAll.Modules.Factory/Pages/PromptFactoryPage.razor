@@ -28,15 +28,20 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 Title="Prompt session workbench"
                 Description="Operate the prompt flow from the shared canvas stage, edit steps from the mirrored inspector, and keep governance, preview, and send actions in supporting panels." />
 
-    <div class="flex flex-wrap gap-2">
+    <div class="pf-step-rail">
         @for (var index = 0; index < wizardSteps.Length; index++)
         {
-            var isActive = editor.WizardStepIndex == index;
+            var stepIndex = index;
+            var isActive = CurrentWizardStep == index;
             <button type="button"
-                    class="cw-button"
-                    data-tone="@(isActive ? "accent" : "ghost")"
-                    @onclick="@(() => MoveToStepAsync(index))">
-                @(index + 1). @wizardSteps[index]
+                    class="pf-step-pill @(isActive ? "is-active" : string.Empty)"
+                    @onclick="@(() => MoveToStepAsync(stepIndex))">
+                <span class="pf-step-pill__index">@($"{index + 1:00}")</span>
+                <span class="pf-step-pill__body">
+                    <strong>@wizardSteps[index]</strong>
+                    <small>@ResolveWizardStepDescription(index)</small>
+                </span>
+                <span class="pf-step-pill__meta">@ResolveWizardStepMeta(index)</span>
             </button>
         }
     </div>
@@ -437,6 +442,788 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 }
             </Inspector>
             <Supporting>
+                @if (IsContextStep)
+                {
+                    <section class="cw-panel-card pf-step-hero pf-wide-card">
+                        <p class="cw-panel-kicker">Context</p>
+                        <h3 class="cw-panel-title">Frame the session before the canvas gets busy</h3>
+                        <p class="cw-panel-copy">Context setup stays in the canvas and inspector. The supporting lane only mirrors the active frame so users do not scroll through duplicate forms before they can start composing.</p>
+                        <div class="cw-summary-grid">
+                            <div class="cw-summary-tile">
+                                <span>Session</span>
+                                <strong>@(string.IsNullOrWhiteSpace(editor.SessionName) ? "Untitled session" : editor.SessionName)</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Project</span>
+                                <strong>@ResolveSelectedProjectName()</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Blueprint</span>
+                                <strong>@ResolveSelectedBlueprintName()</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Flow</span>
+                                <strong>@ResolveSelectedFlowName()</strong>
+                            </div>
+                        </div>
+                        <div class="cw-button-row">
+                            <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session state</button>
+                            <button type="button" class="cw-button" data-tone="ghost" @onclick="SelectRootNodeAsync">Focus session</button>
+                            <button type="button" class="cw-button" data-tone="ghost" @onclick="() => MoveToStepAsync(1)">Continue to governance</button>
+                        </div>
+                    </section>
+
+                    <section class="cw-panel-card pf-wide-card pf-workspace-card">
+                        <div class="pf-card-header">
+                            <div class="pf-card-header__copy">
+                                <p class="cw-panel-kicker">Context workspace</p>
+                                <h3 class="cw-panel-title">Use one support view at a time</h3>
+                                <p class="cw-panel-copy">@ResolveContextWorkspaceSummary()</p>
+                            </div>
+                            <div class="pf-tab-strip" role="tablist" aria-label="Context workspace views">
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(IsContextView(ContextViewOverview) ? "true" : "false")"
+                                        class="pf-tab-button @(IsContextView(ContextViewOverview) ? "is-active" : string.Empty)"
+                                        @onclick="() => SetContextWorkspaceView(ContextViewOverview)">
+                                    Overview
+                                </button>
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(IsContextView(ContextViewLibrary) ? "true" : "false")"
+                                        class="pf-tab-button @(IsContextView(ContextViewLibrary) ? "is-active" : string.Empty)"
+                                        @onclick="() => SetContextWorkspaceView(ContextViewLibrary)">
+                                    Library
+                                </button>
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(IsContextView(ContextViewStarters) ? "true" : "false")"
+                                        class="pf-tab-button @(IsContextView(ContextViewStarters) ? "is-active" : string.Empty)"
+                                        @onclick="() => SetContextWorkspaceView(ContextViewStarters)">
+                                    Starters
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (IsContextView(ContextViewOverview))
+                        {
+                            <div class="pf-two-column">
+                                <div class="pf-section-stack">
+                                    <article class="pf-group-card">
+                                        <strong>Current working frame</strong>
+                                        <div class="cw-summary-grid">
+                                            <div class="cw-summary-tile">
+                                                <span>Provider</span>
+                                                <strong>@ResolveSelectedProviderName()</strong>
+                                            </div>
+                                            <div class="cw-summary-tile">
+                                                <span>Phase</span>
+                                                <strong>@(string.IsNullOrWhiteSpace(editor.Phase) ? "Not set" : editor.Phase)</strong>
+                                            </div>
+                                            <div class="cw-summary-tile">
+                                                <span>Inputs</span>
+                                                <strong>@editor.SessionAttachments.Count</strong>
+                                            </div>
+                                            <div class="cw-summary-tile">
+                                                <span>Warnings</span>
+                                                <strong>@editor.Warnings.Count</strong>
+                                            </div>
+                                        </div>
+                                        <small>Pick blueprint and flow from the canvas or inspector first. Resource assembly and detailed governance move to later steps so the page stays short while the user is still orienting.</small>
+                                    </article>
+
+                                    <article class="pf-group-card">
+                                        <strong>Prompt library pack</strong>
+                                        <p>@($"{libraryCatalog.ComponentCount} components, {libraryCatalog.FlowCount} flows, and {libraryCatalog.BlueprintCount} blueprints are available to the wizard.")</p>
+                                        <div class="cw-chip-row">
+                                            <span class="cw-node__chip">@($"{OrderedLibraryGroups.Count} groups")</span>
+                                            <span class="cw-node__chip">Grouped canvas menu</span>
+                                            <span class="cw-node__chip">Prompt-library import active</span>
+                                        </div>
+                                    </article>
+                                </div>
+
+                                <div class="pf-section-stack">
+                                    <article class="pf-group-card">
+                                        <strong>Recommended next moves</strong>
+                                        <div class="pf-next-list">
+                                            <div class="pf-next-step">Confirm the project and provider in the inspector so the session has a delivery frame.</div>
+                                            <div class="pf-next-step">Open <strong>Starters</strong> to apply a blueprint or flow directly instead of browsing long dropdowns.</div>
+                                            <div class="pf-next-step">Continue to <strong>Governance</strong> only after the base prompt shape is set.</div>
+                                        </div>
+                                        <div class="cw-button-row">
+                                            <button type="button" class="cw-button" data-tone="accent" @onclick="() => SetContextWorkspaceView(ContextViewStarters)">Open starters</button>
+                                            <button type="button" class="cw-button" data-tone="ghost" @onclick="() => SetContextWorkspaceView(ContextViewLibrary)">Open library</button>
+                                            <button type="button" class="cw-button" data-tone="ghost" @onclick="() => MoveToStepAsync(1)">Go to governance</button>
+                                        </div>
+                                    </article>
+
+                                    <article class="pf-group-card">
+                                        <strong>Current selection path</strong>
+                                        <p>The support lane now mirrors the active context in one glance instead of repeating every form below the canvas.</p>
+                                        <div class="cw-chip-row">
+                                            <span class="cw-node__chip">@($"Project: {ResolveSelectedProjectName()}")</span>
+                                            <span class="cw-node__chip">@($"Blueprint: {ResolveSelectedBlueprintName()}")</span>
+                                            <span class="cw-node__chip">@($"Flow: {ResolveSelectedFlowName()}")</span>
+                                            <span class="cw-node__chip">@($"Provider: {ResolveSelectedProviderName()}")</span>
+                                        </div>
+                                    </article>
+                                </div>
+                            </div>
+                        }
+                        else if (IsContextView(ContextViewLibrary))
+                        {
+                            <div class="pf-toolbar">
+                                <input class="cw-text-input pf-toolbar__search"
+                                       placeholder="Search prompt library groups"
+                                       @bind="catalogSearchText"
+                                       @bind:event="oninput" />
+                                <span class="pf-accordion-meta">@($"{FilteredLibraryGroups.Count} groups")</span>
+                            </div>
+                            @if (FilteredLibraryGroups.Count == 0)
+                            {
+                                <div class="pf-empty">No prompt-library groups match the current search.</div>
+                            }
+                            else
+                            {
+                                <div class="pf-scroll-panel pf-scroll-panel--tall">
+                                    <div class="pf-group-grid">
+                                        @foreach (var group in FilteredLibraryGroups)
+                                        {
+                                            <article class="pf-group-card">
+                                                <strong>@group.Name</strong>
+                                                <p>@group.Summary</p>
+                                                <small>@group.Purpose</small>
+                                                <div class="cw-chip-row">
+                                                    <span class="cw-node__chip">@($"{group.ComponentCount} components")</span>
+                                                    <span class="cw-node__chip">@group.UiMode</span>
+                                                    <span class="cw-node__chip">@group.Key</span>
+                                                </div>
+                                            </article>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else if (IsContextView(ContextViewStarters))
+                        {
+                            <div class="pf-toolbar">
+                                <input class="cw-text-input pf-toolbar__search"
+                                       placeholder="Search blueprints and flows"
+                                       @bind="starterSearchText"
+                                       @bind:event="oninput" />
+                                <span class="pf-accordion-meta">@($"{FilteredBlueprintStarters.Count} blueprints | {FilteredFlowStarters.Count} flows")</span>
+                            </div>
+
+                            <div class="pf-two-column">
+                                <div class="pf-section-stack">
+                                    <div class="pf-card-header">
+                                        <div class="pf-card-header__copy">
+                                            <p class="cw-panel-kicker">Blueprint starters</p>
+                                            <h3 class="cw-panel-title">Apply a blueprint directly</h3>
+                                            <p class="cw-panel-copy">Use starters to set the base prompt type without leaving the current page context.</p>
+                                        </div>
+                                    </div>
+                                    @if (FilteredBlueprintStarters.Count == 0)
+                                    {
+                                        <div class="pf-empty">No blueprints match the current search.</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="pf-scroll-panel pf-scroll-panel--tall">
+                                            <div class="pf-select-stack">
+                                                @foreach (var blueprint in FilteredBlueprintStarters)
+                                                {
+                                                    <article class="pf-action-card @(editor.BlueprintId == blueprint.Id ? "is-selected" : string.Empty)">
+                                                        <div class="pf-action-card__header">
+                                                            <div class="pf-action-card__body">
+                                                                <strong>@blueprint.Name</strong>
+                                                                <span>@blueprint.Summary</span>
+                                                            </div>
+                                                            <span class="pf-accordion-meta">@(editor.BlueprintId == blueprint.Id ? "Selected" : blueprint.PromptType)</span>
+                                                        </div>
+                                                        <div class="cw-chip-row">
+                                                            <span class="cw-node__chip">@blueprint.Key</span>
+                                                            <span class="cw-node__chip">@blueprint.PromptType</span>
+                                                            @if (blueprint.RecommendedFlowTemplateId.HasValue)
+                                                            {
+                                                                <span class="cw-node__chip">Loads recommended flow</span>
+                                                            }
+                                                        </div>
+                                                        <div class="cw-button-row">
+                                                            @if (editor.BlueprintId == blueprint.Id)
+                                                            {
+                                                                <button type="button" class="cw-button" data-tone="ghost" disabled>Selected</button>
+                                                            }
+                                                            else
+                                                            {
+                                                                <button type="button" class="cw-button" data-tone="accent" @onclick="() => SelectBlueprintByKeyAsync(blueprint.Key)">Use blueprint</button>
+                                                            }
+                                                        </div>
+                                                    </article>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="pf-section-stack">
+                                    <div class="pf-card-header">
+                                        <div class="pf-card-header__copy">
+                                            <p class="cw-panel-kicker">Flow starters</p>
+                                            <h3 class="cw-panel-title">Load a flow without hunting in the inspector</h3>
+                                            <p class="cw-panel-copy">Starter flows front-load the most common delivery patterns and immediately load their block sets.</p>
+                                        </div>
+                                    </div>
+                                    @if (FilteredFlowStarters.Count == 0)
+                                    {
+                                        <div class="pf-empty">No flow templates match the current search.</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="pf-scroll-panel pf-scroll-panel--tall">
+                                            <div class="pf-select-stack">
+                                                @foreach (var template in FilteredFlowStarters)
+                                                {
+                                                    <article class="pf-action-card @(editor.FlowTemplateId == template.Id ? "is-selected" : string.Empty)">
+                                                        <div class="pf-action-card__header">
+                                                            <div class="pf-action-card__body">
+                                                                <strong>@template.Name</strong>
+                                                                <span>@($"{template.BlockIds.Count} blocks | {template.AgentSequence.Count} agents")</span>
+                                                                <small>@($"{string.Join(" -> ", template.AgentSequence.Select(agent => agent.Phase).Take(4))}{(template.AgentSequence.Count > 4 ? " -> ..." : string.Empty)}")</small>
+                                                            </div>
+                                                            <span class="pf-accordion-meta">@(editor.FlowTemplateId == template.Id ? "Selected" : "Starter")</span>
+                                                        </div>
+                                                        <div class="cw-chip-row">
+                                                            <span class="cw-node__chip">@template.Key</span>
+                                                            <span class="cw-node__chip">@($"{template.BlockIds.Count} blocks")</span>
+                                                            <span class="cw-node__chip">@($"{template.AgentSequence.Count} agents")</span>
+                                                        </div>
+                                                        <div class="cw-button-row">
+                                                            @if (editor.FlowTemplateId == template.Id)
+                                                            {
+                                                                <button type="button" class="cw-button" data-tone="ghost" disabled>Selected</button>
+                                                            }
+                                                            else
+                                                            {
+                                                                <button type="button" class="cw-button" data-tone="accent" @onclick="() => SelectFlowByKeyAsync(template.Key)">Use flow</button>
+                                                            }
+                                                        </div>
+                                                    </article>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </section>
+                }
+                else if (IsGovernanceStep)
+                {
+                    <section class="cw-panel-card pf-step-hero pf-wide-card">
+                        <p class="cw-panel-kicker">Governance</p>
+                        <h3 class="cw-panel-title">Curate reusable blocks without drowning in a single list</h3>
+                        <p class="cw-panel-copy">The old screen forced every component, editor form, and template checklist onto one page. This version keeps selection fast, shows the current working set, and moves block authoring behind explicit admin toggles.</p>
+                        <div class="cw-summary-grid">
+                            <div class="cw-summary-tile">
+                                <span>Selected blocks</span>
+                                <strong>@editor.SelectedBlockIds.Count</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Available blocks</span>
+                                <strong>@blocks.Count</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Groups</span>
+                                <strong>@OrderedLibraryGroups.Count</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Mode</span>
+                                <strong>@(editor.HasCustomizedBlocks ? "Customized session" : "Library defaults")</strong>
+                            </div>
+                        </div>
+                        <div class="cw-button-row">
+                            <button type="button" class="cw-button" data-tone="accent" @onclick="ApplyRecommendationsAsync">Apply recommendations</button>
+                            <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session state</button>
+                            <button type="button" class="cw-button" data-tone="ghost" @onclick="CreateNewBlock">New block</button>
+                        </div>
+                    </section>
+
+                    <section class="cw-panel-card">
+                        <p class="cw-panel-kicker">Selection filters</p>
+                        <h3 class="cw-panel-title">Search and narrow the working set</h3>
+                        <div class="pf-toolbar">
+                            <input class="cw-text-input pf-toolbar__search" @bind="blockSearchText" placeholder="Search blocks, tags, or template tokens" />
+                            <label class="pf-toggle">
+                                <input type="checkbox" @bind="showSelectedBlocksOnly" />
+                                <span>Selected only</span>
+                            </label>
+                        </div>
+                        <p class="cw-panel-copy">Grouped accordions open the first group by default and expand during search, so the user can scan large libraries without a page-length checkbox wall.</p>
+                    </section>
+
+                    <section class="cw-panel-card">
+                        <p class="cw-panel-kicker">Working set</p>
+                        <h3 class="cw-panel-title">Selected blocks</h3>
+                        @if (SelectedGovernanceBlocks.Count == 0)
+                        {
+                            <div class="pf-empty">No blocks are selected yet. Use the grouped list to build a focused governance set.</div>
+                        }
+                        else
+                        {
+                            <div class="pf-scroll-panel">
+                                <div class="cw-list">
+                                    @foreach (var block in SelectedGovernanceBlocks)
+                                    {
+                                        <div class="cw-list-item">
+                                            <strong>@block.Name</strong>
+                                            <span>@(string.IsNullOrWhiteSpace(block.Summary) ? ResolveBlockListSummary(block) : $"{ResolveBlockListSummary(block)} | {block.Summary}")</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </section>
+
+                    <section class="cw-panel-card">
+                        <div class="pf-card-header">
+                            <div class="pf-card-header__copy">
+                                <p class="cw-panel-kicker">Template governance</p>
+                                <h3 class="cw-panel-title">Flow templates stay visible, not overwhelming</h3>
+                            </div>
+                            <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="CreateNewTemplate">New template</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => templateAdminExpanded = !templateAdminExpanded)">@(templateAdminExpanded ? "Hide editor" : "Open editor")</button>
+                            </div>
+                        </div>
+                        @if (templates.Count == 0)
+                        {
+                            <div class="pf-empty">No flow templates are available.</div>
+                        }
+                        else
+                        {
+                            <div class="pf-scroll-panel">
+                                <div class="cw-list">
+                                    @foreach (var template in templates.OrderBy(item => item.OrderIndex))
+                                    {
+                                        <div class="cw-list-item">
+                                            <strong>@template.Name</strong>
+                                            <span>@($"{template.BlockIds.Count} blocks | {template.AgentSequence.Count} agents")</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </section>
+
+                    <section class="cw-panel-card pf-wide-card">
+                        <div class="pf-card-header">
+                            <div class="pf-card-header__copy">
+                                <p class="cw-panel-kicker">Grouped components</p>
+                                <h3 class="cw-panel-title">Governance explorer</h3>
+                                <p class="cw-panel-copy">Blocks are grouped by imported catalog sections. Each group keeps its own compact checklist and selection count.</p>
+                            </div>
+                        </div>
+                        @if (GovernanceBlockGroups.Count == 0)
+                        {
+                            <div class="pf-empty">No blocks match the current filter.</div>
+                        }
+                        else
+                        {
+                            <div class="pf-scroll-panel pf-scroll-panel--tall">
+                                <div class="cw-accordion-stack">
+                                    @foreach (var group in GovernanceBlockGroups)
+                                    {
+                                        <details class="cw-accordion" open="@ShouldExpandGovernanceGroup(group)">
+                                            <summary class="cw-accordion__summary">
+                                                <span>
+                                                    <strong>@group.Name</strong>
+                                                    <small>@group.Purpose</small>
+                                                </span>
+                                                <span class="pf-accordion-meta">@($"{group.SelectedCount} selected / {group.Blocks.Count}")</span>
+                                            </summary>
+                                            <div class="cw-accordion__body">
+                                                <div class="pf-select-stack">
+                                                    @foreach (var block in group.Blocks)
+                                                    {
+                                                        var isSelected = editor.SelectedBlockIds.Contains(block.Id);
+                                                        <label class="pf-checklist-item @(isSelected ? "is-selected" : string.Empty)">
+                                                            <span class="pf-checklist-item__body">
+                                                                <strong>@block.Name</strong>
+                                                                <span>@(string.IsNullOrWhiteSpace(block.Summary) ? ResolveBlockListSummary(block) : $"{ResolveBlockListSummary(block)} | {block.Summary}")</span>
+                                                            </span>
+                                                            <input type="checkbox"
+                                                                   checked="@isSelected"
+                                                                   @onchange="args => ToggleBlock(block.Id, ReadCheckboxValue(args))" />
+                                                        </label>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </details>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </section>
+
+                    <section class="cw-panel-card pf-wide-card">
+                        <div class="pf-card-header">
+                            <div class="pf-card-header__copy">
+                                <p class="cw-panel-kicker">Block administration</p>
+                                <h3 class="cw-panel-title">Edit reusable blocks only when needed</h3>
+                                <p class="cw-panel-copy">The editor is intentionally hidden by default. That keeps curation and authoring separate, which cuts a large chunk of page height from the normal workflow.</p>
+                            </div>
+                            <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => blockAdminExpanded = !blockAdminExpanded)">@(blockAdminExpanded ? "Hide block editor" : "Open block editor")</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="CreateNewBlock">New block</button>
+                                @foreach (var block in blocks.Take(4))
+                                {
+                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => EditBlockAsync(block.Id))">@block.Name</button>
+                                }
+                            </div>
+                        </div>
+                        @if (blockAdminExpanded)
+                        {
+                            <div class="cw-form-grid">
+                                <div class="cw-form-field">
+                                    <label>Block name</label>
+                                    <input class="cw-text-input" @bind="blockEditor.Name" />
+                                </div>
+                                <div class="cw-form-field">
+                                    <label>Kind</label>
+                                    <select class="cw-select" @bind="blockEditor.BlockKind">
+                                        @foreach (var kind in Enum.GetValues<PromptBlockKind>())
+                                        {
+                                            <option value="@kind">@kind</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="cw-form-field">
+                                    <label>Summary</label>
+                                    <textarea class="cw-textarea" @bind="blockEditor.Summary"></textarea>
+                                </div>
+                                <div class="cw-form-field">
+                                    <label>Reusable content</label>
+                                    <textarea class="cw-textarea" @bind="blockEditor.Content"></textarea>
+                                </div>
+                                <div class="cw-form-grid cw-form-grid--split">
+                                    <div class="cw-form-field">
+                                        <label>Prompt types</label>
+                                        <input class="cw-text-input" @bind="blockEditor.PromptTypes" />
+                                    </div>
+                                    <div class="cw-form-field">
+                                        <label>Blueprints</label>
+                                        <input class="cw-text-input" @bind="blockEditor.Blueprints" />
+                                    </div>
+                                    <div class="cw-form-field">
+                                        <label>Phases</label>
+                                        <input class="cw-text-input" @bind="blockEditor.Phases" />
+                                    </div>
+                                </div>
+                                <label class="pf-checklist-item">
+                                    <span class="pf-checklist-item__body">
+                                        <strong>Recommended by default</strong>
+                                        <span>Make this block part of the seeded governance set.</span>
+                                    </span>
+                                    <input type="checkbox" @bind="blockEditor.IsRecommendedByDefault" />
+                                </label>
+                                <div class="cw-button-row">
+                                    <button type="button" class="cw-button" data-tone="primary" @onclick="SaveBlockAsync">Save block</button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="pf-empty">Open the block editor only when the user needs to author or modify shared components.</div>
+                        }
+                    </section>
+
+                    <section class="cw-panel-card pf-wide-card">
+                        <div class="pf-card-header">
+                            <div class="pf-card-header__copy">
+                                <p class="cw-panel-kicker">Template administration</p>
+                                <h3 class="cw-panel-title">Keep template editing behind an explicit action</h3>
+                                <p class="cw-panel-copy">Template governance still exists, but it no longer expands into another full-length checklist unless the user opens it.</p>
+                            </div>
+                            <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => templateAdminExpanded = !templateAdminExpanded)">@(templateAdminExpanded ? "Hide template editor" : "Open template editor")</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="CreateNewTemplate">New template</button>
+                                @foreach (var template in templates.Take(4))
+                                {
+                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => EditTemplateAsync(template.Id))">@template.Name</button>
+                                }
+                            </div>
+                        </div>
+                        @if (templateAdminExpanded)
+                        {
+                            <div class="cw-form-grid">
+                                <div class="cw-form-field">
+                                    <label>Template name</label>
+                                    <input class="cw-text-input" @bind="templateEditor.Name" />
+                                </div>
+                                <div class="cw-form-field">
+                                    <label>Summary</label>
+                                    <textarea class="cw-textarea" @bind="templateEditor.Summary"></textarea>
+                                </div>
+                                <div class="cw-form-field">
+                                    <label>Recommended prompt types</label>
+                                    <input class="cw-text-input" @bind="templateEditor.RecommendedPromptTypes" />
+                                </div>
+                                <div class="cw-form-field">
+                                    <label>Included blocks</label>
+                                    <div class="pf-scroll-panel">
+                                        <div class="pf-select-stack">
+                                            @foreach (var block in blocks)
+                                            {
+                                                var isSelected = templateEditor.SelectedBlockIds.Contains(block.Id);
+                                                <label class="pf-checklist-item @(isSelected ? "is-selected" : string.Empty)">
+                                                    <span class="pf-checklist-item__body">
+                                                        <strong>@block.Name</strong>
+                                                        <span>@ResolveBlockListSummary(block)</span>
+                                                    </span>
+                                                    <input type="checkbox"
+                                                           checked="@isSelected"
+                                                           @onchange="args => ToggleTemplateBlock(block.Id, ReadCheckboxValue(args))" />
+                                                </label>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="cw-button-row">
+                                    <button type="button" class="cw-button" data-tone="primary" @onclick="SaveTemplateAsync">Save template</button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="pf-empty">Open the template editor when flow governance needs real authoring, not during normal block selection.</div>
+                        }
+                    </section>
+                }
+                else if (IsAssemblyStep)
+                {
+                    <section class="cw-panel-card pf-step-hero pf-wide-card">
+                        <p class="cw-panel-kicker">Assembly</p>
+                        <h3 class="cw-panel-title">Build from a compact context pack instead of another long page</h3>
+                        <p class="cw-panel-copy">Assembly focuses on two things: the prompt-session inputs attached from the canvas and the project resources selected for context. Everything else is summarized so the user can build quickly.</p>
+                        <div class="cw-summary-grid">
+                            <div class="cw-summary-tile">
+                                <span>Prompt inputs</span>
+                                <strong>@editor.SessionAttachments.Count</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Selected resources</span>
+                                <strong>@editor.SelectedResourceIds.Count</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Selected blocks</span>
+                                <strong>@editor.SelectedBlockIds.Count</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Warnings</span>
+                                <strong>@editor.Warnings.Count</strong>
+                            </div>
+                        </div>
+                        <div class="cw-button-row">
+                            <button type="button" class="cw-button" data-tone="mint" data-testid="prompt-factory-build" @onclick="BuildAsync">Build prompt</button>
+                            <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session state</button>
+                            <button type="button" class="cw-button" data-tone="warn" data-testid="prompt-factory-reset-session" @onclick='@(() => HandleCanvasActionAsync("reset:session", "session-root"))'>Reset session</button>
+                        </div>
+                    </section>
+
+                    <section class="cw-panel-card">
+                        <p class="cw-panel-kicker">Prompt inputs</p>
+                        <h3 class="cw-panel-title">Files, images, notes, and links attached to the session</h3>
+                        <p class="cw-panel-copy">Inputs are added from the canvas right click menu. This panel mirrors the current set so users can review context without hunting across the tree.</p>
+                        @if (editor.SessionAttachments.Count == 0)
+                        {
+                            <div class="pf-empty">No prompt-session inputs are attached yet.</div>
+                        }
+                        else
+                        {
+                            <div class="pf-scroll-panel">
+                                <div class="cw-list">
+                                    @foreach (var attachment in editor.SessionAttachments)
+                                    {
+                                        <div class="cw-list-item">
+                                            <strong>@ResolveAttachmentDisplayTitle(attachment)</strong>
+                                            <span>@($"{attachment.Kind} | {ResolveAttachmentDisplaySubtitle(attachment)}")</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </section>
+
+                    <section class="cw-panel-card">
+                        <p class="cw-panel-kicker">Working set</p>
+                        <h3 class="cw-panel-title">Selected project resources</h3>
+                        @if (SelectedProjectResources.Count == 0)
+                        {
+                            <div class="pf-empty">No project resources are selected yet.</div>
+                        }
+                        else
+                        {
+                            <div class="pf-scroll-panel">
+                                <div class="cw-list">
+                                    @foreach (var resource in SelectedProjectResources)
+                                    {
+                                        <div class="cw-list-item">
+                                            <strong>@resource.Name</strong>
+                                            <span>@ResolveResourceListSummary(resource)</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </section>
+
+                    <section class="cw-panel-card pf-wide-card">
+                        <div class="pf-card-header">
+                            <div class="pf-card-header__copy">
+                                <p class="cw-panel-kicker">Project resources</p>
+                                <h3 class="cw-panel-title">Searchable resource selection</h3>
+                                <p class="cw-panel-copy">The resource picker is bounded by an internal scroll region, so large projects stop stretching the entire page.</p>
+                            </div>
+                            <label class="pf-toggle">
+                                <input type="checkbox" @bind="showSelectedResourcesOnly" />
+                                <span>Selected only</span>
+                            </label>
+                        </div>
+                        <div class="pf-toolbar">
+                            <input class="cw-text-input pf-toolbar__search" @bind="resourceSearchText" placeholder="Search resources by name, kind, or validation" />
+                        </div>
+                        @if (projectResources.Count == 0)
+                        {
+                            <div class="pf-empty">Select a project to load linked resources for the prompt session.</div>
+                        }
+                        else if (FilteredProjectResources.Count == 0)
+                        {
+                            <div class="pf-empty">No project resources match the current filter.</div>
+                        }
+                        else
+                        {
+                            <div class="pf-scroll-panel pf-scroll-panel--tall">
+                                <div class="pf-select-stack">
+                                    @foreach (var resource in FilteredProjectResources)
+                                    {
+                                        var isSelected = editor.SelectedResourceIds.Contains(resource.Id);
+                                        <label class="pf-checklist-item @(isSelected ? "is-selected" : string.Empty)">
+                                            <span class="pf-checklist-item__body">
+                                                <strong>@resource.Name</strong>
+                                                <span>@ResolveResourceListSummary(resource)</span>
+                                            </span>
+                                            <input type="checkbox"
+                                                   checked="@isSelected"
+                                                   @onchange="args => ToggleResource(resource.Id, ReadCheckboxValue(args))" />
+                                        </label>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </section>
+                }
+                else if (IsReviewStep)
+                {
+                    <section class="cw-panel-card pf-step-hero pf-wide-card">
+                        <p class="cw-panel-kicker">Review</p>
+                        <h3 class="cw-panel-title">Keep warnings, preview, and delivery actions in one lane</h3>
+                        <p class="cw-panel-copy">Review is now a short finish screen. Users see readiness, preview length, and all delivery actions together instead of scrolling back through selection tools they no longer need.</p>
+                        <div class="cw-summary-grid">
+                            <div class="cw-summary-tile">
+                                <span>Warnings</span>
+                                <strong>@editor.Warnings.Count</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Prompt size</span>
+                                <strong>@(string.IsNullOrWhiteSpace(editor.GeneratedPrompt) ? "Not built" : $"{editor.GeneratedPrompt.Length:N0} chars")</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Draft</span>
+                                <strong>@(string.IsNullOrWhiteSpace(editor.DraftTitle) ? "Draft not named" : editor.DraftTitle)</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Steps</span>
+                                <strong>@editor.Nodes.Count</strong>
+                            </div>
+                        </div>
+                        <div class="cw-button-row">
+                            <button type="button" class="cw-button" data-tone="accent" @onclick="BuildAsync">Build prompt</button>
+                            <button type="button" class="cw-button" data-tone="ghost" @onclick="CopyAsync">Copy</button>
+                            <button type="button" class="cw-button" data-tone="ghost" @onclick="ExportAsync">Export</button>
+                            <button type="button" class="cw-button" data-tone="primary" @onclick="SaveDraftAsync">Save draft</button>
+                            <button type="button" class="cw-button" data-tone="mint" @onclick="SaveFinalAsync">Save final</button>
+                            <button type="button" class="cw-button" data-tone="warn" @onclick="SendAsync">Send</button>
+                        </div>
+                    </section>
+
+                    <section class="cw-panel-card">
+                        <p class="cw-panel-kicker">Warnings and readiness</p>
+                        <h3 class="cw-panel-title">Final checks</h3>
+                        @if (editor.Warnings.Count == 0)
+                        {
+                            <div class="pf-empty">No warnings were generated. The session looks ready for draft, final save, or send.</div>
+                        }
+                        else
+                        {
+                            <div class="pf-scroll-panel">
+                                <div class="cw-list">
+                                    @foreach (var warning in editor.Warnings)
+                                    {
+                                        <div class="cw-list-item">
+                                            <strong>Warning</strong>
+                                            <span>@warning</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </section>
+
+                    <section class="cw-panel-card">
+                        <p class="cw-panel-kicker">Delivery context</p>
+                        <h3 class="cw-panel-title">What will ship</h3>
+                        <div class="cw-summary-grid">
+                            <div class="cw-summary-tile">
+                                <span>Blocks</span>
+                                <strong>@editor.SelectedBlockIds.Count</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Resources</span>
+                                <strong>@editor.SelectedResourceIds.Count</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Inputs</span>
+                                <strong>@editor.SessionAttachments.Count</strong>
+                            </div>
+                            <div class="cw-summary-tile">
+                                <span>Provider</span>
+                                <strong>@ResolveSelectedProviderName()</strong>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="cw-panel-card pf-wide-card">
+                        <p class="cw-panel-kicker">Prompt review</p>
+                        <h3 class="cw-panel-title">Generated prompt</h3>
+                        <div class="cw-form-field">
+                            <label>Prompt preview</label>
+                            <textarea class="cw-textarea pf-prompt-preview" @bind="editor.GeneratedPrompt"></textarea>
+                        </div>
+                    </section>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(message))
+                {
+                    <section class="cw-panel-card pf-wide-card">
+                        <p class="cw-panel-kicker">Latest action</p>
+                        <p class="@(isError ? "text-sm text-rose-700" : "text-sm text-emerald-700")">@message</p>
+                    </section>
+                }
+
+                @* Legacy supporting layout retired after staged UX redesign.
+                {
                 <div class="cw-panel-card">
                     <p class="cw-panel-kicker">Governed blocks</p>
                     <h3 class="cw-panel-title">Prompt block selection</h3>
@@ -639,6 +1426,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         <p class="@(isError ? "text-sm text-rose-700" : "text-sm text-emerald-700")">@message</p>
                     }
                 </div>
+                *@
             </Supporting>
         </CanvasWorkbenchStage>
     }
@@ -1432,7 +2220,10 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
     }
 
     private async Task EditBlockAsync(Guid blockId)
-        => blockEditor = await PromptFactoryService.GetBlockEditorAsync(blockId);
+    {
+        blockEditor = await PromptFactoryService.GetBlockEditorAsync(blockId);
+        blockAdminExpanded = true;
+    }
 
     private async Task SaveBlockAsync()
     {
@@ -1448,10 +2239,17 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         SetMessage("Shared block saved.");
     }
 
-    private void CreateNewBlock() => blockEditor = new PromptBlockEditorModel();
+    private void CreateNewBlock()
+    {
+        blockEditor = new PromptBlockEditorModel();
+        blockAdminExpanded = true;
+    }
 
     private async Task EditTemplateAsync(Guid templateId)
-        => templateEditor = await PromptFactoryService.GetTemplateEditorAsync(templateId);
+    {
+        templateEditor = await PromptFactoryService.GetTemplateEditorAsync(templateId);
+        templateAdminExpanded = true;
+    }
 
     private async Task SaveTemplateAsync()
     {
@@ -1467,7 +2265,11 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         SetMessage("Flow template saved.");
     }
 
-    private void CreateNewTemplate() => templateEditor = new PromptFlowTemplateEditorModel();
+    private void CreateNewTemplate()
+    {
+        templateEditor = new PromptFlowTemplateEditorModel();
+        templateAdminExpanded = true;
+    }
 
     private void ToggleTemplateBlock(Guid id, bool isSelected)
     {
