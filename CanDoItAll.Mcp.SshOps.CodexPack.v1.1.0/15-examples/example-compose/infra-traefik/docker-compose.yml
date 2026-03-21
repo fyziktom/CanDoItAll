@@ -1,0 +1,48 @@
+services:
+  traefik:
+    image: traefik:v3.6
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=proxy
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.le-staging.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.le-staging.acme.storage=/data/acme.json
+      - --certificatesresolvers.le-staging.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+      - --certificatesresolvers.le-staging.acme.httpchallenge=true
+      - --certificatesresolvers.le-staging.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le-prod.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.le-prod.acme.storage=/data/acme.json
+      - --certificatesresolvers.le-prod.acme.httpchallenge=true
+      - --certificatesresolvers.le-prod.acme.httpchallenge.entrypoint=web
+      - --api.dashboard=true
+      - --ping=true
+      - --accesslog=true
+      - --log.level=INFO
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./dynamic:/etc/traefik/dynamic:ro
+      - ./data:/data
+    networks:
+      - proxy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.traefik-dashboard.rule: Host(`${TRAEFIK_DASHBOARD_HOST}`)
+      traefik.http.routers.traefik-dashboard.entrypoints: websecure
+      traefik.http.routers.traefik-dashboard.service: api@internal
+      traefik.http.routers.traefik-dashboard.tls: "true"
+      traefik.http.routers.traefik-dashboard.tls.certresolver: ${TRAEFIK_CERT_RESOLVER}
+      traefik.http.routers.traefik-dashboard.middlewares: traefik-dashboard-auth@file
+
+networks:
+  proxy:
+    external: true

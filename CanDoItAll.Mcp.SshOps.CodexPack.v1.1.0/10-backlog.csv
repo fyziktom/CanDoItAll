@@ -1,0 +1,61 @@
+ID,Epic,Title,Priority,Estimate,DependsOn,AcceptanceSummary
+FND-001,F,Audit current CanDoItAll.Mcp.DotNetWatch implementation and produce shared candidate inventory,P0,M,,Inventory exists with source file mapping and keep-vs-extract decisions
+FND-002,F,Define shared boundary rules for MCP libraries,P0,S,FND-001,Documented allowed dependencies and anti-goals exist
+FND-003,F,Create project CanDoItAll.Mcp.Core,P0,S,FND-002,Project exists in solution and builds
+FND-004,F,"Extract common tool envelope, error model and identity helpers into CanDoItAll.Mcp.Core",P0,M,FND-003,Shared contracts are consumed by at least DotNetWatch and compile cleanly
+FND-005,F,Extract common logging primitives and redaction into CanDoItAll.Mcp.Core,P0,M,FND-003,"Ring buffer, file log store and redactor are shared"
+FND-006,F,Extract common mutation gate and async operation helpers into CanDoItAll.Mcp.Core,P0,M,FND-003,Shared concurrency and operation primitives exist with tests
+FND-007,F,Create project CanDoItAll.Mcp.LocalRuntime,P0,S,FND-002,Local runtime project exists and builds
+FND-008,F,Extract process supervision and stale cleanup into CanDoItAll.Mcp.LocalRuntime,P0,L,FND-007,"Process supervisor, terminators and stale registry are shared"
+FND-009,F,Refactor existing CanDoItAll.Mcp.DotNetWatch to consume shared foundation,P0,L,FND-004;FND-005;FND-006;FND-008,DotNetWatch references shared libs and duplicate code is removed or reduced to adapters
+FND-010,F,Run DotNetWatch regression gate after shared extraction,P0,M,FND-009,No tool contract or lifecycle regression remains; SSH work may start
+FND-011,F,Scaffold shared foundation tests and contract snapshots,P1,M,FND-004;FND-005;FND-006,Shared library contracts have unit coverage and snapshots
+FND-012,F,Add guidance and prompts for future MCP servers to consume shared foundation,P1,S,FND-010,Prompts and checklist exist for all future MCP servers
+SSH-001,A,Create project CanDoItAll.Mcp.SshOps in solution,P0,S,FND-010,"Project builds, is wired into solution, and references shared foundation"
+SSH-002,A,Implement stdio MCP host with official SDK,P0,S,SSH-001,Server starts and registers tools
+SSH-003,A,Add strongly typed settings model and startup validation,P0,S,SSH-001,Invalid config fails at startup
+SSH-004,A,Implement SecretResolver for env-driven secrets,P0,M,SSH-003,Secrets resolved without logging values
+SSH-005,A,Implement TargetCatalog and target lookup,P0,S,SSH-003,targets_list returns configured targets
+SSH-006,A,Adopt shared response envelope and common error model from CanDoItAll.Mcp.Core,P0,S,SSH-002;FND-004,All SSH tools use shared envelope/error types; only SSH-specific metadata is added
+SSH-007,A,Create ISshTransport abstraction,P0,S,SSH-001,Core interface exists with tests
+SSH-008,A,Implement SshNetTransport connect/exec/upload/download,P0,L,"SSH-007,SSH-004",Basic SSH and SFTP operations work
+SSH-009,A,Implement HostKeyVerifier with SHA256 fingerprints,P0,M,SSH-008,Host key mismatch is rejected
+SSH-010,A,Implement target_test tool,P0,S,"SSH-008,SSH-009",Connectivity verified without mutation
+SSH-011,A,Implement target_audit tool,P0,M,SSH-010,Audit returns docker/sudo/ports summary
+SSH-012,B,Implement PathGuard for allowed remote roots,P0,S,SSH-003,Traversal and forbidden roots are blocked
+SSH-013,B,Implement RemoteFileService write/read/stat,P0,M,"SSH-008,SSH-012",Basic file operations work
+SSH-014,B,Implement fs_apply_bundle tool,P0,M,SSH-013,Multiple files can be written atomically enough
+SSH-015,B,Implement backup metadata and revision records,P1,M,SSH-013,Backups created before overwrite
+SSH-016,B,Implement fs_backup_path tool,P1,S,SSH-015,Backup IDs are returned and discoverable
+SSH-017,B,Implement fs_restore_backup tool,P1,M,SSH-016,Files can be restored from backup
+SSH-018,C,Implement RemoteJobManager detached job wrapper,P0,L,"SSH-008,SSH-013",Long operations survive MCP restart
+SSH-019,C,Implement operation_status tool,P0,S,SSH-018,Detached job status is readable
+SSH-020,C,Implement operation_wait tool,P0,S,SSH-019,Client can wait without blind sleep
+SSH-021,C,Implement operation_logs tool with cursor,P0,M,SSH-018,Detached logs are streamable
+SSH-022,C,Implement operation_cancel tool,P1,M,SSH-018,TERM/KILL cancellation works best-effort
+SSH-023,D,Implement Docker command builder and policy,P0,M,SSH-008,Commands built from structured DTOs
+SSH-024,D,Implement docker_network_ensure tool,P0,S,SSH-023,Network creation is idempotent
+SSH-025,D,Implement docker_volume_ensure tool,P1,S,SSH-023,Volume creation is idempotent
+SSH-026,D,Implement compose_validate tool,P0,M,"SSH-023,SSH-014",docker compose config works remotely
+SSH-027,D,Implement compose_apply tool,P0,L,"SSH-026,SSH-018",Stack can be deployed with async mode
+SSH-028,D,Implement compose_ps tool,P0,S,SSH-027,Service status is readable
+SSH-029,D,Implement compose_logs tool,P0,S,SSH-027,Stack logs are readable and redacted
+SSH-030,D,Implement compose_exec tool,P1,M,SSH-023,Whitelist exec works in service containers
+SSH-031,D,Implement compose_down tool,P1,S,SSH-027,Stack can be stopped intentionally
+SSH-032,E,Implement http_probe local and remote origins,P0,M,SSH-008,HTTP probe works from both origins
+SSH-033,E,Implement http_wait tool,P0,S,SSH-032,Wait succeeds or times out deterministically
+SSH-034,E,Implement TraefikService and infra stack helpers,P0,M,SSH-027,Traefik stack conventions encapsulated
+SSH-035,E,Implement cert_check tool,P0,M,"SSH-032,SSH-034",TLS certificate readiness is inspectable
+SSH-036,F,Implement postgres_ready tool,P0,S,SSH-030,pg_isready can be executed safely
+SSH-037,G,Implement ipfs_status tool,P0,M,SSH-030,Kubo API and peer ID are readable
+SSH-038,G,Implement ipfs_private_validate tool,P0,M,SSH-037,swarm.key and bootstrap list are validated
+SSH-039,H,Implement rollback metadata and stack_rollback tool,P0,L,"SSH-015,SSH-027",Last known good revision can be restored
+SSH-040,H,Implement ValidationOrchestrator helper,P1,M,"SSH-033,SSH-036,SSH-038",Common validation flow is reusable
+SSH-041,I,Adopt shared SecretRedactor with SSH-specific tests,P0,M,SSH-004;FND-005,Shared redactor is reused and SSH-specific secrets are masked in responses/logs
+SSH-042,I,Implement dangerous_raw_exec guard scaffold,P2,S,SSH-023,Feature exists but is off by default
+SSH-043,I,Write unit tests for config/guard/error handling,P0,M,"SSH-003,SSH-012",Critical safety logic is covered
+SSH-044,I,Write transport integration tests against SSH server container,P1,L,SSH-008,SSH and SFTP adapter tested end-to-end
+SSH-045,I,Write staging smoke checklist and scripts,P1,M,"SSH-027,SSH-035,SSH-038",Staging verification documented
+SSH-046,I,"Add examples for Traefik, app stack and IPFS stack",P0,M,"SSH-034,SSH-037",Examples are runnable and coherent
+SSH-047,I,Prepare prompt pack and checklists,P0,M,,Codex usage is guided and constrained
+SSH-048,I,Perform QA review and remediation pass,P0,M,SSH-047,Known gaps documented and closed or accepted
