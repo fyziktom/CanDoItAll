@@ -1,19 +1,21 @@
-# Checklist testování
+# Testing checklist
 
-- [ ] Unit testy pokrývají host key verification.
-- [ ] Unit testy pokrývají path guard.
-- [ ] Unit testy pokrývají secret redaction.
-- [ ] Unit testy pokrývají operation state reducer.
-- [ ] Contract testy pokrývají všechny tooly.
-- [ ] Integration testy pokrývají detached job runner.
-- [ ] Integration testy pokrývají locking.
-- [ ] Integration testy pokrývají bundle apply + rollback.
-- [ ] E2E testy pokrývají bootstrap hostu.
-- [ ] E2E testy pokrývají Traefik deploy.
-- [ ] E2E testy pokrývají HTTPS probe.
-- [ ] E2E testy pokrývají PostgreSQL readiness.
-- [ ] E2E testy pokrývají IPFS private validate.
-- [ ] E2E testy pokrývají reconnect na dlouhou operaci.
-- [ ] Negativní testy pokrývají host key mismatch.
-- [ ] Negativní testy pokrývají path traversal.
-- [ ] Negativní testy pokrývají veřejnou expozici IPFS API nebo PostgreSQL.
+- [ ] Unit tests cover host key verification.
+- [ ] Unit tests cover path guard rules.
+- [ ] Unit tests cover secret redaction.
+- [ ] Unit tests cover operation state reduction.
+- [ ] Contract tests cover every public tool.
+- [ ] Integration tests cover the detached job runner.
+- [ ] Integration tests cover locking behavior.
+- [ ] Integration tests cover bundle apply plus rollback.
+- [ ] E2E starts with a real-host capability audit and records distro, architecture, glibc, OpenSSL, systemd, Docker/Compose, and port availability.
+- [ ] E2E covers host bootstrap for the selected validation lane.
+- [ ] E2E covers Traefik deployment and HTTPS reachability.
+- [ ] E2E covers IPFS private validation.
+- [ ] E2E covers reconnect on a long-running operation.
+- [ ] E2E captures Playwright screenshots and a real UI navigation step from a client machine.
+- [ ] Legacy ARM or no-Docker validation covers the native-service lane with self-signed TLS and in-memory app configuration.
+- [ ] Negative tests cover host key mismatch.
+- [ ] Negative tests cover path traversal.
+- [ ] Negative tests cover public exposure of IPFS API or PostgreSQL.
+- [ ] Negative tests cover runtime compatibility mismatches such as unsupported glibc, missing OpenSSL, or missing ICU before final deployment.

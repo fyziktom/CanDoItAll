@@ -1,11 +1,12 @@
 using System.Diagnostics;
+using CanDoItAll.Mcp.Core.Contracts;
+using CanDoItAll.Mcp.Core.Observability;
 using CanDoItAll.Mcp.DotNetWatch.Configuration;
 using CanDoItAll.Mcp.DotNetWatch.Diagnostics;
-using CanDoItAll.Mcp.DotNetWatch.Logging;
 using CanDoItAll.Mcp.DotNetWatch.Operations;
-using CanDoItAll.Mcp.DotNetWatch.Processes;
 using CanDoItAll.Mcp.DotNetWatch.Runtime;
 using CanDoItAll.Mcp.DotNetWatch.Security;
+using CanDoItAll.Mcp.LocalRuntime.Processes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -70,7 +71,7 @@ public sealed class InfrastructureTests
     {
         using var workspace = CreateWorkspace();
         var configuration = new RuntimeConfiguration(Options.Create(CreateOptions(workspace.RootPath)));
-        var redactor = new LogRedactor(configuration);
+        var redactor = new SecretRedactor(configuration.CreateSecretRedactionOptions());
 
         var redacted = redactor.Redact("password=supersecret apiKey:abc123");
 
@@ -86,7 +87,7 @@ public sealed class InfrastructureTests
         var options = CreateOptions(workspace.RootPath);
         options.Logs.MaxFileSizeMb = 1;
         var configuration = new RuntimeConfiguration(Options.Create(options));
-        var store = new FileLogStore(configuration);
+        var store = new FileLogStore(configuration.CreateFileLogStoreOptions());
         var path = Path.Combine(configuration.LogFolder, "app-rotation.ndjson");
 
         File.WriteAllText(path, new string('x', (int)configuration.MaxLogFileSizeBytes));

@@ -1,3 +1,5 @@
+using CanDoItAll.Mcp.Core.Observability;
+using CanDoItAll.Mcp.LocalRuntime.Processes;
 using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Mcp.DotNetWatch.Configuration;
@@ -152,6 +154,35 @@ public sealed class RuntimeConfiguration
     public bool AllowExternalHealthHosts { get; }
 
     public HashSet<string> AllowedEnvironmentKeys { get; }
+
+    public FileLogStoreOptions CreateFileLogStoreOptions()
+    {
+        return new FileLogStoreOptions
+        {
+            Enabled = PersistLogsToFile,
+            RootDirectory = LogFolder,
+            MaxFileSizeBytes = MaxLogFileSizeBytes
+        };
+    }
+
+    public SecretRedactionOptions CreateSecretRedactionOptions()
+    {
+        return new SecretRedactionOptions
+        {
+            Enabled = RedactionEnabled
+        };
+    }
+
+    public LocalProcessRuntimeOptions CreateLocalProcessRuntimeOptions()
+    {
+        return new LocalProcessRuntimeOptions
+        {
+            WorkspaceRoot = WorkspaceRoot,
+            RegistryPath = RegistryPath,
+            GracefulStopTimeout = GracefulStopTimeout,
+            ForceKillAfter = ForceKillAfter
+        };
+    }
 
     public IReadOnlyDictionary<string, object?> CreateRedactedSnapshot()
     {

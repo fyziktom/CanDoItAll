@@ -1,13 +1,15 @@
-# Checklist bootstrapu vzdáleného hostu
+# Remote host bootstrap checklist
 
-- [ ] Ubuntu verze je podporovaná.
-- [ ] Uživatel pro SSH existuje.
-- [ ] Sudo politika je definovaná.
-- [ ] Docker Engine je nainstalovaný.
-- [ ] Compose plugin je dostupný.
-- [ ] Externí proxy network existuje nebo ji server umí vytvořit.
-- [ ] Root state dir `/opt/candoitall/.mcp-state` existuje.
-- [ ] Stack root existuje.
-- [ ] Firewall je prověřen pro porty 22/80/443 a případně 4001.
-- [ ] Disk space je dostatečný.
-- [ ] DNS A/AAAA záznamy míří na správný host.
+- [ ] Actual distribution name and version are detected and recorded, not assumed from operator description.
+- [ ] CPU architecture is recorded.
+- [ ] glibc, OpenSSL, and ICU baselines are checked before choosing a publish/runtime strategy.
+- [ ] SSH user exists.
+- [ ] Sudo policy is verified.
+- [ ] Docker Engine and Compose are verified, or the host is explicitly routed into the native-service lane.
+- [ ] systemd availability is verified for native service deployment.
+- [ ] The selected lane is recorded as either `standard-host` or `legacy-arm-host`.
+- [ ] Required directories for state, stack files, and artifacts exist under an allowed root.
+- [ ] Port availability is checked for 22, 80, 443, and the chosen IPFS ports.
+- [ ] Disk space is sufficient.
+- [ ] DNS or direct-IP access mode is explicitly chosen for validation.
+- [ ] Host key pinning is recorded before any mutating operation.

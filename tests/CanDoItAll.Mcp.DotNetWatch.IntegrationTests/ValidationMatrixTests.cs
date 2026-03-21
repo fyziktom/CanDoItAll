@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using System.Text.Json;
+using CanDoItAll.Mcp.Core.Contracts;
 using CanDoItAll.Mcp.DotNetWatch;
-using CanDoItAll.Mcp.DotNetWatch.Persistence;
+using CanDoItAll.Mcp.LocalRuntime.Persistence;
 
 namespace CanDoItAll.Mcp.DotNetWatch.IntegrationTests;
 

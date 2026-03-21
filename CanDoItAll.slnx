@@ -3,6 +3,10 @@
     <Project Path="src/CanDoItAll.ComponentKit/CanDoItAll.ComponentKit.csproj" />
     <Project Path="src/CanDoItAll.Components/CanDoItAll.Components.csproj" />
     <Project Path="src/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
+    <Project Path="src/CanDoItAll.Mcp.Core/CanDoItAll.Mcp.Core.csproj" />
+    <Project Path="src/CanDoItAll.Mcp.DotNetWatch/CanDoItAll.Mcp.DotNetWatch.csproj" />
+    <Project Path="src/CanDoItAll.Mcp.LocalRuntime/CanDoItAll.Mcp.LocalRuntime.csproj" />
+    <Project Path="src/CanDoItAll.Mcp.SshOps/CanDoItAll.Mcp.SshOps.csproj" />
     <Project Path="src/CanDoItAll.Modules.Activity/CanDoItAll.Modules.Activity.csproj" />
     <Project Path="src/CanDoItAll.Modules.Automation/CanDoItAll.Modules.Automation.csproj" />
     <Project Path="src/CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj" />

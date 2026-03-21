@@ -13,4 +13,9 @@
     <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\\CanDoItAll.Mcp.Core\\CanDoItAll.Mcp.Core.csproj" />
+    <ProjectReference Include="..\\CanDoItAll.Mcp.LocalRuntime\\CanDoItAll.Mcp.LocalRuntime.csproj" />
+  </ItemGroup>
+
 </Project>

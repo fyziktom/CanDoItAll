@@ -1,0 +1,15 @@
+global using CanDoItAll.Mcp.Core.Contracts;
+global using CanDoItAll.Mcp.Core.Identity;
+global using CanDoItAll.Mcp.Core.Net;
+global using CanDoItAll.Mcp.Core.Observability;
+global using CanDoItAll.Mcp.Core.Operations;
+global using CanDoItAll.Mcp.SshOps.Configuration;
+global using CanDoItAll.Mcp.SshOps.Coordination;
+global using CanDoItAll.Mcp.SshOps.Operations;
+global using CanDoItAll.Mcp.SshOps.Transport;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Hosting;
+global using Microsoft.Extensions.Logging;
+global using System.Text;
+global using System.Text.Json;

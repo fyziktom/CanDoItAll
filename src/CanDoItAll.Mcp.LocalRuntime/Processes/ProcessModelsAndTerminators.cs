@@ -1,14 +1,42 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
-using CanDoItAll.Mcp.DotNetWatch.Configuration;
-using CanDoItAll.Mcp.DotNetWatch.Logging;
-using CanDoItAll.Mcp.DotNetWatch.Persistence;
-using CanDoItAll.Mcp.DotNetWatch.Runtime;
+using CanDoItAll.Mcp.Core.Contracts;
+using CanDoItAll.Mcp.LocalRuntime.Persistence;
 
-namespace CanDoItAll.Mcp.DotNetWatch.Processes;
+namespace CanDoItAll.Mcp.LocalRuntime.Processes;
 
-public sealed record ManagedProcessStartInfo(
+public sealed record LocalProcessRuntimeOptions
+{
+    public string WorkspaceRoot { get; init; } = ".";
+
+    public string RegistryPath { get; init; } = Path.Combine(".mcp-state", "process-registry.json");
+
+    public TimeSpan GracefulStopTimeout { get; init; } = TimeSpan.FromSeconds(1);
+
+    public TimeSpan ForceKillAfter { get; init; } = TimeSpan.FromSeconds(5);
+
+    public IReadOnlyList<string> ClearedInheritedEnvironmentVariables { get; init; } =
+    [
+        "ASPNETCORE_URLS",
+        "ASPNETCORE_HTTP_PORT",
+        "ASPNETCORE_HTTPS_PORT",
+        "ASPNETCORE_HTTP_PORTS",
+        "ASPNETCORE_HTTPS_PORTS",
+        "HTTP_PORTS",
+        "HTTPS_PORTS",
+        "DOTNET_LAUNCH_PROFILE",
+        "LAUNCH_PROFILE",
+        "ASPNETCORE_AUTO_RELOAD_WS_ENDPOINT",
+        "ASPNETCORE_AUTO_RELOAD_WS_KEY",
+        "ASPNETCORE_AUTO_RELOAD_WS_INTERVAL",
+        "DOTNET_STARTUP_HOOKS",
+        "DOTNET_ADDITIONAL_DEPS",
+        "DOTNET_SHARED_STORE"
+    ];
+}
+
+public record ManagedProcessStartInfo(
     string OwnerKind,
     string OwnerId,
     string Command,
@@ -18,7 +46,7 @@ public sealed record ManagedProcessStartInfo(
     string CorrelationId,
     int? SessionVersion);
 
-public sealed record ProcessStopResult(bool Graceful, IReadOnlyList<int> KilledPids, int? ExitCode);
+public record ProcessStopResult(bool Graceful, IReadOnlyList<int> KilledPids, int? ExitCode);
 
 public interface IProcessTreeTerminator
 {
@@ -32,7 +60,7 @@ public interface IProcessCommandRunner
     Task<string> RunCaptureAsync(string fileName, IReadOnlyList<string> arguments, CancellationToken cancellationToken);
 }
 
-public sealed class ProcessCommandRunner : IProcessCommandRunner
+public class ProcessCommandRunner : IProcessCommandRunner
 {
     public async Task<int> RunAsync(string fileName, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
@@ -98,7 +126,7 @@ public interface IPlatformProcessTreeTerminator
     Task<IReadOnlyList<int>> KillTreeAsync(Process process, CancellationToken cancellationToken);
 }
 
-public sealed class WindowsProcessTreeTerminator(IProcessCommandRunner commandRunner, ILogger<WindowsProcessTreeTerminator> logger) : IPlatformProcessTreeTerminator
+public class WindowsProcessTreeTerminator(IProcessCommandRunner commandRunner, ILogger<WindowsProcessTreeTerminator> logger) : IPlatformProcessTreeTerminator
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -146,18 +174,18 @@ public sealed class WindowsProcessTreeTerminator(IProcessCommandRunner commandRu
         try
         {
             var script = $$"""
-                $root={{rootPid}}
-                $all = New-Object System.Collections.Generic.List[int]
-                function Add-Descendants([int]$pid) {
-                    $all.Add($pid) | Out-Null
-                    $children = Get-CimInstance Win32_Process -Filter "ParentProcessId = $pid" | Select-Object -ExpandProperty ProcessId
-                    foreach ($child in $children) {
-                        Add-Descendants([int]$child)
-                    }
-                }
-                Add-Descendants $root
-                $all | ConvertTo-Json -Compress
-                """;
+$root={{rootPid}}
+$all = New-Object System.Collections.Generic.List[int]
+function Add-Descendants([int]$pid) {
+    $all.Add($pid) | Out-Null
+    $children = Get-CimInstance Win32_Process -Filter "ParentProcessId = $pid" | Select-Object -ExpandProperty ProcessId
+    foreach ($child in $children) {
+        Add-Descendants([int]$child)
+    }
+}
+Add-Descendants $root
+$all | ConvertTo-Json -Compress
+""";
             var output = await commandRunner.RunCaptureAsync(
                 "powershell",
                 ["-NoProfile", "-NonInteractive", "-Command", script],
@@ -199,7 +227,7 @@ public sealed class WindowsProcessTreeTerminator(IProcessCommandRunner commandRu
     }
 }
 
-public sealed class UnixProcessTreeTerminator(IProcessCommandRunner commandRunner, ILogger<UnixProcessTreeTerminator> logger) : IPlatformProcessTreeTerminator
+public class UnixProcessTreeTerminator(IProcessCommandRunner commandRunner, ILogger<UnixProcessTreeTerminator> logger) : IPlatformProcessTreeTerminator
 {
     public async Task RequestGracefulStopAsync(Process process, CancellationToken cancellationToken)
     {
@@ -268,8 +296,8 @@ public sealed class UnixProcessTreeTerminator(IProcessCommandRunner commandRunne
     }
 }
 
-public sealed class ProcessTreeTerminator(
-    RuntimeConfiguration configuration,
+public class ProcessTreeTerminator(
+    LocalProcessRuntimeOptions options,
     IPlatformProcessTreeTerminator platformTerminator,
     ILogger<ProcessTreeTerminator> logger) : IProcessTreeTerminator
 {
@@ -284,14 +312,14 @@ public sealed class ProcessTreeTerminator(
         if (!force)
         {
             await platformTerminator.RequestGracefulStopAsync(process, cancellationToken);
-            graceful = await WaitForExitAsync(process, configuration.GracefulStopTimeout, cancellationToken);
+            graceful = await WaitForExitAsync(process, options.GracefulStopTimeout, cancellationToken);
         }
 
         IReadOnlyList<int> killedPids = [];
         if (!graceful && !process.HasExited)
         {
             killedPids = await platformTerminator.KillTreeAsync(process, cancellationToken);
-            var forceExited = await WaitForExitAsync(process, configuration.ForceKillAfter, cancellationToken);
+            var forceExited = await WaitForExitAsync(process, options.ForceKillAfter, cancellationToken);
             if (!forceExited && !process.HasExited)
             {
                 try
@@ -336,7 +364,7 @@ public sealed class ProcessTreeTerminator(
     }
 }
 
-internal static class ManagedProcessMarkers
+public static class ManagedProcessMarkers
 {
     private const string OwnerKindProperty = "CanDoItAllMcpOwnerKind";
     private const string OwnerIdProperty = "CanDoItAllMcpOwnerId";
@@ -413,7 +441,7 @@ internal static class ManagedProcessMarkers
     }
 }
 
-public sealed class ManagedProcess
+public class ManagedProcess
 {
     private readonly Process _process;
     private readonly IProcessTreeTerminator _terminator;
@@ -437,184 +465,5 @@ public sealed class ManagedProcess
     public Task<ProcessStopResult> StopAsync(bool force, CancellationToken cancellationToken)
     {
         return _terminator.TerminateAsync(_process, force, cancellationToken);
-    }
-}
-
-public sealed class ProcessSupervisor(
-    RuntimeConfiguration configuration,
-    ServerInstanceIdentity serverInstanceIdentity,
-    StaleProcessRegistry staleProcessRegistry,
-    IProcessTreeTerminator terminator,
-    FileLogStore fileLogStore,
-    LogRedactor logRedactor,
-    ILogger<ProcessSupervisor> logger)
-{
-    public async Task<ManagedProcess> StartAsync(
-        ManagedProcessStartInfo startInfo,
-        RingLogBuffer logBuffer,
-        Func<LogEntry, Task>? onLogAsync,
-        Func<int?, Task>? onExitAsync,
-        CancellationToken cancellationToken)
-    {
-        var processStartInfo = new ProcessStartInfo(startInfo.Command)
-        {
-            WorkingDirectory = startInfo.WorkingDirectory,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            RedirectStandardInput = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        foreach (var argument in startInfo.Arguments)
-        {
-            processStartInfo.ArgumentList.Add(argument);
-        }
-
-        foreach (var variable in startInfo.EnvironmentVariables)
-        {
-            processStartInfo.Environment[variable.Key] = variable.Value;
-        }
-
-        ClearInheritedHostVariables(processStartInfo);
-
-        var process = new Process
-        {
-            StartInfo = processStartInfo,
-            EnableRaisingEvents = true
-        };
-
-        if (!process.Start())
-        {
-            throw new ToolInvocationException("ProcessStartFailed", $"Failed to start process '{startInfo.Command}'.");
-        }
-
-        var managedProcess = new ManagedProcess(process, terminator);
-        var startedUtc = TryGetStartedUtc(process) ?? DateTimeOffset.UtcNow;
-
-        await staleProcessRegistry.RegisterAsync(
-            new ManagedProcessRecord(
-                process.Id,
-                startedUtc,
-                startInfo.Command,
-                startInfo.Arguments,
-                startInfo.WorkingDirectory,
-                configuration.WorkspaceRoot,
-                startInfo.OwnerKind,
-                startInfo.OwnerId,
-                serverInstanceIdentity.Id),
-            cancellationToken);
-
-        var startupEntry = logBuffer.Append("System", null, startInfo.SessionVersion, startInfo.CorrelationId, $"Started process {process.Id}: {startInfo.Command} {string.Join(' ', startInfo.Arguments)}");
-        fileLogStore.Append(startInfo.OwnerKind, startInfo.OwnerId, startupEntry);
-        if (onLogAsync is not null)
-        {
-            await onLogAsync(startupEntry);
-        }
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var stdoutTask = ReadStreamAsync(process.StandardOutput, "ProcessStdOut", "stdout", startInfo, logBuffer, onLogAsync, CancellationToken.None);
-                var stderrTask = ReadStreamAsync(process.StandardError, "ProcessStdErr", "stderr", startInfo, logBuffer, onLogAsync, CancellationToken.None);
-                await Task.WhenAll(stdoutTask, stderrTask, process.WaitForExitAsync(CancellationToken.None));
-                await staleProcessRegistry.UnregisterAsync(process.Id, CancellationToken.None);
-
-                var exitEntry = logBuffer.Append("System", null, startInfo.SessionVersion, startInfo.CorrelationId, $"Process {process.Id} exited with code {process.ExitCode}.");
-                fileLogStore.Append(startInfo.OwnerKind, startInfo.OwnerId, exitEntry);
-                if (onLogAsync is not null)
-                {
-                    await onLogAsync(exitEntry);
-                }
-
-                managedProcess.Complete(process.ExitCode);
-                if (onExitAsync is not null)
-                {
-                    await onExitAsync(process.ExitCode);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Managed process reader loop crashed for {OwnerKind}/{OwnerId}", startInfo.OwnerKind, startInfo.OwnerId);
-                managedProcess.Complete(process.HasExited ? process.ExitCode : null);
-            }
-        }, CancellationToken.None);
-
-        return managedProcess;
-    }
-
-    private async Task ReadStreamAsync(
-        StreamReader reader,
-        string source,
-        string streamName,
-        ManagedProcessStartInfo startInfo,
-        RingLogBuffer logBuffer,
-        Func<LogEntry, Task>? onLogAsync,
-        CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            string? line;
-            try
-            {
-                line = await reader.ReadLineAsync(cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-
-            if (line is null)
-            {
-                break;
-            }
-
-            var redactedLine = logRedactor.Redact(line);
-            var entry = logBuffer.Append(source, streamName, startInfo.SessionVersion, startInfo.CorrelationId, redactedLine);
-            fileLogStore.Append(startInfo.OwnerKind, startInfo.OwnerId, entry);
-
-            if (onLogAsync is not null)
-            {
-                await onLogAsync(entry);
-            }
-        }
-    }
-
-    private static DateTimeOffset? TryGetStartedUtc(Process process)
-    {
-        try
-        {
-            return process.StartTime.ToUniversalTime();
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static void ClearInheritedHostVariables(ProcessStartInfo processStartInfo)
-    {
-        foreach (var variableName in new[]
-                 {
-                     "ASPNETCORE_URLS",
-                     "ASPNETCORE_HTTP_PORT",
-                     "ASPNETCORE_HTTPS_PORT",
-                     "ASPNETCORE_HTTP_PORTS",
-                     "ASPNETCORE_HTTPS_PORTS",
-                     "HTTP_PORTS",
-                     "HTTPS_PORTS",
-                     "DOTNET_LAUNCH_PROFILE",
-                     "LAUNCH_PROFILE",
-                     "ASPNETCORE_AUTO_RELOAD_WS_ENDPOINT",
-                     "ASPNETCORE_AUTO_RELOAD_WS_KEY",
-                     "ASPNETCORE_AUTO_RELOAD_WS_INTERVAL",
-                     "DOTNET_STARTUP_HOOKS",
-                     "DOTNET_ADDITIONAL_DEPS",
-                     "DOTNET_SHARED_STORE"
-                 })
-        {
-            processStartInfo.Environment.Remove(variableName);
-        }
     }
 }

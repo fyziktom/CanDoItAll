@@ -1,227 +1,142 @@
-> **Revize 1.1.0 – shared foundation gate**  
-> Validační strategie nově obsahuje ještě nultý release gate:  
-> `CanDoItAll.Mcp.DotNetWatch` musí po extrakci shared knihoven projít regresní validací dřív, než se začne implementovat `CanDoItAll.Mcp.SshOps`.
+# Validation strategy
 
-# Validační strategie
+## 1. Principle
 
-## 1. Princip
-Validace musí dokazovat dvě věci zároveň:
+Validation must prove two things at the same time:
 
-1. že MCP server bezpečně a deterministicky řídí vzdálený Ubuntu host,
-2. že Codex dostává stabilní, čitelný a opakovatelný tool surface pro Docker, Traefik, PostgreSQL a privátní IPFS.
+1. the MCP server controls the remote host safely and deterministically,
+2. Codex receives a stable, readable, repeatable tool surface.
 
-Nejde jen o unit testy. Potřebujeme **layered validation**:
+This is not only about unit tests. The package requires layered validation:
 
-- statická validace konfigurace,
-- unit testy doménové logiky,
-- contract testy DTO a tool response envelope,
-- integration testy s fake SSH backendem,
-- end-to-end testy proti reálnému test hostu,
-- failure-injection scénáře,
+- static configuration validation,
+- unit tests,
+- contract tests,
+- integration tests,
+- end-to-end validation against a real host,
+- negative and failure-injection scenarios,
 - release gates.
 
-## 2. Testovací pyramidy
+## 2. Real-host calibration gate
 
-### 2.1 Unit
-Cíl:
-- validátory,
-- path guard,
+Before mutating a real host, record the actual target facts instead of trusting the operator description:
+
+- distribution name and version,
+- CPU architecture,
+- glibc / OpenSSL / ICU baseline,
+- Docker Engine / Compose availability,
+- systemd availability,
+- sudo behavior,
+- free disk,
+- usable ports,
+- whether containers are allowed on that host at all.
+
+The validation record must choose one lane:
+
+- `standard-host`: Ubuntu plus Docker/Compose, containerized Traefik/PostgreSQL/Kubo, ACME-capable TLS.
+- `legacy-arm-host`: constrained or legacy Linux target, native systemd services, framework-dependent app publish, self-signed TLS for local-only validation, in-memory app configuration, and private IPFS without public bootstrap peers.
+
+If the host forces a lane switch during validation, the failure analysis and the updated plan/prompts/checklists become mandatory release artifacts.
+
+## 3. Test layers
+
+### 3.1 Unit
+Cover:
 - host key matching,
-- redakce logů,
-- compose parser wrappery,
-- operation state reducer,
-- retry policy,
-- timeout policy,
-- mapping tool DTO -> domain command.
+- path guard rules,
+- secret redaction,
+- operation state handling,
+- timeout and retry policy,
+- DTO to command mapping.
 
-Požadavek:
-- rychlé,
-- bez sítě,
-- bez reálného SSH,
-- bez Docker daemonu.
+Requirements:
+- fast,
+- no network,
+- no real SSH,
+- no Docker daemon.
 
-### 2.2 Contract
-Cíl:
-- stabilita veřejného MCP API.
+### 3.2 Contract
+Cover:
+- request and response shapes,
+- required fields,
+- standard error codes,
+- `operationId` behavior,
+- stability of `status`, `summary`, and `nextSteps`.
 
-Ověřit:
-- JSON schema-like shape requestů,
-- povinná pole,
-- standardní error codes,
-- `operationId` chování,
-- serializace `status`, `summary`, `nextSteps`,
-- backward-compatible rozšiřování response.
-
-### 2.3 Integration
-Cíl:
-- interakce mezi vrstvami.
-
-Doporučené integration modes:
+### 3.3 Integration
+Cover:
 - fake `ISshTransport`,
-- stub remote filesystem,
-- simulovaný detached job runner,
-- simulovaný Docker/Compose výstup.
-
-Ověřit:
+- detached job runner behavior,
 - locking,
-- concurrency,
-- rollback orchestrace,
+- rollback orchestration,
 - bundle upload/apply flow,
-- parse logů,
-- cancel/wait flow.
+- wait and log flow.
 
-### 2.4 End-to-end against real host
-Cíl:
-- skutečné SSH,
-- skutečný Ubuntu server,
-- skutečný Docker Engine a Compose plugin,
-- skutečný Traefik stack,
-- skutečný app stack,
-- skutečný PostgreSQL container,
-- skutečný Kubo/IPFS container.
+### 3.4 End-to-end
+Cover the selected real-host lane and prove:
+- host bootstrap,
+- Traefik deployment,
+- HTTPS reachability,
+- certificate validation for the selected lane,
+- private IPFS behavior,
+- app health,
+- reconnect and wait behavior for long-running operations,
+- browser proof from a client machine with Playwright screenshots and at least one real UI navigation step.
 
-Ověřit:
-- bootstrap hostu,
-- nasazení Traefiku,
-- vystavení .NET app přes HTTPS,
-- issuance/obnova certifikátu,
-- DB readiness,
-- IPFS privátní swarm chování,
-- rollback poslední revize,
-- reconnect po přerušení klienta.
+## 4. Mandatory negative scenarios
 
-## 3. Testovací prostředí
+Always test:
+- wrong SSH credential,
+- wrong host key fingerprint,
+- path traversal attempt,
+- public exposure of IPFS API,
+- public exposure of PostgreSQL where PostgreSQL is part of the lane,
+- occupied ports,
+- missing runtime compatibility on the target,
+- wrong IPFS swarm key,
+- public bootstrap peers left enabled,
+- rollback to a non-existent revision.
 
-### 3.1 Local developer harness
-Použít:
-- fake SSH,
-- lokální test data,
-- snapshoty logů,
-- golden files.
+## 5. Evidence artifacts
 
-### 3.2 CI integration harness
-Použít:
-- disposable Ubuntu VM nebo dedikovaný ephemeral host,
-- izolovanou DNS zónu nebo test doménu,
-- staging ACME,
-- test registry nebo veřejné image s pinem tagu,
-- samostatný target config.
-
-### 3.3 Staging host
-Použít:
-- topologii co nejbližší produkci,
-- reálný Traefik,
-- reálné porty 80/443,
-- oddělené secrets,
-- privátní IPFS swarm s test peerem.
-
-## 4. Validační osy
-
-### 4.1 Bezpečnost
-Ověřit:
-- host key mismatch vede k hard fail,
-- raw exec disabled by default,
-- secret redaction v logu,
-- path traversal je odmítnut,
-- zápis mimo allowed roots je odmítnut,
-- IPFS API není veřejně vystavené,
-- PostgreSQL není veřejně vystavená,
-- dashboard Traefiku není veřejně vystaven bez autentizace.
-
-### 4.2 Spolehlivost
-Ověřit:
-- dlouhá operace přežije reconnect klienta,
-- `operation_wait` umí timeout a polling,
-- `operation_logs` vrací inkrementální logy,
-- rollback vrátí předchozí soubory a compose stav,
-- locky zabrání souběžnému konfliktu.
-
-### 4.3 Použitelnost pro Codex
-Ověřit:
-- summary je stručné a akční,
-- next steps jsou jasné,
-- chybové stavy jsou deterministické,
-- tooly nevyžadují interaktivní shell,
-- návratové payloady mají stálou strukturu.
-
-### 4.4 Provozní správnost
-Ověřit:
-- compose config validace proběhne před apply,
-- health checks čekají na readiness,
-- Traefik route je dostupná přes HTTPS,
-- certifikát je vystaven pro očekávaný hostname,
-- app komunikuje s PostgreSQL,
-- app komunikuje s IPFS RPC jen interně.
-
-## 5. Release gates
-
-Release není připraven, pokud není splněno vše:
-
-- žádný blocker v threat modelu,
-- žádný kritický únik secretů v logu,
-- žádný failing unit/contract/integration test,
-- minimálně jeden green E2E deploy proti test hostu,
-- green rollback test,
-- green host key mismatch test,
-- green IPFS private validation test,
-- green path guard negative test,
-- green ACME staging test,
-- zdokumentované known risks,
-- aktualizovaný manifest a reference.
-
-## 6. Negativní scénáře
-Povinně testovat:
-
-- špatný SSH key,
-- špatný host key fingerprint,
-- timeout při image pull,
-- compose config syntax error,
-- chybějící external network,
-- nevalidní Traefik labels,
-- obsazený port 80/443,
-- Let's Encrypt rate limit / staging fallback,
-- PostgreSQL volume permissions problem,
-- IPFS swarm key mismatch,
-- IPFS default bootstrap peers nebyly odstraněny,
-- nedostupný backend service,
-- rollback na neexistující revision.
-
-## 7. Důkazní artefakty
-Každý E2E běh má uložit:
+Every real-host validation run must capture:
 
 - target identifier,
 - timestamp,
-- git revision serveru,
-- použitou target konfiguraci bez secretů,
+- git revision,
+- sanitized target configuration,
 - operation journal,
-- relevantní remote logy,
-- probe výsledky,
-- cert summary,
-- compose ps snapshot,
-- rollback snapshot.
+- relevant remote logs,
+- probe results,
+- certificate summary,
+- IPFS private validation summary,
+- browser screenshots,
+- failure analysis if the lane changed,
+- list of pack docs updated because of field findings.
 
-## 8. Metriky kvality
-Doporučené minimum:
+## 6. Release gates
 
-- unit + contract coverage na kritických třídách: >= 85 %,
-- všechny security sensitive cesty pokryté explicitními testy,
-- 0 známých blockerů,
-- 0 TODO v shipping path,
-- 100 % toolů s acceptance scénářem,
-- 100 % mutujících toolů s rollback nebo fail-safe chováním.
+Release is not ready unless all of the following are true:
 
-## 9. Doporučené test projekty
-- `CanDoItAll.Mcp.SshOps.Tests.Unit`
-- `CanDoItAll.Mcp.SshOps.Tests.Contract`
-- `CanDoItAll.Mcp.SshOps.Tests.Integration`
-- `CanDoItAll.Mcp.SshOps.Tests.E2E` (volitelně mimo default CI)
+- no blocker remains in the threat model,
+- no critical secret leak exists in logs,
+- unit, contract, and integration suites are green,
+- at least one green real-host deploy exists,
+- rollback validation is green where supported,
+- host key mismatch handling is green,
+- IPFS private validation is green,
+- browser proof is green,
+- known risks are documented,
+- plan, prompts, and checklists have been updated if field validation disproved an assumption.
 
-## 10. Exit criteria pro Codex implementaci
-Codex smí považovat práci za hotovou až když:
+## 7. Exit criteria for Codex implementation
 
-- kód buildí na .NET 10,
-- všechny tooly mají dokumentovanou request/response ukázku,
-- validace konfigurace běží při startu,
-- základní compose/Traefik/PostgreSQL/IPFS E2E scénář prošel,
-- QA checklist je odškrtnut,
-- závěrečná self-review zpráva je přiložená v PR.
+Codex may treat the work as done only when:
+
+- the code builds on .NET 10,
+- every tool has a documented request and response example,
+- configuration validation runs on startup,
+- the selected real-host validation lane passed end to end,
+- the QA checklist is green,
+- the browser proof artifacts are attached,
+- the closing self-review explains any remaining limitations.

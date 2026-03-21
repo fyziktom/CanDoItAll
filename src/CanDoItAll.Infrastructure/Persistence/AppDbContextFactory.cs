@@ -31,6 +31,15 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
 
             optionsBuilder.UseNpgsql(connectionString, builder => builder.MigrationsAssembly("CanDoItAll.Web"));
         }
+        else if (string.Equals(databaseOptions.Provider, "inmemory", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(databaseOptions.Provider, "memory", StringComparison.OrdinalIgnoreCase))
+        {
+            var databaseName = string.IsNullOrWhiteSpace(databaseOptions.ConnectionString)
+                ? "candoitall"
+                : databaseOptions.ConnectionString.Trim();
+
+            optionsBuilder.UseInMemoryDatabase(databaseName);
+        }
         else
         {
             var basePath = Directory.GetCurrentDirectory();

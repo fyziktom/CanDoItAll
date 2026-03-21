@@ -1,4 +1,3 @@
-using CanDoItAll.Mcp.DotNetWatch.Logging;
 using CanDoItAll.Mcp.DotNetWatch.Operations;
 using CanDoItAll.Mcp.DotNetWatch.Runtime;
 

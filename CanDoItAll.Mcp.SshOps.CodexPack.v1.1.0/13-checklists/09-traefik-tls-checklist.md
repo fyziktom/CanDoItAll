@@ -1,13 +1,13 @@
-# Checklist Traefik + TLS
+# Traefik and TLS checklist
 
-- [ ] Traefik běží na shared proxy network.
-- [ ] `exposedByDefault=false` je nastavené.
-- [ ] Routers jsou deklarované přes labels nebo file provider.
-- [ ] HTTP -> HTTPS redirect je definovaný.
-- [ ] Cert resolver má persistentní storage.
-- [ ] `acme.json` má správná práva.
-- [ ] Staging resolver je připraven pro testy.
-- [ ] Production resolver se používá až po ověření.
-- [ ] Dashboard je interní nebo chráněný.
-- [ ] App service má správný `loadbalancer.server.port`.
-- [ ] `cert_check` vrací očekávaný SAN/hostname.
+- [ ] The deployment mode is explicit: Docker network or native service.
+- [ ] `exposedByDefault=false` is set.
+- [ ] Routers are declared through labels or the file provider.
+- [ ] HTTP to HTTPS redirect is defined.
+- [ ] Certificate storage is persistent for the chosen lane.
+- [ ] `acme.json` permissions are correct when ACME is used.
+- [ ] A self-signed certificate path is defined for local-only validation when ACME is intentionally skipped.
+- [ ] Dashboard exposure is internal or protected.
+- [ ] The app backend port matches the real application listener.
+- [ ] `cert_check` returns the expected hostname or direct IP identity.
+- [ ] Browser validation proves that the HTTPS endpoint loads in Playwright with the expected certificate mode.

@@ -2,25 +2,13 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using CanDoItAll.Mcp.DotNetWatch.Configuration;
-using CanDoItAll.Mcp.DotNetWatch.Processes;
-using CanDoItAll.Mcp.DotNetWatch.Runtime;
+using CanDoItAll.Mcp.Core.Identity;
+using CanDoItAll.Mcp.LocalRuntime.Processes;
 
-namespace CanDoItAll.Mcp.DotNetWatch.Persistence;
+namespace CanDoItAll.Mcp.LocalRuntime.Persistence;
 
-public sealed record ManagedProcessRecord(
-    int Pid,
-    DateTimeOffset StartedUtc,
-    string Command,
-    IReadOnlyList<string> Arguments,
-    string WorkingDirectory,
-    string WorkspaceRoot,
-    string OwnerKind,
-    string OwnerId,
-    string RegisteredByServerInstanceId);
-
-public sealed class StaleProcessRegistry(
-    RuntimeConfiguration configuration,
+public class StaleProcessRegistry(
+    LocalProcessRuntimeOptions options,
     ServerInstanceIdentity serverInstanceIdentity,
     IProcessCommandRunner commandRunner,
     ILogger<StaleProcessRegistry> logger)
@@ -256,51 +244,27 @@ public sealed class StaleProcessRegistry(
 
     private async Task<List<ManagedProcessRecord>> ReadUnsafeAsync(CancellationToken cancellationToken)
     {
-        if (!File.Exists(configuration.RegistryPath))
+        if (!File.Exists(options.RegistryPath))
         {
             return [];
         }
 
-        await using var stream = File.Open(configuration.RegistryPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        await using var stream = File.Open(options.RegistryPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         var records = await JsonSerializer.DeserializeAsync<List<ManagedProcessRecord>>(stream, _serializerOptions, cancellationToken);
         return records ?? [];
     }
 
     private async Task WriteUnsafeAsync(List<ManagedProcessRecord> records, CancellationToken cancellationToken)
     {
-        await using var stream = File.Open(configuration.RegistryPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        var directory = Path.GetDirectoryName(options.RegistryPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        await using var stream = File.Open(options.RegistryPath, FileMode.Create, FileAccess.Write, FileShare.None);
         await JsonSerializer.SerializeAsync(stream, records, _serializerOptions, cancellationToken);
     }
 
     private readonly record struct OwnershipResult(bool IsOwned, bool KeepRecord, string Reason);
-}
-
-public sealed class StartupCleanupHostedService(
-    RuntimeConfiguration configuration,
-    StaleProcessRegistry staleProcessRegistry,
-    IProcessTreeTerminator terminator,
-    ILogger<StartupCleanupHostedService> logger) : IHostedService
-{
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        if (!configuration.CleanupStaleManagedProcessesOnStartup)
-        {
-            return;
-        }
-
-        var result = await staleProcessRegistry.CleanupAsync(terminator, dryRun: false, cancellationToken);
-        if (result.Killed.Count > 0 || result.Skipped.Count > 0)
-        {
-            logger.LogInformation(
-                "Startup stale process cleanup completed. Checked={Checked}, Killed={Killed}, Skipped={Skipped}",
-                result.Checked,
-                result.Killed.Count,
-                result.Skipped.Count);
-        }
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
 }

@@ -1,8 +1,9 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CanDoItAll.Mcp.Core.Contracts;
 using CanDoItAll.Mcp.DotNetWatch;
-using CanDoItAll.Mcp.DotNetWatch.Persistence;
+using CanDoItAll.Mcp.LocalRuntime.Persistence;
 using ModelContextProtocol.Client;
 
 namespace CanDoItAll.Mcp.DotNetWatch.IntegrationTests;

@@ -19,6 +19,7 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Components;
 using CanDoItAll.Web.Composition;
 using CanDoItAll.Web.Infrastructure;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 
@@ -33,6 +34,12 @@ builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Envi
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
 builder.Services.AddScoped<IWorkbenchStateStore, BrowserWorkspaceStateStore>();
 builder.Services.AddScoped<TuningCoordinator>();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 builder.Services.AddSecurityModule();
 builder.Services.AddWorkspaceModule();
 builder.Services.AddProjectsModule();
@@ -46,6 +53,8 @@ builder.Services.AddActivityModule();
 builder.Services.AddAutomationModule();
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -84,6 +93,7 @@ if (app.Environment.IsDevelopment())
 app.MapRazorComponents<App>()
     .AddAdditionalAssemblies(ModuleAssemblies.All)
     .AddInteractiveServerRenderMode();
+app.MapHealthChecks("/health");
 
 await using (var scope = app.Services.CreateAsyncScope())
 {

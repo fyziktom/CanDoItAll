@@ -1,11 +1,10 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using CanDoItAll.Mcp.DotNetWatch.Configuration;
 
-namespace CanDoItAll.Mcp.DotNetWatch.Logging;
+namespace CanDoItAll.Mcp.Core.Observability;
 
-public sealed record LogEntry(
+public record LogEntry(
     long Sequence,
     DateTimeOffset TimestampUtc,
     string Source,
@@ -14,13 +13,13 @@ public sealed record LogEntry(
     string CorrelationId,
     string Text);
 
-public sealed record LogReadResult(
+public record LogReadResult(
     IReadOnlyList<LogEntry> Entries,
     long NextCursor,
     bool Truncated,
     int TotalAvailableAfterCursor);
 
-public sealed class RingLogBuffer
+public class RingLogBuffer
 {
     private readonly object _gate = new();
     private readonly int _capacity;
@@ -90,19 +89,35 @@ public sealed class RingLogBuffer
     }
 }
 
-public sealed class FileLogStore(RuntimeConfiguration configuration)
+public sealed record FileLogStoreOptions
 {
+    public bool Enabled { get; init; } = true;
+
+    public string RootDirectory { get; init; } = ".";
+
+    public long MaxFileSizeBytes { get; init; } = 50L * 1024L * 1024L;
+}
+
+public class FileLogStore
+{
+    private readonly FileLogStoreOptions _options;
     private readonly ConcurrentDictionary<string, object> _fileLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
 
+    public FileLogStore(FileLogStoreOptions options)
+    {
+        _options = options;
+        Directory.CreateDirectory(_options.RootDirectory);
+    }
+
     public void Append(string ownerKind, string ownerId, LogEntry entry)
     {
-        if (!configuration.PersistLogsToFile)
+        if (!_options.Enabled)
         {
             return;
         }
 
-        var path = Path.Combine(configuration.LogFolder, $"{ownerKind.ToLowerInvariant()}-{Sanitize(ownerId)}.ndjson");
+        var path = Path.Combine(_options.RootDirectory, $"{ownerKind.ToLowerInvariant()}-{Sanitize(ownerId)}.ndjson");
         var fileLock = _fileLocks.GetOrAdd(path, static _ => new object());
 
         lock (fileLock)
@@ -120,7 +135,7 @@ public sealed class FileLogStore(RuntimeConfiguration configuration)
         }
 
         var fileInfo = new FileInfo(path);
-        if (fileInfo.Length < configuration.MaxLogFileSizeBytes)
+        if (fileInfo.Length < _options.MaxFileSizeBytes)
         {
             return;
         }
@@ -131,7 +146,7 @@ public sealed class FileLogStore(RuntimeConfiguration configuration)
             File.Delete(rotatedPath);
         }
 
-        File.Move(path, rotatedPath);
+        File.Move(path, rotatedPath, overwrite: true);
     }
 
     private static string Sanitize(string value)
@@ -141,17 +156,44 @@ public sealed class FileLogStore(RuntimeConfiguration configuration)
     }
 }
 
-public sealed partial class LogRedactor(RuntimeConfiguration configuration)
+public sealed record SecretRedactionOptions
 {
+    public bool Enabled { get; init; } = true;
+
+    public string Replacement { get; init; } = "***redacted***";
+
+    public IReadOnlyList<string> LiteralPatterns { get; init; } = [];
+}
+
+public partial class SecretRedactor
+{
+    private readonly SecretRedactionOptions _options;
+
+    public SecretRedactor(SecretRedactionOptions options)
+    {
+        _options = options;
+    }
+
     public string Redact(string text)
     {
-        if (!configuration.RedactionEnabled || string.IsNullOrWhiteSpace(text))
+        if (!_options.Enabled || string.IsNullOrWhiteSpace(text))
         {
             return text;
         }
 
-        var redacted = SecretKeyValueRegex().Replace(text, static match => $"{match.Groups["key"].Value}{match.Groups["separator"].Value}***redacted***");
-        redacted = ConnectionStringPasswordRegex().Replace(redacted, static match => $"{match.Groups["key"].Value}=***redacted***");
+        var redacted = SecretKeyValueRegex().Replace(
+            text,
+            match => $"{match.Groups["key"].Value}{match.Groups["separator"].Value}{_options.Replacement}");
+        redacted = ConnectionStringPasswordRegex().Replace(
+            redacted,
+            match => $"{match.Groups["key"].Value}={_options.Replacement}");
+        redacted = PrivateKeyBlockRegex().Replace(redacted, _options.Replacement);
+
+        foreach (var pattern in _options.LiteralPatterns.Where(static value => !string.IsNullOrWhiteSpace(value)))
+        {
+            redacted = redacted.Replace(pattern, _options.Replacement, StringComparison.OrdinalIgnoreCase);
+        }
+
         return redacted;
     }
 
@@ -160,4 +202,7 @@ public sealed partial class LogRedactor(RuntimeConfiguration configuration)
 
     [GeneratedRegex(@"(?<key>(?i:password|pwd|user\s*id|userid))=(?<value>[^;]+)")]
     private static partial Regex ConnectionStringPasswordRegex();
+
+    [GeneratedRegex(@"-----BEGIN [^-]+ PRIVATE KEY-----.*?-----END [^-]+ PRIVATE KEY-----", RegexOptions.Singleline)]
+    private static partial Regex PrivateKeyBlockRegex();
 }
