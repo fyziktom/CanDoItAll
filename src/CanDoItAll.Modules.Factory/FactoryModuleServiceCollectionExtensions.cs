@@ -6,6 +6,7 @@ public static class FactoryModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddFactoryModule(this IServiceCollection services)
     {
+        services.AddSingleton<PromptLibraryPackLoader>();
         services.AddScoped<PromptFactoryService>();
         return services;
     }

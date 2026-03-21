@@ -219,6 +219,10 @@ public sealed class CanvasWorkbenchAction
 
     public string NotesPlaceholder { get; set; } = string.Empty;
 
+    public bool ShowDefaultTextFields { get; set; } = true;
+
+    public string SubmitLabel { get; set; } = "Create";
+
     public bool RequiresFile { get; set; }
 
     public string AcceptedFileTypes { get; set; } = string.Empty;
@@ -226,6 +230,10 @@ public sealed class CanvasWorkbenchAction
     public string FilePrompt { get; set; } = "Drop a file here or choose one.";
 
     public bool SupportsDragDrop { get; set; } = true;
+
+    public List<CanvasWorkbenchInputField> InputFields { get; set; } = [];
+
+    public List<CanvasWorkbenchInputValue> DefaultInputValues { get; set; } = [];
 
     public List<CanvasWorkbenchAction> Children { get; set; } = [];
 }
@@ -253,6 +261,26 @@ public sealed class CanvasWorkbenchGroupFrame
     public string Tone { get; set; } = "accent";
 
     public List<string> AnchorNodeIds { get; set; } = [];
+}
+
+public sealed class CanvasWorkbenchInputField
+{
+    public string Key { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
+
+    public string Placeholder { get; set; } = string.Empty;
+
+    public string InputMode { get; set; } = "text";
+
+    public bool IsRequired { get; set; }
+}
+
+public sealed class CanvasWorkbenchInputValue
+{
+    public string Key { get; set; } = string.Empty;
+
+    public string Value { get; set; } = string.Empty;
 }
 
 public sealed class CanvasWorkbenchUploadedFile
@@ -295,7 +323,8 @@ public sealed record CanvasWorkbenchCreateActionRequest(
     string PlacementKind,
     string CreateMode,
     string ObjectSubtype,
-    CanvasWorkbenchUploadedFile? UploadedFile);
+    CanvasWorkbenchUploadedFile? UploadedFile,
+    IReadOnlyList<CanvasWorkbenchInputValue>? InputValues = null);
 
 public sealed record CanvasWorkbenchNodeEditRequest(
     string NodeId,

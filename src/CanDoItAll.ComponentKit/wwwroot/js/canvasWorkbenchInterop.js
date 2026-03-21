@@ -31,6 +31,23 @@
         return element;
     }
 
+    function normalizeInputField(field) {
+        return {
+            key: field?.key || "",
+            label: field?.label || field?.key || "Value",
+            placeholder: field?.placeholder || "",
+            inputMode: field?.inputMode || "text",
+            isRequired: !!field?.isRequired
+        };
+    }
+
+    function normalizeInputValue(value) {
+        return {
+            key: value?.key || "",
+            value: value?.value || ""
+        };
+    }
+
     function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
     }
@@ -63,10 +80,14 @@
             subtitlePlaceholder: action?.subtitlePlaceholder || "",
             notesLabel: action?.notesLabel || "Notes",
             notesPlaceholder: action?.notesPlaceholder || "",
+            showDefaultTextFields: action?.showDefaultTextFields !== false,
+            submitLabel: action?.submitLabel || action?.label || "Create",
             requiresFile: !!action?.requiresFile,
             acceptedFileTypes: action?.acceptedFileTypes || "",
             filePrompt: action?.filePrompt || "Drop a file here or choose one.",
             supportsDragDrop: action?.supportsDragDrop !== false,
+            inputFields: Array.isArray(action?.inputFields) ? action.inputFields.map(normalizeInputField) : [],
+            defaultInputValues: Array.isArray(action?.defaultInputValues) ? action.defaultInputValues.map(normalizeInputValue) : [],
             children: Array.isArray(action?.children) ? action.children.map(normalizeAction) : []
         };
     }
@@ -1381,6 +1402,9 @@
             notes: "",
             objectSubtype: action.objectSubtype || "",
             uploadedFile: null,
+            inputValues: Array.isArray(action?.defaultInputValues)
+                ? action.defaultInputValues.map(item => ({ key: item.key || "", value: item.value || "" }))
+                : [],
             placementKind: placementKind || (sourceNode ? "child" : "canvas"),
             createMode: action.createMode || (action.requiresInput ? "dialog" : "command")
         };
@@ -1935,12 +1959,25 @@
                 return;
             }
 
+            const inputValues = Array.isArray(state.composer.inputFieldEntries)
+                ? state.composer.inputFieldEntries.map(entry => ({
+                    key: entry.key,
+                    value: (entry.input.value || "").trim()
+                }))
+                : [];
+            const hasMissingRequiredInputs = Array.isArray(state.composer.inputFieldEntries) &&
+                state.composer.inputFieldEntries.some(entry => entry.isRequired && !(entry.input.value || "").trim());
+            if (hasMissingRequiredInputs) {
+                return;
+            }
+
             submitCreateRequest(state, {
                 ...state.composer.request,
-                title: state.composer.titleInput.value.trim(),
-                subtitle: state.composer.subtitleInput.value.trim(),
-                notes: state.composer.notesInput.value.trim(),
+                title: state.composer.titleInput ? state.composer.titleInput.value.trim() : "",
+                subtitle: state.composer.subtitleInput ? state.composer.subtitleInput.value.trim() : "",
+                notes: state.composer.notesInput ? state.composer.notesInput.value.trim() : "",
                 objectSubtype: state.composer.request.objectSubtype || "",
+                inputValues,
                 uploadedFile: state.composer.uploadedFile || null
             }, { focusHost: true });
             closeComposer(state);
@@ -2022,7 +2059,9 @@
         }
 
         if (composer.createButton) {
-            composer.createButton.disabled = !!composer.requiresFile && !composer.uploadedFile;
+            const hasMissingRequiredInputs = Array.isArray(composer.inputFieldEntries) &&
+                composer.inputFieldEntries.some(entry => entry.isRequired && !(entry.input.value || "").trim());
+            composer.createButton.disabled = (!!composer.requiresFile && !composer.uploadedFile) || hasMissingRequiredInputs;
         }
     }
 
@@ -2032,32 +2071,85 @@
 
         const shell = decorateComposerShell(state, `Create ${action.label || "item"}`, action.label || "Create", "dialog");
         const fields = createElement(state.document, "div", "cw-canvas-composer__fields");
+        const showDefaultTextFields = action.showDefaultTextFields !== false;
+        let titleInput = null;
+        let subtitleInput = null;
+        let notesInput = null;
 
-        const titleField = createElement(state.document, "label", "cw-canvas-composer__field");
-        titleField.appendChild(createElement(state.document, "span", null, action.titleLabel || "Title"));
-        const titleInput = createElement(state.document, "input", "cw-canvas-composer__input");
-        titleInput.type = "text";
-        titleInput.value = request?.title || "";
-        titleInput.placeholder = action.titlePlaceholder || "";
-        titleField.appendChild(titleInput);
-        fields.appendChild(titleField);
+        if (showDefaultTextFields) {
+            const titleField = createElement(state.document, "label", "cw-canvas-composer__field");
+            titleField.appendChild(createElement(state.document, "span", null, action.titleLabel || "Title"));
+            titleInput = createElement(state.document, "input", "cw-canvas-composer__input");
+            titleInput.type = "text";
+            titleInput.value = request?.title || "";
+            titleInput.placeholder = action.titlePlaceholder || "";
+            titleField.appendChild(titleInput);
+            fields.appendChild(titleField);
 
-        const subtitleField = createElement(state.document, "label", "cw-canvas-composer__field");
-        subtitleField.appendChild(createElement(state.document, "span", null, action.subtitleLabel || "Subtitle"));
-        const subtitleInput = createElement(state.document, "input", "cw-canvas-composer__input");
-        subtitleInput.type = "text";
-        subtitleInput.value = request?.subtitle || "";
-        subtitleInput.placeholder = action.subtitlePlaceholder || "";
-        subtitleField.appendChild(subtitleInput);
-        fields.appendChild(subtitleField);
+            const subtitleField = createElement(state.document, "label", "cw-canvas-composer__field");
+            subtitleField.appendChild(createElement(state.document, "span", null, action.subtitleLabel || "Subtitle"));
+            subtitleInput = createElement(state.document, "input", "cw-canvas-composer__input");
+            subtitleInput.type = "text";
+            subtitleInput.value = request?.subtitle || "";
+            subtitleInput.placeholder = action.subtitlePlaceholder || "";
+            subtitleField.appendChild(subtitleInput);
+            fields.appendChild(subtitleField);
 
-        const notesField = createElement(state.document, "label", "cw-canvas-composer__field");
-        notesField.appendChild(createElement(state.document, "span", null, action.notesLabel || "Notes"));
-        const notesInput = createElement(state.document, "textarea", "cw-canvas-composer__textarea");
-        notesInput.value = request?.notes || "";
-        notesInput.placeholder = action.notesPlaceholder || "";
-        notesField.appendChild(notesInput);
-        fields.appendChild(notesField);
+            const notesField = createElement(state.document, "label", "cw-canvas-composer__field");
+            notesField.appendChild(createElement(state.document, "span", null, action.notesLabel || "Notes"));
+            notesInput = createElement(state.document, "textarea", "cw-canvas-composer__textarea");
+            notesInput.value = request?.notes || "";
+            notesInput.placeholder = action.notesPlaceholder || "";
+            notesField.appendChild(notesInput);
+            fields.appendChild(notesField);
+        }
+
+        const inputValueLookup = new Map();
+        const initialInputValues = Array.isArray(request?.inputValues) && request.inputValues.length
+            ? request.inputValues
+            : (Array.isArray(action?.defaultInputValues) ? action.defaultInputValues : []);
+        for (const item of initialInputValues) {
+            if (!item?.key) {
+                continue;
+            }
+
+            inputValueLookup.set(item.key, item.value || "");
+        }
+
+        const inputFieldEntries = [];
+        for (const field of action.inputFields || []) {
+            const fieldWrapper = createElement(state.document, "label", "cw-canvas-composer__field");
+            fieldWrapper.appendChild(createElement(
+                state.document,
+                "span",
+                null,
+                `${field.label || field.key || "Value"}${field.isRequired ? " *" : ""}`));
+
+            const inputMode = (field.inputMode || "text").toLowerCase();
+            const isMultiline = inputMode === "textarea" || inputMode === "multiline";
+            const input = createElement(
+                state.document,
+                isMultiline ? "textarea" : "input",
+                isMultiline ? "cw-canvas-composer__textarea" : "cw-canvas-composer__input");
+            if (!isMultiline) {
+                input.type = inputMode === "url" ? "url" : "text";
+            }
+
+            input.value = inputValueLookup.get(field.key) || "";
+            input.placeholder = field.placeholder || "";
+            fieldWrapper.appendChild(input);
+            fields.appendChild(fieldWrapper);
+            input.addEventListener("input", () => {
+                if (state.composer) {
+                    updateComposerFileState(state.composer);
+                }
+            });
+            inputFieldEntries.push({
+                key: field.key,
+                input,
+                isRequired: !!field.isRequired
+            });
+        }
 
         let uploadedFile = request?.uploadedFile || null;
         let fileSummary = null;
@@ -2152,7 +2244,7 @@
         const create = createElement(state.document, "button", "cw-button");
         create.type = "button";
         create.dataset.tone = "accent";
-        create.textContent = action.label || "Create";
+        create.textContent = action.submitLabel || action.label || "Create";
         create.addEventListener("click", () => commitComposer(state));
         actions.appendChild(create);
 
@@ -2170,6 +2262,7 @@
             titleInput,
             subtitleInput,
             notesInput,
+            inputFieldEntries,
             createButton: create,
             requiresFile: !!action.requiresFile,
             uploadedFile,
@@ -2181,8 +2274,13 @@
         window.requestAnimationFrame(() => {
             layoutComposer(state);
             updateComposerFileState(state.composer);
-            titleInput.focus();
-            titleInput.select();
+            const firstInput = inputFieldEntries[0]?.input || titleInput || subtitleInput || notesInput;
+            if (firstInput) {
+                firstInput.focus();
+                if (typeof firstInput.select === "function") {
+                    firstInput.select();
+                }
+            }
         });
     }
 

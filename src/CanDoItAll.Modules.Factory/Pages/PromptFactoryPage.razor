@@ -84,6 +84,145 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         </div>
                     </div>
                 }
+                else if (selectedBlueprintNode is not null)
+                {
+                    <div class="space-y-4">
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Blueprint</p>
+                            <h3 class="cw-panel-title">@selectedBlueprintNode.Name</h3>
+                            <p class="cw-panel-copy">@selectedBlueprintNode.Guidance</p>
+                            <div class="cw-chip-row">
+                                <span class="cw-node__chip tone-accent">@selectedBlueprintNode.PromptType</span>
+                                @if (!string.IsNullOrWhiteSpace(selectedBlueprintNode.RecommendedFlowKey))
+                                {
+                                    <span class="cw-node__chip">Flow: @selectedBlueprintNode.RecommendedFlowKey</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Selection</p>
+                            <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="accent" @onclick="ApplyRecommendationsAsync">Apply recommendations</button>
+                                <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => HandleCanvasActionAsync("clear:blueprint", selectedCanvasNodeId))">Clear blueprint</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (selectedFlowNode is not null)
+                {
+                    <div class="space-y-4">
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Flow template</p>
+                            <h3 class="cw-panel-title">@selectedFlowNode.Name</h3>
+                            <p class="cw-panel-copy">@selectedFlowNode.Summary</p>
+                            <div class="cw-chip-row">
+                                <span class="cw-node__chip tone-accent">@selectedFlowNode.AgentSequence.Count agent step(s)</span>
+                                <span class="cw-node__chip">@selectedFlowNode.BlockKeys.Count block(s)</span>
+                            </div>
+                        </div>
+
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Selection</p>
+                            <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="mint" @onclick="BuildAsync">Build prompt</button>
+                                <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => HandleCanvasActionAsync("clear:flow", selectedCanvasNodeId))">Clear flow</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (selectedComponentNode is not null)
+                {
+                    var customization = editor.ComponentCustomizations.LastOrDefault(item => item.BlockId == selectedComponentNode.Id);
+                    <div class="space-y-4">
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Prompt component</p>
+                            <h3 class="cw-panel-title">@selectedComponentNode.Name</h3>
+                            <p class="cw-panel-copy">@selectedComponentNode.Summary</p>
+                            <div class="cw-chip-row">
+                                <span class="cw-node__chip tone-accent">@selectedComponentNode.BlockKind</span>
+                                <span class="cw-node__chip">@ResolveLibraryGroupLabel(selectedComponentNode.GroupKey)</span>
+                                @if (customization?.TemplateValues.Count > 0)
+                                {
+                                    <span class="cw-node__chip tone-success">@($"{customization.TemplateValues.Count} specified")</span>
+                                }
+                            </div>
+                        </div>
+
+                        @if (customization?.TemplateValues.Count > 0)
+                        {
+                            <div class="cw-panel-card">
+                                <p class="cw-panel-kicker">Specification</p>
+                                <div class="cw-list">
+                                    @foreach (var value in customization.TemplateValues)
+                                    {
+                                        <div class="cw-list-item">
+                                            <strong>@value.Key</strong>
+                                            <span>@value.Value</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Selection</p>
+                            <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => HandleCanvasActionAsync($"component:remove:{selectedComponentNode.Key}", selectedCanvasNodeId))">Remove component</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (selectedComponentGroupNode is not null)
+                {
+                    <div class="space-y-4">
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Component group</p>
+                            <h3 class="cw-panel-title">@selectedComponentGroupNode.Name</h3>
+                            <p class="cw-panel-copy">@selectedComponentGroupNode.Purpose</p>
+                            <div class="cw-chip-row">
+                                <span class="cw-node__chip tone-accent">@($"{selectedComponentGroupNode.Components.Count(item => editor.SelectedBlockIds.Contains(item.Id))} selected")</span>
+                            </div>
+                        </div>
+
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Selected components</p>
+                            <div class="cw-list">
+                                @foreach (var component in selectedComponentGroupNode.Components.Where(item => editor.SelectedBlockIds.Contains(item.Id)).OrderBy(item => item.OrderIndex))
+                                {
+                                    <div class="cw-list-item">
+                                        <strong>@component.Name</strong>
+                                        <span>@component.BlockKind</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (selectedAttachmentNode is not null)
+                {
+                    <div class="space-y-4">
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Prompt input</p>
+                            <h3 class="cw-panel-title">@selectedAttachmentNode.Title</h3>
+                            <p class="cw-panel-copy">@ResolveAttachmentLeadText(selectedAttachmentNode)</p>
+                            <div class="cw-chip-row">
+                                <span class="cw-node__chip tone-accent">@selectedAttachmentNode.Kind</span>
+                                @if (!string.IsNullOrWhiteSpace(selectedAttachmentNode.MediaOriginalFileName))
+                                {
+                                    <span class="cw-node__chip">@selectedAttachmentNode.MediaOriginalFileName</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Selection</p>
+                            <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => HandleCanvasActionAsync($"input:remove:{selectedAttachmentNode.Id}", selectedCanvasNodeId))">Remove input</button>
+                            </div>
+                        </div>
+                    </div>
+                }
                 else if (selectedPromptNode is not null)
                 {
                     <div class="space-y-4">
@@ -411,11 +550,40 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 </div>
 
                 <div class="cw-panel-card">
+                    <p class="cw-panel-kicker">Prompt library pack</p>
+                    <h3 class="cw-panel-title">Imported catalog</h3>
+                    <div class="cw-summary-grid">
+                        <div class="cw-summary-tile">
+                            <span>Components</span>
+                            <strong>@libraryCatalog.ComponentCount</strong>
+                        </div>
+                        <div class="cw-summary-tile">
+                            <span>Flows</span>
+                            <strong>@libraryCatalog.FlowCount</strong>
+                        </div>
+                        <div class="cw-summary-tile">
+                            <span>Blueprints</span>
+                            <strong>@libraryCatalog.BlueprintCount</strong>
+                        </div>
+                    </div>
+                    <div class="cw-list">
+                        @foreach (var group in libraryCatalog.Groups.OrderBy(item => item.Order))
+                        {
+                            <div class="cw-list-item">
+                                <strong>@group.Name</strong>
+                                <span>@($"{group.ComponentCount} components · {group.Purpose}")</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="cw-panel-card">
                     <p class="cw-panel-kicker">Context assembly</p>
                     <h3 class="cw-panel-title">Project resources</h3>
                     <div class="cw-button-row">
                         <button type="button" class="cw-button" data-tone="mint" data-testid="prompt-factory-build" @onclick="BuildAsync">Build prompt</button>
                         <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session state</button>
+                        <button type="button" class="cw-button" data-tone="warn" data-testid="prompt-factory-reset-session" @onclick='@(() => HandleCanvasActionAsync("reset:session", "session-root"))'>Reset session</button>
                     </div>
 
                     @if (projectResources.Count == 0)
@@ -506,7 +674,8 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
     private IReadOnlyList<CanvasWorkbenchStat> stageStats =>
     [
         new() { Label = "Steps", Value = editor.Nodes.Count.ToString(), Tone = "neutral" },
-        new() { Label = "Blocks", Value = editor.SelectedBlockIds.Count.ToString(), Tone = "accent" },
+        new() { Label = "Components", Value = editor.SelectedBlockIds.Count.ToString(), Tone = "accent" },
+        new() { Label = "Inputs", Value = editor.SessionAttachments.Count.ToString(), Tone = "mint" },
         new() { Label = "Resources", Value = editor.SelectedResourceIds.Count.ToString(), Tone = "mint" },
         new() { Label = "Warnings", Value = editor.Warnings.Count.ToString(), Tone = "warn" }
     ];
@@ -539,6 +708,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         blocks = await PromptFactoryService.ListBlocksAsync();
         templates = await PromptFactoryService.ListTemplatesAsync();
         blueprints = await PromptFactoryService.ListBlueprintsAsync();
+        libraryCatalog = await PromptFactoryService.GetLibraryCatalogAsync();
         editor = await PromptFactoryService.GetEditorAsync(sessionId, runId);
         if (string.IsNullOrWhiteSpace(editor.SessionName))
         {
@@ -590,6 +760,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         uiState.SelectedNodeIds = [.. selectedCanvasNodeIds];
         uiState.ActiveInspectorTab = activeInspectorTab;
         editor.CanvasUiStateJson = uiState.ToJson();
+        var sessionActions = PromptFactoryCanvasCatalog.BuildSessionContextActions(libraryCatalog).ToList();
 
         canvasSurface = new CanvasWorkbenchSurface
         {
@@ -600,13 +771,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
             {
                 HintText = "Click to inspect a step, Alt-drag to multi-select, drag to move, and use the same shared canvas vocabulary as project structure.",
                 FocusActionLabel = "Focus session",
-                QuickCreateActions =
-                [
-                    new CanvasWorkbenchAction { ActionId = "build-flow", Label = "Build", Icon = "flow", Tone = "mint" },
-                    new CanvasWorkbenchAction { ActionId = "apply-recommendations", Label = "Recommend", Icon = "rules", Tone = "accent" },
-                    new CanvasWorkbenchAction { ActionId = "save-session", Label = "Save", Icon = "save", Tone = "primary" },
-                    new CanvasWorkbenchAction { ActionId = "branch-selected", Label = "Branch", Icon = "fork", Tone = "warn" }
-                ]
+                QuickCreateActions = sessionActions
             },
             Nodes = BuildCanvasNodes(),
             Links = BuildCanvasLinks()
@@ -641,17 +806,15 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 ],
                 FooterChips =
                 [
-                    new CanvasWorkbenchChip { Text = $"{editor.SelectedBlockIds.Count} blocks", Tone = "accent" },
-                    new CanvasWorkbenchChip { Text = $"{editor.SelectedResourceIds.Count} resources", Tone = "success" }
+                    new CanvasWorkbenchChip { Text = $"{editor.SelectedBlockIds.Count} components", Tone = "accent" },
+                    new CanvasWorkbenchChip { Text = $"{editor.SessionAttachments.Count} inputs", Tone = "success" }
                 ],
-                ContextActions =
-                [
-                    new CanvasWorkbenchAction { ActionId = "build-flow", Label = "Build", Icon = "flow", Tone = "mint" },
-                    new CanvasWorkbenchAction { ActionId = "apply-recommendations", Label = "Recommend", Icon = "rules", Tone = "accent" },
-                    new CanvasWorkbenchAction { ActionId = "save-session", Label = "Save", Icon = "save", Tone = "primary" }
-                ]
+                ContextActions = PromptFactoryCanvasCatalog.BuildSessionContextActions(libraryCatalog).ToList()
             }
         };
+
+        var selectionGraph = BuildSelectionGraph();
+        nodes.AddRange(selectionGraph.Nodes);
 
         var positions = new Dictionary<string, (double X, double Y)>
         {
@@ -677,7 +840,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         {
             var groupId = $"branch:{branch.BranchKey}";
             string parentCanvasId = "session-root";
-            double baseX = 550;
+            double baseX = 1040;
             double baseY = 200 + (branchOffset * 140);
 
             var firstBranchItem = branch.Items.FirstOrDefault(item => item.ParentNodeId.HasValue);
@@ -776,10 +939,9 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private List<CanvasWorkbenchLink> BuildCanvasLinks()
     {
-        var links = new List<CanvasWorkbenchLink>
-        {
-            new() { SourceId = "session-root", TargetId = "branch:main", Kind = "contains", IsUserAuthored = false }
-        };
+        var selectionGraph = BuildSelectionGraph();
+        var links = selectionGraph.Links.ToList();
+        links.Add(new CanvasWorkbenchLink { SourceId = "session-root", TargetId = "branch:main", Kind = "contains", IsUserAuthored = false });
 
         foreach (var node in editor.Nodes)
         {
@@ -827,6 +989,38 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
     {
         foreach (var selectedId in selectedCanvasNodeIds)
         {
+            if (selectedId == BlueprintCanvasNodeId && selectedBlueprintNode is not null)
+            {
+                yield return (selectedBlueprintNode.Name, selectedBlueprintNode.PromptType);
+                continue;
+            }
+
+            if (selectedId == FlowCanvasNodeId && selectedFlowNode is not null)
+            {
+                yield return (selectedFlowNode.Name, $"{selectedFlowNode.AgentSequence.Count} agent step(s)");
+                continue;
+            }
+
+            if (TryParseSelectedComponentNodeId(selectedId, out var blockKey) &&
+                blocks.FirstOrDefault(item => string.Equals(item.Key, blockKey, StringComparison.OrdinalIgnoreCase)) is { } selectedBlock)
+            {
+                yield return (selectedBlock.Name, ResolveLibraryGroupLabel(selectedBlock.GroupKey));
+                continue;
+            }
+
+            if (TryParseSelectedInputNodeId(selectedId, out var attachmentId) &&
+                editor.SessionAttachments.FirstOrDefault(item => string.Equals(item.Id, attachmentId, StringComparison.OrdinalIgnoreCase)) is { } selectedAttachment)
+            {
+                yield return (selectedAttachment.Title, selectedAttachment.Kind);
+                continue;
+            }
+
+            if (TryParseComponentGroupNodeId(selectedId, out var groupKey))
+            {
+                yield return (ResolveLibraryGroupLabel(groupKey), "Component group");
+                continue;
+            }
+
             if (TryParsePromptCanvasNodeId(selectedId, out var nodeId) &&
                 editor.Nodes.FirstOrDefault(node => node.Id == nodeId) is { } promptNode)
             {
@@ -1075,7 +1269,14 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         => await HandleCanvasActionAsync(request.ActionId, request.NodeId);
 
     private async Task HandleCanvasCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
-        => await HandleCanvasActionAsync(request.ActionId, request.SourceNodeId);
+    {
+        if (await HandleCatalogCreateActionAsync(request))
+        {
+            return;
+        }
+
+        await HandleCanvasActionAsync(request.ActionId, request.SourceNodeId);
+    }
 
     private async Task HandleCanvasNodeOpenedAsync(string nodeId)
     {
@@ -1091,6 +1292,11 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private async Task HandleCanvasActionAsync(string actionId, string? sourceNodeId)
     {
+        if (await HandleCatalogContextActionAsync(actionId))
+        {
+            return;
+        }
+
         switch (actionId)
         {
             case "build-flow":

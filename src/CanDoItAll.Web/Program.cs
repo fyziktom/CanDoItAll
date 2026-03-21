@@ -24,9 +24,13 @@ using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 var detailedErrorsEnabled = builder.Configuration.GetValue<bool?>("DetailedErrors") ?? builder.Environment.IsDevelopment();
+var promptAttachmentMessageLimitBytes = 8 * 1024 * 1024;
 
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(options => options.DetailedErrors = detailedErrorsEnabled);
+    .AddInteractiveServerComponents(options => options.DetailedErrors = detailedErrorsEnabled)
+    // Prompt-session attachments are posted through JS interop, so the default 32 KB SignalR limit
+    // is too small for screenshots and other evidence files added from the canvas wizard.
+    .AddHubOptions(options => options.MaximumReceiveMessageSize = promptAttachmentMessageLimitBytes);
 
 builder.Services.AddCanDoItAllComponents();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, ModuleAssemblies.All);
