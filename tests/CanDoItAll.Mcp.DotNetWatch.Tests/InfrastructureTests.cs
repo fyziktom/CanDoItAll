@@ -115,7 +115,7 @@ public sealed class InfrastructureTests
             },
             ["https://localhost:7271"]);
 
-        var session = new AppSession("app_test", template, "corr_test", new RingLogBuffer(128));
+        var session = new AppSession("app_test", template, "corr_test", new RingLogBuffer(128), healthEnabled: true);
 
         Assert.True(session.IsCompatible(template));
 
@@ -142,7 +142,7 @@ public sealed class InfrastructureTests
             framework: null,
             configuration: "Debug",
             WhenAppRunningPolicy.StopAndResume,
-            affectedSessionId: null,
+            affectedSessionIds: [],
             runner: null,
             buffer,
             TimeSpan.FromMinutes(5));

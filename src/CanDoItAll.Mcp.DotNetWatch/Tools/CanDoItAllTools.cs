@@ -1,29 +1,23 @@
 using System.ComponentModel;
+using CanDoItAll.Mcp.DotNetWatch.Backend;
 using CanDoItAll.Mcp.DotNetWatch.Configuration;
-using CanDoItAll.Mcp.DotNetWatch.Runtime;
 using ModelContextProtocol.Server;
 
 namespace CanDoItAll.Mcp.DotNetWatch.Tools;
 
 [McpServerToolType]
-public sealed class CanDoItAllTools(SessionCoordinator coordinator, ILogger<CanDoItAllTools> logger)
+public sealed class CanDoItAllTools(IDotNetWatchToolInvoker invoker)
 {
     [McpServerTool(Name = "candoitall_workspace_info", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Returns workspace metadata, configured defaults, and active managed sessions or operations for the CanDoItAll development workspace.")]
+    [Description("Returns workspace metadata, configured defaults, backend session inventory, and active managed operations for the CanDoItAll development workspace.")]
     public Task<ToolEnvelope<WorkspaceInfoData>> WorkspaceInfoAsync(
         bool includeHistory = false,
         bool includeConfigSnapshot = false,
         CancellationToken cancellationToken = default)
-    {
-        return ExecuteAsync("candoitall_workspace_info", _ =>
-        {
-            var data = coordinator.GetWorkspaceInfo(includeHistory, includeConfigSnapshot);
-            return Task.FromResult(data);
-        });
-    }
+        => invoker.WorkspaceInfoAsync(includeHistory, includeConfigSnapshot, cancellationToken);
 
     [McpServerTool(Name = "candoitall_app_start", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Starts the configured CanDoItAll web app under dotnet watch or dotnet run and returns the managed session metadata.")]
+    [Description("Starts the configured CanDoItAll web app under dotnet watch or dotnet run through the persistent backend. Compatible live sessions are reused by default.")]
     public Task<ToolEnvelope<AppStartData>> AppStartAsync(
         string? projectPath = null,
         AppRunMode? mode = null,
@@ -38,43 +32,24 @@ public sealed class CanDoItAllTools(SessionCoordinator coordinator, ILogger<CanD
         AppStartConflictPolicy conflictPolicy = AppStartConflictPolicy.Fail,
         AppWaitCondition waitFor = AppWaitCondition.None,
         CancellationToken cancellationToken = default)
-    {
-        return ExecuteAsync("candoitall_app_start", _ => coordinator.StartAppAsync(
-            projectPath,
-            mode,
-            configurationName,
-            framework,
-            launchProfile,
-            workingDirectory,
-            arguments ?? [],
-            environmentOverlay,
-            urls ?? [],
-            reuseIfCompatible,
-            conflictPolicy,
-            waitFor,
-            cancellationToken));
-    }
+        => invoker.AppStartAsync(projectPath, mode, configurationName, framework, launchProfile, workingDirectory, arguments, environmentOverlay, urls, reuseIfCompatible, conflictPolicy, waitFor, cancellationToken);
 
     [McpServerTool(Name = "candoitall_app_stop", ReadOnly = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Stops the active or specified managed app session and cleans up its process tree.")]
+    [Description("Stops an active backend-owned managed app session. Use explicitly; MCP server re-instancing does not require stopping the app.")]
     public Task<ToolEnvelope<AppStopData>> AppStopAsync(
         string? sessionId = null,
         string reason = "RequestedByClient",
         bool force = false,
         CancellationToken cancellationToken = default)
-    {
-        return ExecuteAsync("candoitall_app_stop", _ => coordinator.StopAppAsync(sessionId, reason, force, cancellationToken));
-    }
+        => invoker.AppStopAsync(sessionId, reason, force, cancellationToken);
 
     [McpServerTool(Name = "candoitall_app_status", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Returns the latest managed app session snapshot.")]
+    [Description("Returns the latest backend-owned managed app session snapshot. If no sessionId is supplied, the default live session is used.")]
     public Task<ToolEnvelope<AppStatusData>> AppStatusAsync(string? sessionId = null, CancellationToken cancellationToken = default)
-    {
-        return ExecuteAsync("candoitall_app_status", _ => Task.FromResult(coordinator.GetAppStatus(sessionId)));
-    }
+        => invoker.AppStatusAsync(sessionId, cancellationToken);
 
     [McpServerTool(Name = "candoitall_app_wait", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Performs a server-side wait against the managed app lifecycle, health signal, log stream, or quiet period.")]
+    [Description("Performs a backend-side wait against the managed app lifecycle, health signal, log stream, or quiet period.")]
     public Task<ToolEnvelope<AppWaitData>> AppWaitAsync(
         string? sessionId = null,
         AppWaitCondition condition = AppWaitCondition.Healthy,
@@ -85,21 +60,10 @@ public sealed class CanDoItAllTools(SessionCoordinator coordinator, ILogger<CanD
         string? logPattern = null,
         bool caseInsensitive = true,
         CancellationToken cancellationToken = default)
-    {
-        return ExecuteAsync("candoitall_app_wait", _ => coordinator.WaitForAppAsync(
-            sessionId,
-            condition,
-            TimeSpan.FromMilliseconds(timeoutMs),
-            TimeSpan.FromMilliseconds(pollIntervalMs),
-            cursor,
-            TimeSpan.FromMilliseconds(quietPeriodMs),
-            logPattern,
-            caseInsensitive,
-            cancellationToken));
-    }
+        => invoker.AppWaitAsync(sessionId, condition, timeoutMs, pollIntervalMs, cursor, quietPeriodMs, logPattern, caseInsensitive, cancellationToken);
 
     [McpServerTool(Name = "candoitall_app_logs", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Reads incrementally from the managed app log buffer.")]
+    [Description("Reads incrementally from the backend-owned managed app log buffer.")]
     public Task<ToolEnvelope<AppLogsData>> AppLogsAsync(
         string? sessionId = null,
         long? cursor = null,
@@ -108,12 +72,10 @@ public sealed class CanDoItAllTools(SessionCoordinator coordinator, ILogger<CanD
         bool includeStdErr = true,
         bool includeSystemEvents = true,
         CancellationToken cancellationToken = default)
-    {
-        return ExecuteAsync("candoitall_app_logs", _ => Task.FromResult(coordinator.GetAppLogs(sessionId, cursor, limit, includeStdOut, includeStdErr, includeSystemEvents)));
-    }
+        => invoker.AppLogsAsync(sessionId, cursor, limit, includeStdOut, includeStdErr, includeSystemEvents, cancellationToken);
 
     [McpServerTool(Name = "candoitall_solution_build", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Starts a managed dotnet build operation against the solution or a specified target and applies the configured app preemption policy.")]
+    [Description("Starts a backend-managed dotnet build operation against the solution or a specified target and applies the configured app preemption policy.")]
     public Task<ToolEnvelope<OperationStartData>> SolutionBuildAsync(
         string? targetPath = null,
         string? configurationName = null,
@@ -124,21 +86,10 @@ public sealed class CanDoItAllTools(SessionCoordinator coordinator, ILogger<CanD
         bool waitForCompletion = false,
         int? timeoutMs = null,
         CancellationToken cancellationToken = default)
-    {
-        return ExecuteAsync("candoitall_solution_build", _ => coordinator.StartBuildAsync(
-            targetPath,
-            configurationName,
-            framework,
-            arguments ?? [],
-            environmentOverlay,
-            whenAppRunning,
-            timeoutMs.HasValue ? TimeSpan.FromMilliseconds(timeoutMs.Value) : null,
-            waitForCompletion,
-            cancellationToken));
-    }
+        => invoker.SolutionBuildAsync(targetPath, configurationName, framework, arguments, environmentOverlay, whenAppRunning, waitForCompletion, timeoutMs, cancellationToken);
 
     [McpServerTool(Name = "candoitall_tests_run", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Starts a managed dotnet test operation without using dotnet watch test.")]
+    [Description("Starts a backend-managed dotnet test operation without using dotnet watch test.")]
     public Task<ToolEnvelope<OperationStartData>> TestsRunAsync(
         string? targetPath = null,
         string? configurationName = null,
@@ -152,101 +103,42 @@ public sealed class CanDoItAllTools(SessionCoordinator coordinator, ILogger<CanD
         bool waitForCompletion = false,
         int? timeoutMs = null,
         CancellationToken cancellationToken = default)
-    {
-        var effectiveArguments = arguments?.ToList() ?? [];
-        if (collectCoverage)
-        {
-            effectiveArguments.Add("--collect");
-            effectiveArguments.Add("XPlat Code Coverage");
-        }
-
-        return ExecuteAsync("candoitall_tests_run", _ => coordinator.StartTestsAsync(
-            targetPath,
-            configurationName,
-            framework,
-            filter,
-            effectiveArguments,
-            environmentOverlay,
-            whenAppRunning,
-            runnerPreference,
-            timeoutMs.HasValue ? TimeSpan.FromMilliseconds(timeoutMs.Value) : null,
-            waitForCompletion,
-            cancellationToken));
-    }
+        => invoker.TestsRunAsync(targetPath, configurationName, framework, filter, arguments, environmentOverlay, collectCoverage, whenAppRunning, runnerPreference, waitForCompletion, timeoutMs, cancellationToken);
 
     [McpServerTool(Name = "candoitall_operation_status", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Returns the latest build or test operation snapshot.")]
+    [Description("Returns the latest backend-managed build or test operation snapshot.")]
     public Task<ToolEnvelope<OperationStatusData>> OperationStatusAsync(string operationId, CancellationToken cancellationToken = default)
-    {
-        return ExecuteAsync("candoitall_operation_status", _ => Task.FromResult(coordinator.GetOperationStatus(operationId)));
-    }
+        => invoker.OperationStatusAsync(operationId, cancellationToken);
 
     [McpServerTool(Name = "candoitall_operation_wait", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Performs a server-side wait for a managed build or test operation to finish.")]
+    [Description("Performs a backend-side wait for a managed build or test operation to finish.")]
     public Task<ToolEnvelope<OperationWaitData>> OperationWaitAsync(
         string operationId,
         int timeoutMs = 1800000,
         int pollIntervalMs = 500,
         CancellationToken cancellationToken = default)
-    {
-        return ExecuteAsync("candoitall_operation_wait", _ => coordinator.WaitForOperationAsync(
-            operationId,
-            TimeSpan.FromMilliseconds(timeoutMs),
-            TimeSpan.FromMilliseconds(pollIntervalMs),
-            cancellationToken));
-    }
+        => invoker.OperationWaitAsync(operationId, timeoutMs, pollIntervalMs, cancellationToken);
 
     [McpServerTool(Name = "candoitall_operation_logs", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Reads incrementally from the managed build or test operation log buffer.")]
+    [Description("Reads incrementally from the backend-managed build or test operation log buffer.")]
     public Task<ToolEnvelope<OperationLogsData>> OperationLogsAsync(
         string operationId,
         long? cursor = null,
         int limit = 200,
         CancellationToken cancellationToken = default)
-    {
-        return ExecuteAsync("candoitall_operation_logs", _ => Task.FromResult(coordinator.GetOperationLogs(operationId, cursor, limit)));
-    }
+        => invoker.OperationLogsAsync(operationId, cursor, limit, cancellationToken);
 
     [McpServerTool(Name = "candoitall_cleanup_stale_processes", ReadOnly = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Cleans up stale managed processes that survived a previous MCP server crash or session termination.")]
+    [Description("Cleans up stale managed processes that survived a previous backend crash or session termination.")]
     public Task<ToolEnvelope<CleanupStaleProcessesData>> CleanupStaleProcessesAsync(bool dryRun = false, CancellationToken cancellationToken = default)
-    {
-        return ExecuteAsync("candoitall_cleanup_stale_processes", _ => coordinator.CleanupStaleProcessesAsync(dryRun, cancellationToken));
-    }
+        => invoker.CleanupStaleProcessesAsync(dryRun, cancellationToken);
 
     [McpServerTool(Name = "candoitall_diagnose_start_failure", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Diagnoses the latest failed managed app start, build, or test flow using recent logs and runtime state.")]
+    [Description("Diagnoses the latest failed managed app, build, or test flow using recent backend logs and runtime state.")]
     public Task<ToolEnvelope<DiagnoseStartFailureData>> DiagnoseStartFailureAsync(
         string? sessionId = null,
         string? operationId = null,
         int maxLogEntries = 200,
         CancellationToken cancellationToken = default)
-    {
-        return ExecuteAsync("candoitall_diagnose_start_failure", _ => Task.FromResult(coordinator.Diagnose(sessionId, operationId, maxLogEntries)));
-    }
-
-    private async Task<ToolEnvelope<T>> ExecuteAsync<T>(string toolName, Func<string, Task<T>> callback)
-    {
-        var correlationId = $"corr_{Guid.NewGuid():N}";
-
-        try
-        {
-            var data = await callback(correlationId);
-            return ToolEnvelope<T>.Success(toolName, correlationId, data);
-        }
-        catch (ToolInvocationException ex)
-        {
-            logger.LogWarning(ex, "{ToolName} failed with a tool error: {Code}", toolName, ex.Code);
-            return ToolEnvelope<T>.Failure(toolName, correlationId, new ToolError(ex.Code, ex.Message, ex.Details));
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "{ToolName} failed unexpectedly", toolName);
-            return ToolEnvelope<T>.Failure(toolName, correlationId, new ToolError("InternalError", ex.Message));
-        }
-    }
+        => invoker.DiagnoseStartFailureAsync(sessionId, operationId, maxLogEntries, cancellationToken);
 }

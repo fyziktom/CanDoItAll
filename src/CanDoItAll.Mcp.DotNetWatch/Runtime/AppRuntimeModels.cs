@@ -21,6 +21,7 @@ public sealed partial class AppSession
     private readonly object _gate = new();
     private readonly HashSet<string> _observedUrls = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _recentEvents = [];
+    private readonly bool _healthEnabled;
     private WatchProcessingState _watchState;
     private string _watchSummary;
     private bool _watchPendingChange;
@@ -36,7 +37,8 @@ public sealed partial class AppSession
         string sessionId,
         AppStartTemplate template,
         string correlationId,
-        RingLogBuffer logBuffer)
+        RingLogBuffer logBuffer,
+        bool healthEnabled)
     {
         SessionId = sessionId;
         CorrelationId = correlationId;
@@ -50,6 +52,7 @@ public sealed partial class AppSession
         EnvironmentOverlay = new Dictionary<string, string>(template.EnvironmentOverlay, StringComparer.OrdinalIgnoreCase);
         RequestedUrls = template.Urls.ToArray();
         LogBuffer = logBuffer;
+        _healthEnabled = healthEnabled;
         State = AppLifecycleState.Starting;
         SessionVersion = 1;
         LastStartUtc = DateTimeOffset.UtcNow;
@@ -144,11 +147,7 @@ public sealed partial class AppSession
             }
 
             _runtimePid = snapshot.RuntimePid ?? _runtimePid;
-            if (snapshot.WatchIteration.HasValue)
-            {
-                _confirmedWatchIteration = snapshot.WatchIteration.Value;
-                _expectedWatchIteration = Math.Max(_expectedWatchIteration ?? snapshot.WatchIteration.Value, snapshot.WatchIteration.Value);
-            }
+            SyncObservedWatchIterationLocked(snapshot);
 
             if (Mode == AppRunMode.WatchRun)
             {
@@ -178,10 +177,7 @@ public sealed partial class AppSession
                 _runtimePid = snapshot.RuntimePid.Value;
             }
 
-            if (snapshot.WatchIteration.HasValue)
-            {
-                _confirmedWatchIteration = snapshot.WatchIteration.Value;
-            }
+            SyncObservedWatchIterationLocked(snapshot);
         }
     }
 
@@ -195,10 +191,7 @@ public sealed partial class AppSession
                 _runtimePid = snapshot.RuntimePid.Value;
             }
 
-            if (snapshot.WatchIteration.HasValue)
-            {
-                _confirmedWatchIteration = snapshot.WatchIteration.Value;
-            }
+            SyncObservedWatchIterationLocked(snapshot);
         }
     }
 
@@ -351,8 +344,28 @@ public sealed partial class AppSession
             _observedUrls.Add(url);
             if (Mode == AppRunMode.WatchRun)
             {
-                _watchState = WatchProcessingState.Launching;
-                _watchSummary = "Application is launching.";
+                if (_healthEnabled)
+                {
+                    _watchState = WatchProcessingState.Launching;
+                    _watchSummary = "Application is launching.";
+                }
+                else
+                {
+                    _watchPendingChange = false;
+                    _watchState = WatchProcessingState.WaitingForChanges;
+                    _watchSummary = "Application is waiting for changes.";
+                    LastHealthSnapshot = new HealthSnapshot(
+                        "Ready",
+                        true,
+                        entry.TimestampUtc,
+                        null,
+                        url,
+                        "Observed listening URL.",
+                        _confirmedWatchIteration,
+                        _runtimePid,
+                        _observedUrls.ToArray());
+                }
+
                 _lastWatchActivitySequence = entry.Sequence;
                 _lastWatchActivityUtc = entry.TimestampUtc;
             }
@@ -380,7 +393,15 @@ public sealed partial class AppSession
 
         if (line.Contains("Evaluating projects", StringComparison.OrdinalIgnoreCase))
         {
-            UpdateWatchPhase(WatchProcessingState.EvaluatingProjects, line, entry);
+            if (ShouldBeginImplicitWatchChange())
+            {
+                BeginWatchChange(WatchProcessingState.EvaluatingProjects, line, entry);
+            }
+            else
+            {
+                UpdateWatchPhase(WatchProcessingState.EvaluatingProjects, line, entry);
+            }
+
             return true;
         }
 
@@ -393,13 +414,29 @@ public sealed partial class AppSession
         if (line.Contains("Loading projects", StringComparison.OrdinalIgnoreCase) ||
             line.Contains("Projects loaded", StringComparison.OrdinalIgnoreCase))
         {
-            UpdateWatchPhase(WatchProcessingState.LoadingProjects, line, entry);
+            if (ShouldBeginImplicitWatchChange())
+            {
+                BeginWatchChange(WatchProcessingState.LoadingProjects, line, entry);
+            }
+            else
+            {
+                UpdateWatchPhase(WatchProcessingState.LoadingProjects, line, entry);
+            }
+
             return true;
         }
 
         if (line.Contains("Building", StringComparison.OrdinalIgnoreCase))
         {
-            UpdateWatchPhase(WatchProcessingState.Building, line, entry, clearRuntimePid: _restartBaselineRuntimePid.HasValue);
+            if (ShouldBeginImplicitWatchChange())
+            {
+                BeginWatchChange(WatchProcessingState.Building, line, entry);
+            }
+            else
+            {
+                UpdateWatchPhase(WatchProcessingState.Building, line, entry, clearRuntimePid: _restartBaselineRuntimePid.HasValue);
+            }
+
             return true;
         }
 
@@ -411,6 +448,13 @@ public sealed partial class AppSession
                 entry,
                 hotReloadOutcome: HotReloadOutcome.Succeeded,
                 healthSummary: "Hot reload succeeded. Waiting for fresh health confirmation.");
+            return true;
+        }
+
+        if (line.Contains("Hot reload of static assets succeeded", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("No C# changes to apply", StringComparison.OrdinalIgnoreCase))
+        {
+            MarkWatchChangeApplied(line, entry, HotReloadOutcome.Succeeded);
             return true;
         }
 
@@ -590,6 +634,79 @@ public sealed partial class AppSession
             LastHealthSnapshot?.ActiveUrls ?? _observedUrls.ToArray());
     }
 
+    private void MarkWatchChangeApplied(string line, LogEntry entry, HotReloadOutcome hotReloadOutcome)
+    {
+        AppLifecycleState nextState;
+
+        lock (_gate)
+        {
+            _watchPendingChange = false;
+            _watchState = WatchProcessingState.WaitingForChanges;
+            _watchSummary = line;
+            _lastWatchActivitySequence = entry.Sequence;
+            _lastWatchActivityUtc = entry.TimestampUtc;
+            _lastHotReloadOutcome = hotReloadOutcome;
+
+            if (!_healthEnabled && _observedUrls.Count > 0)
+            {
+                LastHealthSnapshot = new HealthSnapshot(
+                    "Ready",
+                    true,
+                    LastHealthSnapshot?.LastSuccessUtc ?? entry.TimestampUtc,
+                    null,
+                    LastHealthSnapshot?.LastUrl ?? _observedUrls.LastOrDefault(),
+                    "Ready",
+                    _confirmedWatchIteration,
+                    _runtimePid,
+                    _observedUrls.ToArray());
+            }
+
+            nextState = _healthEnabled && LastHealthSnapshot?.IsReady == true
+                ? AppLifecycleState.Healthy
+                : AppLifecycleState.Running;
+        }
+
+        Transition(nextState, line);
+    }
+
+    private void SyncObservedWatchIterationLocked(HealthSnapshot snapshot)
+    {
+        if (Mode != AppRunMode.WatchRun || !snapshot.WatchIteration.HasValue)
+        {
+            return;
+        }
+
+        var observedIteration = snapshot.WatchIteration.Value;
+        if (_confirmedWatchIteration.HasValue &&
+            observedIteration < _confirmedWatchIteration.Value)
+        {
+            return;
+        }
+
+        if (!_watchPendingChange &&
+            _confirmedWatchIteration.HasValue &&
+            observedIteration > _confirmedWatchIteration.Value)
+        {
+            SessionVersion += observedIteration - _confirmedWatchIteration.Value;
+            _lastWatchActivityUtc = snapshot.LastSuccessUtc ?? snapshot.LastFailureUtc ?? DateTimeOffset.UtcNow;
+            RecordEventLocked($"Health probe observed watch iteration {observedIteration}.");
+        }
+
+        _confirmedWatchIteration = observedIteration;
+        _expectedWatchIteration = Math.Max(_expectedWatchIteration ?? observedIteration, observedIteration);
+    }
+
+    private bool ShouldBeginImplicitWatchChange()
+    {
+        lock (_gate)
+        {
+            return !_watchPendingChange &&
+                   Mode == AppRunMode.WatchRun &&
+                   (State is AppLifecycleState.Running or AppLifecycleState.Healthy) &&
+                   (_confirmedWatchIteration.HasValue || LastHealthSnapshot?.IsReady == true);
+        }
+    }
+
     private static string NormalizeWatchLine(string text)
     {
         const string watchPrefix = "dotnet watch :";
@@ -640,14 +757,15 @@ public sealed class AppRuntimeManager(
 {
     private readonly object _gate = new();
     private readonly Dictionary<string, AppSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
-    private AppSession? _activeSession;
+    private readonly HashSet<string> _activeSessionIds = new(StringComparer.OrdinalIgnoreCase);
+    private string? _defaultSessionId;
     private AppSession? _lastSession;
 
     public AppSession? GetActiveSession()
     {
         lock (_gate)
         {
-            return _activeSession;
+            return ResolveDefaultSessionLocked();
         }
     }
 
@@ -657,11 +775,24 @@ public sealed class AppRuntimeManager(
         {
             if (string.IsNullOrWhiteSpace(sessionId))
             {
-                return _activeSession ?? _lastSession;
+                return ResolveDefaultSessionLocked() ?? _lastSession;
             }
 
             _sessions.TryGetValue(sessionId, out var session);
             return session;
+        }
+    }
+
+    public IReadOnlyList<AppSession> GetActiveSessions()
+    {
+        lock (_gate)
+        {
+            return _activeSessionIds
+                .Select(id => _sessions.TryGetValue(id, out var session) ? session : null)
+                .Where(static session => session is not null)
+                .OrderByDescending(static session => session!.LastStartUtc)
+                .Cast<AppSession>()
+                .ToList();
         }
     }
 
@@ -679,35 +810,59 @@ public sealed class AppRuntimeManager(
         AppStartConflictPolicy conflictPolicy,
         CancellationToken cancellationToken)
     {
-        AppSession? existing;
+        List<AppSession> conflictingSessions;
+        AppSession? reusableSession = null;
         lock (_gate)
         {
-            existing = _activeSession;
+            var activeSessions = ResolveActiveSessionsLocked();
+            reusableSession = reuseIfCompatible
+                ? activeSessions.FirstOrDefault(session => session.IsCompatible(template))
+                : null;
+            conflictingSessions = activeSessions
+                .Where(session => SessionConflicts(session, template))
+                .ToList();
         }
 
-        if (existing is not null)
+        if (reusableSession is not null)
         {
-            if (reuseIfCompatible && existing.IsCompatible(template))
+            lock (_gate)
             {
-                return (existing, true);
+                _defaultSessionId = reusableSession.SessionId;
+                _lastSession = reusableSession;
             }
 
+            return (reusableSession, true);
+        }
+
+        if (conflictingSessions.Count > 0)
+        {
             if (conflictPolicy == AppStartConflictPolicy.Fail)
             {
-                throw new ToolInvocationException("RunningSessionConflict", "A managed app session is already running.", new { existingSessionId = existing.SessionId });
+                throw new ToolInvocationException(
+                    "RunningSessionConflict",
+                    "One or more managed app sessions conflict with the requested launch.",
+                    new
+                    {
+                        conflictingSessionIds = conflictingSessions.Select(static session => session.SessionId).ToArray(),
+                        requestedProjectPath = template.ProjectPath
+                    });
             }
 
-            await StopAsync(existing.SessionId, "Replacing incompatible session.", force: true, cancellationToken);
+            foreach (var conflictingSession in conflictingSessions)
+            {
+                await StopAsync(conflictingSession.SessionId, "Replacing incompatible session.", force: true, cancellationToken);
+            }
         }
 
         var sessionId = $"app_{Guid.NewGuid():N}";
         var correlationId = $"corr_{Guid.NewGuid():N}";
-        var session = new AppSession(sessionId, template, correlationId, new RingLogBuffer(configuration.LogBufferCapacity));
+        var session = new AppSession(sessionId, template, correlationId, new RingLogBuffer(configuration.LogBufferCapacity), configuration.HealthEnabled);
 
         lock (_gate)
         {
             _sessions[sessionId] = session;
-            _activeSession = session;
+            _activeSessionIds.Add(sessionId);
+            _defaultSessionId = sessionId;
             _lastSession = session;
         }
 
@@ -725,9 +880,10 @@ public sealed class AppRuntimeManager(
                 session.MarkExitedUnexpectedly(exitCode);
                 lock (_gate)
                 {
-                    if (ReferenceEquals(_activeSession, session))
+                    _activeSessionIds.Remove(session.SessionId);
+                    if (string.Equals(_defaultSessionId, session.SessionId, StringComparison.OrdinalIgnoreCase))
                     {
-                        _activeSession = null;
+                        _defaultSessionId = ResolveActiveSessionsLocked().FirstOrDefault()?.SessionId;
                     }
                 }
 
@@ -757,11 +913,11 @@ public sealed class AppRuntimeManager(
 
         lock (_gate)
         {
-            if (ReferenceEquals(_activeSession, session))
+            _activeSessionIds.Remove(session.SessionId);
+            if (string.Equals(_defaultSessionId, session.SessionId, StringComparison.OrdinalIgnoreCase))
             {
-                _activeSession = null;
+                _defaultSessionId = ResolveActiveSessionsLocked().FirstOrDefault()?.SessionId;
             }
-
             _lastSession = session;
         }
 
@@ -864,5 +1020,70 @@ public sealed class AppRuntimeManager(
         }
 
         return environment;
+    }
+
+    private AppSession? ResolveDefaultSessionLocked()
+    {
+        if (!string.IsNullOrWhiteSpace(_defaultSessionId) &&
+            _sessions.TryGetValue(_defaultSessionId, out var preferredSession) &&
+            _activeSessionIds.Contains(_defaultSessionId))
+        {
+            return preferredSession;
+        }
+
+        return ResolveActiveSessionsLocked().FirstOrDefault();
+    }
+
+    private List<AppSession> ResolveActiveSessionsLocked()
+    {
+        return _activeSessionIds
+            .Select(id => _sessions.TryGetValue(id, out var session) ? session : null)
+            .Where(static session => session is not null)
+            .OrderByDescending(static session => session!.LastStartUtc)
+            .Cast<AppSession>()
+            .ToList();
+    }
+
+    private static bool SessionConflicts(AppSession existing, AppStartTemplate requested)
+    {
+        if (string.Equals(existing.ProjectPath, requested.ProjectPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (string.Equals(existing.WorkingDirectory, requested.WorkingDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (HasUrlOverlap(existing.RequestedUrls, requested.Urls))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool HasUrlOverlap(IReadOnlyList<string> left, IReadOnlyList<string> right)
+    {
+        if (left.Count == 0 || right.Count == 0)
+        {
+            return false;
+        }
+
+        var leftSet = left
+            .Where(static url => !string.IsNullOrWhiteSpace(url))
+            .Select(NormalizeUrl)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return right
+            .Where(static url => !string.IsNullOrWhiteSpace(url))
+            .Select(NormalizeUrl)
+            .Any(leftSet.Contains);
+    }
+
+    private static string NormalizeUrl(string url)
+    {
+        return url.Trim().TrimEnd('/').ToLowerInvariant();
     }
 }

@@ -119,7 +119,10 @@ public sealed record WorkspaceInfoData(
     IReadOnlyList<OperationStatusData> ActiveOperations,
     IReadOnlyList<string> SupportedPolicies,
     IReadOnlyDictionary<string, object?>? ConfigSnapshot,
-    WorkspaceHistoryData? History);
+    WorkspaceHistoryData? History)
+{
+    public IReadOnlyList<AppStatusData> ActiveAppSessions { get; init; } = ActiveAppSession is null ? [] : [ActiveAppSession];
+}
 
 public sealed record HealthData(
     string Status,
@@ -207,7 +210,10 @@ public sealed record AppLogsData(
 public sealed record AppPreemptionData(
     WhenAppRunningPolicy Policy,
     string? StoppedSessionId,
-    bool ResumePlanned);
+    bool ResumePlanned)
+{
+    public IReadOnlyList<string> StoppedSessionIds { get; init; } = StoppedSessionId is null ? [] : [StoppedSessionId];
+}
 
 public sealed record OperationArtifactData(string Kind, string Path, string RelativePath);
 
@@ -224,7 +230,10 @@ public sealed record OperationStartData(
 public sealed record ResumeOutcomeData(
     bool Attempted,
     bool Success,
-    string? SessionId);
+    string? SessionId)
+{
+    public IReadOnlyList<string> SessionIds { get; init; } = SessionId is null ? [] : [SessionId];
+}
 
 public sealed record TestSummaryData(
     int? Total,

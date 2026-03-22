@@ -16,6 +16,8 @@ public sealed class McpServerOptions
 
     public ProcessOptions Process { get; set; } = new();
 
+    public BackendOptions Backend { get; set; } = new();
+
     public WaitOptions Waits { get; set; } = new();
 
     public SecurityOptions Security { get; set; } = new();
@@ -120,6 +122,21 @@ public sealed class ProcessOptions
     public string RegistryPath { get; set; } = ".mcp-state/process-registry.json";
 
     public bool UsePollingFileWatcher { get; set; }
+}
+
+public sealed class BackendOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    public string BindHost { get; set; } = "127.0.0.1";
+
+    public string RegistrationPath { get; set; } = ".mcp-state/backend/registration.json";
+
+    public string LaunchLockPath { get; set; } = ".mcp-state/backend/launch.lock";
+
+    public int StartupTimeoutMs { get; set; } = 30_000;
+
+    public int StartupPollIntervalMs { get; set; } = 250;
 }
 
 public sealed class WaitOptions

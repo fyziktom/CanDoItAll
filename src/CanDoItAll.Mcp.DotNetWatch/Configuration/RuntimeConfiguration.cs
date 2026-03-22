@@ -1,6 +1,9 @@
 using CanDoItAll.Mcp.Core.Observability;
 using CanDoItAll.Mcp.LocalRuntime.Processes;
 using Microsoft.Extensions.Options;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace CanDoItAll.Mcp.DotNetWatch.Configuration;
 
@@ -13,6 +16,8 @@ public sealed class RuntimeConfiguration
         ServerName = options.Server.Name.Trim();
         WorkspaceRoot = ResolvePath(Environment.CurrentDirectory, options.Server.WorkspaceRoot);
         SolutionPath = ResolvePath(WorkspaceRoot, options.Server.SolutionPath);
+        ServerAssemblyPath = ResolveServerAssemblyPath();
+        BinaryVersionMarker = ComputeBinaryVersionMarker(ServerAssemblyPath);
 
         DefaultApp = new RuntimeDefaultAppConfiguration(
             ResolvePath(WorkspaceRoot, options.DefaultApp.ProjectPath),
@@ -61,6 +66,13 @@ public sealed class RuntimeConfiguration
         ServerInstanceDirectory = Path.Combine(Path.GetDirectoryName(RegistryPath) ?? Path.Combine(WorkspaceRoot, ".mcp-state"), "server-instances");
         UsePollingFileWatcher = options.Process.UsePollingFileWatcher;
 
+        BackendEnabled = options.Backend.Enabled;
+        BackendBindHost = options.Backend.BindHost.Trim();
+        BackendRegistrationPath = ResolvePath(WorkspaceRoot, options.Backend.RegistrationPath);
+        BackendLaunchLockPath = ResolvePath(WorkspaceRoot, options.Backend.LaunchLockPath);
+        BackendStartupTimeout = TimeSpan.FromMilliseconds(options.Backend.StartupTimeoutMs);
+        BackendStartupPollInterval = TimeSpan.FromMilliseconds(options.Backend.StartupPollIntervalMs);
+
         DefaultAppWaitTimeout = TimeSpan.FromMilliseconds(options.Waits.DefaultAppWaitTimeoutMs);
         DefaultOperationWaitTimeout = TimeSpan.FromMilliseconds(options.Waits.DefaultOperationWaitTimeoutMs);
         DefaultPollInterval = TimeSpan.FromMilliseconds(options.Waits.DefaultPollIntervalMs);
@@ -78,6 +90,8 @@ public sealed class RuntimeConfiguration
         }
 
         Directory.CreateDirectory(ServerInstanceDirectory);
+        EnsureParentDirectoryExists(BackendRegistrationPath);
+        EnsureParentDirectoryExists(BackendLaunchLockPath);
     }
 
     public string ServerName { get; }
@@ -85,6 +99,10 @@ public sealed class RuntimeConfiguration
     public string WorkspaceRoot { get; }
 
     public string SolutionPath { get; }
+
+    public string ServerAssemblyPath { get; }
+
+    public string BinaryVersionMarker { get; }
 
     public RuntimeDefaultAppConfiguration DefaultApp { get; }
 
@@ -146,6 +164,18 @@ public sealed class RuntimeConfiguration
 
     public bool UsePollingFileWatcher { get; }
 
+    public bool BackendEnabled { get; }
+
+    public string BackendBindHost { get; }
+
+    public string BackendRegistrationPath { get; }
+
+    public string BackendLaunchLockPath { get; }
+
+    public TimeSpan BackendStartupTimeout { get; }
+
+    public TimeSpan BackendStartupPollInterval { get; }
+
     public TimeSpan DefaultAppWaitTimeout { get; }
 
     public TimeSpan DefaultOperationWaitTimeout { get; }
@@ -195,10 +225,20 @@ public sealed class RuntimeConfiguration
         return new Dictionary<string, object?>
         {
             ["serverName"] = ServerName,
+            ["binaryVersionMarker"] = BinaryVersionMarker,
             ["workspaceRoot"] = WorkspaceRoot,
             ["workspaceRootRelative"] = ".",
             ["solutionPath"] = SolutionPath,
             ["solutionPathRelative"] = GetRelativePath(SolutionPath),
+            ["backend"] = new Dictionary<string, object?>
+            {
+                ["enabled"] = BackendEnabled,
+                ["bindHost"] = BackendBindHost,
+                ["registrationPath"] = BackendRegistrationPath,
+                ["registrationPathRelative"] = GetRelativePath(BackendRegistrationPath),
+                ["launchLockPath"] = BackendLaunchLockPath,
+                ["launchLockPathRelative"] = GetRelativePath(BackendLaunchLockPath)
+            },
             ["defaultApp"] = new Dictionary<string, object?>
             {
                 ["projectPath"] = DefaultApp.ProjectPath,
@@ -236,6 +276,28 @@ public sealed class RuntimeConfiguration
         return Path.IsPathRooted(path)
             ? Path.GetFullPath(path)
             : Path.GetFullPath(Path.Combine(basePath, path));
+    }
+
+    private static void EnsureParentDirectoryExists(string path)
+    {
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+    }
+
+    private static string ResolveServerAssemblyPath()
+    {
+        return Path.GetFullPath(Assembly.GetEntryAssembly()?.Location ?? Environment.ProcessPath ?? throw new InvalidOperationException("Could not resolve server assembly path."));
+    }
+
+    private static string ComputeBinaryVersionMarker(string assemblyPath)
+    {
+        var fileInfo = new FileInfo(assemblyPath);
+        var stamp = $"{fileInfo.FullName}|{fileInfo.Length}|{fileInfo.LastWriteTimeUtc.Ticks}";
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(stamp));
+        return Convert.ToHexString(hash);
     }
 
     private static string? NullIfWhiteSpace(string? value)

@@ -127,6 +127,7 @@
 .cw-support-grid {
     display: grid;
     gap: 1rem;
+    align-items: start;
     grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
 }
 
@@ -1591,6 +1592,32 @@ body.cw-body-lock {
     font-size: 1rem;
 }
 
+.project-structure-page .cw-support-grid {
+    grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
+}
+
+.project-structure-support-card--outline {
+    grid-template-rows: auto auto minmax(0, 1fr);
+    max-height: min(42rem, calc(100vh - 11rem));
+}
+
+.project-structure-support-card--health {
+    border-color: rgba(56, 189, 248, 0.14);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(239, 246, 255, 0.95));
+}
+
+.project-structure-support-card--health .cw-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.project-structure-outline-list {
+    min-height: 0;
+    overflow: auto;
+    padding-right: 0.35rem;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
 .cw-canvas-composer {
     position: absolute;
     z-index: 10;
@@ -1830,6 +1857,18 @@ body.cw-body-lock {
 
     .cw-settings-grid {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .project-structure-page .cw-support-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .project-structure-support-card--outline {
+        max-height: 32rem;
+    }
+
+    .project-structure-support-card--health .cw-summary-grid {
+        grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
     }
 }
 
