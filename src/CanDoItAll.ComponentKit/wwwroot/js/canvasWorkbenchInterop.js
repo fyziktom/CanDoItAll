@@ -67,6 +67,7 @@
             handle: null,
             container: null,
             observedContainer: null,
+            observedPanel: null,
             resizeObserver: null,
             pointerId: null,
             startX: 0,
@@ -145,7 +146,7 @@
     }
 
     function updateFloatingInspectorObserver(state) {
-        if (state.observedContainer === state.container) {
+        if (state.observedContainer === state.container && state.observedPanel === state.panel) {
             return;
         }
 
@@ -155,6 +156,7 @@
         }
 
         state.observedContainer = state.container;
+        state.observedPanel = state.panel;
         if (!state.container || typeof window.ResizeObserver !== "function") {
             return;
         }
@@ -168,6 +170,7 @@
         });
 
         state.resizeObserver.observe(state.container);
+        state.resizeObserver.observe(state.panel);
     }
 
     function setFloatingInspectorPosition(panel, container, left, top) {
