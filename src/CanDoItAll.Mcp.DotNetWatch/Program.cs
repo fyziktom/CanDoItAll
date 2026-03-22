@@ -120,15 +120,21 @@ internal static class Program
         builder.WebHost.UseUrls($"http://{backendOptions.BindHost}:0");
 
         var app = builder.Build();
-        var runtimeConfiguration = app.Services.GetRequiredService<RuntimeConfiguration>();
         var registrationStore = app.Services.GetRequiredService<BackendRegistrationStore>();
+        var globalCatalogStore = app.Services.GetRequiredService<GlobalBackendCatalogStore>();
         var identityProvider = app.Services.GetRequiredService<BackendIdentityProvider>();
-        var coordinator = app.Services.GetRequiredService<SessionCoordinator>();
+        var managerService = app.Services.GetRequiredService<BackendManagerService>();
         var invoker = app.Services.GetRequiredService<IDotNetWatchToolInvoker>();
 
         BackendRegistrationRecord? registrationRecord = null;
         app.Use(async (httpContext, next) =>
         {
+            if (httpContext.Request.Path == "/favicon.ico")
+            {
+                httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
+                return;
+            }
+
             if (!BackendAuth.IsAuthorized(httpContext, launchContext.BackendToken))
             {
                 httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -139,9 +145,9 @@ internal static class Program
             await next();
         });
 
-        app.MapGet("/", () =>
+        app.MapGet("/", async (CancellationToken cancellationToken) =>
         {
-            var snapshot = CreateManagerStatus(registrationRecord, coordinator, identityProvider);
+            var snapshot = await managerService.CreateAggregateStatusAsync(registrationRecord, cancellationToken);
             return Results.Content(BackendDashboardPage.Render(snapshot), "text/html; charset=utf-8");
         });
 
@@ -151,7 +157,13 @@ internal static class Program
             return Results.Ok(new BackendPingResponse(record.BackendId, record.ProcessId, record.ProcessStartedUtc, record.Identity));
         });
 
-        app.MapGet("/api/manager/status", () => Results.Ok(CreateManagerStatus(registrationRecord, coordinator, identityProvider)));
+        app.MapGet("/api/backend/status", () => Results.Ok(managerService.CreateLocalRuntimeStatus(registrationRecord)));
+        app.MapGet("/api/manager/status", async (CancellationToken cancellationToken) =>
+            Results.Ok(await managerService.CreateAggregateStatusAsync(registrationRecord, cancellationToken)));
+        app.MapPost("/api/backend/manager-action", async (BackendManagerActionRequest request, CancellationToken cancellationToken) =>
+            Results.Ok(await managerService.ExecuteLocalActionAsync(request, proxied: false, cancellationToken)));
+        app.MapPost("/api/manager/action", async (BackendManagerActionRequest request, CancellationToken cancellationToken) =>
+            Results.Ok(await managerService.ExecuteManagerActionAsync(request, registrationRecord, cancellationToken)));
 
         MapToolRoutes(app, invoker);
 
@@ -173,6 +185,7 @@ internal static class Program
             identityProvider.Current);
 
         await registrationStore.WriteAsync(registrationRecord, CancellationToken.None);
+        await globalCatalogStore.UpsertAsync(registrationRecord, CancellationToken.None);
 
         try
         {
@@ -181,6 +194,7 @@ internal static class Program
         finally
         {
             registrationStore.Delete();
+            await globalCatalogStore.DeleteAsync(registrationRecord?.BackendId, CancellationToken.None);
         }
     }
 
@@ -225,6 +239,7 @@ internal static class Program
         services.AddSingleton<StaleProcessRegistry>();
         services.AddSingleton<ServerInstanceRegistry>();
         services.AddSingleton<BackendRegistrationStore>();
+        services.AddSingleton<GlobalBackendCatalogStore>();
         services.AddSingleton<IProcessCommandRunner, ProcessCommandRunner>();
         services.AddSingleton<IPlatformProcessTreeTerminator>(static serviceProvider =>
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
@@ -237,6 +252,7 @@ internal static class Program
         services.AddSingleton<HttpProbeService>();
         services.AddSingleton<TlsCertificateInspector>();
         services.AddSingleton<HttpHealthProbe>();
+        services.AddSingleton<AgentLogReducer>();
         services.AddSingleton<AppRuntimeManager>();
         services.AddSingleton<ResourceMutationGate>();
         services.AddSingleton<WorkspaceExecutionLock>();
@@ -244,6 +260,7 @@ internal static class Program
         services.AddSingleton<StartFailureDiagnoser>();
         services.AddSingleton<SessionCoordinator>();
         services.AddSingleton<LocalToolInvoker>();
+        services.AddSingleton<BackendManagerService>();
     }
 
     private static void MapToolRoutes(WebApplication app, IDotNetWatchToolInvoker invoker)
@@ -259,7 +276,7 @@ internal static class Program
         app.MapPost("/api/tools/app-wait", (AppWaitRequest request, CancellationToken cancellationToken) =>
             invoker.AppWaitAsync(request.SessionId, request.Condition, request.TimeoutMs, request.PollIntervalMs, request.Cursor, request.QuietPeriodMs, request.LogPattern, request.CaseInsensitive, cancellationToken));
         app.MapPost("/api/tools/app-logs", (AppLogsRequest request, CancellationToken cancellationToken) =>
-            invoker.AppLogsAsync(request.SessionId, request.Cursor, request.Limit, request.IncludeStdOut, request.IncludeStdErr, request.IncludeSystemEvents, cancellationToken));
+            invoker.AppLogsAsync(request.SessionId, request.Cursor, request.Limit, request.IncludeStdOut, request.IncludeStdErr, request.IncludeSystemEvents, request.View, cancellationToken));
         app.MapPost("/api/tools/solution-build", (SolutionBuildRequest request, CancellationToken cancellationToken) =>
             invoker.SolutionBuildAsync(request.TargetPath, request.ConfigurationName, request.Framework, request.Arguments, request.EnvironmentOverlay, request.WhenAppRunning, request.WaitForCompletion, request.TimeoutMs, cancellationToken));
         app.MapPost("/api/tools/tests-run", (TestsRunRequest request, CancellationToken cancellationToken) =>
@@ -269,30 +286,11 @@ internal static class Program
         app.MapPost("/api/tools/operation-wait", (OperationWaitRequest request, CancellationToken cancellationToken) =>
             invoker.OperationWaitAsync(request.OperationId, request.TimeoutMs, request.PollIntervalMs, cancellationToken));
         app.MapPost("/api/tools/operation-logs", (OperationLogsRequest request, CancellationToken cancellationToken) =>
-            invoker.OperationLogsAsync(request.OperationId, request.Cursor, request.Limit, cancellationToken));
+            invoker.OperationLogsAsync(request.OperationId, request.Cursor, request.Limit, request.View, cancellationToken));
         app.MapPost("/api/tools/cleanup-stale-processes", (CleanupStaleProcessesRequest request, CancellationToken cancellationToken) =>
             invoker.CleanupStaleProcessesAsync(request.DryRun, cancellationToken));
         app.MapPost("/api/tools/diagnose-start-failure", (DiagnoseStartFailureRequest request, CancellationToken cancellationToken) =>
             invoker.DiagnoseStartFailureAsync(request.SessionId, request.OperationId, request.MaxLogEntries, cancellationToken));
-    }
-
-    private static BackendManagerStatusResponse CreateManagerStatus(
-        BackendRegistrationRecord? registrationRecord,
-        SessionCoordinator coordinator,
-        BackendIdentityProvider identityProvider)
-    {
-        var workspaceInfo = coordinator.GetWorkspaceInfo(includeHistory: true, includeConfigSnapshot: false);
-        return new BackendManagerStatusResponse(
-            identityProvider.Current,
-            registrationRecord?.BackendId ?? "pending",
-            registrationRecord?.ProcessId ?? Environment.ProcessId,
-            registrationRecord?.ProcessStartedUtc ?? Process.GetCurrentProcess().StartTime.ToUniversalTime(),
-            registrationRecord?.BaseUrl ?? string.Empty,
-            registrationRecord?.ManagerUrl ?? string.Empty,
-            workspaceInfo.ActiveAppSessions,
-            workspaceInfo.ActiveOperations,
-            workspaceInfo.History?.RecentOperations ?? [],
-            DateTimeOffset.UtcNow);
     }
 
     private static LaunchContext ResolveLaunchContext(string[] args)

@@ -72,6 +72,8 @@ public sealed class RuntimeConfiguration
         BackendLaunchLockPath = ResolvePath(WorkspaceRoot, options.Backend.LaunchLockPath);
         BackendStartupTimeout = TimeSpan.FromMilliseconds(options.Backend.StartupTimeoutMs);
         BackendStartupPollInterval = TimeSpan.FromMilliseconds(options.Backend.StartupPollIntervalMs);
+        MachineStateRoot = ResolveMachineStateRoot();
+        GlobalBackendCatalogDirectory = Path.Combine(MachineStateRoot, "backend-catalog");
 
         DefaultAppWaitTimeout = TimeSpan.FromMilliseconds(options.Waits.DefaultAppWaitTimeoutMs);
         DefaultOperationWaitTimeout = TimeSpan.FromMilliseconds(options.Waits.DefaultOperationWaitTimeoutMs);
@@ -92,6 +94,7 @@ public sealed class RuntimeConfiguration
         Directory.CreateDirectory(ServerInstanceDirectory);
         EnsureParentDirectoryExists(BackendRegistrationPath);
         EnsureParentDirectoryExists(BackendLaunchLockPath);
+        Directory.CreateDirectory(GlobalBackendCatalogDirectory);
     }
 
     public string ServerName { get; }
@@ -176,6 +179,10 @@ public sealed class RuntimeConfiguration
 
     public TimeSpan BackendStartupPollInterval { get; }
 
+    public string MachineStateRoot { get; }
+
+    public string GlobalBackendCatalogDirectory { get; }
+
     public TimeSpan DefaultAppWaitTimeout { get; }
 
     public TimeSpan DefaultOperationWaitTimeout { get; }
@@ -237,7 +244,9 @@ public sealed class RuntimeConfiguration
                 ["registrationPath"] = BackendRegistrationPath,
                 ["registrationPathRelative"] = GetRelativePath(BackendRegistrationPath),
                 ["launchLockPath"] = BackendLaunchLockPath,
-                ["launchLockPathRelative"] = GetRelativePath(BackendLaunchLockPath)
+                ["launchLockPathRelative"] = GetRelativePath(BackendLaunchLockPath),
+                ["machineStateRoot"] = MachineStateRoot,
+                ["globalBackendCatalogDirectory"] = GlobalBackendCatalogDirectory
             },
             ["defaultApp"] = new Dictionary<string, object?>
             {
@@ -285,6 +294,23 @@ public sealed class RuntimeConfiguration
         {
             Directory.CreateDirectory(directory);
         }
+    }
+
+    private static string ResolveMachineStateRoot()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrWhiteSpace(localAppData))
+        {
+            return Path.Combine(localAppData, "CanDoItAll.Mcp.DotNetWatch");
+        }
+
+        var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrWhiteSpace(userProfile))
+        {
+            return Path.Combine(userProfile, ".candoitall-mcp-dotnetwatch");
+        }
+
+        return Path.Combine(Path.GetTempPath(), "CanDoItAll.Mcp.DotNetWatch");
     }
 
     private static string ResolveServerAssemblyPath()

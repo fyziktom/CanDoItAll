@@ -18,6 +18,7 @@ public sealed class SessionCoordinator(
     PathGuard pathGuard,
     EnvironmentOverlayFilter environmentOverlayFilter,
     StartFailureDiagnoser diagnoser,
+    AgentLogReducer logReducer,
     StaleProcessRegistry staleProcessRegistry,
     IProcessTreeTerminator processTreeTerminator,
     ILogger<SessionCoordinator> logger)
@@ -127,6 +128,16 @@ public sealed class SessionCoordinator(
         return appRuntimeManager.StopAsync(sessionId, string.IsNullOrWhiteSpace(reason) ? "RequestedByClient" : reason, force, cancellationToken);
     }
 
+    public Task<AppRebuildResult> RebuildAppAsync(string? sessionId, CancellationToken cancellationToken)
+    {
+        return appRuntimeManager.RebuildAsync(sessionId, cancellationToken);
+    }
+
+    public Task<AppRebuildResult> ForceRebuildAppAsync(string? sessionId, CancellationToken cancellationToken)
+    {
+        return appRuntimeManager.ForceRebuildAsync(sessionId, cancellationToken);
+    }
+
     public AppStatusData GetAppStatus(string? sessionId)
     {
         var session = appRuntimeManager.GetById(sessionId)
@@ -134,27 +145,30 @@ public sealed class SessionCoordinator(
         return session.ToStatusData();
     }
 
-    public AppLogsData GetAppLogs(string? sessionId, long? cursor, int limit, bool includeStdOut, bool includeStdErr, bool includeSystemEvents)
+    public AppLogsData GetAppLogs(string? sessionId, long? cursor, int limit, bool includeStdOut, bool includeStdErr, bool includeSystemEvents, LogViewMode view)
     {
         var session = appRuntimeManager.GetById(sessionId)
             ?? throw new ToolInvocationException("SessionNotFound", "No managed app session was found.", new { sessionId });
 
-        var result = session.LogBuffer.ReadAfter(cursor, limit, entry =>
-        {
-            if (entry.Source == "ProcessStdOut")
+        var filteredEntries = session.LogBuffer.GetAfter(cursor ?? 0)
+            .Where(entry =>
             {
-                return includeStdOut;
-            }
+                if (entry.Source == "ProcessStdOut")
+                {
+                    return includeStdOut;
+                }
 
-            if (entry.Source == "ProcessStdErr")
-            {
-                return includeStdErr;
-            }
+                if (entry.Source == "ProcessStdErr")
+                {
+                    return includeStdErr;
+                }
 
-            return includeSystemEvents;
-        });
+                return includeSystemEvents;
+            })
+            .ToArray();
 
-        return new AppLogsData(session.SessionId, result.Entries, result.NextCursor, result.Truncated, result.TotalAvailableAfterCursor);
+        var result = logReducer.Reduce(filteredEntries, cursor ?? 0, limit, LogReductionScenario.App, view);
+        return new AppLogsData(session.SessionId, result.Entries, result.NextCursor, result.Truncated, result.TotalAvailableAfterCursor, result.FilterSummary);
     }
 
     public async Task<AppWaitData> WaitForAppAsync(
@@ -408,12 +422,12 @@ public sealed class SessionCoordinator(
         return CreateOperationWaitResult(operation.ToStatusData(), completed: false, timedOut: true);
     }
 
-    public OperationLogsData GetOperationLogs(string operationId, long? cursor, int limit)
+    public OperationLogsData GetOperationLogs(string operationId, long? cursor, int limit, LogViewMode view)
     {
         var operation = operationRegistry.GetById(operationId)
             ?? throw new ToolInvocationException("OperationNotFound", "No managed operation was found.", new { operationId });
-        var result = operation.LogBuffer.ReadAfter(cursor, limit);
-        return new OperationLogsData(operation.OperationId, result.Entries, result.NextCursor, result.Truncated, result.TotalAvailableAfterCursor);
+        var result = logReducer.Reduce(operation.LogBuffer.GetAfter(cursor ?? 0), cursor ?? 0, limit, LogReductionScenario.Operation, view);
+        return new OperationLogsData(operation.OperationId, result.Entries, result.NextCursor, result.Truncated, result.TotalAvailableAfterCursor, result.FilterSummary);
     }
 
     public Task<CleanupStaleProcessesData> CleanupStaleProcessesAsync(bool dryRun, CancellationToken cancellationToken)

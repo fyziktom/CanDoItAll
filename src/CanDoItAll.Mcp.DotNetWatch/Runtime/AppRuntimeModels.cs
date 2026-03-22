@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using CanDoItAll.Mcp.DotNetWatch.Configuration;
 using CanDoItAll.Mcp.DotNetWatch.Health;
@@ -15,6 +16,8 @@ public sealed record AppStartTemplate(
     IReadOnlyList<string> Arguments,
     IReadOnlyDictionary<string, string> EnvironmentOverlay,
     IReadOnlyList<string> Urls);
+
+public sealed record AppRebuildResult(string SessionId, string Strategy);
 
 public sealed partial class AppSession
 {
@@ -442,12 +445,7 @@ public sealed partial class AppSession
 
         if (line.Contains("Hot reload succeeded", StringComparison.OrdinalIgnoreCase))
         {
-            UpdateWatchPhase(
-                WatchProcessingState.HotReloadSucceeded,
-                line,
-                entry,
-                hotReloadOutcome: HotReloadOutcome.Succeeded,
-                healthSummary: "Hot reload succeeded. Waiting for fresh health confirmation.");
+            MarkWatchChangeApplied(line, entry, HotReloadOutcome.Succeeded);
             return true;
         }
 
@@ -707,6 +705,42 @@ public sealed partial class AppSession
         }
     }
 
+    public void MarkManagerRebuildRequested(string summary)
+    {
+        if (Mode != AppRunMode.WatchRun)
+        {
+            RecordEvent(summary);
+            return;
+        }
+
+        lock (_gate)
+        {
+            if (!_watchPendingChange)
+            {
+                SessionVersion++;
+            }
+
+            _watchPendingChange = true;
+            _watchState = WatchProcessingState.Building;
+            _watchSummary = summary;
+            _lastWatchActivityUtc = DateTimeOffset.UtcNow;
+            _lastHotReloadOutcome = HotReloadOutcome.RestartRequired;
+            _restartBaselineRuntimePid ??= _runtimePid;
+            LastRestartUtc = _lastWatchActivityUtc;
+
+            if (_confirmedWatchIteration.HasValue)
+            {
+                var nextExpectedIteration = _confirmedWatchIteration.Value + 1;
+                _expectedWatchIteration = Math.Max(_expectedWatchIteration ?? nextExpectedIteration, nextExpectedIteration);
+            }
+
+            InvalidateHealthLocked(summary, _lastWatchActivityUtc.Value);
+            RecordEventLocked(summary);
+        }
+
+        Transition(AppLifecycleState.Restarting, summary);
+    }
+
     private static string NormalizeWatchLine(string text)
     {
         const string watchPrefix = "dotnet watch :";
@@ -753,9 +787,11 @@ public sealed class AppRuntimeManager(
     ServerInstanceIdentity serverInstanceIdentity,
     EnvironmentOverlayFilter environmentOverlayFilter,
     ProcessSupervisor processSupervisor,
+    HttpHealthProbe healthProbe,
     ILogger<AppRuntimeManager> logger)
 {
     private readonly object _gate = new();
+    private readonly ConcurrentDictionary<string, byte> _backgroundHealthChecks = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, AppSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _activeSessionIds = new(StringComparer.OrdinalIgnoreCase);
     private string? _defaultSessionId;
@@ -872,6 +908,7 @@ public sealed class AppRuntimeManager(
             async entry =>
             {
                 session.NoteLog(entry);
+                MaybeScheduleBackgroundHealthProbe(session);
                 await Task.CompletedTask;
             },
             async exitCode =>
@@ -924,6 +961,28 @@ public sealed class AppRuntimeManager(
         return new AppStopData(session.SessionId, session.CorrelationId, true, AppLifecycleState.Stopped, stopResult.Graceful, stopResult.KilledPids, session.LogBuffer.CurrentSequence);
     }
 
+    public async Task<AppRebuildResult> RebuildAsync(string? sessionId, CancellationToken cancellationToken)
+    {
+        var session = GetById(sessionId)
+            ?? throw new ToolInvocationException("SessionNotFound", "No managed session was found.", new { sessionId });
+
+        var template = session.CreateTemplate();
+        await StopAsync(session.SessionId, "Manager rebuild requested.", force: false, cancellationToken);
+        var (replacementSession, _) = await StartAsync(template, reuseIfCompatible: false, AppStartConflictPolicy.Replace, cancellationToken);
+        return new AppRebuildResult(replacementSession.SessionId, "graceful-stop-start");
+    }
+
+    public async Task<AppRebuildResult> ForceRebuildAsync(string? sessionId, CancellationToken cancellationToken)
+    {
+        var session = GetById(sessionId)
+            ?? throw new ToolInvocationException("SessionNotFound", "No managed session was found.", new { sessionId });
+
+        var template = session.CreateTemplate();
+        await StopAsync(session.SessionId, "Manager force rebuild requested.", force: true, cancellationToken);
+        var (replacementSession, _) = await StartAsync(template, reuseIfCompatible: false, AppStartConflictPolicy.Replace, cancellationToken);
+        return new AppRebuildResult(replacementSession.SessionId, "forced-stop-start");
+    }
+
     private ManagedProcessStartInfo BuildProcessStartInfo(AppStartTemplate template, AppSession session, string correlationId)
     {
         var environment = environmentOverlayFilter.Merge(
@@ -932,55 +991,10 @@ public sealed class AppRuntimeManager(
             configuration.UsePollingFileWatcher);
 
         var ownershipMarkers = ManagedProcessMarkers.CreateApplicationArguments("app", session.SessionId, configuration.WorkspaceRoot, serverInstanceIdentity.Id);
-        string[] arguments;
-        if (template.Mode == AppRunMode.WatchRun)
-        {
-            List<string> watchArguments = ["watch", "--non-interactive", "--project", template.ProjectPath, "run", "--configuration", template.Configuration];
-            if (!string.IsNullOrWhiteSpace(template.Framework))
-            {
-                watchArguments.Add("--framework");
-                watchArguments.Add(template.Framework);
-            }
-
-            if (!string.IsNullOrWhiteSpace(template.LaunchProfile))
-            {
-                watchArguments.Add("--launch-profile");
-                watchArguments.Add(template.LaunchProfile);
-            }
-
-            if (ownershipMarkers.Count > 0 || template.Arguments.Count > 0)
-            {
-                watchArguments.Add("--");
-                watchArguments.AddRange(ownershipMarkers);
-                watchArguments.AddRange(template.Arguments);
-            }
-
-            arguments = watchArguments.ToArray();
-        }
-        else
-        {
-            List<string> runArguments = ["run", "--project", template.ProjectPath, "--configuration", template.Configuration];
-            if (!string.IsNullOrWhiteSpace(template.Framework))
-            {
-                runArguments.Add("--framework");
-                runArguments.Add(template.Framework);
-            }
-
-            if (!string.IsNullOrWhiteSpace(template.LaunchProfile))
-            {
-                runArguments.Add("--launch-profile");
-                runArguments.Add(template.LaunchProfile);
-            }
-
-            if (ownershipMarkers.Count > 0 || template.Arguments.Count > 0)
-            {
-                runArguments.Add("--");
-                runArguments.AddRange(ownershipMarkers);
-                runArguments.AddRange(template.Arguments);
-            }
-
-            arguments = runArguments.ToArray();
-        }
+        var applicationArguments = BuildManagedApplicationArguments(template, ownershipMarkers);
+        var artifactsRoot = Path.Combine(configuration.WorkspaceRoot, ".mcp-state", "artifacts", "app-sessions", session.SessionId);
+        Directory.CreateDirectory(artifactsRoot);
+        var arguments = BuildManagedProcessArguments(template, applicationArguments, artifactsRoot).ToArray();
 
         return new ManagedProcessStartInfo(
             "app",
@@ -991,6 +1005,75 @@ public sealed class AppRuntimeManager(
             environment,
             correlationId,
             session.SessionVersion);
+    }
+
+    internal static IReadOnlyList<string> BuildManagedApplicationArguments(AppStartTemplate template, IReadOnlyList<string> ownershipMarkers)
+    {
+        List<string> arguments = [];
+        arguments.AddRange(ownershipMarkers);
+
+        if (template.Urls.Count > 0 && !ContainsUrlsArgument(template.Arguments))
+        {
+            arguments.Add("--urls");
+            arguments.Add(string.Join(';', template.Urls));
+        }
+
+        arguments.AddRange(template.Arguments);
+        return arguments;
+    }
+
+    internal static IReadOnlyList<string> BuildManagedProcessArguments(
+        AppStartTemplate template,
+        IReadOnlyList<string> applicationArguments,
+        string artifactsRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(artifactsRoot);
+
+        List<string> arguments;
+        if (template.Mode == AppRunMode.WatchRun)
+        {
+            arguments =
+            [
+                "watch",
+                "--non-interactive",
+                "--project", template.ProjectPath,
+                "--artifacts-path", artifactsRoot,
+                "run",
+                "--configuration", template.Configuration,
+                "--property:UseAppHost=false"
+            ];
+        }
+        else
+        {
+            arguments =
+            [
+                "run",
+                "--project", template.ProjectPath,
+                "--artifacts-path", artifactsRoot,
+                "--configuration", template.Configuration,
+                "--property:UseAppHost=false"
+            ];
+        }
+
+        if (!string.IsNullOrWhiteSpace(template.Framework))
+        {
+            arguments.Add("--framework");
+            arguments.Add(template.Framework);
+        }
+
+        if (!string.IsNullOrWhiteSpace(template.LaunchProfile))
+        {
+            arguments.Add("--launch-profile");
+            arguments.Add(template.LaunchProfile);
+        }
+
+        if (applicationArguments.Count > 0)
+        {
+            arguments.Add("--");
+            arguments.AddRange(applicationArguments);
+        }
+
+        return arguments;
     }
 
     private static IReadOnlyDictionary<string, string> GetDefaultEnvironment(AppStartTemplate template, bool usePollingWatcher)
@@ -1020,6 +1103,100 @@ public sealed class AppRuntimeManager(
         }
 
         return environment;
+    }
+
+    private void MaybeScheduleBackgroundHealthProbe(AppSession session)
+    {
+        if (!configuration.HealthEnabled || session.Mode != AppRunMode.WatchRun)
+        {
+            return;
+        }
+
+        var status = session.ToStatusData();
+        if (status.Watch?.PendingChange != true)
+        {
+            return;
+        }
+
+        if (status.Watch.State is not WatchProcessingState.Launching and not WatchProcessingState.WaitingForChanges and not WatchProcessingState.HotReloadSucceeded)
+        {
+            return;
+        }
+
+        if (!_backgroundHealthChecks.TryAdd(session.SessionId, 0))
+        {
+            return;
+        }
+
+        _ = Task.Run(() => ProbeSessionHealthAsync(session));
+    }
+
+    private async Task ProbeSessionHealthAsync(AppSession session)
+    {
+        try
+        {
+            var maxAttempts = Math.Max(configuration.StableHealthSuccessCount * 8, 20);
+            for (var attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                var status = session.ToStatusData();
+                if (status.State is AppLifecycleState.Stopped or AppLifecycleState.Failed or AppLifecycleState.ExitedUnexpectedly)
+                {
+                    return;
+                }
+
+                if (status.Watch?.PendingChange != true)
+                {
+                    return;
+                }
+
+                var probe = await healthProbe.ProbeAsync(configuration.HealthUrls, CancellationToken.None);
+                if (!probe.IsReady)
+                {
+                    session.MarkHealthFailure(probe);
+                    await Task.Delay(configuration.DefaultPollInterval, CancellationToken.None);
+                    continue;
+                }
+
+                if (!session.ConfirmsCurrentGeneration(probe))
+                {
+                    session.MarkHealthObserved(probe, "Waiting for the active dotnet watch generation to become healthy.");
+                    await Task.Delay(configuration.DefaultPollInterval, CancellationToken.None);
+                    continue;
+                }
+
+                session.MarkHealthy(probe);
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Background health reconciliation failed for session {SessionId}", session.SessionId);
+        }
+        finally
+        {
+            _backgroundHealthChecks.TryRemove(session.SessionId, out _);
+        }
+    }
+
+    private static bool ContainsUrlsArgument(IReadOnlyList<string> arguments)
+    {
+        foreach (var argument in arguments)
+        {
+            if (string.IsNullOrWhiteSpace(argument))
+            {
+                continue;
+            }
+
+            if (string.Equals(argument, "--urls", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(argument, "urls", StringComparison.OrdinalIgnoreCase) ||
+                argument.StartsWith("--urls=", StringComparison.OrdinalIgnoreCase) ||
+                argument.StartsWith("urls=", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private AppSession? ResolveDefaultSessionLocked()

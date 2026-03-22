@@ -42,8 +42,8 @@ internal sealed class BackendToolInvoker(
     public Task<ToolEnvelope<AppWaitData>> AppWaitAsync(string? sessionId = null, AppWaitCondition condition = AppWaitCondition.Healthy, int timeoutMs = 120000, int pollIntervalMs = 500, long? cursor = null, int quietPeriodMs = 2000, string? logPattern = null, bool caseInsensitive = true, CancellationToken cancellationToken = default)
         => PostAsync<AppWaitRequest, AppWaitData>("app-wait", new AppWaitRequest(sessionId, condition, timeoutMs, pollIntervalMs, cursor, quietPeriodMs, logPattern, caseInsensitive), cancellationToken);
 
-    public Task<ToolEnvelope<AppLogsData>> AppLogsAsync(string? sessionId = null, long? cursor = null, int limit = 200, bool includeStdOut = true, bool includeStdErr = true, bool includeSystemEvents = true, CancellationToken cancellationToken = default)
-        => PostAsync<AppLogsRequest, AppLogsData>("app-logs", new AppLogsRequest(sessionId, cursor, limit, includeStdOut, includeStdErr, includeSystemEvents), cancellationToken);
+    public Task<ToolEnvelope<AppLogsData>> AppLogsAsync(string? sessionId = null, long? cursor = null, int limit = 200, bool includeStdOut = true, bool includeStdErr = true, bool includeSystemEvents = true, LogViewMode view = LogViewMode.AgentOptimized, CancellationToken cancellationToken = default)
+        => PostAsync<AppLogsRequest, AppLogsData>("app-logs", new AppLogsRequest(sessionId, cursor, limit, includeStdOut, includeStdErr, includeSystemEvents, view), cancellationToken);
 
     public Task<ToolEnvelope<OperationStartData>> SolutionBuildAsync(string? targetPath = null, string? configurationName = null, string? framework = null, string[]? arguments = null, Dictionary<string, string?>? environmentOverlay = null, WhenAppRunningPolicy? whenAppRunning = null, bool waitForCompletion = false, int? timeoutMs = null, CancellationToken cancellationToken = default)
         => PostAsync<SolutionBuildRequest, OperationStartData>("solution-build", new SolutionBuildRequest(targetPath, configurationName, framework, arguments, environmentOverlay, whenAppRunning, waitForCompletion, timeoutMs), cancellationToken);
@@ -57,8 +57,8 @@ internal sealed class BackendToolInvoker(
     public Task<ToolEnvelope<OperationWaitData>> OperationWaitAsync(string operationId, int timeoutMs = 1800000, int pollIntervalMs = 500, CancellationToken cancellationToken = default)
         => PostAsync<OperationWaitRequest, OperationWaitData>("operation-wait", new OperationWaitRequest(operationId, timeoutMs, pollIntervalMs), cancellationToken);
 
-    public Task<ToolEnvelope<OperationLogsData>> OperationLogsAsync(string operationId, long? cursor = null, int limit = 200, CancellationToken cancellationToken = default)
-        => PostAsync<OperationLogsRequest, OperationLogsData>("operation-logs", new OperationLogsRequest(operationId, cursor, limit), cancellationToken);
+    public Task<ToolEnvelope<OperationLogsData>> OperationLogsAsync(string operationId, long? cursor = null, int limit = 200, LogViewMode view = LogViewMode.AgentOptimized, CancellationToken cancellationToken = default)
+        => PostAsync<OperationLogsRequest, OperationLogsData>("operation-logs", new OperationLogsRequest(operationId, cursor, limit, view), cancellationToken);
 
     public Task<ToolEnvelope<CleanupStaleProcessesData>> CleanupStaleProcessesAsync(bool dryRun = false, CancellationToken cancellationToken = default)
         => PostAsync<CleanupStaleProcessesRequest, CleanupStaleProcessesData>("cleanup-stale-processes", new CleanupStaleProcessesRequest(dryRun), cancellationToken);

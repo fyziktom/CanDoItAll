@@ -1,14 +1,19 @@
 using System.Diagnostics;
 using CanDoItAll.Mcp.Core.Contracts;
 using CanDoItAll.Mcp.Core.Observability;
+using CanDoItAll.Mcp.DotNetWatch.Backend;
 using CanDoItAll.Mcp.DotNetWatch.Configuration;
 using CanDoItAll.Mcp.DotNetWatch.Diagnostics;
+using CanDoItAll.Mcp.DotNetWatch.Manager;
 using CanDoItAll.Mcp.DotNetWatch.Operations;
 using CanDoItAll.Mcp.DotNetWatch.Runtime;
 using CanDoItAll.Mcp.DotNetWatch.Security;
 using CanDoItAll.Mcp.LocalRuntime.Processes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Json;
 
 namespace CanDoItAll.Mcp.DotNetWatch.Tests;
 
@@ -221,6 +226,290 @@ public sealed class InfrastructureTests
         Assert.Contains($"taskkill /PID {pid} /T /F", runner.Commands);
     }
 
+    [Fact]
+    public void AgentLogReducer_SuppressesWarningsAndRestoreNoise_ButKeepsOutcomeLines()
+    {
+        var reducer = new AgentLogReducer();
+        var result = reducer.Reduce(
+            [
+                CreateLogEntry(1, "  Determining projects to restore..."),
+                CreateLogEntry(2, @"C:\repo\App.csproj : warning NU1510: PackageReference Microsoft.Extensions.Hosting will not be pruned."),
+                CreateLogEntry(3, @"C:\repo\Program.cs(42,11): warning CS8602: Dereference of a possibly null reference."),
+                CreateLogEntry(4, "Build succeeded."),
+                CreateLogEntry(5, "    2 Warning(s)"),
+                CreateLogEntry(6, "    0 Error(s)")
+            ],
+            startCursor: 0,
+            limit: 50,
+            scenario: LogReductionScenario.Operation,
+            view: LogViewMode.AgentOptimized);
+
+        Assert.Collection(
+            result.Entries,
+            entry => Assert.Equal("Build succeeded.", entry.Text),
+            entry => Assert.Equal("    2 Warning(s)", entry.Text),
+            entry => Assert.Equal("    0 Error(s)", entry.Text));
+        Assert.Equal(3, result.FilterSummary.SuppressedEntryCount);
+        Assert.Contains(result.FilterSummary.Notes, note => note.Contains("compiler/NuGet warning lines", StringComparison.Ordinal));
+        Assert.Contains(result.FilterSummary.Notes, note => note.Contains("restore/build progress lines", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AgentLogReducer_SuppressesFrameworkHttpNoise_ButKeepsAppWarnings()
+    {
+        var reducer = new AgentLogReducer();
+        var result = reducer.Reduce(
+            [
+                CreateLogEntry(1, "info: System.Net.Http.HttpClient.Default.LogicalHandler[100]"),
+                CreateLogEntry(2, "      Start processing HTTP request GET https://example.test/api"),
+                CreateLogEntry(3, "warn: PVEInvoicing[0]"),
+                CreateLogEntry(4, "      Mail provider returned 404 for a simulated lookup.")
+            ],
+            startCursor: 0,
+            limit: 50,
+            scenario: LogReductionScenario.App,
+            view: LogViewMode.AgentOptimized);
+
+        Assert.Collection(
+            result.Entries,
+            entry => Assert.Equal("warn: PVEInvoicing[0]", entry.Text),
+            entry => Assert.Equal("      Mail provider returned 404 for a simulated lookup.", entry.Text));
+        Assert.Equal(2, result.FilterSummary.SuppressedEntryCount);
+        Assert.Contains(result.FilterSummary.Notes, note => note.Contains("framework HTTP trace lines", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AgentLogReducer_SuppressesEntityFrameworkAndDebugTraceNoise()
+    {
+        var reducer = new AgentLogReducer();
+        var result = reducer.Reduce(
+            [
+                CreateLogEntry(1, "dbug: Microsoft.Extensions.Hosting.Internal.Host[1]"),
+                CreateLogEntry(2, "      Hosting debug trace."),
+                CreateLogEntry(3, "info: Microsoft.EntityFrameworkCore.Update[30100]"),
+                CreateLogEntry(4, "      Saved 2 entities to in-memory store."),
+                CreateLogEntry(5, "warn: PVEInvoicing[0]"),
+                CreateLogEntry(6, "      Mail provider returned 404 for a simulated lookup.")
+            ],
+            startCursor: 0,
+            limit: 50,
+            scenario: LogReductionScenario.App,
+            view: LogViewMode.AgentOptimized);
+
+        Assert.Collection(
+            result.Entries,
+            entry => Assert.Equal("warn: PVEInvoicing[0]", entry.Text),
+            entry => Assert.Equal("      Mail provider returned 404 for a simulated lookup.", entry.Text));
+        Assert.Equal(4, result.FilterSummary.SuppressedEntryCount);
+        Assert.Contains(result.FilterSummary.Notes, note => note.Contains("Entity Framework", StringComparison.Ordinal));
+        Assert.Contains(result.FilterSummary.Notes, note => note.Contains("debug/trace log lines", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildManagedApplicationArguments_AddsConfiguredUrls_WithoutDuplicatingExplicitOverride()
+    {
+        var template = new AppStartTemplate(
+            @"C:\repo\App.csproj",
+            @"C:\repo",
+            AppRunMode.WatchRun,
+            "Debug",
+            Framework: null,
+            LaunchProfile: "https",
+            Arguments: ["--flag"],
+            EnvironmentOverlay: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            Urls: ["https://localhost:7367", "http://localhost:5239"]);
+
+        var arguments = AppRuntimeManager.BuildManagedApplicationArguments(template, ["--CanDoItAllMcpOwnerKind=app"]);
+
+        Assert.Equal("--CanDoItAllMcpOwnerKind=app", arguments[0]);
+        Assert.Contains("--urls", arguments);
+        Assert.Contains("https://localhost:7367;http://localhost:5239", arguments);
+        Assert.Contains("--flag", arguments);
+
+        var explicitUrlsTemplate = template with
+        {
+            Arguments = ["--urls", "https://localhost:9001"]
+        };
+
+        var explicitArguments = AppRuntimeManager.BuildManagedApplicationArguments(explicitUrlsTemplate, []);
+        Assert.Equal(2, explicitArguments.Count);
+        Assert.Equal("--urls", explicitArguments[0]);
+        Assert.Equal("https://localhost:9001", explicitArguments[1]);
+    }
+
+    [Fact]
+    public void BuildManagedProcessArguments_UsesShadowArtifacts_ForWatchRun()
+    {
+        var template = new AppStartTemplate(
+            @"C:\repo\App.csproj",
+            @"C:\repo",
+            AppRunMode.WatchRun,
+            "Debug",
+            Framework: "net10.0",
+            LaunchProfile: "https",
+            Arguments: [],
+            EnvironmentOverlay: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            Urls: []);
+
+        var arguments = AppRuntimeManager.BuildManagedProcessArguments(
+            template,
+            ["--CanDoItAllMcpOwnerKind=app", "--urls", "https://localhost:7367"],
+            @"C:\repo\.mcp-state\artifacts\app-sessions\app_123");
+
+        Assert.Equal("watch", arguments[0]);
+        Assert.Contains("--non-interactive", arguments);
+        Assert.Contains("--artifacts-path", arguments);
+        Assert.Contains(@"C:\repo\.mcp-state\artifacts\app-sessions\app_123", arguments);
+        Assert.Contains("--property:UseAppHost=false", arguments);
+        Assert.Contains("--framework", arguments);
+        Assert.Contains("net10.0", arguments);
+        Assert.Contains("--launch-profile", arguments);
+        Assert.Contains("https", arguments);
+        Assert.Equal("--", arguments[^4]);
+        Assert.Equal("--CanDoItAllMcpOwnerKind=app", arguments[^3]);
+        Assert.Equal("--urls", arguments[^2]);
+        Assert.Equal("https://localhost:7367", arguments[^1]);
+    }
+
+    [Fact]
+    public void BuildManagedProcessArguments_UsesShadowArtifacts_ForRunOnce()
+    {
+        var template = new AppStartTemplate(
+            @"C:\repo\App.csproj",
+            @"C:\repo",
+            AppRunMode.RunOnce,
+            "Release",
+            Framework: null,
+            LaunchProfile: null,
+            Arguments: [],
+            EnvironmentOverlay: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            Urls: []);
+
+        var arguments = AppRuntimeManager.BuildManagedProcessArguments(
+            template,
+            ["--CanDoItAllMcpOwnerKind=app"],
+            @"C:\repo\.mcp-state\artifacts\app-sessions\app_456");
+
+        Assert.Equal("run", arguments[0]);
+        Assert.Contains("--artifacts-path", arguments);
+        Assert.Contains(@"C:\repo\.mcp-state\artifacts\app-sessions\app_456", arguments);
+        Assert.Contains("--property:UseAppHost=false", arguments);
+        Assert.DoesNotContain("--non-interactive", arguments);
+    }
+
+    [Fact]
+    public void BackendDashboardPage_RendersAggregateBackends_WithStringEnums_AndForceRebuildControl()
+    {
+        var identity = new BackendIdentitySnapshot("CanDoItAll.Mcp.DotNetWatch", @"C:\repo\one", @"C:\repo\one\settings.json", "hash-1", "bin-1");
+        var otherIdentity = identity with { WorkspaceRoot = @"C:\repo\two", SettingsPath = @"C:\repo\two\settings.json", SettingsHash = "hash-2" };
+        var session = new AppStatusData(
+            "app_1",
+            "corr_1",
+            AppLifecycleState.Restarting,
+            AppRunMode.WatchRun,
+            @"C:\repo\one\App.csproj",
+            3,
+            1234,
+            ["https://localhost:7411"],
+            null,
+            DateTimeOffset.UtcNow,
+            null,
+            null,
+            42,
+            new HealthData("Pending", null, DateTimeOffset.UtcNow, "https://localhost:7411/_dev/runtime", "Restarting", false, null, null),
+            ["Restart requested."],
+            new WatchStatusData(WatchProcessingState.Building, "Building", true, 1234, null, 2, 1, HotReloadOutcome.RestartRequired, 42, DateTimeOffset.UtcNow));
+
+        var status = new BackendManagerStatusResponse(
+            identity,
+            "backend_1",
+            1001,
+            DateTimeOffset.UtcNow,
+            "http://127.0.0.1:5001",
+            "http://127.0.0.1:5001/?token=test",
+            [session],
+            [],
+            [],
+            [
+                new ManagedBackendStatusData(identity, "backend_1", 1001, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "http://127.0.0.1:5001", "http://127.0.0.1:5001/?token=test", true, true, null, [session], [], [], DateTimeOffset.UtcNow),
+                new ManagedBackendStatusData(otherIdentity, "backend_2", 1002, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "http://127.0.0.1:5002", "http://127.0.0.1:5002/?token=test", false, true, null, [], [], [], DateTimeOffset.UtcNow)
+            ],
+            2,
+            1,
+            0,
+            DateTimeOffset.UtcNow);
+
+        var html = BackendDashboardPage.Render(status);
+
+        Assert.Contains(@"""state"":""Restarting""", html, StringComparison.Ordinal);
+        Assert.Contains(@"""mode"":""WatchRun""", html, StringComparison.Ordinal);
+        Assert.Contains(@"C:\\repo\\two", html, StringComparison.Ordinal);
+        Assert.Contains("Force Rebuild", html, StringComparison.Ordinal);
+        Assert.Contains("Backend PID", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task BackendManagerService_RemoteAction_IsReportedAsProxied()
+    {
+        using var workspace = CreateWorkspace();
+        var configuration = new RuntimeConfiguration(Options.Create(CreateOptions(workspace.RootPath)));
+        var catalog = new GlobalBackendCatalogStore(configuration, NullLogger<GlobalBackendCatalogStore>.Instance);
+        var identity = new BackendIdentitySnapshot("CanDoItAll.Mcp.DotNetWatch", @"C:\repo\remote", @"C:\repo\remote\settings.json", "hash-remote", "bin-remote");
+        var remoteRegistration = new BackendRegistrationRecord(
+            "backend_remote",
+            Environment.ProcessId,
+            Process.GetCurrentProcess().StartTime.ToUniversalTime(),
+            DateTimeOffset.UtcNow,
+            "http://127.0.0.1:5015",
+            "http://127.0.0.1:5015/?token=test",
+            "test-token",
+            identity);
+
+        await catalog.UpsertAsync(remoteRegistration, CancellationToken.None);
+
+        var httpClientFactory = new StaticHttpClientFactory(new HttpClient(new StaticHttpMessageHandler(_ =>
+        {
+            var payload = new BackendManagerActionResponse(
+                Success: true,
+                BackendId: "backend_remote",
+                Action: BackendManagerActionKind.RebuildSession,
+                Message: "Remote rebuild requested.",
+                SessionId: "app_remote",
+                OperationId: null,
+                Proxied: false,
+                TimestampUtc: DateTimeOffset.UtcNow);
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(payload)
+            };
+        })));
+
+        var service = new BackendManagerService(
+            identityProvider: null!,
+            coordinator: null!,
+            catalogStore: catalog,
+            httpClientFactory,
+            NullLogger<BackendManagerService>.Instance);
+
+        var result = await service.ExecuteManagerActionAsync(
+            new BackendManagerActionRequest("backend_remote", BackendManagerActionKind.RebuildSession, SessionId: "app_remote"),
+            currentRegistration: new BackendRegistrationRecord(
+                "backend_current",
+                Environment.ProcessId,
+                Process.GetCurrentProcess().StartTime.ToUniversalTime(),
+                DateTimeOffset.UtcNow,
+                "http://127.0.0.1:5001",
+                "http://127.0.0.1:5001/?token=current",
+                "current-token",
+                identity with { WorkspaceRoot = workspace.RootPath, SettingsPath = Path.Combine(workspace.RootPath, "settings.json") }),
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.True(result.Proxied);
+        Assert.Equal("app_remote", result.SessionId);
+    }
+
     private static McpServerOptions CreateOptions(string workspaceRoot)
     {
         return new McpServerOptions
@@ -271,6 +560,18 @@ public sealed class InfrastructureTests
         return workspace;
     }
 
+    private static LogEntry CreateLogEntry(long sequence, string text)
+    {
+        return new LogEntry(
+            sequence,
+            DateTimeOffset.UtcNow,
+            "ProcessStdOut",
+            "stdout",
+            1,
+            "corr_test",
+            text);
+    }
+
     private sealed class RecordingCommandRunner(Func<string, string> captureOutputFactory) : IProcessCommandRunner
     {
         public List<string> Commands { get; } = [];
@@ -287,6 +588,17 @@ public sealed class InfrastructureTests
             Commands.Add(key);
             return Task.FromResult(captureOutputFactory(key));
         }
+    }
+
+    private sealed class StaticHttpClientFactory(HttpClient client) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => client;
+    }
+
+    private sealed class StaticHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(responder(request));
     }
 
     private sealed class TemporaryWorkspace : IDisposable

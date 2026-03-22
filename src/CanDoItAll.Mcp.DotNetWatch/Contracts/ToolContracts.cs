@@ -42,6 +42,12 @@ public enum AppWaitCondition
     WatchSettled
 }
 
+public enum LogViewMode
+{
+    AgentOptimized,
+    Raw
+}
+
 public enum WatchProcessingState
 {
     Idle,
@@ -205,7 +211,8 @@ public sealed record AppLogsData(
     IReadOnlyList<LogEntry> Entries,
     long NextCursor,
     bool Truncated,
-    int TotalAvailableAfterCursor);
+    int TotalAvailableAfterCursor,
+    LogFilterSummaryData? FilterSummary = null);
 
 public sealed record AppPreemptionData(
     WhenAppRunningPolicy Policy,
@@ -275,7 +282,15 @@ public sealed record OperationLogsData(
     IReadOnlyList<LogEntry> Entries,
     long NextCursor,
     bool Truncated,
-    int TotalAvailableAfterCursor);
+    int TotalAvailableAfterCursor,
+    LogFilterSummaryData? FilterSummary = null);
+
+public sealed record LogFilterSummaryData(
+    LogViewMode View,
+    int ConsumedRawEntryCount,
+    int ReturnedEntryCount,
+    int SuppressedEntryCount,
+    IReadOnlyList<string> Notes);
 
 public sealed record DiagnosticEvidence(long Sequence, string Text);
 

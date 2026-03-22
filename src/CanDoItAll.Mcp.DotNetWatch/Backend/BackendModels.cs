@@ -72,6 +72,35 @@ public sealed record BackendPingResponse(
     DateTimeOffset StartedUtc,
     BackendIdentitySnapshot Identity);
 
+public sealed record BackendRuntimeStatusResponse(
+    BackendIdentitySnapshot Identity,
+    string BackendId,
+    int ProcessId,
+    DateTimeOffset StartedUtc,
+    DateTimeOffset RegisteredUtc,
+    string BaseUrl,
+    string ManagerUrl,
+    IReadOnlyList<AppStatusData> ActiveSessions,
+    IReadOnlyList<OperationStatusData> ActiveOperations,
+    IReadOnlyList<OperationStatusData> RecentOperations,
+    DateTimeOffset TimestampUtc);
+
+public sealed record ManagedBackendStatusData(
+    BackendIdentitySnapshot Identity,
+    string BackendId,
+    int ProcessId,
+    DateTimeOffset StartedUtc,
+    DateTimeOffset RegisteredUtc,
+    string BaseUrl,
+    string ManagerUrl,
+    bool IsCurrentBackend,
+    bool IsReachable,
+    string? UnavailableReason,
+    IReadOnlyList<AppStatusData> ActiveSessions,
+    IReadOnlyList<OperationStatusData> ActiveOperations,
+    IReadOnlyList<OperationStatusData> RecentOperations,
+    DateTimeOffset TimestampUtc);
+
 public sealed record BackendManagerStatusResponse(
     BackendIdentitySnapshot Identity,
     string BackendId,
@@ -82,6 +111,36 @@ public sealed record BackendManagerStatusResponse(
     IReadOnlyList<AppStatusData> ActiveSessions,
     IReadOnlyList<OperationStatusData> ActiveOperations,
     IReadOnlyList<OperationStatusData> RecentOperations,
+    IReadOnlyList<ManagedBackendStatusData> Backends,
+    int LiveBackendCount,
+    int TotalActiveSessionCount,
+    int TotalActiveOperationCount,
+    DateTimeOffset TimestampUtc);
+
+public enum BackendManagerActionKind
+{
+    StartDefaultApp,
+    StopSession,
+    ForceStopSession,
+    RebuildSession,
+    ForceRebuildSession,
+    BuildWorkspace
+}
+
+public sealed record BackendManagerActionRequest(
+    string BackendId,
+    BackendManagerActionKind Action,
+    string? SessionId = null,
+    bool WaitForCompletion = false);
+
+public sealed record BackendManagerActionResponse(
+    bool Success,
+    string BackendId,
+    BackendManagerActionKind Action,
+    string Message,
+    string? SessionId,
+    string? OperationId,
+    bool Proxied,
     DateTimeOffset TimestampUtc);
 
 internal sealed class BackendIdentityProvider(RuntimeConfiguration configuration, LaunchContext launchContext)

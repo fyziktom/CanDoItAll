@@ -45,6 +45,7 @@ public interface IDotNetWatchToolInvoker
         bool includeStdOut = true,
         bool includeStdErr = true,
         bool includeSystemEvents = true,
+        LogViewMode view = LogViewMode.AgentOptimized,
         CancellationToken cancellationToken = default);
 
     Task<ToolEnvelope<OperationStartData>> SolutionBuildAsync(
@@ -84,6 +85,7 @@ public interface IDotNetWatchToolInvoker
         string operationId,
         long? cursor = null,
         int limit = 200,
+        LogViewMode view = LogViewMode.AgentOptimized,
         CancellationToken cancellationToken = default);
 
     Task<ToolEnvelope<CleanupStaleProcessesData>> CleanupStaleProcessesAsync(bool dryRun = false, CancellationToken cancellationToken = default);
@@ -134,7 +136,8 @@ public sealed record AppLogsRequest(
     int Limit = 200,
     bool IncludeStdOut = true,
     bool IncludeStdErr = true,
-    bool IncludeSystemEvents = true);
+    bool IncludeSystemEvents = true,
+    LogViewMode View = LogViewMode.AgentOptimized);
 
 public sealed record SolutionBuildRequest(
     string? TargetPath = null,
@@ -169,7 +172,8 @@ public sealed record OperationWaitRequest(
 public sealed record OperationLogsRequest(
     string OperationId,
     long? Cursor = null,
-    int Limit = 200);
+    int Limit = 200,
+    LogViewMode View = LogViewMode.AgentOptimized);
 
 public sealed record CleanupStaleProcessesRequest(bool DryRun = false);
 

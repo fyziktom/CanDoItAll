@@ -63,7 +63,7 @@ public sealed class CanDoItAllTools(IDotNetWatchToolInvoker invoker)
         => invoker.AppWaitAsync(sessionId, condition, timeoutMs, pollIntervalMs, cursor, quietPeriodMs, logPattern, caseInsensitive, cancellationToken);
 
     [McpServerTool(Name = "candoitall_app_logs", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Reads incrementally from the backend-owned managed app log buffer.")]
+    [Description("Reads incrementally from the backend-owned managed app log buffer. Agent-optimized filtering is used by default; pass view=Raw for unfiltered logs.")]
     public Task<ToolEnvelope<AppLogsData>> AppLogsAsync(
         string? sessionId = null,
         long? cursor = null,
@@ -71,8 +71,9 @@ public sealed class CanDoItAllTools(IDotNetWatchToolInvoker invoker)
         bool includeStdOut = true,
         bool includeStdErr = true,
         bool includeSystemEvents = true,
+        LogViewMode view = LogViewMode.AgentOptimized,
         CancellationToken cancellationToken = default)
-        => invoker.AppLogsAsync(sessionId, cursor, limit, includeStdOut, includeStdErr, includeSystemEvents, cancellationToken);
+        => invoker.AppLogsAsync(sessionId, cursor, limit, includeStdOut, includeStdErr, includeSystemEvents, view, cancellationToken);
 
     [McpServerTool(Name = "candoitall_solution_build", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
     [Description("Starts a backend-managed dotnet build operation against the solution or a specified target and applies the configured app preemption policy.")]
@@ -120,13 +121,14 @@ public sealed class CanDoItAllTools(IDotNetWatchToolInvoker invoker)
         => invoker.OperationWaitAsync(operationId, timeoutMs, pollIntervalMs, cancellationToken);
 
     [McpServerTool(Name = "candoitall_operation_logs", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Reads incrementally from the backend-managed build or test operation log buffer.")]
+    [Description("Reads incrementally from the backend-managed build or test operation log buffer. Agent-optimized filtering is used by default; pass view=Raw for unfiltered logs.")]
     public Task<ToolEnvelope<OperationLogsData>> OperationLogsAsync(
         string operationId,
         long? cursor = null,
         int limit = 200,
+        LogViewMode view = LogViewMode.AgentOptimized,
         CancellationToken cancellationToken = default)
-        => invoker.OperationLogsAsync(operationId, cursor, limit, cancellationToken);
+        => invoker.OperationLogsAsync(operationId, cursor, limit, view, cancellationToken);
 
     [McpServerTool(Name = "candoitall_cleanup_stale_processes", ReadOnly = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Cleans up stale managed processes that survived a previous backend crash or session termination.")]

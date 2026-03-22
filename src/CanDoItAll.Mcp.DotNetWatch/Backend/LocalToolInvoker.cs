@@ -70,8 +70,9 @@ internal sealed class LocalToolInvoker(SessionCoordinator coordinator, ILogger<L
         bool includeStdOut = true,
         bool includeStdErr = true,
         bool includeSystemEvents = true,
+        LogViewMode view = LogViewMode.AgentOptimized,
         CancellationToken cancellationToken = default)
-        => ExecuteAsync("candoitall_app_logs", _ => Task.FromResult(coordinator.GetAppLogs(sessionId, cursor, limit, includeStdOut, includeStdErr, includeSystemEvents)));
+        => ExecuteAsync("candoitall_app_logs", _ => Task.FromResult(coordinator.GetAppLogs(sessionId, cursor, limit, includeStdOut, includeStdErr, includeSystemEvents, view)));
 
     public Task<ToolEnvelope<OperationStartData>> SolutionBuildAsync(
         string? targetPath = null,
@@ -139,8 +140,8 @@ internal sealed class LocalToolInvoker(SessionCoordinator coordinator, ILogger<L
             TimeSpan.FromMilliseconds(pollIntervalMs),
             cancellationToken));
 
-    public Task<ToolEnvelope<OperationLogsData>> OperationLogsAsync(string operationId, long? cursor = null, int limit = 200, CancellationToken cancellationToken = default)
-        => ExecuteAsync("candoitall_operation_logs", _ => Task.FromResult(coordinator.GetOperationLogs(operationId, cursor, limit)));
+    public Task<ToolEnvelope<OperationLogsData>> OperationLogsAsync(string operationId, long? cursor = null, int limit = 200, LogViewMode view = LogViewMode.AgentOptimized, CancellationToken cancellationToken = default)
+        => ExecuteAsync("candoitall_operation_logs", _ => Task.FromResult(coordinator.GetOperationLogs(operationId, cursor, limit, view)));
 
     public Task<ToolEnvelope<CleanupStaleProcessesData>> CleanupStaleProcessesAsync(bool dryRun = false, CancellationToken cancellationToken = default)
         => ExecuteAsync("candoitall_cleanup_stale_processes", _ => coordinator.CleanupStaleProcessesAsync(dryRun, cancellationToken));
