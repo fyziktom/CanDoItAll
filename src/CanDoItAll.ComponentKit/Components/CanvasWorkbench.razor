@@ -14,18 +14,22 @@
                             class="cw-toolbar-action cw-toolbar-action--primary"
                             @ref="quickCreateButton"
                             aria-label="Open quick create actions"
+                            title="Open quick create actions"
                             @onclick="OpenQuickCreateMenuAsync">
-                        <span>+</span>
+                        <span class="cw-toolbar-symbol" aria-hidden="true">+</span>
+                        <span class="sr-only">Open quick create actions</span>
                     </button>
                 }
 
                 @if (Surface.Chrome.ShowFocusAction)
                 {
                     <button type="button"
-                            class="cw-toolbar-action"
+                            class="cw-toolbar-action cw-toolbar-action--icon"
                             aria-label="@Surface.Chrome.FocusActionLabel"
+                            title="@Surface.Chrome.FocusActionLabel"
                             @onclick="FocusPrimaryNodeAsync">
-                        @Surface.Chrome.FocusActionLabel
+                        <span class="cw-toolbar-symbol" aria-hidden="true">◎</span>
+                        <span class="sr-only">@Surface.Chrome.FocusActionLabel</span>
                     </button>
                 }
 
@@ -33,13 +37,48 @@
             </div>
 
             <div class="cw-toolbar-group">
-                <button type="button" class="cw-toolbar-action" aria-label="Fit canvas" @onclick="FitViewAsync">Fit</button>
-                <button type="button" class="cw-toolbar-action" aria-label="Toggle maximize" @onclick="ToggleMaximizeAsync">@(isMaximized ? "Dock" : "Max")</button>
-                <button type="button" class="cw-toolbar-action" aria-label="Toggle help" @onclick="ToggleHelp">Help</button>
-                <button type="button" class="cw-toolbar-action" aria-label="Toggle settings" @onclick="ToggleSettings">Settings</button>
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--icon"
+                        aria-label="Fit canvas"
+                        title="Fit canvas"
+                        @onclick="FitViewAsync">
+                    <span class="cw-toolbar-symbol" aria-hidden="true">◫</span>
+                    <span class="sr-only">Fit canvas</span>
+                </button>
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--icon"
+                        aria-label="Toggle maximize"
+                        title="@(isMaximized ? "Dock canvas" : "Maximize canvas")"
+                        @onclick="ToggleMaximizeAsync">
+                    <span class="cw-toolbar-symbol" aria-hidden="true">@(isMaximized ? "⤡" : "⤢")</span>
+                    <span class="sr-only">@(isMaximized ? "Dock canvas" : "Maximize canvas")</span>
+                </button>
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--icon"
+                        aria-label="Toggle help"
+                        title="Canvas help"
+                        @onclick="ToggleHelp">
+                    <span class="cw-toolbar-symbol" aria-hidden="true">?</span>
+                    <span class="sr-only">Canvas help</span>
+                </button>
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--icon"
+                        aria-label="Toggle settings"
+                        title="Canvas settings"
+                        @onclick="ToggleSettings">
+                    <span class="cw-toolbar-symbol" aria-hidden="true">⚙</span>
+                    <span class="sr-only">Canvas settings</span>
+                </button>
 
                 <div class="cw-zoom-rail">
-                    <button type="button" class="cw-toolbar-action cw-toolbar-action--ghost" aria-label="Zoom out" @onclick="ZoomOutAsync">-</button>
+                    <button type="button"
+                            class="cw-toolbar-action cw-toolbar-action--ghost cw-toolbar-action--icon"
+                            aria-label="Zoom out"
+                            title="Zoom out"
+                            @onclick="ZoomOutAsync">
+                        <span class="cw-toolbar-symbol" aria-hidden="true">−</span>
+                        <span class="sr-only">Zoom out</span>
+                    </button>
                     <input class="cw-zoom-slider"
                            type="range"
                            min="15"
@@ -48,7 +87,14 @@
                            value="@zoomPercent"
                            aria-label="Canvas zoom"
                            @onchange="HandleZoomChangedAsync" />
-                    <button type="button" class="cw-toolbar-action cw-toolbar-action--ghost" aria-label="Zoom in" @onclick="ZoomInAsync">+</button>
+                    <button type="button"
+                            class="cw-toolbar-action cw-toolbar-action--ghost cw-toolbar-action--icon"
+                            aria-label="Zoom in"
+                            title="Zoom in"
+                            @onclick="ZoomInAsync">
+                        <span class="cw-toolbar-symbol" aria-hidden="true">+</span>
+                        <span class="sr-only">Zoom in</span>
+                    </button>
                     <span class="cw-zoom-pill">@($"{zoomPercent}%")</span>
                 </div>
             </div>

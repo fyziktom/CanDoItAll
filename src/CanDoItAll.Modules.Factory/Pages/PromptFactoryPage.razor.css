@@ -2,33 +2,151 @@
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
-.pf-history-toolbar__hint {
-    color: rgba(15, 23, 42, 0.62);
-    font-size: 0.72rem;
+.pf-meta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    max-width: 100%;
+    padding: 0.42rem 0.72rem;
+    border-radius: 999px;
+    border: 1px solid rgba(8, 145, 178, 0.16);
+    background: linear-gradient(135deg, rgba(240, 249, 255, 0.96), rgba(236, 254, 255, 0.92));
+    color: rgba(8, 47, 73, 0.88);
+    font-size: 0.68rem;
     font-weight: 800;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
+    box-shadow: 0 14px 26px rgba(8, 145, 178, 0.12);
 }
 
 .pf-inspector-nav {
+    position: relative;
     gap: 1rem;
+    padding-top: 1.6rem;
+}
+
+.pf-meta-badge--floating {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 2;
 }
 
 .pf-inspector-step-grid {
     display: grid;
-    gap: 0.65rem;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pf-card-header--tight {
+    align-items: flex-start;
+}
+
+.pf-panel-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.pf-help-popover {
+    position: relative;
+}
+
+.pf-help-popover > summary {
+    list-style: none;
+}
+
+.pf-help-popover > summary::-webkit-details-marker {
+    display: none;
+}
+
+.pf-help-popover__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #0284c7, #2563eb);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 14px 26px rgba(37, 99, 235, 0.18);
+    transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+.pf-help-popover__toggle:hover {
+    transform: translateY(-1px);
+    filter: saturate(1.05);
+    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.24);
+}
+
+.pf-help-popover__toggle span {
+    font-size: 0.8rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.pf-help-popover__panel {
+    position: absolute;
+    top: calc(100% + 0.45rem);
+    right: 0;
+    z-index: 20;
+    display: grid;
+    gap: 0.45rem;
+    width: min(18rem, 78vw);
+    padding: 0.9rem 0.95rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 1rem;
+    background: rgba(15, 23, 42, 0.96);
+    color: rgba(248, 250, 252, 0.94);
+    box-shadow: 0 24px 42px rgba(15, 23, 42, 0.24);
+}
+
+.pf-help-popover__panel strong {
+    font-size: 0.84rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.pf-help-popover__panel p,
+.pf-help-popover__panel small {
+    margin: 0;
+    color: rgba(226, 232, 240, 0.88);
+    line-height: 1.5;
+}
+
+.pf-help-popover__panel small {
+    color: rgba(125, 211, 252, 0.96);
+}
+
+.pf-help-popover:not([open]) .pf-help-popover__panel {
+    display: none;
+}
+
+.pf-help-popover--step {
+    position: absolute;
+    top: 0.65rem;
+    right: 0.65rem;
+    z-index: 3;
+}
+
+.pf-inspector-step-card {
+    position: relative;
 }
 
 .pf-inspector-step {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.7rem;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.45rem;
     align-items: start;
-    padding: 0.8rem 0.9rem;
+    min-height: 4.85rem;
+    padding: 0.78rem 2rem 0.78rem 0.72rem;
     border: 1px solid rgba(15, 23, 42, 0.1);
     border-radius: 1rem;
     background: rgba(248, 250, 252, 0.96);
@@ -43,6 +161,7 @@
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
 }
 
+.pf-inspector-step-card.is-active .pf-inspector-step,
 .pf-inspector-step.is-active {
     border-color: rgba(8, 145, 178, 0.35);
     background: linear-gradient(135deg, rgba(236, 254, 255, 0.98), rgba(224, 242, 254, 0.95));
@@ -53,27 +172,32 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2rem;
-    height: 2rem;
+    width: 1.7rem;
+    height: 1.7rem;
     border-radius: 999px;
     background: rgba(15, 23, 42, 0.08);
-    font-size: 0.74rem;
+    font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.1em;
 }
 
 .pf-inspector-step__body {
     display: grid;
-    gap: 0.2rem;
+    gap: 0.05rem;
 }
 
 .pf-inspector-step__body strong {
-    font-size: 0.92rem;
+    font-size: 0.88rem;
+    line-height: 1.25;
 }
 
 .pf-inspector-step__body small {
-    color: rgba(15, 23, 42, 0.72);
-    line-height: 1.4;
+    color: rgba(15, 23, 42, 0.58);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1.35;
+    text-transform: uppercase;
 }
 
 .pf-step-hero {
@@ -102,6 +226,59 @@
     display: grid;
     gap: 0.35rem;
     max-width: 56rem;
+}
+
+::deep .cw-stage-header-row {
+    align-items: flex-start;
+    row-gap: 0.6rem;
+}
+
+::deep .cw-stage-stats {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-left: auto;
+}
+
+::deep .cw-stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: auto;
+    padding: 0.42rem 0.72rem;
+    border-radius: 999px;
+    border-color: rgba(8, 145, 178, 0.14);
+    background: linear-gradient(135deg, rgba(240, 249, 255, 0.96), rgba(236, 254, 255, 0.92));
+    box-shadow: 0 14px 26px rgba(8, 145, 178, 0.12);
+}
+
+::deep .cw-stat-chip span,
+::deep .cw-stat-chip strong {
+    margin: 0;
+    display: inline;
+}
+
+::deep .cw-stat-chip span {
+    color: rgba(8, 47, 73, 0.68);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+}
+
+::deep .cw-stat-chip strong {
+    color: rgba(8, 47, 73, 0.92);
+    font-size: 0.72rem;
+    font-weight: 900;
+}
+
+@media (min-width: 1200px) {
+    ::deep .cw-stage-header-row {
+        flex-wrap: nowrap;
+    }
+
+    ::deep .cw-stage-stats {
+        flex-wrap: nowrap;
+    }
 }
 
 .pf-compact-summary {
@@ -353,7 +530,7 @@
     }
 
     .pf-inspector-step-grid {
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .pf-compact-summary {
@@ -366,8 +543,17 @@
 }
 
 @media (max-width: 720px) {
-    .pf-history-toolbar__hint {
-        display: none;
+    .pf-inspector-step-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .pf-meta-badge--floating {
+        position: static;
+        justify-self: start;
+    }
+
+    .pf-inspector-nav {
+        padding-top: 1rem;
     }
 
     .pf-checklist-item {

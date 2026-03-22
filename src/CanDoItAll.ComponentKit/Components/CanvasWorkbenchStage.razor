@@ -10,8 +10,11 @@
                 }
 
                 <div class="cw-stage-header-row">
-                    <div>
-                        <h2 class="cw-stage-title">@Title</h2>
+                    <div class="cw-stage-heading">
+                        <div class="cw-stage-title-row">
+                            <h2 class="cw-stage-title">@Title</h2>
+                            @HeaderActions
+                        </div>
                         @if (!string.IsNullOrWhiteSpace(Description))
                         {
                             <p class="cw-stage-description">@Description</p>
@@ -58,6 +61,9 @@
 
     [Parameter]
     public string Description { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
 
     [Parameter]
     public IReadOnlyList<CanvasWorkbenchStat> Stats { get; set; } = [];

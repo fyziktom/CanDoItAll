@@ -92,6 +92,38 @@ public partial class PromptFactoryPage
     private string ResolveWizardStepTooltip(int stepIndex)
         => $"{wizardSteps[stepIndex]}: {ResolveWizardStepDescription(stepIndex)} ({ResolveWizardStepMeta(stepIndex)})";
 
+    private string ResolveActiveWorkflowBadge()
+        => CurrentWizardStep switch
+        {
+            0 => $"{(editor.ProjectId.HasValue ? "Project ready" : "Project optional")} | {blueprints.Count} blueprints",
+            1 => $"{editor.SelectedBlockIds.Count}/{blocks.Count} blocks",
+            2 => $"{editor.SessionAttachments.Count} inputs | {editor.SelectedResourceIds.Count} resources",
+            3 => $"{editor.Nodes.Count} steps | {editor.Warnings.Count} warnings",
+            _ => string.Empty
+        };
+
+    private string ResolveWizardStepHelpTip(int stepIndex)
+        => stepIndex switch
+        {
+            0 => "Pick the project and defaults first so later tabs start from a real delivery frame.",
+            1 => "Stay with the working set here; open deeper tabs only when you need library or authoring actions.",
+            2 => "Use this stage to decide what context is worth carrying into the prompt before you build.",
+            3 => "Treat review as the finish lane: check risks, read the prompt, then save or publish.",
+            _ => "Move one decision layer at a time."
+        };
+
+    private string ResolveCanvasHeaderHelpBody()
+        => "The canvas is the structural workspace for the prompt flow. Session framing, governance tuning, context packing, and final review now stay in the inspector and lower support tabs so the canvas surface remains visually calm.";
+
+    private string ResolveCanvasHeaderHelpTip()
+        => "Tip: use the right inspector to switch stages, and keep the canvas focused on branch shape, node order, and prompt-step edits.";
+
+    private string ResolveWorkflowHeaderHelpBody()
+        => "The inspector workflow replaces the old duplicated top navigation. Each stage button changes both the inspector details and the support lane below, so the page reveals only the controls needed for the current decision.";
+
+    private string ResolveWorkflowHeaderHelpTip()
+        => "Tip: treat these four cards as a compact journey map. The active badge tells you what is currently loaded or missing without forcing another scan down the page.";
+
     private string ResolveSessionInspectorCopy()
         => CurrentWizardStep switch
         {

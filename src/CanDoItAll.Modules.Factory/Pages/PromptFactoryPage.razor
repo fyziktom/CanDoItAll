@@ -32,8 +32,21 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
     {
         <CanvasWorkbenchStage Eyebrow="Prompt flow canvas"
                               Title="@ResolveStageTitle()"
-                              Description="The flow editor now shares the same workbench system as the project structure canvas while keeping prompt-specific rules, branching, and review actions."
                               Stats="stageStats">
+            <HeaderActions>
+                <details class="pf-help-popover pf-help-popover--header">
+                    <summary class="pf-help-popover__toggle"
+                             aria-label="Show canvas stage help"
+                             title="Show canvas stage help">
+                        <span aria-hidden="true">?</span>
+                    </summary>
+                    <div class="pf-help-popover__panel">
+                        <strong>Canvas stage</strong>
+                        <p>@ResolveCanvasHeaderHelpBody()</p>
+                        <small>@ResolveCanvasHeaderHelpTip()</small>
+                    </div>
+                </details>
+            </HeaderActions>
             <Canvas>
                 <CanvasWorkbench Surface="canvasSurface"
                                  SelectionChanged="HandleCanvasSelectionChangedAsync"
@@ -45,55 +58,82 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                     <ToolbarLeftContent>
                         <div class="pf-history-toolbar" role="group" aria-label="History controls">
                             <button type="button"
-                                    class="cw-toolbar-action"
+                                    class="cw-toolbar-action cw-toolbar-action--icon"
                                     data-testid="prompt-factory-undo"
                                     title="Undo (Ctrl/Cmd + Z)"
                                     aria-label="Undo"
                                     disabled="@(!CanUndo)"
                                     @onclick="UndoAsync">
-                                Undo
+                                <span class="cw-toolbar-symbol" aria-hidden="true">↶</span>
+                                <span class="sr-only">Undo</span>
                             </button>
                             <button type="button"
-                                    class="cw-toolbar-action"
+                                    class="cw-toolbar-action cw-toolbar-action--icon"
                                     data-testid="prompt-factory-redo"
                                     title="Redo (Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y)"
                                     aria-label="Redo"
                                     disabled="@(!CanRedo)"
                                     @onclick="RedoAsync">
-                                Redo
+                                <span class="cw-toolbar-symbol" aria-hidden="true">↷</span>
+                                <span class="sr-only">Redo</span>
                             </button>
-                            <span class="pf-history-toolbar__hint">Ctrl/Cmd+Z</span>
                         </div>
                     </ToolbarLeftContent>
                 </CanvasWorkbench>
             </Canvas>
             <Inspector>
                 <div class="cw-panel-card pf-inspector-nav">
-                    <div class="pf-card-header">
+                    <span class="pf-meta-badge pf-meta-badge--floating">@ResolveActiveWorkflowBadge()</span>
+                    <div class="pf-card-header pf-card-header--tight">
                         <div class="pf-card-header__copy">
                             <p class="cw-panel-kicker">Workflow</p>
-                            <h3 class="cw-panel-title">Switch stages from the inspector</h3>
-                            <p class="cw-panel-copy">The supporting lane follows the active stage, so the canvas stays central and the page stops repeating the same navigation up top.</p>
+                            <div class="pf-panel-title-row">
+                                <h3 class="cw-panel-title">Switch stages from the inspector</h3>
+                                <details class="pf-help-popover pf-help-popover--header">
+                                    <summary class="pf-help-popover__toggle"
+                                             aria-label="Show workflow help"
+                                             title="Show workflow help">
+                                        <span aria-hidden="true">?</span>
+                                    </summary>
+                                    <div class="pf-help-popover__panel">
+                                        <strong>Workflow map</strong>
+                                        <p>@ResolveWorkflowHeaderHelpBody()</p>
+                                        <small>@ResolveWorkflowHeaderHelpTip()</small>
+                                    </div>
+                                </details>
+                            </div>
                         </div>
-                        <span class="pf-accordion-meta">@ResolveWizardStepMeta(CurrentWizardStep)</span>
                     </div>
                     <div class="pf-inspector-step-grid" role="tablist" aria-label="Prompt workflow steps">
                         @for (var index = 0; index < wizardSteps.Length; index++)
                         {
                             var stepIndex = index;
                             var isActive = CurrentWizardStep == index;
-                            <button type="button"
-                                    role="tab"
-                                    aria-selected="@(isActive ? "true" : "false")"
-                                    title="@ResolveWizardStepTooltip(index)"
-                                    class="pf-inspector-step @(isActive ? "is-active" : string.Empty)"
-                                    @onclick="@(() => MoveToStepAsync(stepIndex))">
-                                <span class="pf-inspector-step__index">@($"{index + 1:00}")</span>
-                                <span class="pf-inspector-step__body">
-                                    <strong>@wizardSteps[index]</strong>
-                                    <small>@ResolveWizardStepDescription(index)</small>
-                                </span>
-                            </button>
+                            <div class="pf-inspector-step-card @(isActive ? "is-active" : string.Empty)">
+                                <details class="pf-help-popover pf-help-popover--step">
+                                    <summary class="pf-help-popover__toggle"
+                                             aria-label="@($"Show {wizardSteps[index]} help")"
+                                             title="@($"Show {wizardSteps[index]} help")">
+                                        <span aria-hidden="true">?</span>
+                                    </summary>
+                                    <div class="pf-help-popover__panel">
+                                        <strong>@wizardSteps[index]</strong>
+                                        <p>@ResolveWizardStepDescription(index)</p>
+                                        <small>@ResolveWizardStepHelpTip(index)</small>
+                                    </div>
+                                </details>
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(isActive ? "true" : "false")"
+                                        title="@ResolveWizardStepTooltip(index)"
+                                        class="pf-inspector-step @(isActive ? "is-active" : string.Empty)"
+                                        @onclick="@(() => MoveToStepAsync(stepIndex))">
+                                    <span class="pf-inspector-step__index">@($"{index + 1:00}")</span>
+                                    <span class="pf-inspector-step__body">
+                                        <strong>@wizardSteps[index]</strong>
+                                    </span>
+                                </button>
+                            </div>
                         }
                     </div>
                 </div>
