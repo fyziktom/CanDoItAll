@@ -2,10 +2,11 @@ using System.Text.Json;
 using CanDoItAll.ComponentKit.Canvas;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 
 namespace CanDoItAll.Modules.Factory.Pages;
 
-public partial class PromptFactoryPage
+public partial class PromptFactoryPage : IAsyncDisposable
 {
     private const int MaxHistoryEntries = 40;
     private static readonly JsonSerializerOptions HistorySerializerOptions = new(JsonSerializerDefaults.Web)
@@ -20,6 +21,8 @@ public partial class PromptFactoryPage
     private readonly List<PromptFactoryEditorModel> redoHistory = [];
     private bool showPromptPreviewDialog;
     private bool isRestoringHistory;
+    private DotNetObjectReference<PromptFactoryPage>? historyShortcutReference;
+    private bool historyShortcutsRegistered;
 
     private bool CanUndo => undoHistory.Count > 0;
 
@@ -115,6 +118,27 @@ public partial class PromptFactoryPage
         await RedoAsync();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!historyShortcutsRegistered)
+        {
+            historyShortcutReference ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("CanDoItAll.promptFactory.registerHistoryShortcuts", historyShortcutReference);
+            historyShortcutsRegistered = true;
+        }
+    }
+
+    [JSInvokable]
+    public Task HandleHistoryShortcutAsync(string key, bool ctrlKey, bool metaKey, bool shiftKey, bool altKey)
+        => HandleWindowKeyDownAsync(new KeyboardEventArgs
+        {
+            Key = key,
+            CtrlKey = ctrlKey,
+            MetaKey = metaKey,
+            ShiftKey = shiftKey,
+            AltKey = altKey
+        });
+
     private Task ClosePromptPreviewDialogAsync()
     {
         showPromptPreviewDialog = false;
@@ -188,4 +212,21 @@ public partial class PromptFactoryPage
 
     private static string SerializeHistorySnapshot(PromptFactoryEditorModel snapshot)
         => JsonSerializer.Serialize(snapshot, HistorySerializerOptions);
+
+    public async ValueTask DisposeAsync()
+    {
+        if (historyShortcutReference is not null)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("CanDoItAll.promptFactory.unregisterHistoryShortcuts", historyShortcutReference);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+
+            historyShortcutReference.Dispose();
+            historyShortcutReference = null;
+        }
+    }
 }

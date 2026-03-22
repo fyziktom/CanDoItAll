@@ -97,16 +97,27 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         Assert.True(response!.Ok, $"Expected /prompt-factory to return 2xx, got {(int)response.Status}.");
 
         await page.WaitForSelectorAsync("text=Prompt session workbench");
+        await page.WaitForTimeoutAsync(4000);
         await page.GetByTestId("prompt-factory-project").SelectOptionAsync(projectId.ToString());
+        await page.WaitForFunctionAsync(
+            "projectId => document.querySelector('[data-testid=\"prompt-factory-project\"]')?.value === projectId",
+            projectId.ToString());
         await page.Locator(".cw-workbench-shell").WaitForAsync();
         await page.GetByRole(AriaRole.Heading, new() { Name = "Local delivery workbench" }).WaitForAsync();
         await page.GetByLabel("Canvas zoom").WaitForAsync();
+        await page.WaitForTimeoutAsync(1000);
         await page.GetByRole(AriaRole.Button, new() { Name = "Toggle help", Exact = true }).ClickAsync();
         await page.GetByRole(AriaRole.Dialog, new() { Name = "Canvas shortcuts and gestures" }).WaitForAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Close help" }).ClickAsync();
-        await page.GetByTestId("prompt-factory-build").WaitForAsync();
-        await page.GetByTestId("prompt-factory-build").ClickAsync();
-        await page.Locator(".cw-panel-card:has-text('Generated prompt') textarea").WaitForAsync();
+        await page.Locator(".pf-inspector-step:has-text('Assembly')").ClickAsync();
+        await page.WaitForFunctionAsync(
+            @"() => Array.from(document.querySelectorAll('.pf-inspector-step'))
+                .some(step => step.textContent?.includes('Assembly') === true &&
+                              step.getAttribute('aria-selected') === 'true')");
+        await page.GetByTestId("prompt-factory-build").First.WaitForAsync();
+        await page.GetByTestId("prompt-factory-build").First.ClickAsync();
+        await page.GetByTestId("prompt-factory-prompt-modal").WaitForAsync();
+        await page.GetByTestId("prompt-factory-prompt-modal-text").WaitForAsync();
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 

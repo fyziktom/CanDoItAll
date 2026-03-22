@@ -1,5 +1,6 @@
 (function () {
     const root = window.CanDoItAll = window.CanDoItAll || {};
+    const promptFactoryShortcutHandlers = new WeakMap();
     root.promptFactory = root.promptFactory || {
         shouldHandleHistoryShortcut() {
             const activeElement = document.activeElement;
@@ -11,6 +12,44 @@
             return tagName !== "input" &&
                 tagName !== "textarea" &&
                 !activeElement.isContentEditable;
+        },
+        registerHistoryShortcuts(dotNetRef) {
+            if (!dotNetRef) {
+                return;
+            }
+
+            this.unregisterHistoryShortcuts(dotNetRef);
+            const handler = (event) => {
+                const key = event.key?.trim()?.toLowerCase?.() || "";
+                const isHistoryShortcut = (event.ctrlKey || event.metaKey) &&
+                    !event.altKey &&
+                    (key === "z" || key === "y");
+                if (!isHistoryShortcut || !this.shouldHandleHistoryShortcut()) {
+                    return;
+                }
+
+                event.preventDefault();
+                dotNetRef.invokeMethodAsync(
+                    "HandleHistoryShortcutAsync",
+                    event.key || "",
+                    !!event.ctrlKey,
+                    !!event.metaKey,
+                    !!event.shiftKey,
+                    !!event.altKey)
+                    .catch(() => { });
+            };
+
+            promptFactoryShortcutHandlers.set(dotNetRef, handler);
+            window.addEventListener("keydown", handler, true);
+        },
+        unregisterHistoryShortcuts(dotNetRef) {
+            const handler = promptFactoryShortcutHandlers.get(dotNetRef);
+            if (!handler) {
+                return;
+            }
+
+            window.removeEventListener("keydown", handler, true);
+            promptFactoryShortcutHandlers.delete(dotNetRef);
         }
     };
     const MIN_ZOOM = 0.15;

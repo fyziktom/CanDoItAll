@@ -8,6 +8,15 @@ public partial class PromptFactoryPage
     private const string ContextViewOverview = "overview";
     private const string ContextViewLibrary = "library";
     private const string ContextViewStarters = "starters";
+    private const string GovernanceViewSelection = "selection";
+    private const string GovernanceViewLibrary = "library";
+    private const string GovernanceViewBlocks = "blocks";
+    private const string GovernanceViewTemplates = "templates";
+    private const string AssemblyViewInputs = "inputs";
+    private const string AssemblyViewResources = "resources";
+    private const string ReviewViewReadiness = "readiness";
+    private const string ReviewViewPreview = "preview";
+    private const string ReviewViewDelivery = "delivery";
 
     private string blockSearchText = string.Empty;
     private bool showSelectedBlocksOnly;
@@ -16,6 +25,9 @@ public partial class PromptFactoryPage
     private bool blockAdminExpanded;
     private bool templateAdminExpanded;
     private string contextWorkspaceView = ContextViewOverview;
+    private string governanceWorkspaceView = GovernanceViewSelection;
+    private string assemblyWorkspaceView = AssemblyViewResources;
+    private string reviewWorkspaceView = ReviewViewPreview;
     private string catalogSearchText = string.Empty;
     private string starterSearchText = string.Empty;
 
@@ -77,6 +89,18 @@ public partial class PromptFactoryPage
             _ => string.Empty
         };
 
+    private string ResolveWizardStepTooltip(int stepIndex)
+        => $"{wizardSteps[stepIndex]}: {ResolveWizardStepDescription(stepIndex)} ({ResolveWizardStepMeta(stepIndex)})";
+
+    private string ResolveSessionInspectorCopy()
+        => CurrentWizardStep switch
+        {
+            1 => "Adjust the governance working set here, then open the lower workspace only when you need deeper library or authoring controls.",
+            2 => "Review attached inputs and selected resources here before you build from the current session context.",
+            3 => "Finish in one place: check readiness, inspect the prompt, and publish without climbing back through setup tools.",
+            _ => "Set the session frame here while the canvas stays focused on prompt flow structure and branching."
+        };
+
     private bool IsContextView(string value)
         => string.Equals(contextWorkspaceView, value, StringComparison.OrdinalIgnoreCase);
 
@@ -97,6 +121,72 @@ public partial class PromptFactoryPage
             ContextViewLibrary => "Scan the imported prompt pack by logical group instead of absorbing every component at once.",
             ContextViewStarters => "Apply a blueprint or flow directly from the starter list, then continue into governance with defaults already loaded.",
             _ => "Start with the current frame, then open only the support view you need instead of stacking reference panels below the canvas."
+        };
+
+    private bool IsGovernanceView(string value)
+        => string.Equals(governanceWorkspaceView, value, StringComparison.OrdinalIgnoreCase);
+
+    private void SetGovernanceWorkspaceView(string value)
+    {
+        var normalized = value?.Trim().ToLowerInvariant();
+        governanceWorkspaceView = normalized switch
+        {
+            GovernanceViewLibrary => GovernanceViewLibrary,
+            GovernanceViewBlocks => GovernanceViewBlocks,
+            GovernanceViewTemplates => GovernanceViewTemplates,
+            _ => GovernanceViewSelection
+        };
+    }
+
+    private string ResolveGovernanceWorkspaceSummary()
+        => governanceWorkspaceView switch
+        {
+            GovernanceViewLibrary => "Browse grouped components in one bounded explorer instead of stretching the page with every checklist at once.",
+            GovernanceViewBlocks => "Block authoring stays behind an explicit tab so normal governance work stays short and focused.",
+            GovernanceViewTemplates => "Template curation and editing stay together in one tab instead of adding another stack of cards to the page.",
+            _ => "Keep the current selection, filters, and template signal in one place while you curate the active governance set."
+        };
+
+    private bool IsAssemblyView(string value)
+        => string.Equals(assemblyWorkspaceView, value, StringComparison.OrdinalIgnoreCase);
+
+    private void SetAssemblyWorkspaceView(string value)
+    {
+        var normalized = value?.Trim().ToLowerInvariant();
+        assemblyWorkspaceView = normalized switch
+        {
+            AssemblyViewInputs => AssemblyViewInputs,
+            _ => AssemblyViewResources
+        };
+    }
+
+    private string ResolveAssemblyWorkspaceSummary()
+        => assemblyWorkspaceView switch
+        {
+            AssemblyViewInputs => "Inspect the prompt-session attachments already added from the canvas without hunting through the graph.",
+            _ => "Search, filter, and confirm project resources in one bounded panel while keeping the selected working set visible."
+        };
+
+    private bool IsReviewView(string value)
+        => string.Equals(reviewWorkspaceView, value, StringComparison.OrdinalIgnoreCase);
+
+    private void SetReviewWorkspaceView(string value)
+    {
+        var normalized = value?.Trim().ToLowerInvariant();
+        reviewWorkspaceView = normalized switch
+        {
+            ReviewViewReadiness => ReviewViewReadiness,
+            ReviewViewDelivery => ReviewViewDelivery,
+            _ => ReviewViewPreview
+        };
+    }
+
+    private string ResolveReviewWorkspaceSummary()
+        => reviewWorkspaceView switch
+        {
+            ReviewViewReadiness => "Surface warnings and readiness first so the finish lane starts with risks, not another long page scan.",
+            ReviewViewDelivery => "Keep the shipping context visible without displacing the generated prompt preview.",
+            _ => "Inspect and refine the generated prompt in the main review tab while delivery actions stay close by."
         };
 
     private string ResolveSelectedProjectName()

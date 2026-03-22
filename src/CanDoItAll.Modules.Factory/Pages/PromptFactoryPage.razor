@@ -23,50 +23,10 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
 <PageTitle>Prompt Factory</PageTitle>
 
-<div class="space-y-6" @onkeydown:window="HandleWindowKeyDownAsync">
+<div class="space-y-6">
     <PageHeader Eyebrow="Prompt Factory"
                 Title="Prompt session workbench"
                 Compact="true" />
-
-    <div class="pf-command-row">
-        <div class="pf-history-actions">
-            <button type="button"
-                    class="cw-button"
-                    data-tone="ghost"
-                    data-testid="prompt-factory-undo"
-                    disabled="@(!CanUndo)"
-                    @onclick="UndoAsync">
-                Undo
-            </button>
-            <button type="button"
-                    class="cw-button"
-                    data-tone="ghost"
-                    data-testid="prompt-factory-redo"
-                    disabled="@(!CanRedo)"
-                    @onclick="RedoAsync">
-                Redo
-            </button>
-        </div>
-        <span class="pf-history-hint">Ctrl/Cmd + Z / Ctrl/Cmd + Shift + Z / Ctrl/Cmd + Y</span>
-    </div>
-
-    <div class="pf-step-rail">
-        @for (var index = 0; index < wizardSteps.Length; index++)
-        {
-            var stepIndex = index;
-            var isActive = CurrentWizardStep == index;
-            <button type="button"
-                    class="pf-step-pill @(isActive ? "is-active" : string.Empty)"
-                    @onclick="@(() => MoveToStepAsync(stepIndex))">
-                <span class="pf-step-pill__index">@($"{index + 1:00}")</span>
-                <span class="pf-step-pill__body">
-                    <strong>@wizardSteps[index]</strong>
-                    <small>@ResolveWizardStepDescription(index)</small>
-                </span>
-                <span class="pf-step-pill__meta">@ResolveWizardStepMeta(index)</span>
-            </button>
-        }
-    </div>
 
     @if (canvasSurface is not null)
     {
@@ -81,9 +41,63 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                  ContextActionRequested="HandleCanvasContextActionAsync"
                                  CreateActionInvoked="HandleCanvasCreateActionAsync"
                                  NodeOpened="HandleCanvasNodeOpenedAsync"
-                                 StateChanged="HandleCanvasStateChangedAsync" />
+                                 StateChanged="HandleCanvasStateChangedAsync">
+                    <ToolbarLeftContent>
+                        <div class="pf-history-toolbar" role="group" aria-label="History controls">
+                            <button type="button"
+                                    class="cw-toolbar-action"
+                                    data-testid="prompt-factory-undo"
+                                    title="Undo (Ctrl/Cmd + Z)"
+                                    aria-label="Undo"
+                                    disabled="@(!CanUndo)"
+                                    @onclick="UndoAsync">
+                                Undo
+                            </button>
+                            <button type="button"
+                                    class="cw-toolbar-action"
+                                    data-testid="prompt-factory-redo"
+                                    title="Redo (Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y)"
+                                    aria-label="Redo"
+                                    disabled="@(!CanRedo)"
+                                    @onclick="RedoAsync">
+                                Redo
+                            </button>
+                            <span class="pf-history-toolbar__hint">Ctrl/Cmd+Z</span>
+                        </div>
+                    </ToolbarLeftContent>
+                </CanvasWorkbench>
             </Canvas>
             <Inspector>
+                <div class="cw-panel-card pf-inspector-nav">
+                    <div class="pf-card-header">
+                        <div class="pf-card-header__copy">
+                            <p class="cw-panel-kicker">Workflow</p>
+                            <h3 class="cw-panel-title">Switch stages from the inspector</h3>
+                            <p class="cw-panel-copy">The supporting lane follows the active stage, so the canvas stays central and the page stops repeating the same navigation up top.</p>
+                        </div>
+                        <span class="pf-accordion-meta">@ResolveWizardStepMeta(CurrentWizardStep)</span>
+                    </div>
+                    <div class="pf-inspector-step-grid" role="tablist" aria-label="Prompt workflow steps">
+                        @for (var index = 0; index < wizardSteps.Length; index++)
+                        {
+                            var stepIndex = index;
+                            var isActive = CurrentWizardStep == index;
+                            <button type="button"
+                                    role="tab"
+                                    aria-selected="@(isActive ? "true" : "false")"
+                                    title="@ResolveWizardStepTooltip(index)"
+                                    class="pf-inspector-step @(isActive ? "is-active" : string.Empty)"
+                                    @onclick="@(() => MoveToStepAsync(stepIndex))">
+                                <span class="pf-inspector-step__index">@($"{index + 1:00}")</span>
+                                <span class="pf-inspector-step__body">
+                                    <strong>@wizardSteps[index]</strong>
+                                    <small>@ResolveWizardStepDescription(index)</small>
+                                </span>
+                            </button>
+                        }
+                    </div>
+                </div>
+
                 @if (selectedCanvasNodeIds.Count > 1)
                 {
                     <div class="space-y-4">
@@ -339,17 +353,15 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Session</p>
                             <h3 class="cw-panel-title">@(!string.IsNullOrWhiteSpace(editor.SessionName) ? editor.SessionName : "Prompt session")</h3>
-                            <p class="cw-panel-copy">The root inspector holds the current prompt context, provider, and save/build controls while the canvas stays focused on flow operations.</p>
+                            <p class="cw-panel-copy">@ResolveSessionInspectorCopy()</p>
+                            <div class="cw-chip-row">
+                                <span class="cw-node__chip tone-accent">@wizardSteps[CurrentWizardStep]</span>
+                                <span class="cw-node__chip">@ResolveWizardStepMeta(CurrentWizardStep)</span>
+                            </div>
                         </div>
 
                         <div class="cw-panel-card">
-                            <div class="cw-tab-row">
-                                <button type="button" class="cw-button" data-tone="@(activeInspectorTab == "context" ? "accent" : "ghost")" @onclick="@(() => SetInspectorTabAsync("context"))">Context</button>
-                                <button type="button" class="cw-button" data-tone="@(activeInspectorTab == "governance" ? "accent" : "ghost")" @onclick="@(() => SetInspectorTabAsync("governance"))">Governance</button>
-                                <button type="button" class="cw-button" data-tone="@(activeInspectorTab == "review" ? "accent" : "ghost")" @onclick="@(() => SetInspectorTabAsync("review"))">Review</button>
-                            </div>
-
-                            @if (activeInspectorTab == "governance")
+                            @if (IsGovernanceStep)
                             {
                                 <div class="cw-summary-grid">
                                     <div class="cw-summary-tile">
@@ -368,9 +380,32 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                 <div class="cw-button-row">
                                     <button type="button" class="cw-button" data-tone="accent" @onclick="ApplyRecommendationsAsync">Apply recommendations</button>
                                     <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session</button>
+                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetGovernanceWorkspaceView(GovernanceViewLibrary))">Open library</button>
                                 </div>
                             }
-                            else if (activeInspectorTab == "review")
+                            else if (IsAssemblyStep)
+                            {
+                                <div class="cw-summary-grid">
+                                    <div class="cw-summary-tile">
+                                        <span>Inputs</span>
+                                        <strong>@editor.SessionAttachments.Count</strong>
+                                    </div>
+                                    <div class="cw-summary-tile">
+                                        <span>Resources</span>
+                                        <strong>@editor.SelectedResourceIds.Count</strong>
+                                    </div>
+                                    <div class="cw-summary-tile">
+                                        <span>Warnings</span>
+                                        <strong>@editor.Warnings.Count</strong>
+                                    </div>
+                                </div>
+                                <div class="cw-button-row">
+                                    <button type="button" class="cw-button" data-tone="mint" @onclick="BuildAsync">Build prompt</button>
+                                    <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session</button>
+                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetAssemblyWorkspaceView(AssemblyViewResources))">Open resources</button>
+                                </div>
+                            }
+                            else if (IsReviewStep)
                             {
                                 <div class="cw-summary-grid">
                                     <div class="cw-summary-tile">
@@ -390,6 +425,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                     <button type="button" class="cw-button" data-tone="mint" @onclick="BuildAsync">Build prompt</button>
                                     <button type="button" class="cw-button" data-tone="primary" @onclick="SaveDraftAsync">Save draft</button>
                                     <button type="button" class="cw-button" data-tone="warn" @onclick="SendAsync">Send</button>
+                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetReviewWorkspaceView(ReviewViewPreview))">Open preview</button>
                                 </div>
                             }
                             else
@@ -405,7 +441,10 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                     </div>
                                     <div class="cw-form-field">
                                         <label>Project</label>
-                                        <select class="cw-select" data-testid="prompt-factory-project" @bind="editor.ProjectId" @bind:after="HandleProjectChangedAsync">
+                                        <select class="cw-select"
+                                                data-testid="prompt-factory-project"
+                                                value="@(editor.ProjectId?.ToString() ?? string.Empty)"
+                                                @onchange="HandleProjectSelectionChangedAsync">
                                             <option value="">Select a project</option>
                                             @foreach (var project in projects)
                                             {
@@ -419,7 +458,9 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                     </div>
                                     <div class="cw-form-field">
                                         <label>Blueprint</label>
-                                        <select class="cw-select" @bind="editor.BlueprintId" @bind:after="HandleBlueprintChangedAsync">
+                                        <select class="cw-select"
+                                                value="@(editor.BlueprintId?.ToString() ?? string.Empty)"
+                                                @onchange="HandleBlueprintSelectionChangedAsync">
                                             @foreach (var blueprint in blueprints)
                                             {
                                                 <option value="@blueprint.Id">@($@"{blueprint.Name} - {blueprint.PromptType}")</option>
@@ -428,7 +469,9 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                     </div>
                                     <div class="cw-form-field">
                                         <label>Flow template</label>
-                                        <select class="cw-select" @bind="editor.FlowTemplateId">
+                                        <select class="cw-select"
+                                                value="@(editor.FlowTemplateId?.ToString() ?? string.Empty)"
+                                                @onchange="HandleFlowTemplateSelectionChangedAsync">
                                             @foreach (var template in templates)
                                             {
                                                 <option value="@template.Id">@template.Name</option>
@@ -437,7 +480,9 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                     </div>
                                     <div class="cw-form-field">
                                         <label>Provider</label>
-                                        <select class="cw-select" @bind="editor.ProviderProfileId">
+                                        <select class="cw-select"
+                                                value="@(editor.ProviderProfileId?.ToString() ?? string.Empty)"
+                                                @onchange="HandleProviderSelectionChangedAsync">
                                             <option value="">No provider selected</option>
                                             @foreach (var provider in providers)
                                             {
@@ -772,6 +817,48 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         </div>
                     </section>
 
+                    <section class="cw-panel-card pf-wide-card pf-workspace-card">
+                        <div class="pf-card-header">
+                            <div class="pf-card-header__copy">
+                                <p class="cw-panel-kicker">Governance workspace</p>
+                                <h3 class="cw-panel-title">Keep one governance view open at a time</h3>
+                                <p class="cw-panel-copy">@ResolveGovernanceWorkspaceSummary()</p>
+                            </div>
+                            <div class="pf-tab-strip" role="tablist" aria-label="Governance workspace views">
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(IsGovernanceView(GovernanceViewSelection) ? "true" : "false")"
+                                        class="pf-tab-button @(IsGovernanceView(GovernanceViewSelection) ? "is-active" : string.Empty)"
+                                        @onclick="@(() => SetGovernanceWorkspaceView(GovernanceViewSelection))">
+                                    Selection
+                                </button>
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(IsGovernanceView(GovernanceViewLibrary) ? "true" : "false")"
+                                        class="pf-tab-button @(IsGovernanceView(GovernanceViewLibrary) ? "is-active" : string.Empty)"
+                                        @onclick="@(() => SetGovernanceWorkspaceView(GovernanceViewLibrary))">
+                                    Library
+                                </button>
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(IsGovernanceView(GovernanceViewBlocks) ? "true" : "false")"
+                                        class="pf-tab-button @(IsGovernanceView(GovernanceViewBlocks) ? "is-active" : string.Empty)"
+                                        @onclick="@(() => SetGovernanceWorkspaceView(GovernanceViewBlocks))">
+                                    Block editor
+                                </button>
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(IsGovernanceView(GovernanceViewTemplates) ? "true" : "false")"
+                                        class="pf-tab-button @(IsGovernanceView(GovernanceViewTemplates) ? "is-active" : string.Empty)"
+                                        @onclick="@(() => SetGovernanceWorkspaceView(GovernanceViewTemplates))">
+                                    Templates
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    @if (IsGovernanceView(GovernanceViewSelection))
+                    {
                     <section class="cw-panel-card">
                         <p class="cw-panel-kicker">Selection filters</p>
                         <h3 class="cw-panel-title">Search and narrow the working set</h3>
@@ -807,7 +894,10 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         }
                     </section>
+                    }
 
+                    @if (IsGovernanceView(GovernanceViewTemplates))
+                    {
                     <section class="cw-panel-card">
                         <div class="pf-card-header">
                             <div class="pf-card-header__copy">
@@ -838,7 +928,10 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         }
                     </section>
+                    }
 
+                    @if (IsGovernanceView(GovernanceViewLibrary))
+                    {
                     <section class="cw-panel-card pf-wide-card">
                         <div class="pf-card-header">
                             <div class="pf-card-header__copy">
@@ -888,7 +981,10 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         }
                     </section>
+                    }
 
+                    @if (IsGovernanceView(GovernanceViewBlocks))
+                    {
                     <section class="cw-panel-card pf-wide-card">
                         <div class="pf-card-header">
                             <div class="pf-card-header__copy">
@@ -960,7 +1056,10 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             <div class="pf-empty">Open the block editor only when the user needs to author or modify shared components.</div>
                         }
                     </section>
+                    }
 
+                    @if (IsGovernanceView(GovernanceViewTemplates))
+                    {
                     <section class="cw-panel-card pf-wide-card">
                         <div class="pf-card-header">
                             <div class="pf-card-header__copy">
@@ -1022,6 +1121,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             <div class="pf-empty">Open the template editor when flow governance needs real authoring, not during normal block selection.</div>
                         }
                     </section>
+                    }
                 }
                 else if (IsAssemblyStep)
                 {
@@ -1054,6 +1154,34 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         </div>
                     </section>
 
+                    <section class="cw-panel-card pf-wide-card pf-workspace-card">
+                        <div class="pf-card-header">
+                            <div class="pf-card-header__copy">
+                                <p class="cw-panel-kicker">Assembly workspace</p>
+                                <h3 class="cw-panel-title">Keep context packing in one lane</h3>
+                                <p class="cw-panel-copy">@ResolveAssemblyWorkspaceSummary()</p>
+                            </div>
+                            <div class="pf-tab-strip" role="tablist" aria-label="Assembly workspace views">
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(IsAssemblyView(AssemblyViewInputs) ? "true" : "false")"
+                                        class="pf-tab-button @(IsAssemblyView(AssemblyViewInputs) ? "is-active" : string.Empty)"
+                                        @onclick="@(() => SetAssemblyWorkspaceView(AssemblyViewInputs))">
+                                    Inputs
+                                </button>
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(IsAssemblyView(AssemblyViewResources) ? "true" : "false")"
+                                        class="pf-tab-button @(IsAssemblyView(AssemblyViewResources) ? "is-active" : string.Empty)"
+                                        @onclick="@(() => SetAssemblyWorkspaceView(AssemblyViewResources))">
+                                    Resources
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    @if (IsAssemblyView(AssemblyViewInputs))
+                    {
                     <section class="cw-panel-card">
                         <p class="cw-panel-kicker">Prompt inputs</p>
                         <h3 class="cw-panel-title">Files, images, notes, and links attached to the session</h3>
@@ -1077,7 +1205,10 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         }
                     </section>
+                    }
 
+                    @if (IsAssemblyView(AssemblyViewResources))
+                    {
                     <section class="cw-panel-card">
                         <p class="cw-panel-kicker">Working set</p>
                         <h3 class="cw-panel-title">Selected project resources</h3>
@@ -1145,6 +1276,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         }
                     </section>
+                    }
                 }
                 else if (IsReviewStep)
                 {
@@ -1180,6 +1312,41 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         </div>
                     </section>
 
+                    <section class="cw-panel-card pf-wide-card pf-workspace-card">
+                        <div class="pf-card-header">
+                            <div class="pf-card-header__copy">
+                                <p class="cw-panel-kicker">Review workspace</p>
+                                <h3 class="cw-panel-title">Finish in one focused support frame</h3>
+                                <p class="cw-panel-copy">@ResolveReviewWorkspaceSummary()</p>
+                            </div>
+                            <div class="pf-tab-strip" role="tablist" aria-label="Review workspace views">
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(IsReviewView(ReviewViewReadiness) ? "true" : "false")"
+                                        class="pf-tab-button @(IsReviewView(ReviewViewReadiness) ? "is-active" : string.Empty)"
+                                        @onclick="@(() => SetReviewWorkspaceView(ReviewViewReadiness))">
+                                    Readiness
+                                </button>
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(IsReviewView(ReviewViewPreview) ? "true" : "false")"
+                                        class="pf-tab-button @(IsReviewView(ReviewViewPreview) ? "is-active" : string.Empty)"
+                                        @onclick="@(() => SetReviewWorkspaceView(ReviewViewPreview))">
+                                    Preview
+                                </button>
+                                <button type="button"
+                                        role="tab"
+                                        aria-selected="@(IsReviewView(ReviewViewDelivery) ? "true" : "false")"
+                                        class="pf-tab-button @(IsReviewView(ReviewViewDelivery) ? "is-active" : string.Empty)"
+                                        @onclick="@(() => SetReviewWorkspaceView(ReviewViewDelivery))">
+                                    Delivery
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    @if (IsReviewView(ReviewViewReadiness))
+                    {
                     <section class="cw-panel-card">
                         <p class="cw-panel-kicker">Warnings and readiness</p>
                         <h3 class="cw-panel-title">Final checks</h3>
@@ -1202,7 +1369,10 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         }
                     </section>
+                    }
 
+                    @if (IsReviewView(ReviewViewDelivery))
+                    {
                     <section class="cw-panel-card">
                         <p class="cw-panel-kicker">Delivery context</p>
                         <h3 class="cw-panel-title">What will ship</h3>
@@ -1225,7 +1395,10 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         </div>
                     </section>
+                    }
 
+                    @if (IsReviewView(ReviewViewPreview))
+                    {
                     <section class="cw-panel-card pf-wide-card">
                         <p class="cw-panel-kicker">Prompt review</p>
                         <h3 class="cw-panel-title">Generated prompt</h3>
@@ -1234,6 +1407,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             <textarea class="cw-textarea pf-prompt-preview" @bind="editor.GeneratedPrompt"></textarea>
                         </div>
                     </section>
+                    }
                 }
 
                 @if (!string.IsNullOrWhiteSpace(message))
@@ -1891,6 +2065,12 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         RefreshCanvasSurface();
     }
 
+    private async Task HandleProjectSelectionChangedAsync(ChangeEventArgs args)
+    {
+        editor.ProjectId = ParseOptionalGuid(args.Value);
+        await HandleProjectChangedAsync();
+    }
+
     private async Task HandleBlueprintChangedAsync()
     {
         var blueprint = blueprints.FirstOrDefault(item => item.Id == editor.BlueprintId);
@@ -1901,6 +2081,33 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
         await ApplyRecommendationsAsync();
     }
+
+    private async Task HandleBlueprintSelectionChangedAsync(ChangeEventArgs args)
+    {
+        editor.BlueprintId = ParseOptionalGuid(args.Value);
+        await HandleBlueprintChangedAsync();
+    }
+
+    private Task HandleFlowTemplateSelectionChangedAsync(ChangeEventArgs args)
+    {
+        editor.FlowTemplateId = ParseOptionalGuid(args.Value);
+        RefreshCanvasSurface();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleProviderSelectionChangedAsync(ChangeEventArgs args)
+    {
+        editor.ProviderProfileId = ParseOptionalGuid(args.Value);
+        RefreshCanvasSurface();
+        return Task.CompletedTask;
+    }
+
+    private static Guid? ParseOptionalGuid(object? value)
+        => value is null || string.IsNullOrWhiteSpace(value.ToString())
+            ? null
+            : Guid.TryParse(value.ToString(), out var parsed)
+                ? parsed
+                : null;
 
     private async Task LoadResourcesAsync()
     {
@@ -2200,6 +2407,13 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
     private async Task SetInspectorTabAsync(string tab)
     {
         activeInspectorTab = tab;
+        editor.WizardStepIndex = tab switch
+        {
+            "governance" => 1,
+            "assembly" => 2,
+            "review" => 3,
+            _ => 0
+        };
         await PersistCanvasUiStateAsync();
     }
 
@@ -2241,6 +2455,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         activeInspectorTab = editor.WizardStepIndex switch
         {
             1 => "governance",
+            2 => "assembly",
             3 => "review",
             _ => "context"
         };

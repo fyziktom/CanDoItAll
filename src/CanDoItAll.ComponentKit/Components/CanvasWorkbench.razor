@@ -28,6 +28,8 @@
                         @Surface.Chrome.FocusActionLabel
                     </button>
                 }
+
+                @ToolbarLeftContent
             </div>
 
             <div class="cw-toolbar-group">
@@ -191,6 +193,9 @@
 
     [Parameter]
     public EventCallback<string> StateChanged { get; set; }
+
+    [Parameter]
+    public RenderFragment? ToolbarLeftContent { get; set; }
 
     protected override void OnParametersSet()
     {

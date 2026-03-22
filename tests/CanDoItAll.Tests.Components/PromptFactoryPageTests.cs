@@ -10,6 +10,21 @@ namespace CanDoItAll.Tests.Components;
 public sealed class PromptFactoryPageTests
 {
     [Fact]
+    public async Task Page_renders_canvas_history_controls_and_inspector_workflow_steps()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var cut = harness.Context.RenderComponent<PromptFactoryPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(cut.FindAll("[data-testid='prompt-factory-undo']"));
+            Assert.Single(cut.FindAll("[data-testid='prompt-factory-redo']"));
+            Assert.Equal(4, cut.FindAll(".pf-inspector-step").Count);
+            Assert.Contains("Switch stages from the inspector", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Preview_query_opens_built_prompt_modal()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
