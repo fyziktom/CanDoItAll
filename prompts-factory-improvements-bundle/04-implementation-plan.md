@@ -9,16 +9,24 @@
 ### Stream 2: Scroll reduction
 - replace the top button strip with real page tabs
 - default to `Canvas`
-- make `Canvas` the only tab that renders canvas + inspector
+- make `Canvas` the only tab that renders canvas + floating inspector
 - move `Setup`, `Governance`, `Assembly`, and `Review` into separate page tabs
 - restyle the tab strip so the active tab visually connects to the active panel like a standard browser tab
 
 ### Stream 2B: Inspector refocus
-- strip page-wide workflow duplication out of the right inspector
+- strip page-wide workflow duplication out of the inspector
 - keep the inspector focused on selected canvas-item details and actions
 - route broad workspace editing into the corresponding page tabs
 - make selected prompt components editable directly in the inspector
 - add a subtree or selection preview action to the inspector for copy-ready prompt slices
+
+### Stream 2C: Floating inspector
+- remove the fixed external inspector column from the canvas layout
+- render the inspector inside the canvas surface
+- default it to a right-docked floating position
+- support drag and reposition within the canvas
+- support minimize and restore without leaving the canvas
+- keep the same inspector available in maximized canvas mode
 
 ### Stream 3: Setup wizard
 - create a persistent session setup model
@@ -52,7 +60,7 @@
 - [ ] replace the button-strip control with a real tab strip
 - [ ] keep tab state in Prompt Factory
 - [ ] default support tab to `Canvas`
-- [ ] render canvas + inspector only on the `Canvas` tab
+- [ ] render canvas + floating inspector only on the `Canvas` tab
 - [ ] render only the active non-canvas workspace on the other tabs
 - [ ] keep current wizard step synced when the user opens a stage tab
 
@@ -66,6 +74,14 @@
 - [ ] store component edits in the session customization model used by prompt build
 - [ ] add a preview action that opens a modal for the selected item or subtree
 - [ ] keep a reset path so component content can return to its template-based baseline
+
+### C2. Floating inspector behavior
+- [ ] remove the external inspector column from the canvas stage when Prompt Factory is on the `Canvas` tab
+- [ ] render the contextual inspector as a floating panel inside the canvas surface
+- [ ] dock it to the right by default
+- [ ] support drag via a dedicated handle
+- [ ] support minimize and restore
+- [ ] keep drag and minimize working in maximized canvas mode
 
 ### D. Setup wizard
 - [ ] add a session setup profile model
@@ -104,11 +120,15 @@
 ## Validation Criteria
 
 ### Layout
-- `Canvas` shows canvas and inspector only.
+- `Canvas` shows canvas and floating inspector only.
 - `Setup`, `Governance`, `Assembly`, and `Review` do not render the canvas.
 - Only one page-tab workspace is visible at a time.
 - The default canvas tab has no support section below it.
 - The active tab looks visually attached to the active content panel.
+- The external inspector column is gone.
+- The floating inspector defaults to the right side of the canvas.
+- The floating inspector can be minimized and restored.
+- The floating inspector can be dragged without breaking canvas interaction.
 
 ### Help behavior
 - Clicking outside closes help.
@@ -142,7 +162,7 @@
 ## Execution Prompts
 
 ### Implementation prompt
-Build the Prompt Factory refactor in a canvas-first way. Use a real page-tab model where `Canvas` is the first tab and the only tab that renders the canvas plus contextual inspector. Move setup, governance, assembly, and review into their own full page tabs. Keep the inspector focused on the selected canvas item, not on duplicating whole workspaces. Style the tabs like connected browser tabs. When a prompt component is selected, show its effective prompt text in an editable multiline inspector field and store edits in the same session customization data that final build uses. Add a preview action that can open a modal for the selected item or prompt-step subtree.
+Build the Prompt Factory refactor in a canvas-first way. Use a real page-tab model where `Canvas` is the first tab and the only tab that renders the canvas plus contextual floating inspector. Move setup, governance, assembly, and review into their own full page tabs. Keep the inspector focused on the selected canvas item, not on duplicating whole workspaces. Render the inspector inside the canvas surface, dock it to the right by default, and let users drag or minimize it so maximized canvas work remains self-contained. Style the tabs like connected browser tabs. When a prompt component is selected, show its effective prompt text in an editable multiline inspector field and store edits in the same session customization data that final build uses. Add a preview action that can open a modal for the selected item or prompt-step subtree.
 
 ### QA prompt
 Test Prompt Factory as if it were a high-flexibility consumer productivity tool. Focus on orientation, accidental actions, large-scroll fatigue, discoverability of setup, confidence in component picking, clarity of attachment intent, connected-tab readability, and whether selected-item preview or editing in the inspector feels direct and trustworthy.

@@ -81,7 +81,7 @@ public partial class PromptFactoryPage
 
     private IReadOnlyList<SecondaryTabItem> SupportLaneTabs =>
     [
-        new(SupportLaneTabCanvas, "Canvas", null, "Keep the lower lane closed while the canvas and inspector stay primary."),
+        new(SupportLaneTabCanvas, "Canvas", null, "Keep the lower lane closed while the canvas and floating inspector stay primary."),
         new(SupportLaneTabSetup, "Setup", SetupIsReady ? "Ready" : MissingSetupFieldCount.ToString(), "Frame the prompt intent, language, app state, and repositories."),
         new(SupportLaneTabGovernance, "Governance", editor.SelectedBlockIds.Count.ToString(), "Curate the working prompt-component set."),
         new(SupportLaneTabAssembly, "Assembly", $"{VisibleSessionAttachments.Count} + {editor.SelectedResourceIds.Count}", "Manage prompt inputs, files, and resources."),
@@ -146,7 +146,7 @@ public partial class PromptFactoryPage
             SupportLaneTabGovernance => "Curate reusable prompt components in a focused governance workspace without keeping the canvas open.",
             SupportLaneTabAssembly => "Pack files, notes, and project resources into the current prompt session in one assembly workspace.",
             SupportLaneTabReview => "Check readiness, inspect the generated prompt, and finish delivery actions in the review workspace.",
-            _ => "Use the canvas tab for graph editing. The right inspector is contextual to the selected node, while the later tabs replace the canvas with focused workspaces."
+            _ => "Use the canvas tab for graph editing. The floating inspector stays contextual to the selected node inside the canvas, while the later tabs replace the canvas with focused workspaces."
         };
 
     private bool IsSupportLaneTab(string value)

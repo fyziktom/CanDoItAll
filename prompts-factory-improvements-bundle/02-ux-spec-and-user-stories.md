@@ -6,7 +6,7 @@ Prompt Factory should be organized as page tabs:
 
 ### Tab 1: Canvas
 - canvas
-- right inspector
+- floating in-canvas inspector
 - persistent setup entry point inside the graph
 - no lower support content
 
@@ -30,14 +30,21 @@ Only one page tab should be visible at a time.
 - The main Prompt Factory page should use a standard tab strip.
 - The first tab is `Canvas`.
 - Additional tabs expose `Setup`, `Governance`, `Assembly`, and `Review`.
-- Switching away from `Canvas` hides both the canvas and the right inspector.
+- Switching away from `Canvas` hides both the canvas and the floating inspector.
 - The active non-canvas tab becomes the full page workspace for that stage.
 
 ### C. Contextual inspector
-- The right panel on the canvas tab should focus on the selected canvas item.
+- The inspector on the canvas tab should focus on the selected canvas item.
 - Remove the large workflow duplication from the inspector.
 - Keep item-level detail, status, and actions in the inspector.
 - Move page-level forms and explorers into the matching page tabs.
+
+### C2. Floating inspector behavior
+- The inspector must render inside the canvas surface, not as a fixed column outside it.
+- Default state is docked on the right edge of the canvas.
+- The inspector can be dragged to another position inside the canvas.
+- The inspector can be minimized into a compact restore handle.
+- Maximized canvas mode must preserve the same floating inspector behavior.
 
 ### D. Canvas setup wizard
 - Add a persistent `Session setup` node near the session root.
@@ -105,13 +112,14 @@ Only one page tab should be visible at a time.
 - User stays on the `Canvas` tab.
 - Setup remains reachable from the setup node and inspector actions.
 - Other stage work lives on separate tabs, so the canvas view stays visually clean.
+- The floating inspector stays inside the maximized canvas, so the user does not lose the selected-node editor when switching to focused graph work.
 
 ## Expected UX Resolution By Area
 
 ### Orientation
 - improved by real page tabs with canvas-first default
 - improved by persistent setup node
-- improved by contextual inspector instead of repeated stage work
+- improved by contextual floating inspector instead of repeated stage work
 
 ### Discoverability
 - improved by list-based component toolbox
@@ -127,3 +135,4 @@ Only one page tab should be visible at a time.
 - improved by reduced scroll
 - improved by search-first component picking
 - improved by direct reopen of setup instead of hunting through page forms
+- improved by keeping selected-node editing inside the canvas even in maximized mode

@@ -1,7 +1,7 @@
 @using CanDoItAll.ComponentKit.Canvas
 
 <section class="cw-editor-shell">
-    <div class="cw-main-grid">
+    <div class="cw-main-grid @(Inspector is null ? "cw-main-grid--canvas-only" : string.Empty)">
         <div class="cw-stage-column">
             <div class="cw-stage-header">
                 @if (!string.IsNullOrWhiteSpace(Eyebrow))
@@ -39,9 +39,12 @@
             @Canvas
         </div>
 
-        <aside class="cw-inspector-shell">
-            @Inspector
-        </aside>
+        @if (Inspector is not null)
+        {
+            <aside class="cw-inspector-shell">
+                @Inspector
+            </aside>
+        }
     </div>
 
     @if (Supporting is not null)
@@ -71,8 +74,8 @@
     [Parameter, EditorRequired]
     public RenderFragment Canvas { get; set; } = default!;
 
-    [Parameter, EditorRequired]
-    public RenderFragment Inspector { get; set; } = default!;
+    [Parameter]
+    public RenderFragment? Inspector { get; set; }
 
     [Parameter]
     public RenderFragment? Supporting { get; set; }

@@ -108,9 +108,48 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </button>
                         </div>
                     </ToolbarLeftContent>
-                </CanvasWorkbench>
-            </Canvas>
-            <Inspector>
+                    <OverlayContent>
+                        <section @ref="floatingInspectorPanel"
+                                 class="pf-floating-inspector @(isCanvasInspectorMinimized ? "is-minimized" : string.Empty)"
+                                 aria-label="Canvas inspector">
+                            <div class="pf-floating-inspector__header">
+                                <div class="pf-floating-inspector__drag"
+                                     @ref="floatingInspectorHandle"
+                                     title="Drag inspector">
+                                    <p class="cw-panel-kicker">Canvas inspector</p>
+                                    <h3 class="cw-panel-title">@ResolveInspectorTitle()</h3>
+                                </div>
+                                <div class="pf-floating-inspector__actions">
+                                    @if (!isCanvasInspectorMinimized)
+                                    {
+                                        <span class="pf-meta-badge pf-meta-badge--compact">@ResolveActiveWorkflowBadge()</span>
+                                        <button type="button"
+                                                class="pf-floating-inspector__action"
+                                                title="Dock inspector to the right edge"
+                                                @onclick="DockCanvasInspectorAsync">
+                                            Dock
+                                        </button>
+                                    }
+                                    <button type="button"
+                                            class="pf-floating-inspector__action"
+                                            title="@(isCanvasInspectorMinimized ? "Show inspector" : "Hide inspector")"
+                                            @onclick="ToggleCanvasInspector">
+                                        @(isCanvasInspectorMinimized ? "Show" : "Hide")
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if (isCanvasInspectorMinimized)
+                            {
+                                <button type="button"
+                                        class="pf-floating-inspector__restore"
+                                        @onclick="ToggleCanvasInspector">
+                                    Show selected item
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="pf-floating-inspector__body @(selectedComponentNode is not null ? "pf-floating-inspector__body--component" : string.Empty)">
                 <div class="cw-panel-card pf-inspector-context">
                     <div class="pf-card-header pf-card-header--tight">
                         <div class="pf-card-header__copy">
@@ -128,7 +167,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
                 @if (selectedCanvasNodeIds.Count > 1)
                 {
-                    <div class="space-y-4">
+                    <div class="pf-inspector-stack">
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Multi-select</p>
                             <h3 class="cw-panel-title">@($"{selectedCanvasNodeIds.Count} flow elements selected")</h3>
@@ -155,7 +194,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 }
                 else if (selectedBlueprintNode is not null)
                 {
-                    <div class="space-y-4">
+                    <div class="pf-inspector-stack">
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Blueprint</p>
                             <h3 class="cw-panel-title">@selectedBlueprintNode.Name</h3>
@@ -181,7 +220,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 }
                 else if (selectedFlowNode is not null)
                 {
-                    <div class="space-y-4">
+                    <div class="pf-inspector-stack">
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Flow template</p>
                             <h3 class="cw-panel-title">@selectedFlowNode.Name</h3>
@@ -205,7 +244,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 else if (selectedComponentNode is not null)
                 {
                     var customization = selectedComponentCustomization;
-                    <div class="space-y-4">
+                    <div class="pf-inspector-stack pf-inspector-stack--editor">
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Prompt component</p>
                             <h3 class="cw-panel-title">@selectedComponentNode.Name</h3>
@@ -262,7 +301,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 }
                 else if (selectedComponentGroupNode is not null)
                 {
-                    <div class="space-y-4">
+                    <div class="pf-inspector-stack">
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Component group</p>
                             <h3 class="cw-panel-title">@selectedComponentGroupNode.Name</h3>
@@ -291,7 +330,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 }
                 else if (selectedSetupNode is not null)
                 {
-                    <div class="space-y-4">
+                    <div class="pf-inspector-stack">
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Session setup</p>
                             <h3 class="cw-panel-title">First-step wizard</h3>
@@ -333,7 +372,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 }
                 else if (selectedAttachmentNode is not null)
                 {
-                    <div class="space-y-4">
+                    <div class="pf-inspector-stack">
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Prompt input</p>
                             <h3 class="cw-panel-title">@selectedAttachmentNode.Title</h3>
@@ -358,7 +397,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 }
                 else if (selectedPromptNode is not null)
                 {
-                    <div class="space-y-4">
+                    <div class="pf-inspector-stack">
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Prompt step</p>
                             <h3 class="cw-panel-title">@selectedPromptNode.Title</h3>
@@ -415,7 +454,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 }
                 else if (selectedBranchLabel is not null)
                 {
-                    <div class="space-y-4">
+                    <div class="pf-inspector-stack">
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Branch</p>
                             <h3 class="cw-panel-title">@selectedBranchLabel</h3>
@@ -443,7 +482,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 }
                 else
                 {
-                    <div class="space-y-4">
+                    <div class="pf-inspector-stack">
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Session root</p>
                             <h3 class="cw-panel-title">@(!string.IsNullOrWhiteSpace(editor.SessionName) ? editor.SessionName : "Prompt session")</h3>
@@ -485,7 +524,12 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         </div>
                     </div>
                 }
-            </Inspector>
+                                </div>
+                            }
+                        </section>
+                    </OverlayContent>
+                </CanvasWorkbench>
+            </Canvas>
             </CanvasWorkbenchStage>
             </div>
         }

@@ -29,6 +29,10 @@
     grid-template-columns: minmax(0, 1.18fr) minmax(20rem, 0.82fr);
 }
 
+.cw-main-grid--canvas-only {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .cw-stage-column,
 .cw-inspector-shell,
 .cw-support-grid > * {

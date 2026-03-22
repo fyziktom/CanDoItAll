@@ -111,6 +111,8 @@
             {
                 <div class="cw-hint-pill">@Surface.Chrome.HintText</div>
             }
+
+            @OverlayContent
         </div>
 
         @if (helpOpen)
@@ -242,6 +244,9 @@
 
     [Parameter]
     public RenderFragment? ToolbarLeftContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? OverlayContent { get; set; }
 
     protected override void OnParametersSet()
     {

@@ -14,7 +14,7 @@
 - The canvas and inspector should be the primary workspace.
 - The lower content should move behind real tabs so the user opens only the lane they need.
 - `Canvas` must be the first tab.
-- When a non-canvas tab is active, the canvas and right inspector must disappear.
+- When a non-canvas tab is active, the canvas and floating inspector must disappear.
 
 ### 3. New prompt sessions need a guided setup flow
 - A new prompt mindmap should offer a basic setup wizard directly in the canvas experience.
@@ -58,6 +58,13 @@
 - When the user clicks a setup node, component, attachment, branch, or prompt step, the inspector should show that item's specific details and actions.
 - Page-wide work such as setup forms, governance exploration, assembly packing, and review should live in their own tabs instead.
 
+### 9. The inspector must move inside the canvas
+- The contextual inspector should no longer live in a fixed column beside the canvas.
+- It should become a floating panel inside the canvas surface so the maximized canvas flow stays self-contained.
+- Default position should be docked to the right side of the canvas.
+- Users should be able to drag it to another location if it covers important nodes.
+- Users should be able to minimize it and restore it without leaving the canvas workspace.
+
 ## Refined Product Intent
 
 Prompt Factory should behave like a guided expert workbench:
@@ -69,6 +76,7 @@ Prompt Factory should behave like a guided expert workbench:
 ## Non-Negotiable UX Principles
 - One dominant workspace at a time.
 - The page-level tab is the workspace switch. Canvas is one workspace, each later stage is another.
+- The canvas inspector is part of the canvas workspace, not a second page column.
 - Every heavy action needs preview or confirmation.
 - The canvas must keep setup reachable, not hidden behind a long page.
 - Search and hover preview are mandatory for large prompt-component libraries.

@@ -126,6 +126,8 @@ public partial class PromptFactoryPage : IAsyncDisposable
             await JS.InvokeVoidAsync("CanDoItAll.promptFactory.registerHistoryShortcuts", historyShortcutReference);
             historyShortcutsRegistered = true;
         }
+
+        await SyncFloatingInspectorAsync();
     }
 
     [JSInvokable]
