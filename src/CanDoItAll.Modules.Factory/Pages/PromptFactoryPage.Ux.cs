@@ -84,7 +84,7 @@ public partial class PromptFactoryPage
         {
             0 => $"{(editor.ProjectId.HasValue ? "Project linked" : "Project optional")} | {blueprints.Count} blueprints",
             1 => $"{editor.SelectedBlockIds.Count} selected | {blocks.Count} total blocks",
-            2 => $"{editor.SessionAttachments.Count} inputs | {editor.SelectedResourceIds.Count} resources",
+            2 => $"{VisibleSessionAttachments.Count} inputs | {editor.SelectedResourceIds.Count} resources",
             3 => $"{editor.Nodes.Count} steps | {editor.Warnings.Count} warnings",
             _ => string.Empty
         };
@@ -97,7 +97,7 @@ public partial class PromptFactoryPage
         {
             0 => $"{(editor.ProjectId.HasValue ? "Project ready" : "Project optional")} | {blueprints.Count} blueprints",
             1 => $"{editor.SelectedBlockIds.Count}/{blocks.Count} blocks",
-            2 => $"{editor.SessionAttachments.Count} inputs | {editor.SelectedResourceIds.Count} resources",
+            2 => $"{VisibleSessionAttachments.Count} inputs | {editor.SelectedResourceIds.Count} resources",
             3 => $"{editor.Nodes.Count} steps | {editor.Warnings.Count} warnings",
             _ => string.Empty
         };

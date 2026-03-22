@@ -58,13 +58,14 @@ public sealed partial class PromptFactoryService
             Kind = NormalizeAttachmentKind(draft.Kind),
             Title = draft.Title?.Trim() ?? string.Empty,
             Subtitle = draft.Subtitle?.Trim() ?? string.Empty,
-            Notes = draft.Notes?.Trim() ?? string.Empty,
-            LinkUrl = draft.LinkUrl?.Trim() ?? string.Empty,
-            MediaRelativePath = draft.MediaRelativePath?.Trim() ?? string.Empty,
-            MediaRoute = draft.MediaRoute?.Trim() ?? string.Empty,
-            MediaContentType = draft.MediaContentType?.Trim() ?? string.Empty,
-            MediaOriginalFileName = draft.MediaOriginalFileName?.Trim() ?? string.Empty
-        };
+        Notes = draft.Notes?.Trim() ?? string.Empty,
+        LinkUrl = draft.LinkUrl?.Trim() ?? string.Empty,
+        MediaRelativePath = draft.MediaRelativePath?.Trim() ?? string.Empty,
+        MediaRoute = draft.MediaRoute?.Trim() ?? string.Empty,
+        MediaContentType = draft.MediaContentType?.Trim() ?? string.Empty,
+        MediaOriginalFileName = draft.MediaOriginalFileName?.Trim() ?? string.Empty,
+        MetadataJson = draft.MetadataJson?.Trim() ?? string.Empty
+    };
 
         if (string.Equals(normalized.Kind, "link", StringComparison.OrdinalIgnoreCase) &&
             string.IsNullOrWhiteSpace(normalized.LinkUrl))
@@ -157,11 +158,11 @@ public sealed partial class PromptFactoryService
     private static string SerializeJson<T>(T value)
         => JsonSerializer.Serialize(value, SerializerOptions);
 
-    private static PromptBlockSummary MapBlockSummary(PromptBlockDefinition item)
-        => new(
-            item.Id,
-            item.Key,
-            item.GroupKey,
+private static PromptBlockSummary MapBlockSummary(PromptBlockDefinition item)
+    => new(
+        item.Id,
+        item.Key,
+        item.GroupKey,
             item.Name,
             item.BlockKind,
             item.Summary,
@@ -170,11 +171,33 @@ public sealed partial class PromptFactoryService
             SplitTokens(item.PromptTypeRules),
             SplitTokens(item.BlueprintRules),
             SplitTokens(item.PhaseRules),
-            DeserializeJson<List<string>>(item.TagsJson),
-            DeserializeJson<List<string>>(item.StackTagsJson),
-            DeserializeJson<List<string>>(item.TemplateTokensJson),
-            item.OrderIndex,
-            item.CatalogSource);
+        DeserializeJson<List<string>>(item.TagsJson),
+        DeserializeJson<List<string>>(item.StackTagsJson),
+        DeserializeJson<List<string>>(item.TemplateTokensJson),
+        BuildContentPreview(item.Content),
+        item.OrderIndex,
+        item.CatalogSource);
+
+private static string BuildContentPreview(string? content)
+{
+    if (string.IsNullOrWhiteSpace(content))
+    {
+        return string.Empty;
+    }
+
+    var normalized = string.Join(
+        " ",
+        content
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(line => !string.IsNullOrWhiteSpace(line)));
+
+    if (normalized.Length <= 260)
+    {
+        return normalized;
+    }
+
+    return normalized[..257].TrimEnd() + "...";
+}
 
     private static PromptFlowTemplateSummary MapTemplateSummary(PromptFlowTemplate item)
         => new(

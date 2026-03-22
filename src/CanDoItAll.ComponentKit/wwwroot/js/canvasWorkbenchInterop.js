@@ -1842,6 +1842,13 @@
             return false;
         }
 
+        if (layerState.mode === "panel" && layerState.bounds) {
+            return localPoint.x >= (layerState.bounds.minX - 12) &&
+                localPoint.x <= (layerState.bounds.maxX + 12) &&
+                localPoint.y >= (layerState.bounds.minY - 12) &&
+                localPoint.y <= (layerState.bounds.maxY + 12);
+        }
+
         const dx = localPoint.x - layerState.originOffset.x;
         const dy = localPoint.y - layerState.originOffset.y;
         return Math.hypot(dx, dy) <= (layerState.radius + 18);
@@ -1919,7 +1926,70 @@
         };
     }
 
+    function getToolboxPanelSize() {
+        return { width: 452, height: 492 };
+    }
+
+    function getToolboxPanelBounds(originOffset, panelSize) {
+        return {
+            minX: originOffset.x,
+            maxX: originOffset.x + panelSize.width,
+            minY: originOffset.y,
+            maxY: originOffset.y + panelSize.height
+        };
+    }
+
+    function clampToolboxPanelOriginToHost(state, originOffset, panelSize) {
+        const bounds = getToolboxPanelBounds(originOffset, panelSize);
+        const shift = clampLayerBoundsToHost(state, bounds);
+        return {
+            x: round(originOffset.x + shift.x),
+            y: round(originOffset.y + shift.y)
+        };
+    }
+
+    function resolveToolboxPanelOrigin(parentLayer, offset, panelSize) {
+        const openRight = offset.x >= 0;
+        const anchorX = parentLayer.mode === "panel"
+            ? (openRight ? parentLayer.bounds.maxX : parentLayer.bounds.minX)
+            : (parentLayer.originOffset.x + offset.x);
+        const anchorY = parentLayer.mode === "panel"
+            ? parentLayer.originOffset.y + 18
+            : (parentLayer.originOffset.y + offset.y - (panelSize.height * 0.34));
+        return {
+            x: round(anchorX + (openRight ? 26 : -(panelSize.width + 26))),
+            y: round(anchorY)
+        };
+    }
+
     function createContextMenuLayer(state, options) {
+        if ((options.mode || "") === "panel") {
+            const panelSize = options.panelSize || getToolboxPanelSize();
+            const layer = createElement(state.document, "div", `cw-context-menu__layer cw-context-menu__layer--panel ${options.depth > 0 ? "is-submenu" : "is-root"}`);
+            layer.style.zIndex = `${options.depth + 1}`;
+
+            const panel = createElement(state.document, "div", "cw-context-toolbox");
+            panel.style.left = `${options.originOffset.x}px`;
+            panel.style.top = `${options.originOffset.y}px`;
+            panel.style.setProperty("--cw-toolbox-width", `${panelSize.width}px`);
+            panel.style.setProperty("--cw-toolbox-height", `${panelSize.height}px`);
+            panel.addEventListener("pointerdown", event => event.stopPropagation());
+            layer.appendChild(panel);
+
+            return {
+                depth: options.depth,
+                element: layer,
+                panel,
+                mode: "panel",
+                originOffset: options.originOffset,
+                bounds: getToolboxPanelBounds(options.originOffset, panelSize),
+                radius: 0,
+                ownerActionId: options.ownerActionId || "",
+                ownerDepth: typeof options.ownerDepth === "number" ? options.ownerDepth : -1,
+                actionEntries: new Map()
+            };
+        }
+
         const layer = createElement(state.document, "div", `cw-context-menu__layer ${options.depth > 0 ? "is-submenu" : "is-root"}`);
         layer.style.zIndex = `${options.depth + 1}`;
 
@@ -1944,6 +2014,7 @@
             element: layer,
             backdrop,
             orbit,
+            mode: "orbit",
             originOffset: options.originOffset,
             radius: 0,
             ownerActionId: options.ownerActionId || "",
@@ -2469,6 +2540,37 @@
         closeContextMenuLayersFrom(state, nextDepth);
 
         const submenuLayout = action.submenuLayout || "";
+        if (submenuLayout === "toolbox-panel") {
+            const panelSize = getToolboxPanelSize();
+            const submenuOrigin = clampToolboxPanelOriginToHost(
+                state,
+                resolveToolboxPanelOrigin(parentLayer, offset, panelSize),
+                panelSize);
+            const submenuLayer = createContextMenuLayer(state, {
+                depth: nextDepth,
+                label: action.label || "Components",
+                originOffset: submenuOrigin,
+                ownerActionId: action.actionId,
+                ownerDepth: parentLayer.depth,
+                mode: "panel",
+                panelSize
+            });
+
+            renderToolboxPanelLayer(state, submenuLayer, {
+                actions: action.children || [],
+                node: options.node,
+                clientX: options.clientX,
+                clientY: options.clientY,
+                placementKind: options.placementKind,
+                label: action.label || "Components",
+                description: action.description || ""
+            });
+
+            state.contextMenu.appendChild(submenuLayer.element);
+            state.contextMenuState.layers.push(submenuLayer);
+            return;
+        }
+
         const menuScale = getMenuScale(state);
         const submenuBaseRadius = (submenuLayout === "compact-ring" ? 74 : 80) * menuScale;
         const submenuRingStep = (submenuLayout === "compact-ring" ? 0 : 64) * menuScale;
@@ -2598,6 +2700,192 @@
         });
 
         return offsets;
+    }
+
+    function renderToolboxPreview(state, layerState, previewHost, action, sectionLabel, groupLabel) {
+        if (!previewHost) {
+            return;
+        }
+
+        clear(previewHost);
+
+        const kicker = createElement(state.document, "span", "cw-context-toolbox__preview-kicker", `${sectionLabel} / ${groupLabel}`);
+        const title = createElement(state.document, "strong", "cw-context-toolbox__preview-title", action?.label || action?.menuLabel || "Component");
+        const copy = createElement(
+            state.document,
+            "p",
+            "cw-context-toolbox__preview-copy",
+            action?.description || "Hover a component to preview its prompt text and usage.");
+        const meta = createElement(state.document, "div", "cw-context-toolbox__preview-meta");
+        meta.appendChild(createElement(
+            state.document,
+            "span",
+            "cw-context-toolbox__preview-pill",
+            action?.requiresInput ? `${action.inputFields?.length || 0} inputs required` : "Ready to add"));
+        meta.appendChild(createElement(
+            state.document,
+            "span",
+            "cw-context-toolbox__preview-pill",
+            action?.tone || "neutral"));
+
+        previewHost.appendChild(kicker);
+        previewHost.appendChild(title);
+        previewHost.appendChild(copy);
+        previewHost.appendChild(meta);
+        layerState.previewActionId = action?.actionId || "";
+    }
+
+    function renderToolboxPanelLayer(state, layerState, options) {
+        const panel = layerState.panel;
+        if (!panel) {
+            return;
+        }
+
+        clear(panel);
+        layerState.actionEntries = new Map();
+
+        const header = createElement(state.document, "div", "cw-context-toolbox__header");
+        const headerCopy = createElement(state.document, "div", "cw-context-toolbox__header-copy");
+        headerCopy.appendChild(createElement(state.document, "span", "cw-context-toolbox__eyebrow", options.label || "Components"));
+        headerCopy.appendChild(createElement(state.document, "strong", "cw-context-toolbox__title", options.label || "Prompt components"));
+        if (options.description) {
+            headerCopy.appendChild(createElement(state.document, "p", "cw-context-toolbox__copy", options.description));
+        }
+        header.appendChild(headerCopy);
+        header.appendChild(createElement(state.document, "span", "cw-context-toolbox__count", `${options.actions?.length || 0} sections`));
+        panel.appendChild(header);
+
+        const search = createElement(state.document, "input", "cw-context-toolbox__search");
+        search.type = "search";
+        search.placeholder = "Search components";
+        search.setAttribute("aria-label", "Search prompt components");
+        panel.appendChild(search);
+
+        const body = createElement(state.document, "div", "cw-context-toolbox__body");
+        const sectionsHost = createElement(state.document, "div", "cw-context-toolbox__sections");
+        const previewHost = createElement(state.document, "aside", "cw-context-toolbox__preview");
+        body.appendChild(sectionsHost);
+        body.appendChild(previewHost);
+        panel.appendChild(body);
+
+        const renderSections = () => {
+            clear(sectionsHost);
+            const query = (search.value || "").trim().toLowerCase();
+            let firstPreview = null;
+
+            for (let sectionIndex = 0; sectionIndex < (options.actions || []).length; sectionIndex++) {
+                const sectionAction = options.actions[sectionIndex];
+                const matchingGroups = [];
+
+                for (const groupAction of (sectionAction.children || [])) {
+                    const matchingItems = (groupAction.children || []).filter(item => {
+                        if (!query) {
+                            return true;
+                        }
+
+                        const haystack = [
+                            item.label,
+                            item.menuLabel,
+                            item.description,
+                            groupAction.label,
+                            sectionAction.label
+                        ].join(" ").toLowerCase();
+                        return haystack.includes(query);
+                    });
+
+                    if (matchingItems.length > 0) {
+                        matchingGroups.push({ groupAction, matchingItems });
+                    }
+                }
+
+                const sectionMatches = !query ||
+                    [sectionAction.label, sectionAction.description].join(" ").toLowerCase().includes(query);
+                if (!sectionMatches && matchingGroups.length === 0) {
+                    continue;
+                }
+
+                const section = createElement(state.document, "details", "cw-context-toolbox__section");
+                section.open = !!query || sectionIndex === 0;
+
+                const sectionSummary = createElement(state.document, "summary", "cw-context-toolbox__section-summary");
+                const sectionBadge = createElement(state.document, `span`, `cw-context-toolbox__section-badge tone-${sectionAction.tone || "neutral"}`);
+                sectionBadge.textContent = resolveActionGlyph(sectionAction.icon || "");
+                const sectionSummaryCopy = createElement(state.document, "span", "cw-context-toolbox__section-copy");
+                sectionSummaryCopy.appendChild(createElement(state.document, "strong", null, sectionAction.label || "Section"));
+                sectionSummaryCopy.appendChild(createElement(state.document, "small", null, sectionAction.description || ""));
+                sectionSummary.appendChild(sectionBadge);
+                sectionSummary.appendChild(sectionSummaryCopy);
+                section.appendChild(sectionSummary);
+
+                const sectionBody = createElement(state.document, "div", "cw-context-toolbox__section-body");
+
+                for (let groupIndex = 0; groupIndex < matchingGroups.length; groupIndex++) {
+                    const groupEntry = matchingGroups[groupIndex];
+                    const group = createElement(state.document, "details", "cw-context-toolbox__group");
+                    group.open = !!query || groupIndex === 0;
+
+                    const groupSummary = createElement(state.document, "summary", "cw-context-toolbox__group-summary");
+                    groupSummary.appendChild(createElement(state.document, "strong", null, groupEntry.groupAction.label || "Group"));
+                    groupSummary.appendChild(createElement(state.document, "small", null, groupEntry.groupAction.description || ""));
+                    group.appendChild(groupSummary);
+
+                    const itemList = createElement(state.document, "div", "cw-context-toolbox__item-list");
+                    for (const itemAction of groupEntry.matchingItems) {
+                        if (!firstPreview) {
+                            firstPreview = {
+                                action: itemAction,
+                                sectionLabel: sectionAction.label || "Section",
+                                groupLabel: groupEntry.groupAction.label || "Group"
+                            };
+                        }
+
+                        const item = createElement(state.document, "button", "cw-context-toolbox__item");
+                        item.type = "button";
+                        item.dataset.tone = itemAction.tone || "neutral";
+                        item.addEventListener("pointerdown", event => event.stopPropagation());
+                        item.addEventListener("pointerenter", () => {
+                            renderToolboxPreview(state, layerState, previewHost, itemAction, sectionAction.label || "Section", groupEntry.groupAction.label || "Group");
+                        });
+                        item.addEventListener("focus", () => {
+                            renderToolboxPreview(state, layerState, previewHost, itemAction, sectionAction.label || "Section", groupEntry.groupAction.label || "Group");
+                        });
+                        item.addEventListener("click", event => {
+                            event.stopPropagation();
+                            executeContextAction(state, options.node, itemAction, options.clientX, options.clientY, options.placementKind);
+                        });
+
+                        const itemIcon = createElement(state.document, "span", "cw-context-toolbox__item-icon");
+                        itemIcon.appendChild(createMenuActionIcon(state, itemAction));
+                        const itemBody = createElement(state.document, "span", "cw-context-toolbox__item-body");
+                        itemBody.appendChild(createElement(state.document, "strong", null, itemAction.label || itemAction.menuLabel || "Item"));
+                        itemBody.appendChild(createElement(state.document, "small", null, itemAction.requiresInput ? "Specify inputs before inserting" : "Add directly to the prompt flow"));
+                        item.appendChild(itemIcon);
+                        item.appendChild(itemBody);
+                        itemList.appendChild(item);
+                    }
+
+                    group.appendChild(itemList);
+                    sectionBody.appendChild(group);
+                }
+
+                section.appendChild(sectionBody);
+                sectionsHost.appendChild(section);
+            }
+
+            if (!sectionsHost.childElementCount) {
+                sectionsHost.appendChild(createElement(state.document, "div", "cw-context-toolbox__empty", "No prompt components match the current search."));
+                renderToolboxPreview(state, layerState, previewHost, null, "Search", "No results");
+                return;
+            }
+
+            if (firstPreview && layerState.previewActionId !== firstPreview.action.actionId) {
+                renderToolboxPreview(state, layerState, previewHost, firstPreview.action, firstPreview.sectionLabel, firstPreview.groupLabel);
+            }
+        };
+
+        search.addEventListener("input", renderSections);
+        renderSections();
+        window.requestAnimationFrame(() => search.focus({ preventScroll: true }));
     }
 
     function showContextMenu(state, options) {

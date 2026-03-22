@@ -317,6 +317,7 @@ public sealed record PromptBlockSummary(
     IReadOnlyList<string> Tags,
     IReadOnlyList<string> StackTags,
     IReadOnlyList<string> TemplateTokens,
+    string ContentPreview,
     int OrderIndex,
     string CatalogSource);
 
@@ -441,6 +442,27 @@ public sealed class PromptSessionAttachmentSummary
     public string MediaContentType { get; set; } = string.Empty;
 
     public string MediaOriginalFileName { get; set; } = string.Empty;
+
+    public string MetadataJson { get; set; } = string.Empty;
+}
+
+public sealed class PromptSessionSetupProfile
+{
+    public string IntentCategory { get; set; } = string.Empty;
+
+    public string MainLanguage { get; set; } = string.Empty;
+
+    public string SecondaryLanguages { get; set; } = string.Empty;
+
+    public string ApplicationState { get; set; } = string.Empty;
+
+    public string WorkRepository { get; set; } = string.Empty;
+
+    public string SourceRepositories { get; set; } = string.Empty;
+
+    public string GuidanceNotes { get; set; } = string.Empty;
+
+    public string ProjectSnapshot { get; set; } = string.Empty;
 }
 
 public sealed record PromptLibraryGroupSummary(

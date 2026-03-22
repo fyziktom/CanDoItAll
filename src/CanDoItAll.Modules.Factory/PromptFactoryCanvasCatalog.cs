@@ -142,75 +142,75 @@ internal static class PromptFactoryCanvasCatalog
 
     private static readonly IReadOnlyList<InputDefinition> InputDefinitions =
     [
-        new(
-            "file",
-            "File",
-            "Attach a file and keep it as prompt-session context.",
-            "file",
-            "mint",
-            "File title",
-            "Architecture notes",
-            "Path or usage",
-            "docs/architecture",
-            "Why it matters",
-            "What this file contributes",
-            true,
-            "*/*",
-            "Drop a file here or choose one."),
+    new(
+        "file",
+        "File",
+        "Attach any file and describe what the AI should extract, compare, or verify from it.",
+        "file",
+        "mint",
+        "File title",
+        "Architecture notes",
+        "Focus or usage",
+        "Extract acceptance criteria",
+        "AI task",
+        "What should the AI read or extract from this file?",
+        true,
+        "*/*",
+        "Drop a file here or choose one."),
         new(
             "image",
-            "Image",
-            "Attach an image as prompt-session context.",
-            "image",
-            "danger",
-            "Image title",
-            "Canvas capture",
-            "Usage",
-            "Where this image is used",
-            "What it shows",
-            "Describe what this image confirms",
-            true,
-            "image/*",
-            "Drop an image here or choose one."),
+        "Image",
+        "Attach an image and specify what visual evidence the AI should inspect.",
+        "image",
+        "danger",
+        "Image title",
+        "Canvas capture",
+        "Focus or usage",
+        "Read layout defects",
+        "AI task",
+        "What should the AI inspect or infer from this image?",
+        true,
+        "image/*",
+        "Drop an image here or choose one."),
         new(
             "video",
-            "Video",
-            "Attach a video as prompt-session context.",
-            "video",
-            "accent",
-            "Video title",
-            "Demo recording",
-            "Usage",
-            "Where this video is used",
-            "What it shows",
-            "Describe what this video demonstrates",
-            true,
-            "video/*",
-            "Drop a video here or choose one."),
+        "Video",
+        "Attach a video and explain what sequence, regression, or behavior the AI should inspect.",
+        "video",
+        "accent",
+        "Video title",
+        "Demo recording",
+        "Focus or usage",
+        "Find the regression sequence",
+        "AI task",
+        "What should the AI watch for in this video?",
+        true,
+        "video/*",
+        "Drop a video here or choose one."),
         new(
             "link",
-            "Link",
-            "Attach an external link or reference.",
-            "link",
-            "sky",
-            "Link label",
-            "API reference",
-            "URL",
-            "https://...",
-            "Usage",
-            "Why this link matters"),
-        new(
-            "note",
-            "Note",
-            "Capture free-form prompt-session context.",
-            "note",
-            "neutral",
-            "Note title",
-            "Current blocker",
-            "Context",
-            "Where this note applies",
-            "Details",
-            "Write the note")
+        "Link",
+        "Attach a link and state how the AI should use it.",
+        "link",
+        "sky",
+        "Link label",
+        "API reference",
+        "URL",
+        "https://...",
+        "AI task",
+        "What should the AI extract from this link?"),
+    new(
+        "note",
+        "Note",
+        "Capture free-form prompt context or operator instructions.",
+        "note",
+        "neutral",
+        "Note title",
+        "Current blocker",
+        "Context",
+        "Where this note applies",
+        "AI task",
+        "How should the AI use this note?")
     ];
 
     public static IReadOnlyList<CanvasWorkbenchAction> BuildSessionContextActions(PromptLibraryCatalogSummary catalog)
@@ -316,16 +316,17 @@ internal static class PromptFactoryCanvasCatalog
             }
         ];
 
-    private static CanvasWorkbenchAction BuildComponentsAction(PromptLibraryCatalogSummary catalog)
-        => new()
-        {
-            ActionId = "catalog-components",
-            Label = "Components",
-            MenuLabel = "Components",
-            Description = "Add prompt components from the shared library.",
-            Icon = "prompt",
-            Tone = "accent",
-            Children = ComponentSections
+private static CanvasWorkbenchAction BuildComponentsAction(PromptLibraryCatalogSummary catalog)
+    => new()
+    {
+        ActionId = "catalog-components",
+        Label = "Components",
+        MenuLabel = "Components",
+        Description = "Add prompt components from the shared library.",
+        Icon = "prompt",
+        Tone = "accent",
+        SubmenuLayout = "toolbox-panel",
+        Children = ComponentSections
                 .Select(section => new CanvasWorkbenchAction
                 {
                     ActionId = $"catalog-components:{section.Key}",
@@ -359,16 +360,16 @@ internal static class PromptFactoryCanvasCatalog
                 .ToList()
         };
 
-    private static CanvasWorkbenchAction BuildComponentLeafAction(PromptBlockSummary block)
-        => new()
-        {
-            ActionId = $"component:add:{block.Key}",
-            Label = ResolveComponentMenuLabel(block.Name),
-            MenuLabel = ResolveComponentMenuLabel(block.Name),
-            Description = block.Summary,
-            Icon = ResolveBlockIcon(block.BlockKind),
-            Tone = ResolveGroupTone(block.GroupKey),
-            RequiresInput = block.TemplateTokens.Count > 0,
+private static CanvasWorkbenchAction BuildComponentLeafAction(PromptBlockSummary block)
+    => new()
+    {
+        ActionId = $"component:add:{block.Key}",
+        Label = ResolveComponentMenuLabel(block.Name),
+        MenuLabel = ResolveComponentMenuLabel(block.Name),
+        Description = string.IsNullOrWhiteSpace(block.ContentPreview) ? block.Summary : block.ContentPreview,
+        Icon = ResolveBlockIcon(block.BlockKind),
+        Tone = ResolveGroupTone(block.GroupKey),
+        RequiresInput = block.TemplateTokens.Count > 0,
             CreateMode = block.TemplateTokens.Count > 0 ? "dialog" : "create",
             ShowDefaultTextFields = false,
             SubmitLabel = block.TemplateTokens.Count > 0 ? "Add component" : "Add",

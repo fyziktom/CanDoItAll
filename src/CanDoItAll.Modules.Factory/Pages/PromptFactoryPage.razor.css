@@ -5,6 +5,13 @@
     flex-wrap: nowrap;
 }
 
+.pf-help-popover__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    background: transparent;
+}
+
 .pf-meta-badge {
     display: inline-flex;
     align-items: center;
@@ -50,89 +57,6 @@
     align-items: center;
     gap: 0.55rem;
     flex-wrap: wrap;
-}
-
-.pf-help-popover {
-    position: relative;
-}
-
-.pf-help-popover > summary {
-    list-style: none;
-}
-
-.pf-help-popover > summary::-webkit-details-marker {
-    display: none;
-}
-
-.pf-help-popover__toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.7rem;
-    height: 1.7rem;
-    border: 0;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #0284c7, #2563eb);
-    color: #fff;
-    cursor: pointer;
-    box-shadow: 0 14px 26px rgba(37, 99, 235, 0.18);
-    transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
-}
-
-.pf-help-popover__toggle:hover {
-    transform: translateY(-1px);
-    filter: saturate(1.05);
-    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.24);
-}
-
-.pf-help-popover__toggle span {
-    font-size: 0.8rem;
-    font-weight: 900;
-    line-height: 1;
-}
-
-.pf-help-popover__panel {
-    position: absolute;
-    top: calc(100% + 0.45rem);
-    right: 0;
-    z-index: 20;
-    display: grid;
-    gap: 0.45rem;
-    width: min(18rem, 78vw);
-    padding: 0.9rem 0.95rem;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 1rem;
-    background: rgba(15, 23, 42, 0.96);
-    color: rgba(248, 250, 252, 0.94);
-    box-shadow: 0 24px 42px rgba(15, 23, 42, 0.24);
-}
-
-.pf-help-popover__panel strong {
-    font-size: 0.84rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.pf-help-popover__panel p,
-.pf-help-popover__panel small {
-    margin: 0;
-    color: rgba(226, 232, 240, 0.88);
-    line-height: 1.5;
-}
-
-.pf-help-popover__panel small {
-    color: rgba(125, 211, 252, 0.96);
-}
-
-.pf-help-popover:not([open]) .pf-help-popover__panel {
-    display: none;
-}
-
-.pf-help-popover--step {
-    position: absolute;
-    top: 0.65rem;
-    right: 0.65rem;
-    z-index: 3;
 }
 
 .pf-inspector-step-card {
@@ -205,7 +129,8 @@
 }
 
 .pf-workspace-card,
-.pf-section-stack {
+.pf-section-stack,
+.pf-setup-editor {
     display: grid;
     gap: 1rem;
 }
@@ -226,6 +151,50 @@
     display: grid;
     gap: 0.35rem;
     max-width: 56rem;
+}
+
+.pf-lane-switcher {
+    padding: 1.05rem 1.1rem;
+}
+
+.pf-lane-switcher__header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.pf-lane-switcher__header .cw-panel-copy {
+    max-width: 42rem;
+}
+
+.pf-workbench-shell.is-canvas-mode ::deep .cw-support-grid {
+    display: none;
+}
+
+.pf-workbench-shell.is-canvas-mode {
+    min-height: calc(100vh - 14rem);
+}
+
+.pf-workbench-shell.is-canvas-mode ::deep .cw-main-grid {
+    min-height: calc(100vh - 14rem);
+    align-items: stretch;
+}
+
+.pf-workbench-shell.is-canvas-mode ::deep .cw-inspector-shell {
+    max-height: calc(100vh - 14rem);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+.pf-workbench-shell.is-support-mode ::deep .cw-main-grid {
+    display: none;
+}
+
+.pf-workbench-shell.is-support-mode ::deep .cw-support-grid {
+    margin-top: 0;
 }
 
 ::deep .cw-stage-header-row {
@@ -346,6 +315,78 @@
     margin: 0;
     color: rgba(15, 23, 42, 0.72);
     line-height: 1.5;
+}
+
+.pf-setup-guide .cw-textarea,
+.pf-setup-editor .cw-textarea {
+    min-height: 7.5rem;
+}
+
+.pf-attachment-grid {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.pf-attachment-card {
+    display: grid;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-radius: 1.1rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+}
+
+.pf-attachment-card[data-kind="pdf"] {
+    border-color: rgba(220, 38, 38, 0.18);
+    background: linear-gradient(180deg, rgba(254, 242, 242, 0.96), rgba(255, 255, 255, 0.94));
+}
+
+.pf-attachment-card[data-kind="spreadsheet"] {
+    border-color: rgba(5, 150, 105, 0.18);
+    background: linear-gradient(180deg, rgba(236, 253, 245, 0.96), rgba(255, 255, 255, 0.94));
+}
+
+.pf-attachment-card[data-kind="image"],
+.pf-attachment-card[data-kind="video"] {
+    border-color: rgba(37, 99, 235, 0.18);
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.96), rgba(255, 255, 255, 0.94));
+}
+
+.pf-attachment-card[data-kind="document"],
+.pf-attachment-card[data-kind="text"] {
+    border-color: rgba(249, 115, 22, 0.18);
+    background: linear-gradient(180deg, rgba(255, 247, 237, 0.96), rgba(255, 255, 255, 0.94));
+}
+
+.pf-attachment-card__header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.pf-attachment-card p,
+.pf-attachment-card small {
+    margin: 0;
+    color: rgba(15, 23, 42, 0.74);
+    line-height: 1.5;
+}
+
+.pf-attachment-card__pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.32rem 0.58rem;
+    border-radius: 999px;
+    background: rgba(241, 245, 249, 0.96);
+    color: rgba(15, 23, 42, 0.68);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .pf-toolbar {
@@ -504,6 +545,11 @@
     box-shadow: 0 30px 60px rgba(15, 23, 42, 0.24);
 }
 
+.pf-impact-modal {
+    width: min(100%, 34rem);
+    max-height: none;
+}
+
 .pf-prompt-modal__header {
     display: flex;
     align-items: start;
@@ -524,9 +570,20 @@
 @media (max-width: 900px) {
     .pf-card-header,
     .pf-toolbar,
-    .pf-prompt-modal__header {
+    .pf-prompt-modal__header,
+    .pf-lane-switcher__header {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .pf-workbench-shell.is-canvas-mode {
+        min-height: auto;
+    }
+
+    .pf-workbench-shell.is-canvas-mode ::deep .cw-main-grid,
+    .pf-workbench-shell.is-canvas-mode ::deep .cw-inspector-shell {
+        min-height: auto;
+        max-height: none;
     }
 
     .pf-inspector-step-grid {

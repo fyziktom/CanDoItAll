@@ -33,7 +33,12 @@ public partial class PromptFactoryPage
 
     private PromptSessionAttachmentSummary? selectedAttachmentNode
         => TryParseSelectedInputNodeId(selectedCanvasNodeId, out var attachmentId)
-            ? editor.SessionAttachments.FirstOrDefault(item => string.Equals(item.Id, attachmentId, StringComparison.OrdinalIgnoreCase))
+            ? VisibleSessionAttachments.FirstOrDefault(item => string.Equals(item.Id, attachmentId, StringComparison.OrdinalIgnoreCase))
+            : null;
+
+    private PromptSessionAttachmentSummary? selectedSetupNode
+        => string.Equals(selectedCanvasNodeId, SetupCanvasNodeId, StringComparison.Ordinal)
+            ? SetupAttachment
             : null;
 
     private PromptLibraryGroupSummary? selectedComponentGroupNode
@@ -45,6 +50,8 @@ public partial class PromptFactoryPage
     {
         var nodes = new List<CanvasWorkbenchNode>();
         var links = new List<CanvasWorkbenchLink>();
+
+        AppendSetupSelectionGraph(nodes, links);
 
         var blueprint = blueprints.FirstOrDefault(item => item.Id == editor.BlueprintId);
         if (blueprint is not null)
@@ -255,9 +262,61 @@ public partial class PromptFactoryPage
         return (nodes, links);
     }
 
+    private void AppendSetupSelectionGraph(List<CanvasWorkbenchNode> nodes, List<CanvasWorkbenchLink> links)
+    {
+        UpsertSetupAttachment();
+
+        nodes.Add(new CanvasWorkbenchNode
+        {
+            Id = SetupCanvasNodeId,
+            ParentId = "session-root",
+            Family = "special",
+            Kind = "setup",
+            Icon = "SET",
+            Title = "Session setup",
+            Subtitle = ResolveSetupSummaryLine(),
+            LeadText = ResolveSetupLeadCopy(),
+            Status = "Setup",
+            StatusPill = SetupIsReady ? "Ready" : $"{MissingSetupFieldCount} missing",
+            AccentColor = SetupIsReady ? "#0f766e" : "#0f172a",
+            PaletteKey = SetupIsReady ? "mint" : "sky",
+            IsRequired = true,
+            X = 520,
+            Y = -70,
+            Chips =
+            [
+                new CanvasWorkbenchChip { Text = ResolveSetupStatusLabel(), Tone = SetupIsReady ? "success" : "warn" }
+            ],
+            FooterChips =
+            [
+                new CanvasWorkbenchChip { Text = string.IsNullOrWhiteSpace(sessionSetup.WorkRepository) ? "Repository needed" : sessionSetup.WorkRepository, Tone = "neutral" }
+            ],
+            ContextActions =
+            [
+                new CanvasWorkbenchAction
+                {
+                    ActionId = "setup:open",
+                    Label = "Setup",
+                    MenuLabel = "Setup",
+                    Description = "Open the session setup guide.",
+                    Icon = "session",
+                    Tone = "sky"
+                }
+            ]
+        });
+
+        links.Add(new CanvasWorkbenchLink
+        {
+            SourceId = "session-root",
+            TargetId = SetupCanvasNodeId,
+            Kind = "selection",
+            IsUserAuthored = false
+        });
+    }
+
     private void AppendInputSelectionGraph(List<CanvasWorkbenchNode> nodes, List<CanvasWorkbenchLink> links)
     {
-        if (editor.SessionAttachments.Count == 0)
+        if (VisibleSessionAttachments.Count == 0)
         {
             return;
         }
@@ -270,10 +329,10 @@ public partial class PromptFactoryPage
             Kind = "inputs",
             Icon = "IN",
             Title = "Prompt inputs",
-            Subtitle = $"{editor.SessionAttachments.Count} attached",
+            Subtitle = $"{VisibleSessionAttachments.Count} attached",
             LeadText = "Files, media, links, and notes explicitly attached to the prompt session.",
             Status = "Inputs",
-            StatusPill = editor.SessionAttachments.Count.ToString(),
+            StatusPill = VisibleSessionAttachments.Count.ToString(),
             AccentColor = "#059669",
             PaletteKey = "mint",
             IsCollapsible = true,
@@ -283,9 +342,9 @@ public partial class PromptFactoryPage
         });
         links.Add(new CanvasWorkbenchLink { SourceId = "session-root", TargetId = InputsRootCanvasNodeId, Kind = "selection", IsUserAuthored = false });
 
-        for (var index = 0; index < editor.SessionAttachments.Count; index++)
+        for (var index = 0; index < VisibleSessionAttachments.Count; index++)
         {
-            var attachment = editor.SessionAttachments[index];
+            var attachment = VisibleSessionAttachments[index];
             var inputNodeId = $"{InputCanvasNodePrefix}{attachment.Id}";
             nodes.Add(new CanvasWorkbenchNode
             {
@@ -293,24 +352,30 @@ public partial class PromptFactoryPage
                 ParentId = InputsRootCanvasNodeId,
                 Family = "special",
                 Kind = "input",
-                Icon = "AT",
+                Icon = ResolveAttachmentNodeIcon(attachment),
                 Title = string.IsNullOrWhiteSpace(attachment.Title) ? $"Input {index + 1}" : attachment.Title,
                 Subtitle = ResolveAttachmentSubtitle(attachment),
                 LeadText = ResolveAttachmentLeadText(attachment),
-                Status = attachment.Kind,
-                StatusPill = attachment.Kind.ToUpperInvariant(),
-                AccentColor = ResolveAttachmentAccent(attachment.Kind),
-                PaletteKey = ResolveAttachmentPalette(attachment.Kind),
+                Status = ResolveAttachmentVisualKind(attachment),
+                StatusPill = ResolveAttachmentStatusPill(attachment),
+                AccentColor = ResolveAttachmentAccent(attachment),
+                PaletteKey = ResolveAttachmentPalette(attachment),
                 X = 860,
                 Y = 780 + (index * 124),
-                MediaKind = attachment.Kind,
+                MediaKind = ResolveAttachmentVisualKind(attachment),
                 MediaPreviewUrl = attachment.MediaRoute,
                 MediaPreviewAlt = string.IsNullOrWhiteSpace(attachment.Title) ? attachment.Kind : attachment.Title,
                 MediaContentType = attachment.MediaContentType,
                 MediaFileName = attachment.MediaOriginalFileName,
                 FooterChips =
                 [
-                    new CanvasWorkbenchChip { Text = string.IsNullOrWhiteSpace(attachment.MediaOriginalFileName) ? attachment.Kind : attachment.MediaOriginalFileName, Tone = "neutral" }
+                    new CanvasWorkbenchChip
+                    {
+                        Text = string.IsNullOrWhiteSpace(attachment.MediaOriginalFileName)
+                            ? ResolveAttachmentStatusPill(attachment)
+                            : attachment.MediaOriginalFileName,
+                        Tone = "neutral"
+                    }
                 ],
                 ContextActions = PromptFactoryCanvasCatalog.BuildInputNodeActions(attachment.Id).ToList()
             });
@@ -347,11 +412,17 @@ public partial class PromptFactoryPage
         switch (actionId)
         {
             case "clear:components":
-                RememberHistoryCheckpoint();
-                editor.SelectedBlockIds.Clear();
-                editor.ComponentCustomizations.Clear();
-                editor.HasCustomizedBlocks = false;
-                await FocusCanvasNodeAsync("session-root", "Prompt components cleared.");
+                if (editor.SelectedBlockIds.Count > 0)
+                {
+                    OpenImpactDialog(
+                        "Clear prompt components?",
+                        $"This will remove {editor.SelectedBlockIds.Count} selected component(s) from the session.",
+                        "Clear components",
+                        ClearComponentsAsync);
+                    return true;
+                }
+
+                await ClearComponentsAsync();
                 return true;
             case "clear:flow":
                 RememberHistoryCheckpoint();
@@ -364,19 +435,37 @@ public partial class PromptFactoryPage
                 await FocusCanvasNodeAsync("session-root", "Blueprint selection cleared.");
                 return true;
             case "clear:inputs":
-                RememberHistoryCheckpoint();
-                editor.SessionAttachments.Clear();
-                await FocusCanvasNodeAsync("session-root", "Prompt inputs cleared.");
+                if (VisibleSessionAttachments.Count > 0)
+                {
+                    OpenImpactDialog(
+                        "Clear prompt inputs?",
+                        $"This will remove {VisibleSessionAttachments.Count} attached prompt input(s) from the current session.",
+                        "Clear inputs",
+                        ClearInputsAsync);
+                    return true;
+                }
+
+                await ClearInputsAsync();
                 return true;
             case "reset:session":
-                RememberHistoryCheckpoint();
-                editor.BlueprintId = null;
-                editor.FlowTemplateId = null;
-                editor.SelectedBlockIds.Clear();
-                editor.ComponentCustomizations.Clear();
-                editor.SessionAttachments.Clear();
-                editor.HasCustomizedBlocks = false;
-                await FocusCanvasNodeAsync("session-root", "Prompt session reset.");
+                if (editor.BlueprintId.HasValue ||
+                    editor.FlowTemplateId.HasValue ||
+                    editor.SelectedBlockIds.Count > 0 ||
+                    VisibleSessionAttachments.Count > 0 ||
+                    editor.Nodes.Count > 0)
+                {
+                    OpenImpactDialog(
+                        "Reset prompt session?",
+                        "This will clear the blueprint, flow, selected components, inputs, and prompt steps. Setup will be preserved only from known project context.",
+                        "Reset session",
+                        ResetSessionAsync);
+                    return true;
+                }
+
+                await ResetSessionAsync();
+                return true;
+            case "setup:open":
+                await SelectSetupNodeAsync(openSetupTab: true);
                 return true;
         }
 
@@ -482,7 +571,7 @@ public partial class PromptFactoryPage
             return;
         }
 
-        var nextSelection = editor.SessionAttachments.Count == 0 ? "session-root" : InputsRootCanvasNodeId;
+        var nextSelection = VisibleSessionAttachments.Count == 0 ? "session-root" : InputsRootCanvasNodeId;
         await FocusCanvasNodeAsync(nextSelection, "Prompt input removed.");
     }
 
@@ -505,6 +594,38 @@ public partial class PromptFactoryPage
         await FocusCanvasNodeAsync($"{InputCanvasNodePrefix}{prepared.Id}", $"Prompt input '{prepared.Title}' added.");
     }
 
+    private async Task ClearComponentsAsync()
+    {
+        RememberHistoryCheckpoint();
+        editor.SelectedBlockIds.Clear();
+        editor.ComponentCustomizations.Clear();
+        editor.HasCustomizedBlocks = false;
+        await FocusCanvasNodeAsync("session-root", "Prompt components cleared.");
+    }
+
+    private async Task ClearInputsAsync()
+    {
+        RememberHistoryCheckpoint();
+        editor.SessionAttachments.RemoveAll(item => !IsSetupAttachment(item));
+        await FocusCanvasNodeAsync("session-root", "Prompt inputs cleared.");
+    }
+
+    private async Task ResetSessionAsync()
+    {
+        RememberHistoryCheckpoint();
+        editor.BlueprintId = null;
+        editor.FlowTemplateId = null;
+        editor.SelectedBlockIds.Clear();
+        editor.ComponentCustomizations.Clear();
+        editor.SessionAttachments.Clear();
+        editor.HasCustomizedBlocks = false;
+        sessionSetup = new PromptSessionSetupProfile();
+        PrefillSetupProfile();
+        UpsertSetupAttachment();
+        supportLaneTab = SupportLaneTabCanvas;
+        await FocusCanvasNodeAsync(SetupCanvasNodeId, "Prompt session reset. Complete session setup to continue.");
+    }
+
     private async Task SelectBlueprintByKeyAsync(string blueprintKey)
     {
         var blueprint = blueprints.FirstOrDefault(item => string.Equals(item.Key, blueprintKey, StringComparison.OrdinalIgnoreCase));
@@ -514,17 +635,19 @@ public partial class PromptFactoryPage
             return;
         }
 
-        RememberHistoryCheckpoint();
-        editor.BlueprintId = blueprint.Id;
-        if (blueprint.RecommendedFlowTemplateId.HasValue)
+        var targetFlowTemplateId = blueprint.RecommendedFlowTemplateId ?? editor.FlowTemplateId;
+        var recommendedBlockIds = (await PromptFactoryService.GetRecommendedBlockIdsAsync(blueprint.Id, targetFlowTemplateId, editor.Phase)).ToList();
+        if (TryBuildSelectionImpactMessage(recommendedBlockIds, $"Selecting blueprint '{blueprint.Name}'", out var dialogBody))
         {
-            editor.FlowTemplateId = blueprint.RecommendedFlowTemplateId.Value;
+            OpenImpactDialog(
+                $"Use blueprint '{blueprint.Name}'?",
+                dialogBody,
+                "Use blueprint",
+                () => ApplyBlueprintSelectionAsync(blueprint, recommendedBlockIds));
+            return;
         }
 
-        editor.SelectedBlockIds = (await PromptFactoryService.GetRecommendedBlockIdsAsync(editor.BlueprintId, editor.FlowTemplateId, editor.Phase)).ToList();
-        editor.HasCustomizedBlocks = false;
-        TrimComponentCustomizations();
-        await FocusCanvasNodeAsync(BlueprintCanvasNodeId, $"Blueprint '{blueprint.Name}' selected.");
+        await ApplyBlueprintSelectionAsync(blueprint, recommendedBlockIds);
     }
 
     private async Task SelectFlowByKeyAsync(string flowKey)
@@ -536,9 +659,40 @@ public partial class PromptFactoryPage
             return;
         }
 
+        var recommendedBlockIds = (await PromptFactoryService.GetRecommendedBlockIdsAsync(editor.BlueprintId, flow.Id, editor.Phase)).ToList();
+        if (TryBuildSelectionImpactMessage(recommendedBlockIds, $"Selecting flow '{flow.Name}'", out var dialogBody))
+        {
+            OpenImpactDialog(
+                $"Use flow '{flow.Name}'?",
+                dialogBody,
+                "Use flow",
+                () => ApplyFlowSelectionAsync(flow, recommendedBlockIds));
+            return;
+        }
+
+        await ApplyFlowSelectionAsync(flow, recommendedBlockIds);
+    }
+
+    private async Task ApplyBlueprintSelectionAsync(PromptBlueprintSummary blueprint, IReadOnlyList<Guid> recommendedBlockIds)
+    {
+        RememberHistoryCheckpoint();
+        editor.BlueprintId = blueprint.Id;
+        if (blueprint.RecommendedFlowTemplateId.HasValue)
+        {
+            editor.FlowTemplateId = blueprint.RecommendedFlowTemplateId.Value;
+        }
+
+        editor.SelectedBlockIds = recommendedBlockIds.ToList();
+        editor.HasCustomizedBlocks = false;
+        TrimComponentCustomizations();
+        await FocusCanvasNodeAsync(BlueprintCanvasNodeId, $"Blueprint '{blueprint.Name}' selected.");
+    }
+
+    private async Task ApplyFlowSelectionAsync(PromptFlowTemplateSummary flow, IReadOnlyList<Guid> recommendedBlockIds)
+    {
         RememberHistoryCheckpoint();
         editor.FlowTemplateId = flow.Id;
-        editor.SelectedBlockIds = (await PromptFactoryService.GetRecommendedBlockIdsAsync(editor.BlueprintId, flow.Id, editor.Phase)).ToList();
+        editor.SelectedBlockIds = recommendedBlockIds.ToList();
         editor.HasCustomizedBlocks = false;
         TrimComponentCustomizations();
         await FocusCanvasNodeAsync(FlowCanvasNodeId, $"Flow '{flow.Name}' selected.");
@@ -623,11 +777,11 @@ public partial class PromptFactoryPage
 
     private string ResolveAttachmentSubtitle(PromptSessionAttachmentSummary attachment)
     {
-        return attachment.Kind switch
+        return ResolveAttachmentVisualKind(attachment) switch
         {
             "link" => attachment.LinkUrl,
-            "image" or "video" or "file" => string.IsNullOrWhiteSpace(attachment.MediaOriginalFileName)
-                ? attachment.Kind
+            "image" or "video" or "pdf" or "spreadsheet" or "document" or "text" or "archive" or "file" => string.IsNullOrWhiteSpace(attachment.MediaOriginalFileName)
+                ? ResolveAttachmentStatusPill(attachment)
                 : attachment.MediaOriginalFileName,
             _ => string.IsNullOrWhiteSpace(attachment.Subtitle) ? attachment.Kind : attachment.Subtitle
         };
@@ -642,7 +796,7 @@ public partial class PromptFactoryPage
 
         if (!string.IsNullOrWhiteSpace(attachment.Subtitle))
         {
-            return attachment.Subtitle;
+            return $"Use this input for: {attachment.Subtitle}";
         }
 
         return attachment.Kind;
@@ -725,23 +879,97 @@ public partial class PromptFactoryPage
     private static string ResolveGroupPalette(string groupKey)
         => ResolveComponentSectionPalette(ResolveComponentSectionKey(groupKey));
 
-    private static string ResolveAttachmentAccent(string kind)
-        => kind switch
+    private static string ResolveAttachmentVisualKind(PromptSessionAttachmentSummary attachment)
+    {
+        if (string.Equals(attachment.Kind, "image", StringComparison.OrdinalIgnoreCase))
         {
-            "image" => "#be123c",
+            return "image";
+        }
+
+        if (string.Equals(attachment.Kind, "video", StringComparison.OrdinalIgnoreCase))
+        {
+            return "video";
+        }
+
+        if (string.Equals(attachment.Kind, "link", StringComparison.OrdinalIgnoreCase))
+        {
+            return "link";
+        }
+
+        if (string.Equals(attachment.Kind, "note", StringComparison.OrdinalIgnoreCase))
+        {
+            return "note";
+        }
+
+        var extension = Path.GetExtension(attachment.MediaOriginalFileName)?.Trim().ToLowerInvariant();
+        return extension switch
+        {
+            ".pdf" => "pdf",
+            ".xls" or ".xlsx" or ".csv" => "spreadsheet",
+            ".doc" or ".docx" or ".ppt" or ".pptx" => "document",
+            ".txt" or ".md" or ".json" or ".xml" or ".log" => "text",
+            ".zip" or ".rar" or ".7z" => "archive",
+            _ => "file"
+        };
+    }
+
+    private static string ResolveAttachmentNodeIcon(PromptSessionAttachmentSummary attachment)
+        => ResolveAttachmentVisualKind(attachment) switch
+        {
+            "image" => "IMG",
+            "video" => "VID",
+            "link" => "URL",
+            "note" => "NOTE",
+            "pdf" => "PDF",
+            "spreadsheet" => "XLS",
+            "document" => "DOC",
+            "text" => "TXT",
+            "archive" => "ZIP",
+            _ => "FILE"
+        };
+
+    private static string ResolveAttachmentStatusPill(PromptSessionAttachmentSummary attachment)
+        => ResolveAttachmentVisualKind(attachment) switch
+        {
+            "image" => "Image",
+            "video" => "Video",
+            "link" => "Link",
+            "note" => "Note",
+            "pdf" => "PDF",
+            "spreadsheet" => "Spreadsheet",
+            "document" => "Document",
+            "text" => "Text",
+            "archive" => "Archive",
+            _ => "File"
+        };
+
+    private static string ResolveAttachmentAccent(PromptSessionAttachmentSummary attachment)
+        => ResolveAttachmentVisualKind(attachment) switch
+        {
+            "image" => "#2563eb",
             "video" => "#7c3aed",
             "link" => "#0284c7",
             "note" => "#4b5563",
+            "pdf" => "#dc2626",
+            "spreadsheet" => "#15803d",
+            "document" => "#ea580c",
+            "text" => "#475569",
+            "archive" => "#7c2d12",
             _ => "#059669"
         };
 
-    private static string ResolveAttachmentPalette(string kind)
-        => kind switch
+    private static string ResolveAttachmentPalette(PromptSessionAttachmentSummary attachment)
+        => ResolveAttachmentVisualKind(attachment) switch
         {
-            "image" => "danger",
+            "image" => "sky",
             "video" => "violet",
             "link" => "sky",
             "note" => "neutral",
+            "pdf" => "danger",
+            "spreadsheet" => "mint",
+            "document" => "warn",
+            "text" => "neutral",
+            "archive" => "warn",
             _ => "mint"
         };
 }
