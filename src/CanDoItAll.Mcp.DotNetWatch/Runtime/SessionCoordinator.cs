@@ -18,6 +18,7 @@ public sealed class SessionCoordinator(
     PathGuard pathGuard,
     EnvironmentOverlayFilter environmentOverlayFilter,
     StartFailureDiagnoser diagnoser,
+    AgentLogReducer logReducer,
     StaleProcessRegistry staleProcessRegistry,
     IProcessTreeTerminator processTreeTerminator,
     ILogger<SessionCoordinator> logger)
@@ -26,7 +27,8 @@ public sealed class SessionCoordinator(
 
     public WorkspaceInfoData GetWorkspaceInfo(bool includeHistory, bool includeConfigSnapshot)
     {
-        var activeSession = appRuntimeManager.GetActiveSession()?.ToStatusData();
+        var activeSessions = appRuntimeManager.GetActiveSessions().Select(static session => session.ToStatusData()).ToArray();
+        var activeSession = activeSessions.FirstOrDefault();
         var activeOperations = operationRegistry.GetActiveOperations().Select(static operation => operation.ToStatusData()).ToArray();
         var history = includeHistory
             ? new WorkspaceHistoryData(
@@ -47,7 +49,10 @@ public sealed class SessionCoordinator(
             activeOperations,
             Enum.GetNames<WhenAppRunningPolicy>(),
             includeConfigSnapshot ? configuration.CreateRedactedSnapshot() : null,
-            history);
+            history)
+        {
+            ActiveAppSessions = activeSessions
+        };
     }
 
     public async Task<AppStartData> StartAppAsync(
@@ -123,6 +128,16 @@ public sealed class SessionCoordinator(
         return appRuntimeManager.StopAsync(sessionId, string.IsNullOrWhiteSpace(reason) ? "RequestedByClient" : reason, force, cancellationToken);
     }
 
+    public Task<AppRebuildResult> RebuildAppAsync(string? sessionId, CancellationToken cancellationToken)
+    {
+        return appRuntimeManager.RebuildAsync(sessionId, cancellationToken);
+    }
+
+    public Task<AppRebuildResult> ForceRebuildAppAsync(string? sessionId, CancellationToken cancellationToken)
+    {
+        return appRuntimeManager.ForceRebuildAsync(sessionId, cancellationToken);
+    }
+
     public AppStatusData GetAppStatus(string? sessionId)
     {
         var session = appRuntimeManager.GetById(sessionId)
@@ -130,27 +145,30 @@ public sealed class SessionCoordinator(
         return session.ToStatusData();
     }
 
-    public AppLogsData GetAppLogs(string? sessionId, long? cursor, int limit, bool includeStdOut, bool includeStdErr, bool includeSystemEvents)
+    public AppLogsData GetAppLogs(string? sessionId, long? cursor, int limit, bool includeStdOut, bool includeStdErr, bool includeSystemEvents, LogViewMode view)
     {
         var session = appRuntimeManager.GetById(sessionId)
             ?? throw new ToolInvocationException("SessionNotFound", "No managed app session was found.", new { sessionId });
 
-        var result = session.LogBuffer.ReadAfter(cursor, limit, entry =>
-        {
-            if (entry.Source == "ProcessStdOut")
+        var filteredEntries = session.LogBuffer.GetAfter(cursor ?? 0)
+            .Where(entry =>
             {
-                return includeStdOut;
-            }
+                if (entry.Source == "ProcessStdOut")
+                {
+                    return includeStdOut;
+                }
 
-            if (entry.Source == "ProcessStdErr")
-            {
-                return includeStdErr;
-            }
+                if (entry.Source == "ProcessStdErr")
+                {
+                    return includeStdErr;
+                }
 
-            return includeSystemEvents;
-        });
+                return includeSystemEvents;
+            })
+            .ToArray();
 
-        return new AppLogsData(session.SessionId, result.Entries, result.NextCursor, result.Truncated, result.TotalAvailableAfterCursor);
+        var result = logReducer.Reduce(filteredEntries, cursor ?? 0, limit, LogReductionScenario.App, view);
+        return new AppLogsData(session.SessionId, result.Entries, result.NextCursor, result.Truncated, result.TotalAvailableAfterCursor, result.FilterSummary);
     }
 
     public async Task<AppWaitData> WaitForAppAsync(
@@ -404,12 +422,12 @@ public sealed class SessionCoordinator(
         return CreateOperationWaitResult(operation.ToStatusData(), completed: false, timedOut: true);
     }
 
-    public OperationLogsData GetOperationLogs(string operationId, long? cursor, int limit)
+    public OperationLogsData GetOperationLogs(string operationId, long? cursor, int limit, LogViewMode view)
     {
         var operation = operationRegistry.GetById(operationId)
             ?? throw new ToolInvocationException("OperationNotFound", "No managed operation was found.", new { operationId });
-        var result = operation.LogBuffer.ReadAfter(cursor, limit);
-        return new OperationLogsData(operation.OperationId, result.Entries, result.NextCursor, result.Truncated, result.TotalAvailableAfterCursor);
+        var result = logReducer.Reduce(operation.LogBuffer.GetAfter(cursor ?? 0), cursor ?? 0, limit, LogReductionScenario.Operation, view);
+        return new OperationLogsData(operation.OperationId, result.Entries, result.NextCursor, result.Truncated, result.TotalAvailableAfterCursor, result.FilterSummary);
     }
 
     public Task<CleanupStaleProcessesData> CleanupStaleProcessesAsync(bool dryRun, CancellationToken cancellationToken)
@@ -447,34 +465,41 @@ public sealed class SessionCoordinator(
         var logBuffer = new RingLogBuffer(configuration.LogBufferCapacity);
         var effectiveRunner = operationType == OperationType.Test ? ResolveTestRunner(targetPath, runnerPreference) : null;
 
-        AppStartTemplate? resumeTemplate = null;
-        string? stoppedSessionId = null;
-        var effectivePolicy = requestedPolicy;
+        List<AppStartTemplate> resumeTemplates = [];
+        List<string> stoppedSessionIds = [];
+        var effectivePolicy = WhenAppRunningPolicy.ContinueIfSafe;
 
-        var activeSession = appRuntimeManager.GetActiveSession();
-        if (activeSession is not null)
+        var activeSessions = appRuntimeManager.GetActiveSessions();
+        foreach (var activeSession in activeSessions)
         {
-            stoppedSessionId = activeSession.SessionId;
-            effectivePolicy = ResolveWhenAppRunningPolicy(requestedPolicy, operationType, targetPath, activeSession);
-            if (effectivePolicy == WhenAppRunningPolicy.Fail)
+            var sessionPolicy = ResolveWhenAppRunningPolicy(requestedPolicy, operationType, targetPath, activeSession);
+            effectivePolicy = PromotePreemptionPolicy(effectivePolicy, sessionPolicy);
+
+            if (sessionPolicy == WhenAppRunningPolicy.ContinueIfSafe)
+            {
+                continue;
+            }
+
+            if (sessionPolicy == WhenAppRunningPolicy.Fail)
             {
                 throw new ToolInvocationException(
                     "RunningSessionConflict",
-                    $"Cannot start {operationType} because a managed session is running.",
+                    $"Cannot start {operationType} because a conflicting managed session is running.",
                     new
                     {
                         sessionId = activeSession.SessionId,
                         currentHolder = executionLock.GetCurrentHolder(),
                         requestedPolicy,
-                        effectivePolicy,
+                        effectivePolicy = sessionPolicy,
                         activeProjectPath = activeSession.ProjectPath,
                         targetPath
                     });
             }
 
-            if (effectivePolicy == WhenAppRunningPolicy.StopAndResume)
+            stoppedSessionIds.Add(activeSession.SessionId);
+            if (sessionPolicy == WhenAppRunningPolicy.StopAndResume)
             {
-                resumeTemplate = activeSession.CreateTemplate();
+                resumeTemplates.Add(activeSession.CreateTemplate());
             }
         }
 
@@ -486,7 +511,7 @@ public sealed class SessionCoordinator(
             framework,
             configurationName,
             effectivePolicy,
-            stoppedSessionId,
+            stoppedSessionIds,
             effectiveRunner,
             logBuffer,
             timeout);
@@ -494,9 +519,12 @@ public sealed class SessionCoordinator(
 
         var lease = await executionLock.AcquireMutationAsync($"{operationType}:{operationId}", cancellationToken);
 
-        if (activeSession is not null && effectivePolicy is WhenAppRunningPolicy.StopAndResume or WhenAppRunningPolicy.StopOnly)
+        if (stoppedSessionIds.Count > 0)
         {
-            await appRuntimeManager.StopAsync(activeSession.SessionId, $"{operationType} preemption requested.", force: false, cancellationToken);
+            foreach (var sessionId in stoppedSessionIds)
+            {
+                await appRuntimeManager.StopAsync(sessionId, $"{operationType} preemption requested.", force: false, cancellationToken);
+            }
         }
 
         _ = Task.Run(async () =>
@@ -586,22 +614,28 @@ public sealed class SessionCoordinator(
             {
                 operation.SetArtifacts(CollectArtifacts(artifactsRoot));
 
-                if (resumeTemplate is not null)
+                if (resumeTemplates.Count > 0)
                 {
+                    List<string> resumedSessionIds = [];
                     try
                     {
-                        var (resumedSession, _) = await appRuntimeManager.StartAsync(resumeTemplate, reuseIfCompatible: false, AppStartConflictPolicy.Replace, CancellationToken.None);
-                        operation.SetResumeOutcome(true, true, resumedSession.SessionId);
+                        foreach (var resumeTemplate in resumeTemplates)
+                        {
+                            var (resumedSession, _) = await appRuntimeManager.StartAsync(resumeTemplate, reuseIfCompatible: false, AppStartConflictPolicy.Replace, CancellationToken.None);
+                            resumedSessionIds.Add(resumedSession.SessionId);
+                        }
+
+                        operation.SetResumeOutcome(true, resumedSessionIds.Count == resumeTemplates.Count, resumedSessionIds);
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to resume managed app session after operation {OperationId}", operationId);
-                        operation.SetResumeOutcome(true, false, null);
+                        operation.SetResumeOutcome(true, false, []);
                     }
                 }
                 else
                 {
-                    operation.SetResumeOutcome(false, false, null);
+                    operation.SetResumeOutcome(false, false, []);
                 }
             }
         }, CancellationToken.None);
@@ -619,7 +653,10 @@ public sealed class SessionCoordinator(
             status.State,
             targetPath,
             effectiveRunner,
-            new AppPreemptionData(effectivePolicy, stoppedSessionId, resumeTemplate is not null),
+            new AppPreemptionData(effectivePolicy, stoppedSessionIds.FirstOrDefault(), resumeTemplates.Count > 0)
+            {
+                StoppedSessionIds = stoppedSessionIds
+            },
             operation.LogBuffer.CurrentSequence);
     }
 
@@ -761,6 +798,26 @@ public sealed class SessionCoordinator(
         return operationType == OperationType.Build
             ? WhenAppRunningPolicy.StopAndResume
             : WhenAppRunningPolicy.ContinueIfSafe;
+    }
+
+    private static WhenAppRunningPolicy PromotePreemptionPolicy(WhenAppRunningPolicy current, WhenAppRunningPolicy candidate)
+    {
+        if (candidate == WhenAppRunningPolicy.Fail || current == WhenAppRunningPolicy.Fail)
+        {
+            return WhenAppRunningPolicy.Fail;
+        }
+
+        if (candidate == WhenAppRunningPolicy.StopAndResume || current == WhenAppRunningPolicy.StopAndResume)
+        {
+            return WhenAppRunningPolicy.StopAndResume;
+        }
+
+        if (candidate == WhenAppRunningPolicy.StopOnly || current == WhenAppRunningPolicy.StopOnly)
+        {
+            return WhenAppRunningPolicy.StopOnly;
+        }
+
+        return WhenAppRunningPolicy.ContinueIfSafe;
     }
 
     private static OperationWaitData CreateOperationWaitResult(OperationStatusData status, bool completed, bool timedOut)

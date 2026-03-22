@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "candoitall_dotnetwatch": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": [
+        "${workspaceFolder}\\.artifacts\\mcp-server-shadow\\bin\\CanDoItAll.Mcp.DotNetWatch\\debug\\CanDoItAll.Mcp.DotNetWatch.dll",
+        "--settings",
+        "${workspaceFolder}\\CanDoItAll.Mcp.DotNetWatch.settings.json"
+      ],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}

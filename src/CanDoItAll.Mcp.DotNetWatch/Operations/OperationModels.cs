@@ -6,6 +6,7 @@ public sealed partial class OperationRecord
 {
     private readonly object _gate = new();
     private readonly List<OperationArtifactData> _artifacts = [];
+    private readonly List<string> _resumedSessionIds = [];
 
     public OperationRecord(
         string operationId,
@@ -15,7 +16,7 @@ public sealed partial class OperationRecord
         string? framework,
         string configuration,
         WhenAppRunningPolicy whenAppRunningPolicy,
-        string? affectedSessionId,
+        IReadOnlyList<string> affectedSessionIds,
         string? runner,
         RingLogBuffer logBuffer,
         TimeSpan timeout)
@@ -27,7 +28,7 @@ public sealed partial class OperationRecord
         Framework = framework;
         Configuration = configuration;
         WhenAppRunningPolicy = whenAppRunningPolicy;
-        AffectedSessionId = affectedSessionId;
+        AffectedSessionIds = affectedSessionIds.ToArray();
         Runner = runner;
         LogBuffer = logBuffer;
         Timeout = timeout;
@@ -49,7 +50,9 @@ public sealed partial class OperationRecord
 
     public WhenAppRunningPolicy WhenAppRunningPolicy { get; }
 
-    public string? AffectedSessionId { get; }
+    public IReadOnlyList<string> AffectedSessionIds { get; }
+
+    public string? AffectedSessionId => AffectedSessionIds.FirstOrDefault();
 
     public string? Runner { get; }
 
@@ -73,7 +76,7 @@ public sealed partial class OperationRecord
 
     public bool ResumeSucceeded { get; private set; }
 
-    public string? ResumedSessionId { get; private set; }
+    public string? ResumedSessionId => _resumedSessionIds.FirstOrDefault();
 
     public int? TotalTests { get; private set; }
 
@@ -151,13 +154,14 @@ public sealed partial class OperationRecord
         }
     }
 
-    public void SetResumeOutcome(bool attempted, bool success, string? sessionId)
+    public void SetResumeOutcome(bool attempted, bool success, IReadOnlyList<string> sessionIds)
     {
         lock (_gate)
         {
             ResumeAttempted = attempted;
             ResumeSucceeded = success;
-            ResumedSessionId = sessionId;
+            _resumedSessionIds.Clear();
+            _resumedSessionIds.AddRange(sessionIds.Where(static sessionId => !string.IsNullOrWhiteSpace(sessionId)));
         }
     }
 
@@ -179,7 +183,10 @@ public sealed partial class OperationRecord
                 ExitCode,
                 Summary,
                 Runner,
-                new ResumeOutcomeData(ResumeAttempted, ResumeSucceeded, ResumedSessionId),
+                new ResumeOutcomeData(ResumeAttempted, ResumeSucceeded, ResumedSessionId)
+                {
+                    SessionIds = _resumedSessionIds.ToArray()
+                },
                 LogBuffer.CurrentSequence,
                 OperationType == OperationType.Test
                     ? new TestSummaryData(TotalTests, PassedTests, FailedTests, SkippedTests)

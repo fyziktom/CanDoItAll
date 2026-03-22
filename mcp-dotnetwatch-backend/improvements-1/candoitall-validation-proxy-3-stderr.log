@@ -1,0 +1,18 @@
+info: CanDoItAll.Mcp.DotNetWatch.Backend.BackendProcessLauncher[0]
+      Started detached backend launcher PID 15956
+info: ModelContextProtocol.Server.StdioServerTransport[857250842]
+      Server (stream) (CanDoItAll.Mcp.DotNetWatch) transport reading messages.
+info: ModelContextProtocol.Server.StdioServerTransport[1221292038]
+      Server (stream) (CanDoItAll.Mcp.DotNetWatch) transport completed reading messages.
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.DotNetWatch\bin\Debug\net10.0\
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+info: ModelContextProtocol.Server.StdioServerTransport[1375634372]
+      Server (stream) (CanDoItAll.Mcp.DotNetWatch) shutting down.
+info: ModelContextProtocol.Server.StdioServerTransport[1256455528]
+      Server (stream) (CanDoItAll.Mcp.DotNetWatch) shut down.

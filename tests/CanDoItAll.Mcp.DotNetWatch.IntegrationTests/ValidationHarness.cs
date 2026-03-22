@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CanDoItAll.Mcp.DotNetWatch.Backend;
 using ModelContextProtocol.Client;
 
 namespace CanDoItAll.Mcp.DotNetWatch.IntegrationTests;
@@ -30,6 +32,8 @@ internal sealed class ValidationHarness : IAsyncDisposable
         "CanDoItAll.Mcp.DotNetWatch.dll");
 
     public static string SettingsPath { get; } = Path.Combine(RepoRoot, "CanDoItAll.Mcp.DotNetWatch.settings.json");
+
+    public static string BackendRegistrationPath { get; } = Path.Combine(RepoRoot, ".mcp-state", "backend", "registration.json");
 
     public static async Task<ValidationHarness> CreateAsync()
     {
@@ -95,6 +99,50 @@ internal sealed class ValidationHarness : IAsyncDisposable
         if (_client is IAsyncDisposable asyncClient)
         {
             await asyncClient.DisposeAsync();
+        }
+    }
+
+    public static async Task StopBackendIfPresentAsync()
+    {
+        BackendRegistrationRecord? registration = null;
+        if (File.Exists(BackendRegistrationPath))
+        {
+            try
+            {
+                await using var stream = File.Open(BackendRegistrationPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                registration = await JsonSerializer.DeserializeAsync<BackendRegistrationRecord>(stream, JsonOptions);
+            }
+            catch
+            {
+                registration = null;
+            }
+        }
+
+        if (registration is not null)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(registration.ProcessId);
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(10000);
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        try
+        {
+            if (File.Exists(BackendRegistrationPath))
+            {
+                File.Delete(BackendRegistrationPath);
+            }
+        }
+        catch
+        {
         }
     }
 

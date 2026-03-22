@@ -48,37 +48,22 @@
           CloseBackgroundTabs="HandleCloseBackgroundAsync"
           ReopenRecentTab="HandleReopenRecentAsync">
     <TopBar>
-        <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div class="min-w-0 space-y-3">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-600">@ActiveWorkspaceTitle</span>
-                    <h2 class="text-lg font-semibold tracking-tight text-slate-950">@ActiveNavigation.Title</h2>
-                    @if (ShellMode == AppShellMode.FocusWorkbench && !string.IsNullOrWhiteSpace(ActiveProjectTitle))
-                    {
-                        <span class="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">@ActiveProjectTitle</span>
-                    }
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
-                    <span>@CurrentRouteDisplay</span>
-                    @if (!string.IsNullOrWhiteSpace(ActiveTabTitle) && !string.Equals(ActiveTabTitle, ActiveNavigation.Title, StringComparison.OrdinalIgnoreCase))
-                    {
-                        <span>/ @ActiveTabTitle</span>
-                    }
-
-                    @if (!string.IsNullOrWhiteSpace(ActiveProjectTitle) && ShellMode == AppShellMode.StandardPage)
-                    {
-                        <span>/ project: @ActiveProjectTitle</span>
-                    }
-
-                    @if (!string.IsNullOrWhiteSpace(ActivePhaseTitle))
-                    {
-                        <span>/ phase: @ActivePhaseTitle</span>
-                    }
-                </div>
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex min-w-0 items-center gap-2">
+                <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-500">@ActiveWorkspaceTitle</span>
+                <h2 class="text-sm font-semibold tracking-tight text-slate-950">@ActiveNavigation.Title</h2>
+                @if (ShellMode == AppShellMode.FocusWorkbench && !string.IsNullOrWhiteSpace(ActiveProjectTitle))
+                {
+                    <span class="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-sky-700">@ActiveProjectTitle</span>
+                }
+                <span class="hidden truncate text-xs text-slate-400 lg:inline">@CurrentRouteDisplay</span>
+                @if (!string.IsNullOrWhiteSpace(ActivePhaseTitle))
+                {
+                    <span class="hidden text-xs text-slate-400 lg:inline">/ phase: @ActivePhaseTitle</span>
+                }
             </div>
 
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-shrink-0 items-center gap-1.5">
                 <StatusBadge Tone="info" Text="Interactive Server" />
                 <StatusBadge Tone="success" Text="@($"Live items {OpenedProjectTabs.Count + OpenedPromptSessionTabs.Count}")" />
                 <StatusBadge Tone="neutral" Text="@($"Tabs {Workbench.Tabs.Count}")" />

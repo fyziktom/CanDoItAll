@@ -8,13 +8,17 @@ using ModelContextProtocol.Client;
 
 namespace CanDoItAll.Mcp.DotNetWatch.IntegrationTests;
 
-public sealed class McpServerIntegrationTests
+public sealed class McpServerIntegrationTests : IAsyncLifetime
 {
     private static string SharedKernelProjectPath => Path.Combine(McpServerHarness.RepoRoot, "src", "CanDoItAll.SharedKernel", "CanDoItAll.SharedKernel.csproj");
 
     private static string McpUnitTestProjectPath => Path.Combine(McpServerHarness.RepoRoot, "tests", "CanDoItAll.Mcp.DotNetWatch.Tests", "CanDoItAll.Mcp.DotNetWatch.Tests.csproj");
 
     private static string RegistryPath => Path.Combine(McpServerHarness.RepoRoot, ".mcp-state", "process-registry.json");
+
+    public Task InitializeAsync() => ValidationHarness.StopBackendIfPresentAsync();
+
+    public Task DisposeAsync() => ValidationHarness.StopBackendIfPresentAsync();
 
     [Fact]
     public async Task WorkspaceInfo_UsesCurrentRepositoryConfiguration()

@@ -1,0 +1,98 @@
+{
+  "Server": {
+    "Name": "CanDoItAll.Mcp.DotNetWatch",
+    "WorkspaceRoot": "C:\\repositories\\pveinvoicing\\PVEInvoicing",
+    "SolutionPath": "PVEInvoicing.sln"
+  },
+  "DefaultApp": {
+    "ProjectPath": "PVEInvoicing/PVEInvoicing.csproj",
+    "WorkingDirectory": "PVEInvoicing",
+    "Mode": "WatchRun",
+    "Configuration": "Debug",
+    "Framework": null,
+    "LaunchProfile": "https",
+    "Arguments": [],
+    "Urls": [
+      "https://localhost:7367",
+      "http://localhost:5239"
+    ],
+    "EnvironmentOverlay": {
+      "ASPNETCORE_ENVIRONMENT": "Development",
+      "DOTNET_ENVIRONMENT": "Development",
+      "DOTNET_CLI_UI_LANGUAGE": "en"
+    }
+  },
+  "Health": {
+    "Enabled": false,
+    "Urls": [],
+    "TimeoutMs": 5000,
+    "PollIntervalMs": 500,
+    "StableSuccessCount": 1,
+    "AcceptInsecureLocalhostHttps": true,
+    "AllowedHosts": [
+      "localhost",
+      "127.0.0.1",
+      "::1"
+    ]
+  },
+  "Build": {
+    "DefaultTargetPath": "PVEInvoicing.sln",
+    "DefaultWhenAppRunning": "StopAndResume",
+    "DefaultTimeoutMs": 1800000,
+    "ExtraArguments": []
+  },
+  "Tests": {
+    "DefaultTargetPath": "PVEInvoicing.Tests/PVEInvoicing.Tests.csproj",
+    "DefaultWhenAppRunning": "StopAndResume",
+    "DefaultTimeoutMs": 1800000,
+    "RunnerPreference": "Auto",
+    "DefaultFilter": null,
+    "Projects": [
+      "PVEInvoicing.Tests/PVEInvoicing.Tests.csproj"
+    ]
+  },
+  "Logs": {
+    "BufferCapacity": 5000,
+    "PersistToFile": true,
+    "Folder": ".mcp-state/validation-2/logs",
+    "MaxFileSizeMb": 50,
+    "RedactionEnabled": true,
+    "IncludeSystemEvents": true
+  },
+  "Process": {
+    "GracefulStopTimeoutMs": 1000,
+    "ForceKillAfterMs": 5000,
+    "CleanupStaleManagedProcessesOnStartup": true,
+    "RegistryPath": ".mcp-state/validation-2/process-registry.json",
+    "UsePollingFileWatcher": false
+  },
+  "Backend": {
+    "Enabled": true,
+    "BindHost": "127.0.0.1",
+    "RegistrationPath": ".mcp-state/validation-2/backend/registration.json",
+    "LaunchLockPath": ".mcp-state/validation-2/backend/launch.lock",
+    "StartupTimeoutMs": 30000,
+    "StartupPollIntervalMs": 250
+  },
+  "Waits": {
+    "DefaultAppWaitTimeoutMs": 180000,
+    "DefaultOperationWaitTimeoutMs": 1800000,
+    "DefaultPollIntervalMs": 500,
+    "DefaultQuietPeriodMs": 2000
+  },
+  "Security": {
+    "AllowedProjectRoots": [
+      "PVEInvoicing",
+      "PVEInvoicing.Tests"
+    ],
+    "AllowExternalHealthHosts": false,
+    "AllowedEnvironmentKeys": [
+      "ASPNETCORE_ENVIRONMENT",
+      "ASPNETCORE_URLS",
+      "DOTNET_ENVIRONMENT",
+      "DOTNET_USE_POLLING_FILE_WATCHER",
+      "DetailedErrors",
+      "DOTNET_CLI_UI_LANGUAGE"
+    ]
+  }
+}

@@ -2,10 +2,10 @@
 @* codex-capsule
 kind: page
 name: ProjectsPage
-summary: Guides project creation and editing through a staged wizard-first flow that feeds the rest of the workspace.
-owns: project-list, project-wizard, phase-planning
+summary: Surfaces projects as a card-first workspace with modal overview and editing flows instead of a permanent inline detail pane.
+owns: project-cards, project-modal, phase-planning
 deps: ProjectsService, IProjectWorkbenchSeedService, NavigationManager
-risks: stale-project-selection, weak-linked-object-handoff
+risks: route-driven-modal-state, modal-save-regressions
 tests: component:ProjectsPageTests, e2e:projects-smoke
 *@
 @using CanDoItAll.ComponentKit.Components
@@ -20,12 +20,12 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 <Header>
 <PageHeader Eyebrow="Projects"
 Title="Project workspace"
-Description="Create, refine, and reopen projects through a staged authoring flow with predictable list selection, sections, and save actions.">
+Description="Browse delivery work through compact cards, open a project overview in a modal, and only jump into focused tabs when the work needs more space.">
 <Actions>
 <button type="button"
 class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
 data-testid="projects-new-button"
-@onclick="OpenNewWizardAsync">
+@onclick="OpenNewProjectAsync">
 New project
 </button>
 <button type="button"
@@ -38,17 +38,41 @@ Back to dashboard
 </Header>
 
 <ChildContent>
-<ListDetailShell>
-<ListHeader>
-<ListPanelHeader Title="Projects"
-Description="Select a project to continue editing it, or start a new guided workspace."
-Count="@($"{FilteredProjectSummaries.Count} item(s)")">
-<Filters>
-<FilterBar ResultText="@($"{FilteredProjectSummaries.Count} matching project(s)")">
+<div class="space-y-6">
+<SummaryTiles>
+<SummaryTile Label="Visible projects"
+Value="@FilteredProjectSummaries.Count.ToString()"
+HelperText="Cards that match the current search and status filters."
+Tone="info" />
+<SummaryTile Label="Active delivery"
+Value="@projectSummaries.Count(project => project.Status == ProjectStatus.Active).ToString()"
+HelperText="Projects that are currently in motion."
+Tone="success" />
+<SummaryTile Label="Draft backlog"
+Value="@projectSummaries.Count(project => project.Status == ProjectStatus.Draft).ToString()"
+HelperText="Projects still shaping scope or setup."
+Tone="neutral" />
+<SummaryTile Label="Latest change"
+Value="@LatestUpdatedProjectLabel"
+HelperText="@LatestUpdatedProjectHelper"
+Tone="warning" />
+</SummaryTiles>
+
+<section class="overflow-hidden rounded-[1.85rem] border border-slate-200 bg-white/92 shadow-sm shadow-slate-200/60">
+<div class="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 xl:flex-row xl:items-end xl:justify-between">
+<div class="space-y-2">
+<div class="flex flex-wrap items-center gap-2">
+<h2 class="text-xl font-semibold tracking-tight text-slate-950">Project cards</h2>
+<StatusBadge Tone="info" Text="@($"{FilteredProjectSummaries.Count} visible")" />
+</div>
+<p class="max-w-3xl text-sm leading-6 text-slate-600">Keep the main surface focused on scanning and selecting. Details, editing, and dashboard actions move into the modal so the page can stay compact even with a large project set.</p>
+</div>
+
+<div class="flex flex-col gap-3 md:flex-row md:flex-wrap">
 <input @bind="projectSearch"
 @bind:event="oninput"
-class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-placeholder="Search projects" />
+class="min-w-[15rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+placeholder="Search by name or current phase" />
 <InputSelect @bind-Value="statusFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
 <option value="">All statuses</option>
 @foreach (var status in Enum.GetValues<ProjectStatus>())
@@ -57,24 +81,23 @@ placeholder="Search projects" />
 }
 </InputSelect>
 <button type="button"
-class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
 @onclick="ResetFilters">
 Reset
 </button>
-</FilterBar>
-</Filters>
-</ListPanelHeader>
-</ListHeader>
-<ListContent>
+</div>
+</div>
+
+<div class="p-5">
 @if (FilteredProjectSummaries.Count == 0)
 {
-<EmptyState Eyebrow="No projects"
-Title="Start the first project workspace"
-Description="Projects appear here once they have been saved through the staged authoring flow.">
+<EmptyState Eyebrow="No matching projects"
+Title="Adjust the filters or start a new project"
+Description="When projects match the current filters, they appear here as compact cards with overview and dashboard actions.">
 <Actions>
 <button type="button"
 class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-@onclick="OpenNewWizardAsync">
+@onclick="OpenNewProjectAsync">
 New project
 </button>
 </Actions>
@@ -82,90 +105,120 @@ New project
 }
 else
 {
-<div class="space-y-3">
+<div class="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
 @foreach (var project in FilteredProjectSummaries)
 {
-<SelectionListItem Title="@project.Name"
-Meta="@($"{project.Status} / {project.CurrentPhase} / {project.PhaseCount} phase(s)")"
-Summary="@($"Updated {project.UpdatedAtUtc.LocalDateTime:g}")"
-IsSelected="@(editor.Id == project.Id && showWizard)"
-OnSelect="@(() => SelectProject(project.Id))">
-<Status>
-<StatusBadge Tone="info" Text="@project.Status.ToString()" />
-</Status>
-<Actions>
-<div class="flex flex-wrap gap-2">
+<article class="@GetProjectCardCss(project.Status)" data-testid="project-card">
+<div class="flex items-start justify-between gap-4">
+<div class="min-w-0">
+<p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Project</p>
+<h3 class="mt-1.5 text-lg font-bold tracking-tight text-slate-950">@project.Name</h3>
+<p class="mt-1.5 text-sm leading-6 text-slate-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : $"Current phase: {project.CurrentPhase}")</p>
+</div>
+<StatusBadge Tone="@GetStatusTone(project.Status)" Text="@project.Status.ToString()" />
+</div>
+
+<div class="mt-4 grid gap-2.5 sm:grid-cols-3">
+<div class="rounded-xl border border-slate-100 bg-white/90 px-3.5 py-3">
+<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Phase count</p>
+<p class="mt-1.5 text-sm font-semibold text-slate-950">@project.PhaseCount</p>
+</div>
+<div class="rounded-xl border border-slate-100 bg-white/90 px-3.5 py-3">
+<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Last update</p>
+<p class="mt-1.5 text-sm font-semibold text-slate-950">@project.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
+</div>
+<div class="rounded-xl border border-slate-100 bg-white/90 px-3.5 py-3">
+<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Dashboard</p>
+<p class="mt-1.5 text-sm font-semibold text-slate-950">Overview tab ready</p>
+</div>
+</div>
+
+<div class="mt-4 flex flex-wrap items-center gap-2">
 <button type="button"
-class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+class="inline-flex items-center rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+data-testid="project-card-details-button"
+@onclick="@(() => OpenProjectPreviewAsync(project.Id))">
+Details
+</button>
+<button type="button"
+class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+@onclick="@(() => OpenProjectDashboard(project.Id))">
+Dashboard
+</button>
+<button type="button"
+class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
 @onclick="@(() => OpenStructure(project.Id))">
 Structure
 </button>
 <button type="button"
-class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
 @onclick="@(() => OpenCalendar(project.Id))">
 Calendar
 </button>
 </div>
-</Actions>
-</SelectionListItem>
+</article>
 }
 </div>
 }
-</ListContent>
-<DetailHeader>
-@if (showWizard)
+</div>
+</section>
+</div>
+</ChildContent>
+</PageScaffold>
+
+@if (showProjectModal)
 {
-<div class="space-y-3">
-<div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-<div class="space-y-1">
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Project editor</p>
-<h2 class="text-xl font-semibold text-slate-950">@(editor.Id.HasValue ? editor.Name : "New project")</h2>
-<p class="text-sm leading-6 text-slate-600">Identity, phase planning, stack profile, linked objects, and review now follow one shared detail-pane structure.</p>
+<div class="fixed inset-0 z-[80] flex items-center justify-center p-4 sm:p-6">
+<div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" @onclick="CloseProjectModalAsync"></div>
+
+@if (modalMode == ProjectModalMode.Editor)
+{
+<EditForm Model="editor" OnValidSubmit="SaveAsync" class="relative z-[81] flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/25" data-testid="projects-editor-modal" @onclick:stopPropagation="true">
+<div class="border-b border-slate-200 px-6 py-5">
+<div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+<div class="space-y-2">
+<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Project editor</p>
+<h2 class="text-2xl font-semibold tracking-tight text-slate-950">@(editor.Id.HasValue ? editor.Name : "New project")</h2>
+<p class="max-w-3xl text-sm leading-6 text-slate-600">Use the editor only when you need to shape the project deeply. The main page stays dedicated to scanning cards and opening focused tabs.</p>
 </div>
+
 <div class="flex flex-wrap items-center gap-2">
-<StatusBadge Tone="info" Text="@editor.Status.ToString()" />
-<StatusBadge Tone="neutral" Text="@($"{editor.Phases.Count} phase(s)")" />
+@if (editor.Id.HasValue)
+{
+<button type="button"
+class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+@onclick="SwitchToOverview">
+Back to details
+</button>
+}
+<button type="button"
+class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+@onclick="CloseProjectModalAsync">
+Close
+</button>
 </div>
 </div>
 
+<div class="mt-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
 <SecondaryTabs Items="WizardTabs"
 SelectedKey="@wizardStep.ToString()"
 SelectedKeyChanged="HandleWizardTabChanged" />
+
+<div class="flex flex-wrap items-center gap-2">
+<StatusBadge Tone="@GetStatusTone(editor.Status)" Text="@editor.Status.ToString()" />
+<StatusBadge Tone="neutral" Text="@($"{editor.Phases.Count} phase(s)")" />
+<StatusBadge Tone="info" Text="@($"{starterObjects.Count} starter object(s)")" />
 </div>
-}
-else
-{
-<div class="space-y-1">
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Project editor</p>
-<h2 class="text-xl font-semibold text-slate-950">No project selected</h2>
-<p class="text-sm leading-6 text-slate-600">Choose a project from the list or start a new one to open the guided authoring flow.</p>
 </div>
-}
-</DetailHeader>
-<DetailContent>
-@if (!showWizard)
-{
-<EmptyState Eyebrow="Ready to start"
-Title="Open a project or create one"
-Description="The detail pane stays focused on the active project so the next step is always obvious.">
-<Actions>
-<button type="button"
-class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-@onclick="OpenNewWizardAsync">
-New project
-</button>
-</Actions>
-</EmptyState>
-}
-else
-{
-<EditForm Model="editor" OnValidSubmit="SaveAsync">
-<div class="flex min-h-full flex-col gap-6">
+</div>
+
+<div class="flex-1 overflow-y-auto px-6 py-6">
+<div class="space-y-6">
 <SummaryTiles>
 <SummaryTile Label="Step" Value="@($"{wizardStep + 1} / {wizardSteps.Length}")" HelperText="@wizardSteps[wizardStep]" Tone="info" />
-<SummaryTile Label="Phases" Value="@editor.Phases.Count.ToString()" HelperText="Current planned delivery stages." />
-<SummaryTile Label="Starter objects" Value="@starterObjects.Count.ToString()" HelperText="Seed items for the structure workbench." />
-<SummaryTile Label="Current phase" Value="@(string.IsNullOrWhiteSpace(editor.CurrentPhase) ? "Unset" : editor.CurrentPhase)" HelperText="What the project is actively working on." />
+<SummaryTile Label="Current phase" Value="@(string.IsNullOrWhiteSpace(editor.CurrentPhase) ? "Unset" : editor.CurrentPhase)" HelperText="The phase the workspace should foreground." />
+<SummaryTile Label="Target date" Value="@FormatDate(editor.TargetDateUtc)" HelperText="Leave empty when timing is still fluid." />
+<SummaryTile Label="Stack decisions" Value="@MeaningfulOptions.Count().ToString()" HelperText="Profile choices already captured for prompts and validation." />
 </SummaryTiles>
 
 @switch (wizardStep)
@@ -173,7 +226,7 @@ else
 case 0:
 <FormSection Title="Identity"
 Description="Frame the project clearly before moving into phases and downstream workbench actions.">
-<div class="grid gap-4 md:grid-cols-2">
+<div class="grid gap-4 lg:grid-cols-2">
 <div>
 <label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
 <InputText @bind-Value="editor.Name" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="project-name-input" />
@@ -184,7 +237,7 @@ Description="Frame the project clearly before moving into phases and downstream 
 </div>
 </div>
 
-<div class="grid gap-4 md:grid-cols-2">
+<div class="grid gap-4 lg:grid-cols-2">
 <div>
 <label class="mb-1 block text-sm font-medium text-slate-700">Status</label>
 <InputSelect @bind-Value="editor.Status" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
@@ -202,12 +255,12 @@ Description="Frame the project clearly before moving into phases and downstream 
 
 <div>
 <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-<InputTextArea @bind-Value="editor.Description" class="min-h-24 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+<InputTextArea @bind-Value="editor.Description" class="min-h-28 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
 </div>
 
 <div>
 <label class="mb-1 block text-sm font-medium text-slate-700">Objective</label>
-<InputTextArea @bind-Value="editor.Objective" class="min-h-24 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+<InputTextArea @bind-Value="editor.Objective" class="min-h-28 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
 </div>
 </FormSection>
 break;
@@ -215,6 +268,7 @@ case 1:
 <FormSection Title="Dates and phases"
 Description="Keep phase planning explicit so the project calendar and workbench stay aligned."
 Actions="PhaseActions">
+
 @if (editor.Phases.Count == 0)
 {
 <EmptyState Eyebrow="No phases"
@@ -235,8 +289,8 @@ else
 @foreach (var phase in editor.Phases)
 {
 <div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
-<div class="grid gap-3 md:grid-cols-5">
-<InputText @bind-Value="phase.Name" class="rounded-xl border border-slate-300 px-3 py-2 text-sm md:col-span-2" />
+<div class="grid gap-3 xl:grid-cols-5">
+<InputText @bind-Value="phase.Name" class="rounded-xl border border-slate-300 px-3 py-2 text-sm xl:col-span-2" />
 <InputSelect @bind-Value="phase.Status" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
 @foreach (var status in Enum.GetValues<ProjectPhaseStatus>())
 {
@@ -245,7 +299,7 @@ else
 </InputSelect>
 <InputDate @bind-Value="phase.StartDateUtc" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
 <InputDate @bind-Value="phase.EndDateUtc" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-<InputTextArea @bind-Value="phase.Goal" class="min-h-16 rounded-xl border border-slate-300 px-3 py-2 text-sm md:col-span-4" />
+<InputTextArea @bind-Value="phase.Goal" class="min-h-20 rounded-xl border border-slate-300 px-3 py-2 text-sm xl:col-span-4" />
 <button type="button"
 class="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700"
 @onclick="@(() => RemovePhaseAsync(phase))">
@@ -261,13 +315,15 @@ break;
 case 2:
 <FormSection Title="Stack profile"
 Description="Capture the main platform decisions once so downstream prompts and validations inherit the same context.">
-<div class="space-y-4">
+<div class="grid gap-4 lg:grid-cols-2">
 @foreach (var option in editor.Options.OrderBy(item => item.Category))
 {
-<div class="grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-4 md:grid-cols-3">
-<div class="rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">@option.Category</div>
+<div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+<div class="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">@option.Category</div>
+<div class="grid gap-3">
 <InputText @bind-Value="option.OptionName" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
 <InputText @bind-Value="option.Notes" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+</div>
 </div>
 }
 </div>
@@ -277,6 +333,7 @@ case 3:
 <FormSection Title="Linked object planning"
 Description="Capture the first notes, milestones, repositories, or links that should appear when the structure workbench opens."
 Actions="StarterActions">
+
 @if (starterObjects.Count == 0)
 {
 <EmptyState Eyebrow="No starter objects"
@@ -296,7 +353,7 @@ else
 <div class="space-y-4">
 @foreach (var starter in starterObjects)
 {
-<div class="grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-4 md:grid-cols-4">
+<div class="grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-4 xl:grid-cols-4">
 <InputSelect @bind-Value="starter.ObjectType" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
 @foreach (var kind in starterObjectKinds)
 {
@@ -319,30 +376,26 @@ break;
 default:
 <FormSection Title="Review"
 Description="Confirm the project shape before opening the next workbench surface.">
-<div class="grid gap-4 lg:grid-cols-2">
+<div class="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
 <div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Project</p>
-<p class="mt-2 text-lg font-semibold text-slate-950">@editor.Name</p>
-<p class="mt-2 text-sm leading-6 text-slate-600">@editor.Description</p>
+<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Project summary</p>
+<p class="mt-2 text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(editor.Name) ? "Unnamed project" : editor.Name)</p>
+<p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(editor.Description) ? "No description captured yet." : editor.Description)</p>
 </div>
-<div class="rounded-[1.35rem] border border-sky-200 bg-sky-50/70 p-4 text-sm leading-6 text-sky-900">
-Finishing the wizard keeps the project editor intact, refreshes the list selection, and can open the protected structure workbench immediately when needed.
-</div>
-</div>
-</FormSection>
-break;
-}
 
-<FormSection Title="Readiness snapshot"
-Description="Keep the summary near the save actions so the user does not have to scroll back to understand what is about to be saved.">
+<div class="rounded-[1.35rem] border border-sky-200 bg-sky-50/80 p-4 text-sm leading-6 text-sky-900">
+Saving keeps the card list current, preserves the modal context, and lets the user open structure or calendar tabs only when they actually need a larger work surface.
+</div>
+</div>
+
 <div class="grid gap-4 md:grid-cols-3">
 <div class="rounded-[1.2rem] bg-white px-4 py-3">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Name</p>
-<p class="mt-2 text-sm font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(editor.Name) ? "Unnamed project" : editor.Name)</p>
+<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Status</p>
+<p class="mt-2 text-sm font-semibold text-slate-950">@editor.Status</p>
 </div>
 <div class="rounded-[1.2rem] bg-white px-4 py-3">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Current phase</p>
-<p class="mt-2 text-sm font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(editor.CurrentPhase) ? "Unset" : editor.CurrentPhase)</p>
+<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Phases</p>
+<p class="mt-2 text-sm font-semibold text-slate-950">@editor.Phases.Count</p>
 </div>
 <div class="rounded-[1.2rem] bg-white px-4 py-3">
 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Starter objects</p>
@@ -350,11 +403,19 @@ Description="Keep the summary near the save actions so the user does not have to
 </div>
 </div>
 </FormSection>
+break;
+}
+</div>
+</div>
 
-<StickyActionFooter StatusLabel="Project save state"
-StatusMessage="@message"
-StatusTone="success">
-<SecondaryActions>
+<div class="border-t border-slate-200 bg-slate-50/90 px-6 py-4">
+<div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+<div class="space-y-1">
+<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Project save state</p>
+<p class="text-sm @(IsErrorMessage ? "text-rose-700" : "text-slate-600")">@(string.IsNullOrWhiteSpace(message) ? "Save keeps the grid in sync without leaving the page." : message)</p>
+</div>
+
+<div class="flex flex-wrap items-center gap-2">
 <button type="button"
 class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
 disabled="@(wizardStep == 0)"
@@ -367,8 +428,6 @@ disabled="@(wizardStep == wizardSteps.Length - 1)"
 @onclick="NextStep">
 Next
 </button>
-</SecondaryActions>
-<PrimaryActions>
 <button type="submit"
 class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
 data-testid="project-save-button">
@@ -379,25 +438,183 @@ class="inline-flex items-center rounded-xl border border-sky-300 bg-sky-50 px-4 
 @onclick="SaveAndOpenStructureAsync">
 Save and open structure
 </button>
-</PrimaryActions>
-<DangerActions>
 @if (editor.Id.HasValue)
 {
+<button type="button"
+class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+@onclick="OpenProjectDashboardAsync">
+Open dashboard tab
+</button>
 <button type="button"
 class="inline-flex items-center rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700"
 @onclick="DeleteAsync">
 Delete
 </button>
 }
-</DangerActions>
-</StickyActionFooter>
+</div>
+</div>
 </div>
 </EditForm>
 }
-</DetailContent>
-</ListDetailShell>
-</ChildContent>
-</PageScaffold>
+else
+{
+<div class="relative z-[81] flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/25" data-testid="projects-detail-modal" @onclick:stopPropagation="true">
+<div class="border-b border-slate-200 px-6 py-5">
+<div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+<div class="space-y-2">
+<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Project details</p>
+<h2 class="text-2xl font-semibold tracking-tight text-slate-950">@(string.IsNullOrWhiteSpace(editor.Name) ? "Project overview" : editor.Name)</h2>
+<p class="max-w-3xl text-sm leading-6 text-slate-600">This modal keeps the overview compact. Use the focused tabs only when the work really needs structure, calendar, or a dedicated dashboard route.</p>
+</div>
+
+<div class="flex flex-wrap items-center gap-2">
+<StatusBadge Tone="@GetStatusTone(editor.Status)" Text="@editor.Status.ToString()" />
+<StatusBadge Tone="neutral" Text="@($"{editor.Phases.Count} phase(s)")" />
+<button type="button"
+class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+@onclick="CloseProjectModalAsync">
+Close
+</button>
+</div>
+</div>
+</div>
+
+<div class="flex-1 overflow-y-auto px-6 py-6">
+<div class="space-y-6">
+<SummaryTiles>
+<SummaryTile Label="Current phase" Value="@(string.IsNullOrWhiteSpace(editor.CurrentPhase) ? "Unset" : editor.CurrentPhase)" HelperText="The phase currently highlighted for delivery." Tone="info" />
+<SummaryTile Label="Target date" Value="@FormatDate(editor.TargetDateUtc)" HelperText="Leave flexible when the delivery window is still moving." />
+<SummaryTile Label="Last updated" Value="@FormatTimestamp(editor.Id.HasValue ? projectSummaries.FirstOrDefault(project => project.Id == editor.Id.Value)?.UpdatedAtUtc : null)" HelperText="Pulled from the live project list." />
+<SummaryTile Label="Stack decisions" Value="@MeaningfulOptions.Count().ToString()" HelperText="Filled stack-profile entries captured for this project." Tone="warning" />
+</SummaryTiles>
+
+<div class="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
+<section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Description</p>
+<p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(editor.Description) ? "No description has been captured for this project yet." : editor.Description)</p>
+
+<p class="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Objective</p>
+<p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(editor.Objective) ? "No explicit objective has been recorded yet." : editor.Objective)</p>
+</section>
+
+<section class="rounded-[1.5rem] border border-slate-200 bg-slate-50/85 p-5 shadow-sm shadow-slate-200/40">
+<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Next actions</p>
+<div class="mt-4 grid gap-3">
+<button type="button"
+class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
+@onclick="SwitchToEditor">
+Edit project
+</button>
+<button type="button"
+class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
+@onclick="OpenProjectDashboardAsync">
+Open dashboard tab
+</button>
+<button type="button"
+class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
+@onclick="@(() => OpenStructure(editor.Id ?? Guid.Empty))"
+disabled="@(!editor.Id.HasValue)">
+Open structure
+</button>
+<button type="button"
+class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
+@onclick="@(() => OpenCalendar(editor.Id ?? Guid.Empty))"
+disabled="@(!editor.Id.HasValue)">
+Open calendar
+</button>
+</div>
+</section>
+</div>
+
+<section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+<div>
+<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Phase plan</p>
+<h3 class="mt-1 text-lg font-semibold text-slate-950">Delivery sequence</h3>
+</div>
+<StatusBadge Tone="neutral" Text="@($"{editor.Phases.Count} phase(s)")" />
+</div>
+
+@if (editor.Phases.Count == 0)
+{
+<p class="mt-4 text-sm leading-6 text-slate-600">No phase plan exists yet. Use the editor to map the first delivery stages before opening structure or calendar tabs.</p>
+}
+else
+{
+<div class="mt-4 grid gap-3 lg:grid-cols-2">
+@foreach (var phase in editor.Phases.OrderBy(GetPhaseOrderKey).ThenBy(item => item.Name))
+{
+<div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4">
+<div class="flex items-start justify-between gap-3">
+<div class="min-w-0">
+<p class="text-sm font-semibold text-slate-950">@phase.Name</p>
+<p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@phase.Status</p>
+</div>
+<StatusBadge Tone="@GetPhaseStatusTone(phase.Status)" Text="@phase.Status.ToString()" />
+</div>
+<p class="mt-3 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(phase.Goal) ? "No goal has been captured for this phase yet." : phase.Goal)</p>
+<p class="mt-3 text-xs font-medium text-slate-500">@($"{FormatDate(phase.StartDateUtc)} to {FormatDate(phase.EndDateUtc)}")</p>
+</div>
+}
+</div>
+}
+</section>
+
+<section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+<div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+<div>
+<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Stack profile</p>
+<h3 class="mt-1 text-lg font-semibold text-slate-950">Captured platform choices</h3>
+</div>
+<StatusBadge Tone="warning" Text="@($"{MeaningfulOptions.Count()} filled")" />
+</div>
+
+@if (!MeaningfulOptions.Any())
+{
+<p class="mt-4 text-sm leading-6 text-slate-600">No stack profile has been captured yet. The editor can record platform, storage, testing, deployment, and external dependency choices.</p>
+}
+else
+{
+<div class="mt-4 grid gap-3 lg:grid-cols-2">
+@foreach (var option in MeaningfulOptions.OrderBy(item => item.Category).ThenBy(item => item.OptionName))
+{
+<div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4">
+<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">@option.Category</p>
+<p class="mt-2 text-sm font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(option.OptionName) ? "Not specified" : option.OptionName)</p>
+<p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(option.Notes) ? "No notes recorded." : option.Notes)</p>
+</div>
+}
+</div>
+}
+</section>
+</div>
+</div>
+
+<div class="border-t border-slate-200 bg-slate-50/90 px-6 py-4">
+<div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+<div class="space-y-1">
+<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Project dashboard</p>
+<p class="text-sm text-slate-600">Use the modal to inspect and decide. Use tabs only when you want the project overview or a deeper work surface to stay open alongside other work.</p>
+</div>
+
+<div class="flex flex-wrap items-center gap-2">
+<button type="button"
+class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+@onclick="SwitchToEditor">
+Edit project
+</button>
+<button type="button"
+class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+@onclick="OpenProjectDashboardAsync">
+Open dashboard tab
+</button>
+</div>
+</div>
+</div>
+</div>
+}
+</div>
+}
 
 @code {
 private static readonly string[] wizardSteps = ["Identity", "Dates and phases", "Stack profile", "Linked objects", "Review"];
@@ -419,9 +636,12 @@ private ProjectEditorModel editor = new();
 private readonly List<StarterObjectDraft> starterObjects = [];
 private string? message;
 private int wizardStep;
-private bool showWizard;
+private bool showProjectModal;
 private string projectSearch = string.Empty;
 private string statusFilter = string.Empty;
+private ProjectModalMode modalMode = ProjectModalMode.Overview;
+private bool modalOpenedFromRoute;
+private Guid? handledProjectQueryId;
 
 private IReadOnlyList<ProjectSummary> FilteredProjectSummaries => projectSummaries
 .Where(project =>
@@ -431,6 +651,10 @@ project.CurrentPhase.Contains(projectSearch, StringComparison.OrdinalIgnoreCase)
 (string.IsNullOrWhiteSpace(statusFilter) ||
 string.Equals(project.Status.ToString(), statusFilter, StringComparison.OrdinalIgnoreCase)))
 .OrderByDescending(project => project.UpdatedAtUtc)
+.ToList();
+
+private IReadOnlyList<ProjectOptionEditorModel> MeaningfulOptions => editor.Options
+.Where(option => !string.IsNullOrWhiteSpace(option.OptionName) || !string.IsNullOrWhiteSpace(option.Notes))
 .ToList();
 
 private IReadOnlyList<SecondaryTabItem> WizardTabs => wizardSteps
@@ -449,25 +673,69 @@ class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3
 Add planned object
 </button>;
 
-protected override async Task OnParametersSetAsync() => await LoadAsync(ProjectIdQuery);
+private bool IsErrorMessage
+=> !string.IsNullOrWhiteSpace(message) &&
+(message.StartsWith("Unable", StringComparison.OrdinalIgnoreCase) ||
+message.StartsWith("No ", StringComparison.OrdinalIgnoreCase));
 
-private async Task LoadAsync(Guid? selectedProjectId = null)
+private string LatestUpdatedProjectLabel
+=> projectSummaries.Count == 0
+? "No projects"
+: projectSummaries.OrderByDescending(project => project.UpdatedAtUtc).First().UpdatedAtUtc.LocalDateTime.ToString("g");
+
+private string LatestUpdatedProjectHelper
+=> projectSummaries.Count == 0
+? "Save the first project to populate the workspace."
+: projectSummaries.OrderByDescending(project => project.UpdatedAtUtc).First().Name;
+
+protected override async Task OnParametersSetAsync()
 {
-projectSummaries = await ProjectsService.ListAsync();
-editor = await ProjectsService.GetAsync(selectedProjectId);
-showWizard = selectedProjectId.HasValue || showWizard;
-if (!selectedProjectId.HasValue)
+await LoadProjectSummariesAsync();
+
+if (ProjectIdQuery == handledProjectQueryId)
 {
-starterObjects.Clear();
+return;
+}
+
+handledProjectQueryId = ProjectIdQuery;
+
+if (ProjectIdQuery.HasValue)
+{
+await LoadEditorAsync(ProjectIdQuery.Value);
+modalMode = ProjectModalMode.Overview;
+showProjectModal = true;
+modalOpenedFromRoute = true;
+message = null;
+return;
+}
+
+if (modalOpenedFromRoute)
+{
+showProjectModal = false;
+modalOpenedFromRoute = false;
+message = null;
 }
 }
 
-private async Task OpenNewWizardAsync()
+private async Task LoadProjectSummariesAsync()
+=> projectSummaries = await ProjectsService.ListAsync();
+
+private async Task LoadEditorAsync(Guid? projectId)
 {
-editor = await ProjectsService.GetAsync(null);
-starterObjects.Clear();
+editor = await ProjectsService.GetAsync(projectId);
 wizardStep = 0;
-showWizard = true;
+if (!projectId.HasValue)
+{
+starterObjects.Clear();
+}
+}
+
+private async Task OpenNewProjectAsync()
+{
+await LoadEditorAsync(null);
+showProjectModal = true;
+modalMode = ProjectModalMode.Editor;
+modalOpenedFromRoute = false;
 message = null;
 
 if (ProjectIdQuery.HasValue)
@@ -476,14 +744,55 @@ Navigation.NavigateTo("/projects", replace: true);
 }
 }
 
-private void SelectProject(Guid id)
+private async Task OpenProjectPreviewAsync(Guid id)
+{
+await LoadEditorAsync(id);
+showProjectModal = true;
+modalMode = ProjectModalMode.Overview;
+modalOpenedFromRoute = false;
+message = null;
+}
+
+private void OpenProjectDashboard(Guid id)
 => Navigation.NavigateTo($"/projects?projectId={id}");
+
+private void OpenProjectDashboardAsync()
+{
+if (editor.Id.HasValue)
+{
+OpenProjectDashboard(editor.Id.Value);
+}
+}
 
 private Task HandleWizardTabChanged(string key)
 {
 if (int.TryParse(key, out var parsed))
 {
 wizardStep = parsed;
+}
+
+return Task.CompletedTask;
+}
+
+private void SwitchToOverview()
+=> modalMode = ProjectModalMode.Overview;
+
+private void SwitchToEditor()
+{
+modalMode = ProjectModalMode.Editor;
+message = null;
+}
+
+private Task CloseProjectModalAsync()
+{
+showProjectModal = false;
+message = null;
+
+if (modalOpenedFromRoute)
+{
+modalOpenedFromRoute = false;
+Navigation.NavigateTo("/projects", replace: true);
+return Task.CompletedTask;
 }
 
 return Task.CompletedTask;
@@ -520,9 +829,13 @@ private async Task SaveAsync()
 {
 var result = await ProjectsService.SaveAsync(editor);
 message = result.IsSuccess ? "Project saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-projectSummaries = await ProjectsService.ListAsync();
-if (result.IsSuccess)
+await LoadProjectSummariesAsync();
+
+if (!result.IsSuccess)
 {
+return;
+}
+
 if (starterObjects.Count > 0)
 {
 await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(
@@ -536,11 +849,10 @@ message = "Project saved and starter objects seeded to the structure workbench."
 }
 
 editor = await ProjectsService.GetAsync(result.Value);
-showWizard = true;
-if (ProjectIdQuery != result.Value)
+
+if (ProjectIdQuery.HasValue && ProjectIdQuery != result.Value)
 {
 Navigation.NavigateTo($"/projects?projectId={result.Value}");
-}
 }
 }
 
@@ -561,22 +873,87 @@ return;
 }
 
 await ProjectsService.DeleteAsync(editor.Id.Value);
-await LoadAsync();
-showWizard = false;
+await LoadProjectSummariesAsync();
+showProjectModal = false;
 message = "Project deleted.";
+
+if (ProjectIdQuery.HasValue)
+{
+modalOpenedFromRoute = false;
 Navigation.NavigateTo("/projects", replace: true);
 }
+}
 
-private void OpenStructure(Guid projectId) => Navigation.NavigateTo($"/projects/{projectId}/structure");
+private void OpenStructure(Guid projectId)
+{
+if (projectId != Guid.Empty)
+{
+Navigation.NavigateTo($"/projects/{projectId}/structure");
+}
+}
 
-private void OpenCalendar(Guid projectId) => Navigation.NavigateTo($"/projects/{projectId}/calendar");
+private void OpenCalendar(Guid projectId)
+{
+if (projectId != Guid.Empty)
+{
+Navigation.NavigateTo($"/projects/{projectId}/calendar");
+}
+}
 
 private void NavigateHome() => Navigation.NavigateTo("/");
+
+private static string GetProjectCardCss(ProjectStatus status)
+{
+var accent = status switch
+{
+ProjectStatus.Active => "border-emerald-200 bg-[linear-gradient(180deg,_rgba(236,253,245,0.96),_rgba(255,255,255,0.98))]",
+ProjectStatus.Completed => "border-sky-200 bg-[linear-gradient(180deg,_rgba(240,249,255,0.96),_rgba(255,255,255,0.98))]",
+ProjectStatus.OnHold => "border-amber-200 bg-[linear-gradient(180deg,_rgba(255,251,235,0.96),_rgba(255,255,255,0.98))]",
+ProjectStatus.Archived => "border-slate-300 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]",
+_ => "border-slate-200 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]"
+};
+
+return $"flex min-h-[17rem] flex-col rounded-[1.75rem] border p-5 shadow-sm shadow-slate-200/60 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/70 {accent}";
+}
+
+private static string GetStatusTone(ProjectStatus status)
+=> status switch
+{
+ProjectStatus.Active => "success",
+ProjectStatus.Completed => "info",
+ProjectStatus.OnHold => "warning",
+ProjectStatus.Archived => "neutral",
+_ => "neutral"
+};
+
+private static string GetPhaseStatusTone(ProjectPhaseStatus status)
+=> status switch
+{
+ProjectPhaseStatus.Active => "success",
+ProjectPhaseStatus.Completed => "info",
+ProjectPhaseStatus.Blocked => "danger",
+_ => "neutral"
+};
+
+private static string FormatDate(DateTime? value)
+=> value.HasValue ? value.Value.ToString("MMM d, yyyy") : "Not set";
+
+private static string FormatTimestamp(DateTimeOffset? value)
+=> value.HasValue ? value.Value.LocalDateTime.ToString("g") : "Not available";
+
+private static DateTime GetPhaseOrderKey(ProjectPhaseEditorModel phase)
+=> phase.StartDateUtc ?? phase.EndDateUtc ?? DateTime.MaxValue;
 
 private sealed class StarterObjectDraft
 {
 public ProjectObjectType ObjectType { get; set; } = ProjectObjectType.Note;
 public string Title { get; set; } = string.Empty;
 public string Subtitle { get; set; } = string.Empty;
+}
+
+private enum ProjectModalMode
+{
+Overview,
+Editor
 }
 }

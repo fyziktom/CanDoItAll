@@ -27,6 +27,7 @@ public sealed class AppTabStripTests : TestContext
 
         Assert.Contains("pin", cut.Markup);
         Assert.Contains("zZ", cut.Markup);
+        Assert.Contains("w-full max-w-full", cut.Markup);
 
         cut.Find("button[title='Move right']").Click();
         cut.Find("button[title='Sleep or wake tab']").Click();

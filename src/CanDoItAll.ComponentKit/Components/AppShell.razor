@@ -89,7 +89,7 @@
                 }
         </aside>
 
-        <main class="flex min-w-0 flex-1 flex-col gap-4">
+        <main class="flex min-w-0 flex-1 flex-col gap-2">
             <details class="rounded-[1.5rem] border border-white/80 bg-white/90 px-4 py-3 shadow-lg shadow-slate-200/40 backdrop-blur xl:hidden">
                 <summary class="cursor-pointer list-none text-sm font-semibold text-slate-900">
                     Workspace navigation
@@ -166,7 +166,7 @@
 
             @if (TopBar is not null)
             {
-                <div class="rounded-[1.6rem] border border-white/80 bg-white/88 p-4 shadow-lg shadow-slate-200/50 backdrop-blur lg:px-5 @(Mode == AppShellMode.FocusWorkbench ? "lg:py-4" : "lg:py-5")">
+                <div class="rounded-xl border border-white/80 bg-white/88 px-4 py-2.5 shadow-sm shadow-slate-200/40 backdrop-blur">
                     @TopBar
                 </div>
             }
@@ -187,7 +187,7 @@
                          CloseBackground="CloseBackgroundTabs"
                          ReopenRecent="ReopenRecentTab" />
 
-            <div class="@(ShowRightRail ? "grid gap-4 2xl:grid-cols-[minmax(0,1fr)_20rem]" : "block")">
+            <div class="@(ShowRightRail ? "grid gap-2 2xl:grid-cols-[minmax(0,1fr)_20rem]" : "block")">
                 @if (Mode == AppShellMode.FocusWorkbench)
                 {
                     <div class="min-w-0">

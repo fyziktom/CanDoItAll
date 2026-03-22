@@ -87,7 +87,7 @@ public sealed class AppSessionLifecycleTests
             },
             ["https://localhost:7271", "http://localhost:5032"]);
 
-        return new AppSession("app_test", template, "corr_test", new RingLogBuffer(128));
+        return new AppSession("app_test", template, "corr_test", new RingLogBuffer(128), healthEnabled: true);
     }
 
     private static HealthSnapshot CreateHealthySnapshot(int watchIteration, int runtimePid)

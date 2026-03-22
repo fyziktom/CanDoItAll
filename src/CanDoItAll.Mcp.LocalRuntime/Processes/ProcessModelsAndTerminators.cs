@@ -468,4 +468,23 @@ public class ManagedProcess
     {
         return _terminator.TerminateAsync(_process, force, cancellationToken);
     }
+
+    public async Task<bool> TryWriteAsync(string text, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (_process.HasExited)
+            {
+                return false;
+            }
+
+            await _process.StandardInput.WriteAsync(text.AsMemory(), cancellationToken);
+            await _process.StandardInput.FlushAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

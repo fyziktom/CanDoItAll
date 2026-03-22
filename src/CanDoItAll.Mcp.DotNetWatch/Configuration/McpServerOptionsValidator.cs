@@ -61,6 +61,16 @@ public sealed class McpServerOptionsValidator : IValidateOptions<McpServerOption
             failures.Add("Wait defaults must be positive.");
         }
 
+        if (options.Backend.StartupTimeoutMs <= 0 || options.Backend.StartupPollIntervalMs <= 0)
+        {
+            failures.Add("Backend startup timeouts and poll intervals must be positive.");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.Backend.BindHost))
+        {
+            failures.Add("Backend:BindHost must not be empty.");
+        }
+
         foreach (var allowedRoot in options.Security.AllowedProjectRoots)
         {
             var resolvedRoot = ResolvePath(workspaceRoot, allowedRoot);
@@ -97,6 +107,23 @@ public sealed class McpServerOptionsValidator : IValidateOptions<McpServerOption
         catch (Exception ex)
         {
             failures.Add($"Registry path '{registryPath}' is not writable: {ex.Message}");
+        }
+
+        foreach (var backendPath in new[] { options.Backend.RegistrationPath, options.Backend.LaunchLockPath })
+        {
+            var resolvedBackendPath = ResolvePath(workspaceRoot, backendPath);
+            try
+            {
+                var directory = Path.GetDirectoryName(resolvedBackendPath);
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+            }
+            catch (Exception ex)
+            {
+                failures.Add($"Backend path '{resolvedBackendPath}' is not writable: {ex.Message}");
+            }
         }
 
         foreach (var healthUrl in options.Health.Urls)

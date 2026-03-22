@@ -1,28 +1,28 @@
 @using CanDoItAll.SharedKernel
 
-<div class="space-y-3 rounded-[1.5rem] border border-white/80 bg-white/80 p-3 shadow-lg shadow-slate-200/40 backdrop-blur @(Compact ? "lg:p-3" : "lg:p-4")">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div class="flex min-w-0 flex-wrap gap-2">
+<div class="flex flex-col gap-1.5 px-1 @(Compact ? "" : "pb-1")">
+    <div class="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+        <div class="flex min-w-0 flex-wrap items-center gap-1.5">
             @foreach (var tab in InlineTabs)
             {
                 @RenderTab(tab)
             }
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-shrink-0 flex-wrap items-center gap-1.5">
             @if (Items.Count > InlineTabLimit || RecentTabs.Count > 0)
             {
                 <input @bind="searchText"
                        @bind:event="oninput"
                        placeholder="Search tabs"
-                       class="w-44 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-400" />
+                       class="w-36 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 outline-none transition focus:border-slate-400" />
             }
 
             @if (OverflowTabs.Count > 0)
             {
                 <details class="group relative">
-                    <summary class="cursor-pointer list-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-                        Overflow @($"({OverflowTabs.Count})")
+                    <summary class="cursor-pointer list-none rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
+                        +@OverflowTabs.Count
                     </summary>
                     <div class="absolute right-0 z-20 mt-2 w-80 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-900/10">
                         <div class="space-y-2">
@@ -49,7 +49,7 @@
             @if (RecentTabs.Count > 0)
             {
                 <details class="group relative">
-                    <summary class="cursor-pointer list-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                    <summary class="cursor-pointer list-none rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
                         Reopen
                     </summary>
                     <div class="absolute right-0 z-20 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-900/10">
@@ -76,41 +76,29 @@
 
     @if (ShowActiveSummary && ActiveTab is not null)
     {
-        <div class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
-            <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2">
-                    <p class="text-sm font-semibold text-slate-900">@ActiveTab.Title</p>
-                    <span class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">@ActiveTab.TabGroup</span>
-                    @if (!string.IsNullOrWhiteSpace(ActiveTab.ProjectName))
-                    {
-                        <span class="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-sky-700">@ActiveTab.ProjectName</span>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(ActiveTab.PhaseName))
-                    {
-                        <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-emerald-700">@ActiveTab.PhaseName</span>
-                    }
-                </div>
-                <p class="mt-1 truncate text-xs text-slate-500">@ActiveTab.Route</p>
+        <div class="flex flex-col gap-2 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2 xl:flex-row xl:items-center xl:justify-between">
+            <div class="flex min-w-0 flex-wrap items-center gap-1.5">
+                <p class="text-xs font-semibold text-slate-900">@ActiveTab.Title</p>
+                <span class="rounded-full bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-500">@ActiveTab.TabGroup</span>
+                @if (!string.IsNullOrWhiteSpace(ActiveTab.ProjectName))
+                {
+                    <span class="rounded-full bg-sky-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-sky-700">@ActiveTab.ProjectName</span>
+                }
+                <span class="truncate text-[10px] text-slate-400">@ActiveTab.Route</span>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-shrink-0 items-center gap-1">
                 <button type="button"
-                        class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+                        class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-50"
                         title="Close other tabs"
                         @onclick="() => CloseOthers.InvokeAsync(ActiveTab.TabId)">
                     Close others
                 </button>
                 <button type="button"
-                        class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+                        class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-50"
                         title="Close tabs to the right"
                         @onclick="() => CloseRight.InvokeAsync(ActiveTab.TabId)">
                     Close right
-                </button>
-                <button type="button"
-                        class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
-                        title="Close background tabs"
-                        @onclick="() => CloseBackground.InvokeAsync(ActiveTab.TabId)">
-                    Close background
                 </button>
             </div>
         </div>
@@ -189,31 +177,27 @@
                     tab.Route.Contains(searchText, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-    private RenderFragment RenderTab(WorkbenchTabState tab) => @<div class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition @(IsActive(tab) ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100")">
-        <button type="button" class="inline-flex min-w-0 items-center gap-2" @onclick="() => Activate.InvokeAsync(tab.TabId)">
-            <span class="max-w-44 truncate font-medium">@tab.Title</span>
+    private RenderFragment RenderTab(WorkbenchTabState tab) => @<div class="group/tab inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs transition @(IsActive(tab) ? "border-slate-900 bg-slate-900 text-white" : "border-transparent bg-slate-100/80 text-slate-600 hover:border-slate-200 hover:bg-slate-50")">
+        <button type="button" class="inline-flex min-w-0 items-center gap-1.5 text-left" @onclick="() => Activate.InvokeAsync(tab.TabId)">
+            <span class="max-w-[9rem] truncate font-medium">@tab.Title</span>
             @if (tab.IsDirty)
             {
-                <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
             }
             @if (tab.IsPinned)
             {
-                <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700">pin</span>
-            }
-            @if (tab.IsSleeping)
-            {
-                <span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">zZ</span>
+                <span class="text-[9px] font-semibold uppercase text-sky-400">pin</span>
             }
         </button>
 
-        <div class="inline-flex items-center gap-1 text-[10px] font-semibold">
-            <button type="button" class="rounded-lg px-1.5 py-1 opacity-70 transition hover:opacity-100" title="Move left" @onclick="() => MoveLeft.InvokeAsync(tab.TabId)">&#x2039;</button>
-            <button type="button" class="rounded-lg px-1.5 py-1 opacity-70 transition hover:opacity-100" title="Move right" @onclick="() => MoveRight.InvokeAsync(tab.TabId)">&#x203A;</button>
-            <button type="button" class="rounded-lg px-1.5 py-1 opacity-70 transition hover:opacity-100" title="Pin tab" @onclick="() => TogglePin.InvokeAsync(tab.TabId)">pin</button>
-            <button type="button" class="rounded-lg px-1.5 py-1 opacity-70 transition hover:opacity-100" title="Sleep or wake tab" @onclick="() => ToggleSleep.InvokeAsync(tab.TabId)">zZ</button>
+        <div class="hidden items-center gap-0.5 text-[9px] font-semibold group-hover/tab:inline-flex @(IsActive(tab) ? "inline-flex" : "")">
+            <button type="button" class="rounded px-1 py-0.5 opacity-60 transition hover:opacity-100" title="Move left" @onclick="() => MoveLeft.InvokeAsync(tab.TabId)">&#x2039;</button>
+            <button type="button" class="rounded px-1 py-0.5 opacity-60 transition hover:opacity-100" title="Move right" @onclick="() => MoveRight.InvokeAsync(tab.TabId)">&#x203A;</button>
+            <button type="button" class="rounded px-1 py-0.5 opacity-60 transition hover:opacity-100" title="Pin tab" @onclick="() => TogglePin.InvokeAsync(tab.TabId)">pin</button>
+            <button type="button" class="rounded px-1 py-0.5 opacity-60 transition hover:opacity-100" title="Sleep/wake" @onclick="() => ToggleSleep.InvokeAsync(tab.TabId)">zZ</button>
             @if (tab.CanClose)
             {
-                <button type="button" class="rounded-lg px-1.5 py-1 opacity-70 transition hover:opacity-100" title="Close tab" @onclick="() => Close.InvokeAsync(tab.TabId)">x</button>
+                <button type="button" class="rounded px-1 py-0.5 opacity-60 transition hover:opacity-100" title="Close tab" @onclick="() => Close.InvokeAsync(tab.TabId)">×</button>
             }
         </div>
     </div>;

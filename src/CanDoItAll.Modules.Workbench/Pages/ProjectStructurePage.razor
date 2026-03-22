@@ -22,10 +22,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 }
 else
 {
-    <div class="space-y-6">
+    <div class="space-y-6 project-structure-page">
         <PageHeader Eyebrow="Workbench"
                     Title="@($"{surface.ProjectName} structure")"
-                    Description="Operate the project graph from one shared canvas stage, mirrored inspector, and supporting outline surface." />
+                    Compact="true" />
 
         <CanvasWorkbenchStage Eyebrow="Structure canvas"
                               Title="@($"{surface.ProjectName} workbench")"
@@ -201,10 +201,10 @@ else
                 }
             </Inspector>
             <Supporting>
-                <div class="cw-panel-card">
+                <div class="cw-panel-card project-structure-support-card project-structure-support-card--outline">
                     <p class="cw-panel-kicker">Outline</p>
                     <h3 class="cw-panel-title">Project object index</h3>
-                    <div class="cw-list">
+                    <div class="cw-list project-structure-outline-list">
                         @foreach (var node in outlineNodes)
                         {
                             <button type="button"
@@ -217,7 +217,7 @@ else
                     </div>
                 </div>
 
-                <div class="cw-panel-card">
+                <div class="cw-panel-card project-structure-support-card project-structure-support-card--health">
                     <p class="cw-panel-kicker">Canvas coverage</p>
                     <h3 class="cw-panel-title">Graph health</h3>
                     <div class="cw-summary-grid">

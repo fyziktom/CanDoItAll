@@ -4,8 +4,12 @@ using CanDoItAll.Mcp.DotNetWatch;
 
 namespace CanDoItAll.Mcp.DotNetWatch.IntegrationTests;
 
-public sealed class BootstrapValidationTests
+public sealed class BootstrapValidationTests : IAsyncLifetime
 {
+    public Task InitializeAsync() => ValidationHarness.StopBackendIfPresentAsync();
+
+    public Task DisposeAsync() => ValidationHarness.StopBackendIfPresentAsync();
+
     [Fact]
     public async Task InvalidSolutionPath_FailsFast_WithActionableError()
     {
