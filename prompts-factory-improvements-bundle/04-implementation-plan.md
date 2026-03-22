@@ -7,9 +7,18 @@
 - keep styles consistent with the current visual language
 
 ### Stream 2: Scroll reduction
-- add a top-level support-lane tab strip
+- replace the top button strip with real page tabs
 - default to `Canvas`
-- move lower support content behind `Setup`, `Governance`, `Assembly`, and `Review` tabs
+- make `Canvas` the only tab that renders canvas + inspector
+- move `Setup`, `Governance`, `Assembly`, and `Review` into separate page tabs
+- restyle the tab strip so the active tab visually connects to the active panel like a standard browser tab
+
+### Stream 2B: Inspector refocus
+- strip page-wide workflow duplication out of the right inspector
+- keep the inspector focused on selected canvas-item details and actions
+- route broad workspace editing into the corresponding page tabs
+- make selected prompt components editable directly in the inspector
+- add a subtree or selection preview action to the inspector for copy-ready prompt slices
 
 ### Stream 3: Setup wizard
 - create a persistent session setup model
@@ -40,12 +49,25 @@
 - [x] define diagrams and layout proposals
 
 ### B. Page structure
-- [ ] add support-lane tab state to Prompt Factory
+- [ ] replace the button-strip control with a real tab strip
+- [ ] keep tab state in Prompt Factory
 - [ ] default support tab to `Canvas`
-- [ ] render only the active support lane below the canvas
+- [ ] render canvas + inspector only on the `Canvas` tab
+- [ ] render only the active non-canvas workspace on the other tabs
 - [ ] keep current wizard step synced when the user opens a stage tab
 
-### C. Setup wizard
+### C. Inspector behavior
+- [ ] remove the large workflow/stage chooser from the inspector
+- [ ] add a contextual inspector header for the selected node
+- [ ] keep setup-node actions in the inspector, but move full setup editing to the `Setup` tab
+- [ ] keep prompt-step editing in the inspector because it is item-specific
+- [ ] keep attachment/component/branch actions in the inspector because they are item-specific
+- [ ] show selected component content in a multiline editor that fills the available inspector space
+- [ ] store component edits in the session customization model used by prompt build
+- [ ] add a preview action that opens a modal for the selected item or subtree
+- [ ] keep a reset path so component content can return to its template-based baseline
+
+### D. Setup wizard
 - [ ] add a session setup profile model
 - [ ] persist setup profile within prompt session data
 - [ ] create a canvas node for setup
@@ -54,7 +76,7 @@
 - [ ] prefill known values from project data and current session values
 - [ ] clearly mark missing required fields
 
-### D. Components toolbox
+### E. Components toolbox
 - [ ] extend action model or menu rendering to support a toolbox panel layout
 - [ ] route `Components` into the toolbox panel
 - [ ] add search
@@ -62,19 +84,19 @@
 - [ ] add hover preview
 - [ ] keep generic radial menus unchanged for other categories
 
-### E. Attachments
+### F. Attachments
 - [ ] improve input prompts to capture extraction intent
 - [ ] add richer visual typing for file inputs
 - [ ] map common file types to accent and icon treatment
 - [ ] exclude setup metadata from normal attachment counts and lists
 
-### F. Safety
+### G. Safety
 - [ ] add confirmation dialog state
 - [ ] confirm bulk recommendation changes
 - [ ] confirm reset and large clear actions
 - [ ] surface change counts in the dialog body
 
-### G. Verification
+### H. Verification
 - [ ] component tests for key Prompt Factory rendering paths
 - [ ] Playwright checks for main workbench flow
 - [ ] screenshot review for context, setup, components toolbox, and attachments
@@ -82,9 +104,11 @@
 ## Validation Criteria
 
 ### Layout
-- Canvas tab shows canvas and inspector without forcing the lower workspace open.
-- Only one lower support lane is visible at a time.
-- The page is meaningfully shorter on the default view.
+- `Canvas` shows canvas and inspector only.
+- `Setup`, `Governance`, `Assembly`, and `Review` do not render the canvas.
+- Only one page-tab workspace is visible at a time.
+- The default canvas tab has no support section below it.
+- The active tab looks visually attached to the active content panel.
 
 ### Help behavior
 - Clicking outside closes help.
@@ -112,11 +136,13 @@
 - Bulk changes show confirmation.
 - Reset actions warn before clearing.
 - Undo still works after confirmed actions.
+- Editing a selected component changes the session override that build uses.
+- Previewing a selected prompt node shows that node and its descendants only.
 
 ## Execution Prompts
 
 ### Implementation prompt
-Build the Prompt Factory refactor in a canvas-first way. Keep the canvas and inspector dominant, move lower support content behind tabs, add a persistent setup node and editable setup wizard, replace component radial browsing with a searchable toolbox panel while preserving radial menus for generic actions, improve attachment semantics and styling, and add confirmation for heavy changes.
+Build the Prompt Factory refactor in a canvas-first way. Use a real page-tab model where `Canvas` is the first tab and the only tab that renders the canvas plus contextual inspector. Move setup, governance, assembly, and review into their own full page tabs. Keep the inspector focused on the selected canvas item, not on duplicating whole workspaces. Style the tabs like connected browser tabs. When a prompt component is selected, show its effective prompt text in an editable multiline inspector field and store edits in the same session customization data that final build uses. Add a preview action that can open a modal for the selected item or prompt-step subtree.
 
 ### QA prompt
-Test Prompt Factory as if it were a high-flexibility consumer productivity tool. Focus on orientation, accidental actions, large-scroll fatigue, discoverability of setup, confidence in component picking, and clarity of attachment intent.
+Test Prompt Factory as if it were a high-flexibility consumer productivity tool. Focus on orientation, accidental actions, large-scroll fatigue, discoverability of setup, confidence in component picking, clarity of attachment intent, connected-tab readability, and whether selected-item preview or editing in the inspector feels direct and trustworthy.

@@ -317,6 +317,7 @@ public sealed record PromptBlockSummary(
     IReadOnlyList<string> Tags,
     IReadOnlyList<string> StackTags,
     IReadOnlyList<string> TemplateTokens,
+    string Content,
     string ContentPreview,
     int OrderIndex,
     string CatalogSource);

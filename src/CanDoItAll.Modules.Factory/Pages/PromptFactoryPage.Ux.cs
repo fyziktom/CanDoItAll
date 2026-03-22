@@ -102,6 +102,69 @@ public partial class PromptFactoryPage
             _ => string.Empty
         };
 
+    private string ResolveInspectorTitle()
+        => selectedCanvasNodeIds.Count > 1
+            ? "Batch selection"
+            : selectedSetupNode is not null
+                ? "Session setup node"
+                : selectedBlueprintNode is not null
+                    ? "Blueprint node"
+                    : selectedFlowNode is not null
+                        ? "Flow template node"
+                        : selectedComponentNode is not null
+                            ? "Prompt component"
+                            : selectedComponentGroupNode is not null
+                                ? "Component group"
+                                : selectedAttachmentNode is not null
+                                    ? "Prompt input"
+                                    : selectedPromptNode is not null
+                                        ? "Prompt step"
+                                        : selectedBranchLabel is not null
+                                            ? "Branch overview"
+                                            : "Session root";
+
+    private string ResolveInspectorCopy()
+        => selectedCanvasNodeIds.Count > 1
+            ? "Review the selected set here, then use the canvas for spatial edits. Page tabs handle wider stage work."
+            : selectedSetupNode is not null
+                ? "This inspector stays brief on purpose. Open the Setup tab for full editing and use this panel for status plus quick actions."
+                : selectedBlueprintNode is not null
+                    ? "Blueprint choices belong to the session frame. Use this panel for the selected node, and the Setup or Governance tabs for broader adjustments."
+                    : selectedFlowNode is not null
+                        ? "Flow choices shape the delivery path. Use the node actions here, and open Review later when the prompt is ready to assemble."
+                        : selectedComponentNode is not null
+                            ? "Component-specific actions stay in the inspector so the canvas remains the control surface for prompt composition."
+                            : selectedComponentGroupNode is not null
+                                ? "Group details are contextual to the selected cluster. Open Governance when you need the larger library and filtering workspace."
+                                : selectedAttachmentNode is not null
+                                    ? "Inputs stay lightweight in the inspector. Open Assembly for the full context-packing workspace."
+                                    : selectedPromptNode is not null
+                                        ? "Prompt steps are edited directly from the inspector because they are node-specific actions."
+                                        : selectedBranchLabel is not null
+                                            ? "Branch review is contextual here. Use Review for the full finishing workspace."
+                                            : "Select a node to inspect it here. Use the page tabs for setup, governance, assembly, and review instead of a duplicate side workspace.";
+
+    private string ResolveInspectorSelectionPill()
+        => selectedCanvasNodeIds.Count > 1
+            ? $"{selectedCanvasNodeIds.Count} selected"
+            : selectedSetupNode is not null
+                ? "Setup"
+                : selectedBlueprintNode is not null
+                    ? "Blueprint"
+                    : selectedFlowNode is not null
+                        ? "Flow"
+                        : selectedComponentNode is not null
+                            ? "Component"
+                            : selectedComponentGroupNode is not null
+                                ? "Group"
+                                : selectedAttachmentNode is not null
+                                    ? "Input"
+                                    : selectedPromptNode is not null
+                                        ? "Prompt step"
+                                        : selectedBranchLabel is not null
+                                            ? "Branch"
+                                            : "Session";
+
     private string ResolveWizardStepHelpTip(int stepIndex)
         => stepIndex switch
         {
@@ -113,24 +176,18 @@ public partial class PromptFactoryPage
         };
 
     private string ResolveCanvasHeaderHelpBody()
-        => "The canvas is the structural workspace for the prompt flow. Session framing, governance tuning, context packing, and final review now stay in the inspector and lower support tabs so the canvas surface remains visually calm.";
+        => "The canvas is the structural workspace for the prompt flow. Use it for graph shape, node order, branching, and prompt-step edits. Setup, governance, assembly, and review now live in their own page tabs instead of stacking under the canvas.";
 
     private string ResolveCanvasHeaderHelpTip()
-        => "Tip: use the right inspector to switch stages, and keep the canvas focused on branch shape, node order, and prompt-step edits.";
-
-    private string ResolveWorkflowHeaderHelpBody()
-        => "The inspector workflow replaces the old duplicated top navigation. Each stage button changes both the inspector details and the support lane below, so the page reveals only the controls needed for the current decision.";
-
-    private string ResolveWorkflowHeaderHelpTip()
-        => "Tip: treat these four cards as a compact journey map. The active badge tells you what is currently loaded or missing without forcing another scan down the page.";
+        => "Tip: stay on the Canvas tab for node work. Open the other page tabs only when you need the full setup, governance, assembly, or review workspace.";
 
     private string ResolveSessionInspectorCopy()
         => CurrentWizardStep switch
         {
-            1 => "Adjust the governance working set here, then open the lower workspace only when you need deeper library or authoring controls.",
-            2 => "Review attached inputs and selected resources here before you build from the current session context.",
-            3 => "Finish in one place: check readiness, inspect the prompt, and publish without climbing back through setup tools.",
-            _ => "Set the session frame here while the canvas stays focused on prompt flow structure and branching."
+            1 => "The session root gives quick navigation and save actions. Open the Governance tab for the full component workspace.",
+            2 => "Use the session root for quick status, then open Assembly for the full input and resource workspace.",
+            3 => "Use the session root for quick status, then open Review for the full prompt preview and delivery workspace.",
+            _ => "The session root gives quick navigation while the full setup editing now lives in the Setup tab."
         };
 
     private bool IsContextView(string value)

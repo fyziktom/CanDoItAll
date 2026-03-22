@@ -4,23 +4,35 @@
 
 The original inputs were directionally strong but needed tighter product framing in a few areas.
 
-### Improvement 1: “Wizard” should not feel blocking
+### Improvement 1: wizard should not feel blocking
 - A mandatory full-screen wizard would slow expert users down.
 - Better solution: a persistent setup node with a guided editor that is visible early and reachable later.
 
-### Improvement 2: tabs should hide scroll, not hide context
-- If the canvas itself moved behind separate tabs, users could lose continuity.
-- Better solution: keep canvas and inspector primary, and tab only the lower support lanes.
+### Improvement 2: tabs must be real workspaces, not just content switches
+- A fake tab strip that only swaps lower content still leaves the page visually overloaded.
+- Better solution: use true page tabs where `Canvas` is one workspace and `Setup`, `Governance`, `Assembly`, and `Review` are separate workspaces.
 
-### Improvement 3: radial menu should not be removed globally
+### Improvement 3: the inspector must be contextual, not a duplicate page
+- If the right panel mirrors whole stage workspaces, the scroll problem just moves sideways.
+- Better solution: keep the inspector for selected-node detail and actions, and move broad workspace editing into the matching page tabs.
+
+### Improvement 3B: contextual editing must feel live and local
+- If a selected prompt component opens only metadata, the inspector still feels passive.
+- Better solution: show the effective session prompt text directly in the inspector and let the user edit it there.
+
+### Improvement 3C: selected-item preview needs a fast copy path
+- Users should not need a full prompt build every time they want to inspect one branch or one component.
+- Better solution: expose a selection preview modal that can assemble the selected subtree or item into a copy-ready text slice.
+
+### Improvement 4: radial menu should not be removed globally
 - The radial system is efficient for compact generic actions.
 - Better solution: keep radial for generic actions and switch only component browsing to a toolbox-style panel.
 
-### Improvement 4: “any file type” needs semantic intent, not only upload
+### Improvement 5: any file type needs semantic intent, not only upload
 - Uploading files without telling the AI what to do with them creates weak prompts.
 - Better solution: every rich input should capture extraction or usage intent.
 
-### Improvement 5: safety should focus on high-impact actions
+### Improvement 6: safety should focus on high-impact actions
 - Confirming every action would create friction.
 - Better solution: confirm only bulk replace, clear, and reset actions with clear impact counts.
 
@@ -28,8 +40,9 @@ The original inputs were directionally strong but needed tighter product framing
 
 Accepted with the following refinements:
 - canvas-first default
+- real page tabs instead of a fake support-lane button strip
+- contextual inspector instead of duplicate right-side workspaces
 - setup node instead of blocking wizard
-- support-lane tabs instead of long page
 - toolbox panel only for prompt components
 - semantic file attachments
 - targeted confirmations for bulk actions
@@ -37,8 +50,13 @@ Accepted with the following refinements:
 ## QA Approval Gate
 
 The implementation is acceptable only if all of the following are true:
+- the active page tab is the only major workspace rendered
+- the active tab is visually connected to the active panel and reads as a standard tab pattern
+- non-canvas tabs do not show the canvas or right inspector
 - a new user can understand what to do within the first screen
 - an advanced user can continue working without modal friction
+- selected component editing is obvious and clearly session-scoped
+- previewing a selected item opens the right slice, not the entire prompt by accident
 - the component picker is more precise than the current radial browsing
 - attachment nodes communicate file type and intended use
 - destructive or heavy actions are no longer one-click surprises

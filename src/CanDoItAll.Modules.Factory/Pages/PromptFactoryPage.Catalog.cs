@@ -31,6 +31,28 @@ public partial class PromptFactoryPage
             ? blocks.FirstOrDefault(item => string.Equals(item.Key, blockKey, StringComparison.OrdinalIgnoreCase))
             : null;
 
+    private PromptSessionComponentCustomization? selectedComponentCustomization
+        => selectedComponentNode is null
+            ? null
+            : editor.ComponentCustomizations.LastOrDefault(item => item.BlockId == selectedComponentNode.Id);
+
+    private string SelectedComponentRenderedContent
+    {
+        get => selectedComponentNode is null
+            ? string.Empty
+            : ResolveComponentRenderedContent(selectedComponentNode, selectedComponentCustomization);
+        set => UpdateSelectedComponentRenderedContent(value);
+    }
+
+    private string SelectedComponentBaseContent
+        => selectedComponentNode is null
+            ? string.Empty
+            : ResolveComponentBaseContent(selectedComponentNode, selectedComponentCustomization);
+
+    private bool SelectedComponentIsModified
+        => selectedComponentNode is not null &&
+           !string.Equals(SelectedComponentRenderedContent, SelectedComponentBaseContent, StringComparison.Ordinal);
+
     private PromptSessionAttachmentSummary? selectedAttachmentNode
         => TryParseSelectedInputNodeId(selectedCanvasNodeId, out var attachmentId)
             ? VisibleSessionAttachments.FirstOrDefault(item => string.Equals(item.Id, attachmentId, StringComparison.OrdinalIgnoreCase))
@@ -773,6 +795,99 @@ public partial class PromptFactoryPage
         }
 
         return block.Summary;
+    }
+
+    private void UpdateSelectedComponentRenderedContent(string? value)
+    {
+        if (selectedComponentNode is null)
+        {
+            return;
+        }
+
+        var nextValue = value ?? string.Empty;
+        var currentValue = ResolveComponentRenderedContent(selectedComponentNode, selectedComponentCustomization);
+        if (string.Equals(currentValue, nextValue, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        RememberHistoryCheckpoint();
+        UpsertSelectedComponentCustomization(selectedComponentNode, nextValue);
+        editor.HasCustomizedBlocks = editor.ComponentCustomizations.Count > 0 || editor.SelectedBlockIds.Count > 0;
+    }
+
+    private void ResetSelectedComponentRenderedContent()
+    {
+        if (selectedComponentNode is null)
+        {
+            return;
+        }
+
+        var baseContent = ResolveComponentBaseContent(selectedComponentNode, selectedComponentCustomization);
+        UpdateSelectedComponentRenderedContent(baseContent);
+        SetMessage("Component content reset to the current template baseline.");
+    }
+
+    private void UpsertSelectedComponentCustomization(PromptBlockSummary block, string renderedContent)
+    {
+        var customization = editor.ComponentCustomizations.LastOrDefault(item => item.BlockId == block.Id);
+        var baseContent = ResolveComponentBaseContent(block, customization);
+        if (string.Equals(renderedContent, baseContent, StringComparison.Ordinal))
+        {
+            if (customization is null)
+            {
+                return;
+            }
+
+            if (customization.TemplateValues.Count > 0)
+            {
+                customization.BlockKey = block.Key;
+                customization.Name = block.Name;
+                customization.RenderedContent = baseContent;
+            }
+            else
+            {
+                editor.ComponentCustomizations.Remove(customization);
+            }
+
+            return;
+        }
+
+        if (customization is null)
+        {
+            editor.ComponentCustomizations.Add(new PromptSessionComponentCustomization
+            {
+                BlockId = block.Id,
+                BlockKey = block.Key,
+                Name = block.Name,
+                RenderedContent = renderedContent
+            });
+            return;
+        }
+
+        customization.BlockKey = block.Key;
+        customization.Name = block.Name;
+        customization.RenderedContent = renderedContent;
+    }
+
+    private static string ResolveComponentBaseContent(PromptBlockSummary block, PromptSessionComponentCustomization? customization)
+    {
+        if (customization?.TemplateValues.Count > 0)
+        {
+            return RenderComponentContent(block.Content, customization.TemplateValues);
+        }
+
+        return block.Content ?? string.Empty;
+    }
+
+    private static string ResolveComponentRenderedContent(PromptBlockSummary block, PromptSessionComponentCustomization? customization)
+    {
+        if (!string.IsNullOrWhiteSpace(customization?.RenderedContent))
+        {
+            return customization.RenderedContent;
+        }
+
+        return ResolveComponentBaseContent(block, customization);
     }
 
     private string ResolveAttachmentSubtitle(PromptSessionAttachmentSummary attachment)

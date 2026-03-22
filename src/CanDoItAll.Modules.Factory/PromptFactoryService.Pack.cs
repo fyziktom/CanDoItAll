@@ -174,6 +174,7 @@ private static PromptBlockSummary MapBlockSummary(PromptBlockDefinition item)
         DeserializeJson<List<string>>(item.TagsJson),
         DeserializeJson<List<string>>(item.StackTagsJson),
         DeserializeJson<List<string>>(item.TemplateTokensJson),
+        item.Content,
         BuildContentPreview(item.Content),
         item.OrderIndex,
         item.CatalogSource);

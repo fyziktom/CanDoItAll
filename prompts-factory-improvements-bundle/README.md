@@ -16,3 +16,15 @@ Outcome target:
 - make prompt inputs richer and easier to reason about
 - prevent destructive or accidental mass changes
 - keep the experience advanced but guided, like a serious mass-market productivity tool
+
+Latest refinement:
+- Prompt Factory must use true page tabs, not a button strip that only swaps content under the canvas.
+- `Canvas` is tab 1 and contains the canvas plus the contextual right inspector only.
+- `Setup`, `Governance`, `Assembly`, and `Review` are separate tabs that replace the canvas surface when selected.
+- The right inspector should no longer mirror those whole workspaces. Its job is to show details and actions for the selected canvas item.
+
+Current slice:
+- The tab strip must read like standard connected tabs, with the active tab visually attached to the active workspace panel.
+- The right inspector must become a real component editor when a prompt component is selected.
+- Component edits must update the session override used by prompt build.
+- The inspector must expose a selection preview action that can open a copy-ready modal for the selected item or prompt-step subtree.

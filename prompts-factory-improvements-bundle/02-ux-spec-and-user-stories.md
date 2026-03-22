@@ -2,21 +2,21 @@
 
 ## Proposed UX Model
 
-Prompt Factory should be organized into two layers:
+Prompt Factory should be organized as page tabs:
 
-### Layer A: Primary work surface
+### Tab 1: Canvas
 - canvas
 - right inspector
-- compact stage rail
-- always-available setup entry point
+- persistent setup entry point inside the graph
+- no lower support content
 
-### Layer B: Secondary support lanes
-- setup details
-- governance explorer
-- assembly resources and inputs
-- review and delivery
+### Tab 2+: Stage workspaces
+- setup
+- governance
+- assembly
+- review
 
-Only one secondary lane should be expanded at a time.
+Only one page tab should be visible at a time.
 
 ## Core UX Changes
 
@@ -26,19 +26,26 @@ Only one secondary lane should be expanded at a time.
 - Close on mouse leave after a short grace delay.
 - Keep the interaction fast and non-modal.
 
-### B. Support-lane tabs below the canvas
-- The support area below the canvas should start collapsed to a `Canvas` tab.
-- Additional tabs should expose `Setup`, `Governance`, `Assembly`, and `Review`.
-- Switching to a support tab should open only that lane.
-- The canvas stays visible and primary, but the page stops growing vertically.
+### B. Real page tabs
+- The main Prompt Factory page should use a standard tab strip.
+- The first tab is `Canvas`.
+- Additional tabs expose `Setup`, `Governance`, `Assembly`, and `Review`.
+- Switching away from `Canvas` hides both the canvas and the right inspector.
+- The active non-canvas tab becomes the full page workspace for that stage.
 
-### C. Canvas setup wizard
+### C. Contextual inspector
+- The right panel on the canvas tab should focus on the selected canvas item.
+- Remove the large workflow duplication from the inspector.
+- Keep item-level detail, status, and actions in the inspector.
+- Move page-level forms and explorers into the matching page tabs.
+
+### D. Canvas setup wizard
 - Add a persistent `Session setup` node near the session root.
 - The setup node is available on new sessions and remains editable later.
 - Missing setup should be visually obvious but not blocking.
 - Project facts should prefill the setup summary when available.
 
-### D. Toolbox-style prompt-component picker
+### E. Toolbox-style prompt-component picker
 - Keep radial menu for generic actions.
 - For prompt components, open a second-layer toolbox panel with:
 - search
@@ -48,13 +55,13 @@ Only one secondary lane should be expanded at a time.
 - hover preview
 - click to add or configure
 
-### E. Rich input attachments
+### F. Rich input attachments
 - Treat file inputs as first-class prompt context.
 - Differentiate visual type by file kind or extension.
 - Ask the user what to extract, summarize, compare, or validate from each input.
 - Keep the input presentation compact but legible in canvas and inspector.
 
-### F. Bulk-action confirmation
+### G. Bulk-action confirmation
 - Confirm before actions that can add, replace, or clear many items.
 - Explain impact with counts.
 - Allow cancel.
@@ -64,6 +71,7 @@ Only one secondary lane should be expanded at a time.
 
 ### Story 1: New user starts a blank prompt session
 - User opens Prompt Factory with no project selected.
+- User lands on the `Canvas` tab first.
 - User sees canvas and inspector first.
 - User is guided to open `Session setup`.
 - User fills intent, language, app state, and repositories.
@@ -94,16 +102,16 @@ Only one secondary lane should be expanded at a time.
 - User can cancel safely.
 
 ### Story 6: User needs deep work on the canvas
-- User maximizes the canvas.
-- Setup remains reachable from the setup node and inspector.
-- The lower support area no longer competes for attention.
+- User stays on the `Canvas` tab.
+- Setup remains reachable from the setup node and inspector actions.
+- Other stage work lives on separate tabs, so the canvas view stays visually clean.
 
 ## Expected UX Resolution By Area
 
 ### Orientation
-- improved by canvas-first tab default
+- improved by real page tabs with canvas-first default
 - improved by persistent setup node
-- improved by support tabs with explicit labels
+- improved by contextual inspector instead of repeated stage work
 
 ### Discoverability
 - improved by list-based component toolbox

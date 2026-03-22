@@ -30,26 +30,44 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     @if (canvasSurface is not null)
     {
-        <section class="cw-panel-card pf-lane-switcher">
-            <SecondaryTabs Items="SupportLaneTabs"
-                           SelectedKey="supportLaneTab"
-                           SelectedKeyChanged="SetSupportLaneTabAsync">
-                <Header>
-                    <div class="pf-lane-switcher__header">
-                        <div>
-                            <p class="cw-panel-kicker">Workbench views</p>
-                            <h3 class="cw-panel-title">@ResolveSupportLaneTitle()</h3>
-                        </div>
-                        <p class="cw-panel-copy">@ResolveSupportLaneDescription()</p>
-                    </div>
-                </Header>
-            </SecondaryTabs>
+        <section class="cw-panel-card pf-page-tabs">
+            <div class="pf-page-tabs__header">
+                <div class="pf-page-tabs__copy">
+                    <p class="cw-panel-kicker">Prompt Factory tabs</p>
+                    <h3 class="cw-panel-title">@ResolveSupportLaneTitle()</h3>
+                </div>
+                <p class="cw-panel-copy">@ResolveSupportLaneDescription()</p>
+            </div>
+            <div class="pf-page-tablist" role="tablist" aria-label="Prompt Factory workspaces">
+                @foreach (var item in SupportLaneTabs)
+                {
+                    var isSelected = string.Equals(item.Key, supportLaneTab, StringComparison.Ordinal);
+                    <button type="button"
+                            id="@($"{item.Key}-tab")"
+                            role="tab"
+                            aria-selected="@(isSelected ? "true" : "false")"
+                            aria-controls="@($"{item.Key}-panel")"
+                            class="pf-page-tab @(isSelected ? "is-active" : string.Empty)"
+                            @onclick="@(() => SetSupportLaneTabAsync(item.Key))">
+                        <span>@item.Label</span>
+                        @if (!string.IsNullOrWhiteSpace(item.Count))
+                        {
+                            <span class="pf-page-tab__count">@item.Count</span>
+                        }
+                    </button>
+                }
+            </div>
         </section>
 
-        <div class="pf-workbench-shell @(IsSupportLaneTab(SupportLaneTabCanvas) ? "is-canvas-mode" : "is-support-mode")">
-        <CanvasWorkbenchStage Eyebrow="Prompt flow canvas"
-                              Title="@ResolveStageTitle()"
-                              Stats="stageStats">
+        @if (IsSupportLaneTab(SupportLaneTabCanvas))
+        {
+            <div class="pf-workbench-shell is-canvas-mode"
+                 id="@($"{SupportLaneTabCanvas}-panel")"
+                 role="tabpanel"
+                 aria-labelledby="@($"{SupportLaneTabCanvas}-tab")">
+            <CanvasWorkbenchStage Eyebrow="Prompt flow canvas"
+                                  Title="@ResolveStageTitle()"
+                                  Stats="stageStats">
             <HeaderActions>
                 <HelpPopover RootClass="pf-help-popover pf-help-popover--header"
                              AriaLabel="Show canvas stage help"
@@ -93,47 +111,18 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 </CanvasWorkbench>
             </Canvas>
             <Inspector>
-                <div class="cw-panel-card pf-inspector-nav">
-                    <span class="pf-meta-badge pf-meta-badge--floating">@ResolveActiveWorkflowBadge()</span>
+                <div class="cw-panel-card pf-inspector-context">
                     <div class="pf-card-header pf-card-header--tight">
                         <div class="pf-card-header__copy">
-                            <p class="cw-panel-kicker">Workflow</p>
-                            <div class="pf-panel-title-row">
-                                <h3 class="cw-panel-title">Switch stages from the inspector</h3>
-                                <HelpPopover RootClass="pf-help-popover pf-help-popover--header"
-                                             AriaLabel="Show workflow help"
-                                             Title="Show workflow help"
-                                             Heading="Workflow map"
-                                             Body="@ResolveWorkflowHeaderHelpBody()"
-                                             Tip="@ResolveWorkflowHeaderHelpTip()" />
-                            </div>
+                            <p class="cw-panel-kicker">Canvas inspector</p>
+                            <h3 class="cw-panel-title">@ResolveInspectorTitle()</h3>
+                            <p class="cw-panel-copy">@ResolveInspectorCopy()</p>
                         </div>
+                        <span class="pf-meta-badge">@ResolveActiveWorkflowBadge()</span>
                     </div>
-                    <div class="pf-inspector-step-grid" role="tablist" aria-label="Prompt workflow steps">
-                        @for (var index = 0; index < wizardSteps.Length; index++)
-                        {
-                            var stepIndex = index;
-                            var isActive = CurrentWizardStep == index;
-                            <div class="pf-inspector-step-card @(isActive ? "is-active" : string.Empty)">
-                                <HelpPopover RootClass="pf-help-popover pf-help-popover--step"
-                                             AriaLabel="@($"Show {wizardSteps[index]} help")"
-                                             Title="@($"Show {wizardSteps[index]} help")"
-                                             Heading="@wizardSteps[index]"
-                                             Body="@ResolveWizardStepDescription(index)"
-                                             Tip="@ResolveWizardStepHelpTip(index)" />
-                                <button type="button"
-                                        role="tab"
-                                        aria-selected="@(isActive ? "true" : "false")"
-                                        title="@ResolveWizardStepTooltip(index)"
-                                        class="pf-inspector-step @(isActive ? "is-active" : string.Empty)"
-                                        @onclick="@(() => MoveToStepAsync(stepIndex))">
-                                    <span class="pf-inspector-step__index">@($"{index + 1:00}")</span>
-                                    <span class="pf-inspector-step__body">
-                                        <strong>@wizardSteps[index]</strong>
-                                    </span>
-                                </button>
-                            </div>
-                        }
+                    <div class="cw-chip-row">
+                        <span class="cw-node__chip tone-accent">@ResolveInspectorSelectionPill()</span>
+                        <span class="cw-node__chip">Use page tabs for setup, governance, assembly, and review</span>
                     </div>
                 </div>
 
@@ -184,6 +173,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             <p class="cw-panel-kicker">Selection</p>
                             <div class="cw-button-row">
                                 <button type="button" class="cw-button" data-tone="accent" @onclick="ApplyRecommendationsAsync">Apply recommendations</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
                                 <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => HandleCanvasActionAsync("clear:blueprint", selectedCanvasNodeId))">Clear blueprint</button>
                             </div>
                         </div>
@@ -206,6 +196,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             <p class="cw-panel-kicker">Selection</p>
                             <div class="cw-button-row">
                                 <button type="button" class="cw-button" data-tone="mint" @onclick="BuildAsync">Build prompt</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
                                 <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => HandleCanvasActionAsync("clear:flow", selectedCanvasNodeId))">Clear flow</button>
                             </div>
                         </div>
@@ -213,7 +204,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 }
                 else if (selectedComponentNode is not null)
                 {
-                    var customization = editor.ComponentCustomizations.LastOrDefault(item => item.BlockId == selectedComponentNode.Id);
+                    var customization = selectedComponentCustomization;
                     <div class="space-y-4">
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Prompt component</p>
@@ -222,6 +213,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             <div class="cw-chip-row">
                                 <span class="cw-node__chip tone-accent">@selectedComponentNode.BlockKind</span>
                                 <span class="cw-node__chip">@ResolveLibraryGroupLabel(selectedComponentNode.GroupKey)</span>
+                                <span class="cw-node__chip @(SelectedComponentIsModified ? "tone-warn" : "tone-success")">@(SelectedComponentIsModified ? "Session override" : "Template baseline")</span>
                                 @if (customization?.TemplateValues.Count > 0)
                                 {
                                     <span class="cw-node__chip tone-success">@($"{customization.TemplateValues.Count} specified")</span>
@@ -245,9 +237,24 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         }
 
-                        <div class="cw-panel-card">
-                            <p class="cw-panel-kicker">Selection</p>
+                        <div class="cw-panel-card pf-component-editor-card">
+                            <div class="pf-card-header pf-card-header--tight">
+                                <div class="pf-card-header__copy">
+                                    <p class="cw-panel-kicker">Session prompt text</p>
+                                    <h3 class="cw-panel-title">Effective component content</h3>
+                                    <p class="cw-panel-copy">Edit the actual text that this session will use for the selected component. The next build uses this version.</p>
+                                </div>
+                                <span class="pf-accordion-meta">@(SelectedComponentIsModified ? "Modified" : "Baseline")</span>
+                            </div>
+                            <textarea class="cw-textarea pf-component-editor"
+                                      @bind="SelectedComponentRenderedContent"></textarea>
                             <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
+                                <button type="button"
+                                        class="cw-button"
+                                        data-tone="accent"
+                                        disabled="@(!SelectedComponentIsModified)"
+                                        @onclick="ResetSelectedComponentRenderedContent">Reset to template</button>
                                 <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => HandleCanvasActionAsync($"component:remove:{selectedComponentNode.Key}", selectedCanvasNodeId))">Remove component</button>
                             </div>
                         </div>
@@ -276,6 +283,9 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                     </div>
                                 }
                             </div>
+                            <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
+                            </div>
                         </div>
                     </div>
                 }
@@ -292,74 +302,31 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         </div>
 
-                        <div class="cw-panel-card pf-setup-editor">
-                            <div class="cw-form-grid">
-                                <div class="cw-form-field">
-                                    <label>Intent</label>
-                                    <select class="cw-select" @bind="sessionSetup.IntentCategory">
-                                        <option value="">Select intent</option>
-                                        @foreach (var option in SetupIntentOptions)
-                                        {
-                                            <option value="@option">@option</option>
-                                        }
-                                    </select>
+                        <div class="cw-panel-card">
+                            <p class="cw-panel-kicker">Selected node details</p>
+                            <div class="cw-list">
+                                <div class="cw-list-item">
+                                    <strong>Intent</strong>
+                                    <span>@(string.IsNullOrWhiteSpace(sessionSetup.IntentCategory) ? "Not set" : sessionSetup.IntentCategory)</span>
                                 </div>
-
-                                @if (ShowProgrammingLanguageField)
-                                {
-                                    <div class="cw-form-field">
-                                        <label>Main language</label>
-                                        <select class="cw-select" @bind="sessionSetup.MainLanguage">
-                                            <option value="">Select language</option>
-                                            @foreach (var option in SetupProgrammingLanguageOptions)
-                                            {
-                                                <option value="@option">@option</option>
-                                            }
-                                        </select>
-                                    </div>
-                                }
-
-                                <div class="cw-form-field">
-                                    <label>Application state</label>
-                                    <select class="cw-select" @bind="sessionSetup.ApplicationState">
-                                        <option value="">Select state</option>
-                                        @foreach (var option in SetupApplicationStateOptions)
-                                        {
-                                            <option value="@option">@option</option>
-                                        }
-                                    </select>
+                                <div class="cw-list-item">
+                                    <strong>Main language</strong>
+                                    <span>@(string.IsNullOrWhiteSpace(sessionSetup.MainLanguage) ? "Not set" : sessionSetup.MainLanguage)</span>
                                 </div>
-
-                                <div class="cw-form-field">
-                                    <label>Work repository</label>
-                                    <input class="cw-text-input" @bind="sessionSetup.WorkRepository" placeholder="Main delivery repository" />
+                                <div class="cw-list-item">
+                                    <strong>Application state</strong>
+                                    <span>@(string.IsNullOrWhiteSpace(sessionSetup.ApplicationState) ? "Not set" : sessionSetup.ApplicationState)</span>
                                 </div>
-
-                                <div class="cw-form-field">
-                                    <label>Info or source repositories</label>
-                                    <input class="cw-text-input" @bind="sessionSetup.SourceRepositories" placeholder="Specs, docs, datasets, or supporting repos" />
-                                </div>
-
-                                <div class="cw-form-field">
-                                    <label>Secondary languages</label>
-                                    <input class="cw-text-input" @bind="sessionSetup.SecondaryLanguages" placeholder="Optional supporting languages or stacks" />
-                                </div>
-
-                                <div class="cw-form-field">
-                                    <label>Project snapshot</label>
-                                    <textarea class="cw-textarea" @bind="sessionSetup.ProjectSnapshot"></textarea>
-                                </div>
-
-                                <div class="cw-form-field">
-                                    <label>Guidance notes</label>
-                                    <textarea class="cw-textarea" @bind="sessionSetup.GuidanceNotes" placeholder="Describe what the AI should optimize for in this session."></textarea>
+                                <div class="cw-list-item">
+                                    <strong>Work repository</strong>
+                                    <span>@(string.IsNullOrWhiteSpace(sessionSetup.WorkRepository) ? "Missing" : sessionSetup.WorkRepository)</span>
                                 </div>
                             </div>
-
                             <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabSetup))">Open Setup tab</button>
                                 <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSetupProfileAsync">Save setup</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabSetup))">Open setup tab</button>
-                                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabGovernance))">Continue to governance</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="SelectRootNodeAsync">Focus session</button>
                             </div>
                         </div>
                     </div>
@@ -383,6 +350,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Selection</p>
                             <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
                                 <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => HandleCanvasActionAsync($"input:remove:{selectedAttachmentNode.Id}", selectedCanvasNodeId))">Remove input</button>
                             </div>
                         </div>
@@ -433,6 +401,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             <div class="cw-button-row">
                                 <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSelectedPromptNodeAsync">Save step</button>
                                 <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => BranchAsync(selectedPromptNode.Id))">Branch</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
                                 <button type="button" class="cw-button" data-tone="mint" @onclick="@(() => SetPromptNodeStateAsync(selectedPromptNode.Id, PromptRunNodeState.Used))">Mark used</button>
                                 <button type="button" class="cw-button" data-tone="mint" @onclick="@(() => SetPromptNodeStateAsync(selectedPromptNode.Id, PromptRunNodeState.Validated))">Validate</button>
                                 <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => SetPromptNodeStateAsync(selectedPromptNode.Id, PromptRunNodeState.Skipped))">Skip</button>
@@ -453,6 +422,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             <p class="cw-panel-copy">@($"{selectedBranchNodes.Count} step(s) in this branch")</p>
                             <div class="cw-button-row">
                                 <button type="button" class="cw-button" data-tone="accent" @onclick="BuildAsync">Build prompt</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
                                 <button type="button" class="cw-button" data-tone="ghost" @onclick="SelectRootNodeAsync">Focus session</button>
                             </div>
                         </div>
@@ -475,7 +445,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 {
                     <div class="space-y-4">
                         <div class="cw-panel-card">
-                            <p class="cw-panel-kicker">Session</p>
+                            <p class="cw-panel-kicker">Session root</p>
                             <h3 class="cw-panel-title">@(!string.IsNullOrWhiteSpace(editor.SessionName) ? editor.SessionName : "Prompt session")</h3>
                             <p class="cw-panel-copy">@ResolveSessionInspectorCopy()</p>
                             <div class="cw-chip-row">
@@ -485,154 +455,46 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         </div>
 
                         <div class="cw-panel-card">
-                            @if (IsGovernanceStep)
-                            {
-                                <div class="cw-summary-grid">
-                                    <div class="cw-summary-tile">
-                                        <span>Selected blocks</span>
-                                        <strong>@editor.SelectedBlockIds.Count</strong>
-                                    </div>
-                                    <div class="cw-summary-tile">
-                                        <span>Templates</span>
-                                        <strong>@templates.Count</strong>
-                                    </div>
-                                    <div class="cw-summary-tile">
-                                        <span>Blueprints</span>
-                                        <strong>@blueprints.Count</strong>
-                                    </div>
+                            <p class="cw-panel-kicker">Quick actions</p>
+                            <div class="cw-summary-grid">
+                                <div class="cw-summary-tile">
+                                    <span>Setup</span>
+                                    <strong>@ResolveSetupStatusLabel()</strong>
                                 </div>
-                                <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="accent" @onclick="ApplyRecommendationsAsync">Apply recommendations</button>
-                                    <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetGovernanceWorkspaceView(GovernanceViewLibrary))">Open library</button>
+                                <div class="cw-summary-tile">
+                                    <span>Components</span>
+                                    <strong>@editor.SelectedBlockIds.Count</strong>
                                 </div>
-                            }
-                            else if (IsAssemblyStep)
-                            {
-                                <div class="cw-summary-grid">
-                                    <div class="cw-summary-tile">
-                                        <span>Inputs</span>
-                                        <strong>@VisibleSessionAttachments.Count</strong>
-                                    </div>
-                                    <div class="cw-summary-tile">
-                                        <span>Resources</span>
-                                        <strong>@editor.SelectedResourceIds.Count</strong>
-                                    </div>
-                                    <div class="cw-summary-tile">
-                                        <span>Warnings</span>
-                                        <strong>@editor.Warnings.Count</strong>
-                                    </div>
+                                <div class="cw-summary-tile">
+                                    <span>Inputs</span>
+                                    <strong>@VisibleSessionAttachments.Count</strong>
                                 </div>
-                                <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="mint" @onclick="BuildAsync">Build prompt</button>
-                                    <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetAssemblyWorkspaceView(AssemblyViewResources))">Open resources</button>
+                                <div class="cw-summary-tile">
+                                    <span>Warnings</span>
+                                    <strong>@editor.Warnings.Count</strong>
                                 </div>
-                            }
-                            else if (IsReviewStep)
-                            {
-                                <div class="cw-summary-grid">
-                                    <div class="cw-summary-tile">
-                                        <span>Nodes</span>
-                                        <strong>@editor.Nodes.Count</strong>
-                                    </div>
-                                    <div class="cw-summary-tile">
-                                        <span>Warnings</span>
-                                        <strong>@editor.Warnings.Count</strong>
-                                    </div>
-                                    <div class="cw-summary-tile">
-                                        <span>Resources</span>
-                                        <strong>@editor.SelectedResourceIds.Count</strong>
-                                    </div>
-                                </div>
-                                <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="mint" @onclick="BuildAsync">Build prompt</button>
-                                    <button type="button" class="cw-button" data-tone="primary" @onclick="SaveDraftAsync">Save draft</button>
-                                    <button type="button" class="cw-button" data-tone="warn" @onclick="SendAsync">Send</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetReviewWorkspaceView(ReviewViewPreview))">Open preview</button>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="cw-form-grid cw-form-grid--split">
-                                    <div class="cw-form-field">
-                                        <label>Session name</label>
-                                        <input class="cw-text-input" @bind="editor.SessionName" />
-                                    </div>
-                                    <div class="cw-form-field">
-                                        <label>Draft title</label>
-                                        <input class="cw-text-input" @bind="editor.DraftTitle" />
-                                    </div>
-                                    <div class="cw-form-field">
-                                        <label>Project</label>
-                                        <select class="cw-select"
-                                                data-testid="prompt-factory-project"
-                                                value="@(editor.ProjectId?.ToString() ?? string.Empty)"
-                                                @onchange="HandleProjectSelectionChangedAsync">
-                                            <option value="">Select a project</option>
-                                            @foreach (var project in projects)
-                                            {
-                                                <option value="@project.Id">@project.Name</option>
-                                            }
-                                        </select>
-                                    </div>
-                                    <div class="cw-form-field">
-                                        <label>Phase</label>
-                                        <input class="cw-text-input" @bind="editor.Phase" />
-                                    </div>
-                                    <div class="cw-form-field">
-                                        <label>Blueprint</label>
-                                        <select class="cw-select"
-                                                value="@(editor.BlueprintId?.ToString() ?? string.Empty)"
-                                                @onchange="HandleBlueprintSelectionChangedAsync">
-                                            @foreach (var blueprint in blueprints)
-                                            {
-                                                <option value="@blueprint.Id">@($@"{blueprint.Name} - {blueprint.PromptType}")</option>
-                                            }
-                                        </select>
-                                    </div>
-                                    <div class="cw-form-field">
-                                        <label>Flow template</label>
-                                        <select class="cw-select"
-                                                value="@(editor.FlowTemplateId?.ToString() ?? string.Empty)"
-                                                @onchange="HandleFlowTemplateSelectionChangedAsync">
-                                            @foreach (var template in templates)
-                                            {
-                                                <option value="@template.Id">@template.Name</option>
-                                            }
-                                        </select>
-                                    </div>
-                                    <div class="cw-form-field">
-                                        <label>Provider</label>
-                                        <select class="cw-select"
-                                                value="@(editor.ProviderProfileId?.ToString() ?? string.Empty)"
-                                                @onchange="HandleProviderSelectionChangedAsync">
-                                            <option value="">No provider selected</option>
-                                            @foreach (var provider in providers)
-                                            {
-                                                <option value="@provider.Id">@($@"{provider.Name} - {provider.ProviderKind}")</option>
-                                            }
-                                        </select>
-                                    </div>
-                                    <div class="cw-form-field">
-                                        <label>Repository</label>
-                                        <input class="cw-text-input" @bind="editor.RepositoryName" />
-                                    </div>
-                                    <div class="cw-form-field">
-                                        <label>Branch</label>
-                                        <input class="cw-text-input" @bind="editor.BranchName" />
-                                    </div>
-                                    <div class="cw-form-field">
-                                        <label>Commit</label>
-                                        <input class="cw-text-input" @bind="editor.CommitSha" />
-                                    </div>
-                                </div>
-                            }
+                            </div>
+                            <div class="cw-button-row">
+                                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabSetup))">Open Setup tab</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabGovernance))">Open Governance tab</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabAssembly))">Open Assembly tab</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabReview))">Open Review tab</button>
+                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
+                                <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session</button>
+                            </div>
                         </div>
                     </div>
                 }
             </Inspector>
-            <Supporting>
+            </CanvasWorkbenchStage>
+            </div>
+        }
+        else
+        {
+            <div class="pf-support-tab-shell"
+                 id="@($"{supportLaneTab}-panel")"
+                 role="tabpanel"
+                 aria-labelledby="@($"{supportLaneTab}-tab")">
                 @if (IsContextStep)
                 {
                     <section class="cw-panel-card pf-step-hero pf-wide-card">
@@ -1842,9 +1704,8 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                     }
                 </div>
                 *@
-            </Supporting>
-        </CanvasWorkbenchStage>
-        </div>
+            </div>
+        }
     }
 </div>
 
@@ -1854,24 +1715,24 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         <div class="pf-prompt-modal"
              role="dialog"
              aria-modal="true"
-             aria-label="Built prompt preview"
+             aria-label="Prompt preview"
              data-testid="prompt-factory-prompt-modal"
              @onclick:stopPropagation="true">
             <div class="pf-prompt-modal__header">
                 <div>
-                    <p class="cw-panel-kicker">Build result</p>
-                    <h3 class="cw-panel-title">Final prompt</h3>
-                    <p class="cw-panel-copy">Build uses the selected flow and opens the assembled prompt here so it can be copied immediately.</p>
+                    <p class="cw-panel-kicker">@promptPreviewKicker</p>
+                    <h3 class="cw-panel-title">@promptPreviewTitle</h3>
+                    <p class="cw-panel-copy">@promptPreviewDescription</p>
                 </div>
                 <button type="button" class="cw-button" data-tone="ghost" @onclick="ClosePromptPreviewDialogAsync">Close</button>
             </div>
 
             <textarea class="cw-textarea pf-prompt-preview"
                       readonly
-                      data-testid="prompt-factory-prompt-modal-text">@editor.GeneratedPrompt</textarea>
+                      data-testid="prompt-factory-prompt-modal-text">@promptPreviewText</textarea>
 
             <div class="cw-button-row">
-                <button type="button" class="cw-button" data-tone="accent" @onclick="CopyAsync">Copy prompt</button>
+                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => CopyAsync(promptPreviewText))">Copy prompt</button>
                 <button type="button" class="cw-button" data-tone="ghost" @onclick="ClosePromptPreviewDialogAsync">Done</button>
             </div>
         </div>
@@ -1990,7 +1851,14 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         EnsureSetupFocusForNewSession();
         RefreshCanvasSurface();
         SyncSelectedPromptNodeDraft();
-        showPromptPreviewDialog = ShowPromptPreviewQuery && !string.IsNullOrWhiteSpace(editor.GeneratedPrompt);
+        if (ShowPromptPreviewQuery && !string.IsNullOrWhiteSpace(editor.GeneratedPrompt))
+        {
+            OpenFinalPromptPreview();
+        }
+        else
+        {
+            showPromptPreviewDialog = false;
+        }
     }
 
     private void HydrateCanvasSelection(string? preferredCanvasNodeId = null)
@@ -2431,7 +2299,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         HydrateCanvasSelection(editor.Nodes.Count > 0 ? $"node:{editor.Nodes[0].Id:N}" : "session-root");
         RefreshCanvasSurface();
         SyncSelectedPromptNodeDraft();
-        showPromptPreviewDialog = !string.IsNullOrWhiteSpace(editor.GeneratedPrompt);
+        OpenFinalPromptPreview();
         if (editor.SessionId.HasValue && SessionIdQuery != editor.SessionId)
         {
             NavigateToSession(editor.SessionId, showPromptPreview: true);
@@ -2465,9 +2333,13 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         }
     }
 
-    private async Task CopyAsync()
+    private Task CopyAsync()
+        => CopyAsync(null);
+
+    private async Task CopyAsync(string? text)
     {
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", editor.GeneratedPrompt ?? string.Empty);
+        var value = text ?? (showPromptPreviewDialog ? promptPreviewText : editor.GeneratedPrompt) ?? string.Empty;
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", value);
         SetMessage("Prompt copied to the clipboard.");
     }
 

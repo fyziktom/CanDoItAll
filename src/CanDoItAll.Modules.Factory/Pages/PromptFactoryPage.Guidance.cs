@@ -142,11 +142,11 @@ public partial class PromptFactoryPage
     private string ResolveSupportLaneDescription()
         => supportLaneTab switch
         {
-            SupportLaneTabSetup => "Set the prompt intent, stack, repository frame, and working context before the flow expands.",
-            SupportLaneTabGovernance => "Curate reusable prompt components without opening the whole canvas surface.",
-            SupportLaneTabAssembly => "Pack files, notes, and project resources into the current prompt session.",
-            SupportLaneTabReview => "Check readiness, inspect the generated prompt, and finish delivery actions.",
-            _ => "Stay in the flow canvas when you are actively shaping or branching the prompt map."
+            SupportLaneTabSetup => "Define the prompt intent, stack, repository frame, and working context in a dedicated setup workspace.",
+            SupportLaneTabGovernance => "Curate reusable prompt components in a focused governance workspace without keeping the canvas open.",
+            SupportLaneTabAssembly => "Pack files, notes, and project resources into the current prompt session in one assembly workspace.",
+            SupportLaneTabReview => "Check readiness, inspect the generated prompt, and finish delivery actions in the review workspace.",
+            _ => "Use the canvas tab for graph editing. The right inspector is contextual to the selected node, while the later tabs replace the canvas with focused workspaces."
         };
 
     private bool IsSupportLaneTab(string value)
