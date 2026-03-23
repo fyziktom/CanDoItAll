@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using CanDoItAll.Mcp.Core.Contracts;
 using CanDoItAll.Mcp.Core.Observability;
 using CanDoItAll.Mcp.DotNetWatch;
@@ -74,7 +73,7 @@ public sealed class ValidationMatrixTests : IAsyncLifetime
     [Fact]
     public async Task Backend_PersistsLiveSession_AcrossStdioServerReinstance()
     {
-        using var firstProxy = StartProxyProcess();
+        using var firstProxy = await StartProxyProcessAsync();
         var firstRegistration = await WaitForBackendRegistrationAsync();
         Assert.NotNull(firstRegistration);
         Assert.True(IsProcessAlive(firstRegistration!.ProcessId), "The backend registration should point to a live process.");
@@ -106,7 +105,7 @@ public sealed class ValidationMatrixTests : IAsyncLifetime
         Assert.Equal(firstRegistration.ProcessId, registrationAfterKill.ProcessId);
         Assert.True(IsProcessAlive(firstRegistration.ProcessId), $"The backend process should survive proxy termination. BackendPid={firstRegistration.ProcessId}");
 
-        using var secondProxy = StartProxyProcess();
+        using var secondProxy = await StartProxyProcessAsync();
         var secondRegistration = await WaitForBackendRegistrationAsync();
         Assert.NotNull(secondRegistration);
         Assert.Equal(firstRegistration.BackendId, secondRegistration!.BackendId);
@@ -259,14 +258,17 @@ public sealed class ValidationMatrixTests : IAsyncLifetime
                 $"Expected the add-file generation to advance beyond baseline. Baseline={baseline.Data.SessionVersion}, AfterAdd={afterAdd.Data.SessionVersion}.");
             File.Delete(tempFilePath);
 
-            var restartDetected = await WaitForAppLogPatternAsync(
-                harness,
-                start.Data.SessionId,
-                afterAdd.Data.LastCursor,
-                "Restart is needed to apply the changes|Building",
-                TimeSpan.FromMinutes(3));
+            var restart = await harness.CallToolAsync<ToolEnvelope<AppWaitData>>(
+                "candoitall_app_wait",
+                new Dictionary<string, object?>
+                {
+                    ["sessionId"] = start.Data.SessionId,
+                    ["condition"] = nameof(AppWaitCondition.RestartCompleted),
+                    ["timeoutMs"] = 180000
+                });
 
-            Assert.NotNull(restartDetected);
+            Assert.True(restart.Ok, restart.Error?.Message);
+            Assert.True(restart.Data!.Satisfied, restart.Data.DiagnosticHint);
 
             var healthy = await harness.CallToolAsync<ToolEnvelope<AppWaitData>>(
                 "candoitall_app_wait",
@@ -584,36 +586,6 @@ public sealed class ValidationMatrixTests : IAsyncLifetime
         throw new TimeoutException($"Timed out waiting for operation '{operationId}' to complete.");
     }
 
-    private static async Task<LogEntry?> WaitForAppLogPatternAsync(ValidationHarness harness, string sessionId, long? cursor, string pattern, TimeSpan timeout)
-    {
-        var deadline = DateTimeOffset.UtcNow.Add(timeout);
-        var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
-        var nextCursor = cursor;
-
-        while (DateTimeOffset.UtcNow <= deadline)
-        {
-            var logs = await harness.CallToolAsync<ToolEnvelope<AppLogsData>>(
-                "candoitall_app_logs",
-                new Dictionary<string, object?>
-                {
-                    ["sessionId"] = sessionId,
-                    ["cursor"] = nextCursor
-                });
-
-            Assert.True(logs.Ok, logs.Error?.Message);
-            var match = logs.Data!.Entries.FirstOrDefault(entry => regex.IsMatch(entry.Text));
-            if (match is not null)
-            {
-                return match;
-            }
-
-            nextCursor = logs.Data.NextCursor;
-            await Task.Delay(TimeSpan.FromSeconds(1));
-        }
-
-        return null;
-    }
-
     private static string? GetResumeSessionId(ResumeOutcomeData outcome)
     {
         return outcome.SessionIds.FirstOrDefault() ?? outcome.SessionId;
@@ -670,8 +642,9 @@ public sealed class ValidationMatrixTests : IAsyncLifetime
         }
     }
 
-    private static Process StartProxyProcess()
+    private static async Task<Process> StartProxyProcessAsync()
     {
+        var shadowServerAssemblyPath = await ValidationHarness.GetCurrentShadowServerAssemblyPathAsync();
         var proxy = new Process
         {
             StartInfo = new ProcessStartInfo("dotnet")
@@ -684,7 +657,7 @@ public sealed class ValidationMatrixTests : IAsyncLifetime
             }
         };
 
-        proxy.StartInfo.ArgumentList.Add(ShadowServerAssemblyPath);
+        proxy.StartInfo.ArgumentList.Add(shadowServerAssemblyPath);
         proxy.StartInfo.ArgumentList.Add("--settings");
         proxy.StartInfo.ArgumentList.Add(Path.Combine(RepoRoot, "CanDoItAll.Mcp.DotNetWatch.settings.json"));
 
@@ -729,9 +702,6 @@ public sealed class ValidationMatrixTests : IAsyncLifetime
         Assert.True(process.Start());
         return process;
     }
-
-    private static string ShadowServerAssemblyPath =>
-        Path.Combine(RepoRoot, ".artifacts", "mcp-server-shadow", "bin", "CanDoItAll.Mcp.DotNetWatch", "debug", "CanDoItAll.Mcp.DotNetWatch.dll");
 
     private static JsonSerializerOptions BackendJsonOptions { get; } = CreateBackendJsonOptions();
 

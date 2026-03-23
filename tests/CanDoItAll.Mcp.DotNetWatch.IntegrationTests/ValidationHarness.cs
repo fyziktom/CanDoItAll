@@ -35,6 +35,8 @@ internal sealed class ValidationHarness : IAsyncDisposable
 
     public static string BackendRegistrationPath { get; } = Path.Combine(RepoRoot, ".mcp-state", "backend", "registration.json");
 
+    public static string ShadowManifestPath { get; } = Path.Combine(RepoRoot, ".artifacts", "mcp-server-shadow", "current.json");
+
     public static string WrapperScriptPath { get; } = Path.Combine(
         RepoRoot,
         "tools",
@@ -83,6 +85,18 @@ internal sealed class ValidationHarness : IAsyncDisposable
 
         var client = await McpClient.CreateAsync(transport);
         return new ValidationHarness(client);
+    }
+
+    internal static async Task<string> GetCurrentShadowServerAssemblyPathAsync()
+    {
+        await EnsureWrapperShadowReadyAsync();
+
+        await using var stream = File.Open(ShadowManifestPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        var manifest = await JsonSerializer.DeserializeAsync<ShadowManifest>(stream, JsonOptions);
+        Assert.NotNull(manifest);
+        Assert.False(string.IsNullOrWhiteSpace(manifest!.ShadowDllPath));
+        Assert.True(File.Exists(manifest.ShadowDllPath), $"Wrapper manifest points to a missing shadow DLL: {manifest.ShadowDllPath}");
+        return manifest.ShadowDllPath!;
     }
 
     public static async Task<ValidationHarness> CreateCapturedAsync(string stdoutCapturePath, string stderrCapturePath)
@@ -176,7 +190,7 @@ internal sealed class ValidationHarness : IAsyncDisposable
         }
     }
 
-    private static async Task EnsureWrapperShadowReadyAsync()
+    internal static async Task EnsureWrapperShadowReadyAsync()
     {
         using var process = new Process
         {
@@ -209,8 +223,7 @@ internal sealed class ValidationHarness : IAsyncDisposable
 
         Assert.Equal(0, process.ExitCode);
 
-        var manifestPath = Path.Combine(RepoRoot, ".artifacts", "mcp-server-shadow", "current.json");
-        Assert.True(File.Exists(manifestPath), $"Wrapper prewarm did not produce '{manifestPath}'. Stdout={stdout} Stderr={stderr}");
+        Assert.True(File.Exists(ShadowManifestPath), $"Wrapper prewarm did not produce '{ShadowManifestPath}'. Stdout={stdout} Stderr={stderr}");
     }
 
     private static string Serialize(object? value)
@@ -233,4 +246,6 @@ internal sealed class ValidationHarness : IAsyncDisposable
 
         throw new InvalidOperationException("Could not locate the repo root from the test output directory.");
     }
+
+    private sealed record ShadowManifest(string? ShadowDllPath);
 }
