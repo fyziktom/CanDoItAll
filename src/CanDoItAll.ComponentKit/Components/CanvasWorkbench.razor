@@ -1,6 +1,5 @@
 @implements IAsyncDisposable
 @using System.Globalization
-@using System.Text.Json
 @using CanDoItAll.ComponentKit.Canvas
 @inject IJSRuntime JsRuntime
 
@@ -52,6 +51,22 @@
                         @onclick="ToggleMaximizeAsync">
                     <span class="cw-toolbar-symbol" aria-hidden="true">@(isMaximized ? "⤡" : "⤢")</span>
                     <span class="sr-only">@(isMaximized ? "Dock canvas" : "Maximize canvas")</span>
+                </button>
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--icon"
+                        aria-label="Toggle minimap"
+                        title="Toggle minimap"
+                        @onclick="ToggleMinimapAsync">
+                    <span class="cw-toolbar-symbol" aria-hidden="true">M</span>
+                    <span class="sr-only">Toggle minimap</span>
+                </button>
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--icon"
+                        aria-label="Toggle diagnostics"
+                        title="Toggle diagnostics"
+                        @onclick="ToggleDiagnosticsAsync">
+                    <span class="cw-toolbar-symbol" aria-hidden="true">D</span>
+                    <span class="sr-only">Toggle diagnostics</span>
                 </button>
                 <button type="button"
                         class="cw-toolbar-action cw-toolbar-action--icon"
@@ -136,7 +151,9 @@
                         <p><strong>Drag empty space</strong> pans the scene.</p>
                         <p><strong>Mouse wheel</strong> zooms under the pointer.</p>
                         <p><strong>Double-click</strong> collapses groups or opens artifacts.</p>
-                        <p><strong>+, -, 0, ?, h, Escape</strong> control zoom, help, and selection.</p>
+                        <p><strong>Ctrl/Cmd + C</strong> copies the current selection to the shared canvas clipboard.</p>
+                        <p><strong>Ctrl/Cmd + V</strong> sends clipboard content back through the shared workbench bridge.</p>
+                        <p><strong>m, d, +, -, 0, ?, h, Escape</strong> control minimap, diagnostics, zoom, help, and selection.</p>
                     </div>
                 </div>
             </div>
@@ -201,21 +218,17 @@
 @code {
     private const int MinZoomPercent = 15;
     private const int MaxZoomPercent = 175;
-    private readonly JsonSerializerOptions serializerOptions = new(JsonSerializerDefaults.Web);
+    private readonly CanvasSceneHost sceneHost = new();
     private ElementReference host;
     private ElementReference quickCreateButton;
     private DotNetObjectReference<CanvasWorkbench>? objectReference;
-    private bool initialized;
     private bool helpOpen;
     private bool settingsOpen;
     private bool isMaximized;
     private int zoomPercent = 100;
     private int menuScalePercent = 100;
-    private bool surfaceSyncPending = true;
     private string? pendingDataKey;
     private string? pendingUiStateKey;
-    private string? appliedDataKey;
-    private string? appliedUiStateKey;
     private string? clientUiStateKey;
 
     [Parameter, EditorRequired]
@@ -243,6 +256,9 @@
     public EventCallback<string> StateChanged { get; set; }
 
     [Parameter]
+    public EventCallback<CanvasWorkbenchClipboardRequest> ClipboardRequested { get; set; }
+
+    [Parameter]
     public RenderFragment? ToolbarLeftContent { get; set; }
 
     [Parameter]
@@ -256,36 +272,34 @@
         pendingDataKey = SerializeSurfaceData(Surface);
         pendingUiStateKey = Surface.UiState.ToJson();
 
-        var dataChanged = !string.Equals(appliedDataKey, pendingDataKey, StringComparison.Ordinal);
-        var uiMatchesLatestClientState = string.Equals(clientUiStateKey, pendingUiStateKey, StringComparison.Ordinal);
-        var uiChangedOutsideClient = !string.Equals(appliedUiStateKey, pendingUiStateKey, StringComparison.Ordinal) && !uiMatchesLatestClientState;
-
-        surfaceSyncPending = dataChanged || uiChangedOutsideClient;
+        var dataChanged = !string.Equals(sceneHost.AppliedStateKey, pendingDataKey, StringComparison.Ordinal);
+        var uiChangedOutsideClient = !string.Equals(clientUiStateKey, pendingUiStateKey, StringComparison.Ordinal);
+        sceneHost.QueueSync(pendingDataKey, dataChanged || uiChangedOutsideClient);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         objectReference ??= DotNetObjectReference.Create(this);
-        if (!initialized)
+        var bridge = new JsInteropBridge(JsRuntime);
+        if (sceneHost.ShouldCreate())
         {
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.create", host, objectReference, Surface);
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
+            await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.create", host, objectReference, Surface);
+            await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
             if (ShouldAutoFitInitialView())
             {
-                await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.fitView", host);
+                await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.fitView", host);
             }
-            initialized = true;
             MarkSurfaceApplied();
             return;
         }
 
-        if (!surfaceSyncPending)
+        if (!sceneHost.ShouldUpdate())
         {
             return;
         }
 
-        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.update", host, Surface);
-        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
+        await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.update", host, Surface);
+        await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
         MarkSurfaceApplied();
     }
 
@@ -335,12 +349,15 @@
         var state = CanvasWorkbenchUiState.Parse(stateJson);
         state.IsMaximized = isMaximized;
         clientUiStateKey = state.ToJson();
-        appliedUiStateKey = clientUiStateKey;
         zoomPercent = ClampZoomPercent(state.Zoom);
         menuScalePercent = ClampMenuScalePercent(state.MenuActionScale);
         await StateChanged.InvokeAsync(clientUiStateKey);
         await InvokeAsync(StateHasChanged);
     }
+
+    [JSInvokable]
+    public Task OnClipboardAction(string actionId, string payloadJson)
+        => ClipboardRequested.InvokeAsync(new CanvasWorkbenchClipboardRequest(actionId, payloadJson));
 
     [JSInvokable]
     public async Task OnHelpToggled(bool isOpen)
@@ -370,13 +387,13 @@
     private async Task ToggleMaximizeAsync()
     {
         isMaximized = !isMaximized;
-        if (initialized)
+        if (sceneHost.IsInitialized)
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
         }
 
         await PublishUiStateAsync();
-        if (initialized)
+        if (sceneHost.IsInitialized)
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.resize", host);
         }
@@ -384,7 +401,7 @@
 
     private async Task FitViewAsync()
     {
-        if (!initialized)
+        if (!sceneHost.IsInitialized)
         {
             return;
         }
@@ -398,7 +415,7 @@
             ?? Surface.Nodes.FirstOrDefault(node => string.IsNullOrWhiteSpace(node.ParentId))?.Id
             ?? Surface.UiState.SelectedNodeIds.FirstOrDefault()
             ?? Surface.Nodes.FirstOrDefault()?.Id;
-        if (!initialized || string.IsNullOrWhiteSpace(targetNodeId))
+        if (!sceneHost.IsInitialized || string.IsNullOrWhiteSpace(targetNodeId))
         {
             return;
         }
@@ -427,7 +444,7 @@
     private async Task SetZoomPercentAsync(int value)
     {
         zoomPercent = Math.Clamp(value, MinZoomPercent, MaxZoomPercent);
-        if (initialized)
+        if (sceneHost.IsInitialized)
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setZoomPercent", host, zoomPercent);
         }
@@ -446,7 +463,7 @@
     private async Task SetMenuScalePercentAsync(int value)
     {
         menuScalePercent = Math.Clamp(value, 80, 140);
-        if (initialized)
+        if (sceneHost.IsInitialized)
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMenuScalePercent", host, menuScalePercent);
         }
@@ -454,7 +471,7 @@
 
     private async Task OpenQuickCreateMenuAsync()
     {
-        if (!initialized || !Surface.Chrome.ShowQuickCreateRail || Surface.Chrome.QuickCreateActions.Count == 0)
+        if (!sceneHost.IsInitialized || !Surface.Chrome.ShowQuickCreateRail || Surface.Chrome.QuickCreateActions.Count == 0)
         {
             return;
         }
@@ -462,9 +479,29 @@
         await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.openQuickCreateMenu", host, quickCreateButton);
     }
 
+    private async Task ToggleMinimapAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.toggleMinimap", host);
+    }
+
+    private async Task ToggleDiagnosticsAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.toggleDiagnostics", host);
+    }
+
     private async Task PublishUiStateAsync()
     {
-        var json = initialized
+        var json = sceneHost.IsInitialized
             ? await JsRuntime.InvokeAsync<string>("CanDoItAll.canvasWorkbench.getState", host)
             : Surface.UiState.ToJson();
 
@@ -475,16 +512,7 @@
     }
 
     private T? Deserialize<T>(string json)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<T>(json, serializerOptions);
-        }
-        catch
-        {
-            return default;
-        }
-    }
+        => SerializationPersistencePack.Deserialize<T>(json);
 
     private static int ClampZoomPercent(double zoom)
         => (int)Math.Round(Math.Clamp(zoom, MinZoomPercent / 100d, MaxZoomPercent / 100d) * 100);
@@ -496,7 +524,7 @@
         => $"--cw-preview-menu-scale:{(menuScalePercent / 100d).ToString("0.##", CultureInfo.InvariantCulture)};";
 
     private string SerializeSurfaceData(CanvasWorkbenchSurface surface)
-        => JsonSerializer.Serialize(
+        => SerializationPersistencePack.Serialize(
             new
             {
                 surface.SurfaceId,
@@ -504,15 +532,10 @@
                 surface.Nodes,
                 surface.Links,
                 surface.Chrome
-            },
-            serializerOptions);
+            });
 
     private void MarkSurfaceApplied()
-    {
-        appliedDataKey = pendingDataKey;
-        appliedUiStateKey = pendingUiStateKey;
-        surfaceSyncPending = false;
-    }
+        => sceneHost.MarkApplied();
 
     private bool ShouldAutoFitInitialView()
     {
@@ -535,7 +558,7 @@
 
     public async Task OpenCreateDialogAsync(CanvasWorkbenchAction action, CanvasWorkbenchCreateActionRequest request)
     {
-        if (!initialized)
+        if (!sceneHost.IsInitialized)
         {
             await CreateActionInvoked.InvokeAsync(request);
             return;
@@ -552,7 +575,7 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (initialized)
+        if (sceneHost.IsInitialized)
         {
             try
             {

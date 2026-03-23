@@ -10,6 +10,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 *@
 @using CanDoItAll.ComponentKit.Canvas
 @using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Modules.Workbench.CanvasAdapters
 @using CanDoItAll.SharedKernel
 @inject ProjectWorkbenchService ProjectWorkbenchService
 @inject NavigationManager Navigation
@@ -248,6 +249,9 @@ else
     private ProjectStructureSurface? surface;
     private CanvasWorkbenchSurface? canvasSurface;
     private CanvasWorkbench? workbenchRef;
+    private readonly ProjectStructureActionCatalogAdapter actionCatalog = new();
+    private readonly ProjectStructureGraphAdapter graphAdapter = new();
+    private readonly ProjectStructurePlacementPolicy placementPolicy = new();
     private List<string> selectedNodeIds = [];
     private string? linkModeSourceId;
     private string? currentViewStateJson;
@@ -309,7 +313,7 @@ else
         }
 
         uiState.SelectedNodeIds = [.. selectedNodeIds];
-        ExpandSelectionAncestors(reloadedSurface.Nodes, uiState, selectedNodeIds);
+        graphAdapter.ExpandSelectionAncestors(reloadedSurface.Nodes, uiState, selectedNodeIds);
         surface = reloadedSurface with { ViewStateJson = uiState.ToJson() };
         currentViewStateJson = surface.ViewStateJson;
         RefreshCanvasSurface();
@@ -326,12 +330,10 @@ else
         var uiState = CanvasWorkbenchUiState.Parse(surface.ViewStateJson);
         uiState.SelectedNodeIds = [.. selectedNodeIds];
 
-        canvasSurface = new CanvasWorkbenchSurface
-        {
-            SurfaceId = $"project-structure:{surface.ProjectId:N}",
-            Mode = "authoring",
-            UiState = uiState,
-            Chrome = new CanvasWorkbenchChrome
+        canvasSurface = graphAdapter.BuildSurface(
+            surface,
+            uiState,
+            new CanvasWorkbenchChrome
             {
                 HintText = "Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.",
                 FocusActionLabel = "Focus root",
@@ -339,329 +341,10 @@ else
                 SiblingNoteActionId = "add-note",
                 InlineNotePlaceholder = "Write note",
                 QuickCreateActions = BuildQuickCreateActions().ToList(),
-                GroupContextActions = BuildGroupContextActions().ToList()
+                GroupContextActions = actionCatalog.BuildGroupContextActions().ToList()
             },
-            Nodes = surface.Nodes.Select(MapCanvasNode).ToList(),
-            Links = surface.Links.Select(link => new CanvasWorkbenchLink
-            {
-                SourceId = link.SourceId,
-                TargetId = link.TargetId,
-                Kind = link.Kind.ToString(),
-                IsUserAuthored = link.IsUserAuthored
-            }).ToList()
-        };
+            actionCatalog);
     }
-
-    private CanvasWorkbenchNode MapCanvasNode(ProjectStructureNode node)
-    {
-        var family = ResolveFamily(node.ObjectType);
-        var hasChildren = surface?.Nodes.Any(candidate => string.Equals(candidate.ParentId, node.Id, StringComparison.Ordinal)) ?? false;
-        var inlineText = string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes;
-        var isInlineTextNode = node.ObjectType == ProjectObjectType.Note && string.IsNullOrWhiteSpace(node.Subtitle);
-        var progress = ResolveProgress(node);
-        var (mediaKind, mediaPreviewUrl) = ResolveMediaPresentation(node);
-
-        return new CanvasWorkbenchNode
-        {
-            Id = node.Id,
-            ParentId = node.ParentId,
-            Family = family,
-            Kind = ProjectStructureCanvasCatalog.ResolveNodeLabel(node),
-            Icon = node.VisualProfile.Icon,
-            Title = node.Title,
-            Subtitle = node.Subtitle,
-            LeadText = BuildLeadText(node),
-            Status = node.Status,
-            BranchLabel = node.ObjectType is ProjectObjectType.Phase or ProjectObjectType.PromptSession ? "Branch" : string.Empty,
-            AccentColor = node.VisualProfile.AccentColor,
-            PaletteKey = ResolvePalette(node),
-            DurationLabel = node.Badges.Contains("Scheduled", StringComparer.Ordinal) ? "Scheduled" : string.Empty,
-            StatusPill = node.Status,
-            ProgressMode = progress.Mode,
-            ProgressPercent = progress.Percent,
-            MarkerIcon = node.MarkerIcon,
-            MarkerTone = node.MarkerTone,
-            MarkerLabel = node.MarkerLabel,
-            Priority = node.Priority,
-            IsRequired = node.ObjectType is ProjectObjectType.ProjectRoot or ProjectObjectType.Phase or ProjectObjectType.PromptSession,
-            IsCollapsible = hasChildren,
-            IsInlineTextNode = isInlineTextNode,
-            InlineText = inlineText,
-            InlineTextPlaceholder = "Write note",
-            MediaKind = mediaKind,
-            MediaPreviewUrl = mediaPreviewUrl,
-            MediaPreviewAlt = node.Title,
-            MediaContentType = node.MediaContentType,
-            MediaFileName = node.MediaOriginalFileName,
-            X = node.X,
-            Y = node.Y,
-            Chips = BuildHeaderChips(node),
-            FooterChips = BuildFooterChips(node),
-            ContextActions = BuildContextActions(node)
-        };
-    }
-
-    private static string ResolveFamily(ProjectObjectType objectType) => objectType switch
-    {
-        ProjectObjectType.ProjectRoot => "root",
-        ProjectObjectType.Phase or ProjectObjectType.PromptSession or ProjectObjectType.PromptFlow or ProjectObjectType.ProjectBlock => "group",
-        ProjectObjectType.ValidationRun or ProjectObjectType.TestPlan or ProjectObjectType.Decision or ProjectObjectType.SecretReference => "special",
-        _ => "item"
-    };
-
-    private static string ResolvePalette(ProjectStructureNode node) => node.ObjectType switch
-    {
-        ProjectObjectType.Repository or ProjectObjectType.File => "sky",
-        ProjectObjectType.ImageAsset or ProjectObjectType.Decision => "rose",
-        ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector => "violet",
-        ProjectObjectType.Milestone or ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => "amber",
-        ProjectObjectType.ValidationRun or ProjectObjectType.Note or ProjectObjectType.ProjectBlock => "mint",
-        ProjectObjectType.SecretReference => "rose",
-        _ => "neutral"
-    };
-
-    private static string BuildLeadText(ProjectStructureNode node)
-    {
-        if (node.ObjectType == ProjectObjectType.Note)
-        {
-            return string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes;
-        }
-
-        if (node.ObjectType is ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset &&
-            !string.IsNullOrWhiteSpace(node.MediaOriginalFileName))
-        {
-            return node.MediaOriginalFileName;
-        }
-
-        if (!string.IsNullOrWhiteSpace(node.Notes))
-        {
-            return node.Notes;
-        }
-
-        return string.IsNullOrWhiteSpace(node.Subtitle)
-            ? $"Status: {node.Status}"
-            : node.Subtitle;
-    }
-
-    private static (string Kind, string PreviewUrl) ResolveMediaPresentation(ProjectStructureNode node)
-    {
-        if (string.IsNullOrWhiteSpace(node.MediaRelativePath) || string.IsNullOrWhiteSpace(node.Route))
-        {
-            return (string.Empty, string.Empty);
-        }
-
-        return node.ObjectType switch
-        {
-            ProjectObjectType.ImageAsset => ("image", node.Route),
-            ProjectObjectType.VideoAsset => ("video", node.Route),
-            _ => (string.Empty, string.Empty)
-        };
-    }
-
-    private static List<CanvasWorkbenchChip> BuildHeaderChips(ProjectStructureNode node)
-        => node.Badges.Select(badge => new CanvasWorkbenchChip { Text = badge, Tone = "accent" }).ToList();
-
-    private static List<CanvasWorkbenchChip> BuildFooterChips(ProjectStructureNode node)
-    {
-        var chips = new List<CanvasWorkbenchChip>();
-        if (!string.IsNullOrWhiteSpace(node.Route))
-        {
-            chips.Add(new CanvasWorkbenchChip { Text = "Routed", Tone = "neutral" });
-        }
-
-        if (node.ArtifactId.HasValue)
-        {
-            chips.Add(new CanvasWorkbenchChip { Text = "Artifact", Tone = "success" });
-        }
-
-        if (!string.IsNullOrWhiteSpace(node.MediaOriginalFileName))
-        {
-            chips.Add(new CanvasWorkbenchChip { Text = "Uploaded", Tone = "accent" });
-        }
-
-        return chips;
-    }
-
-    private List<CanvasWorkbenchAction> BuildContextActions(ProjectStructureNode node)
-    {
-        var actions = new List<CanvasWorkbenchAction>
-        {
-            new() { ActionId = "open", Label = "Open", MenuLabel = "Open", Description = "Open the linked artifact or routed workspace.", Icon = "open", Tone = "accent" },
-            new() { ActionId = "connect", Label = "Connect", MenuLabel = "Connect", Description = "Use the selected node as the source for a dependency link.", Icon = "link", Tone = "neutral" },
-            BuildProgressAction(),
-            BuildMarkerAction(),
-            BuildPriorityAction(),
-            new() { ActionId = "validate", Label = "Validate", MenuLabel = "Validate", Description = "Open project validation tooling from this node.", Icon = "qa", Tone = "mint" },
-            new() { ActionId = "test", Label = "Test", MenuLabel = "Test", Description = "Open test planning and evidence flows.", Icon = "test", Tone = "warn" }
-        };
-
-        if (node.ObjectType == ProjectObjectType.PromptFlow)
-        {
-            actions.Insert(1, new CanvasWorkbenchAction
-            {
-                ActionId = "wizard",
-                Label = "Wizard",
-                MenuLabel = "Wizard",
-                Description = "Open the detailed prompt wizard for this flow.",
-                Icon = "flow",
-                Tone = "sky"
-            });
-        }
-
-        if (node.ObjectType == ProjectObjectType.PromptStep)
-        {
-            actions.AddRange(
-            [
-                new CanvasWorkbenchAction { ActionId = "branch", Label = "Branch", MenuLabel = "Branch", Description = "Create a prompt follow-up from this step.", Icon = "fork", Tone = "accent" },
-                new CanvasWorkbenchAction { ActionId = "mark-used", Label = "Used", MenuLabel = "Used", Description = "Mark this prompt step as consumed.", Icon = "use", Tone = "mint" },
-                new CanvasWorkbenchAction { ActionId = "skip", Label = "Skip", MenuLabel = "Skip", Description = "Skip the selected prompt step.", Icon = "skip", Tone = "warn" }
-            ]);
-        }
-
-        actions.AddRange(ProjectStructureCanvasCatalog.BuildMenuCreateActions(node.ObjectType));
-        return actions;
-    }
-
-    private static IReadOnlyList<CanvasWorkbenchAction> BuildGroupContextActions()
-        =>
-        [
-            new CanvasWorkbenchAction
-            {
-                ActionId = "group-frame",
-                Label = "Border",
-                MenuLabel = "Border",
-                Description = "Create a living border around the selected branches.",
-                Icon = "frame",
-                Tone = "sky"
-            },
-            new CanvasWorkbenchAction
-            {
-                ActionId = "group-clear-frame",
-                Label = "Clear border",
-                MenuLabel = "Clear",
-                Description = "Remove borders that currently contain the selected nodes.",
-                Icon = "clear",
-                Tone = "ghost"
-            },
-            BuildProgressAction(),
-            BuildMarkerAction(),
-            BuildPriorityAction()
-        ];
-
-    private static CanvasWorkbenchAction BuildProgressAction()
-        => new()
-        {
-            ActionId = "progress",
-            Label = "Progress",
-            MenuLabel = "Progress",
-            Description = "Update progress for the selected item or active selection.",
-            Icon = "progress",
-            Tone = "mint",
-            SubmenuLayout = "compact-ring",
-            Children = BuildProgressPresetActions()
-        };
-
-    private static List<CanvasWorkbenchAction> BuildProgressPresetActions()
-    {
-        var actions = new List<CanvasWorkbenchAction>
-        {
-            new()
-            {
-                ActionId = "progress:0",
-                Label = "0%",
-                MenuLabel = "0%",
-                Description = "Reset the progress ring to 0 percent.",
-                Icon = "progress-0",
-                Tone = "ghost",
-                MenuSize = "compact"
-            },
-            new()
-            {
-                ActionId = "progress:started",
-                Label = "Started",
-                MenuLabel = "Start",
-                Description = "Show that work started, but the percentage is still too early to judge.",
-                Icon = "progress-started",
-                Tone = "warn",
-                MenuSize = "compact"
-            }
-        };
-
-        foreach (var percent in Enumerable.Range(1, 10).Select(value => value * 10))
-        {
-            actions.Add(new CanvasWorkbenchAction
-            {
-                ActionId = $"progress:{percent}",
-                Label = $"{percent}%",
-                MenuLabel = $"{percent}%",
-                Description = $"Set the clockwise progress ring to {percent} percent.",
-                Icon = $"progress-{percent}",
-                Tone = percent >= 90 ? "mint" : percent >= 60 ? "sky" : percent >= 30 ? "accent" : "warn",
-                MenuSize = "compact"
-            });
-        }
-
-        actions.Add(new CanvasWorkbenchAction
-        {
-            ActionId = "progress:na",
-            Label = "N/A",
-            MenuLabel = "N/A",
-            Description = "Show the neutral not-applicable state.",
-            Icon = "progress-na",
-            Tone = "ghost",
-            MenuSize = "compact"
-        });
-
-        return actions;
-    }
-
-    private static CanvasWorkbenchAction BuildMarkerAction()
-        => new()
-        {
-            ActionId = "marker",
-            Label = "Marker",
-            MenuLabel = "Marker",
-            Description = "Attach a fast visual note marker to the selected item or active selection.",
-            Icon = "marker",
-            Tone = "primary",
-            SubmenuLayout = "compact-ring",
-            Children =
-            [
-                new() { ActionId = "marker:none", Label = "Clear", MenuLabel = "Clear", Description = "Remove the current marker.", Icon = "marker-none", Tone = "ghost", MenuSize = "compact" },
-                new() { ActionId = "marker:question", Label = "Question", MenuLabel = "Ask", Description = "Mark this node as an open question.", Icon = "marker-question", Tone = "sky", MenuSize = "compact" },
-                new() { ActionId = "marker:alert", Label = "Alert", MenuLabel = "Warn", Description = "Mark this node as needing attention.", Icon = "marker-alert", Tone = "danger", MenuSize = "compact" },
-                new() { ActionId = "marker:thumbs-up", Label = "Approved", MenuLabel = "Good", Description = "Mark this node as looking good.", Icon = "marker-thumbs-up", Tone = "mint", MenuSize = "compact" },
-                new() { ActionId = "marker:thumbs-down", Label = "Rejected", MenuLabel = "Bad", Description = "Mark this node as needing a rework or rejection.", Icon = "marker-thumbs-down", Tone = "danger", MenuSize = "compact" },
-                new() { ActionId = "marker:pause", Label = "Paused", MenuLabel = "Pause", Description = "Mark this node as paused.", Icon = "marker-pause", Tone = "warn", MenuSize = "compact" },
-                new() { ActionId = "marker:stop", Label = "Stopped", MenuLabel = "Stop", Description = "Mark this node as stopped.", Icon = "marker-stop", Tone = "primary", MenuSize = "compact" },
-                new() { ActionId = "marker:money", Label = "Budget", MenuLabel = "Money", Description = "Mark this node with a budget or finance note.", Icon = "marker-money", Tone = "mint", MenuSize = "compact" },
-                new() { ActionId = "marker:car", Label = "Transport", MenuLabel = "Drive", Description = "Mark this node with a transport or logistics note.", Icon = "marker-car", Tone = "sky", MenuSize = "compact" },
-                new() { ActionId = "marker:idea", Label = "Idea", MenuLabel = "Idea", Description = "Mark this node as an idea worth keeping visible.", Icon = "marker-idea", Tone = "accent", MenuSize = "compact" },
-                new() { ActionId = "marker:risk", Label = "Risk", MenuLabel = "Risk", Description = "Mark this node as a risk or blocker.", Icon = "marker-risk", Tone = "danger", MenuSize = "compact" }
-            ]
-        };
-
-    private static CanvasWorkbenchAction BuildPriorityAction()
-        => new()
-        {
-            ActionId = "priority",
-            Label = "Priority",
-            MenuLabel = "Priority",
-            Description = "Attach a numbered priority badge to the selected item or active selection.",
-            Icon = "priority",
-            Tone = "warn",
-            SubmenuLayout = "compact-ring",
-            Children =
-            [
-                new() { ActionId = "priority:0", Label = "0", MenuLabel = "0", Description = "Clear the priority badge.", Icon = "priority-0", Tone = "ghost", MenuSize = "compact" },
-                new() { ActionId = "priority:1", Label = "1", MenuLabel = "1", Description = "Set the highest priority marker.", Icon = "priority-1", Tone = "danger", MenuSize = "compact" },
-                new() { ActionId = "priority:2", Label = "2", MenuLabel = "2", Description = "Set priority 2.", Icon = "priority-2", Tone = "warn", MenuSize = "compact" },
-                new() { ActionId = "priority:3", Label = "3", MenuLabel = "3", Description = "Set priority 3.", Icon = "priority-3", Tone = "accent", MenuSize = "compact" },
-                new() { ActionId = "priority:4", Label = "4", MenuLabel = "4", Description = "Set priority 4.", Icon = "priority-4", Tone = "sky", MenuSize = "compact" },
-                new() { ActionId = "priority:5", Label = "5", MenuLabel = "5", Description = "Set priority 5.", Icon = "priority-5", Tone = "mint", MenuSize = "compact" },
-                new() { ActionId = "priority:6", Label = "6", MenuLabel = "6", Description = "Set priority 6.", Icon = "priority-6", Tone = "primary", MenuSize = "compact" }
-            ]
-        };
 
     private async Task HandleSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
     {
@@ -758,19 +441,19 @@ else
             return;
         }
 
-        if (TryResolveProgressAction(actionId, out var progressMode, out var progressPercent))
+        if (actionCatalog.TryResolveProgressAction(actionId, out var progressMode, out var progressPercent))
         {
             await ApplyProgressAsync(ResolveActionTargetNodeIds(nodeId), progressMode, progressPercent);
             return;
         }
 
-        if (TryResolveMarkerAction(actionId, out var markerIcon, out var markerTone, out var markerLabel))
+        if (actionCatalog.TryResolveMarkerAction(actionId, out var markerIcon, out var markerTone, out var markerLabel))
         {
             await ApplyMarkerAsync(ResolveActionTargetNodeIds(nodeId), markerIcon, markerTone, markerLabel);
             return;
         }
 
-        if (TryResolvePriorityAction(actionId, out var priority))
+        if (actionCatalog.TryResolvePriorityAction(actionId, out var priority))
         {
             await ApplyPriorityAsync(ResolveActionTargetNodeIds(nodeId), priority);
             return;
@@ -831,9 +514,9 @@ else
     private async Task CreateObjectAsync(ProjectStructureCreateLeafDefinition definition, CanvasWorkbenchCreateActionRequest request)
     {
         var sourceNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.SourceNodeId, StringComparison.Ordinal));
-        var parentNodeId = ResolveParentNodeId(sourceNode, request);
+        var parentNodeId = ProjectStructurePlacementPolicy.ResolveParentNodeId(sourceNode, request);
         var parentNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, parentNodeId, StringComparison.Ordinal));
-        var placement = ResolveCreatePlacement(sourceNode, parentNode, request);
+        var placement = placementPolicy.ResolveCreatePlacement(surface?.Nodes ?? [], sourceNode, parentNode, request);
         var title = ResolveCreatedTitle(definition, request);
         var subtitle = request.Subtitle?.Trim() ?? string.Empty;
         var notes = ResolveCreatedNotes(definition, request);
@@ -952,7 +635,7 @@ else
 
         var uiState = CanvasWorkbenchUiState.Parse(surface.ViewStateJson);
         uiState.SelectedNodeIds = [.. selectedNodeIds];
-        ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
+        graphAdapter.ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
         currentViewStateJson = uiState.ToJson();
         surface = surface with { ViewStateJson = currentViewStateJson };
         RefreshCanvasSurface();
@@ -963,10 +646,10 @@ else
         => linkModeSourceId = selectedNode?.Id;
 
     private IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions()
-        => ProjectStructureCanvasCatalog.BuildMenuCreateActions(selectedNode?.ObjectType);
+        => actionCatalog.BuildQuickCreateActions(selectedNode?.ObjectType);
 
     private IReadOnlyList<ProjectStructureInspectorCreateGroup> BuildInspectorCreateGroups(ProjectObjectType? sourceType)
-        => ProjectStructureCanvasCatalog.BuildInspectorCreateGroups(sourceType);
+        => actionCatalog.BuildInspectorCreateGroups(sourceType);
 
     private async Task ApplySelectionStatusAsync(string status)
     {
@@ -1025,27 +708,11 @@ else
         }
 
         var uiState = ResolveEditableUiState();
-        var normalizedSelection = selectedNodeIds
-            .Where(id => surface.Nodes.Any(node => string.Equals(node.Id, id, StringComparison.Ordinal)))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        if (normalizedSelection.Count < 2)
+        if (!graphAdapter.TryAddSelectionFrame(surface.Nodes, uiState, selectedNodeIds, BuildSelectionFrameLabel()))
         {
             return;
         }
 
-        var frames = uiState.GroupFrames
-            .Where(frame => !FrameMatchesSelection(frame, normalizedSelection, surface.Nodes))
-            .ToList();
-        frames.Add(new CanvasWorkbenchGroupFrame
-        {
-            Id = $"frame-{Guid.NewGuid():N}",
-            Label = BuildSelectionFrameLabel(),
-            Tone = "sky",
-            AnchorNodeIds = normalizedSelection
-        });
-
-        uiState.GroupFrames = frames;
         await PersistCanvasUiStateAsync(uiState);
     }
 
@@ -1057,15 +724,11 @@ else
         }
 
         var uiState = ResolveEditableUiState();
-        var retainedFrames = uiState.GroupFrames
-            .Where(frame => !FrameMatchesSelection(frame, selectedNodeIds, surface.Nodes))
-            .ToList();
-        if (retainedFrames.Count == uiState.GroupFrames.Count)
+        if (!graphAdapter.TryClearSelectionFrames(surface.Nodes, uiState, selectedNodeIds))
         {
             return;
         }
 
-        uiState.GroupFrames = retainedFrames;
         await PersistCanvasUiStateAsync(uiState);
     }
 
@@ -1080,53 +743,12 @@ else
         }
 
         uiState.SelectedNodeIds = [.. selectedNodeIds];
-        ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
+        graphAdapter.ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
         currentViewStateJson = uiState.ToJson();
         surface = surface with { ViewStateJson = currentViewStateJson };
         RefreshCanvasSurface();
         await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
         await InvokeAsync(StateHasChanged);
-    }
-
-    private (double? X, double? Y) ResolveCreatePlacement(ProjectStructureNode? sourceNode, ProjectStructureNode? parentNode, CanvasWorkbenchCreateActionRequest request)
-    {
-        if (request.X > 0 && request.Y > 0 && string.Equals(request.PlacementKind, "canvas", StringComparison.OrdinalIgnoreCase))
-        {
-            return (request.X, request.Y);
-        }
-
-        if (string.Equals(request.PlacementKind, "sibling", StringComparison.OrdinalIgnoreCase) && sourceNode is not null)
-        {
-            var existingSiblings = surface?.Nodes.Count(node => string.Equals(node.ParentId, sourceNode.ParentId, StringComparison.Ordinal)) ?? 0;
-            return (
-                sourceNode.X + ((existingSiblings % 2) * 24),
-                sourceNode.Y + 132);
-        }
-
-        var anchorNode = parentNode ?? sourceNode;
-        if (anchorNode is null)
-        {
-            return (request.X, request.Y);
-        }
-
-        var existingChildren = surface?.Nodes.Count(node => string.Equals(node.ParentId, anchorNode.Id, StringComparison.Ordinal)) ?? 0;
-        var column = existingChildren % 3;
-        var row = existingChildren / 3;
-        return (
-            anchorNode.X + 240 + (column * 46),
-            anchorNode.Y - 70 + (row * 118));
-    }
-
-    private static string? ResolveParentNodeId(ProjectStructureNode? sourceNode, CanvasWorkbenchCreateActionRequest request)
-    {
-        if (!string.IsNullOrWhiteSpace(request.ParentNodeId))
-        {
-            return request.ParentNodeId;
-        }
-
-        return string.Equals(request.PlacementKind, "sibling", StringComparison.OrdinalIgnoreCase)
-            ? sourceNode?.ParentId
-            : sourceNode?.Id;
     }
 
     private static string ResolveCreatedTitle(ProjectStructureCreateLeafDefinition definition, CanvasWorkbenchCreateActionRequest request)
@@ -1154,67 +776,6 @@ else
     private static bool IsCanvasStatusMutable(ProjectStructureNode node)
         => node.Id.StartsWith("custom:", StringComparison.Ordinal);
 
-    private static (string Mode, int Percent) ResolveProgress(ProjectStructureNode node)
-    {
-        if (!string.IsNullOrWhiteSpace(node.ProgressMode) && node.ProgressPercent >= 0)
-        {
-            var normalizedMode = node.ProgressMode.Trim().ToLowerInvariant();
-            var normalizedPercent = Math.Clamp(node.ProgressPercent, 0, 100);
-            return normalizedMode switch
-            {
-                "complete" => ("complete", 100),
-                "started" => ("started", 0),
-                "na" => ("na", 0),
-                _ => ("progress", normalizedPercent)
-            };
-        }
-
-        var status = node.Status?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(status) ||
-            status.Contains("n/a", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("not applicable", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("skip", StringComparison.OrdinalIgnoreCase))
-        {
-            return ("na", 0);
-        }
-
-        if (status.Contains("done", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("complete", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("approved", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("used", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("ready", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("final", StringComparison.OrdinalIgnoreCase))
-        {
-            return ("complete", 100);
-        }
-
-        if (status.Contains("review", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("validation", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("testing", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("qa", StringComparison.OrdinalIgnoreCase))
-        {
-            return ("progress", 78);
-        }
-
-        if (status.Contains("active", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("in progress", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("running", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("blocked", StringComparison.OrdinalIgnoreCase))
-        {
-            return ("progress", 62);
-        }
-
-        if (status.Contains("planned", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("draft", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("pending", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("queued", StringComparison.OrdinalIgnoreCase))
-        {
-            return ("progress", 28);
-        }
-
-        return ("progress", 48);
-    }
-
     private IReadOnlyList<string> ResolveActionTargetNodeIds(string? nodeId)
     {
         if (!string.IsNullOrWhiteSpace(nodeId) &&
@@ -1234,38 +795,6 @@ else
         return selectedNodeIds
             .Distinct(StringComparer.Ordinal)
             .ToList();
-    }
-
-    private static bool TryResolveProgressAction(string actionId, out string progressMode, out int progressPercent)
-    {
-        progressMode = string.Empty;
-        progressPercent = 0;
-        if (!actionId.StartsWith("progress:", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var token = actionId["progress:".Length..];
-        if (token.Equals("na", StringComparison.OrdinalIgnoreCase))
-        {
-            progressMode = "na";
-            return true;
-        }
-
-        if (token.Equals("started", StringComparison.OrdinalIgnoreCase))
-        {
-            progressMode = "started";
-            return true;
-        }
-
-        if (!int.TryParse(token, out var percent))
-        {
-            return false;
-        }
-
-        progressPercent = Math.Clamp(percent, 0, 100);
-        progressMode = progressPercent >= 100 ? "complete" : "progress";
-        return true;
     }
 
     private static bool TryResolveMarkerAction(string actionId, out string markerIcon, out string markerTone, out string markerLabel)
@@ -1312,47 +841,6 @@ else
         return normalized.Length <= 64 ? normalized : $"{normalized[..61]}...";
     }
 
-    private static bool FrameMatchesSelection(CanvasWorkbenchGroupFrame frame, IReadOnlyList<string> selectedIds, IReadOnlyList<ProjectStructureNode> nodes)
-    {
-        if (selectedIds.Count == 0 || frame.AnchorNodeIds.Count == 0)
-        {
-            return false;
-        }
-
-        var frameMembers = ExpandFrameMembers(frame.AnchorNodeIds, nodes);
-        return selectedIds.All(frameMembers.Contains);
-    }
-
-    private static HashSet<string> ExpandFrameMembers(IReadOnlyList<string> anchorNodeIds, IReadOnlyList<ProjectStructureNode> nodes)
-    {
-        var childrenByParent = nodes
-            .Where(node => !string.IsNullOrWhiteSpace(node.ParentId))
-            .GroupBy(node => node.ParentId!, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.Select(node => node.Id).ToList(), StringComparer.Ordinal);
-        var expanded = new HashSet<string>(StringComparer.Ordinal);
-        var queue = new Queue<string>(anchorNodeIds.Where(id => !string.IsNullOrWhiteSpace(id)));
-
-        while (queue.Count > 0)
-        {
-            var nodeId = queue.Dequeue();
-            if (!expanded.Add(nodeId))
-            {
-                continue;
-            }
-
-            if (!childrenByParent.TryGetValue(nodeId, out var children))
-            {
-                continue;
-            }
-
-            foreach (var child in children)
-            {
-                queue.Enqueue(child);
-            }
-        }
-
-        return expanded;
-    }
 
     private static int ResolveOutlineWeight(ProjectObjectType objectType) => objectType switch
     {
@@ -1369,31 +857,4 @@ else
             ?? nodes.FirstOrDefault(node => string.IsNullOrWhiteSpace(node.ParentId))?.Id
             ?? nodes.FirstOrDefault()?.Id;
 
-    private static void ExpandSelectionAncestors(IReadOnlyList<ProjectStructureNode> nodes, CanvasWorkbenchUiState uiState, IReadOnlyList<string> selectedIds)
-    {
-        if (selectedIds.Count == 0)
-        {
-            return;
-        }
-
-        var collapsedIds = uiState.CollapsedNodeIds.ToHashSet(StringComparer.Ordinal);
-        var nodesById = nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
-
-        foreach (var selectedId in selectedIds)
-        {
-            if (!nodesById.TryGetValue(selectedId, out var current))
-            {
-                continue;
-            }
-
-            while (!string.IsNullOrWhiteSpace(current.ParentId) &&
-                   nodesById.TryGetValue(current.ParentId, out var parent))
-            {
-                collapsedIds.Remove(parent.Id);
-                current = parent;
-            }
-        }
-
-        uiState.CollapsedNodeIds = [.. collapsedIds];
-    }
 }

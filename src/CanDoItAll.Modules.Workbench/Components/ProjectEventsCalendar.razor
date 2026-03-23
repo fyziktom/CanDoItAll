@@ -1,12 +1,17 @@
-@implements IAsyncDisposable
-@inject IJSRuntime JsRuntime
+@attribute [Obsolete("Use CanvasCalendar with ProjectCalendarAdapter instead of ProjectEventsCalendar.")]
+@using CanDoItAll.ComponentKit.Canvas
+@using CanDoItAll.ComponentKit.Components
 
-<div @ref="host" class="min-h-[36rem] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"></div>
+@if (canvasSurface is not null)
+{
+    <CanvasCalendar Surface="canvasSurface"
+                    HostClass="min-h-[36rem] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                    SelectionChanged="HandleSelectionChangedAsync"
+                    StateChanged="HandleStateChangedAsync" />
+}
 
 @code {
-    private ElementReference host;
-    private DotNetObjectReference<ProjectEventsCalendar>? objectReference;
-    private bool initialized;
+    private CanvasCalendarSurface? canvasSurface;
 
     [Parameter, EditorRequired]
     public ProjectCalendarSurface Surface { get; set; } = default!;
@@ -23,28 +28,15 @@
     [Parameter]
     public EventCallback<string> ViewStateChanged { get; set; }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnParametersSet()
     {
-        if (Surface is null)
-        {
-            return;
-        }
-
-        objectReference ??= DotNetObjectReference.Create(this);
-        if (!initialized)
-        {
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCalendar.create", host, objectReference, Surface, SelectedEventId, Surface.ViewStateJson);
-            initialized = true;
-            return;
-        }
-
-        await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCalendar.update", host, Surface, SelectedEventId, Surface.ViewStateJson);
+        var viewState = ProjectCalendarStateParser.Parse(Surface.ViewStateJson) with { SelectedEventId = SelectedEventId };
+        canvasSurface = ProjectCalendarAdapter.BuildSurface(Surface, viewState);
     }
 
-    [JSInvokable]
-    public Task OnEventSelected(string eventId)
+    private Task HandleSelectionChangedAsync(CanvasCalendarSelectionChangedEventArgs args)
     {
-        if (Guid.TryParse(eventId, out var parsed))
+        if (Guid.TryParse(args.SelectedEvent?.EventId, out var parsed))
         {
             return SelectedEventChanged.InvokeAsync(parsed);
         }
@@ -52,28 +44,6 @@
         return Task.CompletedTask;
     }
 
-    [JSInvokable]
-    public Task OnEventOpened(string eventId)
-    {
-        if (Guid.TryParse(eventId, out var parsed))
-        {
-            return OpenEventRequested.InvokeAsync(parsed);
-        }
-
-        return Task.CompletedTask;
-    }
-
-    [JSInvokable]
-    public Task OnViewStateChanged(string stateJson)
-        => ViewStateChanged.InvokeAsync(stateJson);
-
-    public async ValueTask DisposeAsync()
-    {
-        if (initialized)
-        {
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.workbenchCalendar.dispose", host);
-        }
-
-        objectReference?.Dispose();
-    }
+    private Task HandleStateChangedAsync(CanvasCalendarStateChangedEventArgs args)
+        => ViewStateChanged.InvokeAsync(args.StateJson);
 }

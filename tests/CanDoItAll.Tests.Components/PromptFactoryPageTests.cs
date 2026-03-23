@@ -19,8 +19,8 @@ public sealed class PromptFactoryPageTests
         {
             Assert.Single(cut.FindAll("[data-testid='prompt-factory-undo']"));
             Assert.Single(cut.FindAll("[data-testid='prompt-factory-redo']"));
-            Assert.Equal(4, cut.FindAll(".pf-inspector-step").Count);
-            Assert.Contains("Switch stages from the inspector", cut.Markup);
+            Assert.Contains("Prompt Factory tabs", cut.Markup);
+            Assert.Contains("Canvas inspector", cut.Markup);
         });
     }
 

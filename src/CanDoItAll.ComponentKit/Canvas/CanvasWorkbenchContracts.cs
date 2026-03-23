@@ -91,6 +91,8 @@ public sealed class CanvasWorkbenchNode
 
     public List<CanvasWorkbenchChip> FooterChips { get; set; } = [];
 
+    public List<CanvasWorkbenchAnnotation> Annotations { get; set; } = [];
+
     public List<CanvasWorkbenchAction> ContextActions { get; set; } = [];
 }
 
@@ -135,6 +137,10 @@ public sealed class CanvasWorkbenchUiState
     public bool IsMaximized { get; set; }
 
     public string ActiveInspectorTab { get; set; } = string.Empty;
+
+    public bool ShowDiagnostics { get; set; }
+
+    public bool ShowMinimap { get; set; } = true;
 
     public static CanvasWorkbenchUiState Parse(string? json)
     {
@@ -181,6 +187,12 @@ public sealed class CanvasWorkbenchChrome
     public List<CanvasWorkbenchAction> QuickCreateActions { get; set; } = [];
 
     public List<CanvasWorkbenchAction> GroupContextActions { get; set; } = [];
+
+    public CanvasWorkbenchDiagnosticsOptions Diagnostics { get; set; } = new();
+
+    public CanvasWorkbenchMinimapOptions Minimap { get; set; } = new();
+
+    public CanvasWorkbenchClipboardOptions Clipboard { get; set; } = new();
 }
 
 public sealed class CanvasWorkbenchAction

@@ -8,6 +8,7 @@ deps: ProjectWorkbenchService, NavigationManager
 risks: stale-event-selection, wrong-artifact-route
 tests: component:ProjectCalendarPageTests, e2e:workbench-calendar
 *@
+@using CanDoItAll.ComponentKit.Canvas
 @using CanDoItAll.ComponentKit.Components
 @inject ProjectWorkbenchService ProjectWorkbenchService
 @inject NavigationManager Navigation
@@ -48,11 +49,10 @@ else
 
             <div class="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
                 <SectionCard Title="Project calendar" Description="The JavaScript calendar wrapper owns rendering while selection, view persistence, and artifact opening stay typed in .NET.">
-                    <ProjectEventsCalendar Surface="surface"
-                                           SelectedEventId="selectedEventId"
-                                           SelectedEventChanged="HandleEventSelected"
-                                           OpenEventRequested="HandleOpenEventAsync"
-                                           ViewStateChanged="HandleViewStateChangedAsync" />
+                    <CanvasCalendar Surface="canvasSurface"
+                                    HostClass="min-h-[36rem] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                                    SelectionChanged="HandleEventSelectedAsync"
+                                    StateChanged="HandleViewStateChangedAsync" />
                 </SectionCard>
 
                 <SectionCard Title="Selected event" Description="Calendar items open their linked artifacts inside the internal workbench.">
@@ -107,6 +107,8 @@ else
     public Guid ProjectId { get; set; }
 
     private ProjectCalendarSurface? surface;
+    private CanvasCalendarSurface? canvasSurface;
+    private ProjectCalendarViewState currentViewState = ProjectCalendarViewState.Empty;
     private Guid? selectedEventId;
 
     private ProjectCalendarEvent? selectedEvent => surface?.Events.FirstOrDefault(item => item.Id == selectedEventId);
@@ -117,45 +119,33 @@ else
     private async Task LoadAsync()
     {
         surface = await ProjectWorkbenchService.GetCalendarAsync(ProjectId);
-        selectedEventId ??= TryReadSelectedEventId(surface.ViewStateJson) ?? surface.Events.FirstOrDefault()?.Id;
+        currentViewState = ProjectCalendarStateParser.Parse(surface.ViewStateJson);
+        selectedEventId ??= currentViewState.SelectedEventId ?? surface.Events.FirstOrDefault()?.Id;
+        canvasSurface = ProjectCalendarAdapter.BuildSurface(surface, currentViewState with { SelectedEventId = selectedEventId });
     }
 
-    private Task HandleEventSelected(Guid eventId)
+    private Task HandleEventSelectedAsync(CanvasCalendarSelectionChangedEventArgs args)
     {
-        selectedEventId = eventId;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleViewStateChangedAsync(string stateJson)
-        => ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "calendar", stateJson);
-
-    private Task HandleOpenEventAsync(Guid eventId)
-    {
-        var item = surface?.Events.FirstOrDefault(candidate => candidate.Id == eventId);
-        if (item is not null)
+        selectedEventId = Guid.TryParse(args.SelectedEvent?.EventId, out var parsed) ? parsed : null;
+        if (surface is not null)
         {
-            Navigation.NavigateTo(item.Route);
+            currentViewState = currentViewState with { SelectedEventId = selectedEventId };
+            canvasSurface = ProjectCalendarAdapter.BuildSurface(surface, currentViewState);
         }
 
         return Task.CompletedTask;
     }
 
-    private static Guid? TryReadSelectedEventId(string? viewStateJson)
+    private async Task HandleViewStateChangedAsync(CanvasCalendarStateChangedEventArgs args)
     {
-        if (string.IsNullOrWhiteSpace(viewStateJson))
+        currentViewState = ProjectCalendarStateParser.FromStateChanged(args);
+        if (surface is not null)
         {
-            return null;
+            surface = surface with { ViewStateJson = args.StateJson };
+            selectedEventId = currentViewState.SelectedEventId ?? selectedEventId;
+            canvasSurface = ProjectCalendarAdapter.BuildSurface(surface, currentViewState with { SelectedEventId = selectedEventId });
         }
 
-        const string marker = "\"selectedEventId\":\"";
-        var start = viewStateJson.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (start < 0)
-        {
-            return null;
-        }
-
-        start += marker.Length;
-        var end = viewStateJson.IndexOf('"', start);
-        return end > start && Guid.TryParse(viewStateJson[start..end], out var parsed) ? parsed : null;
+        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "calendar", args.StateJson);
     }
 }

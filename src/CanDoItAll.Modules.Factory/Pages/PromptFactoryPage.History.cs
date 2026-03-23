@@ -1,5 +1,5 @@
-using System.Text.Json;
 using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Modules.Factory.CanvasAdapters;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -8,25 +8,17 @@ namespace CanDoItAll.Modules.Factory.Pages;
 
 public partial class PromptFactoryPage : IAsyncDisposable
 {
-    private const int MaxHistoryEntries = 40;
-    private static readonly JsonSerializerOptions HistorySerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
     [SupplyParameterFromQuery(Name = "preview")]
     public bool ShowPromptPreviewQuery { get; set; }
 
-    private readonly List<PromptFactoryEditorModel> undoHistory = [];
-    private readonly List<PromptFactoryEditorModel> redoHistory = [];
     private bool showPromptPreviewDialog;
     private bool isRestoringHistory;
     private DotNetObjectReference<PromptFactoryPage>? historyShortcutReference;
     private bool historyShortcutsRegistered;
 
-    private bool CanUndo => undoHistory.Count > 0;
+    private bool CanUndo => undoRedoAdapter.CanUndo;
 
-    private bool CanRedo => redoHistory.Count > 0;
+    private bool CanRedo => undoRedoAdapter.CanRedo;
 
     private void RememberHistoryCheckpoint()
     {
@@ -35,21 +27,7 @@ public partial class PromptFactoryPage : IAsyncDisposable
             return;
         }
 
-        var snapshot = CaptureHistorySnapshot();
-        var snapshotJson = SerializeHistorySnapshot(snapshot);
-        if (undoHistory.Count > 0 &&
-            string.Equals(SerializeHistorySnapshot(undoHistory[^1]), snapshotJson, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        if (undoHistory.Count >= MaxHistoryEntries)
-        {
-            undoHistory.RemoveAt(0);
-        }
-
-        undoHistory.Add(snapshot);
-        redoHistory.Clear();
+        undoRedoAdapter.Remember(editor, selectedCanvasNodeIds, activeInspectorTab, selectedCanvasNodeId);
     }
 
     private async Task UndoAsync()
@@ -60,9 +38,12 @@ public partial class PromptFactoryPage : IAsyncDisposable
             return;
         }
 
-        redoHistory.Add(CaptureHistorySnapshot());
-        var snapshot = undoHistory[^1];
-        undoHistory.RemoveAt(undoHistory.Count - 1);
+        if (!undoRedoAdapter.TryUndo(editor, selectedCanvasNodeIds, activeInspectorTab, selectedCanvasNodeId, out var snapshot))
+        {
+            SetMessage("Nothing to undo.");
+            return;
+        }
+
         await RestoreHistorySnapshotAsync(snapshot);
         SetMessage("Undo applied.");
     }
@@ -75,9 +56,12 @@ public partial class PromptFactoryPage : IAsyncDisposable
             return;
         }
 
-        undoHistory.Add(CaptureHistorySnapshot());
-        var snapshot = redoHistory[^1];
-        redoHistory.RemoveAt(redoHistory.Count - 1);
+        if (!undoRedoAdapter.TryRedo(editor, selectedCanvasNodeIds, activeInspectorTab, selectedCanvasNodeId, out var snapshot))
+        {
+            SetMessage("Nothing to redo.");
+            return;
+        }
+
         await RestoreHistorySnapshotAsync(snapshot);
         SetMessage("Redo applied.");
     }
@@ -96,7 +80,7 @@ public partial class PromptFactoryPage : IAsyncDisposable
         }
 
         var shouldHandleShortcut = await JS.InvokeAsync<bool>(
-            "CanDoItAll.promptFactory.shouldHandleHistoryShortcut",
+            "CanDoItAll.promptFactoryUndoRedo.shouldHandleHistoryShortcut",
             Array.Empty<object>());
         if (!shouldHandleShortcut)
         {
@@ -123,7 +107,7 @@ public partial class PromptFactoryPage : IAsyncDisposable
         if (!historyShortcutsRegistered)
         {
             historyShortcutReference ??= DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("CanDoItAll.promptFactory.registerHistoryShortcuts", historyShortcutReference);
+            await JS.InvokeVoidAsync("CanDoItAll.promptFactoryUndoRedo.registerHistoryShortcuts", historyShortcutReference);
             historyShortcutsRegistered = true;
         }
 
@@ -160,17 +144,6 @@ public partial class PromptFactoryPage : IAsyncDisposable
             ? $"/prompt-factory?sessionId={sessionId}&preview=true"
             : $"/prompt-factory?sessionId={sessionId}";
 
-    private PromptFactoryEditorModel CaptureHistorySnapshot()
-    {
-        var snapshot = CloneEditor(editor);
-        var uiState = CanvasWorkbenchUiState.Parse(snapshot.CanvasUiStateJson);
-        uiState.SelectedNodeIds = [.. selectedCanvasNodeIds];
-        uiState.ActiveInspectorTab = activeInspectorTab;
-        snapshot.CanvasUiStateJson = uiState.ToJson();
-        snapshot.SelectedNodeId = TryParsePromptCanvasNodeId(selectedCanvasNodeId, out var nodeId) ? nodeId : null;
-        return snapshot;
-    }
-
     private async Task RestoreHistorySnapshotAsync(PromptFactoryEditorModel snapshot)
     {
         isRestoringHistory = true;
@@ -178,7 +151,7 @@ public partial class PromptFactoryPage : IAsyncDisposable
 
         try
         {
-            var snapshotCopy = CloneEditor(snapshot);
+            var snapshotCopy = PromptFactoryUndoRedoAdapter.CloneEditor(snapshot);
             if (snapshotCopy.SessionId.HasValue)
             {
                 var restoreResult = await PromptFactoryService.RestoreSessionStateAsync(snapshotCopy);
@@ -206,22 +179,13 @@ public partial class PromptFactoryPage : IAsyncDisposable
         }
     }
 
-    private static PromptFactoryEditorModel CloneEditor(PromptFactoryEditorModel model)
-        => JsonSerializer.Deserialize<PromptFactoryEditorModel>(
-               JsonSerializer.Serialize(model, HistorySerializerOptions),
-               HistorySerializerOptions)
-           ?? new PromptFactoryEditorModel();
-
-    private static string SerializeHistorySnapshot(PromptFactoryEditorModel snapshot)
-        => JsonSerializer.Serialize(snapshot, HistorySerializerOptions);
-
     public async ValueTask DisposeAsync()
     {
         if (historyShortcutReference is not null)
         {
             try
             {
-                await JS.InvokeVoidAsync("CanDoItAll.promptFactory.unregisterHistoryShortcuts", historyShortcutReference);
+                await JS.InvokeVoidAsync("CanDoItAll.promptFactoryUndoRedo.unregisterHistoryShortcuts", historyShortcutReference);
             }
             catch (JSDisconnectedException)
             {

@@ -63,3 +63,5 @@ output
 .mcp-state/
 .playwright
 .playwright-cli
+
+.codex-obj

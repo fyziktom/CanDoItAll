@@ -1,244 +1,7 @@
 (function () {
     const root = window.CanDoItAll = window.CanDoItAll || {};
-    const promptFactoryShortcutHandlers = new WeakMap();
-    root.promptFactory = root.promptFactory || {
-        shouldHandleHistoryShortcut() {
-            const activeElement = document.activeElement;
-            if (!activeElement) {
-                return true;
-            }
-
-            const tagName = activeElement.tagName?.toLowerCase?.() || "";
-            return tagName !== "input" &&
-                tagName !== "textarea" &&
-                !activeElement.isContentEditable;
-        },
-        registerHistoryShortcuts(dotNetRef) {
-            if (!dotNetRef) {
-                return;
-            }
-
-            this.unregisterHistoryShortcuts(dotNetRef);
-            const handler = (event) => {
-                const key = event.key?.trim()?.toLowerCase?.() || "";
-                const isHistoryShortcut = (event.ctrlKey || event.metaKey) &&
-                    !event.altKey &&
-                    (key === "z" || key === "y");
-                if (!isHistoryShortcut || !this.shouldHandleHistoryShortcut()) {
-                    return;
-                }
-
-                event.preventDefault();
-                dotNetRef.invokeMethodAsync(
-                    "HandleHistoryShortcutAsync",
-                    event.key || "",
-                    !!event.ctrlKey,
-                    !!event.metaKey,
-                    !!event.shiftKey,
-                    !!event.altKey)
-                    .catch(() => { });
-            };
-
-            promptFactoryShortcutHandlers.set(dotNetRef, handler);
-            window.addEventListener("keydown", handler, true);
-        },
-        unregisterHistoryShortcuts(dotNetRef) {
-            const handler = promptFactoryShortcutHandlers.get(dotNetRef);
-            if (!handler) {
-                return;
-            }
-
-            window.removeEventListener("keydown", handler, true);
-            promptFactoryShortcutHandlers.delete(dotNetRef);
-        },
-        mountFloatingInspector(panel, handle) {
-            mountFloatingInspector(panel, handle);
-        },
-        resetFloatingInspector(panel) {
-            resetFloatingInspector(panel);
-        }
-    };
     const MIN_ZOOM = 0.15;
     const MAX_ZOOM = 1.75;
-
-    function createFloatingInspectorState(panel) {
-        const state = {
-            panel,
-            handle: null,
-            container: null,
-            observedContainer: null,
-            observedPanel: null,
-            resizeObserver: null,
-            pointerId: null,
-            startX: 0,
-            startY: 0,
-            startLeft: 0,
-            startTop: 0,
-            pointerMove: event => {
-                if (event.pointerId !== state.pointerId || !state.container) {
-                    return;
-                }
-
-                const nextLeft = state.startLeft + (event.clientX - state.startX);
-                const nextTop = state.startTop + (event.clientY - state.startY);
-                setFloatingInspectorPosition(state.panel, state.container, nextLeft, nextTop);
-            },
-            pointerUp: event => {
-                if (event.pointerId !== state.pointerId) {
-                    return;
-                }
-
-                releaseFloatingInspectorDrag(state);
-            },
-            pointerDown: event => {
-                if (event.button !== 0 || !state.container) {
-                    return;
-                }
-
-                event.preventDefault();
-                event.stopPropagation();
-
-                const panelRect = state.panel.getBoundingClientRect();
-                const containerRect = state.container.getBoundingClientRect();
-                state.pointerId = event.pointerId;
-                state.startX = event.clientX;
-                state.startY = event.clientY;
-                state.startLeft = panelRect.left - containerRect.left;
-                state.startTop = panelRect.top - containerRect.top;
-                state.panel.dataset.dragged = "true";
-                state.panel.classList.add("is-dragging");
-                state.panel.style.right = "auto";
-                state.panel.style.bottom = "auto";
-                state.panel.style.left = `${round(state.startLeft)}px`;
-                state.panel.style.top = `${round(state.startTop)}px`;
-
-                window.addEventListener("pointermove", state.pointerMove, true);
-                window.addEventListener("pointerup", state.pointerUp, true);
-                window.addEventListener("pointercancel", state.pointerUp, true);
-            }
-        };
-
-        panel.__pfFloatingInspectorState = state;
-        return state;
-    }
-
-    function releaseFloatingInspectorDrag(state) {
-        window.removeEventListener("pointermove", state.pointerMove, true);
-        window.removeEventListener("pointerup", state.pointerUp, true);
-        window.removeEventListener("pointercancel", state.pointerUp, true);
-        state.pointerId = null;
-        state.panel.classList.remove("is-dragging");
-    }
-
-    function updateFloatingInspectorHandle(state, handle) {
-        if (state.handle === handle) {
-            return;
-        }
-
-        if (state.handle) {
-            state.handle.removeEventListener("pointerdown", state.pointerDown, true);
-        }
-
-        state.handle = handle || null;
-        if (state.handle) {
-            state.handle.addEventListener("pointerdown", state.pointerDown, true);
-        }
-    }
-
-    function updateFloatingInspectorObserver(state) {
-        if (state.observedContainer === state.container && state.observedPanel === state.panel) {
-            return;
-        }
-
-        if (state.resizeObserver) {
-            state.resizeObserver.disconnect();
-            state.resizeObserver = null;
-        }
-
-        state.observedContainer = state.container;
-        state.observedPanel = state.panel;
-        if (!state.container || typeof window.ResizeObserver !== "function") {
-            return;
-        }
-
-        state.resizeObserver = new window.ResizeObserver(() => {
-            if (!state.panel.isConnected || !state.container) {
-                return;
-            }
-
-            clampFloatingInspector(state.panel, state.container);
-        });
-
-        state.resizeObserver.observe(state.container);
-        state.resizeObserver.observe(state.panel);
-    }
-
-    function setFloatingInspectorPosition(panel, container, left, top) {
-        if (!panel || !container) {
-            return;
-        }
-
-        const margin = 16;
-        const containerRect = container.getBoundingClientRect();
-        const maxLeft = Math.max(margin, container.clientWidth - panel.offsetWidth - margin);
-        const workbenchFrame = panel.closest(".cw-workbench-frame");
-        const toolbar = workbenchFrame ? workbenchFrame.querySelector(".cw-toolbar") : null;
-        const minTop = toolbar
-            ? Math.max(margin, Math.round(toolbar.getBoundingClientRect().bottom - containerRect.top + 12))
-            : margin;
-        const maxTop = Math.max(minTop, container.clientHeight - panel.offsetHeight - margin);
-        const clampedLeft = clamp(round(left), margin, maxLeft);
-        const clampedTop = clamp(round(top), minTop, maxTop);
-        panel.style.left = `${clampedLeft}px`;
-        panel.style.top = `${clampedTop}px`;
-    }
-
-    function clampFloatingInspector(panel, container) {
-        if (!panel || !container || panel.dataset.dragged !== "true") {
-            return;
-        }
-
-        const left = parseFloat(panel.style.left || "0");
-        const top = parseFloat(panel.style.top || "0");
-        setFloatingInspectorPosition(panel, container, left, top);
-    }
-
-    function mountFloatingInspector(panel, handle) {
-        if (!panel || !panel.isConnected) {
-            return;
-        }
-
-        const state = panel.__pfFloatingInspectorState || createFloatingInspectorState(panel);
-        state.container = panel.closest(".cw-stage-surface") || panel.parentElement;
-        updateFloatingInspectorHandle(state, handle);
-        updateFloatingInspectorObserver(state);
-
-        window.requestAnimationFrame(() => {
-            if (!panel.isConnected || !state.container) {
-                return;
-            }
-
-            clampFloatingInspector(panel, state.container);
-        });
-    }
-
-    function resetFloatingInspector(panel) {
-        if (!panel) {
-            return;
-        }
-
-        const state = panel.__pfFloatingInspectorState;
-        if (state) {
-            releaseFloatingInspectorDrag(state);
-        }
-
-        panel.removeAttribute("data-dragged");
-        panel.classList.remove("is-dragging");
-        panel.style.left = "";
-        panel.style.top = "";
-        panel.style.right = "";
-        panel.style.bottom = "";
-    }
 
     function clear(element) {
         while (element.firstChild) {
@@ -329,6 +92,44 @@
         };
     }
 
+    function normalizeAnnotation(annotation) {
+        return {
+            id: annotation?.id || "",
+            kind: annotation?.kind || "info",
+            tone: annotation?.tone || "accent",
+            label: annotation?.label || "",
+            description: annotation?.description || "",
+            icon: annotation?.icon || "",
+            actionId: annotation?.actionId || ""
+        };
+    }
+
+    function normalizeDiagnosticsOptions(options) {
+        return {
+            isEnabled: !!options?.isEnabled,
+            showNodeBounds: options?.showNodeBounds !== false,
+            showConnectorAnchors: options?.showConnectorAnchors !== false,
+            showViewportStats: options?.showViewportStats !== false
+        };
+    }
+
+    function normalizeMinimapOptions(options) {
+        return {
+            isEnabled: options?.isEnabled !== false,
+            title: options?.title || "Scene overview"
+        };
+    }
+
+    function normalizeClipboardOptions(options) {
+        return {
+            isEnabled: options?.isEnabled !== false,
+            allowCopy: options?.allowCopy !== false,
+            allowPaste: options?.allowPaste !== false,
+            allowDuplicate: options?.allowDuplicate !== false,
+            format: options?.format || "application/vnd.candoitall.canvas+json"
+        };
+    }
+
     function normalizeGroupFrame(frame) {
         return {
             id: frame?.id || "",
@@ -378,7 +179,8 @@
                 markerIcon: node?.markerIcon || "",
                 markerTone: node?.markerTone || "",
                 markerLabel: node?.markerLabel || "",
-                priority: typeof node?.priority === "number" ? clamp(Math.round(node.priority), 0, 6) : 0
+                priority: typeof node?.priority === "number" ? clamp(Math.round(node.priority), 0, 6) : 0,
+                annotations: Array.isArray(node?.annotations) ? node.annotations.map(normalizeAnnotation) : []
             })) : [],
             links: Array.isArray(surface?.links) ? surface.links : [],
             uiState: {
@@ -392,7 +194,9 @@
                 panY: typeof surface?.uiState?.panY === "number" ? surface.uiState.panY : 110,
                 menuActionScale: normalizeMenuActionScale(surface?.uiState?.menuActionScale),
                 isMaximized: !!surface?.uiState?.isMaximized,
-                activeInspectorTab: surface?.uiState?.activeInspectorTab || ""
+                activeInspectorTab: surface?.uiState?.activeInspectorTab || "",
+                showDiagnostics: !!surface?.uiState?.showDiagnostics,
+                showMinimap: surface?.uiState?.showMinimap !== false
             },
             chrome: {
                 quickCreateActions: Array.isArray(surface?.chrome?.quickCreateActions) ? surface.chrome.quickCreateActions.map(normalizeAction) : [],
@@ -400,7 +204,14 @@
                 showQuickCreateRail: surface?.chrome?.showQuickCreateRail !== false,
                 childNoteActionId: surface?.chrome?.childNoteActionId || "",
                 siblingNoteActionId: surface?.chrome?.siblingNoteActionId || "",
-                inlineNotePlaceholder: surface?.chrome?.inlineNotePlaceholder || "Write note"
+                inlineNotePlaceholder: surface?.chrome?.inlineNotePlaceholder || "Write note",
+                hintText: surface?.chrome?.hintText || "",
+                emptyStateKicker: surface?.chrome?.emptyStateKicker || "Canvas",
+                emptyStateTitle: surface?.chrome?.emptyStateTitle || "No nodes yet",
+                emptyStateDescription: surface?.chrome?.emptyStateDescription || "Use quick create to start building the scene.",
+                diagnostics: normalizeDiagnosticsOptions(surface?.chrome?.diagnostics),
+                minimap: normalizeMinimapOptions(surface?.chrome?.minimap),
+                clipboard: normalizeClipboardOptions(surface?.chrome?.clipboard)
             }
         };
     }
@@ -915,7 +726,9 @@
             panY: round(state.ui.panY),
             menuActionScale: normalizeMenuActionScale(state.ui.menuActionScale),
             isMaximized: !!state.ui.isMaximized,
-            activeInspectorTab: state.ui.activeInspectorTab || ""
+            activeInspectorTab: state.ui.activeInspectorTab || "",
+            showDiagnostics: !!state.ui.showDiagnostics,
+            showMinimap: state.ui.showMinimap !== false
         });
     }
 
@@ -1200,6 +1013,7 @@
         const surface = createElement(state.document, "div", "cw-node__surface");
         const noteText = node.inlineText || node.title || node.leadText || "Write note";
         surface.appendChild(createElement(state.document, "p", "cw-note-node__text", noteText));
+        renderNodeAnnotations(state, node, surface);
 
         if (node.statusPill || node.progressMode || node.markerIcon || node.priority > 0) {
             const meta = createElement(state.document, "div", "cw-note-node__meta");
@@ -1276,6 +1090,8 @@
             surface.appendChild(createElement(state.document, "p", "cw-node__lead", node.leadText));
         }
 
+        renderNodeAnnotations(state, node, surface);
+
         if (node.chips.length > 0) {
             const chipRow = createElement(state.document, "div", "cw-node__chips");
             for (const chip of node.chips) {
@@ -1347,6 +1163,504 @@
 
             state.nodeLayer.appendChild(nodeElement);
         }
+    }
+
+    function positionFloatingOverlayWithinHost(state, element, anchorRect) {
+        if (!state?.host || !element || !anchorRect) {
+            return;
+        }
+
+        const hostRect = state.host.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const margin = 12;
+        let left = anchorRect.left - hostRect.left + (anchorRect.width / 2) - (elementRect.width / 2);
+        let top = anchorRect.top - hostRect.top - elementRect.height - 10;
+
+        if (top < margin) {
+            top = anchorRect.bottom - hostRect.top + 10;
+        }
+
+        left = clamp(left, margin, Math.max(margin, hostRect.width - elementRect.width - margin));
+        top = clamp(top, margin, Math.max(margin, hostRect.height - elementRect.height - margin));
+        element.style.left = `${round(left)}px`;
+        element.style.top = `${round(top)}px`;
+    }
+
+    function hidePopover(state) {
+        if (!state?.popover) {
+            return;
+        }
+
+        state.popover.style.display = "none";
+        state.popoverAnchor = null;
+    }
+
+    function showPopover(state, anchorElement, annotation) {
+        if (!state?.popover || !anchorElement || !annotation) {
+            return;
+        }
+
+        state.popover.dataset.kind = annotation.kind || "info";
+        state.popover.dataset.tone = annotation.tone || "accent";
+        state.popoverTitle.textContent = annotation.label || annotation.kind || "Signal";
+        state.popoverBody.textContent = annotation.description || annotation.label || "Shared workbench signal";
+        state.popover.style.display = "grid";
+        state.popoverAnchor = anchorElement;
+        positionFloatingOverlayWithinHost(state, state.popover, anchorElement.getBoundingClientRect());
+    }
+
+    function invokeAnnotationAction(state, node, annotation) {
+        if (!annotation?.actionId) {
+            return;
+        }
+
+        const point = getNodePosition(state, node);
+        state.dotNetRef.invokeMethodAsync("OnContextAction", node.id, annotation.actionId, round(point.x), round(point.y));
+    }
+
+    function renderNodeAnnotations(state, node, container) {
+        if (!Array.isArray(node?.annotations) || node.annotations.length === 0) {
+            return;
+        }
+
+        const row = createElement(state.document, "div", "cw-node__annotations");
+        for (const annotation of node.annotations) {
+            const badge = createElement(state.document, "button", `cw-node__annotation tone-${annotation.tone || "accent"}`);
+            badge.type = "button";
+            badge.dataset.kind = annotation.kind || "info";
+            badge.textContent = annotation.icon
+                ? `${annotation.icon} ${annotation.label || annotation.kind || "Signal"}`
+                : (annotation.label || annotation.kind || "Signal");
+            badge.addEventListener("pointerdown", event => event.stopPropagation());
+            badge.addEventListener("pointerenter", () => showPopover(state, badge, annotation));
+            badge.addEventListener("pointerleave", () => hidePopover(state));
+            badge.addEventListener("focus", () => showPopover(state, badge, annotation));
+            badge.addEventListener("blur", () => hidePopover(state));
+            badge.addEventListener("click", event => {
+                event.preventDefault();
+                event.stopPropagation();
+                hidePopover(state);
+                invokeAnnotationAction(state, node, annotation);
+            });
+            row.appendChild(badge);
+        }
+
+        container.appendChild(row);
+    }
+
+    function hideStatusNotice(state) {
+        if (!state?.statusNotice) {
+            return;
+        }
+
+        if (state.statusNoticeTimer) {
+            window.clearTimeout(state.statusNoticeTimer);
+            state.statusNoticeTimer = 0;
+        }
+
+        state.statusNotice.style.display = "none";
+        state.statusNotice.textContent = "";
+        delete state.statusNotice.dataset.tone;
+    }
+
+    function showStatusNotice(state, message, tone) {
+        if (!state?.statusNotice || !message) {
+            return;
+        }
+
+        hideStatusNotice(state);
+        state.statusNotice.textContent = message;
+        state.statusNotice.dataset.tone = tone || "accent";
+        state.statusNotice.style.display = "block";
+        state.statusNoticeTimer = window.setTimeout(() => hideStatusNotice(state), 1800);
+    }
+
+    function renderEmptyStateOverlay(state, visibleNodes) {
+        if (!state?.emptyState) {
+            return;
+        }
+
+        const shouldShow = visibleNodes.length === 0;
+        state.emptyState.style.display = shouldShow ? "grid" : "none";
+        if (!shouldShow) {
+            return;
+        }
+
+        state.emptyStateKicker.textContent = state.surface.chrome.emptyStateKicker || "Canvas";
+        state.emptyStateTitle.textContent = state.surface.chrome.emptyStateTitle || "No nodes yet";
+        state.emptyStateBody.textContent = state.surface.chrome.emptyStateDescription || "Use quick create to start building the scene.";
+    }
+
+    function clearSnapGuides(state) {
+        state.snapGuides = [];
+    }
+
+    function renderSnapGuides(state) {
+        if (!state?.guideLayer) {
+            return;
+        }
+
+        state.guideLayer.innerHTML = "";
+        if (!Array.isArray(state.snapGuides) || state.snapGuides.length === 0) {
+            return;
+        }
+
+        const bounds = getSceneBounds(state) || { minX: -200, maxX: 200, minY: -200, maxY: 200 };
+        const padding = 180;
+        for (const guide of state.snapGuides) {
+            const element = createElement(state.document, "div", `cw-snap-guide is-${guide.orientation || "vertical"}`);
+            if (guide.orientation === "horizontal") {
+                element.style.left = `${round(bounds.minX - padding)}px`;
+                element.style.top = `${round(guide.value)}px`;
+                element.style.width = `${round((bounds.maxX - bounds.minX) + (padding * 2))}px`;
+            }
+            else {
+                element.style.left = `${round(guide.value)}px`;
+                element.style.top = `${round(bounds.minY - padding)}px`;
+                element.style.height = `${round((bounds.maxY - bounds.minY) + (padding * 2))}px`;
+            }
+
+            state.guideLayer.appendChild(element);
+        }
+    }
+
+    function resolveSnapAdjustment(state, interaction, deltaX, deltaY) {
+        const movingIds = new Set(interaction?.nodeIds || []);
+        const movingNodes = (interaction?.nodeIds || [])
+            .map(nodeId => state.lookups.byId.get(nodeId))
+            .filter(Boolean);
+        const stationaryNodes = getVisibleNodes(state).filter(node => !movingIds.has(node.id));
+        const tolerance = 18 / Math.max(state.ui.zoom || 1, 0.25);
+        let bestX = null;
+        let bestY = null;
+
+        for (const movingNode of movingNodes) {
+            const startPosition = interaction.startPositions?.[movingNode.id];
+            if (!startPosition) {
+                continue;
+            }
+
+            const movingPoint = {
+                x: startPosition.x + deltaX,
+                y: startPosition.y + deltaY
+            };
+
+            for (const stationaryNode of stationaryNodes) {
+                const stationaryPoint = getNodePosition(state, stationaryNode);
+                const offsetX = stationaryPoint.x - movingPoint.x;
+                if (Math.abs(offsetX) <= tolerance && (!bestX || Math.abs(offsetX) < Math.abs(bestX.offset))) {
+                    bestX = { offset: offsetX, value: stationaryPoint.x };
+                }
+
+                const offsetY = stationaryPoint.y - movingPoint.y;
+                if (Math.abs(offsetY) <= tolerance && (!bestY || Math.abs(offsetY) < Math.abs(bestY.offset))) {
+                    bestY = { offset: offsetY, value: stationaryPoint.y };
+                }
+            }
+        }
+
+        const adjustedDeltaX = bestX ? deltaX + bestX.offset : deltaX;
+        const adjustedDeltaY = bestY ? deltaY + bestY.offset : deltaY;
+        const guides = [];
+        if (bestX) {
+            guides.push({ orientation: "vertical", value: bestX.value });
+        }
+
+        if (bestY) {
+            guides.push({ orientation: "horizontal", value: bestY.value });
+        }
+
+        return {
+            deltaX: adjustedDeltaX,
+            deltaY: adjustedDeltaY,
+            guides
+        };
+    }
+
+    function renderDebugDecorations(state, visibleNodes) {
+        if (!state?.debugLayer) {
+            return;
+        }
+
+        state.debugLayer.innerHTML = "";
+        const diagnostics = state.surface.chrome.diagnostics || {};
+        const enabled = diagnostics.isEnabled && state.ui.showDiagnostics;
+        if (!enabled) {
+            return;
+        }
+
+        if (diagnostics.showNodeBounds) {
+            for (const node of visibleNodes) {
+                const position = getNodePosition(state, node, visibleNodes);
+                const size = getNodeSize(state, node);
+                const bounds = createElement(state.document, "div", "cw-debug-bounds");
+                bounds.style.left = `${round(position.x - (size.width / 2))}px`;
+                bounds.style.top = `${round(position.y - (size.height / 2))}px`;
+                bounds.style.width = `${round(size.width)}px`;
+                bounds.style.height = `${round(size.height)}px`;
+                state.debugLayer.appendChild(bounds);
+            }
+        }
+
+        if (diagnostics.showConnectorAnchors) {
+            const visibleLookup = new Set(visibleNodes.map(node => node.id));
+            for (const link of state.surface.links) {
+                if (!visibleLookup.has(link.sourceId) || !visibleLookup.has(link.targetId)) {
+                    continue;
+                }
+
+                const source = state.lookups.byId.get(link.sourceId);
+                const target = state.lookups.byId.get(link.targetId);
+                if (!source || !target) {
+                    continue;
+                }
+
+                const sourcePosition = getNodePosition(state, source, visibleNodes);
+                const targetPosition = getNodePosition(state, target, visibleNodes);
+                const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
+                const targetSide = sourceSide === "right" ? "left" : "right";
+                for (const point of [getLinkAnchorPoint(state, source, sourceSide), getLinkAnchorPoint(state, target, targetSide)]) {
+                    const dot = createElement(state.document, "div", "cw-debug-anchor");
+                    dot.style.left = `${round(point.x)}px`;
+                    dot.style.top = `${round(point.y)}px`;
+                    state.debugLayer.appendChild(dot);
+                }
+            }
+        }
+    }
+
+    function renderDiagnosticsOverlay(state, visibleNodes) {
+        if (!state?.diagnosticsPanel) {
+            return;
+        }
+
+        const diagnostics = state.surface.chrome.diagnostics || {};
+        const enabled = diagnostics.isEnabled && state.ui.showDiagnostics;
+        state.diagnosticsPanel.style.display = enabled ? "grid" : "none";
+        if (!enabled) {
+            return;
+        }
+
+        const bounds = getSceneBounds(state);
+        state.diagnosticsBody.innerHTML = "";
+        const rows = [
+            ["Nodes", `${visibleNodes.length}/${state.surface.nodes.length}`],
+            ["Links", `${state.surface.links.length}`],
+            ["Selected", `${state.selectedIds.size}`],
+            ["Interaction", state.interaction?.kind || "idle"],
+            ["Zoom", `${Math.round((state.ui.zoom || 1) * 100)}%`],
+            ["Pan", `${round(state.ui.panX)}, ${round(state.ui.panY)}`]
+        ];
+
+        if (diagnostics.showViewportStats && bounds) {
+            rows.push(["Bounds", `${round(bounds.minX)}:${round(bounds.minY)} to ${round(bounds.maxX)}:${round(bounds.maxY)}`]);
+        }
+
+        for (const [label, value] of rows) {
+            const row = createElement(state.document, "div", "cw-diagnostics__row");
+            row.appendChild(createElement(state.document, "span", "cw-diagnostics__label", label));
+            row.appendChild(createElement(state.document, "strong", "cw-diagnostics__value", value));
+            state.diagnosticsBody.appendChild(row);
+        }
+    }
+
+    function renderMinimap(state, visibleNodes) {
+        if (!state?.minimapShell || !state?.minimapCanvas) {
+            return;
+        }
+
+        const minimap = state.surface.chrome.minimap || {};
+        const enabled = minimap.isEnabled && state.ui.showMinimap !== false && visibleNodes.length > 0;
+        state.minimapShell.style.display = enabled ? "grid" : "none";
+        if (!enabled) {
+            state.minimapMetrics = null;
+            return;
+        }
+
+        const svg = state.minimapCanvas;
+        svg.innerHTML = "";
+        state.minimapTitle.textContent = minimap.title || "Scene overview";
+
+        const bounds = getSceneBounds(state) || { minX: 0, maxX: 320, minY: 0, maxY: 240 };
+        const width = 200;
+        const height = 128;
+        const padding = 12;
+        const sceneWidth = Math.max(bounds.maxX - bounds.minX, 240);
+        const sceneHeight = Math.max(bounds.maxY - bounds.minY, 180);
+        const scale = Math.min((width - (padding * 2)) / sceneWidth, (height - (padding * 2)) / sceneHeight);
+        const offsetX = (width - (sceneWidth * scale)) / 2;
+        const offsetY = (height - (sceneHeight * scale)) / 2;
+
+        state.minimapMetrics = {
+            width,
+            height,
+            padding,
+            scale,
+            offsetX,
+            offsetY,
+            bounds
+        };
+
+        const backdrop = createSvgElement(state.document, "rect", "cw-minimap__backdrop");
+        backdrop.setAttribute("x", "0");
+        backdrop.setAttribute("y", "0");
+        backdrop.setAttribute("width", `${width}`);
+        backdrop.setAttribute("height", `${height}`);
+        svg.appendChild(backdrop);
+
+        for (const node of visibleNodes) {
+            const position = getNodePosition(state, node, visibleNodes);
+            const size = getNodeSize(state, node);
+            const rect = createSvgElement(state.document, "rect", "cw-minimap__node");
+            rect.setAttribute("x", `${round(offsetX + ((position.x - (size.width / 2) - bounds.minX) * scale))}`);
+            rect.setAttribute("y", `${round(offsetY + ((position.y - (size.height / 2) - bounds.minY) * scale))}`);
+            rect.setAttribute("width", `${Math.max(4, round(size.width * scale))}`);
+            rect.setAttribute("height", `${Math.max(4, round(size.height * scale))}`);
+            rect.setAttribute("rx", node.family === "root" ? "5" : "3");
+            rect.setAttribute("data-selected", state.selectedIds.has(node.id) ? "true" : "false");
+            svg.appendChild(rect);
+        }
+
+        const hostRect = state.host.getBoundingClientRect();
+        const viewport = createSvgElement(state.document, "rect", "cw-minimap__viewport");
+        viewport.setAttribute("x", `${round(offsetX + ((((0 - state.ui.panX) / state.ui.zoom) - bounds.minX) * scale))}`);
+        viewport.setAttribute("y", `${round(offsetY + ((((0 - state.ui.panY) / state.ui.zoom) - bounds.minY) * scale))}`);
+        viewport.setAttribute("width", `${Math.max(12, round((hostRect.width / state.ui.zoom) * scale))}`);
+        viewport.setAttribute("height", `${Math.max(12, round((hostRect.height / state.ui.zoom) * scale))}`);
+        svg.appendChild(viewport);
+    }
+
+    function navigateViaMinimap(state, event) {
+        if (!state?.minimapMetrics) {
+            return;
+        }
+
+        const rect = state.minimapCanvas.getBoundingClientRect();
+        const x = clamp(event.clientX - rect.left, 0, rect.width);
+        const y = clamp(event.clientY - rect.top, 0, rect.height);
+        const metrics = state.minimapMetrics;
+        const worldX = metrics.bounds.minX + ((x - metrics.offsetX) / metrics.scale);
+        const worldY = metrics.bounds.minY + ((y - metrics.offsetY) / metrics.scale);
+        const hostRect = state.host.getBoundingClientRect();
+        setPan(
+            state,
+            (hostRect.width / 2) - (worldX * state.ui.zoom),
+            (hostRect.height / 2) - (worldY * state.ui.zoom));
+        render(state);
+        publishState(state);
+    }
+
+    async function writeClipboardText(payload) {
+        if (!navigator?.clipboard?.writeText || !payload) {
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(payload);
+        }
+        catch {
+        }
+    }
+
+    async function readClipboardText() {
+        if (!navigator?.clipboard?.readText) {
+            return "";
+        }
+
+        try {
+            return await navigator.clipboard.readText();
+        }
+        catch {
+            return "";
+        }
+    }
+
+    function resolveClipboardAnchor(state) {
+        const rect = state.host.getBoundingClientRect();
+        return getWorldPoint(state, rect.left + (rect.width / 2), rect.top + (rect.height / 2));
+    }
+
+    function buildClipboardPayload(state) {
+        const selectedNodeIds = [...state.selectedIds];
+        const selectedNodes = selectedNodeIds
+            .map(nodeId => state.lookups.byId.get(nodeId))
+            .filter(Boolean)
+            .map(node => ({
+                id: node.id,
+                title: node.title || "",
+                kind: node.kind || "",
+                family: node.family || "",
+                position: getNodePosition(state, node)
+            }));
+
+        return {
+            format: state.surface.chrome.clipboard.format,
+            surfaceId: state.surface.surfaceId,
+            capturedAtUtc: new Date().toISOString(),
+            selectedNodeIds,
+            selectedNodes
+        };
+    }
+
+    function copySelectionToClipboard(state) {
+        const clipboard = state.surface.chrome.clipboard || {};
+        if (!clipboard.isEnabled || !clipboard.allowCopy || state.selectedIds.size === 0) {
+            return;
+        }
+
+        const payload = JSON.stringify(buildClipboardPayload(state));
+        state.localClipboard = payload;
+        void writeClipboardText(payload);
+        state.dotNetRef.invokeMethodAsync("OnClipboardAction", "copy", payload);
+        showStatusNotice(state, `Copied ${state.selectedIds.size} node(s)`, "accent");
+    }
+
+    async function requestClipboardPaste(state) {
+        const clipboard = state.surface.chrome.clipboard || {};
+        if (!clipboard.isEnabled || !clipboard.allowPaste) {
+            return;
+        }
+
+        let payload = state.localClipboard || "";
+        if (!payload) {
+            payload = await readClipboardText();
+        }
+
+        if (!payload) {
+            showStatusNotice(state, "Clipboard is empty", "warn");
+            return;
+        }
+
+        const envelope = JSON.stringify({
+            payloadJson: payload,
+            anchorWorld: resolveClipboardAnchor(state),
+            surfaceId: state.surface.surfaceId
+        });
+        state.dotNetRef.invokeMethodAsync("OnClipboardAction", "paste", envelope);
+        showStatusNotice(state, "Paste routed through the shared canvas bridge", "success");
+    }
+
+    function requestClipboardDuplicate(state) {
+        const clipboard = state.surface.chrome.clipboard || {};
+        if (!clipboard.isEnabled || !clipboard.allowDuplicate || state.selectedIds.size === 0) {
+            return;
+        }
+
+        state.dotNetRef.invokeMethodAsync("OnClipboardAction", "duplicate", JSON.stringify(buildClipboardPayload(state)));
+        showStatusNotice(state, "Duplicate request sent to the workspace", "accent");
+    }
+
+    function toggleMinimap(state) {
+        state.ui.showMinimap = state.ui.showMinimap === false;
+        render(state);
+        publishState(state);
+    }
+
+    function toggleDiagnostics(state) {
+        state.ui.showDiagnostics = !state.ui.showDiagnostics;
+        hidePopover(state);
+        render(state);
+        publishState(state);
     }
 
     function invalidateMeasuredLayout(state) {
@@ -1454,7 +1768,7 @@
     }
 
     function isOverlayTarget(target) {
-        return !!target?.closest?.(".cw-context-menu, .cw-canvas-composer");
+        return !!target?.closest?.(".cw-context-menu, .cw-canvas-composer, .cw-workbench__popover, .cw-minimap, .cw-status-notice");
     }
 
     function publishSelection(state) {
@@ -1599,7 +1913,12 @@
         applySceneTransform(state);
         renderGroupFrames(state, visibleNodes);
         renderLinks(state, visibleNodes);
+        renderSnapGuides(state);
         renderNodes(state, visibleNodes);
+        renderEmptyStateOverlay(state, visibleNodes);
+        renderDebugDecorations(state, visibleNodes);
+        renderDiagnosticsOverlay(state, visibleNodes);
+        renderMinimap(state, visibleNodes);
         layoutComposer(state);
         scheduleNodeMeasurement(state);
     }
@@ -3138,6 +3457,7 @@
     }
 
     function startPan(state, event) {
+        clearSnapGuides(state);
         state.interaction = {
             kind: "pan",
             startClientX: event.clientX,
@@ -3149,6 +3469,7 @@
     }
 
     function startMarquee(state, event) {
+        clearSnapGuides(state);
         const point = getHostPoint(state, event.clientX, event.clientY);
         state.interaction = {
             kind: "marquee",
@@ -3197,6 +3518,7 @@
             startPositions,
             frameId: options?.frameId || null
         };
+        clearSnapGuides(state);
         render(state);
     }
 
@@ -3249,8 +3571,14 @@
     }
 
     function updateDrag(state, event) {
-        const deltaX = (event.clientX - state.interaction.startClientX) / state.ui.zoom;
-        const deltaY = (event.clientY - state.interaction.startClientY) / state.ui.zoom;
+        const rawDeltaX = (event.clientX - state.interaction.startClientX) / state.ui.zoom;
+        const rawDeltaY = (event.clientY - state.interaction.startClientY) / state.ui.zoom;
+        const snapResult = event.shiftKey
+            ? { deltaX: rawDeltaX, deltaY: rawDeltaY, guides: [] }
+            : resolveSnapAdjustment(state, state.interaction, rawDeltaX, rawDeltaY);
+        const deltaX = snapResult.deltaX;
+        const deltaY = snapResult.deltaY;
+        state.snapGuides = snapResult.guides;
         state.interaction.moved = state.interaction.moved || Math.abs(deltaX) > 0.5 || Math.abs(deltaY) > 0.5;
 
         for (const nodeId of state.interaction.nodeIds) {
@@ -3279,6 +3607,7 @@
 
         const interaction = state.interaction;
         state.interaction = null;
+        clearSnapGuides(state);
 
         switch (interaction.kind) {
             case "drag":
@@ -3297,6 +3626,8 @@
                 applyMarqueeSelection(state);
                 break;
         }
+
+        render(state);
     }
 
     function isNodeVisibleInViewport(state, node, margin) {
@@ -3763,6 +4094,25 @@
                     return;
                 }
 
+                const lowerKey = (event.key || "").toLowerCase();
+                const usesCommandModifier = event.ctrlKey || event.metaKey;
+                if (usesCommandModifier && !event.altKey) {
+                    switch (lowerKey) {
+                        case "c":
+                            event.preventDefault();
+                            copySelectionToClipboard(state);
+                            return;
+                        case "v":
+                            event.preventDefault();
+                            void requestClipboardPaste(state);
+                            return;
+                        case "d":
+                            event.preventDefault();
+                            requestClipboardDuplicate(state);
+                            return;
+                    }
+                }
+
                 if (event.key === "Tab" && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
                     event.preventDefault();
                     openKeyboardNoteComposer(state, "child");
@@ -3794,6 +4144,16 @@
                     case "H":
                         event.preventDefault();
                         toggleHelp(state);
+                        break;
+                    case "d":
+                    case "D":
+                        event.preventDefault();
+                        toggleDiagnostics(state);
+                        break;
+                    case "m":
+                    case "M":
+                        event.preventDefault();
+                        toggleMinimap(state);
                         break;
                     case "Escape":
                         event.preventDefault();
@@ -3834,11 +4194,32 @@
         const scene = createElement(state.document, "div", "cw-workbench__scene");
         const frameLayer = createElement(state.document, "div", "cw-workbench__frame-layer");
         const links = createSvgElement(state.document, "svg", "cw-workbench__links");
+        const debugLayer = createElement(state.document, "div", "cw-workbench__debug-layer");
+        const guideLayer = createElement(state.document, "div", "cw-workbench__guide-layer");
         const nodeLayer = createElement(state.document, "div", "cw-workbench__node-layer");
         const marquee = createElement(state.document, "div", "cw-marquee");
         const contextMenu = createElement(state.document, "div", "cw-context-menu");
+        const emptyState = createElement(state.document, "div", "cw-empty-state");
+        const emptyStateKicker = createElement(state.document, "p", "cw-empty-state__kicker");
+        const emptyStateTitle = createElement(state.document, "h3", "cw-empty-state__title");
+        const emptyStateBody = createElement(state.document, "p", "cw-empty-state__body");
+        const diagnosticsPanel = createElement(state.document, "div", "cw-diagnostics");
+        const diagnosticsTitle = createElement(state.document, "p", "cw-diagnostics__title", "Diagnostics");
+        const diagnosticsBody = createElement(state.document, "div", "cw-diagnostics__body");
+        const minimapShell = createElement(state.document, "div", "cw-minimap");
+        const minimapTitle = createElement(state.document, "p", "cw-minimap__title");
+        const minimapCanvas = createSvgElement(state.document, "svg", "cw-minimap__canvas");
+        const popover = createElement(state.document, "div", "cw-workbench__popover");
+        const popoverTitle = createElement(state.document, "strong", "cw-workbench__popover-title");
+        const popoverBody = createElement(state.document, "span", "cw-workbench__popover-body");
+        const statusNotice = createElement(state.document, "div", "cw-status-notice");
         contextMenu.style.display = "none";
         marquee.style.display = "none";
+        emptyState.style.display = "none";
+        diagnosticsPanel.style.display = "none";
+        minimapShell.style.display = "none";
+        popover.style.display = "none";
+        statusNotice.style.display = "none";
         contextMenu.addEventListener("pointerdown", event => event.stopPropagation());
         contextMenu.addEventListener("contextmenu", event => {
             event.preventDefault();
@@ -3849,21 +4230,58 @@
                 closeContextMenuLayersFrom(state, depth);
             }
         });
+        emptyState.appendChild(emptyStateKicker);
+        emptyState.appendChild(emptyStateTitle);
+        emptyState.appendChild(emptyStateBody);
+        diagnosticsPanel.appendChild(diagnosticsTitle);
+        diagnosticsPanel.appendChild(diagnosticsBody);
+        minimapShell.appendChild(minimapTitle);
+        minimapCanvas.setAttribute("viewBox", "0 0 200 128");
+        minimapCanvas.addEventListener("pointerdown", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            navigateViaMinimap(state, event);
+        });
+        minimapShell.appendChild(minimapCanvas);
+        popover.appendChild(popoverTitle);
+        popover.appendChild(popoverBody);
 
         scene.appendChild(frameLayer);
         scene.appendChild(links);
+        scene.appendChild(debugLayer);
+        scene.appendChild(guideLayer);
         scene.appendChild(nodeLayer);
         state.host.appendChild(backdrop);
         state.host.appendChild(scene);
         state.host.appendChild(marquee);
+        state.host.appendChild(emptyState);
+        state.host.appendChild(diagnosticsPanel);
+        state.host.appendChild(minimapShell);
         state.host.appendChild(contextMenu);
+        state.host.appendChild(popover);
+        state.host.appendChild(statusNotice);
 
         state.scene = scene;
         state.frameLayer = frameLayer;
         state.links = links;
+        state.debugLayer = debugLayer;
+        state.guideLayer = guideLayer;
         state.nodeLayer = nodeLayer;
         state.marquee = marquee;
+        state.emptyState = emptyState;
+        state.emptyStateKicker = emptyStateKicker;
+        state.emptyStateTitle = emptyStateTitle;
+        state.emptyStateBody = emptyStateBody;
+        state.diagnosticsPanel = diagnosticsPanel;
+        state.diagnosticsBody = diagnosticsBody;
+        state.minimapShell = minimapShell;
+        state.minimapTitle = minimapTitle;
+        state.minimapCanvas = minimapCanvas;
         state.contextMenu = contextMenu;
+        state.popover = popover;
+        state.popoverTitle = popoverTitle;
+        state.popoverBody = popoverBody;
+        state.statusNotice = statusNotice;
         resize(state);
     }
 
@@ -3886,8 +4304,19 @@
             scene: null,
             frameLayer: null,
             links: null,
+            debugLayer: null,
+            guideLayer: null,
             nodeLayer: null,
             marquee: null,
+            emptyState: null,
+            emptyStateKicker: null,
+            emptyStateTitle: null,
+            emptyStateBody: null,
+            diagnosticsPanel: null,
+            diagnosticsBody: null,
+            minimapShell: null,
+            minimapTitle: null,
+            minimapCanvas: null,
             contextMenu: null,
             contextMenuState: null,
             composer: null,
@@ -3902,6 +4331,15 @@
             layoutPositions: null,
             layoutKey: "",
             measureLayoutFrame: 0,
+            snapGuides: [],
+            popover: null,
+            popoverTitle: null,
+            popoverBody: null,
+            popoverAnchor: null,
+            statusNotice: null,
+            statusNoticeTimer: 0,
+            localClipboard: "",
+            minimapMetrics: null,
             publishStateDebounced: debounce(stateJson => dotNetRef.invokeMethodAsync("OnStateChanged", stateJson), 140)
         };
     }
@@ -3923,6 +4361,7 @@
         syncMenuScaleCss(state);
         invalidateMeasuredLayout(state);
         clearContextMenu(state);
+        hidePopover(state);
         if (state.composer?.nodeId && !state.lookups.byId.has(state.composer.nodeId)) {
             closeComposer(state, { focusHost: false });
         }
@@ -4040,6 +4479,22 @@
                 label: sourceNode?.title || "Quick create"
             });
         },
+        toggleMinimap(host) {
+            const state = host.__canvasWorkbenchState;
+            if (!state) {
+                return;
+            }
+
+            toggleMinimap(state);
+        },
+        toggleDiagnostics(host) {
+            const state = host.__canvasWorkbenchState;
+            if (!state) {
+                return;
+            }
+
+            toggleDiagnostics(state);
+        },
         getState(host) {
             const state = host.__canvasWorkbenchState;
             return state ? serializeState(state) : JSON.stringify({});
@@ -4078,6 +4533,11 @@
             if (state.measureLayoutFrame) {
                 window.cancelAnimationFrame(state.measureLayoutFrame);
                 state.measureLayoutFrame = 0;
+            }
+
+            if (state.statusNoticeTimer) {
+                window.clearTimeout(state.statusNoticeTimer);
+                state.statusNoticeTimer = 0;
             }
 
             if (state.handlers) {

@@ -1,22 +1,14 @@
 @implements IAsyncDisposable
-@using System.Text.Json
 @using CanDoItAll.ComponentKit.Canvas
 @inject IJSRuntime JsRuntime
 
 <div @ref="host" class="@BuildHostClass()"></div>
 
 @code {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
+    private readonly CanvasSceneHost sceneHost = new();
     private ElementReference host;
     private DotNetObjectReference<CanvasCalendar>? objectReference;
-    private bool initialized;
-    private bool surfaceSyncPending = true;
     private string? pendingSurfaceKey;
-    private string? appliedSurfaceKey;
 
     [Parameter, EditorRequired]
     public CanvasCalendarSurface Surface { get; set; } = default!;
@@ -53,27 +45,29 @@
 
     protected override void OnParametersSet()
     {
-        pendingSurfaceKey = JsonSerializer.Serialize(Surface, SerializerOptions);
-        surfaceSyncPending = !string.Equals(appliedSurfaceKey, pendingSurfaceKey, StringComparison.Ordinal);
+        pendingSurfaceKey = SerializationPersistencePack.Serialize(Surface);
+        sceneHost.QueueSync(
+            pendingSurfaceKey,
+            !string.Equals(sceneHost.AppliedStateKey, pendingSurfaceKey, StringComparison.Ordinal));
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         objectReference ??= DotNetObjectReference.Create(this);
-        if (!initialized)
+        var bridge = new JsInteropBridge(JsRuntime);
+        if (sceneHost.ShouldCreate())
         {
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasCalendar.create", host, objectReference, Surface);
-            initialized = true;
+            await bridge.InvokeVoidAsync("CanDoItAll.canvasCalendar.create", host, objectReference, Surface);
             MarkSurfaceApplied();
             return;
         }
 
-        if (!surfaceSyncPending)
+        if (!sceneHost.ShouldUpdate())
         {
             return;
         }
 
-        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasCalendar.update", host, Surface);
+        await bridge.InvokeVoidAsync("CanDoItAll.canvasCalendar.update", host, Surface);
         MarkSurfaceApplied();
     }
 
@@ -84,11 +78,11 @@
         var context = Deserialize<CanvasCalendarOperationContext>(contextJson) ?? new CanvasCalendarOperationContext();
         if (SaveEventAsync is null)
         {
-            return JsonSerializer.Serialize(calendarEvent, SerializerOptions);
+            return SerializationPersistencePack.Serialize(calendarEvent);
         }
 
         var result = await SaveEventAsync(new CanvasCalendarSaveRequest(calendarEvent, context, mode));
-        return JsonSerializer.Serialize(result ?? calendarEvent, SerializerOptions);
+        return SerializationPersistencePack.Serialize(result ?? calendarEvent);
     }
 
     [JSInvokable]
@@ -115,7 +109,7 @@
         var calendarEvent = Deserialize<CanvasCalendarEvent>(eventJson);
         var context = Deserialize<CanvasCalendarOperationContext>(contextJson) ?? new CanvasCalendarOperationContext();
         var results = await SearchPlaylistsAsync(new CanvasCalendarPlaylistSearchRequest(query, calendarEvent, context));
-        return JsonSerializer.Serialize(results ?? Array.Empty<CanvasCalendarPlaylist>(), SerializerOptions);
+        return SerializationPersistencePack.Serialize(results ?? Array.Empty<CanvasCalendarPlaylist>());
     }
 
     [JSInvokable]
@@ -181,11 +175,11 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (initialized)
+        if (sceneHost.IsInitialized)
         {
             try
             {
-                await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasCalendar.dispose", host);
+                await new JsInteropBridge(JsRuntime).InvokeVoidAsync("CanDoItAll.canvasCalendar.dispose", host);
             }
             catch (JSDisconnectedException)
             {
@@ -199,21 +193,7 @@
     }
 
     private static T? Deserialize<T>(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return default;
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<T>(json, SerializerOptions);
-        }
-        catch
-        {
-            return default;
-        }
-    }
+        => SerializationPersistencePack.Deserialize<T>(json);
 
     private async Task<string?> HandlePlaylistMutationAsync(
         string eventJson,
@@ -227,11 +207,11 @@
 
         if (callback is null)
         {
-            return JsonSerializer.Serialize(calendarEvent, SerializerOptions);
+            return SerializationPersistencePack.Serialize(calendarEvent);
         }
 
         var result = await callback(new CanvasCalendarPlaylistMutationRequest(calendarEvent, playlist, context));
-        return JsonSerializer.Serialize(result ?? calendarEvent, SerializerOptions);
+        return SerializationPersistencePack.Serialize(result ?? calendarEvent);
     }
 
     private string BuildHostClass()
@@ -252,7 +232,6 @@
 
     private void MarkSurfaceApplied()
     {
-        appliedSurfaceKey = pendingSurfaceKey;
-        surfaceSyncPending = false;
+        sceneHost.MarkApplied();
     }
 }

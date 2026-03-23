@@ -10,6 +10,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 *@
 @using CanDoItAll.ComponentKit.Canvas
 @using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Modules.Factory.CanvasAdapters
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Resources
 @using CanDoItAll.Modules.Workspace
@@ -1867,6 +1868,8 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
     private PromptBlockEditorModel blockEditor = new();
     private PromptFlowTemplateEditorModel templateEditor = new();
     private CanvasWorkbenchSurface? canvasSurface;
+    private readonly PromptFactorySessionGraphAdapter sessionGraphAdapter = new();
+    private readonly PromptFactoryUndoRedoAdapter undoRedoAdapter = new();
     private List<string> selectedCanvasNodeIds = [];
     private string activeInspectorTab = "context";
     private string selectedPromptNodeTitle = string.Empty;
@@ -1974,27 +1977,27 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private void RefreshCanvasSurface()
     {
-        var uiState = CanvasWorkbenchUiState.Parse(editor.CanvasUiStateJson);
-        uiState.SelectedNodeIds = [.. selectedCanvasNodeIds];
-        uiState.ActiveInspectorTab = activeInspectorTab;
+        UpsertSetupAttachment();
+        var uiState = sessionGraphAdapter.BuildUiState(editor.CanvasUiStateJson, selectedCanvasNodeIds, activeInspectorTab);
         editor.CanvasUiStateJson = uiState.ToJson();
-        var sessionActions = PromptFactoryCanvasCatalog.BuildSessionContextActions(libraryCatalog).ToList();
-
-        canvasSurface = new CanvasWorkbenchSurface
-        {
-            SurfaceId = editor.SessionId.HasValue ? $"prompt-session:{editor.SessionId.Value:N}" : "prompt-session:draft",
-            Mode = "authoring",
-            UiState = uiState,
-            Chrome = new CanvasWorkbenchChrome
-            {
-                HintText = "Click to inspect a step, Alt-drag to multi-select, drag to move, and use the same shared canvas vocabulary as project structure.",
-                FocusActionLabel = "Focus session",
-                QuickCreateActions = sessionActions
-            },
-            Nodes = BuildCanvasNodes(),
-            Links = BuildCanvasLinks()
-        };
+        canvasSurface = sessionGraphAdapter.BuildSurface(BuildCanvasGraphRequest(uiState));
     }
+
+    private PromptFactorySessionGraphRequest BuildCanvasGraphRequest(CanvasWorkbenchUiState uiState)
+        => new(
+            editor,
+            libraryCatalog,
+            blueprints,
+            templates,
+            blocks,
+            VisibleSessionAttachments,
+            sessionSetup,
+            uiState,
+            ResolveSetupSummaryLine(),
+            ResolveSetupLeadCopy(),
+            ResolveSetupStatusLabel(),
+            SetupIsReady,
+            MissingSetupFieldCount);
 
     private List<CanvasWorkbenchNode> BuildCanvasNodes()
     {
@@ -2542,9 +2545,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private async Task PersistCanvasUiStateAsync()
     {
-        var uiState = CanvasWorkbenchUiState.Parse(editor.CanvasUiStateJson);
-        uiState.SelectedNodeIds = [.. selectedCanvasNodeIds];
-        uiState.ActiveInspectorTab = activeInspectorTab;
+        var uiState = sessionGraphAdapter.BuildUiState(editor.CanvasUiStateJson, selectedCanvasNodeIds, activeInspectorTab);
         editor.CanvasUiStateJson = uiState.ToJson();
         if (editor.SessionId.HasValue)
         {
