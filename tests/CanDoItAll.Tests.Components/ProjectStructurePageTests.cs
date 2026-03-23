@@ -120,4 +120,77 @@ public sealed class ProjectStructurePageTests
         Assert.Contains("/prompt-factory?sessionId=", navigation.Uri, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(created.ArtifactId!.Value.ToString(), navigation.Uri, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task Pdf_attachment_nodes_render_inline_preview_and_open_modal_without_navigation()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "PDF Preview Project";
+        project.Description = "Verify attachment previews in the inspector.";
+        project.Objective = "Keep PDF viewing inside project structure.";
+        project.CurrentPhase = "Review";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "Architecture spec",
+                "Uploaded PDF",
+                "Attachment preview coverage",
+                $"project:{projectId}",
+                540,
+                260,
+                null,
+                null,
+                string.Empty,
+                new ProjectObjectMediaPayload(
+                    "architecture-spec.pdf",
+                    "application/pdf",
+                    Convert.ToBase64String("%PDF-1.4 test payload"u8.ToArray()))));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Architecture spec", cut.Markup));
+
+        cut.FindAll("button")
+            .First(button => button.TextContent.Contains("Architecture spec", StringComparison.Ordinal))
+            .Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Attachment preview", cut.Markup);
+            Assert.Contains("application/pdf", cut.Markup);
+            Assert.Contains("project-structure-document-preview", cut.Markup);
+        });
+
+        var uriBeforeOpen = navigation.Uri;
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Expand preview", cut.Markup);
+            Assert.Contains("Open in new tab", cut.Markup);
+        });
+
+        cut.FindAll("button")
+            .First(button => string.Equals(button.TextContent.Trim(), "Open", StringComparison.Ordinal))
+            .Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-preview-dialog", cut.Markup);
+            Assert.Contains("dialog preview", cut.Markup);
+        });
+
+        Assert.Equal(uriBeforeOpen, navigation.Uri);
+    }
 }

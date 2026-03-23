@@ -129,18 +129,32 @@ else
                             </div>
                         </div>
 
-                        @if (selectedNode.ObjectType is ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset)
+                        @if (HasManagedAttachment(selectedNode))
                         {
                             <div class="cw-panel-card">
-                                <p class="cw-panel-kicker">Media preview</p>
-                                <h3 class="cw-panel-title">Uploaded asset</h3>
-                                @if (selectedNode.ObjectType == ProjectObjectType.ImageAsset)
+                                <p class="cw-panel-kicker">Attachment preview</p>
+                                <h3 class="cw-panel-title">@ResolveAttachmentDisplayName(selectedNode)</h3>
+                                <p class="cw-panel-copy">@ResolveAttachmentLeadCopy(selectedNode)</p>
+
+                                @switch (ResolveAttachmentPreviewKind(selectedNode))
                                 {
-                                    <img class="cw-media-preview" src="@selectedNode.Route" alt="@selectedNode.Title" />
-                                }
-                                else
-                                {
-                                    <video class="cw-media-preview" controls preload="metadata" src="@selectedNode.Route"></video>
+                                    case AttachmentPreviewKind.Image:
+                                        <img class="cw-media-preview" src="@selectedNode.Route" alt="@selectedNode.Title" />
+                                        break;
+                                    case AttachmentPreviewKind.Video:
+                                        <video class="cw-media-preview" controls preload="metadata" src="@selectedNode.Route"></video>
+                                        break;
+                                    case AttachmentPreviewKind.Document:
+                                        <iframe class="project-structure-document-preview"
+                                                src="@ResolveAttachmentPreviewSource(selectedNode)"
+                                                title="@($"{ResolveAttachmentDisplayName(selectedNode)} preview")"></iframe>
+                                        break;
+                                    default:
+                                        <div class="project-structure-preview-empty">
+                                            <strong>Inline preview is not available for this file type.</strong>
+                                            <span>Open the attachment in a new tab when you need the raw browser viewer.</span>
+                                        </div>
+                                        break;
                                 }
 
                                 <div class="cw-chip-row">
@@ -149,10 +163,30 @@ else
                                         <span class="cw-node__chip">@selectedNode.MediaOriginalFileName</span>
                                     }
 
-                                    @if (!string.IsNullOrWhiteSpace(selectedNode.MediaContentType))
+                                    @if (!string.IsNullOrWhiteSpace(ResolveAttachmentContentType(selectedNode)))
                                     {
-                                        <span class="cw-node__chip">@selectedNode.MediaContentType</span>
+                                        <span class="cw-node__chip">@ResolveAttachmentContentType(selectedNode)</span>
                                     }
+                                </div>
+
+                                <div class="cw-button-row">
+                                    @if (CanRenderAttachmentPreview(selectedNode))
+                                    {
+                                        <button type="button"
+                                                class="cw-button"
+                                                data-tone="accent"
+                                                @onclick="@(() => OpenAttachmentPreview(selectedNode))">
+                                            Expand preview
+                                        </button>
+                                    }
+
+                                    <a class="cw-button"
+                                       data-tone="ghost"
+                                       href="@selectedNode.Route"
+                                       target="_blank"
+                                       rel="noopener noreferrer">
+                                        Open in new tab
+                                    </a>
                                 </div>
                             </div>
                         }
@@ -242,6 +276,58 @@ else
     </div>
 }
 
+@if (previewNode is not null)
+{
+    <div class="project-structure-preview-backdrop" @onclick="CloseAttachmentPreview">
+        <div class="project-structure-preview-dialog"
+             role="dialog"
+             aria-modal="true"
+             aria-label="@($"{ResolveAttachmentDisplayName(previewNode)} preview")"
+             @onclick:stopPropagation="true">
+            <div class="project-structure-preview-dialog__header">
+                <div class="project-structure-preview-dialog__copy">
+                    <p class="cw-panel-kicker">Canvas preview</p>
+                    <h3 class="cw-panel-title">@ResolveAttachmentDisplayName(previewNode)</h3>
+                    <p class="cw-panel-copy">@ResolveAttachmentLeadCopy(previewNode)</p>
+                </div>
+
+                <div class="project-structure-preview-dialog__actions">
+                    <a class="cw-button"
+                       data-tone="ghost"
+                       href="@previewNode.Route"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        Open in new tab
+                    </a>
+                    <button type="button" class="cw-button" data-tone="primary" @onclick="CloseAttachmentPreview">Close</button>
+                </div>
+            </div>
+
+            <div class="project-structure-preview-dialog__body">
+                @switch (ResolveAttachmentPreviewKind(previewNode))
+                {
+                    case AttachmentPreviewKind.Image:
+                        <img class="project-structure-preview-dialog__media"
+                             src="@previewNode.Route"
+                             alt="@previewNode.Title" />
+                        break;
+                    case AttachmentPreviewKind.Video:
+                        <video class="project-structure-preview-dialog__media"
+                               controls
+                               preload="metadata"
+                               src="@previewNode.Route"></video>
+                        break;
+                    case AttachmentPreviewKind.Document:
+                        <iframe class="project-structure-preview-dialog__frame"
+                                src="@ResolveAttachmentPreviewSource(previewNode)"
+                                title="@($"{ResolveAttachmentDisplayName(previewNode)} dialog preview")"></iframe>
+                        break;
+                }
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter]
     public Guid ProjectId { get; set; }
@@ -255,6 +341,7 @@ else
     private List<string> selectedNodeIds = [];
     private string? linkModeSourceId;
     private string? currentViewStateJson;
+    private ProjectStructureNode? previewNode;
     private Guid loadedProjectId;
 
     private IReadOnlyList<CanvasWorkbenchStat> stageStats =>
@@ -294,6 +381,12 @@ else
         var uiState = !string.IsNullOrWhiteSpace(currentViewStateJson)
             ? CanvasWorkbenchUiState.Parse(currentViewStateJson)
             : CanvasWorkbenchUiState.Parse(reloadedSurface.ViewStateJson);
+
+        if (previewNode is not null)
+        {
+            previewNode = reloadedSurface.Nodes.FirstOrDefault(node => string.Equals(node.Id, previewNode.Id, StringComparison.Ordinal));
+        }
+
         selectedNodeIds = uiState.SelectedNodeIds
             .Where(id => reloadedSurface.Nodes.Any(node => string.Equals(node.Id, id, StringComparison.Ordinal)))
             .ToList();
@@ -499,6 +592,16 @@ else
         var targetNodeId = nodeId ?? selectedNode?.Id;
         if (string.IsNullOrWhiteSpace(targetNodeId))
         {
+            return;
+        }
+
+        var attachmentNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, targetNodeId, StringComparison.Ordinal));
+        if (commandKind == ProjectStructureCommandKind.Open &&
+            attachmentNode is not null &&
+            CanRenderAttachmentPreview(attachmentNode))
+        {
+            OpenAttachmentPreview(attachmentNode);
+            await InvokeAsync(StateHasChanged);
             return;
         }
 
@@ -856,5 +959,135 @@ else
         => nodes.FirstOrDefault(node => node.ObjectType == ProjectObjectType.ProjectRoot)?.Id
             ?? nodes.FirstOrDefault(node => string.IsNullOrWhiteSpace(node.ParentId))?.Id
             ?? nodes.FirstOrDefault()?.Id;
+
+    private static bool HasManagedAttachment(ProjectStructureNode? node)
+        => node is not null &&
+            !string.IsNullOrWhiteSpace(node.Route) &&
+            (!string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
+             node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase));
+
+    private static bool CanRenderAttachmentPreview(ProjectStructureNode? node)
+        => ResolveAttachmentPreviewKind(node) is not AttachmentPreviewKind.None;
+
+    private static AttachmentPreviewKind ResolveAttachmentPreviewKind(ProjectStructureNode? node)
+    {
+        if (!HasManagedAttachment(node))
+        {
+            return AttachmentPreviewKind.None;
+        }
+
+        var contentType = ResolveAttachmentContentType(node!);
+        if (node!.ObjectType == ProjectObjectType.ImageAsset ||
+            contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return AttachmentPreviewKind.Image;
+        }
+
+        if (node.ObjectType == ProjectObjectType.VideoAsset ||
+            contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
+        {
+            return AttachmentPreviewKind.Video;
+        }
+
+        if (IsDocumentAttachment(node, contentType))
+        {
+            return AttachmentPreviewKind.Document;
+        }
+
+        return AttachmentPreviewKind.None;
+    }
+
+    private static bool IsDocumentAttachment(ProjectStructureNode node, string contentType)
+    {
+        if (contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase) ||
+            contentType.Equals("application/json", StringComparison.OrdinalIgnoreCase) ||
+            contentType.Equals("application/xml", StringComparison.OrdinalIgnoreCase) ||
+            contentType.Equals("text/xml", StringComparison.OrdinalIgnoreCase) ||
+            contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return ResolveAttachmentExtension(node) is ".pdf" or ".txt" or ".md" or ".json" or ".xml" or ".csv" or ".log" or ".yaml" or ".yml";
+    }
+
+    private static string ResolveAttachmentContentType(ProjectStructureNode node)
+    {
+        if (!string.IsNullOrWhiteSpace(node.MediaContentType) &&
+            !string.Equals(node.MediaContentType, "application/octet-stream", StringComparison.OrdinalIgnoreCase))
+        {
+            return node.MediaContentType.Trim();
+        }
+
+        return ResolveAttachmentExtension(node) switch
+        {
+            ".pdf" => "application/pdf",
+            ".json" => "application/json",
+            ".xml" => "application/xml",
+            ".txt" => "text/plain",
+            ".md" => "text/markdown",
+            ".csv" => "text/csv",
+            ".log" => "text/plain",
+            ".yaml" or ".yml" => "text/yaml",
+            _ => node.MediaContentType?.Trim() ?? string.Empty
+        };
+    }
+
+    private static string ResolveAttachmentExtension(ProjectStructureNode node)
+        => (System.IO.Path.GetExtension(node.MediaOriginalFileName) switch
+        {
+            { Length: > 0 } extension => extension,
+            _ => System.IO.Path.GetExtension(node.Route)
+        }).ToLowerInvariant();
+
+    private static string ResolveAttachmentDisplayName(ProjectStructureNode node)
+        => string.IsNullOrWhiteSpace(node.MediaOriginalFileName) ? node.Title : node.MediaOriginalFileName;
+
+    private static string ResolveAttachmentLeadCopy(ProjectStructureNode node)
+        => ResolveAttachmentPreviewKind(node) switch
+        {
+            AttachmentPreviewKind.Image => "The image stays attached to this node and can expand without leaving the structure canvas.",
+            AttachmentPreviewKind.Video => "The video stays attached to this node and can expand without leaving the structure canvas.",
+            AttachmentPreviewKind.Document when ResolveAttachmentContentType(node).Equals("application/pdf", StringComparison.OrdinalIgnoreCase)
+                => "PDF files now render directly in the inspector and can expand into a focused modal preview.",
+            AttachmentPreviewKind.Document
+                => "Supported document types can render directly in the inspector without leaving the workbench.",
+            _ => "This attachment is stored with the node even when the browser cannot embed it inline."
+        };
+
+    private static string ResolveAttachmentPreviewSource(ProjectStructureNode node)
+    {
+        var route = node.Route;
+        if (string.IsNullOrWhiteSpace(route))
+        {
+            return string.Empty;
+        }
+
+        return ResolveAttachmentContentType(node).Equals("application/pdf", StringComparison.OrdinalIgnoreCase) &&
+            !route.Contains('#', StringComparison.Ordinal)
+            ? $"{route}#toolbar=0&navpanes=0&view=FitH"
+            : route;
+    }
+
+    private void OpenAttachmentPreview(ProjectStructureNode node)
+    {
+        if (!CanRenderAttachmentPreview(node))
+        {
+            return;
+        }
+
+        previewNode = node;
+    }
+
+    private void CloseAttachmentPreview()
+        => previewNode = null;
+
+    private enum AttachmentPreviewKind
+    {
+        None,
+        Image,
+        Video,
+        Document
+    }
 
 }

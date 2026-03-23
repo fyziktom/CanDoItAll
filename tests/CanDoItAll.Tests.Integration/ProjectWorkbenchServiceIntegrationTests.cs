@@ -276,4 +276,52 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.Equal("prompt-session", flowNode.ArtifactKind);
         Assert.True(flowNode.ArtifactId.HasValue);
     }
+
+    [Fact]
+    public async Task CreateObjectAsync_persists_uploaded_file_nodes_as_managed_attachments()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var saveResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Managed Attachment Node",
+            Description = "Persist an uploaded file on the structure canvas.",
+            Objective = "Keep file metadata and the managed-files route intact.",
+            CurrentPhase = "Review"
+        });
+
+        Assert.True(saveResult.IsSuccess);
+
+        var created = await workbench.CreateObjectAsync(
+            saveResult.Value,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "Release checklist",
+                "PDF attachment",
+                "Persist file metadata",
+                $"project:{saveResult.Value}",
+                460,
+                260,
+                null,
+                null,
+                string.Empty,
+                new ProjectObjectMediaPayload(
+                    "release-checklist.pdf",
+                    "application/pdf",
+                    Convert.ToBase64String("%PDF-1.4 release checklist"u8.ToArray()))));
+
+        Assert.StartsWith("/managed-files/project-media/files/", created.Route, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("release-checklist.pdf", created.MediaOriginalFileName);
+        Assert.Equal("application/pdf", created.MediaContentType);
+
+        var surface = await workbench.GetStructureAsync(saveResult.Value);
+        var fileNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+        Assert.Equal(created.Route, fileNode.Route);
+        Assert.Equal("release-checklist.pdf", fileNode.MediaOriginalFileName);
+        Assert.Equal("application/pdf", fileNode.MediaContentType);
+        Assert.Contains("Uploaded", fileNode.Badges);
+    }
 }
