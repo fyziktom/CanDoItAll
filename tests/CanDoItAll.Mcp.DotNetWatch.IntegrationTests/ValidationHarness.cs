@@ -35,6 +35,12 @@ internal sealed class ValidationHarness : IAsyncDisposable
 
     public static string BackendRegistrationPath { get; } = Path.Combine(RepoRoot, ".mcp-state", "backend", "registration.json");
 
+    public static string WrapperScriptPath { get; } = Path.Combine(
+        RepoRoot,
+        "tools",
+        "CanDoItAll.Mcp.DotNetWatch",
+        "Start-CanDoItAllDotNetWatchMcp.ps1");
+
     public static async Task<ValidationHarness> CreateAsync()
     {
         var transport = new StdioClientTransport(new StdioClientTransportOptions
@@ -49,6 +55,30 @@ internal sealed class ValidationHarness : IAsyncDisposable
             ],
             WorkingDirectory = RepoRoot,
             ShutdownTimeout = TimeSpan.FromSeconds(15)
+        });
+
+        var client = await McpClient.CreateAsync(transport);
+        return new ValidationHarness(client);
+    }
+
+    public static async Task<ValidationHarness> CreateViaWrapperAsync()
+    {
+        await EnsureWrapperShadowReadyAsync();
+
+        var transport = new StdioClientTransport(new StdioClientTransportOptions
+        {
+            Name = "CanDoItAll.Mcp.DotNetWatch.ValidationTests.Wrapper",
+            Command = "powershell",
+            Arguments =
+            [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                WrapperScriptPath
+            ],
+            WorkingDirectory = RepoRoot,
+            ShutdownTimeout = TimeSpan.FromSeconds(30)
         });
 
         var client = await McpClient.CreateAsync(transport);
@@ -144,6 +174,43 @@ internal sealed class ValidationHarness : IAsyncDisposable
         catch
         {
         }
+    }
+
+    private static async Task EnsureWrapperShadowReadyAsync()
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo("powershell")
+            {
+                WorkingDirectory = RepoRoot,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false
+            }
+        };
+
+        process.StartInfo.ArgumentList.Add("-NoProfile");
+        process.StartInfo.ArgumentList.Add("-ExecutionPolicy");
+        process.StartInfo.ArgumentList.Add("Bypass");
+        process.StartInfo.ArgumentList.Add("-File");
+        process.StartInfo.ArgumentList.Add(WrapperScriptPath);
+
+        Assert.True(process.Start());
+        process.StandardInput.Close();
+
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+
+        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromMinutes(2));
+
+        var stdout = await stdoutTask;
+        var stderr = await stderrTask;
+
+        Assert.Equal(0, process.ExitCode);
+
+        var manifestPath = Path.Combine(RepoRoot, ".artifacts", "mcp-server-shadow", "current.json");
+        Assert.True(File.Exists(manifestPath), $"Wrapper prewarm did not produce '{manifestPath}'. Stdout={stdout} Stderr={stderr}");
     }
 
     private static string Serialize(object? value)

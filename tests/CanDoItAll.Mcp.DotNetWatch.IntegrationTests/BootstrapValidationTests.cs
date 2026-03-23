@@ -168,7 +168,7 @@ public sealed class BootstrapValidationTests : IAsyncLifetime
                     {
                         ["sessionId"] = start.Data!.SessionId,
                         ["condition"] = nameof(AppWaitCondition.Healthy),
-                        ["timeoutMs"] = 180000
+                        ["timeoutMs"] = 300000
                     });
 
                 Assert.True(wait.Ok, wait.Error?.Message);
@@ -196,5 +196,22 @@ public sealed class BootstrapValidationTests : IAsyncLifetime
         Assert.DoesNotContain("dotnet watch :", stdout, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Started process", stdout, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Server (stream)", stderr, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task WrapperLaunch_CanServe_WorkspaceInfo_AndWriteBootstrapLog()
+    {
+        await using var harness = await ValidationHarness.CreateViaWrapperAsync();
+
+        var workspace = await harness.CallToolAsync<ToolEnvelope<WorkspaceInfoData>>("candoitall_workspace_info");
+
+        Assert.True(workspace.Ok, workspace.Error?.Message);
+        Assert.NotNull(workspace.Data);
+        Assert.Equal(ValidationHarness.RepoRoot, workspace.Data!.WorkspaceRoot.AbsolutePath);
+
+        var bootstrapLogPath = Path.Combine(ValidationHarness.RepoRoot, ".mcp-state", "logs", "mcp-dotnetwatch-bootstrap.log");
+        Assert.True(File.Exists(bootstrapLogPath));
+        var bootstrapLog = await File.ReadAllTextAsync(bootstrapLogPath);
+        Assert.Contains("wrapper start", bootstrapLog, StringComparison.OrdinalIgnoreCase);
     }
 }

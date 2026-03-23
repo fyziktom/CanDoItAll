@@ -55,6 +55,7 @@ public sealed class RuntimeConfiguration
         LogBufferCapacity = options.Logs.BufferCapacity;
         PersistLogsToFile = options.Logs.PersistToFile;
         LogFolder = ResolvePath(WorkspaceRoot, options.Logs.Folder);
+        BootstrapDiagnosticsPath = Path.Combine(LogFolder, "mcp-bootstrap-diagnostics.log");
         MaxLogFileSizeBytes = Math.Max(1, options.Logs.MaxFileSizeMb) * 1024L * 1024L;
         RedactionEnabled = options.Logs.RedactionEnabled;
         IncludeSystemEventsInLogs = options.Logs.IncludeSystemEvents;
@@ -148,6 +149,8 @@ public sealed class RuntimeConfiguration
     public bool PersistLogsToFile { get; }
 
     public string LogFolder { get; }
+
+    public string BootstrapDiagnosticsPath { get; }
 
     public long MaxLogFileSizeBytes { get; }
 

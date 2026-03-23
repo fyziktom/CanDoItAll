@@ -72,6 +72,7 @@ internal static class Program
 
         using var host = builder.Build();
         var configuration = host.Services.GetRequiredService<RuntimeConfiguration>();
+        var bootstrapDiagnostics = host.Services.GetRequiredService<BootstrapDiagnosticsWriter>();
 
         IAsyncDisposable? registration = null;
         try
@@ -87,6 +88,19 @@ internal static class Program
             }
 
             await host.RunAsync();
+        }
+        catch (Exception ex)
+        {
+            await bootstrapDiagnostics.WriteFailureAsync(
+                phase: "stdio-startup-or-run",
+                exception: ex,
+                context: new Dictionary<string, object?>
+                {
+                    ["settingsPath"] = launchContext.SettingsPath,
+                    ["hostMode"] = launchContext.HostMode.ToString()
+                },
+                cancellationToken: CancellationToken.None);
+            throw;
         }
         finally
         {
@@ -125,6 +139,7 @@ internal static class Program
         var identityProvider = app.Services.GetRequiredService<BackendIdentityProvider>();
         var managerService = app.Services.GetRequiredService<BackendManagerService>();
         var invoker = app.Services.GetRequiredService<IDotNetWatchToolInvoker>();
+        var bootstrapDiagnostics = app.Services.GetRequiredService<BootstrapDiagnosticsWriter>();
 
         BackendRegistrationRecord? registrationRecord = null;
         app.Use(async (httpContext, next) =>
@@ -191,6 +206,19 @@ internal static class Program
         {
             await app.WaitForShutdownAsync();
         }
+        catch (Exception ex)
+        {
+            await bootstrapDiagnostics.WriteFailureAsync(
+                phase: "backend-startup-or-run",
+                exception: ex,
+                context: new Dictionary<string, object?>
+                {
+                    ["settingsPath"] = launchContext.SettingsPath,
+                    ["hostMode"] = launchContext.HostMode.ToString()
+                },
+                cancellationToken: CancellationToken.None);
+            throw;
+        }
         finally
         {
             registrationStore.Delete();
@@ -253,6 +281,7 @@ internal static class Program
         services.AddSingleton<TlsCertificateInspector>();
         services.AddSingleton<HttpHealthProbe>();
         services.AddSingleton<AgentLogReducer>();
+        services.AddSingleton<BootstrapDiagnosticsWriter>();
         services.AddSingleton<AppRuntimeManager>();
         services.AddSingleton<ResourceMutationGate>();
         services.AddSingleton<WorkspaceExecutionLock>();

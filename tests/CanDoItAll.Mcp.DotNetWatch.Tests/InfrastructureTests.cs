@@ -338,7 +338,39 @@ public sealed class InfrastructureTests
     }
 
     [Fact]
-    public void BuildManagedProcessArguments_UsesShadowArtifacts_ForWatchRun()
+    public void BuildManagedArtifactsRoot_UsesStableTemplateCache()
+    {
+        var template = new AppStartTemplate(
+            @"C:\repo\App.csproj",
+            @"C:\repo",
+            AppRunMode.WatchRun,
+            "Debug",
+            Framework: "net10.0",
+            LaunchProfile: "https",
+            Arguments: [],
+            EnvironmentOverlay: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            Urls: []);
+
+        var artifactsRoot = AppRuntimeManager.BuildManagedArtifactsRoot(@"C:\repo", template);
+
+        Assert.StartsWith(@"C:\repo\.mcp-state\artifacts\app-projects\", artifactsRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("app-", artifactsRoot, StringComparison.OrdinalIgnoreCase);
+
+        var sameTemplateRoot = AppRuntimeManager.BuildManagedArtifactsRoot(@"C:\repo", template);
+        Assert.Equal(artifactsRoot, sameTemplateRoot);
+
+        var differentConfigurationRoot = AppRuntimeManager.BuildManagedArtifactsRoot(
+            @"C:\repo",
+            template with
+            {
+                Configuration = "Release"
+            });
+
+        Assert.NotEqual(artifactsRoot, differentConfigurationRoot);
+    }
+
+    [Fact]
+    public void BuildManagedProcessArguments_UsesArtifactsCache_ForWatchRun()
     {
         var template = new AppStartTemplate(
             @"C:\repo\App.csproj",
@@ -354,12 +386,12 @@ public sealed class InfrastructureTests
         var arguments = AppRuntimeManager.BuildManagedProcessArguments(
             template,
             ["--CanDoItAllMcpOwnerKind=app", "--urls", "https://localhost:7367"],
-            @"C:\repo\.mcp-state\artifacts\app-sessions\app_123");
+            @"C:\repo\.mcp-state\artifacts\app-projects\app-12345678");
 
         Assert.Equal("watch", arguments[0]);
         Assert.Contains("--non-interactive", arguments);
         Assert.Contains("--artifacts-path", arguments);
-        Assert.Contains(@"C:\repo\.mcp-state\artifacts\app-sessions\app_123", arguments);
+        Assert.Contains(@"C:\repo\.mcp-state\artifacts\app-projects\app-12345678", arguments);
         Assert.Contains("--property:UseAppHost=false", arguments);
         Assert.Contains("--framework", arguments);
         Assert.Contains("net10.0", arguments);
@@ -372,7 +404,7 @@ public sealed class InfrastructureTests
     }
 
     [Fact]
-    public void BuildManagedProcessArguments_UsesShadowArtifacts_ForRunOnce()
+    public void BuildManagedProcessArguments_UsesArtifactsCache_ForRunOnce()
     {
         var template = new AppStartTemplate(
             @"C:\repo\App.csproj",
@@ -388,11 +420,11 @@ public sealed class InfrastructureTests
         var arguments = AppRuntimeManager.BuildManagedProcessArguments(
             template,
             ["--CanDoItAllMcpOwnerKind=app"],
-            @"C:\repo\.mcp-state\artifacts\app-sessions\app_456");
+            @"C:\repo\.mcp-state\artifacts\app-projects\app-87654321");
 
         Assert.Equal("run", arguments[0]);
         Assert.Contains("--artifacts-path", arguments);
-        Assert.Contains(@"C:\repo\.mcp-state\artifacts\app-sessions\app_456", arguments);
+        Assert.Contains(@"C:\repo\.mcp-state\artifacts\app-projects\app-87654321", arguments);
         Assert.Contains("--property:UseAppHost=false", arguments);
         Assert.DoesNotContain("--non-interactive", arguments);
     }

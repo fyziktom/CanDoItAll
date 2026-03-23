@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using CanDoItAll.Mcp.DotNetWatch.Configuration;
 using CanDoItAll.Mcp.DotNetWatch.Health;
@@ -992,7 +994,7 @@ public sealed class AppRuntimeManager(
 
         var ownershipMarkers = ManagedProcessMarkers.CreateApplicationArguments("app", session.SessionId, configuration.WorkspaceRoot, serverInstanceIdentity.Id);
         var applicationArguments = BuildManagedApplicationArguments(template, ownershipMarkers);
-        var artifactsRoot = Path.Combine(configuration.WorkspaceRoot, ".mcp-state", "artifacts", "app-sessions", session.SessionId);
+        var artifactsRoot = BuildManagedArtifactsRoot(configuration.WorkspaceRoot, template);
         Directory.CreateDirectory(artifactsRoot);
         var arguments = BuildManagedProcessArguments(template, applicationArguments, artifactsRoot).ToArray();
 
@@ -1074,6 +1076,16 @@ public sealed class AppRuntimeManager(
         }
 
         return arguments;
+    }
+
+    internal static string BuildManagedArtifactsRoot(string workspaceRoot, AppStartTemplate template)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
+
+        var cacheRoot = Path.Combine(workspaceRoot, ".mcp-state", "artifacts", "app-projects");
+        var projectName = SanitizePathSegment(Path.GetFileNameWithoutExtension(template.ProjectPath));
+        var templateKey = ComputeTemplateKey(template);
+        return Path.Combine(cacheRoot, $"{projectName}-{templateKey}");
     }
 
     private static IReadOnlyDictionary<string, string> GetDefaultEnvironment(AppStartTemplate template, bool usePollingWatcher)
@@ -1197,6 +1209,39 @@ public sealed class AppRuntimeManager(
         }
 
         return false;
+    }
+
+    private static string ComputeTemplateKey(AppStartTemplate template)
+    {
+        var payload = string.Join(
+            "|",
+            template.ProjectPath,
+            template.WorkingDirectory,
+            template.Mode,
+            template.Configuration,
+            template.Framework ?? string.Empty,
+            template.LaunchProfile ?? string.Empty);
+
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(payload));
+        return Convert.ToHexString(hash[..8]).ToLowerInvariant();
+    }
+
+    private static string SanitizePathSegment(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "app";
+        }
+
+        var builder = new StringBuilder(value.Length);
+        foreach (var character in value)
+        {
+            builder.Append(char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-');
+        }
+
+        var result = builder.ToString().Trim('-');
+        return string.IsNullOrWhiteSpace(result) ? "app" : result;
     }
 
     private AppSession? ResolveDefaultSessionLocked()

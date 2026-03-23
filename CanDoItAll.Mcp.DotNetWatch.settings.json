@@ -74,7 +74,7 @@
     "UsePollingFileWatcher": false
   },
   "Waits": {
-    "DefaultAppWaitTimeoutMs": 120000,
+    "DefaultAppWaitTimeoutMs": 300000,
     "DefaultOperationWaitTimeoutMs": 1800000,
     "DefaultPollIntervalMs": 500,
     "DefaultQuietPeriodMs": 2000

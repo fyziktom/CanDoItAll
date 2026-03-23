@@ -65,7 +65,8 @@ internal sealed class BackendConnectionManager(
                 await Task.Delay(configuration.BackendStartupPollInterval, cancellationToken);
             }
 
-            throw new TimeoutException($"Timed out waiting for backend daemon registration at '{registrationStore.RegistrationPath}'.");
+            var observedRegistration = await registrationStore.ReadAsync(CancellationToken.None);
+            throw new TimeoutException(CreateStartupTimeoutMessage(token, observedRegistration));
         }
         finally
         {
@@ -155,6 +156,35 @@ internal sealed class BackendConnectionManager(
         {
             logger.LogDebug(ex, "Failed to kill incompatible backend PID {Pid}", processId);
         }
+    }
+
+    private string CreateStartupTimeoutMessage(string expectedToken, BackendRegistrationRecord? observedRegistration)
+    {
+        var details = new List<string>
+        {
+            $"registrationPath='{registrationStore.RegistrationPath}'",
+            $"launchLockPath='{configuration.BackendLaunchLockPath}'",
+            $"workspaceRoot='{configuration.WorkspaceRoot}'",
+            $"serverAssemblyPath='{configuration.ServerAssemblyPath}'"
+        };
+
+        if (observedRegistration is null)
+        {
+            details.Add("observedRegistration=<none>");
+        }
+        else
+        {
+            details.Add($"observedBackendId='{observedRegistration.BackendId}'");
+            details.Add($"observedProcessId={observedRegistration.ProcessId}");
+            details.Add($"observedBaseUrl='{observedRegistration.BaseUrl}'");
+            details.Add($"observedSettingsPath='{observedRegistration.Identity.SettingsPath}'");
+            details.Add($"observedWorkspaceRoot='{observedRegistration.Identity.WorkspaceRoot}'");
+            details.Add($"observedBinaryVersionMarker='{observedRegistration.Identity.BinaryVersionMarker}'");
+            details.Add($"observedTokenMatchesExpected={string.Equals(observedRegistration.AuthToken, expectedToken, StringComparison.Ordinal)}");
+            details.Add($"observedProcessLive={registrationStore.IsLiveProcess(observedRegistration)}");
+        }
+
+        return $"Timed out waiting for backend daemon registration. {string.Join("; ", details)}.";
     }
 
     private static JsonSerializerOptions CreateJsonOptions()

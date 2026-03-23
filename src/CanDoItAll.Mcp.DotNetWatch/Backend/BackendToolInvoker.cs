@@ -71,6 +71,7 @@ internal sealed class BackendToolInvoker(
         var connection = connectionManager.GetRequiredConnection();
         using var client = httpClientFactory.CreateClient(nameof(BackendToolInvoker));
         client.BaseAddress = new Uri(connection.BaseUrl, UriKind.Absolute);
+        client.Timeout = Timeout.InfiniteTimeSpan;
         client.DefaultRequestHeaders.Add(BackendAuth.HeaderName, connection.AuthToken);
 
         using var response = await client.PostAsJsonAsync($"/api/tools/{route}", request, JsonOptions, cancellationToken);
