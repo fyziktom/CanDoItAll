@@ -1,0 +1,51 @@
+{
+  "bundle_name": "CanDoItAll Canvas Framework Codex Bundle",
+  "generated_at_utc": "2026-03-23T20:26:54Z",
+  "source_zip": "/mnt/data/CanDoItAll-main.zip",
+  "repo_root": "/mnt/data/cando/CanDoItAll-main",
+  "component_count": 62,
+  "status_counts": {
+    "partial": 41,
+    "missing": 19,
+    "exists": 2
+  },
+  "priority_counts": {
+    "P0": 27,
+    "P1": 26,
+    "P2": 9
+  },
+  "scope_counts": {
+    "shared": 50,
+    "domain-specific": 12
+  },
+  "categories": {
+    "Utility and infrastructure components": 9,
+    "Advanced graphical components": 2,
+    "Layout and navigation components": 5,
+    "Text components": 2,
+    "Diagnostic and developer components": 1,
+    "Basic primitives": 2,
+    "Image components": 1,
+    "Containers": 2,
+    "Connector and relationship components": 2,
+    "Interactive components": 4,
+    "Selection and transform components": 4,
+    "Editing components": 3,
+    "Overlay, inspector, and helper components": 6,
+    "Calendar domain components": 9,
+    "Project Structure domain components": 4,
+    "Prompt Factory domain components": 6
+  },
+  "top_level_documents": [
+    "00_BUNDLE_STRUCTURE.md",
+    "01_ANALYSIS_CURRENT_STATE.md",
+    "02_TARGET_ARCHITECTURE.md",
+    "03_COMPONENT_INVENTORY.md",
+    "04_IMPLEMENTATION_ROADMAP.md",
+    "05_FILE_REFERENCE_CATALOG.md",
+    "06_QA_UX_ARCHITECTURE_REVIEW.md",
+    "07_FUTURE_FEATURE_SIMULATION.md",
+    "08_EXECUTIVE_SUMMARY.md",
+    "09_KONVA_REFERENCE_EXTRACTION.md"
+  ]
+}

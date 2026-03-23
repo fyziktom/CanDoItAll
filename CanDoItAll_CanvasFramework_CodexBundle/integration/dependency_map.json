@@ -1,0 +1,689 @@
+[
+  {
+    "component": "CanvasSceneHost",
+    "wave": 1,
+    "dependencies": [
+      "JsInteropBridge",
+      "CanvasThemeTokenPack",
+      "DiagnosticsOverlay"
+    ],
+    "scope": "shared",
+    "category": "Utility and infrastructure components"
+  },
+  {
+    "component": "SceneNodeModel",
+    "wave": 1,
+    "dependencies": [
+      "CanvasSceneHost",
+      "LayerStack",
+      "InvalidationScheduler"
+    ],
+    "scope": "shared",
+    "category": "Utility and infrastructure components"
+  },
+  {
+    "component": "LayerStack",
+    "wave": 1,
+    "dependencies": [
+      "CanvasSceneHost",
+      "SceneNodeModel",
+      "InvalidationScheduler"
+    ],
+    "scope": "shared",
+    "category": "Utility and infrastructure components"
+  },
+  {
+    "component": "GridBackdrop",
+    "wave": 1,
+    "dependencies": [
+      "CanvasSceneHost",
+      "ViewportController",
+      "SnapGuideSystem"
+    ],
+    "scope": "shared",
+    "category": "Advanced graphical components"
+  },
+  {
+    "component": "InvalidationScheduler",
+    "wave": 1,
+    "dependencies": [
+      "SceneNodeModel",
+      "LayerStack",
+      "AnimationTimeline"
+    ],
+    "scope": "shared",
+    "category": "Utility and infrastructure components"
+  },
+  {
+    "component": "LayoutEngine",
+    "wave": 1,
+    "dependencies": [
+      "TextMeasureService",
+      "SceneNodeModel",
+      "ViewportController"
+    ],
+    "scope": "shared",
+    "category": "Layout and navigation components"
+  },
+  {
+    "component": "TextMeasureService",
+    "wave": 1,
+    "dependencies": [
+      "JsInteropBridge",
+      "CanvasThemeTokenPack"
+    ],
+    "scope": "shared",
+    "category": "Text components"
+  },
+  {
+    "component": "CanvasThemeTokenPack",
+    "wave": 1,
+    "dependencies": [
+      "CanvasSceneHost"
+    ],
+    "scope": "shared",
+    "category": "Utility and infrastructure components"
+  },
+  {
+    "component": "JsInteropBridge",
+    "wave": 1,
+    "dependencies": [
+      "CanvasSceneHost"
+    ],
+    "scope": "shared",
+    "category": "Utility and infrastructure components"
+  },
+  {
+    "component": "SerializationPersistencePack",
+    "wave": 1,
+    "dependencies": [
+      "SceneNodeModel",
+      "CommandHistoryStore"
+    ],
+    "scope": "shared",
+    "category": "Utility and infrastructure components"
+  },
+  {
+    "component": "CommandHistoryStore",
+    "wave": 1,
+    "dependencies": [
+      "SerializationPersistencePack"
+    ],
+    "scope": "shared",
+    "category": "Utility and infrastructure components"
+  },
+  {
+    "component": "DiagnosticsOverlay",
+    "wave": 6,
+    "dependencies": [
+      "CanvasSceneHost",
+      "LayerStack",
+      "InvalidationScheduler"
+    ],
+    "scope": "shared",
+    "category": "Diagnostic and developer components"
+  },
+  {
+    "component": "TextBlockPrimitive",
+    "wave": 2,
+    "dependencies": [
+      "TextMeasureService",
+      "CanvasThemeTokenPack"
+    ],
+    "scope": "shared",
+    "category": "Text components"
+  },
+  {
+    "component": "IconGlyphPrimitive",
+    "wave": 2,
+    "dependencies": [
+      "CanvasThemeTokenPack",
+      "TextBlockPrimitive"
+    ],
+    "scope": "shared",
+    "category": "Basic primitives"
+  },
+  {
+    "component": "ChipBadgePrimitive",
+    "wave": 2,
+    "dependencies": [
+      "TextBlockPrimitive",
+      "IconGlyphPrimitive",
+      "CanvasThemeTokenPack"
+    ],
+    "scope": "shared",
+    "category": "Basic primitives"
+  },
+  {
+    "component": "ImagePrimitive",
+    "wave": 2,
+    "dependencies": [
+      "ContainerPrimitive",
+      "CanvasThemeTokenPack",
+      "TextBlockPrimitive"
+    ],
+    "scope": "shared",
+    "category": "Image components"
+  },
+  {
+    "component": "ContainerPrimitive",
+    "wave": 2,
+    "dependencies": [
+      "CanvasThemeTokenPack",
+      "TextBlockPrimitive",
+      "IconGlyphPrimitive"
+    ],
+    "scope": "shared",
+    "category": "Containers"
+  },
+  {
+    "component": "ConnectorPathPrimitive",
+    "wave": 2,
+    "dependencies": [
+      "SceneNodeModel",
+      "ConnectorAnchorOverlay",
+      "CanvasThemeTokenPack"
+    ],
+    "scope": "shared",
+    "category": "Connector and relationship components"
+  },
+  {
+    "component": "ViewportController",
+    "wave": 1,
+    "dependencies": [
+      "CanvasSceneHost",
+      "InvalidationScheduler",
+      "GridBackdrop"
+    ],
+    "scope": "shared",
+    "category": "Layout and navigation components"
+  },
+  {
+    "component": "HitTestService",
+    "wave": 1,
+    "dependencies": [
+      "SceneNodeModel",
+      "LayerStack",
+      "ViewportController"
+    ],
+    "scope": "shared",
+    "category": "Interactive components"
+  },
+  {
+    "component": "SelectionModel",
+    "wave": 1,
+    "dependencies": [
+      "HitTestService",
+      "MarqueeSelectionOverlay",
+      "HoverFocusRouter"
+    ],
+    "scope": "shared",
+    "category": "Selection and transform components"
+  },
+  {
+    "component": "HoverFocusRouter",
+    "wave": 1,
+    "dependencies": [
+      "SelectionModel",
+      "TooltipPopoverHost",
+      "AccessibilityMirrorLayer"
+    ],
+    "scope": "shared",
+    "category": "Interactive components"
+  },
+  {
+    "component": "DragDropController",
+    "wave": 1,
+    "dependencies": [
+      "HitTestService",
+      "SelectionModel",
+      "SnapGuideSystem",
+      "InvalidationScheduler"
+    ],
+    "scope": "shared",
+    "category": "Interactive components"
+  },
+  {
+    "component": "SnapGuideSystem",
+    "wave": 6,
+    "dependencies": [
+      "GridBackdrop",
+      "SelectionModel",
+      "DragDropController",
+      "ViewportController"
+    ],
+    "scope": "shared",
+    "category": "Selection and transform components"
+  },
+  {
+    "component": "MarqueeSelectionOverlay",
+    "wave": 6,
+    "dependencies": [
+      "SelectionModel",
+      "HitTestService",
+      "LayerStack"
+    ],
+    "scope": "shared",
+    "category": "Selection and transform components"
+  },
+  {
+    "component": "TransformHandlesOverlay",
+    "wave": 6,
+    "dependencies": [
+      "SelectionModel",
+      "HitTestService",
+      "DragDropController",
+      "ConnectorAnchorOverlay"
+    ],
+    "scope": "shared",
+    "category": "Selection and transform components"
+  },
+  {
+    "component": "ConnectorAnchorOverlay",
+    "wave": 6,
+    "dependencies": [
+      "ConnectorPathPrimitive",
+      "HitTestService",
+      "HoverFocusRouter",
+      "DiagnosticsOverlay"
+    ],
+    "scope": "shared",
+    "category": "Connector and relationship components"
+  },
+  {
+    "component": "KeyboardShortcutRouter",
+    "wave": 1,
+    "dependencies": [
+      "SelectionModel",
+      "HoverFocusRouter",
+      "CommandHistoryStore"
+    ],
+    "scope": "shared",
+    "category": "Interactive components"
+  },
+  {
+    "component": "ClipboardBridge",
+    "wave": 6,
+    "dependencies": [
+      "SelectionModel",
+      "SerializationPersistencePack",
+      "KeyboardShortcutRouter",
+      "CommandHistoryStore"
+    ],
+    "scope": "shared",
+    "category": "Editing components"
+  },
+  {
+    "component": "AccessibilityMirrorLayer",
+    "wave": 6,
+    "dependencies": [
+      "CanvasSceneHost",
+      "SelectionModel",
+      "HoverFocusRouter",
+      "SerializationPersistencePack"
+    ],
+    "scope": "shared",
+    "category": "Utility and infrastructure components"
+  },
+  {
+    "component": "AnimationTimeline",
+    "wave": 6,
+    "dependencies": [
+      "InvalidationScheduler",
+      "ViewportController",
+      "CanvasThemeTokenPack"
+    ],
+    "scope": "shared",
+    "category": "Advanced graphical components"
+  },
+  {
+    "component": "CanvasWorkbenchShell",
+    "wave": 2,
+    "dependencies": [
+      "CanvasSceneHost",
+      "ViewportController",
+      "SelectionModel",
+      "ContextMenuHost",
+      "CreateActionPalette"
+    ],
+    "scope": "shared",
+    "category": "Layout and navigation components"
+  },
+  {
+    "component": "CanvasWorkbenchStageShell",
+    "wave": 2,
+    "dependencies": [
+      "CanvasWorkbenchShell",
+      "CanvasThemeTokenPack"
+    ],
+    "scope": "shared",
+    "category": "Layout and navigation components"
+  },
+  {
+    "component": "NodeCardComposer",
+    "wave": 2,
+    "dependencies": [
+      "ContainerPrimitive",
+      "TextBlockPrimitive",
+      "ChipBadgePrimitive",
+      "ImagePrimitive",
+      "IconGlyphPrimitive"
+    ],
+    "scope": "shared",
+    "category": "Containers"
+  },
+  {
+    "component": "GroupFrameOverlay",
+    "wave": 2,
+    "dependencies": [
+      "LayoutEngine",
+      "SelectionModel",
+      "ContainerPrimitive"
+    ],
+    "scope": "shared",
+    "category": "Overlay, inspector, and helper components"
+  },
+  {
+    "component": "CreateActionPalette",
+    "wave": 2,
+    "dependencies": [
+      "ContextMenuHost",
+      "InlineEditorComposer",
+      "TextBlockPrimitive",
+      "IconGlyphPrimitive"
+    ],
+    "scope": "shared",
+    "category": "Editing components"
+  },
+  {
+    "component": "ContextMenuHost",
+    "wave": 2,
+    "dependencies": [
+      "HoverFocusRouter",
+      "KeyboardShortcutRouter",
+      "TextBlockPrimitive",
+      "IconGlyphPrimitive"
+    ],
+    "scope": "shared",
+    "category": "Overlay, inspector, and helper components"
+  },
+  {
+    "component": "TooltipPopoverHost",
+    "wave": 6,
+    "dependencies": [
+      "HoverFocusRouter",
+      "CanvasThemeTokenPack",
+      "TextBlockPrimitive"
+    ],
+    "scope": "shared",
+    "category": "Overlay, inspector, and helper components"
+  },
+  {
+    "component": "InlineEditorComposer",
+    "wave": 2,
+    "dependencies": [
+      "HoverFocusRouter",
+      "KeyboardShortcutRouter",
+      "TextBlockPrimitive",
+      "ContainerPrimitive"
+    ],
+    "scope": "shared",
+    "category": "Editing components"
+  },
+  {
+    "component": "FloatingInspectorHost",
+    "wave": 2,
+    "dependencies": [
+      "CanvasWorkbenchStageShell",
+      "HoverFocusRouter",
+      "CanvasThemeTokenPack"
+    ],
+    "scope": "shared",
+    "category": "Overlay, inspector, and helper components"
+  },
+  {
+    "component": "EmptyStateOverlay",
+    "wave": 6,
+    "dependencies": [
+      "CanvasWorkbenchStageShell",
+      "CreateActionPalette",
+      "TextBlockPrimitive",
+      "IconGlyphPrimitive"
+    ],
+    "scope": "shared",
+    "category": "Overlay, inspector, and helper components"
+  },
+  {
+    "component": "SkeletonStateOverlay",
+    "wave": 6,
+    "dependencies": [
+      "CanvasWorkbenchStageShell",
+      "ContainerPrimitive",
+      "AnimationTimeline"
+    ],
+    "scope": "shared",
+    "category": "Overlay, inspector, and helper components"
+  },
+  {
+    "component": "MinimapOverview",
+    "wave": 6,
+    "dependencies": [
+      "ViewportController",
+      "SceneNodeModel",
+      "LayerStack",
+      "GridBackdrop"
+    ],
+    "scope": "shared",
+    "category": "Layout and navigation components"
+  },
+  {
+    "component": "CanvasCalendarHost",
+    "wave": 5,
+    "dependencies": [
+      "CanvasSceneHost",
+      "CalendarCrudBridge",
+      "CalendarSelectionPanel"
+    ],
+    "scope": "shared",
+    "category": "Calendar domain components"
+  },
+  {
+    "component": "CalendarTimeGridRenderer",
+    "wave": 5,
+    "dependencies": [
+      "CanvasCalendarHost",
+      "TextMeasureService",
+      "CanvasThemeTokenPack"
+    ],
+    "scope": "shared",
+    "category": "Calendar domain components"
+  },
+  {
+    "component": "CalendarMiniMonthNavigator",
+    "wave": 5,
+    "dependencies": [
+      "CanvasCalendarHost",
+      "CalendarSelectionPanel",
+      "CanvasThemeTokenPack"
+    ],
+    "scope": "shared",
+    "category": "Calendar domain components"
+  },
+  {
+    "component": "CalendarSelectionPanel",
+    "wave": 5,
+    "dependencies": [
+      "CanvasCalendarHost",
+      "TextBlockPrimitive",
+      "ChipBadgePrimitive"
+    ],
+    "scope": "shared",
+    "category": "Calendar domain components"
+  },
+  {
+    "component": "CalendarEventEditorModal",
+    "wave": 5,
+    "dependencies": [
+      "CalendarCrudBridge",
+      "TextBlockPrimitive",
+      "ContainerPrimitive"
+    ],
+    "scope": "shared",
+    "category": "Calendar domain components"
+  },
+  {
+    "component": "CalendarCrudBridge",
+    "wave": 5,
+    "dependencies": [
+      "JsInteropBridge",
+      "SerializationPersistencePack"
+    ],
+    "scope": "shared",
+    "category": "Calendar domain components"
+  },
+  {
+    "component": "CalendarExportMenu",
+    "wave": 5,
+    "dependencies": [
+      "CanvasCalendarHost",
+      "ContextMenuHost",
+      "SerializationPersistencePack"
+    ],
+    "scope": "shared",
+    "category": "Calendar domain components"
+  },
+  {
+    "component": "ProjectCalendarAdapter",
+    "wave": 5,
+    "dependencies": [
+      "CanvasCalendarHost",
+      "SerializationPersistencePack",
+      "CalendarCrudBridge"
+    ],
+    "scope": "domain-specific",
+    "category": "Calendar domain components"
+  },
+  {
+    "component": "ProjectStructureGraphAdapter",
+    "wave": 3,
+    "dependencies": [
+      "CanvasWorkbenchShell",
+      "NodeCardComposer",
+      "ProjectStructureActionCatalogAdapter"
+    ],
+    "scope": "domain-specific",
+    "category": "Project Structure domain components"
+  },
+  {
+    "component": "ProjectStructureActionCatalogAdapter",
+    "wave": 3,
+    "dependencies": [
+      "CreateActionPalette",
+      "ContextMenuHost"
+    ],
+    "scope": "domain-specific",
+    "category": "Project Structure domain components"
+  },
+  {
+    "component": "ProjectStructurePlacementPolicy",
+    "wave": 3,
+    "dependencies": [
+      "LayoutEngine",
+      "ViewportController",
+      "SnapGuideSystem"
+    ],
+    "scope": "domain-specific",
+    "category": "Project Structure domain components"
+  },
+  {
+    "component": "ProjectStructureValidationOverlay",
+    "wave": 6,
+    "dependencies": [
+      "TooltipPopoverHost",
+      "DiagnosticsOverlay",
+      "ChipBadgePrimitive",
+      "ConnectorPathPrimitive"
+    ],
+    "scope": "domain-specific",
+    "category": "Project Structure domain components"
+  },
+  {
+    "component": "PromptFactorySessionGraphAdapter",
+    "wave": 4,
+    "dependencies": [
+      "CanvasWorkbenchShell",
+      "NodeCardComposer",
+      "PromptFactoryCatalogToolbox",
+      "PromptRunBranchLane",
+      "PromptSessionAttachmentNode"
+    ],
+    "scope": "domain-specific",
+    "category": "Prompt Factory domain components"
+  },
+  {
+    "component": "PromptFactoryCatalogToolbox",
+    "wave": 4,
+    "dependencies": [
+      "CreateActionPalette",
+      "ContextMenuHost"
+    ],
+    "scope": "domain-specific",
+    "category": "Prompt Factory domain components"
+  },
+  {
+    "component": "PromptRunBranchLane",
+    "wave": 4,
+    "dependencies": [
+      "LayoutEngine",
+      "GroupFrameOverlay",
+      "TextBlockPrimitive"
+    ],
+    "scope": "domain-specific",
+    "category": "Prompt Factory domain components"
+  },
+  {
+    "component": "PromptSessionAttachmentNode",
+    "wave": 4,
+    "dependencies": [
+      "NodeCardComposer",
+      "ImagePrimitive",
+      "ChipBadgePrimitive",
+      "TooltipPopoverHost"
+    ],
+    "scope": "domain-specific",
+    "category": "Prompt Factory domain components"
+  },
+  {
+    "component": "PromptFactoryUndoRedoAdapter",
+    "wave": 4,
+    "dependencies": [
+      "CommandHistoryStore",
+      "KeyboardShortcutRouter",
+      "SerializationPersistencePack"
+    ],
+    "scope": "domain-specific",
+    "category": "Prompt Factory domain components"
+  },
+  {
+    "component": "RecommendationOverlay",
+    "wave": 6,
+    "dependencies": [
+      "TooltipPopoverHost",
+      "ChipBadgePrimitive",
+      "HoverFocusRouter",
+      "SelectionModel"
+    ],
+    "scope": "domain-specific",
+    "category": "Prompt Factory domain components"
+  },
+  {
+    "component": "ProjectCalendarStateParser",
+    "wave": 5,
+    "dependencies": [
+      "SerializationPersistencePack",
+      "ProjectCalendarAdapter"
+    ],
+    "scope": "domain-specific",
+    "category": "Calendar domain components"
+  }
+]

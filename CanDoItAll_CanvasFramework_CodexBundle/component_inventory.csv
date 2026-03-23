@@ -1,0 +1,63 @@
+name,category,status,priority,level,scope,js_bridge,wave,folder
+CanvasSceneHost,Utility and infrastructure components,partial,P0,low-level,shared,required,1,components/CanvasSceneHost
+SceneNodeModel,Utility and infrastructure components,missing,P0,low-level,shared,none,1,components/SceneNodeModel
+LayerStack,Utility and infrastructure components,missing,P0,low-level,shared,required,1,components/LayerStack
+GridBackdrop,Advanced graphical components,partial,P1,low-level,shared,required,1,components/GridBackdrop
+InvalidationScheduler,Utility and infrastructure components,missing,P0,low-level,shared,required,1,components/InvalidationScheduler
+LayoutEngine,Layout and navigation components,partial,P0,low-level,shared,required,1,components/LayoutEngine
+TextMeasureService,Text components,missing,P0,low-level,shared,required,1,components/TextMeasureService
+CanvasThemeTokenPack,Utility and infrastructure components,partial,P1,low-level,shared,none,1,components/CanvasThemeTokenPack
+JsInteropBridge,Utility and infrastructure components,partial,P0,low-level,shared,required,1,components/JsInteropBridge
+SerializationPersistencePack,Utility and infrastructure components,partial,P0,low-level,shared,partial,1,components/SerializationPersistencePack
+CommandHistoryStore,Utility and infrastructure components,partial,P1,low-level,shared,none,1,components/CommandHistoryStore
+DiagnosticsOverlay,Diagnostic and developer components,missing,P1,high-level,shared,required,6,components/DiagnosticsOverlay
+TextBlockPrimitive,Text components,partial,P0,low-level,shared,partial,2,components/TextBlockPrimitive
+IconGlyphPrimitive,Basic primitives,partial,P1,low-level,shared,none,2,components/IconGlyphPrimitive
+ChipBadgePrimitive,Basic primitives,partial,P1,low-level,shared,none,2,components/ChipBadgePrimitive
+ImagePrimitive,Image components,partial,P1,low-level,shared,partial,2,components/ImagePrimitive
+ContainerPrimitive,Containers,partial,P0,low-level,shared,partial,2,components/ContainerPrimitive
+ConnectorPathPrimitive,Connector and relationship components,partial,P0,low-level,shared,required,2,components/ConnectorPathPrimitive
+ViewportController,Layout and navigation components,partial,P0,low-level,shared,required,1,components/ViewportController
+HitTestService,Interactive components,partial,P0,low-level,shared,required,1,components/HitTestService
+SelectionModel,Selection and transform components,partial,P0,low-level,shared,partial,1,components/SelectionModel
+HoverFocusRouter,Interactive components,partial,P1,low-level,shared,required,1,components/HoverFocusRouter
+DragDropController,Interactive components,partial,P0,low-level,shared,required,1,components/DragDropController
+SnapGuideSystem,Selection and transform components,missing,P1,low-level,shared,required,6,components/SnapGuideSystem
+MarqueeSelectionOverlay,Selection and transform components,partial,P1,high-level,shared,required,6,components/MarqueeSelectionOverlay
+TransformHandlesOverlay,Selection and transform components,missing,P1,high-level,shared,required,6,components/TransformHandlesOverlay
+ConnectorAnchorOverlay,Connector and relationship components,missing,P1,high-level,shared,required,6,components/ConnectorAnchorOverlay
+KeyboardShortcutRouter,Interactive components,partial,P1,high-level,shared,required,1,components/KeyboardShortcutRouter
+ClipboardBridge,Editing components,missing,P1,high-level,shared,required,6,components/ClipboardBridge
+AccessibilityMirrorLayer,Utility and infrastructure components,missing,P2,high-level,shared,required,6,components/AccessibilityMirrorLayer
+AnimationTimeline,Advanced graphical components,missing,P2,low-level,shared,required,6,components/AnimationTimeline
+CanvasWorkbenchShell,Layout and navigation components,exists,P0,high-level,shared,required,2,components/CanvasWorkbenchShell
+CanvasWorkbenchStageShell,Layout and navigation components,exists,P0,high-level,shared,none,2,components/CanvasWorkbenchStageShell
+NodeCardComposer,Containers,partial,P0,high-level,shared,required,2,components/NodeCardComposer
+GroupFrameOverlay,"Overlay, inspector, and helper components",partial,P1,high-level,shared,required,2,components/GroupFrameOverlay
+CreateActionPalette,Editing components,partial,P0,high-level,shared,required,2,components/CreateActionPalette
+ContextMenuHost,"Overlay, inspector, and helper components",partial,P0,high-level,shared,required,2,components/ContextMenuHost
+TooltipPopoverHost,"Overlay, inspector, and helper components",missing,P1,high-level,shared,required,6,components/TooltipPopoverHost
+InlineEditorComposer,Editing components,partial,P1,high-level,shared,required,2,components/InlineEditorComposer
+FloatingInspectorHost,"Overlay, inspector, and helper components",partial,P1,high-level,shared,required,2,components/FloatingInspectorHost
+EmptyStateOverlay,"Overlay, inspector, and helper components",missing,P2,high-level,shared,none,6,components/EmptyStateOverlay
+SkeletonStateOverlay,"Overlay, inspector, and helper components",missing,P2,high-level,shared,none,6,components/SkeletonStateOverlay
+MinimapOverview,Layout and navigation components,missing,P2,high-level,shared,required,6,components/MinimapOverview
+CanvasCalendarHost,Calendar domain components,partial,P0,high-level,shared,required,5,components/CanvasCalendarHost
+CalendarTimeGridRenderer,Calendar domain components,partial,P1,low-level,shared,required,5,components/CalendarTimeGridRenderer
+CalendarMiniMonthNavigator,Calendar domain components,partial,P2,high-level,shared,required,5,components/CalendarMiniMonthNavigator
+CalendarSelectionPanel,Calendar domain components,partial,P1,high-level,shared,required,5,components/CalendarSelectionPanel
+CalendarEventEditorModal,Calendar domain components,partial,P1,high-level,shared,required,5,components/CalendarEventEditorModal
+CalendarCrudBridge,Calendar domain components,partial,P0,low-level,shared,required,5,components/CalendarCrudBridge
+CalendarExportMenu,Calendar domain components,partial,P2,high-level,shared,required,5,components/CalendarExportMenu
+ProjectCalendarAdapter,Calendar domain components,missing,P0,high-level,domain-specific,none,5,components/ProjectCalendarAdapter
+ProjectStructureGraphAdapter,Project Structure domain components,partial,P0,high-level,domain-specific,none,3,components/ProjectStructureGraphAdapter
+ProjectStructureActionCatalogAdapter,Project Structure domain components,partial,P0,high-level,domain-specific,none,3,components/ProjectStructureActionCatalogAdapter
+ProjectStructurePlacementPolicy,Project Structure domain components,partial,P1,high-level,domain-specific,none,3,components/ProjectStructurePlacementPolicy
+ProjectStructureValidationOverlay,Project Structure domain components,missing,P2,high-level,domain-specific,partial,6,components/ProjectStructureValidationOverlay
+PromptFactorySessionGraphAdapter,Prompt Factory domain components,partial,P0,high-level,domain-specific,none,4,components/PromptFactorySessionGraphAdapter
+PromptFactoryCatalogToolbox,Prompt Factory domain components,partial,P0,high-level,domain-specific,none,4,components/PromptFactoryCatalogToolbox
+PromptRunBranchLane,Prompt Factory domain components,partial,P1,high-level,domain-specific,partial,4,components/PromptRunBranchLane
+PromptSessionAttachmentNode,Prompt Factory domain components,partial,P1,high-level,domain-specific,partial,4,components/PromptSessionAttachmentNode
+PromptFactoryUndoRedoAdapter,Prompt Factory domain components,partial,P1,high-level,domain-specific,partial,4,components/PromptFactoryUndoRedoAdapter
+RecommendationOverlay,Prompt Factory domain components,missing,P2,high-level,domain-specific,partial,6,components/RecommendationOverlay
+ProjectCalendarStateParser,Calendar domain components,missing,P1,low-level,domain-specific,none,5,components/ProjectCalendarStateParser
