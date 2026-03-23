@@ -160,6 +160,10 @@
     min-height: 0;
 }
 
+.pf-workbench-shell.is-canvas-mode:has(.cw-workbench-shell.is-maximized) {
+    z-index: 320;
+}
+
 .pf-page-tabs {
     display: grid;
     gap: 1rem;
@@ -471,6 +475,11 @@
     max-width: 56rem;
 }
 
+.pf-card-header__copy--editor {
+    width: 100%;
+    padding-right: 4.75rem;
+}
+
 .pf-lane-switcher {
     padding: 1.05rem 1.1rem;
 }
@@ -652,18 +661,20 @@
 .pf-component-editor-card {
     display: grid;
     gap: 0.85rem;
+    align-content: start;
+    position: relative;
 }
 
 .pf-inspector-stack--editor .pf-component-editor-card {
-    flex: 1 1 auto;
-    min-height: 0;
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    flex: 0 0 auto;
+    min-height: auto;
+    grid-template-rows: auto auto auto;
 }
 
 .pf-component-editor {
     width: 100%;
-    min-height: 18rem;
-    height: clamp(18rem, 42vh, 30rem);
+    min-height: 22rem;
+    height: clamp(22rem, 46vh, 34rem);
     overflow: auto;
     resize: vertical;
     font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
@@ -671,9 +682,75 @@
 }
 
 .pf-inspector-stack--editor .pf-component-editor {
-    min-height: 0;
-    height: 100%;
+    min-height: 10rem;
+    height: clamp(10rem, 24vh, 14rem);
     resize: none;
+}
+
+/* Compact button row for inspector */
+.pf-button-row--compact {
+    gap: 0.3rem;
+    align-items: center;
+}
+
+.pf-button--compact {
+    padding: 0.12rem 0.42rem;
+    font-size: 0.7rem;
+    min-height: 1.45rem;
+    line-height: 1;
+    border-radius: 0.35rem;
+}
+
+/* Textarea wrapper with expand button */
+.pf-editor-textarea-wrap {
+    position: relative;
+    display: grid;
+    min-height: auto;
+}
+
+.pf-inspector-stack--editor .pf-editor-textarea-wrap {
+    flex: 0 0 auto;
+    min-height: auto;
+}
+
+.pf-editor-expand-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0 0.45rem 0 0.35rem;
+    background: rgba(15, 23, 42, 0.06);
+    color: rgba(15, 23, 42, 0.48);
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+.pf-editor-expand-btn:hover {
+    background: rgba(8, 145, 178, 0.14);
+    color: rgba(8, 145, 178, 0.88);
+}
+
+/* Component editor modal */
+.pf-component-editor-modal {
+    width: min(100%, 56rem);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.pf-component-editor-modal__textarea {
+    width: 100%;
+    min-height: 20rem;
+    height: 100%;
+    overflow: auto;
+    resize: none;
+    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    line-height: 1.55;
 }
 
 .pf-attachment-grid {
@@ -869,6 +946,22 @@
     color: rgba(15, 23, 42, 0.72);
     font-size: 0.74rem;
     font-weight: 800;
+}
+
+.pf-accordion-meta--small {
+    min-width: auto;
+    padding: 0.18rem 0.45rem;
+    font-size: 0.6rem;
+    border-radius: 0.4rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.pf-component-editor-card .pf-accordion-meta--small {
+    position: absolute;
+    top: 0.95rem;
+    right: 0.95rem;
 }
 
 .pf-prompt-preview {

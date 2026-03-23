@@ -9,6 +9,20 @@
         "${workspaceFolder}\\CanDoItAll.Mcp.DotNetWatch.settings.json"
       ],
       "cwd": "${workspaceFolder}"
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
+    },
+    "tailwindcss": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "tailwindcss-mcp@latest"
+      ]
     }
   }
 }
