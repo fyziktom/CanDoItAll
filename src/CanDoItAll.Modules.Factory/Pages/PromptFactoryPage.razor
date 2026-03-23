@@ -150,20 +150,23 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             else
                             {
                                 <div class="pf-floating-inspector__body @(selectedComponentNode is not null ? "pf-floating-inspector__body--component" : string.Empty)">
-                <div class="cw-panel-card pf-inspector-context">
-                    <div class="pf-card-header pf-card-header--tight">
-                        <div class="pf-card-header__copy">
-                            <p class="cw-panel-kicker">Canvas inspector</p>
-                            <h3 class="cw-panel-title">@ResolveInspectorTitle()</h3>
-                            <p class="cw-panel-copy">@ResolveInspectorCopy()</p>
+                @if (selectedComponentNode is null && selectedComponentGroupNode is null)
+                {
+                    <div class="cw-panel-card pf-inspector-context">
+                        <div class="pf-card-header pf-card-header--tight">
+                            <div class="pf-card-header__copy">
+                                <p class="cw-panel-kicker">Canvas inspector</p>
+                                <h3 class="cw-panel-title">@ResolveInspectorTitle()</h3>
+                                <p class="cw-panel-copy">@ResolveInspectorCopy()</p>
+                            </div>
+                            <span class="pf-meta-badge">@ResolveActiveWorkflowBadge()</span>
                         </div>
-                        <span class="pf-meta-badge">@ResolveActiveWorkflowBadge()</span>
+                        <div class="cw-chip-row">
+                            <span class="cw-node__chip tone-accent">@ResolveInspectorSelectionPill()</span>
+                            <span class="cw-node__chip">Use page tabs for setup, governance, assembly, and review</span>
+                        </div>
                     </div>
-                    <div class="cw-chip-row">
-                        <span class="cw-node__chip tone-accent">@ResolveInspectorSelectionPill()</span>
-                        <span class="cw-node__chip">Use page tabs for setup, governance, assembly, and review</span>
-                    </div>
-                </div>
+                }
 
                 @if (selectedCanvasNodeIds.Count > 1)
                 {
@@ -245,11 +248,11 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 {
                     var customization = selectedComponentCustomization;
                     <div class="pf-inspector-stack pf-inspector-stack--editor">
-                        <div class="cw-panel-card">
+                        <div class="cw-panel-card pf-inspector-card--compact">
                             <p class="cw-panel-kicker">Prompt component</p>
                             <h3 class="cw-panel-title">@selectedComponentNode.Name</h3>
                             <p class="cw-panel-copy">@selectedComponentNode.Summary</p>
-                            <div class="cw-chip-row">
+                            <div class="cw-chip-row pf-chip-row--compact">
                                 <span class="cw-node__chip tone-accent">@selectedComponentNode.BlockKind</span>
                                 <span class="cw-node__chip">@ResolveLibraryGroupLabel(selectedComponentNode.GroupKey)</span>
                                 <span class="cw-node__chip @(SelectedComponentIsModified ? "tone-warn" : "tone-success")">@(SelectedComponentIsModified ? "Session override" : "Template baseline")</span>
@@ -309,11 +312,11 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 else if (selectedComponentGroupNode is not null)
                 {
                     <div class="pf-inspector-stack">
-                        <div class="cw-panel-card">
+                        <div class="cw-panel-card pf-inspector-card--compact">
                             <p class="cw-panel-kicker">Component group</p>
                             <h3 class="cw-panel-title">@selectedComponentGroupNode.Name</h3>
                             <p class="cw-panel-copy">@selectedComponentGroupNode.Purpose</p>
-                            <div class="cw-chip-row">
+                            <div class="cw-chip-row pf-chip-row--compact">
                                 <span class="cw-node__chip tone-accent">@($"{selectedComponentGroupNode.Components.Count(item => editor.SelectedBlockIds.Contains(item.Id))} selected")</span>
                             </div>
                         </div>

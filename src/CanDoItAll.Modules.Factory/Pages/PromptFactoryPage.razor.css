@@ -364,6 +364,43 @@
     font-size: 0.68rem;
 }
 
+.pf-inspector-card--compact {
+    gap: 0.45rem;
+    padding: 0.72rem 0.78rem;
+}
+
+.pf-inspector-card--compact .cw-panel-kicker {
+    font-size: 0.66rem;
+    letter-spacing: 0.2em;
+}
+
+.pf-inspector-card--compact .cw-panel-title {
+    font-size: 0.96rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.pf-inspector-card--compact .cw-panel-copy {
+    margin-top: 0.05rem;
+    font-size: 0.82rem;
+    line-height: 1.42;
+    color: rgba(71, 85, 105, 0.92);
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.pf-chip-row--compact {
+    gap: 0.3rem;
+}
+
+.pf-chip-row--compact .cw-node__chip {
+    padding: 0.16rem 0.46rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+}
+
 .pf-inspector-step-grid {
     display: grid;
     gap: 0.55rem;
@@ -717,6 +754,7 @@
     position: absolute;
     top: 0;
     right: 0;
+    z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -960,8 +998,10 @@
 
 .pf-component-editor-card .pf-accordion-meta--small {
     position: absolute;
-    top: 0.95rem;
-    right: 0.95rem;
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0.12rem 0.38rem;
+    font-size: 0.55rem;
 }
 
 .pf-prompt-preview {
@@ -972,7 +1012,7 @@
 .pf-prompt-modal-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 70;
+    z-index: 420;
     display: grid;
     place-items: center;
     padding: 1.5rem;
@@ -981,6 +1021,7 @@
 }
 
 .pf-prompt-modal {
+    position: relative;
     display: grid;
     gap: 1rem;
     width: min(100%, 68rem);

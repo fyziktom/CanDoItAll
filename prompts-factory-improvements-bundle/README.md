@@ -29,3 +29,6 @@ Current slice:
 - Component edits must update the session override used by prompt build.
 - The inspector must expose a selection preview action that can open a copy-ready modal for the selected item or prompt-step subtree.
 - The inspector must live inside the canvas as a floating panel, default docked to the right, draggable, and minimizable so maximized-canvas work stays first-class.
+- Prompt-component and component-group inspection must remove generic filler cards and start with the actual selected-item summary.
+- The selected-item summary must stay compact, with smaller chips and tighter spacing so the editor and actions remain visible.
+- The large-editor modal must always render above the canvas and floating inspector.

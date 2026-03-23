@@ -28,6 +28,14 @@ The original inputs were directionally strong but needed tighter product framing
 - Users should not need a full prompt build every time they want to inspect one branch or one component.
 - Better solution: expose a selection preview modal that can assemble the selected subtree or item into a copy-ready text slice.
 
+### Improvement 3D: the inspector must not waste the first screen on filler
+- Generic explanatory cards above the real selected-item content create scroll debt and bury the primary action.
+- Better solution: start component and group states with the real selected-item summary, then show editor or selected-items actions immediately.
+
+### Improvement 3E: overlays must beat the canvas chrome
+- If the large editor modal sits below the canvas shell or maximized chrome, the UI feels broken even when the action technically fired.
+- Better solution: keep editor modals on a higher layer than the canvas workbench and floating inspector.
+
 ### Improvement 4: radial menu should not be removed globally
 - The radial system is efficient for compact generic actions.
 - Better solution: keep radial for generic actions and switch only component browsing to a toolbox-style panel.
@@ -65,6 +73,8 @@ The implementation is acceptable only if all of the following are true:
 - an advanced user can continue working without modal friction
 - selected component editing is obvious and clearly session-scoped
 - previewing a selected item opens the right slice, not the entire prompt by accident
+- expanding component editing always opens a usable modal above the canvas
+- component and group inspector states lead with useful content, not filler copy
 - the component picker is more precise than the current radial browsing
 - attachment nodes communicate file type and intended use
 - destructive or heavy actions are no longer one-click surprises

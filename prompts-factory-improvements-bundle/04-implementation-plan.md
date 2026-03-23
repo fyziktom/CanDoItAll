@@ -74,6 +74,9 @@
 - [ ] store component edits in the session customization model used by prompt build
 - [ ] add a preview action that opens a modal for the selected item or subtree
 - [ ] keep a reset path so component content can return to its template-based baseline
+- [ ] remove redundant generic intro cards from prompt-component and component-group inspector states
+- [ ] compress selected-item summary cards so chip density does not push the editor below the fold
+- [ ] guarantee selected-item modals layer above the canvas shell, floating inspector, and maximized stage chrome
 
 ### C2. Floating inspector behavior
 - [ ] remove the external inspector column from the canvas stage when Prompt Factory is on the `Canvas` tab
@@ -129,6 +132,8 @@
 - The floating inspector defaults to the right side of the canvas.
 - The floating inspector can be minimized and restored.
 - The floating inspector can be dragged without breaking canvas interaction.
+- Component and group inspector states do not render redundant explanatory cards ahead of real content.
+- Compact chips and summary spacing keep the editor or selected-items list visible without unnecessary scrolling.
 
 ### Help behavior
 - Clicking outside closes help.
@@ -158,6 +163,7 @@
 - Undo still works after confirmed actions.
 - Editing a selected component changes the session override that build uses.
 - Previewing a selected prompt node shows that node and its descendants only.
+- Expanding the large editor opens a modal above the canvas and floating inspector in both normal and maximized canvas modes.
 
 ## Execution Prompts
 
