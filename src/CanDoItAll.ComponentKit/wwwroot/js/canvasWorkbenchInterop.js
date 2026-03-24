@@ -2786,19 +2786,23 @@
             const uploadTitle = createElement(state.document, "span", "cw-canvas-composer__upload-title", action.filePrompt || "Drop a file here or choose one.");
             uploadField.appendChild(uploadTitle);
 
-            const dropZone = createElement(state.document, "label", "cw-canvas-composer__dropzone");
+            const dropZone = createElement(state.document, "div", "cw-canvas-composer__dropzone");
             dropZone.tabIndex = 0;
             fileInput = createElement(state.document, "input", "cw-canvas-composer__file-input");
             fileInput.type = "file";
+            fileInput.tabIndex = -1;
+            fileInput.setAttribute("aria-hidden", "true");
             if (action.acceptedFileTypes) {
                 fileInput.accept = action.acceptedFileTypes;
             }
 
-            const dropHeadline = createElement(state.document, "strong", null, "Choose file");
+            const fileTrigger = createElement(state.document, "button", "cw-button cw-canvas-composer__file-trigger", "Choose file");
+            fileTrigger.type = "button";
+            fileTrigger.dataset.tone = "ghost";
             const dropCopy = createElement(state.document, "span", null, action.supportsDragDrop ? "Click or drop a file here." : "Click to choose a file.");
             fileSummary = createElement(state.document, "small", "cw-canvas-composer__upload-summary", "");
             dropZone.appendChild(fileInput);
-            dropZone.appendChild(dropHeadline);
+            dropZone.appendChild(fileTrigger);
             dropZone.appendChild(dropCopy);
             dropZone.appendChild(fileSummary);
             uploadField.appendChild(dropZone);
@@ -2812,24 +2816,42 @@
                 }
             };
 
-            dropZone.addEventListener("pointerdown", event => event.stopPropagation());
-            dropZone.addEventListener("click", event => {
-                event.stopPropagation();
-                if (event.target === fileInput) {
+            const openFilePicker = event => {
+                event?.preventDefault?.();
+                event?.stopPropagation?.();
+                if (!fileInput) {
                     return;
                 }
 
-                event.preventDefault();
+                try {
+                    if (typeof fileInput.showPicker === "function") {
+                        fileInput.showPicker();
+                        return;
+                    }
+                }
+                catch {
+                }
+
                 fileInput.click();
+            };
+
+            dropZone.addEventListener("pointerdown", event => event.stopPropagation());
+            dropZone.addEventListener("click", event => {
+                if (event.target === fileInput || event.target?.closest?.(".cw-canvas-composer__file-trigger")) {
+                    return;
+                }
+
+                openFilePicker(event);
             });
             dropZone.addEventListener("keydown", event => {
                 if (event.key !== "Enter" && event.key !== " ") {
                     return;
                 }
 
-                event.preventDefault();
-                fileInput.click();
+                openFilePicker(event);
             });
+            fileTrigger.addEventListener("pointerdown", event => event.stopPropagation());
+            fileTrigger.addEventListener("click", openFilePicker);
             fileInput.addEventListener("click", event => event.stopPropagation());
             fileInput.addEventListener("change", async event => {
                 const file = event.target?.files?.[0];

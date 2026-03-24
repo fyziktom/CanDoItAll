@@ -2131,6 +2131,10 @@ body.cw-body-lock {
     font-size: 0.78rem;
 }
 
+.cw-canvas-composer__file-trigger {
+    justify-self: start;
+}
+
 .cw-canvas-composer__file-input {
     position: absolute;
     width: 1px;

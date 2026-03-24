@@ -122,6 +122,47 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
     }
 
     [Fact]
+    public async Task Structure_file_create_dialog_choose_file_button_opens_native_picker()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+
+        await CreateProjectAsync(page, "Playwright File Chooser", "Review");
+
+        var canvasHost = page.Locator(".cw-canvas-host");
+        await canvasHost.ScrollIntoViewIfNeededAsync();
+        await ClickCanvasNodeAsync(page, ".cw-node[data-node-id^='project:']");
+        await page.WaitForFunctionAsync("() => (document.activeElement?.className || '').includes('cw-canvas-host')");
+
+        await OpenCanvasContextMenuAsync(page, ".cw-node[data-node-id^='project:']");
+        await page.Locator(".cw-context-menu__action[data-action-id='group-assets']").HoverAsync(new() { Force = true });
+        await page.Locator(".cw-context-menu__action[data-action-id='add-file']").WaitForAsync();
+        await page.Locator(".cw-context-menu__action[data-action-id='add-file']").ClickAsync(new() { Force = true });
+        await page.Locator(".cw-canvas-composer__upload-title").Filter(new() { HasText = "Drop a file here or choose one." }).WaitForAsync();
+        await page.Locator(".cw-canvas-composer__file-trigger").WaitForAsync();
+
+        var chooser = await page.RunAndWaitForFileChooserAsync(async () =>
+            await page.GetByRole(AriaRole.Button, new() { Name = "Choose file", Exact = true }).ClickAsync());
+        await chooser.SetFilesAsync(
+        [
+            new FilePayload
+            {
+                Name = "playwright-structure-file.txt",
+                MimeType = "text/plain",
+                Buffer = Encoding.UTF8.GetBytes("structure file chooser smoke test")
+            }
+        ]);
+
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-canvas-composer__upload-summary')?.textContent?.includes('playwright-structure-file.txt') === true");
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const button = document.querySelector('.cw-canvas-composer__actions .cw-button[data-tone=""accent""]');
+                return button instanceof HTMLButtonElement && button.disabled !== true;
+            }");
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
     public async Task Structure_canvas_supports_inline_note_creation_editing_and_context_create_dialogs()
     {
         await using var context = await fixture.Browser.NewContextAsync();
