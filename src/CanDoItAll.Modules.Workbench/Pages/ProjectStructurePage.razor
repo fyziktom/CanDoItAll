@@ -19,7 +19,13 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
 @if (surface is null || canvasSurface is null)
 {
-    <p class="text-sm text-slate-500">Loading project structure...</p>
+    <CanvasWorkbenchStage Eyebrow="Structure canvas"
+                          Title="Project structure workbench"
+                          Description="Loading the shared canvas shell, mirrored inspector, and typed project graph.">
+        <Canvas>
+            <SkeletonStateOverlay Snapshot="@LoadingSkeletonSnapshot" />
+        </Canvas>
+    </CanvasWorkbenchStage>
 }
 else
 {
@@ -41,7 +47,63 @@ else
                                  CreateActionInvoked="HandleCreateActionAsync"
                                  NodeEdited="HandleNodeEditedAsync"
                                  NodeOpened="HandleNodeOpenedAsync"
-                                 StateChanged="HandleCanvasStateChangedAsync" />
+                                 StateChanged="HandleCanvasStateChangedAsync">
+                    <OverlayContent>
+                        @if (canvasValidationOverlay.IsVisible)
+                        {
+                            <section class="project-structure-validation-overlay"
+                                     aria-label="Project structure validation overlay"
+                                     data-testid="project-structure-validation-overlay">
+                                <div class="project-structure-validation-overlay__header">
+                                    <p class="cw-panel-kicker">Project validation overlay</p>
+                                    <h3 class="cw-panel-title">Canvas health</h3>
+                                    <p class="cw-panel-copy">Surface dependency and review issues directly in the structure canvas before syncing or publishing.</p>
+                                </div>
+                                <div class="project-structure-validation-overlay__metrics">
+                                    <div class="project-structure-validation-overlay__metric" data-validation-metric="blocked">
+                                        <span>Blocked</span>
+                                        <strong>@canvasValidationOverlay.BlockedCount</strong>
+                                    </div>
+                                    <div class="project-structure-validation-overlay__metric" data-validation-metric="review">
+                                        <span>Review</span>
+                                        <strong>@canvasValidationOverlay.ReviewCount</strong>
+                                    </div>
+                                    <div class="project-structure-validation-overlay__metric" data-validation-metric="priority">
+                                        <span>Priority</span>
+                                        <strong>@canvasValidationOverlay.PriorityCount</strong>
+                                    </div>
+                                    <div class="project-structure-validation-overlay__metric" data-validation-metric="selection">
+                                        <span>Selected issues</span>
+                                        <strong>@canvasValidationOverlay.SelectedIssueCount</strong>
+                                    </div>
+                                </div>
+                                @if (canvasValidationOverlay.SpotlightNodes.Count > 0)
+                                {
+                                    <div class="project-structure-validation-overlay__spotlight">
+                                        <span>Spotlight</span>
+                                        <ul>
+                                            @foreach (var nodeTitle in canvasValidationOverlay.SpotlightNodes)
+                                            {
+                                                <li>@nodeTitle</li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+                                @if (selectedNode is not null && canvasValidationOverlay.SelectedIssueCount > 0)
+                                {
+                                    <div class="project-structure-validation-overlay__actions">
+                                        <button type="button"
+                                                class="cw-button"
+                                                data-tone="accent"
+                                                @onclick="RunSelectedValidationAsync">
+                                            Validate selected
+                                        </button>
+                                    </div>
+                                }
+                            </section>
+                        }
+                    </OverlayContent>
+                </CanvasWorkbench>
             </Canvas>
             <Inspector>
                 @if (selectedNodes.Count == 0)
@@ -273,6 +335,54 @@ else
                 </div>
             </Supporting>
         </CanvasWorkbenchStage>
+
+        <div class="grid gap-5 xl:grid-cols-2">
+            <CanvasBoundaryPreviewCard TestHookId="project-structure-action-catalog-adapter"
+                                       Label="Project Structure action catalog adapter"
+                                       Title="Project Structure actions now flow through a dedicated domain catalog"
+                                       Summary="Quick create, node context, group actions, and inspector create groups no longer need to be rebuilt inline in the page."
+                                       StatePill="@(selectedNode is null ? "Canvas scope" : "Node scope")"
+                                       Metrics="@ActionCatalogMetrics">
+                <div class="grid gap-3 md:grid-cols-2">
+                    <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Quick create</p>
+                        <div class="mt-3 space-y-2">
+                            @foreach (var action in ActionCatalogPreviewQuickActions.Take(4))
+                            {
+                                <div class="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-800">@action.Label</div>
+                            }
+                        </div>
+                    </div>
+                    <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Context actions</p>
+                        <div class="mt-3 space-y-2">
+                            @foreach (var action in ActionCatalogPreviewContextActions.Take(4))
+                            {
+                                <div class="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-800">@action.Label</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </CanvasBoundaryPreviewCard>
+
+            <CanvasBoundaryPreviewCard TestHookId="project-structure-placement-policy"
+                                       Label="Project Structure placement policy"
+                                       Title="Create placement now normalizes through a dedicated policy"
+                                       Summary="Sibling, child, and free-canvas placement resolve through one reusable rule set instead of living inline in create handlers."
+                                       StatePill="@PlacementPreviewMode"
+                                       Metrics="@PlacementPolicyMetrics">
+                <div class="grid gap-3 md:grid-cols-2">
+                    <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Resolved parent</p>
+                        <p class="mt-2 text-sm text-slate-950">@PlacementPreviewParentLabel</p>
+                    </div>
+                    <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Resolved coordinates</p>
+                        <p class="mt-2 text-sm text-slate-950">@PlacementPreviewCoordinates</p>
+                    </div>
+                </div>
+            </CanvasBoundaryPreviewCard>
+        </div>
     </div>
 }
 
@@ -351,6 +461,16 @@ else
         new() { Label = "Selection", Value = selectedNodeIds.Count.ToString(), Tone = "mint" }
     ];
 
+    private SkeletonStateOverlaySnapshot LoadingSkeletonSnapshot
+        => SkeletonStateOverlayFactory.CreateLoadingSnapshot(
+            "Loading project structure",
+            "Shared loading chrome keeps the stage, toolbar, and inspector rhythm stable while the canvas model is still being projected.");
+
+    private ProjectStructureValidationOverlaySummary canvasValidationOverlay
+        => surface is null
+            ? new ProjectStructureValidationOverlaySummary(false, 0, 0, 0, 0, [])
+            : ProjectStructureValidationOverlay.BuildSummary(surface, selectedNodeIds);
+
     private IReadOnlyList<ProjectStructureNode> outlineNodes =>
         surface?.Nodes
             .OrderBy(node => ResolveOutlineWeight(node.ObjectType))
@@ -361,6 +481,58 @@ else
         surface?.Nodes.Where(node => selectedNodeIds.Contains(node.Id, StringComparer.Ordinal)).ToList() ?? [];
 
     private ProjectStructureNode? selectedNode => selectedNodes.FirstOrDefault();
+    private ProjectStructureNode? ActionCatalogPreviewNode
+        => selectedNode ?? surface?.Nodes.FirstOrDefault(node => node.ObjectType != ProjectObjectType.ProjectRoot) ?? surface?.Nodes.FirstOrDefault();
+    private IReadOnlyList<CanvasWorkbenchAction> ActionCatalogPreviewQuickActions
+        => actionCatalog.BuildQuickCreateActions(ActionCatalogPreviewNode?.ObjectType);
+    private IReadOnlyList<CanvasWorkbenchAction> ActionCatalogPreviewContextActions
+        => ActionCatalogPreviewNode is null ? actionCatalog.BuildGroupContextActions() : actionCatalog.BuildNodeContextActions(ActionCatalogPreviewNode);
+    private CanvasWorkbenchCreateActionRequest PlacementPreviewRequest
+        => new(
+            "preview-create",
+            ActionCatalogPreviewNode?.Id,
+            ActionCatalogPreviewNode?.X ?? 120,
+            ActionCatalogPreviewNode?.Y ?? 120,
+            null,
+            "Preview node",
+            string.Empty,
+            string.Empty,
+            selectedNode is null ? "canvas" : "child",
+            "command",
+            string.Empty,
+            null);
+    private string PlacementPreviewMode => PlacementPreviewRequest.PlacementKind;
+    private string? PlacementPreviewParentId => ProjectStructurePlacementPolicy.ResolveParentNodeId(ActionCatalogPreviewNode, PlacementPreviewRequest);
+    private (double? X, double? Y) PlacementPreview
+        => placementPolicy.ResolveCreatePlacement(
+            surface?.Nodes ?? [],
+            ActionCatalogPreviewNode,
+            surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, PlacementPreviewParentId, StringComparison.Ordinal)),
+            PlacementPreviewRequest);
+    private string PlacementPreviewParentLabel => string.IsNullOrWhiteSpace(PlacementPreviewParentId) ? "Canvas root" : PlacementPreviewParentId;
+    private string PlacementPreviewCoordinates
+        => PlacementPreview.X.HasValue && PlacementPreview.Y.HasValue
+            ? $"{Math.Round(PlacementPreview.X.Value)}, {Math.Round(PlacementPreview.Y.Value)}"
+            : "Unresolved";
+    private IReadOnlyList<string> ActionCatalogMetrics =>
+    [
+        $"{ActionCatalogPreviewQuickActions.Count} quick create actions",
+        $"{ActionCatalogPreviewContextActions.Count} context actions",
+        $"{actionCatalog.BuildGroupContextActions().Count} group actions",
+        $"{BuildInspectorCreateGroups(ActionCatalogPreviewNode?.ObjectType).Count} inspector groups"
+    ];
+    private IReadOnlyList<string> PlacementPolicyMetrics =>
+    [
+        $"Parent: {PlacementPreviewParentLabel}",
+        $"Coords: {PlacementPreviewCoordinates}",
+        $"{surface?.Nodes.Count ?? 0} nodes in graph",
+        $"{PlacementPreviewMode} placement"
+    ];
+
+    private Task RunSelectedValidationAsync()
+        => selectedNode is null
+            ? Task.CompletedTask
+            : ExecuteCommandAsync(ProjectStructureCommandKind.Validate, selectedNode.Id);
 
     protected override async Task OnParametersSetAsync()
     {

@@ -156,7 +156,7 @@ public sealed class ProjectStructureGraphAdapter
             Y = node.Y,
             Chips = BuildHeaderChips(node),
             FooterChips = BuildFooterChips(node),
-            Annotations = BuildAnnotations(node),
+            Annotations = ProjectStructureValidationOverlay.BuildNodeAnnotations(node).ToList(),
             ContextActions = actionCatalog.BuildNodeContextActions(node).ToList()
         };
     }
@@ -259,58 +259,6 @@ public sealed class ProjectStructureGraphAdapter
         }
 
         return chips;
-    }
-
-    private static List<CanvasWorkbenchAnnotation> BuildAnnotations(ProjectStructureNode node)
-    {
-        var annotations = new List<CanvasWorkbenchAnnotation>();
-        var status = node.Status?.Trim() ?? string.Empty;
-        if (status.Contains("blocked", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("error", StringComparison.OrdinalIgnoreCase))
-        {
-            annotations.Add(new CanvasWorkbenchAnnotation
-            {
-                Id = $"{node.Id}:validation",
-                Kind = "validation",
-                Tone = "danger",
-                Label = "Blocked",
-                Description = $"This {ProjectStructureCanvasCatalog.ResolveNodeLabel(node)} is marked '{status}'. Open validation tooling before continuing.",
-                Icon = "QA",
-                ActionId = "validate"
-            });
-        }
-        else if (node.ObjectType == ProjectObjectType.ValidationRun &&
-                 !status.Contains("approved", StringComparison.OrdinalIgnoreCase) &&
-                 !status.Contains("complete", StringComparison.OrdinalIgnoreCase))
-        {
-            annotations.Add(new CanvasWorkbenchAnnotation
-            {
-                Id = $"{node.Id}:validation-open",
-                Kind = "validation",
-                Tone = "warn",
-                Label = "Review",
-                Description = "This validation artifact still needs a pass or decision.",
-                Icon = "QA",
-                ActionId = "validate"
-            });
-        }
-
-        if (node.Priority >= 4)
-        {
-            annotations.Add(new CanvasWorkbenchAnnotation
-            {
-                Id = $"{node.Id}:priority",
-                Kind = "priority",
-                Tone = "warn",
-                Label = $"P{node.Priority}",
-                Description = "High-priority work item. Keep it visible while reflowing the structure.",
-                Icon = "!",
-                ActionId = "open"
-            });
-        }
-
-        return annotations;
     }
 
     private static (string Mode, int Percent) ResolveProgress(ProjectStructureNode node)

@@ -110,6 +110,49 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         </div>
                     </ToolbarLeftContent>
                     <OverlayContent>
+                        @if (canvasRecommendationOverlay.IsVisible)
+                        {
+                            <section class="pf-recommendation-overlay"
+                                     aria-label="Recommendation overlay"
+                                     data-testid="prompt-factory-recommendation-overlay">
+                                <div class="pf-recommendation-overlay__header">
+                                    <p class="cw-panel-kicker">@canvasRecommendationOverlay.Title</p>
+                                    <h3 class="cw-panel-title">Next canvas moves</h3>
+                                    <p class="cw-panel-copy">@canvasRecommendationOverlay.Description</p>
+                                </div>
+                                <div class="pf-recommendation-overlay__list">
+                                    @foreach (var item in canvasRecommendationOverlay.Items)
+                                    {
+                                        <article class="pf-recommendation-overlay__item"
+                                                 data-recommendation-tone="@item.Tone">
+                                            <strong>@item.Label</strong>
+                                            <span>@item.Detail</span>
+                                        </article>
+                                    }
+                                </div>
+                                <div class="pf-recommendation-overlay__actions">
+                                    @if (canvasRecommendationOverlay.CanApplyRecommendations)
+                                    {
+                                        <button type="button"
+                                                class="cw-button"
+                                                data-tone="accent"
+                                                @onclick="ApplyCanvasRecommendationsAsync">
+                                            Apply recommendations
+                                        </button>
+                                    }
+                                    @if (canvasRecommendationOverlay.CanBuildFlow)
+                                    {
+                                        <button type="button"
+                                                class="cw-button"
+                                                data-tone="ghost"
+                                                @onclick="BuildCanvasFlowAsync">
+                                            Build flow
+                                        </button>
+                                    }
+                                </div>
+                            </section>
+                        }
+
                         <section @ref="floatingInspectorPanel"
                                  class="pf-floating-inspector @(isCanvasInspectorMinimized ? "is-minimized" : string.Empty)"
                                  aria-label="Canvas inspector">
@@ -542,6 +585,63 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 </CanvasWorkbench>
             </Canvas>
             </CanvasWorkbenchStage>
+
+            <div class="mt-5">
+                <CanvasBoundaryPreviewCard TestHookId="prompt-factory-undo-redo-adapter"
+                                           Label="Prompt Factory undo redo adapter"
+                                           Title="Prompt editing history now resolves through one domain adapter"
+                                           Summary="Canvas selection, inspector tab state, and prompt-session snapshots are captured together so shared history infrastructure can drive toolbar buttons and keyboard shortcuts."
+                                           StatePill="@(CanUndo || CanRedo ? "History ready" : "Baseline")"
+                                           Metrics="@UndoRedoMetrics">
+                    <div class="grid gap-4 lg:grid-cols-[auto_1fr]">
+                        <div class="flex items-start gap-3">
+                            <button type="button"
+                                    class="cw-button"
+                                    data-tone="ghost"
+                                    disabled="@(!CanUndo)"
+                                    @onclick="UndoAsync">
+                                Undo
+                            </button>
+                            <button type="button"
+                                    class="cw-button"
+                                    data-tone="accent"
+                                    disabled="@(!CanRedo)"
+                                    @onclick="RedoAsync">
+                                Redo
+                            </button>
+                        </div>
+                        <div class="grid gap-3 md:grid-cols-3">
+                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Session</p>
+                                <p class="mt-2 text-sm text-slate-950">@UndoRedoSessionLabel</p>
+                            </div>
+                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Selection</p>
+                                <p class="mt-2 text-sm text-slate-950">@UndoRedoSelectionLabel</p>
+                            </div>
+                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Inspector tab</p>
+                                <p class="mt-2 text-sm text-slate-950">@activeInspectorTab</p>
+                            </div>
+                        </div>
+                    </div>
+                </CanvasBoundaryPreviewCard>
+            </div>
+
+            <div class="mt-5 grid gap-5 xl:grid-cols-2 2xl:grid-cols-3">
+                <ChipBadgePrimitive Snapshot="@ChipBadgePreviewSnapshot" />
+                <ConnectorPathPrimitive Snapshot="@ConnectorPathPreviewSnapshot" />
+                <ContainerPrimitive Snapshot="@ContainerPreviewSnapshot" />
+                <ContextMenuHost Snapshot="@ContextMenuPreviewSnapshot" />
+                <CreateActionPalette Snapshot="@CreateActionPalettePreviewSnapshot" />
+                <FloatingInspectorHost Snapshot="@FloatingInspectorPreviewSnapshot" />
+                <GroupFrameOverlay Snapshot="@GroupFramePreviewSnapshot" />
+                <IconGlyphPrimitive Snapshot="@IconGlyphPreviewSnapshot" />
+                <ImagePrimitive Snapshot="@ImagePreviewSnapshot" />
+                <InlineEditorComposer Snapshot="@InlineEditorPreviewSnapshot" />
+                <NodeCardComposer Snapshot="@NodeCardPreviewSnapshot" />
+                <TextBlockPrimitive Snapshot="@TextBlockPreviewSnapshot" />
+            </div>
             </div>
         }
         else
@@ -1887,6 +1987,8 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         new() { Label = "Warnings", Value = editor.Warnings.Count.ToString(), Tone = "warn" }
     ];
 
+    private RecommendationOverlaySummary canvasRecommendationOverlay => ResolveCanvasRecommendationOverlay();
+
     private string? selectedCanvasNodeId => selectedCanvasNodeIds.FirstOrDefault();
 
     private PromptRunNodeSummary? selectedPromptNode => TryParsePromptCanvasNodeId(selectedCanvasNodeId, out var nodeId)
@@ -1999,6 +2101,61 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
             SetupIsReady,
             MissingSetupFieldCount);
 
+    private RecommendationOverlaySummary ResolveCanvasRecommendationOverlay()
+    {
+        var summary = RecommendationOverlay.BuildSummary(
+            new PromptFactorySessionGraphRequest(
+                editor,
+                libraryCatalog,
+                blueprints,
+                templates,
+                blocks,
+                VisibleSessionAttachments,
+                sessionSetup,
+                new CanvasWorkbenchUiState(),
+                ResolveSetupSummaryLine(),
+                ResolveSetupLeadCopy(),
+                ResolveSetupStatusLabel(),
+                SetupIsReady,
+                MissingSetupFieldCount));
+
+        if (summary.IsVisible)
+        {
+            return summary;
+        }
+
+        var fallbackItems = new List<RecommendationOverlayItem>();
+        if (MissingSetupFieldCount > 0)
+        {
+            fallbackItems.Add(new RecommendationOverlayItem(
+                "Setup gaps",
+                $"{MissingSetupFieldCount} field(s) still need attention before the session is fully configured.",
+                "warn"));
+        }
+
+        if (editor.Nodes.Count == 0)
+        {
+            fallbackItems.Add(new RecommendationOverlayItem(
+                "Build branch lanes",
+                "The session has selected components but no prompt steps yet. Run the build flow to materialize the branch graph.",
+                "mint"));
+        }
+
+        return fallbackItems.Count > 0
+            ? new RecommendationOverlaySummary(
+                true,
+                "Recommendation overlay",
+                "Surface the next best Prompt Factory actions directly on the canvas instead of burying them in the inspector.",
+                fallbackItems,
+                CanApplyRecommendations: editor.Warnings.Count > 0 || editor.BlueprintId.HasValue,
+                CanBuildFlow: editor.Nodes.Count == 0)
+            : summary;
+    }
+
+    private Task ApplyCanvasRecommendationsAsync() => ApplyRecommendationsAsync();
+
+    private Task BuildCanvasFlowAsync() => BuildAsync();
+
     private List<CanvasWorkbenchNode> BuildCanvasNodes()
     {
         var nodes = new List<CanvasWorkbenchNode>
@@ -2030,7 +2187,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                     new CanvasWorkbenchChip { Text = $"{editor.SelectedBlockIds.Count} components", Tone = "accent" },
                     new CanvasWorkbenchChip { Text = $"{VisibleSessionAttachments.Count} inputs", Tone = "success" }
                 ],
-                ContextActions = PromptFactoryCanvasCatalog.BuildSessionContextActions(libraryCatalog).ToList()
+                ContextActions = PromptFactoryCatalogToolbox.BuildSessionContextActions(libraryCatalog).ToList()
             }
         };
 
@@ -2205,6 +2362,61 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private string ResolveStageTitle()
         => string.IsNullOrWhiteSpace(editor.SessionName) ? "Prompt flow canvas" : editor.SessionName;
+
+    private string UndoRedoSessionLabel
+        => string.IsNullOrWhiteSpace(editor.SessionName) ? "Unsaved session" : editor.SessionName;
+
+    private string UndoRedoSelectionLabel
+        => string.IsNullOrWhiteSpace(selectedCanvasNodeId) ? "session-root" : selectedCanvasNodeId;
+
+    private IReadOnlyList<string> UndoRedoMetrics =>
+    [
+        CanUndo ? "Undo available" : "Undo stack empty",
+        CanRedo ? "Redo available" : "Redo stack empty",
+        $"{selectedCanvasNodeIds.Count} selected canvas item(s)",
+        $"{editor.Nodes.Count} run node(s)"
+    ];
+
+    private SelectionModel CanvasPrimitiveSelection
+        => canvasSurface is null
+            ? SelectionModel.Empty
+            : SelectionModel.From(selectedCanvasNodeIds, selectedCanvasNodeId);
+
+    private ChipBadgePrimitiveSnapshot ChipBadgePreviewSnapshot
+        => canvasSurface is null ? new() : ChipBadgePrimitiveFactory.CreateForWorkbench(canvasSurface);
+
+    private ConnectorPathPrimitiveSnapshot ConnectorPathPreviewSnapshot
+        => canvasSurface is null ? new() : ConnectorPathPrimitiveFactory.CreateForWorkbench(canvasSurface);
+
+    private ContainerPrimitiveSnapshot ContainerPreviewSnapshot
+        => canvasSurface is null ? new() : ContainerPrimitiveFactory.CreateForWorkbench(canvasSurface, CanvasPrimitiveSelection);
+
+    private ContextMenuHostSnapshot ContextMenuPreviewSnapshot
+        => canvasSurface is null ? new() : ContextMenuHostFactory.CreateForWorkbench(canvasSurface, CanvasPrimitiveSelection);
+
+    private CreateActionPaletteSnapshot CreateActionPalettePreviewSnapshot
+        => canvasSurface is null ? new() : CreateActionPaletteFactory.CreateForWorkbench(canvasSurface);
+
+    private FloatingInspectorHostSnapshot FloatingInspectorPreviewSnapshot
+        => canvasSurface is null ? new() : FloatingInspectorHostFactory.CreateForWorkbench(canvasSurface, CanvasPrimitiveSelection);
+
+    private GroupFrameOverlaySnapshot GroupFramePreviewSnapshot
+        => canvasSurface is null ? new() : GroupFrameOverlayFactory.CreateForWorkbench(canvasSurface);
+
+    private IconGlyphPrimitiveSnapshot IconGlyphPreviewSnapshot
+        => canvasSurface is null ? new() : IconGlyphPrimitiveFactory.CreateForWorkbench(canvasSurface);
+
+    private ImagePrimitiveSnapshot ImagePreviewSnapshot
+        => canvasSurface is null ? new() : ImagePrimitiveFactory.CreateForWorkbench(canvasSurface);
+
+    private InlineEditorComposerSnapshot InlineEditorPreviewSnapshot
+        => canvasSurface is null ? new() : InlineEditorComposerFactory.CreateForWorkbench(canvasSurface, CanvasPrimitiveSelection);
+
+    private NodeCardComposerSnapshot NodeCardPreviewSnapshot
+        => canvasSurface is null ? new() : NodeCardComposerFactory.CreateForWorkbench(canvasSurface, CanvasPrimitiveSelection);
+
+    private TextBlockPrimitiveSnapshot TextBlockPreviewSnapshot
+        => canvasSurface is null ? new() : TextBlockPrimitiveFactory.CreateForWorkbench(canvasSurface);
 
     private IEnumerable<(string Title, string Subtitle)> ResolveSelectedCanvasLabels()
     {

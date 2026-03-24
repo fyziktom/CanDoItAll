@@ -48,6 +48,55 @@ public sealed class CanvasWorkbenchClipboardOptions
     public string Format { get; set; } = "application/vnd.candoitall.canvas+json";
 }
 
+public sealed class CanvasWorkbenchTooltipPopoverOptions
+{
+    public bool IsEnabled { get; set; } = true;
+
+    public bool FocusTriggers { get; set; } = true;
+
+    public bool SupportsRichPreview { get; set; } = true;
+}
+
+public sealed class CanvasWorkbenchMarqueeOptions
+{
+    public bool IsEnabled { get; set; } = true;
+
+    public string ModifierKey { get; set; } = "Alt";
+
+    public string SelectionMode { get; set; } = "Intersect";
+}
+
+public sealed class CanvasWorkbenchSnapGuideOptions
+{
+    public bool IsEnabled { get; set; } = true;
+
+    public double Tolerance { get; set; } = 18;
+
+    public string ModifierPolicy { get; set; } = "ShiftBypassesSnap";
+}
+
+public sealed class CanvasWorkbenchConnectorAnchorOptions
+{
+    public bool IsEnabled { get; set; } = true;
+
+    public bool ShowOnHover { get; set; } = true;
+
+    public bool ShowOnSelection { get; set; } = true;
+
+    public string PlacementMode { get; set; } = "Edges";
+}
+
+public sealed class CanvasWorkbenchTransformHandleOptions
+{
+    public bool IsEnabled { get; set; } = true;
+
+    public bool ShowResizeHandles { get; set; } = true;
+
+    public bool ShowRotateHandle { get; set; } = true;
+
+    public string PlacementMode { get; set; } = "SelectionBounds";
+}
+
 public sealed record CanvasWorkbenchClipboardRequest(
     string ActionId,
     string PayloadJson);

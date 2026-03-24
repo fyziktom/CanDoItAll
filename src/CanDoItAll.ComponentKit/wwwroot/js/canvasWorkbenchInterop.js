@@ -2,6 +2,79 @@
     const root = window.CanDoItAll = window.CanDoItAll || {};
     const MIN_ZOOM = 0.15;
     const MAX_ZOOM = 1.75;
+    function getTextMeasureService() {
+        return root.textMeasureService || null;
+    }
+    function getViewportControllerService() {
+        return root.viewportController || null;
+    }
+    function getAnimationTimelineService() {
+        return root.animationTimeline || null;
+    }
+    const selectionModel = root.selectionModel || {
+        normalize(selectedNodeIds, primaryNodeId) {
+            const seen = new Set();
+            const ordered = [];
+
+            for (const value of Array.isArray(selectedNodeIds) ? selectedNodeIds : []) {
+                const normalized = typeof value === "string" ? value.trim() : "";
+                if (!normalized || seen.has(normalized)) {
+                    continue;
+                }
+
+                seen.add(normalized);
+                ordered.push(normalized);
+            }
+
+            const normalizedPrimary = typeof primaryNodeId === "string" ? primaryNodeId.trim() : "";
+            if (normalizedPrimary) {
+                const existingIndex = ordered.indexOf(normalizedPrimary);
+                if (existingIndex >= 0) {
+                    ordered.splice(existingIndex, 1);
+                }
+
+                ordered.unshift(normalizedPrimary);
+            }
+
+            return {
+                primaryNodeId: ordered[0] || null,
+                selectedNodeIds: ordered
+            };
+        },
+        replace(selectedNodeIds, primaryNodeId) {
+            return this.normalize(selectedNodeIds, primaryNodeId);
+        },
+        selectOne(nodeId) {
+            return this.normalize([nodeId], nodeId);
+        },
+        toggle(selectedNodeIds, nodeId, primaryNodeId) {
+            const normalizedNodeId = typeof nodeId === "string" ? nodeId.trim() : "";
+            const next = this.normalize(selectedNodeIds, primaryNodeId).selectedNodeIds;
+            if (!normalizedNodeId) {
+                return this.normalize(next, primaryNodeId);
+            }
+
+            const existingIndex = next.indexOf(normalizedNodeId);
+            if (existingIndex >= 0) {
+                next.splice(existingIndex, 1);
+                return this.normalize(next, primaryNodeId === normalizedNodeId ? null : primaryNodeId);
+            }
+
+            next.push(normalizedNodeId);
+            return this.normalize(next, primaryNodeId || normalizedNodeId);
+        },
+        clear() {
+            return {
+                primaryNodeId: null,
+                selectedNodeIds: []
+            };
+        },
+        removeMissing(selectedNodeIds, validNodeIds, primaryNodeId) {
+            const valid = new Set(Array.isArray(validNodeIds) ? validNodeIds.filter(Boolean) : []);
+            const filtered = (Array.isArray(selectedNodeIds) ? selectedNodeIds : []).filter(nodeId => valid.has(nodeId));
+            return this.normalize(filtered, valid.has(primaryNodeId) ? primaryNodeId : null);
+        }
+    };
 
     function clear(element) {
         while (element.firstChild) {
@@ -130,6 +203,56 @@
         };
     }
 
+    function normalizeTooltipPopoverOptions(options) {
+        return {
+            isEnabled: options?.isEnabled !== false,
+            focusTriggers: options?.focusTriggers !== false,
+            supportsRichPreview: options?.supportsRichPreview !== false
+        };
+    }
+
+    function normalizeMarqueeOptions(options) {
+        const modifierKey = (options?.modifierKey || "Alt").toString().trim().toLowerCase();
+        const selectionMode = (options?.selectionMode || "Intersect").toString().trim().toLowerCase();
+        return {
+            isEnabled: options?.isEnabled !== false,
+            modifierKey: modifierKey || "alt",
+            selectionMode: selectionMode === "contain" ? "contain" : "intersect"
+        };
+    }
+
+    function normalizeSnapGuideOptions(options) {
+        const tolerance = typeof options?.tolerance === "number" && Number.isFinite(options.tolerance)
+            ? Math.max(0, options.tolerance)
+            : 18;
+        const modifierPolicy = (options?.modifierPolicy || "ShiftBypassesSnap").toString().trim().toLowerCase();
+        return {
+            isEnabled: options?.isEnabled !== false,
+            tolerance,
+            modifierPolicy: modifierPolicy === "none" ? "none" : "shift-bypasses-snap"
+        };
+    }
+
+    function normalizeConnectorAnchorOptions(options) {
+        const placementMode = (options?.placementMode || "Edges").toString().trim().toLowerCase();
+        return {
+            isEnabled: options?.isEnabled !== false,
+            showOnHover: options?.showOnHover !== false,
+            showOnSelection: options?.showOnSelection !== false,
+            placementMode: placementMode || "edges"
+        };
+    }
+
+    function normalizeTransformHandleOptions(options) {
+        const placementMode = (options?.placementMode || "SelectionBounds").toString().trim().toLowerCase();
+        return {
+            isEnabled: options?.isEnabled !== false,
+            showResizeHandles: options?.showResizeHandles !== false,
+            showRotateHandle: options?.showRotateHandle !== false,
+            placementMode: placementMode || "selectionbounds"
+        };
+    }
+
     function normalizeGroupFrame(frame) {
         return {
             id: frame?.id || "",
@@ -156,6 +279,16 @@
     }
 
     function normalizeSurface(surface) {
+        const normalizedSelection = selectionModel.normalize(
+            surface?.uiState?.selectedNodeIds,
+            Array.isArray(surface?.uiState?.selectedNodeIds) ? surface.uiState.selectedNodeIds[0] : null);
+        const viewportController = getViewportControllerService();
+        const normalizedViewport = viewportController?.normalizeUiState?.(surface?.uiState) || {
+            zoom: typeof surface?.uiState?.zoom === "number" ? clamp(surface.uiState.zoom, MIN_ZOOM, MAX_ZOOM) : 1,
+            panX: typeof surface?.uiState?.panX === "number" ? surface.uiState.panX : 90,
+            panY: typeof surface?.uiState?.panY === "number" ? surface.uiState.panY : 110
+        };
+
         return {
             surfaceId: surface?.surfaceId || "canvas-surface",
             mode: surface?.mode || "authoring",
@@ -185,13 +318,13 @@
             links: Array.isArray(surface?.links) ? surface.links : [],
             uiState: {
                 version: surface?.uiState?.version || "canvas-workbench.v1",
-                selectedNodeIds: Array.isArray(surface?.uiState?.selectedNodeIds) ? [...surface.uiState.selectedNodeIds] : [],
+                selectedNodeIds: normalizedSelection.selectedNodeIds,
                 collapsedNodeIds: Array.isArray(surface?.uiState?.collapsedNodeIds) ? [...surface.uiState.collapsedNodeIds] : [],
                 groupFrames: Array.isArray(surface?.uiState?.groupFrames) ? surface.uiState.groupFrames.map(normalizeGroupFrame) : [],
                 manualPositions: surface?.uiState?.manualPositions || {},
-                zoom: typeof surface?.uiState?.zoom === "number" ? clamp(surface.uiState.zoom, MIN_ZOOM, MAX_ZOOM) : 1,
-                panX: typeof surface?.uiState?.panX === "number" ? surface.uiState.panX : 90,
-                panY: typeof surface?.uiState?.panY === "number" ? surface.uiState.panY : 110,
+                zoom: normalizedViewport.zoom,
+                panX: normalizedViewport.panX,
+                panY: normalizedViewport.panY,
                 menuActionScale: normalizeMenuActionScale(surface?.uiState?.menuActionScale),
                 isMaximized: !!surface?.uiState?.isMaximized,
                 activeInspectorTab: surface?.uiState?.activeInspectorTab || "",
@@ -211,7 +344,12 @@
                 emptyStateDescription: surface?.chrome?.emptyStateDescription || "Use quick create to start building the scene.",
                 diagnostics: normalizeDiagnosticsOptions(surface?.chrome?.diagnostics),
                 minimap: normalizeMinimapOptions(surface?.chrome?.minimap),
-                clipboard: normalizeClipboardOptions(surface?.chrome?.clipboard)
+                clipboard: normalizeClipboardOptions(surface?.chrome?.clipboard),
+                tooltipPopover: normalizeTooltipPopoverOptions(surface?.chrome?.tooltipPopover),
+                marqueeSelection: normalizeMarqueeOptions(surface?.chrome?.marqueeSelection),
+                snapGuides: normalizeSnapGuideOptions(surface?.chrome?.snapGuides),
+                connectorAnchors: normalizeConnectorAnchorOptions(surface?.chrome?.connectorAnchors),
+                transformHandles: normalizeTransformHandleOptions(surface?.chrome?.transformHandles)
             }
         };
     }
@@ -225,6 +363,11 @@
     }
 
     function getDefaultNodeSize(node) {
+        const baseSize = resolveBaseNodeSize(node);
+        return estimateNodeSizeFromText(node, baseSize);
+    }
+
+    function resolveBaseNodeSize(node) {
         if (node.isInlineTextNode) {
             return { width: 228, height: 108 };
         }
@@ -239,6 +382,89 @@
             default:
                 return { width: 256, height: 190 };
         }
+    }
+
+    function estimateNodeSizeFromText(node, baseSize) {
+        const measureService = getTextMeasureService();
+        if (!measureService || typeof measureService.measure !== "function") {
+            return baseSize;
+        }
+
+        const family = (node.family || "item").toLowerCase();
+        const titleText = node.isInlineTextNode
+            ? (node.inlineText || node.title || node.subtitle || "Untitled")
+            : (node.title || "Untitled");
+        const subtitleText = node.isInlineTextNode
+            ? (node.subtitle || "")
+            : (node.subtitle || node.leadText || "");
+        const chipText = Array.isArray(node.chips) && node.chips.length > 0
+            ? node.chips[0].text
+            : Array.isArray(node.footerChips) && node.footerChips.length > 0
+                ? node.footerChips[0].text
+                : "";
+        const titleWidth = Math.max(124, baseSize.width - (family === "root" ? 86 : 72));
+        const subtitleWidth = Math.max(120, baseSize.width - 72);
+        const titleMeasure = measureService.measure({
+            text: titleText,
+            maxWidth: titleWidth,
+            maxLines: node.isInlineTextNode ? 4 : 2,
+            font: {
+                family: "\"DM Sans\", sans-serif",
+                sizePx: family === "root" ? 18 : node.isInlineTextNode ? 14 : 15,
+                weight: 700,
+                lineHeightPx: node.isInlineTextNode ? 20 : family === "root" ? 22 : 18
+            }
+        });
+        const subtitleMeasure = subtitleText
+            ? measureService.measure({
+                text: subtitleText,
+                maxWidth: subtitleWidth,
+                maxLines: 2,
+                font: {
+                    family: "\"DM Sans\", sans-serif",
+                    sizePx: 12,
+                    weight: 600,
+                    lineHeightPx: 16
+                }
+            })
+            : null;
+        const chipMeasure = chipText
+            ? measureService.measure({
+                text: chipText,
+                maxWidth: Math.max(96, baseSize.width - 96),
+                maxLines: 1,
+                font: {
+                    family: "\"DM Sans\", sans-serif",
+                    sizePx: 11,
+                    weight: 700,
+                    lineHeightPx: 12
+                }
+            })
+            : null;
+        const annotationHeight = Array.isArray(node.annotations) ? Math.ceil(node.annotations.length / 2) * 14 : 0;
+        const footerHeight = (Array.isArray(node.chips) && node.chips.length > 0 ? 18 : 0) +
+            (Array.isArray(node.footerChips) && node.footerChips.length > 0 ? 18 : 0);
+        const mediaHeight = node.mediaPreviewUrl ? 62 : 0;
+        const bodyHeight = 92 +
+            titleMeasure.estimatedHeight +
+            (subtitleMeasure ? subtitleMeasure.estimatedHeight + 8 : 0) +
+            annotationHeight +
+            footerHeight +
+            mediaHeight;
+        const estimatedWidth = Math.ceil(Math.max(
+            baseSize.width,
+            Math.min(
+                356,
+                Math.max(
+                    titleMeasure.estimatedWidth + (family === "root" ? 82 : 68),
+                    subtitleMeasure ? subtitleMeasure.estimatedWidth + 68 : 0,
+                    chipMeasure ? chipMeasure.estimatedWidth + 96 : 0))));
+        const estimatedHeight = Math.ceil(Math.max(baseSize.height, Math.min(340, bodyHeight)));
+
+        return {
+            width: estimatedWidth,
+            height: estimatedHeight
+        };
     }
 
     function getNodeSize(state, node) {
@@ -676,6 +902,23 @@
     function clampPanToScene(state, panX, panY, zoom) {
         const bounds = getSceneBounds(state);
         const rect = state.host.getBoundingClientRect();
+        const viewportController = getViewportControllerService();
+        if (viewportController?.clampPanToScene) {
+            const clamped = viewportController.clampPanToScene({
+                bounds,
+                hostWidth: rect.width,
+                hostHeight: rect.height,
+                panX,
+                panY,
+                zoom: zoom || state.ui.zoom
+            });
+
+            return {
+                x: round(clamped.panX),
+                y: round(clamped.panY)
+            };
+        }
+
         if (!bounds || rect.width <= 0 || rect.height <= 0) {
             return { x: panX, y: panY };
         }
@@ -736,6 +979,71 @@
         state.scene.style.transform = `translate(${state.ui.panX}px, ${state.ui.panY}px) scale(${state.ui.zoom})`;
     }
 
+    function cancelViewportAnimation(state) {
+        state.animationTimeline?.cancel?.("viewport");
+    }
+
+    function updateViewportTransform(state, viewport) {
+        state.ui.zoom = viewport.zoom;
+        setPan(state, viewport.panX, viewport.panY, viewport.zoom);
+        applySceneTransform(state);
+    }
+
+    function animateViewportTransition(state, target, options) {
+        if (!target) {
+            return false;
+        }
+
+        const current = {
+            panX: state.ui.panX,
+            panY: state.ui.panY,
+            zoom: state.ui.zoom
+        };
+
+        const hasMeaningfulChange = Math.abs(current.panX - target.panX) > 0.5
+            || Math.abs(current.panY - target.panY) > 0.5
+            || Math.abs(current.zoom - target.zoom) > 0.001;
+
+        if (!hasMeaningfulChange) {
+            updateViewportTransform(state, target);
+            render(state);
+            if (options?.publish !== false) {
+                publishState(state);
+            }
+
+            return false;
+        }
+
+        if (!state.animationTimeline) {
+            updateViewportTransform(state, target);
+            render(state);
+            if (options?.publish !== false) {
+                publishState(state);
+            }
+
+            return true;
+        }
+
+        state.animationTimeline.animateViewport({
+            key: options?.key || "viewport",
+            from: current,
+            to: target,
+            durationMs: options?.durationMs ?? 320,
+            easing: options?.easing || "softInOut",
+            apply(next) {
+                updateViewportTransform(state, next);
+            },
+            complete() {
+                render(state);
+                if (options?.publish !== false) {
+                    publishState(state);
+                }
+            }
+        });
+
+        return true;
+    }
+
     function getLinkAnchorPoint(state, node, side) {
         const position = getNodePosition(state, node);
             const size = getNodeSize(state, node);
@@ -783,6 +1091,7 @@
             path.setAttribute("stroke-width", link.isUserAuthored ? "3" : "2");
             path.setAttribute("stroke-linecap", "round");
             path.setAttribute("stroke-linejoin", "round");
+            path.setAttribute("class", link.isUserAuthored ? "cw-link-path is-flow" : "cw-link-path");
             state.links.appendChild(path);
         }
     }
@@ -1080,14 +1389,21 @@
             surface.appendChild(media);
         }
 
-        surface.appendChild(createElement(state.document, "h3", "cw-node__title", node.title || "Untitled"));
+        const title = applyFullTextTooltip(
+            createElement(state.document, "h3", "cw-node__title", node.title || "Untitled"),
+            node.title || "Untitled");
+        surface.appendChild(title);
 
         if (node.subtitle) {
-            surface.appendChild(createElement(state.document, "p", "cw-node__subtitle", node.subtitle));
+            surface.appendChild(applyFullTextTooltip(
+                createElement(state.document, "p", "cw-node__subtitle", node.subtitle),
+                node.subtitle));
         }
 
         if (node.leadText) {
-            surface.appendChild(createElement(state.document, "p", "cw-node__lead", node.leadText));
+            surface.appendChild(applyFullTextTooltip(
+                createElement(state.document, "p", "cw-node__lead", node.leadText),
+                node.leadText));
         }
 
         renderNodeAnnotations(state, node, surface);
@@ -1150,6 +1466,9 @@
                 nodeElement.classList.add("is-selected");
             }
 
+            nodeElement.addEventListener("pointerenter", () => updateConnectorAnchorHover(state, node.id));
+            nodeElement.addEventListener("pointerleave", () => updateConnectorAnchorHover(state, null));
+
             if (state.collapsedIds.has(node.id)) {
                 nodeElement.classList.add("is-collapsed");
             }
@@ -1200,6 +1519,10 @@
             return;
         }
 
+        if (state.surface?.chrome?.tooltipPopover?.isEnabled === false) {
+            return;
+        }
+
         state.popover.dataset.kind = annotation.kind || "info";
         state.popover.dataset.tone = annotation.tone || "accent";
         state.popoverTitle.textContent = annotation.label || annotation.kind || "Signal";
@@ -1223,6 +1546,7 @@
             return;
         }
 
+        const tooltipPopover = state.surface.chrome.tooltipPopover || {};
         const row = createElement(state.document, "div", "cw-node__annotations");
         for (const annotation of node.annotations) {
             const badge = createElement(state.document, "button", `cw-node__annotation tone-${annotation.tone || "accent"}`);
@@ -1232,10 +1556,14 @@
                 ? `${annotation.icon} ${annotation.label || annotation.kind || "Signal"}`
                 : (annotation.label || annotation.kind || "Signal");
             badge.addEventListener("pointerdown", event => event.stopPropagation());
-            badge.addEventListener("pointerenter", () => showPopover(state, badge, annotation));
-            badge.addEventListener("pointerleave", () => hidePopover(state));
-            badge.addEventListener("focus", () => showPopover(state, badge, annotation));
-            badge.addEventListener("blur", () => hidePopover(state));
+            if (tooltipPopover.isEnabled !== false) {
+                badge.addEventListener("pointerenter", () => showPopover(state, badge, annotation));
+                badge.addEventListener("pointerleave", () => hidePopover(state));
+                if (tooltipPopover.focusTriggers !== false) {
+                    badge.addEventListener("focus", () => showPopover(state, badge, annotation));
+                    badge.addEventListener("blur", () => hidePopover(state));
+                }
+            }
             badge.addEventListener("click", event => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -1246,6 +1574,35 @@
         }
 
         container.appendChild(row);
+    }
+
+    function updateConnectorAnchorHover(state, nodeId) {
+        const nextNodeId = nodeId || null;
+        if ((state?.hoveredNodeId || null) === nextNodeId) {
+            return;
+        }
+
+        state.hoveredNodeId = nextNodeId;
+        renderConnectorAnchorOverlay(state, getVisibleNodes(state));
+    }
+
+    function getConnectorAnchorPoints(state, node, placementMode) {
+        const position = getNodePosition(state, node);
+        const size = getNodeSize(state, node);
+        const horizontalInset = Math.min(28, size.width * 0.11);
+        const verticalInset = Math.min(22, size.height * 0.18);
+        const points = [
+            { side: "left", x: position.x - (size.width / 2) + horizontalInset, y: position.y },
+            { side: "right", x: position.x + (size.width / 2) - horizontalInset, y: position.y }
+        ];
+
+        if ((placementMode || "edges") !== "horizontal") {
+            points.push(
+                { side: "top", x: position.x, y: position.y - (size.height / 2) + verticalInset },
+                { side: "bottom", x: position.x, y: position.y + (size.height / 2) - verticalInset });
+        }
+
+        return points;
     }
 
     function hideStatusNotice(state) {
@@ -1301,6 +1658,11 @@
         }
 
         state.guideLayer.innerHTML = "";
+        state.guideLayer.style.opacity = "1";
+        if (state.surface?.chrome?.snapGuides?.isEnabled === false) {
+            return;
+        }
+
         if (!Array.isArray(state.snapGuides) || state.snapGuides.length === 0) {
             return;
         }
@@ -1322,15 +1684,180 @@
 
             state.guideLayer.appendChild(element);
         }
+
+        state.animationTimeline?.fadeElement?.("snap-guides", state.guideLayer, {
+            from: 0.2,
+            to: 1,
+            durationMs: 160,
+            easing: "cubicOut"
+        });
+    }
+
+    function renderConnectorAnchorOverlay(state, visibleNodes) {
+        if (!state?.anchorLayer) {
+            return;
+        }
+
+        state.anchorLayer.innerHTML = "";
+        state.anchorLayer.style.opacity = "1";
+        const anchors = state.surface.chrome.connectorAnchors || {};
+        if (!anchors.isEnabled) {
+            return;
+        }
+
+        const visibleLookup = new Set((visibleNodes || []).map(node => node.id));
+        const activeIds = new Set();
+        if (anchors.showOnSelection) {
+            for (const nodeId of state.selectedIds) {
+                activeIds.add(nodeId);
+            }
+        }
+
+        if (anchors.showOnHover && state.hoveredNodeId) {
+            activeIds.add(state.hoveredNodeId);
+        }
+
+        if (activeIds.size === 0) {
+            return;
+        }
+
+        for (const nodeId of activeIds) {
+            if (!visibleLookup.has(nodeId)) {
+                continue;
+            }
+
+            const node = state.lookups.byId.get(nodeId);
+            if (!node) {
+                continue;
+            }
+
+            const isPrimary = (state.ui.selectedNodeIds?.[0] || null) === nodeId;
+            for (const point of getConnectorAnchorPoints(state, node, anchors.placementMode)) {
+                const anchor = createElement(state.document, "div", `cw-connector-anchor is-${point.side}`);
+                anchor.dataset.nodeId = nodeId;
+                anchor.dataset.side = point.side;
+                anchor.title = `${node.title || node.kind || "Node"} ${point.side} anchor`;
+                if (isPrimary) {
+                    anchor.classList.add("is-primary");
+                }
+
+                anchor.style.left = `${round(point.x)}px`;
+                anchor.style.top = `${round(point.y)}px`;
+                state.anchorLayer.appendChild(anchor);
+            }
+        }
+
+        state.animationTimeline?.fadeElement?.("connector-anchors", state.anchorLayer, {
+            from: 0.24,
+            to: 1,
+            durationMs: 160,
+            easing: "cubicOut"
+        });
+    }
+
+    function getSelectionBounds(state, visibleNodes) {
+        const selectedNodes = (visibleNodes || []).filter(node => state.selectedIds.has(node.id));
+        if (selectedNodes.length === 0) {
+            return null;
+        }
+
+        let minX = Number.POSITIVE_INFINITY;
+        let minY = Number.POSITIVE_INFINITY;
+        let maxX = Number.NEGATIVE_INFINITY;
+        let maxY = Number.NEGATIVE_INFINITY;
+        let isReadOnly = true;
+
+        for (const node of selectedNodes) {
+            const position = getNodePosition(state, node, visibleNodes);
+            const size = getNodeSize(state, node);
+            minX = Math.min(minX, position.x - (size.width / 2));
+            minY = Math.min(minY, position.y - (size.height / 2));
+            maxX = Math.max(maxX, position.x + (size.width / 2));
+            maxY = Math.max(maxY, position.y + (size.height / 2));
+            isReadOnly = isReadOnly && !!node.isReadOnly;
+        }
+
+        return {
+            minX,
+            minY,
+            maxX,
+            maxY,
+            width: Math.max(0, maxX - minX),
+            height: Math.max(0, maxY - minY),
+            selectedCount: selectedNodes.length,
+            isReadOnly
+        };
+    }
+
+    function renderTransformHandlesOverlay(state, visibleNodes) {
+        if (!state?.transformLayer) {
+            return;
+        }
+
+        state.transformLayer.innerHTML = "";
+        const handles = state.surface?.chrome?.transformHandles || {};
+        if (!handles.isEnabled) {
+            return;
+        }
+
+        const selectionBounds = getSelectionBounds(state, visibleNodes);
+        if (!selectionBounds) {
+            return;
+        }
+
+        const frame = createElement(state.document, "div", "cw-transform-frame");
+        frame.style.left = `${round(selectionBounds.minX)}px`;
+        frame.style.top = `${round(selectionBounds.minY)}px`;
+        frame.style.width = `${round(selectionBounds.width)}px`;
+        frame.style.height = `${round(selectionBounds.height)}px`;
+        frame.dataset.selectedCount = `${selectionBounds.selectedCount}`;
+        if (selectionBounds.isReadOnly) {
+            frame.classList.add("is-read-only");
+        }
+
+        state.transformLayer.appendChild(frame);
+
+        if (handles.showResizeHandles) {
+            for (const position of ["nw", "n", "ne", "e", "se", "s", "sw", "w"]) {
+                const handle = createElement(state.document, "div", `cw-transform-handle is-${position}`);
+                if (selectionBounds.isReadOnly) {
+                    handle.classList.add("is-read-only");
+                }
+
+                handle.setAttribute("aria-hidden", "true");
+                frame.appendChild(handle);
+            }
+        }
+
+        if (handles.showRotateHandle) {
+            const stem = createElement(state.document, "div", "cw-transform-rotate-stem");
+            const rotate = createElement(state.document, "div", "cw-transform-rotate-handle");
+            if (selectionBounds.isReadOnly) {
+                stem.classList.add("is-read-only");
+                rotate.classList.add("is-read-only");
+            }
+
+            frame.appendChild(stem);
+            frame.appendChild(rotate);
+        }
     }
 
     function resolveSnapAdjustment(state, interaction, deltaX, deltaY) {
+        const snapGuides = state.surface.chrome.snapGuides || {};
+        if (!snapGuides.isEnabled) {
+            return {
+                deltaX,
+                deltaY,
+                guides: []
+            };
+        }
+
         const movingIds = new Set(interaction?.nodeIds || []);
         const movingNodes = (interaction?.nodeIds || [])
             .map(nodeId => state.lookups.byId.get(nodeId))
             .filter(Boolean);
         const stationaryNodes = getVisibleNodes(state).filter(node => !movingIds.has(node.id));
-        const tolerance = 18 / Math.max(state.ui.zoom || 1, 0.25);
+        const tolerance = (snapGuides.tolerance || 18) / Math.max(state.ui.zoom || 1, 0.25);
         let bestX = null;
         let bestY = null;
 
@@ -1731,6 +2258,17 @@
     }
 
     function worldToHostPoint(state, point) {
+        const viewportController = getViewportControllerService();
+        if (viewportController?.sceneToHost) {
+            return viewportController.sceneToHost({
+                pointX: point.x,
+                pointY: point.y,
+                panX: state.ui.panX,
+                panY: state.ui.panY,
+                zoom: state.ui.zoom
+            });
+        }
+
         return {
             x: (point.x * state.ui.zoom) + state.ui.panX,
             y: (point.y * state.ui.zoom) + state.ui.panY
@@ -1739,6 +2277,17 @@
 
     function getWorldPoint(state, clientX, clientY) {
         const hostPoint = getHostPoint(state, clientX, clientY);
+        const viewportController = getViewportControllerService();
+        if (viewportController?.hostToScene) {
+            return viewportController.hostToScene({
+                pointX: hostPoint.x,
+                pointY: hostPoint.y,
+                panX: state.ui.panX,
+                panY: state.ui.panY,
+                zoom: state.ui.zoom
+            });
+        }
+
         return {
             x: (hostPoint.x - state.ui.panX) / state.ui.zoom,
             y: (hostPoint.y - state.ui.panY) / state.ui.zoom
@@ -1771,10 +2320,54 @@
         return !!target?.closest?.(".cw-context-menu, .cw-canvas-composer, .cw-workbench__popover, .cw-minimap, .cw-status-notice");
     }
 
+    function applyFullTextTooltip(element, text) {
+        const fullText = typeof text === "string" ? text.trim() : "";
+        if (element && fullText) {
+            element.dataset.fullText = fullText;
+            element.title = fullText;
+        }
+
+        return element;
+    }
+
+    function reconcileSelection(state) {
+        const normalized = selectionModel.removeMissing(
+            state.ui.selectedNodeIds,
+            state.surface.nodes.map(node => node.id),
+            state.ui.selectedNodeIds[0] || null);
+
+        state.ui.selectedNodeIds = normalized.selectedNodeIds;
+        state.selectedIds = toSelectionSet(normalized.selectedNodeIds);
+        return normalized;
+    }
+
+    function applySelection(state, selectedNodeIds, primaryNodeId, options) {
+        const normalized = selectionModel.replace(selectedNodeIds, primaryNodeId);
+        state.ui.selectedNodeIds = normalized.selectedNodeIds;
+        state.selectedIds = toSelectionSet(normalized.selectedNodeIds);
+
+        if (options?.render !== false) {
+            render(state);
+        }
+
+        if (options?.publish !== false) {
+            publishSelection(state);
+            publishState(state);
+        }
+
+        return normalized;
+    }
+
+    function selectSingleNode(state, nodeId, options) {
+        const normalized = selectionModel.selectOne(nodeId);
+        return applySelection(state, normalized.selectedNodeIds, normalized.primaryNodeId, options);
+    }
+
     function publishSelection(state) {
-        const selectedNodeIds = [...state.selectedIds];
-        const primaryNodeId = selectedNodeIds[0] || null;
-        state.dotNetRef.invokeMethodAsync("OnSelectionChanged", primaryNodeId, JSON.stringify(selectedNodeIds));
+        const normalized = selectionModel.normalize(state.ui.selectedNodeIds, state.ui.selectedNodeIds[0] || null);
+        state.ui.selectedNodeIds = normalized.selectedNodeIds;
+        state.selectedIds = toSelectionSet(normalized.selectedNodeIds);
+        state.dotNetRef.invokeMethodAsync("OnSelectionChanged", normalized.primaryNodeId, JSON.stringify(normalized.selectedNodeIds));
     }
 
     function publishState(state) {
@@ -1795,25 +2388,13 @@
     }
 
     function setSelection(state, nodeIds, keepOrderPrimary) {
-        state.selectedIds = toSelectionSet(nodeIds);
-        state.ui.selectedNodeIds = keepOrderPrimary ? [...nodeIds] : [...state.selectedIds];
-        render(state);
-        publishSelection(state);
-        publishState(state);
+        const primaryNodeId = keepOrderPrimary && Array.isArray(nodeIds) ? nodeIds[0] || null : null;
+        applySelection(state, nodeIds, primaryNodeId);
     }
 
     function toggleSelection(state, nodeId) {
-        if (state.selectedIds.has(nodeId)) {
-            state.selectedIds.delete(nodeId);
-        }
-        else {
-            state.selectedIds.add(nodeId);
-        }
-
-        state.ui.selectedNodeIds = [...state.selectedIds];
-        render(state);
-        publishSelection(state);
-        publishState(state);
+        const normalized = selectionModel.toggle(state.ui.selectedNodeIds, nodeId, state.ui.selectedNodeIds[0] || null);
+        applySelection(state, normalized.selectedNodeIds, normalized.primaryNodeId);
     }
 
     function toggleCollapse(state, nodeId) {
@@ -1915,6 +2496,8 @@
         renderLinks(state, visibleNodes);
         renderSnapGuides(state);
         renderNodes(state, visibleNodes);
+        renderConnectorAnchorOverlay(state, visibleNodes);
+        renderTransformHandlesOverlay(state, visibleNodes);
         renderEmptyStateOverlay(state, visibleNodes);
         renderDebugDecorations(state, visibleNodes);
         renderDiagnosticsOverlay(state, visibleNodes);
@@ -2045,7 +2628,22 @@
             const maxHeight = Math.max(14, button.clientHeight * maxHeightRatio);
             label.style.maxWidth = `${round(maxWidth)}px`;
 
-            let fontSize = parseFloat(window.getComputedStyle(label).fontSize) || (variant === "normal" ? 11.5 : 8.4);
+            const measureService = getTextMeasureService();
+            const initialFontSize = parseFloat(window.getComputedStyle(label).fontSize) || (variant === "normal" ? 11.5 : 8.4);
+            if (measureService && typeof measureService.fitElementText === "function") {
+                measureService.fitElementText(label, {
+                    text: label.dataset.fullText || label.textContent || "",
+                    maxWidth,
+                    maxHeight,
+                    maxLines: 2,
+                    minFontSize,
+                    initialFontSize,
+                    truncationMode: "ellipsis"
+                });
+                return;
+            }
+
+            let fontSize = initialFontSize;
             while (fontSize > minFontSize &&
                 (label.scrollWidth > (maxWidth + 0.5) || label.scrollHeight > (maxHeight + 0.5))) {
                 fontSize -= 0.25;
@@ -3201,7 +3799,9 @@
             button.appendChild(createMenuActionIcon(state, action));
             let label = null;
             if (variant !== "priority-preset") {
-                label = createElement(state.document, "strong", "cw-context-menu__label", resolveMenuLabel(action));
+                const labelText = resolveMenuLabel(action);
+                label = createElement(state.document, "strong", "cw-context-menu__label", labelText);
+                label.dataset.fullText = labelText;
                 button.appendChild(label);
             }
             if (action.children?.length) {
@@ -3490,7 +4090,27 @@
         };
     }
 
+    function isMarqueeModifierPressed(state, event) {
+        const modifierKey = state.surface?.chrome?.marqueeSelection?.modifierKey || "alt";
+        switch (modifierKey) {
+            case "shift":
+                return !!event.shiftKey;
+            case "control":
+            case "ctrl":
+                return !!event.ctrlKey;
+            case "meta":
+            case "cmd":
+                return !!event.metaKey;
+            default:
+                return !!event.altKey;
+        }
+    }
+
     function startMarquee(state, event) {
+        if (state.surface?.chrome?.marqueeSelection?.isEnabled === false) {
+            return;
+        }
+
         clearSnapGuides(state);
         const point = getHostPoint(state, event.clientX, event.clientY);
         state.interaction = {
@@ -3511,11 +4131,7 @@
 
     function ensureSelectedForDrag(state, nodeId) {
         if (!state.selectedIds.has(nodeId)) {
-            state.selectedIds = toSelectionSet([nodeId]);
-            state.ui.selectedNodeIds = [nodeId];
-            render(state);
-            publishSelection(state);
-            publishState(state);
+            selectSingleNode(state, nodeId);
         }
     }
 
@@ -3576,10 +4192,16 @@
 
     function applyMarqueeSelection(state) {
         const marqueeRect = state.marquee.getBoundingClientRect();
+        const selectionMode = state.surface?.chrome?.marqueeSelection?.selectionMode || "intersect";
         const selected = [];
         for (const element of state.nodeLayer.querySelectorAll(".cw-node")) {
             const rect = element.getBoundingClientRect();
-            const intersects = rect.left < marqueeRect.right &&
+            const intersects = selectionMode === "contain"
+                ? rect.left >= marqueeRect.left &&
+                rect.right <= marqueeRect.right &&
+                rect.top >= marqueeRect.top &&
+                rect.bottom <= marqueeRect.bottom
+                : rect.left < marqueeRect.right &&
                 rect.right > marqueeRect.left &&
                 rect.top < marqueeRect.bottom &&
                 rect.bottom > marqueeRect.top;
@@ -3595,7 +4217,9 @@
     function updateDrag(state, event) {
         const rawDeltaX = (event.clientX - state.interaction.startClientX) / state.ui.zoom;
         const rawDeltaY = (event.clientY - state.interaction.startClientY) / state.ui.zoom;
-        const snapResult = event.shiftKey
+        const modifierPolicy = state.surface?.chrome?.snapGuides?.modifierPolicy || "shift-bypasses-snap";
+        const bypassSnap = event.shiftKey && modifierPolicy === "shift-bypasses-snap";
+        const snapResult = bypassSnap
             ? { deltaX: rawDeltaX, deltaY: rawDeltaY, guides: [] }
             : resolveSnapAdjustment(state, state.interaction, rawDeltaX, rawDeltaY);
         const deltaX = snapResult.deltaX;
@@ -3702,6 +4326,7 @@
     }
 
     function resize(state) {
+        cancelViewportAnimation(state);
         const rect = state.host.getBoundingClientRect();
         state.links.setAttribute("width", `${Math.max(rect.width, 1)}`);
         state.links.setAttribute("height", `${Math.max(rect.height, 1)}`);
@@ -3761,6 +4386,7 @@
     }
 
     function setMaximized(state, isMaximized) {
+        cancelViewportAnimation(state);
         state.ui.isMaximized = !!isMaximized;
         if (isMaximized) {
             suspendContainingBlock(state);
@@ -3787,18 +4413,30 @@
 
         const bounds = getSceneBounds(state, visibleNodes);
         const rect = state.host.getBoundingClientRect();
-        const padding = 120;
-        const width = Math.max(bounds.maxX - bounds.minX, 320);
-        const height = Math.max(bounds.maxY - bounds.minY, 240);
-        const zoom = clamp(Math.min((rect.width - padding) / width, (rect.height - padding) / height), MIN_ZOOM, MAX_ZOOM);
-        state.ui.zoom = zoom;
-        setPan(
-            state,
-            (rect.width / 2) - ((bounds.minX + (width / 2)) * zoom),
-            (rect.height / 2) - ((bounds.minY + (height / 2)) * zoom),
-            zoom);
-        render(state);
-        publishState(state);
+        const viewportController = getViewportControllerService();
+        const target = viewportController?.createFitViewTarget
+            ? viewportController.createFitViewTarget({
+                bounds,
+                hostWidth: rect.width,
+                hostHeight: rect.height
+            })
+            : (() => {
+                const padding = 120;
+                const width = Math.max(bounds.maxX - bounds.minX, 320);
+                const height = Math.max(bounds.maxY - bounds.minY, 240);
+                const zoom = clamp(Math.min((rect.width - padding) / width, (rect.height - padding) / height), MIN_ZOOM, MAX_ZOOM);
+                return {
+                    zoom,
+                    panX: (rect.width / 2) - ((bounds.minX + (width / 2)) * zoom),
+                    panY: (rect.height / 2) - ((bounds.minY + (height / 2)) * zoom)
+                };
+            })();
+
+        animateViewportTransition(state, target, {
+            key: "viewport",
+            durationMs: 320,
+            easing: "softInOut"
+        });
     }
 
     function focusNode(state, nodeId) {
@@ -3807,16 +4445,33 @@
             return;
         }
 
-        state.selectedIds = toSelectionSet([nodeId]);
-        state.ui.selectedNodeIds = [nodeId];
-        render(state);
-        if (centerNodeElementInViewport(state, nodeId)) {
-            render(state);
-        }
+        selectSingleNode(state, nodeId, { publish: false });
+        const rect = state.host.getBoundingClientRect();
+        const position = getNodePosition(state, node);
+        const viewportController = getViewportControllerService();
+        const target = viewportController?.createFocusTarget
+            ? viewportController.createFocusTarget({
+                bounds: getSceneBounds(state),
+                hostWidth: rect.width,
+                hostHeight: rect.height,
+                pointX: position.x,
+                pointY: position.y,
+                zoom: state.ui.zoom
+            })
+            : {
+                zoom: state.ui.zoom,
+                panX: (rect.width / 2) - (position.x * state.ui.zoom),
+                panY: (rect.height / 2) - (position.y * state.ui.zoom)
+            };
+
+        animateViewportTransition(state, target, {
+            key: "viewport",
+            durationMs: 280,
+            easing: "softInOut"
+        });
         ensureHostFocus(state);
         deferHostFocus(state);
         publishSelection(state);
-        publishState(state);
     }
 
     function normalizeWheelDelta(event) {
@@ -3878,17 +4533,39 @@
     }
 
     function setZoomPercent(state, percent, anchorPoint) {
-        const nextZoom = clamp((percent || 100) / 100, MIN_ZOOM, MAX_ZOOM);
+        cancelViewportAnimation(state);
         const rect = state.host.getBoundingClientRect();
         const anchor = anchorPoint || { x: rect.width / 2, y: rect.height / 2 };
-        const worldX = (anchor.x - state.ui.panX) / state.ui.zoom;
-        const worldY = (anchor.y - state.ui.panY) / state.ui.zoom;
-        state.ui.zoom = nextZoom;
+        const viewportController = getViewportControllerService();
+        const target = viewportController?.zoomAroundPoint
+            ? viewportController.zoomAroundPoint({
+                bounds: getSceneBounds(state),
+                hostWidth: rect.width,
+                hostHeight: rect.height,
+                anchorX: anchor.x,
+                anchorY: anchor.y,
+                panX: state.ui.panX,
+                panY: state.ui.panY,
+                zoom: state.ui.zoom,
+                percent
+            })
+            : (() => {
+                const nextZoom = clamp((percent || 100) / 100, MIN_ZOOM, MAX_ZOOM);
+                const worldX = (anchor.x - state.ui.panX) / state.ui.zoom;
+                const worldY = (anchor.y - state.ui.panY) / state.ui.zoom;
+                return {
+                    zoom: nextZoom,
+                    panX: anchor.x - (worldX * nextZoom),
+                    panY: anchor.y - (worldY * nextZoom)
+                };
+            })();
+
+        state.ui.zoom = target.zoom;
         setPan(
             state,
-            anchor.x - (worldX * nextZoom),
-            anchor.y - (worldY * nextZoom),
-            nextZoom);
+            target.panX,
+            target.panY,
+            target.zoom);
         render(state);
         publishState(state);
     }
@@ -3921,9 +4598,7 @@
 
     function handleNodeDoubleActivation(state, node) {
         state.recentDoubleActivationAt = Date.now();
-        state.selectedIds = toSelectionSet([node.id]);
-        state.ui.selectedNodeIds = [node.id];
-        render(state);
+        selectSingleNode(state, node.id, { publish: false });
         publishSelection(state);
         publishState(state);
 
@@ -3952,6 +4627,7 @@
                 }
 
                 clearContextMenu(state);
+                cancelViewportAnimation(state);
                 ensureHostFocus(state);
                 deferHostFocus(state);
 
@@ -3971,7 +4647,7 @@
                 }
 
                 const targetNode = hitTestNode(state, event.target);
-                if (event.altKey) {
+                if (isMarqueeModifierPressed(state, event)) {
                     startMarquee(state, event);
                     return;
                 }
@@ -4003,11 +4679,7 @@
                         state.selectedIds.size > 1 &&
                         state.selectedIds.has(targetNode.id);
                     if (!state.selectedIds.has(targetNode.id) || (state.selectedIds.size > 1 && !isGroupDrag)) {
-                        state.selectedIds = toSelectionSet([targetNode.id]);
-                        state.ui.selectedNodeIds = [targetNode.id];
-                        render(state);
-                        publishSelection(state);
-                        publishState(state);
+                        selectSingleNode(state, targetNode.id);
                     }
 
                     startDrag(state, event, targetNode.id);
@@ -4219,6 +4891,8 @@
         const debugLayer = createElement(state.document, "div", "cw-workbench__debug-layer");
         const guideLayer = createElement(state.document, "div", "cw-workbench__guide-layer");
         const nodeLayer = createElement(state.document, "div", "cw-workbench__node-layer");
+        const anchorLayer = createElement(state.document, "div", "cw-workbench__anchor-layer");
+        const transformLayer = createElement(state.document, "div", "cw-workbench__transform-layer");
         const marquee = createElement(state.document, "div", "cw-marquee");
         const contextMenu = createElement(state.document, "div", "cw-context-menu");
         const emptyState = createElement(state.document, "div", "cw-empty-state");
@@ -4273,6 +4947,8 @@
         scene.appendChild(debugLayer);
         scene.appendChild(guideLayer);
         scene.appendChild(nodeLayer);
+        scene.appendChild(anchorLayer);
+        scene.appendChild(transformLayer);
         state.host.appendChild(backdrop);
         state.host.appendChild(scene);
         state.host.appendChild(marquee);
@@ -4289,6 +4965,8 @@
         state.debugLayer = debugLayer;
         state.guideLayer = guideLayer;
         state.nodeLayer = nodeLayer;
+        state.anchorLayer = anchorLayer;
+        state.transformLayer = transformLayer;
         state.marquee = marquee;
         state.emptyState = emptyState;
         state.emptyStateKicker = emptyStateKicker;
@@ -4310,12 +4988,15 @@
     function hydrateState(host, dotNetRef, surface) {
         const normalizedSurface = normalizeSurface(surface);
         const lookups = buildNodeLookup(normalizedSurface.nodes);
+        const animationTimelineService = getAnimationTimelineService();
+        const animationTimeline = animationTimelineService?.createController?.() || null;
 
-        return {
+        const state = {
             host,
             shell: host.closest(".cw-workbench-shell"),
             document: host.ownerDocument,
             dotNetRef,
+            animationTimeline,
             surface: normalizedSurface,
             lookups,
             ui: normalizedSurface.uiState,
@@ -4329,6 +5010,8 @@
             debugLayer: null,
             guideLayer: null,
             nodeLayer: null,
+            anchorLayer: null,
+            transformLayer: null,
             marquee: null,
             emptyState: null,
             emptyStateKicker: null,
@@ -4354,6 +5037,7 @@
             layoutKey: "",
             measureLayoutFrame: 0,
             snapGuides: [],
+            hoveredNodeId: null,
             popover: null,
             popoverTitle: null,
             popoverBody: null,
@@ -4364,9 +5048,14 @@
             minimapMetrics: null,
             publishStateDebounced: debounce(stateJson => dotNetRef.invokeMethodAsync("OnStateChanged", stateJson), 140)
         };
+
+        state.animationTimeline?.setReducedMotionAttribute?.(host);
+        reconcileSelection(state);
+        return state;
     }
 
     function refresh(state, surface) {
+        cancelViewportAnimation(state);
         const previousNodeIds = new Set((state.surface?.nodes || []).map(node => node.id));
         const previousSelectedId = state.ui?.selectedNodeIds?.[0] || null;
         const pendingCreate = state.pendingCreate;
@@ -4378,7 +5067,7 @@
         state.surface = normalizeSurface(surface);
         state.lookups = buildNodeLookup(state.surface.nodes);
         state.ui = state.surface.uiState;
-        state.selectedIds = toSelectionSet(state.ui.selectedNodeIds);
+        reconcileSelection(state);
         state.collapsedIds = toCollapsedSet(state.ui.collapsedNodeIds);
         syncMenuScaleCss(state);
         invalidateMeasuredLayout(state);
@@ -4521,6 +5210,15 @@
             const state = host.__canvasWorkbenchState;
             return state ? serializeState(state) : JSON.stringify({});
         },
+        selectNodes(host, nodeIds, primaryNodeId) {
+            const state = host.__canvasWorkbenchState;
+            if (!state) {
+                return;
+            }
+
+            const normalized = selectionModel.replace(nodeIds, primaryNodeId || (Array.isArray(nodeIds) ? nodeIds[0] : null));
+            applySelection(state, normalized.selectedNodeIds, normalized.primaryNodeId);
+        },
         setMaximized(host, isMaximized) {
             const state = host.__canvasWorkbenchState;
             if (!state) {
@@ -4560,6 +5258,10 @@
             if (state.statusNoticeTimer) {
                 window.clearTimeout(state.statusNoticeTimer);
                 state.statusNoticeTimer = 0;
+            }
+
+            if (state.animationTimeline) {
+                state.animationTimeline.dispose();
             }
 
             if (state.handlers) {

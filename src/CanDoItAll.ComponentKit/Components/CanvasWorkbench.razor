@@ -1,9 +1,12 @@
 @implements IAsyncDisposable
 @using System.Globalization
 @using CanDoItAll.ComponentKit.Canvas
+@using CanDoItAll.ComponentKit.Components
 @inject IJSRuntime JsRuntime
 
-<div class="cw-workbench-shell @(isMaximized ? "is-maximized" : string.Empty)">
+<div class="cw-workbench-shell @(isMaximized ? "is-maximized" : string.Empty)"
+     style="@ThemeStyle"
+     data-theme-key="@ThemeTokens.ThemeKey">
     <div class="cw-workbench-frame">
         <div class="cw-toolbar">
             <div class="cw-toolbar-group cw-toolbar-group--left">
@@ -128,6 +131,7 @@
             }
 
             @OverlayContent
+            <AccessibilityMirrorLayer Snapshot="@AccessibilitySnapshot" />
         </div>
 
         @if (helpOpen)
@@ -208,6 +212,129 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="cw-settings-preview cw-theme-preview" data-testid="canvas-theme-token-pack">
+                            <p class="cw-settings-label">Theme pack</p>
+                            <div class="cw-theme-summary">
+                                <div>
+                                    <p class="cw-theme-summary__title">@ThemeTokens.ThemeName</p>
+                                    <p class="cw-panel-copy">Shared color, radius, and shadow tokens now come from the typed theme pack instead of only living in CSS.</p>
+                                </div>
+                                <span class="cw-theme-pill">@ThemeTokens.ThemeKey</span>
+                            </div>
+
+                            <div class="cw-theme-swatch-grid">
+                                @foreach (var swatch in ThemeSwatches)
+                                {
+                                    <div class="cw-theme-swatch">
+                                        <span class="cw-theme-swatch__chip" style="@($"--cw-token-swatch:{swatch.Value};")"></span>
+                                        <div>
+                                            <strong>@swatch.Label</strong>
+                                            <p>@swatch.Description</p>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="cw-theme-metrics">
+                                @foreach (var metric in ThemeMetrics)
+                                {
+                                    <span class="cw-theme-metric">@metric</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="cw-settings-preview cw-selection-preview" data-testid="selection-model-preview">
+                            <p class="cw-settings-label">Selection snapshot</p>
+                            <div class="cw-selection-preview__summary">
+                                <div>
+                                    <p class="cw-theme-summary__title">@PrimarySelectionLabel</p>
+                                    <p class="cw-panel-copy">@SelectionSummaryLabel</p>
+                                </div>
+                                <span class="cw-theme-pill">@($"{CurrentSelection.SelectedNodeIds.Count} selected")</span>
+                            </div>
+
+                            <div class="cw-selection-preview__order">
+                                <span class="cw-selection-preview__label">Ordered ids</span>
+                                <p>@SelectionOrderLabel</p>
+                            </div>
+                        </div>
+
+                        <ChipBadgePrimitive Snapshot="@ChipBadgeSnapshot" />
+
+                        <IconGlyphPrimitive Snapshot="@IconGlyphSnapshot" />
+
+                        <TextBlockPrimitive Snapshot="@TextBlockSnapshot" />
+
+                        <ContainerPrimitive Snapshot="@ContainerSnapshot" />
+
+                        <ImagePrimitive Snapshot="@ImageSnapshot" />
+
+                        <NodeCardComposer Snapshot="@NodeCardSnapshot" />
+
+                        <ConnectorPathPrimitive Snapshot="@ConnectorPathSnapshot" />
+
+                        <ContextMenuHost Snapshot="@ContextMenuSnapshot" />
+
+                        <CreateActionPalette Snapshot="@CreatePaletteSnapshot" />
+
+                        <FloatingInspectorHost Snapshot="@FloatingInspectorSnapshot" />
+
+                        <GroupFrameOverlay Snapshot="@GroupFrameSnapshot" />
+
+                        <InlineEditorComposer Snapshot="@InlineEditorSnapshot" />
+
+                        <DragDropController Snapshot="@DragDropSnapshot" />
+
+                        <GridBackdrop Snapshot="@GridBackdropSnapshot" />
+
+                        <HitTestService Snapshot="@HitTestSnapshot" />
+
+                        <HoverFocusRouter Snapshot="@HoverFocusSnapshot" />
+
+                        <KeyboardShortcutRouter Snapshot="@KeyboardShortcutSnapshot" />
+
+                        <LayoutEngine Snapshot="@LayoutSnapshot" />
+
+                        <CanvasSceneHostPreview Snapshot="@CanvasSceneHostSnapshot" />
+
+                        <CommandHistoryStorePreview Snapshot="@CommandHistorySnapshot" />
+
+                        <InvalidationSchedulerPreview Snapshot="@InvalidationSnapshot" />
+
+                        <JsInteropBridgePreview Snapshot="@JsInteropSnapshot" />
+
+                        <LayerStackPreview Snapshot="@LayerStackSnapshot" />
+
+                        <SceneNodeModelPreview Snapshot="@SceneNodeSnapshot" />
+
+                        <SerializationPersistencePackPreview Snapshot="@SerializationSnapshot" />
+
+                        <ViewportControllerPreview Snapshot="@ViewportControllerSnapshot" />
+
+                        <TextMeasureServicePreview Snapshot="@TextMeasureSnapshot" />
+
+                        <AnimationTimelinePreview Snapshot="@AnimationTimelineSnapshot" />
+
+                        <DiagnosticsOverlay Snapshot="@DiagnosticsSnapshot" />
+
+                        <MinimapOverview Snapshot="@MinimapSnapshot" />
+
+                        <ClipboardBridge Snapshot="@ClipboardSnapshot" />
+
+                        <EmptyStateOverlay Snapshot="@EmptyStateSnapshot" />
+
+                        <SkeletonStateOverlay Snapshot="@SkeletonSnapshot" />
+
+                        <TooltipPopoverHost Snapshot="@TooltipPopoverSnapshot" />
+
+                        <MarqueeSelectionOverlay Snapshot="@MarqueeSelectionSnapshot" />
+
+                        <SnapGuideSystem Snapshot="@SnapGuideSnapshot" />
+
+                        <ConnectorAnchorOverlay Snapshot="@ConnectorAnchorSnapshot" />
+
+                        <TransformHandlesOverlay Snapshot="@TransformHandlesSnapshot" />
                     </div>
                 </div>
             </div>
@@ -218,6 +345,7 @@
 @code {
     private const int MinZoomPercent = 15;
     private const int MaxZoomPercent = 175;
+    private static readonly CanvasThemeTokenPack ThemeTokens = CanvasThemeTokenPack.Default;
     private readonly CanvasSceneHost sceneHost = new();
     private ElementReference host;
     private ElementReference quickCreateButton;
@@ -523,6 +651,147 @@
     private string PreviewMenuScaleStyle
         => $"--cw-preview-menu-scale:{(menuScalePercent / 100d).ToString("0.##", CultureInfo.InvariantCulture)};";
 
+    private string ThemeStyle => ThemeTokens.ToInlineStyle();
+
+    private IReadOnlyList<CanvasThemeSwatch> ThemeSwatches => ThemeTokens.BuildPreviewSwatches();
+
+    private IReadOnlyList<string> ThemeMetrics => ThemeTokens.BuildMetrics();
+
+    private SelectionModel CurrentSelection
+        => SelectionModel.From(Surface.UiState.SelectedNodeIds).RemoveMissing(Surface.Nodes.Select(node => node.Id));
+
+    private string PrimarySelectionLabel
+        => CurrentSelection.PrimaryNodeId is null
+            ? "No primary selection"
+            : ResolveNodeLabel(CurrentSelection.PrimaryNodeId);
+
+    private string SelectionSummaryLabel
+        => CurrentSelection.SelectedNodeIds.Count == 0
+            ? "SelectionModel is ready for additive, toggle, and replace semantics."
+            : $"{CurrentSelection.SelectedNodeIds.Count} ordered node ids are mirrored into the shared workbench state.";
+
+    private string SelectionOrderLabel
+        => CurrentSelection.SelectedNodeIds.Count == 0
+            ? "Selection is currently empty."
+            : string.Join(" -> ", CurrentSelection.SelectedNodeIds.Select(ResolveNodeLabel));
+
+    private ChipBadgePrimitiveSnapshot ChipBadgeSnapshot
+        => ChipBadgePrimitiveFactory.CreateForWorkbench(Surface);
+
+    private IconGlyphPrimitiveSnapshot IconGlyphSnapshot
+        => IconGlyphPrimitiveFactory.CreateForWorkbench(Surface);
+
+    private TextBlockPrimitiveSnapshot TextBlockSnapshot
+        => TextBlockPrimitiveFactory.CreateForWorkbench(Surface);
+
+    private ContainerPrimitiveSnapshot ContainerSnapshot
+        => ContainerPrimitiveFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private ImagePrimitiveSnapshot ImageSnapshot
+        => ImagePrimitiveFactory.CreateForWorkbench(Surface);
+
+    private NodeCardComposerSnapshot NodeCardSnapshot
+        => NodeCardComposerFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private ConnectorPathPrimitiveSnapshot ConnectorPathSnapshot
+        => ConnectorPathPrimitiveFactory.CreateForWorkbench(Surface);
+
+    private ContextMenuHostSnapshot ContextMenuSnapshot
+        => ContextMenuHostFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private CreateActionPaletteSnapshot CreatePaletteSnapshot
+        => CreateActionPaletteFactory.CreateForWorkbench(Surface);
+
+    private FloatingInspectorHostSnapshot FloatingInspectorSnapshot
+        => FloatingInspectorHostFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private GroupFrameOverlaySnapshot GroupFrameSnapshot
+        => GroupFrameOverlayFactory.CreateForWorkbench(Surface);
+
+    private InlineEditorComposerSnapshot InlineEditorSnapshot
+        => InlineEditorComposerFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private DragDropControllerSnapshot DragDropSnapshot
+        => DragDropControllerFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private GridBackdropSnapshot GridBackdropSnapshot
+        => GridBackdropFactory.CreateForWorkbench(Surface);
+
+    private HitTestServiceSnapshot HitTestSnapshot
+        => HitTestServiceFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private HoverFocusRouterSnapshot HoverFocusSnapshot
+        => HoverFocusRouterFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private KeyboardShortcutRouterSnapshot KeyboardShortcutSnapshot
+        => KeyboardShortcutRouterFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private LayoutEngineSnapshot LayoutSnapshot
+        => LayoutEngineFactory.CreateForWorkbench(Surface);
+
+    private CanvasSceneHostPreviewSnapshot CanvasSceneHostSnapshot
+        => CanvasSceneHostPreviewFactory.CreateForWorkbench(Surface);
+
+    private CommandHistoryStorePreviewSnapshot CommandHistorySnapshot
+        => CommandHistoryStorePreviewFactory.CreateForWorkbench(Surface);
+
+    private InvalidationSchedulerPreviewSnapshot InvalidationSnapshot
+        => InvalidationSchedulerPreviewFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private JsInteropBridgePreviewSnapshot JsInteropSnapshot
+        => JsInteropBridgePreviewFactory.CreateForWorkbench(Surface);
+
+    private LayerStackPreviewSnapshot LayerStackSnapshot
+        => LayerStackPreviewFactory.CreateForWorkbench();
+
+    private SceneNodeModelPreviewSnapshot SceneNodeSnapshot
+        => SceneNodeModelPreviewFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private SerializationPersistencePackPreviewSnapshot SerializationSnapshot
+        => SerializationPersistencePackPreviewFactory.CreateForWorkbench(Surface);
+
+    private ViewportControllerPreviewSnapshot ViewportControllerSnapshot
+        => ViewportControllerPreviewFactory.CreateForWorkbench(Surface);
+
+    private TextMeasurePreviewSnapshot TextMeasureSnapshot
+        => TextMeasurePreviewFactory.CreateForWorkbench(Surface);
+
+    private AnimationTimelinePreviewSnapshot AnimationTimelineSnapshot
+        => AnimationTimelinePreviewFactory.CreateForWorkbench(Surface);
+
+    private AccessibilityMirrorSnapshot AccessibilitySnapshot
+        => AccessibilityMirrorLayerFactory.CreateForWorkbench(Surface, Surface.UiState.ShowDiagnostics);
+
+    private DiagnosticsOverlaySnapshot DiagnosticsSnapshot
+        => DiagnosticsOverlayFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private MinimapOverviewSnapshot MinimapSnapshot
+        => MinimapOverviewFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private ClipboardBridgeSnapshot ClipboardSnapshot
+        => ClipboardBridgeFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private EmptyStateOverlaySnapshot EmptyStateSnapshot
+        => EmptyStateOverlayFactory.CreateForWorkbench(Surface);
+
+    private SkeletonStateOverlaySnapshot SkeletonSnapshot
+        => SkeletonStateOverlayFactory.CreateForWorkbench(Surface);
+
+    private TooltipPopoverHostSnapshot TooltipPopoverSnapshot
+        => TooltipPopoverHostFactory.CreateForWorkbench(Surface);
+
+    private MarqueeSelectionOverlaySnapshot MarqueeSelectionSnapshot
+        => MarqueeSelectionOverlayFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private SnapGuideSystemSnapshot SnapGuideSnapshot
+        => SnapGuideSystemFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private ConnectorAnchorOverlaySnapshot ConnectorAnchorSnapshot
+        => ConnectorAnchorOverlayFactory.CreateForWorkbench(Surface, CurrentSelection);
+
+    private TransformHandlesOverlaySnapshot TransformHandlesSnapshot
+        => TransformHandlesOverlayFactory.CreateForWorkbench(Surface, CurrentSelection);
+
     private string SerializeSurfaceData(CanvasWorkbenchSurface surface)
         => SerializationPersistencePack.Serialize(
             new
@@ -533,6 +802,29 @@
                 surface.Links,
                 surface.Chrome
             });
+
+    private string ResolveNodeLabel(string nodeId)
+    {
+        var node = Surface.Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, nodeId, StringComparison.Ordinal));
+        if (node is null)
+        {
+            return nodeId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(node.Title))
+        {
+            return node.Title;
+        }
+
+        if (!string.IsNullOrWhiteSpace(node.InlineText))
+        {
+            return node.InlineText;
+        }
+
+        return string.IsNullOrWhiteSpace(node.Kind)
+            ? node.Id
+            : node.Kind;
+    }
 
     private void MarkSurfaceApplied()
         => sceneHost.MarkApplied();

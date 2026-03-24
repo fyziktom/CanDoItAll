@@ -208,6 +208,11 @@
   }
 
   function fitText(ctx, text, maxWidth, ellipsis) {
+    var measureService = window.CanDoItAll && window.CanDoItAll.textMeasureService;
+    if (measureService && typeof measureService.fitText === 'function') {
+      return measureService.fitText(ctx, text, maxWidth, ellipsis);
+    }
+
     var value = asText(text);
     var suffix = asText(ellipsis) || '...';
     if (value === '' || ctx.measureText(value).width <= maxWidth) {
@@ -223,6 +228,11 @@
   }
 
   function wrapText(ctx, text, maxWidth, maxLines) {
+    var measureService = window.CanDoItAll && window.CanDoItAll.textMeasureService;
+    if (measureService && typeof measureService.wrapText === 'function') {
+      return measureService.wrapText(ctx, text, maxWidth, maxLines);
+    }
+
     var value = asText(text);
     if (value === '') {
       return [];

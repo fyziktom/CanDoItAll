@@ -5,6 +5,77 @@
     flex-wrap: nowrap;
 }
 
+.pf-recommendation-overlay {
+    position: absolute;
+    top: 5.1rem;
+    left: 1rem;
+    z-index: 9;
+    width: min(24rem, calc(100% - 23rem));
+    display: grid;
+    gap: 0.8rem;
+    padding: 1rem 1.05rem;
+    border: 1px solid rgba(14, 116, 144, 0.18);
+    border-radius: 1.25rem;
+    background:
+        radial-gradient(circle at top left, rgba(191, 219, 254, 0.42), transparent 45%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(14px);
+}
+
+.pf-recommendation-overlay__header,
+.pf-recommendation-overlay__list,
+.pf-recommendation-overlay__actions {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.pf-recommendation-overlay__list {
+    gap: 0.55rem;
+}
+
+.pf-recommendation-overlay__item {
+    display: grid;
+    gap: 0.18rem;
+    padding: 0.72rem 0.8rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.pf-recommendation-overlay__item strong {
+    font-size: 0.86rem;
+    color: #0f172a;
+}
+
+.pf-recommendation-overlay__item span {
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: rgba(15, 23, 42, 0.72);
+}
+
+.pf-recommendation-overlay__item[data-recommendation-tone="accent"] {
+    border-color: rgba(37, 99, 235, 0.18);
+    background: rgba(239, 246, 255, 0.88);
+}
+
+.pf-recommendation-overlay__item[data-recommendation-tone="warn"] {
+    border-color: rgba(217, 119, 6, 0.18);
+    background: rgba(255, 247, 237, 0.9);
+}
+
+.pf-recommendation-overlay__item[data-recommendation-tone="mint"] {
+    border-color: rgba(5, 150, 105, 0.18);
+    background: rgba(236, 253, 245, 0.88);
+}
+
+.pf-recommendation-overlay__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
 .pf-floating-inspector {
     position: absolute;
     top: 5.1rem;
@@ -1091,6 +1162,13 @@
         height: min(26rem, calc(100dvh - 7.5rem));
         max-height: calc(100dvh - 7.5rem);
         resize: none;
+    }
+
+    .pf-recommendation-overlay {
+        top: auto;
+        bottom: 1rem;
+        width: auto;
+        max-width: calc(100% - 2rem);
     }
 
     .pf-floating-inspector.is-minimized {

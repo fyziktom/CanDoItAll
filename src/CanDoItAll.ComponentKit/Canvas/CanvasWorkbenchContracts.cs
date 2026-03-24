@@ -151,7 +151,10 @@ public sealed class CanvasWorkbenchUiState
 
         try
         {
-            return JsonSerializer.Deserialize<CanvasWorkbenchUiState>(json, SerializerOptions) ?? new CanvasWorkbenchUiState();
+            var state = JsonSerializer.Deserialize<CanvasWorkbenchUiState>(json, SerializerOptions) ?? new CanvasWorkbenchUiState();
+            state.SelectedNodeIds = SelectionModel.From(state.SelectedNodeIds).ToList();
+            state.CollapsedNodeIds = NormalizeStringList(state.CollapsedNodeIds);
+            return state;
         }
         catch
         {
@@ -159,7 +162,46 @@ public sealed class CanvasWorkbenchUiState
         }
     }
 
-    public string ToJson() => JsonSerializer.Serialize(this, SerializerOptions);
+    public string ToJson()
+    {
+        var normalized = new CanvasWorkbenchUiState
+        {
+            Version = Version,
+            SelectedNodeIds = SelectionModel.From(SelectedNodeIds).ToList(),
+            CollapsedNodeIds = NormalizeStringList(CollapsedNodeIds),
+            GroupFrames = GroupFrames,
+            ManualPositions = ManualPositions,
+            Zoom = Zoom,
+            PanX = PanX,
+            PanY = PanY,
+            MenuActionScale = MenuActionScale,
+            IsMaximized = IsMaximized,
+            ActiveInspectorTab = ActiveInspectorTab,
+            ShowDiagnostics = ShowDiagnostics,
+            ShowMinimap = ShowMinimap
+        };
+
+        return JsonSerializer.Serialize(normalized, SerializerOptions);
+    }
+
+    private static List<string> NormalizeStringList(IEnumerable<string>? values)
+    {
+        var normalized = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var value in values ?? [])
+        {
+            var candidate = value?.Trim();
+            if (string.IsNullOrWhiteSpace(candidate) || !seen.Add(candidate))
+            {
+                continue;
+            }
+
+            normalized.Add(candidate);
+        }
+
+        return normalized;
+    }
 }
 
 public sealed class CanvasWorkbenchChrome
@@ -193,6 +235,16 @@ public sealed class CanvasWorkbenchChrome
     public CanvasWorkbenchMinimapOptions Minimap { get; set; } = new();
 
     public CanvasWorkbenchClipboardOptions Clipboard { get; set; } = new();
+
+    public CanvasWorkbenchTooltipPopoverOptions TooltipPopover { get; set; } = new();
+
+    public CanvasWorkbenchMarqueeOptions MarqueeSelection { get; set; } = new();
+
+    public CanvasWorkbenchSnapGuideOptions SnapGuides { get; set; } = new();
+
+    public CanvasWorkbenchConnectorAnchorOptions ConnectorAnchors { get; set; } = new();
+
+    public CanvasWorkbenchTransformHandleOptions TransformHandles { get; set; } = new();
 }
 
 public sealed class CanvasWorkbenchAction

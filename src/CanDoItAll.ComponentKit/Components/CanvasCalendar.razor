@@ -1,10 +1,17 @@
 @implements IAsyncDisposable
 @using CanDoItAll.ComponentKit.Canvas
+@using CanDoItAll.ComponentKit.Components
 @inject IJSRuntime JsRuntime
 
-<div @ref="host" class="@BuildHostClass()"></div>
+<div class="cdi-canvas-calendar-shell"
+     style="@ThemeStyle"
+     data-theme-key="@ThemeTokens.ThemeKey">
+    <div @ref="host" class="@BuildHostClass()"></div>
+    <AccessibilityMirrorLayer Snapshot="@AccessibilitySnapshot" />
+</div>
 
 @code {
+    private static readonly CanvasThemeTokenPack ThemeTokens = CanvasThemeTokenPack.Default;
     private readonly CanvasSceneHost sceneHost = new();
     private ElementReference host;
     private DotNetObjectReference<CanvasCalendar>? objectReference;
@@ -194,6 +201,11 @@
 
     private static T? Deserialize<T>(string json)
         => SerializationPersistencePack.Deserialize<T>(json);
+
+    private string ThemeStyle => ThemeTokens.ToInlineStyle();
+
+    private AccessibilityMirrorSnapshot AccessibilitySnapshot
+        => AccessibilityMirrorLayerFactory.CreateForCalendar(Surface);
 
     private async Task<string?> HandlePlaylistMutationAsync(
         string eventJson,

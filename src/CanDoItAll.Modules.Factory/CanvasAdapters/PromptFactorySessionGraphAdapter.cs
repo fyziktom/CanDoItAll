@@ -34,7 +34,7 @@ public sealed class PromptFactorySessionGraphAdapter
         {
             HintText = "Click to inspect a step, Alt-drag to multi-select, drag to move, and use the same shared canvas vocabulary as project structure.",
             FocusActionLabel = "Focus session",
-            QuickCreateActions = PromptFactoryCanvasCatalog.BuildSessionContextActions(request.LibraryCatalog).ToList()
+            QuickCreateActions = PromptFactoryCatalogToolbox.BuildSessionContextActions(request.LibraryCatalog).ToList()
         };
         ConfigureChrome(chrome);
         return new CanvasWorkbenchSurface
@@ -86,7 +86,7 @@ public sealed class PromptFactorySessionGraphAdapter
                     new CanvasWorkbenchChip { Text = string.IsNullOrWhiteSpace(blueprint.RecommendedFlowKey) ? "No flow" : blueprint.RecommendedFlowKey, Tone = "neutral" }
                 ],
                 Annotations = BuildBlueprintAnnotations(blueprint),
-                ContextActions = PromptFactoryCanvasCatalog.BuildBlueprintNodeActions(request.LibraryCatalog).ToList()
+                ContextActions = PromptFactoryCatalogToolbox.BuildBlueprintNodeActions(request.LibraryCatalog).ToList()
             });
             links.Add(new CanvasWorkbenchLink { SourceId = SessionRootCanvasNodeId, TargetId = BlueprintCanvasNodeId, Kind = "selection", IsUserAuthored = false });
         }
@@ -120,7 +120,7 @@ public sealed class PromptFactorySessionGraphAdapter
                     new CanvasWorkbenchChip { Text = $"{flow.AgentSequence.Count} agent step(s)", Tone = "success" }
                 ],
                 Annotations = BuildFlowAnnotations(flow),
-                ContextActions = PromptFactoryCanvasCatalog.BuildFlowNodeActions(request.LibraryCatalog).ToList()
+                ContextActions = PromptFactoryCatalogToolbox.BuildFlowNodeActions(request.LibraryCatalog).ToList()
             });
             links.Add(new CanvasWorkbenchLink { SourceId = SessionRootCanvasNodeId, TargetId = FlowCanvasNodeId, Kind = "selection", IsUserAuthored = false });
         }
@@ -160,7 +160,7 @@ public sealed class PromptFactorySessionGraphAdapter
                 [
                     new CanvasWorkbenchChip { Text = request.Editor.ComponentCustomizations.Count(item => !string.IsNullOrWhiteSpace(item.RenderedContent)).ToString() + " customized", Tone = "success" }
                 ],
-                ContextActions = PromptFactoryCanvasCatalog.BuildSelectionContextActions(request.LibraryCatalog, "components-root").ToList()
+                ContextActions = PromptFactoryCatalogToolbox.BuildSelectionContextActions(request.LibraryCatalog, "components-root").ToList()
             });
             links.Add(new CanvasWorkbenchLink { SourceId = SessionRootCanvasNodeId, TargetId = ComponentsRootCanvasNodeId, Kind = "selection", IsUserAuthored = false });
 
@@ -190,7 +190,7 @@ public sealed class PromptFactorySessionGraphAdapter
                     IsCollapsible = true,
                     X = 850,
                     Y = 460 + (sectionIndex * 210),
-                    ContextActions = PromptFactoryCanvasCatalog.BuildSelectionContextActions(request.LibraryCatalog, "component-section").ToList()
+                    ContextActions = PromptFactoryCatalogToolbox.BuildSelectionContextActions(request.LibraryCatalog, "component-section").ToList()
                 });
                 links.Add(new CanvasWorkbenchLink { SourceId = ComponentsRootCanvasNodeId, TargetId = sectionNodeId, Kind = "contains", IsUserAuthored = false });
 
@@ -221,7 +221,7 @@ public sealed class PromptFactorySessionGraphAdapter
                         IsCollapsible = true,
                         X = 1160,
                         Y = 410 + (sectionIndex * 210) + (groupIndex * 120),
-                        ContextActions = PromptFactoryCanvasCatalog.BuildSelectionContextActions(request.LibraryCatalog, "component-group").ToList()
+                        ContextActions = PromptFactoryCatalogToolbox.BuildSelectionContextActions(request.LibraryCatalog, "component-group").ToList()
                     });
                     links.Add(new CanvasWorkbenchLink { SourceId = sectionNodeId, TargetId = groupNodeId, Kind = "contains", IsUserAuthored = false });
 
@@ -256,7 +256,7 @@ public sealed class PromptFactorySessionGraphAdapter
                                 new CanvasWorkbenchChip { Text = block.TemplateTokens.Count > 0 ? "Specified" : "Static", Tone = customization is null ? "neutral" : "success" }
                             ],
                             Annotations = BuildComponentAnnotations(block, customization),
-                            ContextActions = PromptFactoryCanvasCatalog.BuildComponentNodeActions(block).ToList()
+                            ContextActions = PromptFactoryCatalogToolbox.BuildComponentNodeActions(block).ToList()
                         });
                         links.Add(new CanvasWorkbenchLink { SourceId = groupNodeId, TargetId = componentNodeId, Kind = "contains", IsUserAuthored = false });
                         blockIndex++;
@@ -303,7 +303,7 @@ public sealed class PromptFactorySessionGraphAdapter
                     new CanvasWorkbenchChip { Text = $"{request.VisibleSessionAttachments.Count} inputs", Tone = "success" }
                 ],
                 Annotations = BuildSessionAnnotations(request),
-                ContextActions = PromptFactoryCanvasCatalog.BuildSessionContextActions(request.LibraryCatalog).ToList()
+                ContextActions = PromptFactoryCatalogToolbox.BuildSessionContextActions(request.LibraryCatalog).ToList()
             }
         };
 
@@ -331,7 +331,7 @@ public sealed class PromptFactorySessionGraphAdapter
         var branchOffset = 0;
         foreach (var branch in groupedNodes)
         {
-            var groupId = $"branch:{branch.BranchKey}";
+            var groupId = PromptRunBranchLane.BuildCanvasId(branch.BranchKey);
             string parentCanvasId = SessionRootCanvasNodeId;
             double baseX = 1040;
             double baseY = 200 + (branchOffset * 140);
@@ -350,46 +350,13 @@ public sealed class PromptFactorySessionGraphAdapter
             }
 
             positions[groupId] = (baseX, baseY);
-            nodes.Add(new CanvasWorkbenchNode
-            {
-                Id = groupId,
-                ParentId = parentCanvasId,
-                Family = "group",
-                Kind = "branch",
-                Icon = "BR",
-                Title = branch.BranchLabel,
-                Subtitle = branch.BranchKey,
-                LeadText = branch.Items.Count == 0 ? "Build the prompt to materialize steps in this branch." : $"{branch.Items.Count} step(s) in this branch.",
-                Status = "Branch",
-                StatusPill = branch.Items.Count == 0 ? "Ready" : $"{branch.Items.Count} steps",
-                AccentColor = "#8b5cf6",
-                PaletteKey = "violet",
-                IsRequired = true,
-                IsCollapsible = branch.Items.Count > 0,
-                X = baseX,
-                Y = baseY,
-                Chips =
-                [
-                    new CanvasWorkbenchChip { Text = string.Equals(branch.BranchKey, "main", StringComparison.OrdinalIgnoreCase) ? "Primary" : "Follow-up", Tone = "accent" }
-                ],
-                FooterChips =
-                [
-                    new CanvasWorkbenchChip { Text = branch.Items.Count == 0 ? "No steps yet" : $"{branch.Items.Count} steps", Tone = branch.Items.Count == 0 ? "warning" : "success" }
-                ],
-                Annotations = BuildBranchAnnotations(branch.BranchKey, branch.Items.Count),
-                ContextActions =
-                [
-                    new CanvasWorkbenchAction { ActionId = "build-flow", Label = "Build", Icon = "flow", Tone = "mint" },
-                    new CanvasWorkbenchAction { ActionId = "branch-selected", Label = "Branch", Icon = "fork", Tone = "warn" }
-                ]
-            });
+            nodes.Add(PromptRunBranchLane.BuildNode(parentCanvasId, branch.BranchKey, branch.BranchLabel, branch.Items.Count, baseX, baseY));
 
             var stepIndex = 0;
             foreach (var node in branch.Items)
             {
                 var nodeId = $"node:{node.Id:N}";
-                var x = baseX + 290 + (stepIndex * 238);
-                var y = baseY + (string.Equals(branch.BranchKey, "main", StringComparison.OrdinalIgnoreCase) ? 0 : stepIndex * 84);
+                var (x, y) = PromptRunBranchLane.ResolveStepPosition(branch.BranchKey, stepIndex, baseX, baseY);
                 positions[nodeId] = (x, y);
 
                 nodes.Add(new CanvasWorkbenchNode
@@ -550,47 +517,15 @@ public sealed class PromptFactorySessionGraphAdapter
             IsCollapsible = true,
             X = 520,
             Y = 860,
-            ContextActions = PromptFactoryCanvasCatalog.BuildSelectionContextActions(request.LibraryCatalog, "inputs-root").ToList()
+            ContextActions = PromptFactoryCatalogToolbox.BuildSelectionContextActions(request.LibraryCatalog, "inputs-root").ToList()
         });
         links.Add(new CanvasWorkbenchLink { SourceId = SessionRootCanvasNodeId, TargetId = InputsRootCanvasNodeId, Kind = "selection", IsUserAuthored = false });
 
         for (var index = 0; index < request.VisibleSessionAttachments.Count; index++)
         {
             var attachment = request.VisibleSessionAttachments[index];
-            var inputNodeId = $"{InputCanvasNodePrefix}{attachment.Id}";
-            nodes.Add(new CanvasWorkbenchNode
-            {
-                Id = inputNodeId,
-                ParentId = InputsRootCanvasNodeId,
-                Family = "special",
-                Kind = "input",
-                Icon = ResolveAttachmentNodeIcon(attachment),
-                Title = string.IsNullOrWhiteSpace(attachment.Title) ? $"Input {index + 1}" : attachment.Title,
-                Subtitle = ResolveAttachmentSubtitle(attachment),
-                LeadText = ResolveAttachmentLeadText(attachment),
-                Status = ResolveAttachmentVisualKind(attachment),
-                StatusPill = ResolveAttachmentStatusPill(attachment),
-                AccentColor = ResolveAttachmentAccent(attachment),
-                PaletteKey = ResolveAttachmentPalette(attachment),
-                X = 860,
-                Y = 780 + (index * 124),
-                MediaKind = ResolveAttachmentVisualKind(attachment),
-                MediaPreviewUrl = attachment.MediaRoute,
-                MediaPreviewAlt = string.IsNullOrWhiteSpace(attachment.Title) ? attachment.Kind : attachment.Title,
-                MediaContentType = attachment.MediaContentType,
-                MediaFileName = attachment.MediaOriginalFileName,
-                FooterChips =
-                [
-                    new CanvasWorkbenchChip
-                    {
-                        Text = string.IsNullOrWhiteSpace(attachment.MediaOriginalFileName)
-                            ? ResolveAttachmentStatusPill(attachment)
-                            : attachment.MediaOriginalFileName,
-                        Tone = "neutral"
-                    }
-                ],
-                ContextActions = PromptFactoryCanvasCatalog.BuildInputNodeActions(attachment.Id).ToList()
-            });
+            var inputNodeId = PromptSessionAttachmentNode.BuildCanvasId(attachment.Id);
+            nodes.Add(PromptSessionAttachmentNode.BuildNode(attachment, index, InputsRootCanvasNodeId));
             links.Add(new CanvasWorkbenchLink { SourceId = InputsRootCanvasNodeId, TargetId = inputNodeId, Kind = "contains", IsUserAuthored = false });
         }
     }
@@ -838,26 +773,7 @@ public sealed class PromptFactorySessionGraphAdapter
     }
 
     private static List<CanvasWorkbenchAnnotation> BuildSessionAnnotations(PromptFactorySessionGraphRequest request)
-    {
-        var annotations = new List<CanvasWorkbenchAnnotation>();
-        if (request.Editor.Warnings.Count > 0)
-        {
-            annotations.Add(new CanvasWorkbenchAnnotation
-            {
-                Id = "session:warnings",
-                Kind = "validation",
-                Tone = "warn",
-                Label = $"{request.Editor.Warnings.Count} warning(s)",
-                Description = string.IsNullOrWhiteSpace(request.Editor.WarningSummary)
-                    ? request.Editor.Warnings[0]
-                    : request.Editor.WarningSummary,
-                Icon = "!",
-                ActionId = "apply-recommendations"
-            });
-        }
-
-        return annotations;
-    }
+        => RecommendationOverlay.BuildSessionAnnotations(request).ToList();
 
     private static List<CanvasWorkbenchAnnotation> BuildSetupAnnotations(PromptFactorySessionGraphRequest request)
     {
@@ -881,24 +797,7 @@ public sealed class PromptFactorySessionGraphAdapter
     }
 
     private static List<CanvasWorkbenchAnnotation> BuildBlueprintAnnotations(PromptBlueprintSummary blueprint)
-    {
-        var annotations = new List<CanvasWorkbenchAnnotation>();
-        if (!string.IsNullOrWhiteSpace(blueprint.RecommendedFlowKey))
-        {
-            annotations.Add(new CanvasWorkbenchAnnotation
-            {
-                Id = $"blueprint:{blueprint.Id:N}:recommendation",
-                Kind = "recommendation",
-                Tone = "accent",
-                Label = "Recommended flow",
-                Description = $"This blueprint prefers '{blueprint.RecommendedFlowKey}'. Apply recommendations to sync blocks and flow.",
-                Icon = "REC",
-                ActionId = "apply-recommendations"
-            });
-        }
-
-        return annotations;
-    }
+        => RecommendationOverlay.BuildBlueprintAnnotations(blueprint).ToList();
 
     private static List<CanvasWorkbenchAnnotation> BuildFlowAnnotations(PromptFlowTemplateSummary flow)
     {
@@ -923,19 +822,7 @@ public sealed class PromptFactorySessionGraphAdapter
 
     private static List<CanvasWorkbenchAnnotation> BuildComponentAnnotations(PromptBlockSummary block, PromptSessionComponentCustomization? customization)
     {
-        var annotations = new List<CanvasWorkbenchAnnotation>();
-        if (block.IsRecommendedByDefault)
-        {
-            annotations.Add(new CanvasWorkbenchAnnotation
-            {
-                Id = $"component:{block.Key}:recommended",
-                Kind = "recommendation",
-                Tone = "accent",
-                Label = "Recommended",
-                Description = "This block is part of the recommended baseline for the current blueprint or phase.",
-                Icon = "REC"
-            });
-        }
+        var annotations = RecommendationOverlay.BuildComponentAnnotations(block).ToList();
 
         if (block.TemplateTokens.Count > 0 && customization?.TemplateValues.Count != block.TemplateTokens.Count)
         {
@@ -954,26 +841,7 @@ public sealed class PromptFactorySessionGraphAdapter
     }
 
     private static List<CanvasWorkbenchAnnotation> BuildBranchAnnotations(string branchKey, int itemCount)
-    {
-        if (itemCount > 0)
-        {
-            return [];
-        }
-
-        return
-        [
-            new CanvasWorkbenchAnnotation
-            {
-                Id = $"branch:{branchKey}:empty",
-                Kind = "recommendation",
-                Tone = "accent",
-                Label = "Build branch",
-                Description = "Run the build flow to materialize prompt steps for this branch.",
-                Icon = "BR",
-                ActionId = "build-flow"
-            }
-        ];
-    }
+        => RecommendationOverlay.BuildBranchAnnotations(branchKey, itemCount).ToList();
 
     private static List<CanvasWorkbenchAnnotation> BuildPromptNodeAnnotations(PromptRunNodeSummary node)
     {

@@ -27,10 +27,10 @@ public sealed class AppTabStripTests : TestContext
 
         Assert.Contains("pin", cut.Markup);
         Assert.Contains("zZ", cut.Markup);
-        Assert.Contains("w-full max-w-full", cut.Markup);
+        Assert.Contains("flex flex-col gap-1.5 px-1 pb-1", cut.Markup);
 
         cut.Find("button[title='Move right']").Click();
-        cut.Find("button[title='Sleep or wake tab']").Click();
+        cut.Find("button[title='Sleep/wake']").Click();
         cut.Find("button").Click();
 
         Assert.Equal("projects", movedRight);

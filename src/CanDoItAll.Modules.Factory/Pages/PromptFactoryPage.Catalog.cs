@@ -1,4 +1,5 @@
 using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Modules.Factory.CanvasAdapters;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Factory.Pages;
@@ -103,7 +104,7 @@ public partial class PromptFactoryPage
                 [
                     new CanvasWorkbenchChip { Text = string.IsNullOrWhiteSpace(blueprint.RecommendedFlowKey) ? "No flow" : blueprint.RecommendedFlowKey, Tone = "neutral" }
                 ],
-                ContextActions = PromptFactoryCanvasCatalog.BuildBlueprintNodeActions(libraryCatalog).ToList()
+                ContextActions = PromptFactoryCatalogToolbox.BuildBlueprintNodeActions(libraryCatalog).ToList()
             });
             links.Add(new CanvasWorkbenchLink { SourceId = "session-root", TargetId = BlueprintCanvasNodeId, Kind = "selection", IsUserAuthored = false });
         }
@@ -136,7 +137,7 @@ public partial class PromptFactoryPage
                 [
                     new CanvasWorkbenchChip { Text = $"{flow.AgentSequence.Count} agent step(s)", Tone = "success" }
                 ],
-                ContextActions = PromptFactoryCanvasCatalog.BuildFlowNodeActions(libraryCatalog).ToList()
+                ContextActions = PromptFactoryCatalogToolbox.BuildFlowNodeActions(libraryCatalog).ToList()
             });
             links.Add(new CanvasWorkbenchLink { SourceId = "session-root", TargetId = FlowCanvasNodeId, Kind = "selection", IsUserAuthored = false });
         }
@@ -176,7 +177,7 @@ public partial class PromptFactoryPage
                 [
                     new CanvasWorkbenchChip { Text = editor.ComponentCustomizations.Count(item => !string.IsNullOrWhiteSpace(item.RenderedContent)).ToString() + " customized", Tone = "success" }
                 ],
-                ContextActions = PromptFactoryCanvasCatalog.BuildSelectionContextActions(libraryCatalog, "components-root").ToList()
+                ContextActions = PromptFactoryCatalogToolbox.BuildSelectionContextActions(libraryCatalog, "components-root").ToList()
             });
             links.Add(new CanvasWorkbenchLink { SourceId = "session-root", TargetId = ComponentsRootCanvasNodeId, Kind = "selection", IsUserAuthored = false });
 
@@ -206,7 +207,7 @@ public partial class PromptFactoryPage
                     IsCollapsible = true,
                     X = 850,
                     Y = 460 + (sectionIndex * 210),
-                    ContextActions = PromptFactoryCanvasCatalog.BuildSelectionContextActions(libraryCatalog, "component-section").ToList()
+                    ContextActions = PromptFactoryCatalogToolbox.BuildSelectionContextActions(libraryCatalog, "component-section").ToList()
                 });
                 links.Add(new CanvasWorkbenchLink { SourceId = ComponentsRootCanvasNodeId, TargetId = sectionNodeId, Kind = "contains", IsUserAuthored = false });
 
@@ -237,7 +238,7 @@ public partial class PromptFactoryPage
                         IsCollapsible = true,
                         X = 1160,
                         Y = 410 + (sectionIndex * 210) + (groupIndex * 120),
-                        ContextActions = PromptFactoryCanvasCatalog.BuildSelectionContextActions(libraryCatalog, "component-group").ToList()
+                        ContextActions = PromptFactoryCatalogToolbox.BuildSelectionContextActions(libraryCatalog, "component-group").ToList()
                     });
                     links.Add(new CanvasWorkbenchLink { SourceId = sectionNodeId, TargetId = groupNodeId, Kind = "contains", IsUserAuthored = false });
 
@@ -271,7 +272,7 @@ public partial class PromptFactoryPage
                                 new CanvasWorkbenchChip { Text = ResolveLibraryGroupLabel(block.GroupKey), Tone = "accent" },
                                 new CanvasWorkbenchChip { Text = block.TemplateTokens.Count > 0 ? "Specified" : "Static", Tone = customization is null ? "neutral" : "success" }
                             ],
-                            ContextActions = PromptFactoryCanvasCatalog.BuildComponentNodeActions(block).ToList()
+                            ContextActions = PromptFactoryCatalogToolbox.BuildComponentNodeActions(block).ToList()
                         });
                         links.Add(new CanvasWorkbenchLink { SourceId = groupNodeId, TargetId = componentNodeId, Kind = "contains", IsUserAuthored = false });
                         blockIndex++;
@@ -360,7 +361,7 @@ public partial class PromptFactoryPage
             IsCollapsible = true,
             X = 520,
             Y = 860,
-            ContextActions = PromptFactoryCanvasCatalog.BuildSelectionContextActions(libraryCatalog, "inputs-root").ToList()
+            ContextActions = PromptFactoryCatalogToolbox.BuildSelectionContextActions(libraryCatalog, "inputs-root").ToList()
         });
         links.Add(new CanvasWorkbenchLink { SourceId = "session-root", TargetId = InputsRootCanvasNodeId, Kind = "selection", IsUserAuthored = false });
 
@@ -399,7 +400,7 @@ public partial class PromptFactoryPage
                         Tone = "neutral"
                     }
                 ],
-                ContextActions = PromptFactoryCanvasCatalog.BuildInputNodeActions(attachment.Id).ToList()
+                ContextActions = PromptFactoryCatalogToolbox.BuildInputNodeActions(attachment.Id).ToList()
             });
             links.Add(new CanvasWorkbenchLink { SourceId = InputsRootCanvasNodeId, TargetId = inputNodeId, Kind = "contains", IsUserAuthored = false });
         }

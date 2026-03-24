@@ -45,3 +45,34 @@ public sealed class LayerStack
     public bool Contains(CanvasSceneLayer layer)
         => Layers.Contains(layer);
 }
+
+public sealed class LayerStackPreviewSnapshot
+{
+    public string TestHookId { get; init; } = "layer-stack";
+
+    public string Label { get; init; } = "Layer stack";
+
+    public string Title { get; init; } = string.Empty;
+
+    public string Summary { get; init; } = string.Empty;
+
+    public string StatePill { get; init; } = string.Empty;
+
+    public IReadOnlyList<string> Metrics { get; init; } = [];
+}
+
+public static class LayerStackPreviewFactory
+{
+    public static LayerStackPreviewSnapshot CreateForWorkbench()
+    {
+        var stack = LayerStack.Workbench;
+
+        return new LayerStackPreviewSnapshot
+        {
+            Title = "Workbench draw order is formalized as a reusable layer stack",
+            Summary = "Backdrop, connectors, nodes, overlays, selection, menus, diagnostics, and accessibility mirrors now have an explicit shared ordering instead of only relying on DOM structure.",
+            StatePill = "Ordered",
+            Metrics = stack.Layers.Select(layer => layer.ToString()).ToList()
+        };
+    }
+}

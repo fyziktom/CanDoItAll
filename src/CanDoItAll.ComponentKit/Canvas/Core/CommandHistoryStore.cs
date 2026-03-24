@@ -75,3 +75,50 @@ public sealed class CommandHistoryStore<T>
 
     private sealed record HistoryEntry(T Snapshot, string Fingerprint);
 }
+
+public sealed class CommandHistoryStorePreviewSnapshot
+{
+    public string TestHookId { get; init; } = "command-history-store";
+
+    public string Label { get; init; } = "Command history store";
+
+    public string Title { get; init; } = string.Empty;
+
+    public string Summary { get; init; } = string.Empty;
+
+    public string StatePill { get; init; } = string.Empty;
+
+    public IReadOnlyList<string> Metrics { get; init; } = [];
+}
+
+public static class CommandHistoryStorePreviewFactory
+{
+    public static CommandHistoryStorePreviewSnapshot CreateForWorkbench(CanvasWorkbenchSurface surface)
+    {
+        ArgumentNullException.ThrowIfNull(surface);
+
+        var store = new CommandHistoryStore<CanvasWorkbenchUiState>(state => state.ToJson(), maxEntries: 12);
+        var baseline = surface.UiState;
+        var edited = CanvasWorkbenchUiState.Parse(surface.UiState.ToJson());
+        edited.SelectedNodeIds = [.. surface.UiState.SelectedNodeIds];
+        edited.SelectedNodeIds.Add("history-preview");
+
+        store.Remember(baseline);
+        store.Remember(edited);
+        store.TryUndo(edited, out var undone);
+
+        return new CommandHistoryStorePreviewSnapshot
+        {
+            Title = "Undo and redo snapshots now flow through one bounded command store",
+            Summary = "Prompt factory history, future graph undo, and selection state changes can share the same deduplicated fingerprinted store instead of each page inventing its own stack semantics.",
+            StatePill = store.CanUndo || store.CanRedo ? "Armed" : "Idle",
+            Metrics =
+            [
+                "12 entry cap",
+                store.CanUndo ? "Undo available" : "Undo empty",
+                store.CanRedo ? "Redo available" : "Redo empty",
+                $"{undone.SelectedNodeIds.Count} ids restored"
+            ]
+        };
+    }
+}

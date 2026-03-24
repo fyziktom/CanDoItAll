@@ -48,6 +48,8 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Project object index", cut.Markup);
             Assert.Contains("Graph health", cut.Markup);
             Assert.Contains("Architecture note", cut.Markup);
+            Assert.Single(cut.FindAll("[data-testid='project-structure-action-catalog-adapter']"));
+            Assert.Single(cut.FindAll("[data-testid='project-structure-placement-policy']"));
         });
 
         cut.FindAll("button")

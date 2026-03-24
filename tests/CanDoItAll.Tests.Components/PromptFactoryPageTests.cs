@@ -19,6 +19,19 @@ public sealed class PromptFactoryPageTests
         {
             Assert.Single(cut.FindAll("[data-testid='prompt-factory-undo']"));
             Assert.Single(cut.FindAll("[data-testid='prompt-factory-redo']"));
+            Assert.Single(cut.FindAll("[data-testid='prompt-factory-undo-redo-adapter']"));
+            Assert.Single(cut.FindAll("[data-testid='chip-badge-primitive']"));
+            Assert.Single(cut.FindAll("[data-testid='connector-path-primitive']"));
+            Assert.Single(cut.FindAll("[data-testid='container-primitive']"));
+            Assert.Single(cut.FindAll("[data-testid='context-menu-host']"));
+            Assert.Single(cut.FindAll("[data-testid='create-action-palette']"));
+            Assert.Single(cut.FindAll("[data-testid='floating-inspector-host']"));
+            Assert.Single(cut.FindAll("[data-testid='group-frame-overlay']"));
+            Assert.Single(cut.FindAll("[data-testid='icon-glyph-primitive']"));
+            Assert.Single(cut.FindAll("[data-testid='image-primitive']"));
+            Assert.Single(cut.FindAll("[data-testid='inline-editor-composer']"));
+            Assert.Single(cut.FindAll("[data-testid='node-card-composer']"));
+            Assert.Single(cut.FindAll("[data-testid='text-block-primitive']"));
             Assert.Contains("Prompt Factory tabs", cut.Markup);
             Assert.Contains("Canvas inspector", cut.Markup);
         });

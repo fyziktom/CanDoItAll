@@ -98,6 +98,49 @@ else
                     }
                 </SectionCard>
             </div>
+
+            <SectionCard Title="Calendar boundary validation"
+                         Description="These extracted calendar boundaries stay on the typed `CanvasCalendarSurface` contract so the page can validate editor, navigation, export, and time-grid behavior without growing a second runtime.">
+                <div class="grid gap-5 2xl:grid-cols-3">
+                    <CalendarSelectionPanel Snapshot="@SelectionPanelSnapshot" />
+                    <CalendarEventEditorModal Snapshot="@EventEditorSnapshot" />
+                    <CalendarCrudBridge Snapshot="@CrudBridgeSnapshot" />
+                </div>
+
+                <div class="mt-5 grid gap-5 xl:grid-cols-3">
+                    <CalendarMiniMonthNavigator Snapshot="@MiniMonthSnapshot" />
+                    <CalendarExportMenu Snapshot="@ExportMenuSnapshot" />
+                    <CanvasBoundaryPreviewCard TestHookId="project-calendar-state-parser"
+                                               Label="Project calendar state parser"
+                                               Title="Persisted calendar state now resolves through one typed parser"
+                                               Summary="The page no longer probes raw JSON for selected event, scope, view, and timezone values. Those defaults and migrations now normalize through `ProjectCalendarStateParser`."
+                                               StatePill="@currentViewState.View"
+                                               Metrics="@StateParserMetrics">
+                        <div class="grid gap-3 md:grid-cols-2">
+                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Selected date</p>
+                                <p class="mt-2 text-sm text-slate-950">@currentViewState.SelectedDate</p>
+                            </div>
+                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Timezone</p>
+                                <p class="mt-2 text-sm text-slate-950">@currentViewState.Timezone</p>
+                            </div>
+                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Scope</p>
+                                <p class="mt-2 text-sm text-slate-950">@currentViewState.Scope</p>
+                            </div>
+                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Selected event</p>
+                                <p class="mt-2 text-sm text-slate-950">@StateParserSelectedEventLabel</p>
+                            </div>
+                        </div>
+                    </CanvasBoundaryPreviewCard>
+                </div>
+
+                <div class="mt-5">
+                    <CalendarTimeGridRenderer Snapshot="@TimeGridSnapshot" />
+                </div>
+            </SectionCard>
         </ChildContent>
     </PageScaffold>
 }
@@ -113,6 +156,21 @@ else
 
     private ProjectCalendarEvent? selectedEvent => surface?.Events.FirstOrDefault(item => item.Id == selectedEventId);
     private string SelectedEventLabel => selectedEvent?.ObjectType.ToString() ?? "None";
+    private string StateParserSelectedEventLabel => currentViewState.SelectedEventId?.ToString("D") ?? "None";
+    private CanvasCalendarSurface ValidationSurface => BuildValidationSurface();
+    private CalendarSelectionPanelSnapshot SelectionPanelSnapshot => CalendarSelectionPanelFactory.Create(ValidationSurface);
+    private CalendarEventEditorModalSnapshot EventEditorSnapshot => CalendarEventEditorModalFactory.Create(ValidationSurface);
+    private CalendarCrudBridgeSnapshot CrudBridgeSnapshot => CalendarCrudBridgeFactory.Create(ValidationSurface);
+    private CalendarMiniMonthNavigatorSnapshot MiniMonthSnapshot => CalendarMiniMonthNavigatorFactory.Create(ValidationSurface);
+    private CalendarExportMenuSnapshot ExportMenuSnapshot => CalendarExportMenuFactory.Create(ValidationSurface);
+    private CalendarTimeGridRendererSnapshot TimeGridSnapshot => CalendarTimeGridRendererFactory.Create(ValidationSurface);
+    private IReadOnlyList<string> StateParserMetrics =>
+    [
+        $"{currentViewState.View} normalized view",
+        $"{currentViewState.Scope} scope",
+        string.IsNullOrWhiteSpace(currentViewState.SelectedDate) ? "No selected date" : currentViewState.SelectedDate,
+        string.IsNullOrWhiteSpace(surface?.ViewStateJson) ? "No persisted JSON" : "Persisted JSON restored"
+    ];
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
@@ -147,5 +205,93 @@ else
         }
 
         await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "calendar", args.StateJson);
+    }
+
+    private CanvasCalendarSurface BuildValidationSurface()
+    {
+        if (canvasSurface is null)
+        {
+            return new CanvasCalendarSurface();
+        }
+
+        var previewEvents = canvasSurface.Events
+            .Select((item, index) =>
+            {
+                var start = item.StartUtc ?? DateTimeOffset.UtcNow.AddHours(index + 8);
+                var end = item.EndUtc ?? start.AddHours(1);
+                return new CanvasCalendarEvent
+                {
+                    Id = item.Id,
+                    EventId = string.IsNullOrWhiteSpace(item.EventId) ? item.Id : item.EventId,
+                    Title = item.Title,
+                    Description = item.Description,
+                    StartUtc = start,
+                    EndUtc = end,
+                    AllDay = item.AllDay,
+                    Timezone = string.IsNullOrWhiteSpace(item.Timezone) ? "UTC" : item.Timezone,
+                    TimezoneName = string.IsNullOrWhiteSpace(item.TimezoneName) ? "UTC" : item.TimezoneName,
+                    Location = item.Location,
+                    LocationLabel = string.IsNullOrWhiteSpace(item.LocationLabel) ? item.Category : item.LocationLabel,
+                    LocationAddress = item.LocationAddress,
+                    Category = item.Category,
+                    Color = string.IsNullOrWhiteSpace(item.Color) ? "#0f172a" : item.Color,
+                    ReadOnly = false,
+                    EventType = string.IsNullOrWhiteSpace(item.EventType) ? "Milestone" : item.EventType,
+                    Status = string.IsNullOrWhiteSpace(item.Status) ? "Planned" : item.Status,
+                    Notes = string.IsNullOrWhiteSpace(item.Notes) ? $"Linked artifact: {item.Description}" : item.Notes,
+                    LinkedPlaylists = item.LinkedPlaylists.Count > 0
+                        ? item.LinkedPlaylists
+                        : new List<CanvasCalendarPlaylist>
+                        {
+                            new()
+                            {
+                                PlaylistId = $"playlist-{index + 1}",
+                                Title = $"Review playlist {index + 1}",
+                                Subtitle = "Prompt and validation handoff",
+                                Purpose = "Support the selected milestone",
+                                Status = "Ready"
+                            }
+                        },
+                    ChecklistRows = item.ChecklistRows.Count > 0
+                        ? item.ChecklistRows
+                        : new List<CanvasCalendarChecklistRow>
+                        {
+                            new() { Label = "Confirm schedule", Status = "Done", Note = "Window approved with the project owner." },
+                            new() { Label = "Review dependencies", Status = "Pending", Note = "Check linked prompt and validation artifacts." }
+                        },
+                    LinkedPlaylistCount = item.LinkedPlaylists.Count > 0 ? item.LinkedPlaylists.Count : 1,
+                    ChecklistItemCount = item.ChecklistRows.Count > 0 ? item.ChecklistRows.Count : 2
+                };
+            })
+            .ToList();
+
+        return new CanvasCalendarSurface
+        {
+            SurfaceId = $"{canvasSurface.SurfaceId}:validation",
+            Events = previewEvents,
+            InitialView = canvasSurface.InitialView,
+            SelectedDate = string.IsNullOrWhiteSpace(canvasSurface.SelectedDate)
+                ? previewEvents.FirstOrDefault()?.StartUtc?.ToString("yyyy-MM-dd") ?? string.Empty
+                : canvasSurface.SelectedDate,
+            SelectedEventId = canvasSurface.SelectedEventId,
+            Timezone = string.IsNullOrWhiteSpace(canvasSurface.Timezone) ? "UTC" : canvasSurface.Timezone,
+            Locale = string.IsNullOrWhiteSpace(canvasSurface.Locale) ? "en-US" : canvasSurface.Locale,
+            WeekStartsOn = canvasSurface.WeekStartsOn,
+            SlotMinutes = canvasSurface.SlotMinutes,
+            BusinessHoursStart = canvasSurface.BusinessHoursStart,
+            BusinessHoursEnd = canvasSurface.BusinessHoursEnd,
+            MiniMonthCount = Math.Max(canvasSurface.MiniMonthCount, 1),
+            AllowCreate = true,
+            AllowEdit = true,
+            AllowDelete = true,
+            AllowDragDrop = true,
+            AllowResize = true,
+            EnableListExport = true,
+            WorkspaceModal = true,
+            EventTypes = canvasSurface.EventTypes.Count > 0 ? canvasSurface.EventTypes : ["Milestone", "Validation", "Prompt"],
+            EventStatuses = canvasSurface.EventStatuses.Count > 0 ? canvasSurface.EventStatuses : ["Planned", "In progress", "Ready"],
+            TimeZoneOptions = canvasSurface.TimeZoneOptions.Count > 0 ? canvasSurface.TimeZoneOptions : ["UTC", "America/New_York"],
+            ViewStateJson = canvasSurface.ViewStateJson
+        };
     }
 }
