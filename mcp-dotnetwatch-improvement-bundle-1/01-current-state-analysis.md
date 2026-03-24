@@ -13,6 +13,8 @@
 - `tools/CanDoItAll.Mcp.DotNetWatch/Start-CanDoItAllDotNetWatchMcp.ps1`
 - current unit and integration tests under `tests/CanDoItAll.Mcp.DotNetWatch.*`
 - current bootstrap evidence in `.mcp-state/logs/mcp-dotnetwatch-bootstrap.log`
+- live `candoitall_workspace_info` and `candoitall_app_status` invocation results observed during this planning pass
+- lightweight response-size measurements for candidate workflow-guidance payloads
 
 ## Verified strengths
 
@@ -42,6 +44,14 @@
 - direct tool calls can still fail generically
 
 That means the weakest link is now the bridge/control plane between Codex and the persistent backend, not the backend-owned runtime itself.
+
+This planning pass also reproduced the same shape of problem:
+
+- direct `candoitall_workspace_info` returned a generic invocation error
+- direct `candoitall_app_status` returned a generic invocation error
+
+That reinforces the same conclusion.
+Codex cannot be expected to build a disciplined workflow on top of an intermittently generic bridge surface.
 
 ### B. The public runtime model is still too narrow
 
@@ -124,6 +134,33 @@ That means bundle 1 must continue to support this workflow safely:
 
 If that path is not explicitly designed, the project will regress into output-lock failures while trying to validate its own changes.
 
+### J. Current responses optimize noise reduction but not workflow discipline
+
+The MCP already does useful context preservation through log reduction.
+However, the current public surface does not actively steer Codex toward:
+
+- one small UI or behavior change at a time
+- revision confirmation before widening scope
+- browser validation before touching nearby areas
+- escalation to atomic candidate or focused build/test when risk increases
+
+Tool descriptions are operational, but they do not teach the preferred iteration loop.
+Status payloads expose state, but they do not convert that state into a compact next-step recommendation.
+
+### K. Guidance must be compact or it will become its own context problem
+
+Lightweight sizing during this planning pass showed:
+
+- a verbose nested guidance object added about 285 serialized characters to a representative `app_status` response
+- a compact micro-guidance object with short fields added about 117 serialized characters
+- adding one short static steering sentence to a tool description added about 87 characters
+
+Conclusion:
+
+- static "work small, validate early" language is cheap enough for key tool descriptions
+- dynamic guidance is viable only if it stays tiny and is emitted on selected status/control tools
+- raw logs and event streams should not carry behavioral coaching text
+
 ## What should not be re-planned
 
 The following areas already have credible implementation or tests and should be preserved:
@@ -142,6 +179,8 @@ In this bundle, fluent work means:
 
 - a small Razor, CSS, or safe hot-reloadable change should continue to use the source-watch lane
 - the MCP server should expose enough structured revision state that Codex does not need to guess whether propagation finished
+- when the watch lane is healthy, Codex should be nudged into a small-loop workflow:
+  one nearby change, revision confirmation, browser validation, then decide whether another nearby change is safe
 - heavy or riskier changes should be routable to a different lane without destabilizing the live source-watch lane
 
 ## Working definition of "atomic updates for Codex" for bundle 1

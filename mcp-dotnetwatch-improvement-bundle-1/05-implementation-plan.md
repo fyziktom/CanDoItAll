@@ -20,20 +20,25 @@ Do not combine bridge hardening, launch-model refactor, atomic slots, and test r
    - `RuntimeLaneKind`
    - `RuntimeRevisionData`
    - atomic transaction state
+   - `WorkflowGuidanceData`
 2. Add backward-compatible contract extensions to `workspace_info`, `app_status`, and `app_wait`.
-3. Add request idempotency plumbing for non-idempotent tool calls.
-4. Add tests for compatibility mapping from current `AppRunMode`.
+3. Update key tool descriptions with one short static workflow sentence about small validated iteration.
+4. Add request idempotency plumbing for non-idempotent tool calls.
+5. Add tests for compatibility mapping from current `AppRunMode`.
 
 ### Likely files
 
+- `src/CanDoItAll.Mcp.Core/Contracts/McpToolEnvelope.cs`
 - `src/CanDoItAll.Mcp.DotNetWatch/Contracts/ToolContracts.cs`
 - `src/CanDoItAll.Mcp.DotNetWatch/Backend/BackendToolContracts.cs`
 - `src/CanDoItAll.Mcp.DotNetWatch/Runtime/AppRuntimeModels.cs`
+- `src/CanDoItAll.Mcp.DotNetWatch/Tools/CanDoItAllTools.cs`
 - `tests/CanDoItAll.Mcp.DotNetWatch.Tests/*`
 
 ### Exit criteria
 
 - new fields compile and serialize cleanly
+- workflow guidance contract exists without changing runtime behavior yet
 - existing callers still pass without knowing about the new fields
 
 ## Phase 2. Bridge hardening and repair loop
@@ -54,6 +59,7 @@ Do not combine bridge hardening, launch-model refactor, atomic slots, and test r
    - retry if safe
 4. Add bridge status to `workspace_info`.
 5. Add typed failure codes for bridge categories.
+6. Emit bridge/failure guidance such as `fix-current-failure` only when it is directly justified by the returned state.
 
 ### Likely files
 
@@ -86,6 +92,7 @@ Do not combine bridge hardening, launch-model refactor, atomic slots, and test r
 3. Add endpoint allocation for candidate runtimes.
 4. Preserve current watch/run flows through compatibility adapters.
 5. Expose lane kind and revision data through `app_status`.
+6. Add lane-aware workflow guidance for healthy watch flows and restart-heavy flows.
 
 ### Likely files
 
@@ -148,6 +155,7 @@ Do not combine bridge hardening, launch-model refactor, atomic slots, and test r
 6. Persist transaction and slot manifests.
 7. Expose current active revision and rollback availability.
 8. Persist endpoint leases for candidate sessions.
+9. Emit atomic-lane guidance for candidate validation, commit, and rollback availability.
 
 ### Likely files
 
@@ -179,12 +187,14 @@ Do not combine bridge hardening, launch-model refactor, atomic slots, and test r
    - current revision
    - candidate transaction
    - rollback availability
-4. Keep raw logs unchanged.
+4. Surface current workflow mode and recommended next validation step for operators where useful.
+5. Keep raw logs unchanged and free of workflow-coaching text.
 
 ### Exit criteria
 
 - Codex can follow an update transaction without parsing free-form logs
 - manager UI exposes slot and transaction state clearly
+- guidance is emitted only on the intended low-volume tools and stays within the configured size budget
 
 ## Phase 7. Validation, rollout, and cleanup
 
@@ -202,6 +212,7 @@ Do not combine bridge hardening, launch-model refactor, atomic slots, and test r
 5. Add self-host validation coverage proving the MCP server can build/test itself while the live backend remains running.
 6. Mark the old `.artifacts\bundle-validation\webapp` workflow as manual-only or deprecated.
 7. Document migration steps for existing Codex config.
+8. Add guidance-budget and guidance-selection tests so the steering layer does not regress into noisy prose.
 
 ### Exit criteria
 

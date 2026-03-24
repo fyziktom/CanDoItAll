@@ -23,6 +23,36 @@ Breaking renames are out of scope for bundle 1.
 
 ## Public model changes
 
+### Envelope evolution
+
+Bundle 1 should add an optional compact guidance block to the MCP envelope rather than smuggling workflow advice into free-form diagnostics.
+
+Suggested direction:
+
+```csharp
+public sealed record WorkflowGuidanceData(
+    string Mode,
+    string Next,
+    string Verify,
+    string? Guard = null,
+    string? ReasonCode = null);
+```
+
+Suggested envelope addition:
+
+```csharp
+[property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+public WorkflowGuidanceData? WorkflowGuidance { get; init; }
+```
+
+Contract rules:
+
+- guidance is optional and additive
+- guidance is for selected status/control tools only
+- guidance must stay compact and code-like rather than prose-heavy
+- `Summary`, `Diagnostics`, and `NextSuggestedTools` remain valid and are not replaced
+- raw log/event tools do not emit `WorkflowGuidance`
+
 ### `workspace_info`
 
 Add:
@@ -32,6 +62,7 @@ Add:
 - atomic update capability flags
 - active logical apps
 - slot summary for managed logical apps
+- optional workflow guidance describing the preferred working mode for the current workspace state
 
 Suggested additions:
 
@@ -82,6 +113,7 @@ Add:
 - `revision`
 - `slot`
 - `activeTransactionId`
+- `workflowGuidance`
 
 Suggested revision model:
 
@@ -104,10 +136,16 @@ Keep existing conditions and add explicit revision/transaction waits:
 
 `Healthy` should remain valid, but it should no longer be the only way to model correctness.
 
+Guidance rule:
+
+- emit `workflowGuidance` only when the returned state is useful to act on
+- do not emit repetitive coaching on every internal poll or transient wait snapshot
+
 ### `app_logs`
 
 Keep log access intact.
 Do not overload it with lifecycle semantics.
+Do not add workflow guidance to this payload.
 
 ### New tool: `candoitall_app_events`
 
@@ -166,6 +204,11 @@ public sealed record AtomicUpdateData(
     bool RollbackAvailable);
 ```
 
+Response guidance examples:
+
+- `atomic-candidate-next` while the candidate is ready for browser validation before commit
+- `rollback-available` after a commit or after a failed validation that left the previous revision intact
+
 ### New tool: `candoitall_app_rollback`
 
 Purpose:
@@ -176,6 +219,35 @@ Purpose:
 
 This can be omitted if the added `workspace_info.bridge` payload is considered sufficient.
 Bundle 1 does not require both.
+
+## Guidance emission matrix
+
+Preferred emitters:
+
+- `workspace_info`
+- `app_status`
+- `app_wait`
+- `operation_status`
+- `app_update_atomic`
+- `app_rollback`
+- `diagnose_start_failure`
+
+Explicit non-emitters:
+
+- `app_logs`
+- `operation_logs`
+- `app_events`
+
+Emission rules:
+
+1. the guidance block should usually contain no more than:
+   - one `Mode`
+   - one `Next`
+   - one `Verify`
+   - one short optional `Guard` or `ReasonCode`
+2. if no high-confidence recommendation exists, omit the block
+3. if the response is already high-volume, omit the block
+4. static tool descriptions may include one short workflow sentence, but not a paragraph
 
 ## Internal state additions
 
@@ -263,3 +335,12 @@ Expected high-signal codes include:
 - `RollbackFailed`
 - `ResourceConflict`
 - `ValidationTimeout`
+
+## Workflow guidance quality rule
+
+Bundle 1 guidance must be:
+
+- accurate with respect to the actual lane and revision state
+- compact enough to avoid noticeable context pollution
+- biased toward local validated iteration before broader change sets
+- able to recommend escalation to build/test or atomic candidate work when local watch iteration is no longer the best fit

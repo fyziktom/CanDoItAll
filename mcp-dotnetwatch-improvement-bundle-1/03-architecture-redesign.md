@@ -31,6 +31,7 @@ The redesign should therefore strengthen boundaries instead of flattening them.
 - `SessionEventJournal`
 - `ResourceScopePlanner`
 - `ShadowBuildRetentionService`
+- `WorkflowGuidancePolicy`
 
 ## Control-plane redesign
 
@@ -73,6 +74,39 @@ Proposed implementation slice:
 - current shadow manifest path
 
 This reduces guesswork during Codex sessions.
+
+### 3. Workflow steering as a control-plane concern
+
+Problem:
+
+- current contracts tell Codex what happened, but they do not tell Codex which working style is appropriate next
+- if guidance is scattered through ad hoc strings, it will become noisy, inconsistent, and expensive
+
+Target behavior:
+
+1. key tool descriptions teach the base rule once:
+   prefer one small UI or behavior change, then validate before widening scope
+2. selected status/control responses emit a compact dynamic recommendation derived from current runtime state
+3. guidance changes when the lane, revision confidence, watch pressure, or failure state changes
+4. logs and event streams remain free of coaching text
+
+Proposed implementation slice:
+
+- add `WorkflowGuidancePolicy`
+- feed it authoritative state from:
+  - `RuntimeLaneCoordinator`
+  - `RuntimeRevisionService`
+  - watch-pressure/restart signals
+  - operation result state
+  - rollback availability
+- keep emitted guidance terse:
+  - mode
+  - next step
+  - validation step
+  - optional guard such as "stay-nearby" or "avoid-broad-edits"
+
+Do not bury this logic inside individual tools.
+One centralized policy keeps recommendations consistent and testable.
 
 ## Launch model redesign
 
@@ -258,6 +292,9 @@ Add a structured journal for:
 - rollback committed
 - bridge repaired
 
+The event journal is for state evidence.
+It should not be overloaded with workflow hints.
+
 This should be queryable incrementally and should coexist with raw logs.
 
 ## Shadow-host governance
@@ -308,6 +345,10 @@ Suggested new settings groups:
 - `ShadowHost`
   - retained build count
   - cleanup policy
+- `WorkflowGuidance`
+  - enabled
+  - max serialized characters
+  - tool emission allow-list
 
 Bundle 1 should keep defaults conservative and keep current settings valid.
 
@@ -334,6 +375,9 @@ Likely file areas:
   - `SessionEventModels.cs`
 - `src/CanDoItAll.Mcp.DotNetWatch/Runtime/Coordination/`
   - `ResourceScopePlanner.cs`
+- `src/CanDoItAll.Mcp.DotNetWatch/Guidance/`
+  - `WorkflowGuidancePolicy.cs`
+  - `WorkflowGuidanceModels.cs`
 
 Do not force all of this into one giant rewrite.
 Phased extraction is explicitly preferred.

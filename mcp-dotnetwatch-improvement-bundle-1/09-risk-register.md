@@ -123,3 +123,36 @@ Mitigation:
 
 - enforce bundle 1 non-goals
 - defer stable relay/proxy and broader deployment concerns unless later justified
+
+## R9. Workflow guidance can become noisy enough that Codex starts ignoring it
+
+Severity:
+
+- Medium
+
+Why it matters:
+
+- if every response starts carrying coaching prose, the signal disappears and context efficiency regresses
+
+Mitigation:
+
+- keep guidance in a compact structured block
+- emit only on selected low-volume status/control tools
+- ban guidance on raw log and event payloads
+- enforce a serialized size budget in tests
+
+## R10. Workflow guidance can drift away from real runtime state
+
+Severity:
+
+- High
+
+Why it matters:
+
+- inaccurate steering is worse than no steering because it can push Codex into the wrong lane or validation action
+
+Mitigation:
+
+- derive guidance only from authoritative lane, revision, pressure, and rollback state
+- centralize policy logic instead of hand-writing strings per tool
+- require unit and integration tests for guidance selection

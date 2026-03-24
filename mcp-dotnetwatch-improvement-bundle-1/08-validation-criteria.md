@@ -39,7 +39,23 @@ Failure conditions:
 
 - bundle 1 makes small watch-based changes slower or less trustworthy than the current tested behavior
 
-### 3. Published candidate preparation is isolated
+### 3. Agent workflow steering is present and efficient
+
+Pass conditions:
+
+- healthy `workspace_info`, `app_status`, or completed `app_wait` responses can recommend a small-step watch workflow:
+  one nearby edit, revision confirmation, browser validation, then decide whether to continue
+- failure, restart-heavy, or pressure states can recommend focused fix/build-test work or the atomic candidate lane
+- guidance is emitted only on selected status/control tools and not on `app_logs`, `operation_logs`, or `app_events`
+- a representative emitted guidance block adds no more than 180 serialized characters to a compact `app_status` or `app_wait` envelope
+
+Failure conditions:
+
+- Codex still receives no explicit workflow steering from the MCP contract
+- guidance is verbose, repetitive, or present in high-volume log/event payloads
+- guidance contradicts the actual lane, revision state, or rollback availability
+
+### 4. Published candidate preparation is isolated
 
 Pass conditions:
 
@@ -54,7 +70,7 @@ Failure conditions:
 - active runtime must be stopped before candidate prepare begins
 - candidate endpoint allocation is implicit, ad hoc, or collision-prone
 
-### 4. Atomic commit semantics
+### 5. Atomic commit semantics
 
 Pass conditions:
 
@@ -68,7 +84,7 @@ Failure conditions:
 - Codex can observe a half-committed runtime
 - commit mutates active runtime before candidate health is established
 
-### 5. Rollback safety
+### 6. Rollback safety
 
 Pass conditions:
 
@@ -81,7 +97,7 @@ Failure conditions:
 - rollback is not implemented
 - rollback depends on manual file surgery or manual process stopping
 
-### 6. Resource coordination correctness
+### 7. Resource coordination correctness
 
 Pass conditions:
 
@@ -94,7 +110,7 @@ Failure conditions:
 - the code still effectively behaves like one workspace-global lock
 - resource conflicts produce vague or context-free failures
 
-### 7. Backward compatibility
+### 8. Backward compatibility
 
 Pass conditions:
 
@@ -106,7 +122,7 @@ Failure conditions:
 
 - bundle 1 breaks current watch flows to gain published-slot support
 
-### 8. Self-host validation isolation
+### 9. Self-host validation isolation
 
 Pass conditions:
 
@@ -118,12 +134,13 @@ Failure conditions:
 - validating the MCP server still requires stopping the live backend
 - the implementation silently relies on manual shell-side artifacts-path workarounds
 
-### 9. Manager and observability quality
+### 10. Manager and observability quality
 
 Pass conditions:
 
 - manager status shows logical app id, lane, active revision, active slot, and pending transaction where relevant
 - `workspace_info` exposes bridge status
+- status/control responses expose workflow guidance where relevant
 - structured events are queryable incrementally
 - raw log access remains available
 
@@ -142,6 +159,8 @@ Failure conditions:
 - transaction state transitions
 - resource-scope ordering and conflict handling
 - rollback restoration logic
+- workflow-guidance selection and suppression
+- workflow-guidance budget enforcement
 
 ### Integration tests
 
@@ -149,11 +168,14 @@ Failure conditions:
 - backend repair after stale registration
 - source-watch small edit flow
 - source-watch restart-required flow
+- healthy watch guidance recommending browser validation before widening scope
+- pressure or failure guidance recommending focused fix/build-test or atomic-lane work
 - published candidate prepare while active runtime remains live
 - commit to candidate revision
 - rollback to previous revision
 - manager visibility of active slot and transaction state
 - self-host build/test isolation for `CanDoItAll.Mcp.DotNetWatch`
+- log and event responses remaining guidance-free
 
 ### Failure-injection tests
 
@@ -163,6 +185,7 @@ Failure conditions:
 - candidate starts but never becomes healthy
 - commit fails after candidate health
 - rollback requested when no previous revision exists
+- guidance requested from a state with insufficient confidence and therefore correctly omitted
 
 ## Minimum evidence artifacts
 
@@ -171,9 +194,12 @@ At final validation, capture at minimum:
 - wrapper/bootstrap log excerpt
 - one successful bridge repair transcript
 - one successful source-watch revision confirmation transcript
+- one healthy watch response carrying small-step workflow guidance
+- one pressure/failure response carrying an atomic-lane or focused-fix recommendation
 - one successful atomic update transcript with transaction id and slot id
 - one failed candidate transcript that preserves the prior active runtime
 - one successful rollback transcript
+- one raw log or event transcript showing no workflow-guidance pollution
 
 ## Final approval rule
 

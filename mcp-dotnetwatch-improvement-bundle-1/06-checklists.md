@@ -13,6 +13,8 @@
 - [ ] Rollback is part of the design, not a future TODO.
 - [ ] Candidate endpoint allocation is explicit and collision-safe.
 - [ ] Shadow build retention and cleanup rules are documented.
+- [ ] Workflow steering is a first-class control-plane concern, not ad hoc text spread across tools.
+- [ ] Guidance stays out of raw log and event payloads.
 
 ## Contract checklist
 
@@ -26,6 +28,9 @@
 - [ ] `app_events` exists or an equivalent structured event stream is provided.
 - [ ] `app_update_atomic` is defined as the primary Codex-safe update tool.
 - [ ] `app_rollback` is defined.
+- [ ] Selected status/control tools can emit compact `workflowGuidance`.
+- [ ] Guidance payload shape is budgeted and additive.
+- [ ] Static tool descriptions include one short small-iteration hint where it materially improves agent behavior.
 
 ## Implementation checklist
 
@@ -41,6 +46,8 @@
 - [ ] Add shadow build retention/cleanup logic.
 - [ ] Deprecate managed dependence on `.artifacts\bundle-validation\webapp` as a single hot folder.
 - [ ] Preserve self-host MCP build/test validation while the live backend is running.
+- [ ] Add a centralized workflow-guidance policy instead of hand-written hint strings per tool.
+- [ ] Enforce guidance suppression on high-volume responses.
 
 ## Testing checklist
 
@@ -55,6 +62,10 @@
 - [ ] Integration tests cover self-host build/test isolation for `CanDoItAll.Mcp.DotNetWatch`.
 - [ ] Failure-injection tests cover backend disappearance mid-call.
 - [ ] Failure-injection tests cover candidate health failure and commit failure.
+- [ ] Unit tests cover guidance selection and suppression rules.
+- [ ] Integration tests prove healthy watch responses recommend small-step browser-checked iteration.
+- [ ] Integration tests prove risky/pressure states recommend focused build/test or atomic-lane work.
+- [ ] Integration tests prove raw logs and event streams remain guidance-free.
 
 ## Migration checklist
 
@@ -72,6 +83,8 @@
 - [ ] Codex can roll back after a bad commit.
 - [ ] Codex does not need to manually stop a running published host to prepare the next candidate.
 - [ ] Codex does not see generic bridge failures for known repairable conditions.
+- [ ] Codex is explicitly nudged toward one nearby UI change followed by validation before widening scope.
+- [ ] Codex is explicitly nudged away from broad edit batches when watch pressure or unresolved failures are present.
 
 ## QA signoff checklist
 
@@ -82,3 +95,4 @@
 - [ ] Risks and mitigations are documented.
 - [ ] Prompts are executable by a follow-on implementation agent.
 - [ ] Final approval is conditioned on evidence, not optimistic prose.
+- [ ] Guidance payload budget and emission scope are explicit and testable.

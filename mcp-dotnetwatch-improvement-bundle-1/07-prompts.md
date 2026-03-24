@@ -21,6 +21,8 @@ Rules:
 - keep raw logs and manager behavior working unless explicitly improved
 - prefer additive contracts and narrow focused changes
 - if a design choice would break existing watch workflows, stop and fix the design instead of forcing the code
+- implement workflow steering as a compact state-derived contract feature, not as repetitive prose sprinkled into every response
+- bias the implementation toward small validated iterations for UI and hot-reload-safe work
 
 Definition of done:
 
@@ -44,6 +46,25 @@ Validation:
 - prove that read-only calls retry safely
 - prove that non-idempotent calls use idempotency keys or equivalent deduplication
 
+## Prompt 1a. Workflow steering contract
+
+Implement the workflow-steering layer required by bundle 1.
+
+Deliverables:
+
+- `WorkflowGuidanceData` or an equivalent compact additive contract shape
+- key tool description updates with one short small-iteration sentence where appropriate
+- a centralized guidance policy that emits on selected status/control tools only
+- suppression rules for logs and event streams
+- budget enforcement so guidance remains compact
+
+Validation:
+
+- healthy watch responses recommend a small-step browser-validated loop
+- failure or pressure responses recommend focused fix/build-test work or atomic-lane work
+- raw log and event responses do not accumulate coaching text
+- captured payloads show guidance overhead stays within the bundle budget
+
 ## Prompt 2. Launch model refactor
 
 Implement Phase 3 from the bundle.
@@ -61,6 +82,7 @@ Validation:
 - existing watch and run integration tests still pass
 - a published DLL can be launched under backend management
 - candidate runtime endpoint leasing prevents port collisions
+- healthy watch-state guidance changes correctly when the session becomes restart-heavy or otherwise unsuitable for fast-path iteration
 
 ## Prompt 3. Resource scopes and lane-aware coordination
 
@@ -104,12 +126,14 @@ Deliverables:
 
 - `app_events` or equivalent structured incremental lifecycle stream
 - manager/UI updates for lane, revision, slot, and transaction visibility
+- manager/UI visibility for current workflow mode or next recommended validation step where useful
 - unchanged raw log access
 
 Validation:
 
 - an update transaction can be followed from structured responses without raw-log parsing
 - manager view clearly distinguishes active runtime, candidate runtime, and rollback availability
+- the workflow guidance surfaced to Codex and operators remains compact and state-consistent
 
 ## Prompt 6. Validation and cleanup
 
@@ -139,6 +163,7 @@ Required behavior:
 - verify backward compatibility of current tool names and settings
 - verify that atomic updates are truly candidate-safe and rollbackable
 - reject the implementation if validation evidence is missing or indirect
+- verify that workflow guidance is accurate, compact, and does not pollute logs or event streams
 
 Required output:
 
