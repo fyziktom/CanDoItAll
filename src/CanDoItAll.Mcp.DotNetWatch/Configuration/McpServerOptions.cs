@@ -164,6 +164,8 @@ public sealed class SecurityOptions
 {
     public string[] AllowedProjectRoots { get; set; } = ["src", "tests", "tools"];
 
+    public string[] AllowedExternalProjectRoots { get; set; } = [];
+
     public bool AllowExternalHealthHosts { get; set; }
 
     public string[] AllowedEnvironmentKeys { get; set; } =

@@ -302,6 +302,7 @@ internal static class Program
         services.AddSingleton<StartFailureDiagnoser>();
         services.AddSingleton<SessionCoordinator>();
         services.AddSingleton<LocalToolInvoker>();
+        services.AddSingleton<IProjectPathPicker, WindowsProjectPathPicker>();
         services.AddSingleton<BackendManagerService>();
     }
 

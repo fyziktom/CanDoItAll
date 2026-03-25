@@ -16,11 +16,22 @@ Code changes:
 - added repo-managed Codex skill assets under `codex/skills/candoitall-watch-playwright-loop/`
 - added the resetup script at `tools/Reinstall-CanDoItAllMcps.ps1`
 - restored wrapper prepare-only support in `tools/CanDoItAll.Mcp.DotNetWatch/Start-CanDoItAllDotNetWatchMcp.ps1`
+- extended the backend manager surface in:
+  - `src/CanDoItAll.Mcp.DotNetWatch/Backend/BackendModels.cs`
+  - `src/CanDoItAll.Mcp.DotNetWatch/Manager/BackendManagerService.cs`
+  - `src/CanDoItAll.Mcp.DotNetWatch/Manager/BackendDashboardPage.cs`
+  - `src/CanDoItAll.Mcp.DotNetWatch/Manager/ProjectPathPicker.cs`
+  - `src/CanDoItAll.Mcp.DotNetWatch/Runtime/ProjectLaunchSettingsResolver.cs`
+  - `src/CanDoItAll.Mcp.DotNetWatch/Security/SecurityServices.cs`
+  - `src/CanDoItAll.Mcp.DotNetWatch/Program.cs`
+  - `CanDoItAll.Mcp.DotNetWatch.settings.json`
 - updated the repo MCP wiring and validation coverage in:
   - `.vscode/mcp.json`
   - `.github/copilot-instructions.md`
   - `tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/ValidationHarness.cs`
   - `tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/BootstrapValidationTests.cs`
+- expanded focused coverage in:
+  - `tests/CanDoItAll.Mcp.DotNetWatch.Tests/InfrastructureTests.cs`
 - hardened backend-catalog cleanup by allowing delete-friendly reads in:
   - `src/CanDoItAll.Mcp.DotNetWatch/Backend/GlobalBackendCatalogStore.cs`
   - `tools/CanDoItAll.Mcp.DotNetWatch.Tray/BackendTrayController.cs`
@@ -30,7 +41,7 @@ Validation:
 - tray build passed:
   - `dotnet build tools\\CanDoItAll.Mcp.DotNetWatch.Tray\\CanDoItAll.Mcp.DotNetWatch.Tray.csproj --nologo`
 - unit tests passed:
-  - `35/35` in `CanDoItAll.Mcp.DotNetWatch.Tests`
+  - `38/38` in `CanDoItAll.Mcp.DotNetWatch.Tests`
 - focused wrapper and integration validation passed:
   - `5/5` in `CanDoItAll.Mcp.DotNetWatch.IntegrationTests`
 - resetup script passed on the live repo path and published:
@@ -47,6 +58,16 @@ Validation:
   - headless `status` reported `Missing` before recovery
   - headless `recover` brought the workspace backend back to `Healthy`
   - headless `restart` replaced the backend PID and returned to `Healthy`
+- manager validation succeeded against `pveinvoicing`:
+  - native `Browse Project` selected `C:\repositories\pveinvoicing\PVEInvoicing\PVEInvoicing\PVEInvoicing.csproj`
+  - `Start Project (HTTPS)` launched a live watch session with both `http://localhost:5139` and `https://localhost:7267`
+  - Playwright navigation through the manager’s `Open HTTPS App` button reached `https://localhost:7267/Account/Login?ReturnUrl=%2F`
+  - the launched app responded `200` with page title `Log in`
+  - validation artifact:
+    - `artifacts/manager-pveinvoicing-validation.json`
+  - screenshots:
+    - `artifacts/manager-pveinvoicing-browse.png`
+    - `artifacts/manager-pveinvoicing-app.png`
 
 Performance:
 
@@ -72,3 +93,4 @@ Residual risks:
 - the shared benchmark path is still slower than the isolated bundle-2 baseline even when the tray is not running
 - cold watch startup remains noisy in this benchmark path at roughly `85-97s`; bundle 3 did not target startup tuning
 - headless `recover` and `restart` completed successfully but emitted blank stdout in shell redirection during validation; follow-up `status` confirmed success, so this is a headless-output quirk rather than a tray-UI failure
+- native manager browse validation is sensitive to stale `Open` dialogs left behind by interrupted runs; before retrying the browse flow, clear old dialogs or the keyboard helper may attach to the wrong picker instance

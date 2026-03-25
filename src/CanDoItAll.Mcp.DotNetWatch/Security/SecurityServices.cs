@@ -6,7 +6,12 @@ public sealed class PathGuard(RuntimeConfiguration configuration)
 {
     public string ResolveProjectPath(string? path)
     {
-        var resolved = ResolveInsideWorkspace(path ?? configuration.DefaultApp.ProjectPath);
+        var resolved = ResolvePath(path ?? configuration.DefaultApp.ProjectPath);
+        if (!File.Exists(resolved))
+        {
+            throw new ToolInvocationException("ValidationError", $"Project path '{resolved}' does not exist.", new { path = resolved });
+        }
+
         EnsureAllowedProject(resolved);
         return resolved;
     }
@@ -38,16 +43,14 @@ public sealed class PathGuard(RuntimeConfiguration configuration)
     {
         var candidate = string.IsNullOrWhiteSpace(workingDirectory)
             ? Path.GetDirectoryName(projectPath)!
-            : ResolveInsideWorkspace(workingDirectory);
-        EnsureInsideWorkspace(candidate);
+            : ResolvePath(workingDirectory);
+        EnsureAllowedProject(candidate);
         return candidate;
     }
 
     public string ResolveInsideWorkspace(string path)
     {
-        var resolved = Path.IsPathRooted(path)
-            ? Path.GetFullPath(path)
-            : Path.GetFullPath(Path.Combine(configuration.WorkspaceRoot, path));
+        var resolved = ResolvePath(path);
         EnsureInsideWorkspace(resolved);
         return resolved;
     }
@@ -62,10 +65,27 @@ public sealed class PathGuard(RuntimeConfiguration configuration)
 
     public void EnsureAllowedProject(string path)
     {
-        if (!configuration.AllowedProjectRoots.Any(root => IsPathUnderRoot(path, root)))
+        if (configuration.AllowedProjectRoots.Any(root => IsPathUnderRoot(path, root)) ||
+            configuration.AllowedExternalProjectRoots.Any(root => IsPathUnderRoot(path, root)))
         {
-            throw new ToolInvocationException("SecurityViolation", $"Path '{path}' is not inside an allowed project root.", new { path, allowedRoots = configuration.AllowedProjectRoots });
+            return;
         }
+
+        throw new ToolInvocationException(
+            "SecurityViolation",
+            $"Path '{path}' is not inside an allowed project root.",
+            new
+            {
+                path,
+                allowedRoots = configuration.AllowedProjectRoots.Concat(configuration.AllowedExternalProjectRoots).ToArray()
+            });
+    }
+
+    private string ResolvePath(string path)
+    {
+        return Path.IsPathRooted(path)
+            ? Path.GetFullPath(path)
+            : Path.GetFullPath(Path.Combine(configuration.WorkspaceRoot, path));
     }
 
     private static bool IsPathUnderRoot(string path, string root)

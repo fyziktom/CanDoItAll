@@ -116,6 +116,9 @@
       "tests",
       "tools"
     ],
+    "AllowedExternalProjectRoots": [
+      ".."
+    ],
     "AllowExternalHealthHosts": false,
     "AllowedEnvironmentKeys": [
       "ASPNETCORE_ENVIRONMENT",

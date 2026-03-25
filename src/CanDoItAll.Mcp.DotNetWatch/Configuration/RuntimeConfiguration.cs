@@ -102,6 +102,7 @@ public sealed class RuntimeConfiguration
         DefaultQuietPeriod = TimeSpan.FromMilliseconds(options.Waits.DefaultQuietPeriodMs);
 
         AllowedProjectRoots = options.Security.AllowedProjectRoots.Select(root => ResolvePath(WorkspaceRoot, root)).ToArray();
+        AllowedExternalProjectRoots = options.Security.AllowedExternalProjectRoots.Select(root => ResolvePath(WorkspaceRoot, root)).ToArray();
         AllowExternalHealthHosts = options.Security.AllowExternalHealthHosts;
         AllowedEnvironmentKeys = new HashSet<string>(options.Security.AllowedEnvironmentKeys, StringComparer.OrdinalIgnoreCase);
 
@@ -244,6 +245,8 @@ public sealed class RuntimeConfiguration
 
     public IReadOnlyList<string> AllowedProjectRoots { get; }
 
+    public IReadOnlyList<string> AllowedExternalProjectRoots { get; }
+
     public bool AllowExternalHealthHosts { get; }
 
     public HashSet<string> AllowedEnvironmentKeys { get; }
@@ -352,6 +355,10 @@ public sealed class RuntimeConfiguration
             ["testProjectsRelative"] = TestProjectPaths.Select(GetRelativePath).ToArray(),
             ["allowedProjectRoots"] = AllowedProjectRoots.ToArray(),
             ["allowedProjectRootsRelative"] = AllowedProjectRoots.Select(GetRelativePath).ToArray(),
+            ["allowedExternalProjectRoots"] = AllowedExternalProjectRoots.ToArray(),
+            ["allowedExternalProjectRootsRelative"] = AllowedExternalProjectRoots
+                .Select(root => root.StartsWith(WorkspaceRoot, StringComparison.OrdinalIgnoreCase) ? GetRelativePath(root) : root)
+                .ToArray(),
             ["allowedEnvironmentKeys"] = AllowedEnvironmentKeys.ToArray()
         };
     }

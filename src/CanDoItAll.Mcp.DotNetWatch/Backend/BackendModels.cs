@@ -120,6 +120,8 @@ public sealed record BackendManagerStatusResponse(
 public enum BackendManagerActionKind
 {
     StartDefaultApp,
+    StartProjectApp,
+    BrowseProject,
     StopSession,
     ForceStopSession,
     RebuildSession,
@@ -131,6 +133,8 @@ public sealed record BackendManagerActionRequest(
     string BackendId,
     BackendManagerActionKind Action,
     string? SessionId = null,
+    string? ProjectPath = null,
+    string? LaunchProfile = null,
     bool WaitForCompletion = false);
 
 public sealed record BackendManagerActionResponse(
@@ -140,6 +144,7 @@ public sealed record BackendManagerActionResponse(
     string Message,
     string? SessionId,
     string? OperationId,
+    string? SelectedProjectPath,
     bool Proxied,
     DateTimeOffset TimestampUtc);
 

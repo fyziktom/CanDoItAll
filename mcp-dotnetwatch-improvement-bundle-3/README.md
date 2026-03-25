@@ -36,3 +36,9 @@ Implementation summary:
 - added `tools/Reinstall-CanDoItAllMcps.ps1` to prepare the wrapper shadow build, publish current MCP helpers, update MCP config, and create the tray startup shortcut
 - added backend-catalog cleanup to resetup and delete-friendly catalog reads so stale records stop accumulating and blocking tray cleanup
 - validated tray-on versus tray-off hot-reload timing and wrote the comparison to `artifacts/tray-benchmark-summary.json`
+- extended the backend manager with:
+  - `Open HTTP App` and `Open HTTPS App` buttons on live sessions
+  - `Start Default App (HTTPS)` in the backend control bar
+  - project browsing plus project-path launch controls for arbitrary `.csproj` files
+  - support for sibling-repo project starts through configured external project roots
+- validated the manager against `C:\repositories\pveinvoicing\PVEInvoicing\PVEInvoicing\PVEInvoicing.csproj` with a Playwright-driven browser flow plus native Windows dialog automation, and wrote the result to `artifacts/manager-pveinvoicing-validation.json`

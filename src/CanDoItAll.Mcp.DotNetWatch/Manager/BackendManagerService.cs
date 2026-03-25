@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.Mcp.DotNetWatch.Backend;
+using CanDoItAll.Mcp.DotNetWatch.Configuration;
 using CanDoItAll.Mcp.DotNetWatch.Runtime;
 
 namespace CanDoItAll.Mcp.DotNetWatch.Manager;
@@ -12,6 +13,8 @@ internal sealed class BackendManagerService(
     SessionCoordinator coordinator,
     GlobalBackendCatalogStore catalogStore,
     IHttpClientFactory httpClientFactory,
+    RuntimeConfiguration configuration,
+    IProjectPathPicker projectPathPicker,
     ILogger<BackendManagerService> logger)
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
@@ -150,11 +153,15 @@ internal sealed class BackendManagerService(
                     entryPath: null,
                     configurationName: null,
                     framework: null,
-                    launchProfile: null,
+                    launchProfile: NormalizeLaunchProfile(request.LaunchProfile),
                     workingDirectory: null,
                     arguments: [],
                     environmentOverlay: null,
-                    urls: [],
+                    urls: ResolveManagerStartUrls(
+                        GetDefaultProjectPath(),
+                        request.LaunchProfile,
+                        configuration.DefaultApp.Urls,
+                        configuration.DefaultApp.LaunchProfile),
                     reuseIfCompatible: true,
                     conflictPolicy: AppStartConflictPolicy.Fail,
                     waitFor: AppWaitCondition.None,
@@ -165,19 +172,68 @@ internal sealed class BackendManagerService(
                     $"Default app session '{started.SessionId}' is {started.State}.",
                     started.SessionId,
                     operationId: null,
+                    selectedProjectPath: null,
+                    proxied);
+            }
+
+            case BackendManagerActionKind.StartProjectApp:
+            {
+                var projectPath = NormalizeProjectPath(RequireProjectPath(request));
+                var started = await coordinator.StartAppAsync(
+                    logicalAppId: null,
+                    projectPath: projectPath,
+                    mode: null,
+                    launchType: AppLaunchType.Project,
+                    preferredLane: null,
+                    entryPath: null,
+                    configurationName: null,
+                    framework: null,
+                    launchProfile: NormalizeLaunchProfile(request.LaunchProfile),
+                    workingDirectory: null,
+                    arguments: [],
+                    environmentOverlay: null,
+                    urls: ResolveManagerStartUrls(projectPath, request.LaunchProfile),
+                    reuseIfCompatible: true,
+                    conflictPolicy: AppStartConflictPolicy.Fail,
+                    waitFor: AppWaitCondition.None,
+                    cancellationToken);
+
+                return Success(
+                    request,
+                    $"Project session '{started.SessionId}' is {started.State}.",
+                    started.SessionId,
+                    operationId: null,
+                    selectedProjectPath: projectPath,
+                    proxied);
+            }
+
+            case BackendManagerActionKind.BrowseProject:
+            {
+                var initialDirectory = ResolveBrowseInitialDirectory(request.ProjectPath);
+                var selectedProjectPath = await projectPathPicker.PickProjectPathAsync(initialDirectory, cancellationToken);
+                var message = string.IsNullOrWhiteSpace(selectedProjectPath)
+                    ? "Project browse canceled."
+                    : $"Selected project '{selectedProjectPath}'.";
+
+                return Success(
+                    request,
+                    message,
+                    sessionId: null,
+                    operationId: null,
+                    selectedProjectPath,
                     proxied);
             }
 
             case BackendManagerActionKind.StopSession:
             {
                 var stop = await coordinator.StopAppAsync(RequireSessionId(request), "Manager stop requested.", force: false, cancellationToken);
-                return Success(request, $"Session '{stop.SessionId}' stopped.", stop.SessionId, operationId: null, proxied);
+                return Success(request, $"Session '{stop.SessionId}' stopped.", stop.SessionId, operationId: null, selectedProjectPath: null, proxied);
             }
 
             case BackendManagerActionKind.ForceStopSession:
             {
                 var stop = await coordinator.StopAppAsync(RequireSessionId(request), "Manager force stop requested.", force: true, cancellationToken);
-                return Success(request, $"Session '{stop.SessionId}' was force-stopped.", stop.SessionId, operationId: null, proxied);
+                return Success(request, $"Session '{stop.SessionId}' was force-stopped.", stop.SessionId, operationId: null, selectedProjectPath: null, proxied);
             }
 
             case BackendManagerActionKind.RebuildSession:
@@ -188,6 +244,7 @@ internal sealed class BackendManagerService(
                     $"Session '{rebuild.SessionId}' rebuild requested via {rebuild.Strategy}.",
                     rebuild.SessionId,
                     operationId: null,
+                    selectedProjectPath: null,
                     proxied);
             }
 
@@ -199,6 +256,7 @@ internal sealed class BackendManagerService(
                     $"Session '{rebuild.SessionId}' force rebuild completed via {rebuild.Strategy}.",
                     rebuild.SessionId,
                     operationId: null,
+                    selectedProjectPath: null,
                     proxied);
             }
 
@@ -220,6 +278,7 @@ internal sealed class BackendManagerService(
                     $"Build operation '{build.OperationId}' started.",
                     sessionId: null,
                     build.OperationId,
+                    selectedProjectPath: null,
                     proxied);
             }
 
@@ -299,11 +358,83 @@ internal sealed class BackendManagerService(
         throw new ToolInvocationException("ValidationError", "This manager action requires a sessionId.", new { request.Action, request.BackendId });
     }
 
+    private static string RequireProjectPath(BackendManagerActionRequest request)
+    {
+        if (!string.IsNullOrWhiteSpace(request.ProjectPath))
+        {
+            return request.ProjectPath.Trim();
+        }
+
+        throw new ToolInvocationException("ValidationError", "This manager action requires a projectPath.", new { request.Action, request.BackendId });
+    }
+
+    private string ResolveBrowseInitialDirectory(string? requestedProjectPath)
+    {
+        if (!string.IsNullOrWhiteSpace(requestedProjectPath))
+        {
+            var fullRequestedPath = NormalizeProjectPath(requestedProjectPath);
+            if (File.Exists(fullRequestedPath))
+            {
+                return Path.GetDirectoryName(fullRequestedPath) ?? configuration.WorkspaceRoot;
+            }
+
+            if (Directory.Exists(fullRequestedPath))
+            {
+                return fullRequestedPath;
+            }
+        }
+
+        return configuration.AllowedExternalProjectRoots.FirstOrDefault(Directory.Exists)
+            ?? configuration.WorkspaceRoot;
+    }
+
+    private string GetDefaultProjectPath()
+    {
+        return NormalizeProjectPath(configuration.DefaultApp.ProjectPath);
+    }
+
+    private string NormalizeProjectPath(string projectPath)
+    {
+        return Path.IsPathRooted(projectPath)
+            ? Path.GetFullPath(projectPath)
+            : Path.GetFullPath(Path.Combine(configuration.WorkspaceRoot, projectPath));
+    }
+
+    private static string? NormalizeLaunchProfile(string? launchProfile)
+    {
+        return string.IsNullOrWhiteSpace(launchProfile)
+            ? null
+            : launchProfile.Trim();
+    }
+
+    private static IReadOnlyList<string> ResolveManagerStartUrls(
+        string projectPath,
+        string? launchProfile,
+        IReadOnlyList<string>? configuredUrls = null,
+        string? configuredLaunchProfile = null)
+    {
+        var normalizedLaunchProfile = NormalizeLaunchProfile(launchProfile);
+        if (string.IsNullOrWhiteSpace(normalizedLaunchProfile))
+        {
+            return [];
+        }
+
+        if (configuredUrls is { Count: > 0 } &&
+            !string.IsNullOrWhiteSpace(configuredLaunchProfile) &&
+            string.Equals(normalizedLaunchProfile, configuredLaunchProfile, StringComparison.OrdinalIgnoreCase))
+        {
+            return configuredUrls;
+        }
+
+        return ProjectLaunchSettingsResolver.ResolveUrls(projectPath, normalizedLaunchProfile);
+    }
+
     private static BackendManagerActionResponse Success(
         BackendManagerActionRequest request,
         string message,
         string? sessionId,
         string? operationId,
+        string? selectedProjectPath,
         bool proxied)
     {
         return new BackendManagerActionResponse(
@@ -313,6 +444,7 @@ internal sealed class BackendManagerService(
             Message: message,
             SessionId: sessionId,
             OperationId: operationId,
+            SelectedProjectPath: selectedProjectPath,
             Proxied: proxied,
             TimestampUtc: DateTimeOffset.UtcNow);
     }
