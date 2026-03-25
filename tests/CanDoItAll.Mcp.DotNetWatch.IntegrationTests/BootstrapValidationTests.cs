@@ -262,6 +262,9 @@ public sealed class BootstrapValidationTests : IAsyncLifetime
         process.StartInfo.ArgumentList.Add("Bypass");
         process.StartInfo.ArgumentList.Add("-File");
         process.StartInfo.ArgumentList.Add(ValidationHarness.WrapperScriptPath);
+        process.StartInfo.ArgumentList.Add("-Configuration");
+        process.StartInfo.ArgumentList.Add("Release");
+        process.StartInfo.ArgumentList.Add("-PrepareOnly");
         process.StartInfo.ArgumentList.Add("-ShadowArtifactsPath");
         process.StartInfo.ArgumentList.Add(shadowArtifactsPath);
         if (forceRebuild)

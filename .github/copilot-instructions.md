@@ -37,14 +37,15 @@ Act like a pragmatic architecture-minded engineer: direct, critical, and precise
 
 ## CanDoItAll MCP DotNetWatch Server (MANDATORY WORKFLOW)
 
-This workspace includes a custom MCP server (`candoitall_dotnetwatch`) that manages the `dotnet watch` lifecycle for the Blazor app. It is configured in `.vscode/mcp.json` and `CanDoItAll.Mcp.DotNetWatch.settings.json`.
+This workspace includes custom CanDoItAll MCP servers. The primary one is `candoitall_dotnetwatch`, which manages the `dotnet watch` lifecycle for the Blazor app. Local MCP wiring lives in `.vscode/mcp.json`, and server settings live in `CanDoItAll.Mcp.DotNetWatch.settings.json` and `CanDoItAll.Mcp.SshOps.settings.json`.
 
 ### What it does
 
 - Manages the full app lifecycle: start, stop, restart, health checks, build, test, log streaming.
 - Runs `dotnet watch run` under the hood so CSS/Razor hot-reload works in seconds without full rebuilds.
 - Provides health-check polling at `https://localhost:7271/_dev/runtime` so you know when changes are ready.
-- The server runs from a shadow-built artifact (`.artifacts/mcp-server-shadow/...`) so the repo itself can be rebuilt without colliding with the running MCP host.
+- The dotnetwatch server runs through `tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1`, which rebuilds a `Release` shadow artifact under `.artifacts\mcp-server-shadow\...` so the repo itself can be rebuilt without colliding with the running MCP host.
+- The other local CanDoItAll MCP executables are installed under `.artifacts\mcp-installs\...` and must not be launched from project `bin` folders.
 
 ### Default Workflow (always follow this order)
 
@@ -66,14 +67,21 @@ This workspace includes a custom MCP server (`candoitall_dotnetwatch`) that mana
 - Do NOT use raw `dotnet watch`, `dotnet run`, `dotnet build`, or `dotnet test` in the terminal unless explicitly asked or when repairing the MCP server itself.
 - Use the MCP server for all build, test, and lifecycle operations.
 - If the MCP server tool fails to start or times out, say so explicitly and continue with best-effort reasoning.
+- If the local MCP binaries were changed, rerun `tools\Reinstall-CanDoItAllMcps.ps1` before assuming the environment is broken.
 
-### Shadow Build (refresh the MCP server)
+### MCP Resetup
 
-To update the server shadow copy after modifying `CanDoItAll.Mcp.DotNetWatch`:
+To rebuild and reinstall the local CanDoItAll MCP servers after modifying them:
 
 ```
-dotnet build src\CanDoItAll.Mcp.DotNetWatch\CanDoItAll.Mcp.DotNetWatch.csproj -c Debug --artifacts-path .artifacts\mcp-server-shadow -p:UseAppHost=false
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Reinstall-CanDoItAllMcps.ps1
 ```
+
+That script:
+
+- refreshes the `Release` dotnetwatch shadow host under `.artifacts\mcp-server-shadow`
+- publishes `CanDoItAll.Mcp.SshOps` and `CanDoItAll.Manager` into `.artifacts\mcp-installs`
+- updates local MCP config entries so they point to artifact-backed installs instead of project `bin` outputs
 
 ## Validation
 

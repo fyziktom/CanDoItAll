@@ -2,11 +2,26 @@
   "servers": {
     "candoitall_dotnetwatch": {
       "type": "stdio",
-      "command": "dotnet",
+      "command": "powershell",
       "args": [
-        "${workspaceFolder}\\.artifacts\\mcp-server-shadow\\bin\\CanDoItAll.Mcp.DotNetWatch\\debug\\CanDoItAll.Mcp.DotNetWatch.dll",
-        "--settings",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\tools\\CanDoItAll.Mcp.DotNetWatch\\Start-CanDoItAllDotNetWatchMcp.ps1",
+        "-Configuration",
+        "Release",
+        "-SettingsPath",
         "${workspaceFolder}\\CanDoItAll.Mcp.DotNetWatch.settings.json"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    "candoitall_sshops": {
+      "type": "stdio",
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.SshOps\\current\\CanDoItAll.Mcp.SshOps.exe",
+      "args": [
+        "--settings",
+        "${workspaceFolder}\\CanDoItAll.Mcp.SshOps.settings.json"
       ],
       "cwd": "${workspaceFolder}"
     },
