@@ -31,5 +31,6 @@
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/CanDoItAll.Manager/CanDoItAll.Manager.csproj" />
+    <Project Path="tools/CanDoItAll.Mcp.DotNetWatch.Tray/CanDoItAll.Mcp.DotNetWatch.Tray.csproj" />
   </Folder>
 </Solution>

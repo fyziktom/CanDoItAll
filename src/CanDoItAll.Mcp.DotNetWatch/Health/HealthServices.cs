@@ -15,6 +15,8 @@ public sealed record HealthSnapshot(
     int? RuntimePid,
     IReadOnlyList<string> ActiveUrls)
 {
+    public long? HotReloadGeneration { get; init; }
+
     public string? OwnerKind { get; init; }
 
     public string? OwnerId { get; init; }
@@ -29,6 +31,8 @@ public sealed record RuntimeProbePayload(
     int? RuntimePid,
     IReadOnlyList<string>? ActiveUrls)
 {
+    public long? HotReloadGeneration { get; init; }
+
     public string? OwnerKind { get; init; }
 
     public string? OwnerId { get; init; }
@@ -83,6 +87,7 @@ public sealed class HttpHealthProbe(RuntimeConfiguration configuration, HttpProb
                         payload.RuntimePid,
                         payload.ActiveUrls ?? [])
                     {
+                        HotReloadGeneration = payload.HotReloadGeneration,
                         OwnerKind = payload.OwnerKind,
                         OwnerId = payload.OwnerId,
                         ServerInstanceId = payload.ServerInstanceId
@@ -102,6 +107,7 @@ public sealed class HttpHealthProbe(RuntimeConfiguration configuration, HttpProb
                         payload?.RuntimePid,
                         payload?.ActiveUrls is { Count: > 0 } activeUrls ? activeUrls : [url.ToString()])
                     {
+                        HotReloadGeneration = payload?.HotReloadGeneration,
                         OwnerKind = payload?.OwnerKind,
                         OwnerId = payload?.OwnerId,
                         ServerInstanceId = payload?.ServerInstanceId

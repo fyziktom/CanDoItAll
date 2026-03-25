@@ -93,6 +93,7 @@ if (app.Environment.IsDevelopment())
             snapshot.EnvironmentName,
             snapshot.Summary,
             WatchIteration = iteration,
+            HotReloadGeneration = RuntimeHotReloadTracker.CurrentGeneration,
             RuntimePid = Environment.ProcessId,
             OwnerKind = app.Configuration["CanDoItAllMcpOwnerKind"],
             OwnerId = app.Configuration["CanDoItAllMcpOwnerId"],

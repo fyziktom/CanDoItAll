@@ -143,9 +143,11 @@ internal static class Program
         var registrationStore = app.Services.GetRequiredService<BackendRegistrationStore>();
         var globalCatalogStore = app.Services.GetRequiredService<GlobalBackendCatalogStore>();
         var identityProvider = app.Services.GetRequiredService<BackendIdentityProvider>();
+        var ownershipCoordinator = app.Services.GetRequiredService<BackendWorkspaceOwnershipCoordinator>();
         var managerService = app.Services.GetRequiredService<BackendManagerService>();
         var invoker = app.Services.GetRequiredService<IDotNetWatchToolInvoker>();
         var bootstrapDiagnostics = app.Services.GetRequiredService<BootstrapDiagnosticsWriter>();
+        var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("CanDoItAll.Mcp.DotNetWatch.BackendHost");
 
         BackendRegistrationRecord? registrationRecord = null;
         app.Use(async (httpContext, next) =>
@@ -188,6 +190,16 @@ internal static class Program
 
         MapToolRoutes(app, invoker);
 
+        var ownership = await ownershipCoordinator.AcquireAsync(CancellationToken.None);
+        if (!ownership.Acquired)
+        {
+            logger.LogInformation(
+                "Backend startup exited because workspace ownership is held by {BackendId}.",
+                ownership.ExistingOwner?.BackendId ?? "<pending>");
+            return;
+        }
+
+        await using var ownershipLease = ownership.Lease!;
         await using var serverRegistration = await app.Services.GetRequiredService<ServerInstanceRegistry>().RegisterCurrentAsync(CancellationToken.None);
         await RunStartupCleanupAsync(app.Services);
 
@@ -274,6 +286,7 @@ internal static class Program
         services.AddSingleton<ServerInstanceRegistry>();
         services.AddSingleton<BackendRegistrationStore>();
         services.AddSingleton<GlobalBackendCatalogStore>();
+        services.AddSingleton<BackendWorkspaceOwnershipCoordinator>();
         services.AddSingleton<BackendRequestReplayStore>();
         services.AddSingleton<IProcessCommandRunner, ProcessCommandRunner>();
         services.AddSingleton<IPlatformProcessTreeTerminator>(static serviceProvider =>
@@ -302,6 +315,7 @@ internal static class Program
         services.AddSingleton<StartFailureDiagnoser>();
         services.AddSingleton<SessionCoordinator>();
         services.AddSingleton<LocalToolInvoker>();
+        services.AddSingleton<IProjectPathPicker, WindowsProjectPathPicker>();
         services.AddSingleton<BackendManagerService>();
     }
 

@@ -44,7 +44,7 @@ This workspace includes custom CanDoItAll MCP servers. The primary one is `cando
 - Manages the full app lifecycle: start, stop, restart, health checks, build, test, log streaming.
 - Runs `dotnet watch run` under the hood so CSS/Razor hot-reload works in seconds without full rebuilds.
 - Provides health-check polling at `https://localhost:7271/_dev/runtime` so you know when changes are ready.
-- The dotnetwatch server runs through `tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1`, which rebuilds a `Release` shadow artifact under `.artifacts\mcp-server-shadow\...` so the repo itself can be rebuilt without colliding with the running MCP host.
+- The dotnetwatch server runs through `tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1`, which rebuilds or reuses the current `Release` shadow artifact under `.artifacts\mcp-server-shadow\builds\...` so the repo itself can be rebuilt without colliding with the running MCP host.
 - The other local CanDoItAll MCP executables are installed under `.artifacts\mcp-installs\...` and must not be launched from project `bin` folders.
 
 ### Default Workflow (always follow this order)
@@ -71,9 +71,21 @@ This workspace includes custom CanDoItAll MCP servers. The primary one is `cando
 
 ### MCP Resetup
 
-To rebuild and reinstall the local CanDoItAll MCP servers after modifying them:
+The wrapper is the default launch path and will refresh the shadow host automatically when the MCP source changes. If you need to force a wrapper-side rebuild manually, run:
 
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1 -RepoRoot . -Configuration Release -SettingsPath .\CanDoItAll.Mcp.DotNetWatch.settings.json -ForceRebuild
 ```
+
+### Repo-managed Codex assets
+
+- Repo-managed Codex skill packs live under `codex/skills/`.
+- The supported machine resetup path is `tools\Reinstall-CanDoItAllMcps.ps1`.
+- That script is responsible for syncing the repo-managed skill pack into `%USERPROFILE%\.codex\skills`, refreshing the wrapper-backed MCP setup, and installing the tray operator app.
+
+To rebuild and reinstall the full local CanDoItAll MCP toolset after modifying it:
+
+```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\Reinstall-CanDoItAllMcps.ps1
 ```
 
@@ -81,6 +93,8 @@ That script:
 
 - refreshes the `Release` dotnetwatch shadow host under `.artifacts\mcp-server-shadow`
 - publishes `CanDoItAll.Mcp.SshOps` and `CanDoItAll.Manager` into `.artifacts\mcp-installs`
+- publishes `CanDoItAll.Mcp.DotNetWatch.Tray` into `.artifacts\mcp-installs`
+- syncs repo-managed skill packs into `%USERPROFILE%\.codex\skills`
 - updates local MCP config entries so they point to artifact-backed installs instead of project `bin` outputs
 
 ## Validation

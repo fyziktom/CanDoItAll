@@ -226,6 +226,30 @@ public sealed class BundleImprovementTests
         Assert.Contains("--extra", executableStart.Arguments);
     }
 
+    [Fact]
+    public void BuildManagedProcessStartArguments_OmitsArtifactsPath_ForSourceWatch()
+    {
+        var project = new ProjectLaunchSpec(
+            LogicalAppId: "web",
+            LaneKind: RuntimeLaneKind.SourceWatch,
+            ProjectPath: @"C:\repo\src\CanDoItAll.Web\CanDoItAll.Web.csproj",
+            WorkingDirectory: @"C:\repo\src\CanDoItAll.Web",
+            Configuration: "Debug",
+            Framework: null,
+            LaunchProfile: "https",
+            Arguments: [],
+            EnvironmentOverlay: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            Urls: ["http://127.0.0.1:5510"],
+            HealthUrls: [new Uri("http://127.0.0.1:5510/_dev/runtime", UriKind.Absolute)]);
+
+        var start = AppRuntimeManager.BuildManagedProcessStartArguments(project, ["--flag"], @"C:\repo\.mcp-state\artifacts\unused");
+
+        Assert.Equal("dotnet", start.Command);
+        Assert.Equal("watch", start.Arguments[0]);
+        Assert.DoesNotContain("--artifacts-path", start.Arguments, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("--flag", start.Arguments);
+    }
+
     private static AppStatusData CreateHealthyWatchStatus()
     {
         return new AppStatusData(
@@ -246,6 +270,11 @@ public sealed class BundleImprovementTests
             RecentEvents: ["Healthy."],
             Watch: new WatchStatusData(WatchProcessingState.WaitingForChanges, "Watching", false, 4100, 4321, 3, 3, HotReloadOutcome.Succeeded, 3, DateTimeOffset.UtcNow))
         {
+            Watch = new WatchStatusData(WatchProcessingState.WaitingForChanges, "Watching", false, 4100, 4321, 3, 3, HotReloadOutcome.Succeeded, 3, DateTimeOffset.UtcNow)
+            {
+                IsReadyForHotReload = true,
+                ReadyForHotReloadSequence = 3
+            },
             LogicalAppId = "web",
             LaneKind = RuntimeLaneKind.SourceWatch,
             Revision = new RuntimeRevisionData("WatchIteration", "web:3", DateTimeOffset.UtcNow, true)

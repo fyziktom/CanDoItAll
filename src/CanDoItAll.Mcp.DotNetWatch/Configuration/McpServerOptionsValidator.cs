@@ -112,6 +112,15 @@ public sealed class McpServerOptionsValidator : IValidateOptions<McpServerOption
             }
         }
 
+        foreach (var externalRoot in options.Security.AllowedExternalProjectRoots)
+        {
+            var resolvedRoot = ResolvePath(workspaceRoot, externalRoot);
+            if (!Directory.Exists(resolvedRoot))
+            {
+                failures.Add($"Allowed external project root '{externalRoot}' resolves to a missing directory '{resolvedRoot}'.");
+            }
+        }
+
         if (options.Security.AllowedEnvironmentKeys.Any(static key => key.Contains('*')))
         {
             failures.Add("Security:AllowedEnvironmentKeys cannot contain wildcard entries.");

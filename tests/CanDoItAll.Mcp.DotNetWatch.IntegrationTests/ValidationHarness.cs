@@ -227,8 +227,8 @@ internal sealed class ValidationHarness : IAsyncDisposable
         var stderr = await stderrTask;
 
         Assert.Equal(0, process.ExitCode);
-
         Assert.True(File.Exists(ShadowManifestPath), $"Wrapper prewarm did not produce '{ShadowManifestPath}'. Stdout={stdout} Stderr={stderr}");
+        Assert.Contains("CanDoItAll.Mcp.DotNetWatch.dll", stdout, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string Serialize(object? value)

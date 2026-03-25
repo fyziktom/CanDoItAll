@@ -47,14 +47,14 @@ public sealed class AppSessionLifecycleTests
     }
 
     [Fact]
-    public void MarkHealthy_AfterHotReloadSuccess_ClearsPendingChange_WithoutInventingARestart()
+    public void MarkHealthy_AfterHotReloadSuccess_ClearsPendingChange_WhenHotReloadGenerationAdvances()
     {
         var session = CreateWatchSession();
-        session.MarkHealthy(CreateHealthySnapshot(watchIteration: 7, runtimePid: 7100));
+        session.MarkHealthy(CreateHealthySnapshot(watchIteration: 7, runtimePid: 7100, hotReloadGeneration: 0));
 
         session.NoteLog(CreateLogEntry(30, "dotnet watch : File updated: .\\Components\\Pages\\Home.razor"));
         session.NoteLog(CreateLogEntry(31, "dotnet watch : [CanDoItAll.Web (net10.0)] Hot reload succeeded."));
-        session.MarkHealthy(CreateHealthySnapshot(watchIteration: 7, runtimePid: 7100));
+        session.MarkHealthy(CreateHealthySnapshot(watchIteration: 7, runtimePid: 7100, hotReloadGeneration: 1));
 
         var status = session.ToStatusData();
 
@@ -65,10 +65,83 @@ public sealed class AppSessionLifecycleTests
         Assert.Equal(HotReloadOutcome.Succeeded, status.Watch.LastHotReloadOutcome);
         Assert.Equal(7, status.Watch.ExpectedWatchIteration);
         Assert.Equal(7, status.Watch.ConfirmedWatchIteration);
+        Assert.Equal(1, status.Watch.ExpectedHotReloadGeneration);
+        Assert.Equal(1, status.Watch.ConfirmedHotReloadGeneration);
         Assert.Equal(7100, status.Watch.RuntimePid);
         Assert.True(status.Health!.IsReady);
         Assert.Equal(7, status.Health.WatchIteration);
+        Assert.Equal(1, status.Health.HotReloadGeneration);
         Assert.Equal(7100, status.Health.RuntimePid);
+    }
+
+    [Fact]
+    public void HotReloadSuccess_RemainsPending_UntilHotReloadGenerationAdvances()
+    {
+        var session = CreateWatchSession();
+        session.MarkHealthy(CreateHealthySnapshot(watchIteration: 4, runtimePid: 4100, hotReloadGeneration: 0));
+
+        session.NoteLog(CreateLogEntry(40, "dotnet watch : File updated: .\\Pages\\Projects.razor"));
+        session.NoteLog(CreateLogEntry(41, "dotnet watch : [CanDoItAll.Web (net10.0)] Hot reload succeeded."));
+
+        var staleSnapshot = CreateHealthySnapshot(watchIteration: 4, runtimePid: 4100, hotReloadGeneration: 0);
+        Assert.False(session.ConfirmsCurrentGeneration(staleSnapshot));
+        session.MarkHealthObserved(staleSnapshot, "Still waiting for updated generation.");
+
+        var pendingStatus = session.ToStatusData();
+        Assert.NotNull(pendingStatus.Watch);
+        Assert.True(pendingStatus.Watch!.PendingChange);
+        Assert.Equal(WatchProcessingState.HotReloadSucceeded, pendingStatus.Watch.State);
+        Assert.Equal(1, pendingStatus.Watch.ExpectedHotReloadGeneration);
+        Assert.Equal(0, pendingStatus.Watch.ConfirmedHotReloadGeneration);
+
+        var confirmedSnapshot = CreateHealthySnapshot(watchIteration: 4, runtimePid: 4100, hotReloadGeneration: 1);
+        Assert.True(session.ConfirmsCurrentGeneration(confirmedSnapshot));
+        session.MarkHealthy(confirmedSnapshot);
+
+        var confirmedStatus = session.ToStatusData();
+        Assert.False(confirmedStatus.Watch!.PendingChange);
+        Assert.Equal(1, confirmedStatus.Watch.ConfirmedHotReloadGeneration);
+        Assert.Equal(1, confirmedStatus.Health!.HotReloadGeneration);
+    }
+
+    [Fact]
+    public void MarkHealthy_DoesNotExposeWatchReadyUntilWaitingForChangesLogArrives()
+    {
+        var session = CreateWatchSession();
+        session.MarkHealthy(CreateHealthySnapshot(watchIteration: 5, runtimePid: 5100, hotReloadGeneration: 0));
+
+        var beforeReadyLog = session.ToStatusData();
+        Assert.NotNull(beforeReadyLog.Watch);
+        Assert.False(beforeReadyLog.Watch!.IsReadyForHotReload);
+        Assert.Null(beforeReadyLog.Watch.ReadyForHotReloadSequence);
+
+        session.NoteLog(CreateLogEntry(50, "dotnet watch : Waiting for changes"));
+
+        var afterReadyLog = session.ToStatusData();
+        Assert.True(afterReadyLog.Watch!.IsReadyForHotReload);
+        Assert.Equal(50, afterReadyLog.Watch.ReadyForHotReloadSequence);
+    }
+
+    [Fact]
+    public void PreReadyStartupLogs_DoNotBeginImplicitWatchChange()
+    {
+        var session = CreateWatchSession();
+        session.MarkHealthy(CreateHealthySnapshot(watchIteration: 6, runtimePid: 6100, hotReloadGeneration: 0));
+
+        session.NoteLog(CreateLogEntry(60, "dotnet watch : Projects loaded in 26.3s."));
+
+        var afterProjectsLoaded = session.ToStatusData();
+        Assert.NotNull(afterProjectsLoaded.Watch);
+        Assert.False(afterProjectsLoaded.Watch!.PendingChange);
+        Assert.Equal(WatchProcessingState.LoadingProjects, afterProjectsLoaded.Watch.State);
+        Assert.False(afterProjectsLoaded.Watch.IsReadyForHotReload);
+
+        session.NoteLog(CreateLogEntry(61, "dotnet watch : Waiting for changes"));
+
+        var afterWaiting = session.ToStatusData();
+        Assert.False(afterWaiting.Watch!.PendingChange);
+        Assert.True(afterWaiting.Watch.IsReadyForHotReload);
+        Assert.Equal(61, afterWaiting.Watch.ReadyForHotReloadSequence);
     }
 
     [Fact]
@@ -103,7 +176,7 @@ public sealed class AppSessionLifecycleTests
         return new AppSession("app_test", template, "corr_test", new RingLogBuffer(128), healthEnabled: true);
     }
 
-    private static HealthSnapshot CreateHealthySnapshot(int watchIteration, int runtimePid)
+    private static HealthSnapshot CreateHealthySnapshot(int watchIteration, int runtimePid, long hotReloadGeneration = 0)
     {
         return new HealthSnapshot(
             "Healthy",
@@ -116,6 +189,7 @@ public sealed class AppSessionLifecycleTests
             runtimePid,
             ["https://localhost:7271", "http://localhost:5032"])
         {
+            HotReloadGeneration = hotReloadGeneration,
             OwnerKind = "app",
             OwnerId = "app_test",
             ServerInstanceId = "srv_test"

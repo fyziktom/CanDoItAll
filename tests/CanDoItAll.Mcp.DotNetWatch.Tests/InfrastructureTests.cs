@@ -57,6 +57,37 @@ public sealed class InfrastructureTests
     }
 
     [Fact]
+    public void PathGuard_Allows_ProjectInsideConfiguredExternalRoot()
+    {
+        using var workspace = CreateWorkspace();
+        var externalRoot = Path.Combine(Path.GetTempPath(), "CanDoItAll.Mcp.DotNetWatch.External", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(externalRoot);
+
+        try
+        {
+            var options = CreateOptions(workspace.RootPath);
+            options.Security.AllowedExternalProjectRoots = [externalRoot];
+            var externalProject = Path.Combine(externalRoot, "SiblingApp", "SiblingApp.csproj");
+            Directory.CreateDirectory(Path.GetDirectoryName(externalProject)!);
+            File.WriteAllText(externalProject, "<Project />");
+
+            var configuration = new RuntimeConfiguration(Options.Create(options));
+            var pathGuard = new PathGuard(configuration);
+
+            var resolved = pathGuard.ResolveProjectPath(externalProject);
+
+            Assert.Equal(Path.GetFullPath(externalProject), resolved);
+        }
+        finally
+        {
+            if (Directory.Exists(externalRoot))
+            {
+                Directory.Delete(externalRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void EnvironmentOverlayFilter_Rejects_DisallowedKeys()
     {
         using var workspace = CreateWorkspace();
@@ -370,7 +401,7 @@ public sealed class InfrastructureTests
     }
 
     [Fact]
-    public void BuildManagedProcessArguments_UsesArtifactsCache_ForWatchRun()
+    public void BuildManagedProcessArguments_OmitsArtifactsCache_ForWatchRun()
     {
         var template = new AppStartTemplate(
             @"C:\repo\App.csproj",
@@ -390,8 +421,8 @@ public sealed class InfrastructureTests
 
         Assert.Equal("watch", arguments[0]);
         Assert.Contains("--non-interactive", arguments);
-        Assert.Contains("--artifacts-path", arguments);
-        Assert.Contains(@"C:\repo\.mcp-state\artifacts\app-projects\app-12345678", arguments);
+        Assert.DoesNotContain("--artifacts-path", arguments);
+        Assert.DoesNotContain(@"C:\repo\.mcp-state\artifacts\app-projects\app-12345678", arguments);
         Assert.Contains("--property:UseAppHost=false", arguments);
         Assert.Contains("--framework", arguments);
         Assert.Contains("net10.0", arguments);
@@ -430,6 +461,29 @@ public sealed class InfrastructureTests
     }
 
     [Fact]
+    public void ProjectLaunchSettingsResolver_Resolves_Multiple_Urls_For_Profile()
+    {
+        using var workspace = CreateWorkspace();
+        var projectPath = Path.Combine(workspace.RootPath, "src", "SampleApp", "SampleApp.csproj");
+        workspace.WriteFile(Path.Combine("src", "SampleApp", "SampleApp.csproj"), "<Project />");
+        workspace.WriteFile(
+            Path.Combine("src", "SampleApp", "Properties", "launchSettings.json"),
+            """
+            {
+              "profiles": {
+                "https": {
+                  "applicationUrl": "https://localhost:7267;http://localhost:5139"
+                }
+              }
+            }
+            """);
+
+        var urls = ProjectLaunchSettingsResolver.ResolveUrls(projectPath, "https");
+
+        Assert.Equal(["https://localhost:7267", "http://localhost:5139"], urls);
+    }
+
+    [Fact]
     public void BackendDashboardPage_RendersAggregateBackends_WithStringEnums_AndForceRebuildControl()
     {
         var identity = new BackendIdentitySnapshot("CanDoItAll.Mcp.DotNetWatch", @"C:\repo\one", @"C:\repo\one\settings.json", "hash-1", "bin-1");
@@ -442,7 +496,7 @@ public sealed class InfrastructureTests
             @"C:\repo\one\App.csproj",
             3,
             1234,
-            ["https://localhost:7411"],
+            ["https://localhost:7411", "http://localhost:5239"],
             null,
             DateTimeOffset.UtcNow,
             null,
@@ -489,6 +543,11 @@ public sealed class InfrastructureTests
         Assert.Contains("slot-a", html, StringComparison.Ordinal);
         Assert.Contains("txn_123", html, StringComparison.Ordinal);
         Assert.Contains("web:slot-a:abc", html, StringComparison.Ordinal);
+        Assert.Contains("Open HTTPS App", html, StringComparison.Ordinal);
+        Assert.Contains("Open HTTP App", html, StringComparison.Ordinal);
+        Assert.Contains("Start Default App (HTTPS)", html, StringComparison.Ordinal);
+        Assert.Contains("Browse Project", html, StringComparison.Ordinal);
+        Assert.Contains("Start Project (HTTPS)", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -519,6 +578,7 @@ public sealed class InfrastructureTests
                 Message: "Remote rebuild requested.",
                 SessionId: "app_remote",
                 OperationId: null,
+                SelectedProjectPath: null,
                 Proxied: false,
                 TimestampUtc: DateTimeOffset.UtcNow);
 
@@ -532,8 +592,10 @@ public sealed class InfrastructureTests
             identityProvider: null!,
             coordinator: null!,
             catalogStore: catalog,
-            httpClientFactory,
-            NullLogger<BackendManagerService>.Instance);
+            httpClientFactory: httpClientFactory,
+            configuration: configuration,
+            projectPathPicker: new StaticProjectPathPicker(selectedPath: null),
+            logger: NullLogger<BackendManagerService>.Instance);
 
         var result = await service.ExecuteManagerActionAsync(
             new BackendManagerActionRequest("backend_remote", BackendManagerActionKind.RebuildSession, SessionId: "app_remote"),
@@ -551,6 +613,30 @@ public sealed class InfrastructureTests
         Assert.True(result.Success);
         Assert.True(result.Proxied);
         Assert.Equal("app_remote", result.SessionId);
+    }
+
+    [Fact]
+    public async Task BackendManagerService_BrowseProject_ReturnsSelectedPath()
+    {
+        using var workspace = CreateWorkspace();
+        var configuration = new RuntimeConfiguration(Options.Create(CreateOptions(workspace.RootPath)));
+        var selectedProjectPath = Path.Combine(workspace.RootPath, "src", "CanDoItAll.Web", "CanDoItAll.Web.csproj");
+        var service = new BackendManagerService(
+            identityProvider: null!,
+            coordinator: null!,
+            catalogStore: new GlobalBackendCatalogStore(configuration, NullLogger<GlobalBackendCatalogStore>.Instance),
+            httpClientFactory: new StaticHttpClientFactory(new HttpClient(new StaticHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)))),
+            configuration: configuration,
+            projectPathPicker: new StaticProjectPathPicker(selectedProjectPath),
+            logger: NullLogger<BackendManagerService>.Instance);
+
+        var result = await service.ExecuteLocalActionAsync(
+            new BackendManagerActionRequest("backend_local", BackendManagerActionKind.BrowseProject),
+            proxied: false,
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(selectedProjectPath, result.SelectedProjectPath);
     }
 
     private static McpServerOptions CreateOptions(string workspaceRoot)
@@ -590,7 +676,8 @@ public sealed class InfrastructureTests
             },
             Security = new SecurityOptions
             {
-                AllowedProjectRoots = ["src", "tests", "tools"]
+                AllowedProjectRoots = ["src", "tests", "tools"],
+                AllowedExternalProjectRoots = []
             }
         };
     }
@@ -636,6 +723,12 @@ public sealed class InfrastructureTests
     private sealed class StaticHttpClientFactory(HttpClient client) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => client;
+    }
+
+    private sealed class StaticProjectPathPicker(string? selectedPath) : IProjectPathPicker
+    {
+        public Task<string?> PickProjectPathAsync(string initialDirectory, CancellationToken cancellationToken)
+            => Task.FromResult(selectedPath);
     }
 
     private sealed class StaticHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler

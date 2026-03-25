@@ -17,7 +17,7 @@ internal sealed class GlobalBackendCatalogStore(RuntimeConfiguration configurati
     {
         Directory.CreateDirectory(DirectoryPath);
         var path = GetRecordPath(registration.BackendId);
-        await using var stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+        await using var stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
         await JsonSerializer.SerializeAsync(stream, registration, SerializerOptions, cancellationToken);
     }
 
@@ -33,7 +33,7 @@ internal sealed class GlobalBackendCatalogStore(RuntimeConfiguration configurati
         {
             try
             {
-                await using var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                await using var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 var record = await JsonSerializer.DeserializeAsync<BackendRegistrationRecord>(stream, SerializerOptions, cancellationToken);
                 if (record is not null)
                 {

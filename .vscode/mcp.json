@@ -9,6 +9,8 @@
         "Bypass",
         "-File",
         "${workspaceFolder}\\tools\\CanDoItAll.Mcp.DotNetWatch\\Start-CanDoItAllDotNetWatchMcp.ps1",
+        "-RepoRoot",
+        "${workspaceFolder}",
         "-Configuration",
         "Release",
         "-SettingsPath",

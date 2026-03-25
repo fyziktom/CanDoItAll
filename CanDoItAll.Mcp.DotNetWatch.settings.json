@@ -19,7 +19,6 @@
     "EnvironmentOverlay": {
       "ASPNETCORE_ENVIRONMENT": "Development",
       "DOTNET_ENVIRONMENT": "Development",
-      "DOTNET_USE_POLLING_FILE_WATCHER": "1",
       "DOTNET_CLI_UI_LANGUAGE": "en"
     }
   },
@@ -103,7 +102,7 @@
     "ForceKillAfterMs": 5000,
     "CleanupStaleManagedProcessesOnStartup": true,
     "RegistryPath": ".mcp-state/process-registry.json",
-    "UsePollingFileWatcher": true
+    "UsePollingFileWatcher": false
   },
   "Waits": {
     "DefaultAppWaitTimeoutMs": 300000,
@@ -116,6 +115,9 @@
       "src",
       "tests",
       "tools"
+    ],
+    "AllowedExternalProjectRoots": [
+      ".."
     ],
     "AllowExternalHealthHosts": false,
     "AllowedEnvironmentKeys": [

@@ -125,7 +125,7 @@ internal static class BackendDashboardPage
       font-weight: 600;
     }
     .link:hover { text-decoration: underline; }
-    button {
+    button, .button-link {
       border: 0;
       border-radius: 999px;
       padding: 0.6rem 0.95rem;
@@ -135,14 +135,37 @@ internal static class BackendDashboardPage
       color: white;
       background: linear-gradient(135deg, #0f766e, #1d4ed8);
       box-shadow: 0 10px 18px rgba(29,78,216,0.18);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
-    button.secondary { background: linear-gradient(135deg, #475569, #1f2937); }
-    button.danger { background: linear-gradient(135deg, #be123c, #9f1239); }
-    button.warn { background: linear-gradient(135deg, #d97706, #b45309); }
-    button:disabled {
+    button.secondary, .button-link.secondary { background: linear-gradient(135deg, #475569, #1f2937); }
+    button.danger, .button-link.danger { background: linear-gradient(135deg, #be123c, #9f1239); }
+    button.warn, .button-link.warn { background: linear-gradient(135deg, #d97706, #b45309); }
+    button.info, .button-link.info { background: linear-gradient(135deg, #1d4ed8, #0f766e); }
+    button:disabled, .button-link:disabled {
       cursor: not-allowed;
       opacity: 0.55;
       box-shadow: none;
+    }
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid rgba(15,23,42,0.14);
+      border-radius: 14px;
+      padding: 0.7rem 0.85rem;
+      font: inherit;
+      color: var(--ink);
+      background: rgba(255,255,255,0.94);
+    }
+    .control-grid, .picker-block {
+      display: grid;
+      gap: 10px;
+    }
+    .picker-label {
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 700;
     }
     .message {
       display: none;
@@ -218,6 +241,7 @@ internal static class BackendDashboardPage
   <script>
     const bootstrap = JSON.parse(document.getElementById("bootstrap-status").textContent || "{}");
     const token = new URLSearchParams(window.location.search).get("token");
+    const projectSelections = {};
 
     function setText(id, value) {
       const node = document.getElementById(id);
@@ -268,7 +292,29 @@ internal static class BackendDashboardPage
       node.textContent = "";
     }
 
-    async function postAction(payload) {
+    function rememberProjectSelection(backendId, value) {
+      const normalized = String(value || "").trim();
+      if (normalized.length === 0) {
+        delete projectSelections[backendId];
+        return;
+      }
+
+      projectSelections[backendId] = normalized;
+    }
+
+    function readProjectSelection(backendId) {
+      return projectSelections[backendId] || "";
+    }
+
+    function setProjectSelection(backendId, inputId, value) {
+      rememberProjectSelection(backendId, value);
+      const node = document.getElementById(inputId);
+      if (node) {
+        node.value = readProjectSelection(backendId);
+      }
+    }
+
+    async function postAction(payload, options = {}) {
       clearMessage();
       try {
         const response = await fetch(`/api/manager/action?token=${encodeURIComponent(token || "")}`, {
@@ -279,15 +325,75 @@ internal static class BackendDashboardPage
 
         if (!response.ok) {
           showMessage("error", `Manager action failed with HTTP ${response.status}.`);
-          return;
+          return null;
         }
 
         const result = await response.json();
         showMessage(result.success ? "ok" : "error", result.message || "Action finished.");
-        await refresh();
+        if (result?.selectedProjectPath && options.inputId) {
+          setProjectSelection(payload.backendId, options.inputId, result.selectedProjectPath);
+        }
+
+        if (!options.skipRefresh) {
+          await refresh();
+        }
+
+        return result;
       } catch (error) {
         showMessage("error", `Manager action failed: ${error}`);
+        return null;
       }
+    }
+
+    async function browseProject(backendId, inputId) {
+      const currentValue = document.getElementById(inputId)?.value || readProjectSelection(backendId);
+      await postAction(
+        {
+          backendId,
+          action: "BrowseProject",
+          projectPath: currentValue
+        },
+        {
+          inputId,
+          skipRefresh: true
+        });
+    }
+
+    async function startSelectedProject(backendId, inputId, launchProfile) {
+      const projectPath = (document.getElementById(inputId)?.value || "").trim();
+      if (!projectPath) {
+        showMessage("error", "Select or enter a project path before starting it.");
+        return;
+      }
+
+      rememberProjectSelection(backendId, projectPath);
+      await postAction({
+        backendId,
+        action: "StartProjectApp",
+        projectPath,
+        launchProfile
+      });
+    }
+
+    function renderAppLaunchButtons(session) {
+      const urls = Array.isArray(session?.observedUrls) ? session.observedUrls : [];
+      const httpUrl = urls.find(url => String(url || "").toLowerCase().startsWith("http://"));
+      const httpsUrl = urls.find(url => String(url || "").toLowerCase().startsWith("https://"));
+      const buttons = [];
+
+      if (httpUrl) {
+        buttons.push(`<a class="button-link secondary" href="${escapeHtml(httpUrl)}" target="_blank" rel="noreferrer">Open HTTP App</a>`);
+      }
+
+      if (httpsUrl) {
+        buttons.push(`<a class="button-link info" href="${escapeHtml(httpsUrl)}" target="_blank" rel="noreferrer">Open HTTPS App</a>`);
+      }
+
+      if (buttons.length === 0) {
+        return "";
+      }
+
+      return `<div class="action-row">${buttons.join("")}</div>`;
     }
 
     function sessionActions(backendId, session) {
@@ -328,6 +434,7 @@ internal static class BackendDashboardPage
             <span>Rollback <strong>${escapeHtml(session.rollbackAvailable ? "yes" : "no")}</strong></span>
           </div>
           <div>${escapeHtml(session.watch?.summary || session.health?.summary || "No summary.")}</div>
+          ${renderAppLaunchButtons(session)}
           ${sessionActions(backend.backendId, session)}
         </article>`).join("")}</div>`;
     }
@@ -349,6 +456,34 @@ internal static class BackendDashboardPage
         </article>`).join("")}</div>`;
     }
 
+    function renderBackendControls(backend, inputId) {
+      if (!backend.isReachable) {
+        return "";
+      }
+
+      const safeBackend = JSON.stringify(backend.backendId);
+      const safeInputId = JSON.stringify(inputId);
+      const selectedProjectPath = escapeHtml(readProjectSelection(backend.backendId));
+
+      return `
+        <div class="control-grid">
+          <div class="action-row">
+            <button onclick='postAction({ backendId: ${safeBackend}, action: "StartDefaultApp" })'>Start Default App</button>
+            <button class="info" onclick='postAction({ backendId: ${safeBackend}, action: "StartDefaultApp", launchProfile: "https" })'>Start Default App (HTTPS)</button>
+            <button class="warn" onclick='postAction({ backendId: ${safeBackend}, action: "BuildWorkspace" })'>Build Workspace</button>
+          </div>
+          <div class="picker-block">
+            <label class="picker-label" for=${safeInputId}>Project path</label>
+            <input id=${safeInputId} type="text" value="${selectedProjectPath}" placeholder="C:\\repo\\App\\App.csproj" oninput='rememberProjectSelection(${safeBackend}, this.value)' />
+            <div class="action-row">
+              <button class="secondary" onclick='browseProject(${safeBackend}, ${safeInputId})'>Browse Project</button>
+              <button onclick='startSelectedProject(${safeBackend}, ${safeInputId}, null)'>Start Project</button>
+              <button class="info" onclick='startSelectedProject(${safeBackend}, ${safeInputId}, "https")'>Start Project (HTTPS)</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
     function renderBackends(status) {
       const host = document.getElementById("backend-list");
       clearNode(host);
@@ -364,15 +499,11 @@ internal static class BackendDashboardPage
       backends.forEach(backend => {
         const card = document.createElement("article");
         card.className = "backend-card";
+        const inputId = `project-path-${String(backend.backendId || "backend").replace(/[^a-zA-Z0-9_-]/g, "-")}`;
         const managerLink = backend.managerUrl
           ? `<a class="link" href="${escapeHtml(backend.managerUrl)}" target="_blank" rel="noreferrer">Open backend page</a>`
           : "";
-        const controlButtons = backend.isReachable
-          ? `<div class="action-row">
-               <button onclick='postAction({ backendId: ${JSON.stringify(backend.backendId)}, action: "StartDefaultApp" })'>Start Default App</button>
-               <button class="warn" onclick='postAction({ backendId: ${JSON.stringify(backend.backendId)}, action: "BuildWorkspace" })'>Build Workspace</button>
-             </div>`
-          : "";
+        const controlButtons = renderBackendControls(backend, inputId);
 
         card.innerHTML = `
           <div class="meta-row">

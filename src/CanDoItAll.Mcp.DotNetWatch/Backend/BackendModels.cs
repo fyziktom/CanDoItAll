@@ -120,6 +120,8 @@ public sealed record BackendManagerStatusResponse(
 public enum BackendManagerActionKind
 {
     StartDefaultApp,
+    StartProjectApp,
+    BrowseProject,
     StopSession,
     ForceStopSession,
     RebuildSession,
@@ -131,6 +133,8 @@ public sealed record BackendManagerActionRequest(
     string BackendId,
     BackendManagerActionKind Action,
     string? SessionId = null,
+    string? ProjectPath = null,
+    string? LaunchProfile = null,
     bool WaitForCompletion = false);
 
 public sealed record BackendManagerActionResponse(
@@ -140,6 +144,7 @@ public sealed record BackendManagerActionResponse(
     string Message,
     string? SessionId,
     string? OperationId,
+    string? SelectedProjectPath,
     bool Proxied,
     DateTimeOffset TimestampUtc);
 
@@ -159,11 +164,33 @@ internal sealed class BackendIdentityProvider(RuntimeConfiguration configuration
         }
 
         var current = Current;
+        return MatchesConfiguration(candidate) &&
+               string.Equals(candidate.BinaryVersionMarker, current.BinaryVersionMarker, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public bool MatchesConfiguration(BackendIdentitySnapshot? candidate)
+    {
+        if (candidate is null)
+        {
+            return false;
+        }
+
+        var current = Current;
+        return MatchesOwnerScope(candidate) &&
+               string.Equals(candidate.SettingsHash, current.SettingsHash, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public bool MatchesOwnerScope(BackendIdentitySnapshot? candidate)
+    {
+        if (candidate is null)
+        {
+            return false;
+        }
+
+        var current = Current;
         return string.Equals(candidate.ServerName, current.ServerName, StringComparison.OrdinalIgnoreCase) &&
                string.Equals(candidate.WorkspaceRoot, current.WorkspaceRoot, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(candidate.SettingsPath, current.SettingsPath, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(candidate.SettingsHash, current.SettingsHash, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(candidate.BinaryVersionMarker, current.BinaryVersionMarker, StringComparison.OrdinalIgnoreCase);
+               string.Equals(candidate.SettingsPath, current.SettingsPath, StringComparison.OrdinalIgnoreCase);
     }
 
     private static BackendIdentitySnapshot CreateSnapshot(RuntimeConfiguration configuration, LaunchContext launchContext)
