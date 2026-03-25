@@ -5,7 +5,8 @@ param(
     [string]$SettingsPath = "",
     [string]$ShadowArtifactsPath = "",
     [string]$Configuration = "Debug",
-    [switch]$ForceRebuild
+    [switch]$ForceRebuild,
+    [switch]$PrepareOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -484,6 +485,12 @@ else {
 }
 
 Invoke-ShadowCleanup -BuildsRoot $buildsRoot -RetiredBuildsRoot $retiredBuildsRoot -CurrentManifestPath $manifestPath -PreviousManifestPath $previousManifestPath -FailedManifestPath $failedManifestPath -RetainedBuildCount $retainedBuildCount
+
+if ($PrepareOnly.IsPresent) {
+    Write-Bootstrap "shadow prepare completed | dll=$shadowDllPath"
+    Write-Output $shadowDllPath
+    exit 0
+}
 
 Write-Bootstrap "launch shadow host | dll=$shadowDllPath"
 

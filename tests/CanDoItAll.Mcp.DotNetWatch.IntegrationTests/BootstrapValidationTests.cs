@@ -273,6 +273,55 @@ public sealed class BootstrapValidationTests : IAsyncLifetime
         }
     }
 
+    [Fact]
+    public async Task WrapperPrepareOnly_ProducesShadowManifestAndDllPath()
+    {
+        var tempDirectory = Path.Combine(ValidationHarness.RepoRoot, ".mcp-state", "wrapper-prepare-tests", Guid.NewGuid().ToString("N"));
+        var shadowArtifactsPath = Path.Combine(tempDirectory, "shadow");
+        Directory.CreateDirectory(tempDirectory);
+
+        try
+        {
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo("powershell")
+                {
+                    WorkingDirectory = ValidationHarness.RepoRoot,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false
+                }
+            };
+
+            process.StartInfo.ArgumentList.Add("-NoProfile");
+            process.StartInfo.ArgumentList.Add("-ExecutionPolicy");
+            process.StartInfo.ArgumentList.Add("Bypass");
+            process.StartInfo.ArgumentList.Add("-File");
+            process.StartInfo.ArgumentList.Add(ValidationHarness.WrapperScriptPath);
+            process.StartInfo.ArgumentList.Add("-ShadowArtifactsPath");
+            process.StartInfo.ArgumentList.Add(shadowArtifactsPath);
+            process.StartInfo.ArgumentList.Add("-PrepareOnly");
+
+            Assert.True(process.Start());
+
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromMinutes(3));
+
+            var stdout = await stdoutTask;
+            var stderr = await stderrTask;
+
+            Assert.Equal(0, process.ExitCode);
+            Assert.Contains("CanDoItAll.Mcp.DotNetWatch.dll", stdout, StringComparison.OrdinalIgnoreCase);
+            Assert.True(File.Exists(Path.Combine(shadowArtifactsPath, "current.json")), $"Wrapper prepare did not produce a manifest. Stdout={stdout} Stderr={stderr}");
+        }
+        finally
+        {
+            await TryDeleteDirectoryAsync(tempDirectory);
+        }
+    }
+
     private static async Task RunWrapperAsync(string shadowArtifactsPath, bool forceRebuild)
     {
         using var process = new Process

@@ -75,6 +75,12 @@ The wrapper is the default launch path and will refresh the shadow host automati
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1 -RepoRoot . -SettingsPath .\CanDoItAll.Mcp.DotNetWatch.settings.json -ForceRebuild
 ```
 
+### Repo-managed Codex assets
+
+- Repo-managed Codex skill packs live under `codex/skills/`.
+- The supported machine resetup path is `tools\Reinstall-CanDoItAllMcps.ps1`.
+- That script is responsible for syncing the repo-managed skill pack into `%USERPROFILE%\.codex\skills`, refreshing the wrapper-backed MCP setup, and installing the tray operator app.
+
 ## Validation
 
 - Always build to validate no compilation errors.
