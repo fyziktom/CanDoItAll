@@ -77,7 +77,9 @@ internal sealed class ValidationHarness : IAsyncDisposable
                 "-ExecutionPolicy",
                 "Bypass",
                 "-File",
-                WrapperScriptPath
+                WrapperScriptPath,
+                "-Configuration",
+                "Release"
             ],
             WorkingDirectory = RepoRoot,
             ShutdownTimeout = TimeSpan.FromSeconds(30)
@@ -209,6 +211,8 @@ internal sealed class ValidationHarness : IAsyncDisposable
         process.StartInfo.ArgumentList.Add("Bypass");
         process.StartInfo.ArgumentList.Add("-File");
         process.StartInfo.ArgumentList.Add(WrapperScriptPath);
+        process.StartInfo.ArgumentList.Add("-Configuration");
+        process.StartInfo.ArgumentList.Add("Release");
         process.StartInfo.ArgumentList.Add("-PrepareOnly");
 
         Assert.True(process.Start());

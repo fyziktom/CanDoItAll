@@ -4,7 +4,7 @@ param(
     [string]$ProjectPath = "",
     [string]$SettingsPath = "",
     [string]$ShadowArtifactsPath = "",
-    [string]$Configuration = "Debug",
+    [string]$Configuration = "Release",
     [switch]$ForceRebuild,
     [switch]$PrepareOnly
 )

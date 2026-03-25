@@ -11,8 +11,19 @@
         "${workspaceFolder}\\tools\\CanDoItAll.Mcp.DotNetWatch\\Start-CanDoItAllDotNetWatchMcp.ps1",
         "-RepoRoot",
         "${workspaceFolder}",
+        "-Configuration",
+        "Release",
         "-SettingsPath",
         "${workspaceFolder}\\CanDoItAll.Mcp.DotNetWatch.settings.json"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    "candoitall_sshops": {
+      "type": "stdio",
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.SshOps\\current\\CanDoItAll.Mcp.SshOps.exe",
+      "args": [
+        "--settings",
+        "${workspaceFolder}\\CanDoItAll.Mcp.SshOps.settings.json"
       ],
       "cwd": "${workspaceFolder}"
     },

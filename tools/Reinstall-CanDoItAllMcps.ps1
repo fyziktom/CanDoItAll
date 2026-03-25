@@ -2,7 +2,7 @@
 param(
     [string]$RepoRoot = "",
     [string]$UserConfigPath = "",
-    [string]$ShadowConfiguration = "Debug",
+    [string]$ShadowConfiguration = "Release",
     [switch]$SkipUserConfig,
     [switch]$SkipVsCodeConfig,
     [switch]$SkipProcessReset,
@@ -192,7 +192,6 @@ function Cleanup-WorkspaceBackendCatalog {
         Write-Status "Backend catalog cleanup for this workspace removed $deletedCount stale record(s); failed to remove $failedCount."
     }
 }
-
 function Publish-ReleaseArtifact {
     param(
         [Parameter(Mandatory = $true)]
@@ -288,8 +287,19 @@ function Update-VsCodeMcpConfig {
         "$WorkspaceFolderToken\\tools\\CanDoItAll.Mcp.DotNetWatch\\Start-CanDoItAllDotNetWatchMcp.ps1",
         "-RepoRoot",
         "$WorkspaceFolderToken",
+        "-Configuration",
+        "$ShadowConfiguration",
         "-SettingsPath",
         "$WorkspaceFolderToken\\CanDoItAll.Mcp.DotNetWatch.settings.json"
+      ],
+      "cwd": "$WorkspaceFolderToken"
+    },
+    "candoitall_sshops": {
+      "type": "stdio",
+      "command": "$WorkspaceFolderToken\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.SshOps\\current\\CanDoItAll.Mcp.SshOps.exe",
+      "args": [
+        "--settings",
+        "$WorkspaceFolderToken\\CanDoItAll.Mcp.SshOps.settings.json"
       ],
       "cwd": "$WorkspaceFolderToken"
     },
@@ -342,6 +352,8 @@ args = [
   "$escapedRepoRoot\\tools\\CanDoItAll.Mcp.DotNetWatch\\Start-CanDoItAllDotNetWatchMcp.ps1",
   "-RepoRoot",
   "$escapedRepoRoot",
+  "-Configuration",
+  "$ShadowConfiguration",
   "-SettingsPath",
   "$escapedRepoRoot\\CanDoItAll.Mcp.DotNetWatch.settings.json"
 ]
@@ -489,7 +501,7 @@ if (-not $SkipProcessReset.IsPresent) {
     Cleanup-WorkspaceBackendCatalog -CatalogDirectory $globalBackendCatalogDirectory -WorkspaceRoot $RepoRoot -SettingsPath $dotNetWatchSettingsPath
 }
 
-Write-Status "Preparing shadow artifact for CanDoItAll.Mcp.DotNetWatch"
+Write-Status "Preparing shadow artifact for CanDoItAll.Mcp.DotNetWatch ($ShadowConfiguration)"
 Invoke-CheckedCommand -FilePath "powershell" -Arguments @(
     "-NoProfile",
     "-ExecutionPolicy",
@@ -498,10 +510,10 @@ Invoke-CheckedCommand -FilePath "powershell" -Arguments @(
     $dotNetWatchWrapperPath,
     "-RepoRoot",
     $RepoRoot,
-    "-SettingsPath",
-    $dotNetWatchSettingsPath,
     "-Configuration",
     $ShadowConfiguration,
+    "-SettingsPath",
+    $dotNetWatchSettingsPath,
     "-ForceRebuild",
     "-PrepareOnly"
 ) -WorkingDirectory $RepoRoot
