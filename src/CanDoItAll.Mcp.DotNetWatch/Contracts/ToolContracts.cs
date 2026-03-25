@@ -10,6 +10,23 @@ public enum AppRunMode
     RunOnce
 }
 
+public enum AppLaunchType
+{
+    Project,
+    PublishedDll,
+    Executable
+}
+
+public enum RuntimeLaneKind
+{
+    SourceWatch,
+    SourceRun,
+    PublishedCandidate,
+    PublishedActive,
+    ExternalExecutable,
+    BuildTest
+}
+
 public enum AppStartConflictPolicy
 {
     Fail,
@@ -39,7 +56,11 @@ public enum AppWaitCondition
     QuietSinceCursor,
     LogMatch,
     RestartCompleted,
-    WatchSettled
+    WatchSettled,
+    RevisionConfirmed,
+    TransactionPrepared,
+    TransactionCommitted,
+    RollbackCommitted
 }
 
 public enum LogViewMode
@@ -110,6 +131,48 @@ public enum DiagnosticCategory
 
 public sealed record DefaultAppInfo(string ProjectPath, string ProjectPathRelative, AppRunMode Mode, IReadOnlyList<string> HealthUrls);
 
+public sealed record RuntimeRevisionData(
+    string Kind,
+    string Value,
+    DateTimeOffset ObservedUtc,
+    bool IsConfirmed);
+
+public sealed record WorkflowGuidanceData(
+    string Mode,
+    string Next,
+    string Verify,
+    string? Guard = null,
+    string? ReasonCode = null);
+
+public sealed record BridgeStatusData(
+    string Mode,
+    string? BackendId,
+    DateTimeOffset? LastPingUtc,
+    DateTimeOffset? LastRepairAttemptUtc,
+    string? CurrentShadowSignature,
+    string? CurrentShadowDllPath,
+    string Health)
+{
+    public string? CurrentShadowManifestPath { get; init; }
+}
+
+public sealed record LaneCapabilityData(
+    RuntimeLaneKind LaneKind,
+    bool Supported,
+    string Summary);
+
+public sealed record SlotSummaryData(
+    string LogicalAppId,
+    string? ActiveSlotId,
+    string? CandidateSlotId,
+    string? ActiveTransactionId,
+    bool RollbackAvailable);
+
+public sealed record AtomicRuntimeCapabilityData(
+    bool Enabled,
+    bool RollbackSupported,
+    bool EndpointLeasingEnabled);
+
 public sealed record WorkspacePathInfo(string AbsolutePath, string RelativePath);
 
 public sealed record WorkspaceHistoryData(
@@ -128,6 +191,16 @@ public sealed record WorkspaceInfoData(
     WorkspaceHistoryData? History)
 {
     public IReadOnlyList<AppStatusData> ActiveAppSessions { get; init; } = ActiveAppSession is null ? [] : [ActiveAppSession];
+
+    public BridgeStatusData? Bridge { get; init; }
+
+    public IReadOnlyList<LaneCapabilityData> LaneCapabilities { get; init; } = [];
+
+    public AtomicRuntimeCapabilityData? AtomicRuntime { get; init; }
+
+    public IReadOnlyList<string> ActiveLogicalApps { get; init; } = [];
+
+    public IReadOnlyList<SlotSummaryData> Slots { get; init; } = [];
 }
 
 public sealed record HealthData(
@@ -168,7 +241,24 @@ public sealed record AppStatusData(
     long LastCursor,
     HealthData? Health,
     IReadOnlyList<string> RecentEvents,
-    WatchStatusData? Watch);
+    WatchStatusData? Watch)
+{
+    public string? LogicalAppId { get; init; }
+
+    public RuntimeLaneKind LaneKind { get; init; } = RuntimeLaneKind.SourceWatch;
+
+    public RuntimeRevisionData? Revision { get; init; }
+
+    public string? SlotId { get; init; }
+
+    public string? ActiveTransactionId { get; init; }
+
+    public bool RollbackAvailable { get; init; }
+
+    public AppLaunchType LaunchType { get; init; } = AppLaunchType.Project;
+
+    public string? EntryPath { get; init; }
+}
 
 public sealed record AppStartData(
     string SessionId,
@@ -181,7 +271,20 @@ public sealed record AppStartData(
     IReadOnlyList<string> ObservedUrls,
     long InitialCursor,
     int? LastKnownPid,
-    WatchStatusData? Watch);
+    WatchStatusData? Watch)
+{
+    public string? LogicalAppId { get; init; }
+
+    public RuntimeLaneKind LaneKind { get; init; } = RuntimeLaneKind.SourceWatch;
+
+    public RuntimeRevisionData? Revision { get; init; }
+
+    public string? SlotId { get; init; }
+
+    public string? ActiveTransactionId { get; init; }
+
+    public AppLaunchType LaunchType { get; init; } = AppLaunchType.Project;
+}
 
 public sealed record AppStopData(
     string SessionId,
@@ -204,7 +307,20 @@ public sealed record AppWaitData(
     LogEntry? MatchedLogEntry,
     string? DiagnosticHint,
     HealthData? Health,
-    WatchStatusData? Watch);
+    WatchStatusData? Watch)
+{
+    public string? LogicalAppId { get; init; }
+
+    public RuntimeLaneKind LaneKind { get; init; } = RuntimeLaneKind.SourceWatch;
+
+    public RuntimeRevisionData? Revision { get; init; }
+
+    public string? SlotId { get; init; }
+
+    public string? ActiveTransactionId { get; init; }
+
+    public bool RollbackAvailable { get; init; }
+}
 
 public sealed record AppLogsData(
     string SessionId,
@@ -262,7 +378,10 @@ public sealed record OperationStatusData(
     ResumeOutcomeData ResumeOutcome,
     long LastCursor,
     TestSummaryData? TestSummary,
-    IReadOnlyList<OperationArtifactData> Artifacts);
+    IReadOnlyList<OperationArtifactData> Artifacts)
+{
+    public RuntimeLaneKind LaneKind { get; init; } = RuntimeLaneKind.BuildTest;
+}
 
 public sealed record OperationWaitData(
     string OperationId,
@@ -275,7 +394,10 @@ public sealed record OperationWaitData(
     string Summary,
     ResumeOutcomeData ResumeOutcome,
     TestSummaryData? TestSummary,
-    IReadOnlyList<OperationArtifactData> Artifacts);
+    IReadOnlyList<OperationArtifactData> Artifacts)
+{
+    public RuntimeLaneKind LaneKind { get; init; } = RuntimeLaneKind.BuildTest;
+}
 
 public sealed record OperationLogsData(
     string OperationId,
@@ -302,3 +424,53 @@ public sealed record DiagnoseStartFailureData(
     string Summary,
     IReadOnlyList<string> RecommendedActions,
     IReadOnlyList<DiagnosticEvidence> Evidence);
+
+public enum AtomicTransactionState
+{
+    Draft,
+    PreparingCandidate,
+    CandidateReady,
+    Committing,
+    Committed,
+    RolledBack,
+    FailedPrepare,
+    FailedCommit,
+    Cancelled
+}
+
+public sealed record AtomicUpdateData(
+    string TransactionId,
+    string LogicalAppId,
+    string CandidateSessionId,
+    string CandidateSlotId,
+    string State,
+    RuntimeRevisionData CandidateRevision,
+    RuntimeRevisionData? ActiveRevision,
+    IReadOnlyList<string> ObservedUrls,
+    bool Committed,
+    bool RollbackAvailable);
+
+public sealed record AtomicRollbackData(
+    string LogicalAppId,
+    string TransactionId,
+    string RestoredSessionId,
+    RuntimeRevisionData RestoredRevision,
+    RuntimeRevisionData? PreviousRevision,
+    bool RollbackAvailable);
+
+public sealed record AppEventData(
+    long Sequence,
+    DateTimeOffset TimestampUtc,
+    string LogicalAppId,
+    string SessionId,
+    string EventType,
+    string Summary,
+    RuntimeRevisionData? Revision,
+    string? TransactionId,
+    string? SlotId);
+
+public sealed record AppEventsData(
+    IReadOnlyList<AppEventData> Entries,
+    long NextCursor,
+    bool Truncated,
+    int TotalAvailableAfterCursor);

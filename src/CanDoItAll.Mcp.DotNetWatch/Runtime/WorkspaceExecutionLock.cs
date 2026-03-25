@@ -17,8 +17,37 @@ public sealed class WorkspaceExecutionLock
 
     public async Task<MutationLease> AcquireMutationAsync(string reason, CancellationToken cancellationToken)
     {
-        var lease = await _gate.AcquireAsync(WorkspaceResourceKey, reason, cancellationToken);
-        return new MutationLease(lease);
+        var lease = await _gate.AcquireAsync(WorkspaceResourceKey, reason, cancellationToken, busyCode: "OperationInProgress");
+        return new MutationLease([lease]);
+    }
+
+    public async Task<MutationLease> AcquireMutationAsync(string reason, IReadOnlyList<string> resourceKeys, CancellationToken cancellationToken)
+    {
+        var normalizedResourceKeys = (resourceKeys.Count == 0 ? [WorkspaceResourceKey] : resourceKeys)
+            .Where(static key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        List<ResourceMutationGate.MutationLease> leases = [];
+        try
+        {
+            foreach (var resourceKey in normalizedResourceKeys)
+            {
+                leases.Add(await _gate.AcquireAsync(resourceKey, reason, cancellationToken, busyCode: "ResourceConflict"));
+            }
+
+            return new MutationLease(leases);
+        }
+        catch
+        {
+            foreach (var lease in leases.AsEnumerable().Reverse())
+            {
+                await lease.DisposeAsync();
+            }
+
+            throw;
+        }
     }
 
     public string? GetCurrentHolder()
@@ -26,7 +55,12 @@ public sealed class WorkspaceExecutionLock
         return _gate.GetCurrentHolder(WorkspaceResourceKey);
     }
 
-    public sealed class MutationLease(ResourceMutationGate.MutationLease innerLease) : IAsyncDisposable
+    public string? GetCurrentHolder(string resourceKey)
+    {
+        return _gate.GetCurrentHolder(resourceKey);
+    }
+
+    public sealed class MutationLease(IReadOnlyList<ResourceMutationGate.MutationLease> innerLeases) : IAsyncDisposable
     {
         private int _disposed;
 
@@ -37,7 +71,12 @@ public sealed class WorkspaceExecutionLock
                 return ValueTask.CompletedTask;
             }
 
-            return innerLease.DisposeAsync();
+            foreach (var lease in innerLeases.Reverse())
+            {
+                lease.DisposeAsync().GetAwaiter().GetResult();
+            }
+
+            return ValueTask.CompletedTask;
         }
     }
 }

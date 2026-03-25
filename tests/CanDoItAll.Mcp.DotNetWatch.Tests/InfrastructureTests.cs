@@ -450,7 +450,15 @@ public sealed class InfrastructureTests
             42,
             new HealthData("Pending", null, DateTimeOffset.UtcNow, "https://localhost:7411/_dev/runtime", "Restarting", false, null, null),
             ["Restart requested."],
-            new WatchStatusData(WatchProcessingState.Building, "Building", true, 1234, null, 2, 1, HotReloadOutcome.RestartRequired, 42, DateTimeOffset.UtcNow));
+            new WatchStatusData(WatchProcessingState.Building, "Building", true, 1234, null, 2, 1, HotReloadOutcome.RestartRequired, 42, DateTimeOffset.UtcNow))
+        {
+            LogicalAppId = "web",
+            LaneKind = RuntimeLaneKind.PublishedActive,
+            Revision = new RuntimeRevisionData("PublishedBundle", "web:slot-a:abc", DateTimeOffset.UtcNow, true),
+            SlotId = "slot-a",
+            ActiveTransactionId = "txn_123",
+            RollbackAvailable = true
+        };
 
         var status = new BackendManagerStatusResponse(
             identity,
@@ -478,6 +486,9 @@ public sealed class InfrastructureTests
         Assert.Contains(@"C:\\repo\\two", html, StringComparison.Ordinal);
         Assert.Contains("Force Rebuild", html, StringComparison.Ordinal);
         Assert.Contains("Backend PID", html, StringComparison.Ordinal);
+        Assert.Contains("slot-a", html, StringComparison.Ordinal);
+        Assert.Contains("txn_123", html, StringComparison.Ordinal);
+        Assert.Contains("web:slot-a:abc", html, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1,15 +1,26 @@
+using CanDoItAll.Mcp.DotNetWatch.Configuration;
+using CanDoItAll.Mcp.DotNetWatch.Guidance;
 using CanDoItAll.Mcp.DotNetWatch.Runtime;
 
 namespace CanDoItAll.Mcp.DotNetWatch.Backend;
 
-internal sealed class LocalToolInvoker(SessionCoordinator coordinator, ILogger<LocalToolInvoker> logger) : IDotNetWatchToolInvoker
+internal sealed class LocalToolInvoker(
+    SessionCoordinator coordinator,
+    RuntimeConfiguration configuration,
+    WorkflowGuidancePolicy guidancePolicy,
+    ILogger<LocalToolInvoker> logger)
+    : IDotNetWatchToolInvoker
 {
     public Task<ToolEnvelope<WorkspaceInfoData>> WorkspaceInfoAsync(bool includeHistory = false, bool includeConfigSnapshot = false, CancellationToken cancellationToken = default)
-        => ExecuteAsync("candoitall_workspace_info", _ => Task.FromResult(coordinator.GetWorkspaceInfo(includeHistory, includeConfigSnapshot)));
+        => ExecuteAsync("candoitall_workspace_info", _ => Task.FromResult(coordinator.GetWorkspaceInfo(includeHistory, includeConfigSnapshot)), guidancePolicy.ForWorkspace);
 
     public Task<ToolEnvelope<AppStartData>> AppStartAsync(
+        string? logicalAppId = null,
         string? projectPath = null,
         AppRunMode? mode = null,
+        AppLaunchType launchType = AppLaunchType.Project,
+        RuntimeLaneKind? preferredLane = null,
+        string? entryPath = null,
         string? configurationName = null,
         string? framework = null,
         string? launchProfile = null,
@@ -21,26 +32,33 @@ internal sealed class LocalToolInvoker(SessionCoordinator coordinator, ILogger<L
         AppStartConflictPolicy conflictPolicy = AppStartConflictPolicy.Fail,
         AppWaitCondition waitFor = AppWaitCondition.None,
         CancellationToken cancellationToken = default)
-        => ExecuteAsync("candoitall_app_start", _ => coordinator.StartAppAsync(
-            projectPath,
-            mode,
-            configurationName,
-            framework,
-            launchProfile,
-            workingDirectory,
-            arguments ?? [],
-            environmentOverlay,
-            urls ?? [],
-            reuseIfCompatible,
-            conflictPolicy,
-            waitFor,
-            cancellationToken));
+        => ExecuteAsync(
+            "candoitall_app_start",
+            _ => coordinator.StartAppAsync(
+                logicalAppId,
+                projectPath,
+                mode,
+                launchType,
+                preferredLane,
+                entryPath,
+                configurationName,
+                framework,
+                launchProfile,
+                workingDirectory,
+                arguments ?? [],
+                environmentOverlay,
+                urls ?? [],
+                reuseIfCompatible,
+                conflictPolicy,
+                waitFor,
+                cancellationToken),
+            guidance => guidancePolicy.ForApp(ToSyntheticStatus(guidance)));
 
     public Task<ToolEnvelope<AppStopData>> AppStopAsync(string? sessionId = null, string reason = "RequestedByClient", bool force = false, CancellationToken cancellationToken = default)
         => ExecuteAsync("candoitall_app_stop", _ => coordinator.StopAppAsync(sessionId, reason, force, cancellationToken));
 
     public Task<ToolEnvelope<AppStatusData>> AppStatusAsync(string? sessionId = null, CancellationToken cancellationToken = default)
-        => ExecuteAsync("candoitall_app_status", _ => Task.FromResult(coordinator.GetAppStatus(sessionId)));
+        => ExecuteAsync("candoitall_app_status", _ => Task.FromResult(coordinator.GetAppStatus(sessionId)), guidancePolicy.ForApp);
 
     public Task<ToolEnvelope<AppWaitData>> AppWaitAsync(
         string? sessionId = null,
@@ -61,7 +79,7 @@ internal sealed class LocalToolInvoker(SessionCoordinator coordinator, ILogger<L
             TimeSpan.FromMilliseconds(quietPeriodMs),
             logPattern,
             caseInsensitive,
-            cancellationToken));
+            cancellationToken), guidancePolicy.ForWait);
 
     public Task<ToolEnvelope<AppLogsData>> AppLogsAsync(
         string? sessionId = null,
@@ -131,7 +149,7 @@ internal sealed class LocalToolInvoker(SessionCoordinator coordinator, ILogger<L
     }
 
     public Task<ToolEnvelope<OperationStatusData>> OperationStatusAsync(string operationId, CancellationToken cancellationToken = default)
-        => ExecuteAsync("candoitall_operation_status", _ => Task.FromResult(coordinator.GetOperationStatus(operationId)));
+        => ExecuteAsync("candoitall_operation_status", _ => Task.FromResult(coordinator.GetOperationStatus(operationId)), guidancePolicy.ForOperation);
 
     public Task<ToolEnvelope<OperationWaitData>> OperationWaitAsync(string operationId, int timeoutMs = 1800000, int pollIntervalMs = 500, CancellationToken cancellationToken = default)
         => ExecuteAsync("candoitall_operation_wait", _ => coordinator.WaitForOperationAsync(
@@ -147,16 +165,46 @@ internal sealed class LocalToolInvoker(SessionCoordinator coordinator, ILogger<L
         => ExecuteAsync("candoitall_cleanup_stale_processes", _ => coordinator.CleanupStaleProcessesAsync(dryRun, cancellationToken));
 
     public Task<ToolEnvelope<DiagnoseStartFailureData>> DiagnoseStartFailureAsync(string? sessionId = null, string? operationId = null, int maxLogEntries = 200, CancellationToken cancellationToken = default)
-        => ExecuteAsync("candoitall_diagnose_start_failure", _ => Task.FromResult(coordinator.Diagnose(sessionId, operationId, maxLogEntries)));
+        => ExecuteAsync("candoitall_diagnose_start_failure", _ => Task.FromResult(coordinator.Diagnose(sessionId, operationId, maxLogEntries)), guidancePolicy.ForDiagnosis);
 
-    private async Task<ToolEnvelope<T>> ExecuteAsync<T>(string toolName, Func<string, Task<T>> callback)
+    public Task<ToolEnvelope<AppEventsData>> AppEventsAsync(string? logicalAppId = null, string? sessionId = null, long? cursor = null, int limit = 200, CancellationToken cancellationToken = default)
+        => ExecuteAsync("candoitall_app_events", _ => Task.FromResult(coordinator.GetAppEvents(logicalAppId, sessionId, cursor, limit)));
+
+    public Task<ToolEnvelope<AtomicUpdateData>> AppUpdateAtomicAsync(string? logicalAppId = null, string? projectPath = null, string configurationName = "Release", string? framework = null, string[]? arguments = null, Dictionary<string, string?>? environmentOverlay = null, bool activateOnSuccess = true, bool keepPreviousRuntimeWarm = true, bool allowRollback = true, int? timeoutMs = null, CancellationToken cancellationToken = default)
+        => ExecuteAsync("candoitall_app_update_atomic", _ => coordinator.UpdateAppAtomicAsync(
+            logicalAppId,
+            projectPath,
+            configurationName,
+            framework,
+            arguments ?? [],
+            environmentOverlay,
+            activateOnSuccess,
+            keepPreviousRuntimeWarm,
+            allowRollback,
+            timeoutMs.HasValue ? TimeSpan.FromMilliseconds(timeoutMs.Value) : configuration.DefaultOperationWaitTimeout,
+            cancellationToken), guidancePolicy.ForAtomic);
+
+    public Task<ToolEnvelope<AtomicRollbackData>> AppRollbackAsync(string? logicalAppId = null, string? transactionId = null, CancellationToken cancellationToken = default)
+        => ExecuteAsync("candoitall_app_rollback", _ => coordinator.RollbackAppAsync(logicalAppId, transactionId, cancellationToken), guidancePolicy.ForRollback);
+
+    private async Task<ToolEnvelope<T>> ExecuteAsync<T>(string toolName, Func<string, Task<T>> callback, Func<T, WorkflowGuidanceData?>? guidanceFactory = null)
     {
         var correlationId = CorrelationIdFactory.Create();
 
         try
         {
             var data = await callback(correlationId);
-            return ToolEnvelope<T>.Success(toolName, correlationId, data);
+            var envelope = ToolEnvelope<T>.Success(toolName, correlationId, data);
+            if (guidanceFactory is not null && guidancePolicy.ShouldEmit(toolName))
+            {
+                var guidance = guidanceFactory(data);
+                if (guidance is not null)
+                {
+                    envelope = envelope with { WorkflowGuidance = guidance };
+                }
+            }
+
+            return envelope;
         }
         catch (ToolInvocationException ex)
         {
@@ -172,5 +220,34 @@ internal sealed class LocalToolInvoker(SessionCoordinator coordinator, ILogger<L
             logger.LogError(ex, "{ToolName} failed unexpectedly", toolName);
             return ToolEnvelope<T>.Failure(toolName, correlationId, new ToolError("InternalError", ex.Message));
         }
+    }
+
+    private static AppStatusData ToSyntheticStatus(AppStartData start)
+    {
+        return new AppStatusData(
+            SessionId: start.SessionId,
+            CorrelationId: start.CorrelationId,
+            State: start.State,
+            Mode: start.Mode,
+            ProjectPath: start.ProjectPath,
+            SessionVersion: start.SessionVersion,
+            LastKnownPid: start.LastKnownPid,
+            ObservedUrls: start.ObservedUrls,
+            LastExitCode: null,
+            LastStartUtc: DateTimeOffset.UtcNow,
+            LastRestartUtc: null,
+            LastStopUtc: null,
+            LastCursor: start.InitialCursor,
+            Health: null,
+            RecentEvents: [],
+            Watch: start.Watch)
+        {
+            LogicalAppId = start.LogicalAppId,
+            LaneKind = start.LaneKind,
+            Revision = start.Revision,
+            SlotId = start.SlotId,
+            ActiveTransactionId = start.ActiveTransactionId,
+            LaunchType = start.LaunchType
+        };
     }
 }

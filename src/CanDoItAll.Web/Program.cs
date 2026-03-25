@@ -94,6 +94,9 @@ if (app.Environment.IsDevelopment())
             snapshot.Summary,
             WatchIteration = iteration,
             RuntimePid = Environment.ProcessId,
+            OwnerKind = app.Configuration["CanDoItAllMcpOwnerKind"],
+            OwnerId = app.Configuration["CanDoItAllMcpOwnerId"],
+            ServerInstanceId = app.Configuration["CanDoItAllMcpServerInstanceId"],
             snapshot.StartedAtUtc,
             snapshot.LastChangedAtUtc,
             snapshot.ActiveUrls

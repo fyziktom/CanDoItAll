@@ -29,6 +29,9 @@ public record McpToolEnvelope<T>(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<string>? NextSuggestedTools { get; init; }
 
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public object? WorkflowGuidance { get; init; }
+
     public static McpToolEnvelope<T> Success(
         string tool,
         string correlationId,

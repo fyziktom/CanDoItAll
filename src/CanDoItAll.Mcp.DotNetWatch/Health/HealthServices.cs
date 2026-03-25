@@ -13,14 +13,28 @@ public sealed record HealthSnapshot(
     string? Summary,
     int? WatchIteration,
     int? RuntimePid,
-    IReadOnlyList<string> ActiveUrls);
+    IReadOnlyList<string> ActiveUrls)
+{
+    public string? OwnerKind { get; init; }
+
+    public string? OwnerId { get; init; }
+
+    public string? ServerInstanceId { get; init; }
+}
 
 public sealed record RuntimeProbePayload(
     bool IsReady,
     string? Summary,
     int? WatchIteration,
     int? RuntimePid,
-    IReadOnlyList<string>? ActiveUrls);
+    IReadOnlyList<string>? ActiveUrls)
+{
+    public string? OwnerKind { get; init; }
+
+    public string? OwnerId { get; init; }
+
+    public string? ServerInstanceId { get; init; }
+}
 
 public sealed class HttpHealthProbe(RuntimeConfiguration configuration, HttpProbeService probeService, ILogger<HttpHealthProbe> logger)
 {
@@ -67,7 +81,12 @@ public sealed class HttpHealthProbe(RuntimeConfiguration configuration, HttpProb
                         payload.Summary ?? "Ready",
                         payload.WatchIteration,
                         payload.RuntimePid,
-                        payload.ActiveUrls ?? []);
+                        payload.ActiveUrls ?? [])
+                    {
+                        OwnerKind = payload.OwnerKind,
+                        OwnerId = payload.OwnerId,
+                        ServerInstanceId = payload.ServerInstanceId
+                    };
                 }
 
                 if (TryInterpretGenericHealthPayload(result.Body, out var genericSummary))
@@ -81,7 +100,12 @@ public sealed class HttpHealthProbe(RuntimeConfiguration configuration, HttpProb
                         genericSummary,
                         payload?.WatchIteration,
                         payload?.RuntimePid,
-                        payload?.ActiveUrls is { Count: > 0 } activeUrls ? activeUrls : [url.ToString()]);
+                        payload?.ActiveUrls is { Count: > 0 } activeUrls ? activeUrls : [url.ToString()])
+                    {
+                        OwnerKind = payload?.OwnerKind,
+                        OwnerId = payload?.OwnerId,
+                        ServerInstanceId = payload?.ServerInstanceId
+                    };
                 }
 
                 lastFailure = DateTimeOffset.UtcNow;

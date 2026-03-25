@@ -142,8 +142,12 @@ internal sealed class BackendManagerService(
             case BackendManagerActionKind.StartDefaultApp:
             {
                 var started = await coordinator.StartAppAsync(
+                    logicalAppId: null,
                     projectPath: null,
                     mode: null,
+                    launchType: AppLaunchType.Project,
+                    preferredLane: null,
+                    entryPath: null,
                     configurationName: null,
                     framework: null,
                     launchProfile: null,

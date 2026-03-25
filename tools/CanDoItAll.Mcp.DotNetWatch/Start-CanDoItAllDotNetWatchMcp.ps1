@@ -120,6 +120,247 @@ function Write-ShadowManifest {
     Set-Content -LiteralPath $ManifestPath -Value $payload
 }
 
+function Write-ShadowFailureManifest {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ManifestPath,
+        [Parameter(Mandatory = $true)]
+        [string]$Signature,
+        [Parameter(Mandatory = $true)]
+        [string]$BuildRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$FailureMessage
+    )
+
+    $payload = @{
+        signature = $Signature
+        buildRoot = $BuildRoot
+        failedUtc = [DateTimeOffset]::UtcNow.ToString("O")
+        failureMessage = $FailureMessage
+    } | ConvertTo-Json
+
+    Set-Content -LiteralPath $ManifestPath -Value $payload
+}
+
+function Get-ShadowRetentionCount {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$SettingsPath
+    )
+
+    if (-not (Test-Path -LiteralPath $SettingsPath)) {
+        return 2
+    }
+
+    try {
+        $settings = Get-Content -LiteralPath $SettingsPath -Raw | ConvertFrom-Json
+        $configuredValue = [int]$settings.ShadowHost.RetainedBuildCount
+        if ($configuredValue -gt 0) {
+            return $configuredValue
+        }
+    }
+    catch {
+        Write-Bootstrap "shadow cleanup | settings parse failed | error=$($_.Exception.Message)"
+    }
+
+    return 2
+}
+
+function Get-LiveShadowBuildRoots {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.IO.DirectoryInfo[]]$BuildDirectories
+    )
+
+    $liveRoots = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    if ($BuildDirectories.Count -eq 0) {
+        return $liveRoots
+    }
+
+    try {
+        $processes = Get-CimInstance Win32_Process -Filter "Name='dotnet.exe'"
+        foreach ($process in $processes) {
+            $commandLine = [string]$process.CommandLine
+            if ([string]::IsNullOrWhiteSpace($commandLine)) {
+                continue
+            }
+
+            foreach ($directory in $BuildDirectories) {
+                if ($commandLine.IndexOf($directory.FullName, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                    [void]$liveRoots.Add($directory.FullName)
+                }
+            }
+        }
+    }
+    catch {
+        Write-Bootstrap "shadow cleanup | live-root-scan failed | error=$($_.Exception.Message)"
+    }
+
+    return $liveRoots
+}
+
+function Remove-DirectoryRobust {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return
+    }
+
+    $attemptMessages = New-Object System.Collections.Generic.List[string]
+
+    for ($attempt = 1; $attempt -le 6; $attempt++) {
+        try {
+            Get-ChildItem -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue |
+                ForEach-Object {
+                    try {
+                        $_.Attributes = [System.IO.FileAttributes]::Normal
+                    }
+                    catch {
+                    }
+                }
+
+            [System.IO.Directory]::Delete($Path, $true)
+        }
+        catch [System.IO.DirectoryNotFoundException] {
+            return
+        }
+        catch {
+            [void]$attemptMessages.Add("attempt=$attempt directory-delete error=$($_.Exception.Message)")
+        }
+
+        if (-not (Test-Path -LiteralPath $Path)) {
+            return
+        }
+
+        $escapedPath = $Path.Replace('"', '""')
+        & cmd.exe /d /c "rmdir /s /q ""$escapedPath""" | Out-Null
+        $commandExitCode = $LASTEXITCODE
+
+        if (-not (Test-Path -LiteralPath $Path)) {
+            return
+        }
+
+        [void]$attemptMessages.Add("attempt=$attempt cmd-exit=$commandExitCode")
+        Start-Sleep -Milliseconds (250 * $attempt)
+    }
+
+    throw "Robust delete failed for '$Path'. Path still exists after retries. Details=$($attemptMessages -join '; ')"
+}
+
+function Move-BuildRootToRetired {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [string]$RetiredBuildsRoot
+    )
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return $null
+    }
+
+    New-Item -ItemType Directory -Force -Path $RetiredBuildsRoot | Out-Null
+    $retiredName = "{0}-retired-{1}" -f ([System.IO.Path]::GetFileName($Path)), ([Guid]::NewGuid().ToString("N"))
+    $retiredPath = Join-Path $RetiredBuildsRoot $retiredName
+    Move-Item -LiteralPath $Path -Destination $retiredPath -Force
+    return $retiredPath
+}
+
+function Invoke-ShadowCleanup {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$BuildsRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$RetiredBuildsRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$CurrentManifestPath,
+        [Parameter(Mandatory = $true)]
+        [string]$PreviousManifestPath,
+        [Parameter(Mandatory = $true)]
+        [string]$FailedManifestPath,
+        [Parameter(Mandatory = $true)]
+        [int]$RetainedBuildCount
+    )
+
+    if (-not (Test-Path -LiteralPath $BuildsRoot)) {
+        return
+    }
+
+    $buildDirectories = @(Get-ChildItem -LiteralPath $BuildsRoot -Directory | Sort-Object LastWriteTimeUtc -Descending)
+    if ($buildDirectories.Count -eq 0) {
+        return
+    }
+
+    $protectedSuccessfulRoots = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($manifestPath in @($CurrentManifestPath, $PreviousManifestPath)) {
+        $manifest = Get-ShadowManifest -ManifestPath $manifestPath
+        if ($null -ne $manifest -and -not [string]::IsNullOrWhiteSpace($manifest.buildRoot) -and (Test-Path -LiteralPath $manifest.buildRoot)) {
+            [void]$protectedSuccessfulRoots.Add((Resolve-AbsolutePath $manifest.buildRoot))
+        }
+    }
+
+    foreach ($directory in $buildDirectories) {
+        if ($protectedSuccessfulRoots.Count -ge $RetainedBuildCount) {
+            break
+        }
+
+        [void]$protectedSuccessfulRoots.Add($directory.FullName)
+    }
+
+    $protectedRoots = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($root in $protectedSuccessfulRoots) {
+        [void]$protectedRoots.Add($root)
+    }
+
+    $failedManifest = Get-ShadowManifest -ManifestPath $FailedManifestPath
+    if ($null -ne $failedManifest -and -not [string]::IsNullOrWhiteSpace($failedManifest.buildRoot) -and (Test-Path -LiteralPath $failedManifest.buildRoot)) {
+        [void]$protectedRoots.Add((Resolve-AbsolutePath $failedManifest.buildRoot))
+    }
+
+    $liveRoots = Get-LiveShadowBuildRoots -BuildDirectories $buildDirectories
+    foreach ($root in $liveRoots) {
+        if ($protectedRoots.Add($root)) {
+            Write-Bootstrap "shadow cleanup | preserving live build root | buildRoot=$root"
+        }
+    }
+
+    foreach ($directory in $buildDirectories) {
+        if ($protectedRoots.Contains($directory.FullName)) {
+            continue
+        }
+
+        try {
+            $retiredPath = Move-BuildRootToRetired -Path $directory.FullName -RetiredBuildsRoot $RetiredBuildsRoot
+            if ($null -ne $retiredPath) {
+                Remove-DirectoryRobust -Path $retiredPath
+                Write-Bootstrap "shadow cleanup | removed buildRoot=$($directory.FullName)"
+                continue
+            }
+
+            Write-Bootstrap "shadow cleanup | buildRoot already gone | buildRoot=$($directory.FullName)"
+        }
+        catch {
+            Write-Bootstrap "shadow cleanup | skipped buildRoot=$($directory.FullName) | error=$($_.Exception.Message)"
+        }
+    }
+
+    if (-not (Test-Path -LiteralPath $RetiredBuildsRoot)) {
+        return
+    }
+
+    foreach ($directory in @(Get-ChildItem -LiteralPath $RetiredBuildsRoot -Directory -ErrorAction SilentlyContinue)) {
+        try {
+            Remove-DirectoryRobust -Path $directory.FullName
+        }
+        catch {
+            Write-Bootstrap "shadow cleanup | retired-build-root pending | buildRoot=$($directory.FullName) | error=$($_.Exception.Message)"
+        }
+    }
+}
+
 if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
     $RepoRoot = Resolve-AbsolutePath (Join-Path $PSScriptRoot "..\..")
 }
@@ -159,10 +400,15 @@ $sourceRoots =
 $trackedFiles = @(Get-TrackedFiles -CandidatePaths $sourceRoots)
 $sourceSignature = Get-SourceSignature -TrackedFiles $trackedFiles
 $buildsRoot = Join-Path $ShadowArtifactsPath "builds"
+$retiredBuildsRoot = Join-Path $ShadowArtifactsPath "retired-builds"
 $manifestPath = Join-Path $ShadowArtifactsPath "current.json"
+$previousManifestPath = Join-Path $ShadowArtifactsPath "previous.json"
+$failedManifestPath = Join-Path $ShadowArtifactsPath "last-failed.json"
+$retainedBuildCount = Get-ShadowRetentionCount -SettingsPath $SettingsPath
 $configurationSegment = $Configuration.ToLowerInvariant()
 
 New-Item -ItemType Directory -Force -Path $buildsRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $retiredBuildsRoot | Out-Null
 
 Write-Bootstrap "wrapper start | repo=$RepoRoot | project=$ProjectPath | settings=$SettingsPath | shadow=$ShadowArtifactsPath | signature=$sourceSignature"
 
@@ -177,6 +423,10 @@ if (-not $shadowNeedsRefresh) {
     elseif ($manifest.signature -ne $sourceSignature) {
         $shadowNeedsRefresh = $true
         Write-Bootstrap "shadow check | signature changed | current=$($manifest.signature) | next=$sourceSignature"
+    }
+    elseif ([string]::IsNullOrWhiteSpace($manifest.buildRoot) -or -not (Test-Path -LiteralPath $manifest.buildRoot)) {
+        $shadowNeedsRefresh = $true
+        Write-Bootstrap "shadow check | manifest build root missing | path=$($manifest.buildRoot)"
     }
     elseif (-not (Test-Path -LiteralPath $manifest.shadowDllPath)) {
         $shadowNeedsRefresh = $true
@@ -195,26 +445,35 @@ if ($shadowNeedsRefresh) {
 
     if (-not (Test-Path -LiteralPath $shadowDllPath)) {
         Write-Bootstrap "shadow build start | buildRoot=$buildRoot"
+        try {
+            $buildOutput = & dotnet build $ProjectPath -c $Configuration --artifacts-path $buildRoot -p:UseAppHost=false 2>&1
+            foreach ($line in $buildOutput) {
+                $text = $line.ToString()
+                [Console]::Error.WriteLine($text)
+                Add-Content -Path $script:BootstrapLogPath -Value ("{0} build | {1}" -f [DateTimeOffset]::UtcNow.ToString("O"), $text)
+            }
 
-        $buildOutput = & dotnet build $ProjectPath -c $Configuration --artifacts-path $buildRoot -p:UseAppHost=false 2>&1
-        foreach ($line in $buildOutput) {
-            $text = $line.ToString()
-            [Console]::Error.WriteLine($text)
-            Add-Content -Path $script:BootstrapLogPath -Value ("{0} build | {1}" -f [DateTimeOffset]::UtcNow.ToString("O"), $text)
+            if ($LASTEXITCODE -ne 0) {
+                throw "Shadow build failed with exit code $LASTEXITCODE. See $script:BootstrapLogPath."
+            }
+
+            if (-not (Test-Path -LiteralPath $shadowDllPath)) {
+                throw "Shadow build completed without producing '$shadowDllPath'."
+            }
+
+            Write-Bootstrap "shadow build completed | buildRoot=$buildRoot"
         }
-
-        if ($LASTEXITCODE -ne 0) {
-            throw "Shadow build failed with exit code $LASTEXITCODE. See $script:BootstrapLogPath."
+        catch {
+            Write-ShadowFailureManifest -ManifestPath $failedManifestPath -Signature $sourceSignature -BuildRoot $buildRoot -FailureMessage $_.Exception.Message
+            throw
         }
-
-        if (-not (Test-Path -LiteralPath $shadowDllPath)) {
-            throw "Shadow build completed without producing '$shadowDllPath'."
-        }
-
-        Write-Bootstrap "shadow build completed | buildRoot=$buildRoot"
     }
     else {
         Write-Bootstrap "shadow build reuse | buildRoot=$buildRoot"
+    }
+
+    if ($null -ne $manifest -and -not [string]::IsNullOrWhiteSpace($manifest.buildRoot) -and ($manifest.buildRoot -ne $buildRoot)) {
+        Set-Content -LiteralPath $previousManifestPath -Value ($manifest | ConvertTo-Json)
     }
 
     Write-ShadowManifest -ManifestPath $manifestPath -Signature $sourceSignature -BuildRoot $buildRoot -ShadowDllPath $shadowDllPath
@@ -223,6 +482,8 @@ else {
     $shadowDllPath = $manifest.shadowDllPath
     Write-Bootstrap "shadow check | manifest current | dll=$shadowDllPath"
 }
+
+Invoke-ShadowCleanup -BuildsRoot $buildsRoot -RetiredBuildsRoot $retiredBuildsRoot -CurrentManifestPath $manifestPath -PreviousManifestPath $previousManifestPath -FailedManifestPath $failedManifestPath -RetainedBuildCount $retainedBuildCount
 
 Write-Bootstrap "launch shadow host | dll=$shadowDllPath"
 

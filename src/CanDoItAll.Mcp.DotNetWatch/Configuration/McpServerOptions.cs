@@ -21,6 +21,16 @@ public sealed class McpServerOptions
     public WaitOptions Waits { get; set; } = new();
 
     public SecurityOptions Security { get; set; } = new();
+
+    public BridgeOptions Bridge { get; set; } = new();
+
+    public AtomicRuntimeOptions AtomicRuntime { get; set; } = new();
+
+    public EndpointsOptions Endpoints { get; set; } = new();
+
+    public ShadowHostOptions ShadowHost { get; set; } = new();
+
+    public WorkflowGuidanceOptions WorkflowGuidance { get; set; } = new();
 }
 
 public sealed class ServerOptions
@@ -163,5 +173,55 @@ public sealed class SecurityOptions
         "DOTNET_ENVIRONMENT",
         "DOTNET_USE_POLLING_FILE_WATCHER",
         "DetailedErrors"
+    ];
+}
+
+public sealed class BridgeOptions
+{
+    public int PingTimeoutMs { get; set; } = 5_000;
+
+    public int RepairRetryCount { get; set; } = 1;
+}
+
+public sealed class AtomicRuntimeOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    public string SlotRoot { get; set; } = ".mcp-state/runtime-slots";
+
+    public int RollbackRetentionCount { get; set; } = 2;
+
+    public string DefaultCandidateConfiguration { get; set; } = "Release";
+}
+
+public sealed class EndpointsOptions
+{
+    public string LeasePath { get; set; } = ".mcp-state/runtime-endpoints/leases.json";
+
+    public int CandidateHttpPortStart { get; set; } = 5500;
+
+    public int CandidateHttpPortEnd { get; set; } = 5799;
+}
+
+public sealed class ShadowHostOptions
+{
+    public int RetainedBuildCount { get; set; } = 2;
+}
+
+public sealed class WorkflowGuidanceOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    public int MaxSerializedCharacters { get; set; } = 180;
+
+    public string[] ToolAllowList { get; set; } =
+    [
+        "candoitall_workspace_info",
+        "candoitall_app_status",
+        "candoitall_app_wait",
+        "candoitall_operation_status",
+        "candoitall_diagnose_start_failure",
+        "candoitall_app_update_atomic",
+        "candoitall_app_rollback"
     ];
 }

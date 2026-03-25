@@ -504,10 +504,10 @@ public sealed class ValidationMatrixTests : IAsyncLifetime
                 {
                     ["targetPath"] = DotNetWatchUnitTestProjectPath,
                     ["timeoutMs"] = 300000
-                });
+            });
 
             Assert.False(tests.Ok);
-            Assert.Equal("OperationInProgress", tests.Error!.Code);
+            Assert.Contains(tests.Error!.Code, new[] { "ResourceConflict", "OperationInProgress" });
             Assert.Contains("Build", tests.Error.Message, StringComparison.OrdinalIgnoreCase);
         }
         finally
@@ -573,6 +573,11 @@ public sealed class ValidationMatrixTests : IAsyncLifetime
                 {
                     ["operationId"] = operationId
                 });
+
+            if (!status.Ok && string.Equals(status.Error?.Code, "OperationNotFound", StringComparison.Ordinal))
+            {
+                return;
+            }
 
             Assert.True(status.Ok, status.Error?.Message);
             if (status.Data!.State is OperationState.Completed or OperationState.Failed or OperationState.TimedOut or OperationState.Cancelled)

@@ -71,6 +71,19 @@ public sealed class AppSessionLifecycleTests
         Assert.Equal(7100, status.Health.RuntimePid);
     }
 
+    [Fact]
+    public void ConfirmsCurrentGeneration_Rejects_RuntimeOwnedByDifferentSession()
+    {
+        var session = CreateWatchSession();
+
+        var foreignSnapshot = CreateHealthySnapshot(watchIteration: 1, runtimePid: 4100) with
+        {
+            OwnerId = "app_other"
+        };
+
+        Assert.False(session.ConfirmsCurrentGeneration(foreignSnapshot));
+    }
+
     private static AppSession CreateWatchSession()
     {
         var template = new AppStartTemplate(
@@ -101,7 +114,12 @@ public sealed class AppSessionLifecycleTests
             "Ready",
             watchIteration,
             runtimePid,
-            ["https://localhost:7271", "http://localhost:5032"]);
+            ["https://localhost:7271", "http://localhost:5032"])
+        {
+            OwnerKind = "app",
+            OwnerId = "app_test",
+            ServerInstanceId = "srv_test"
+        };
     }
 
     private static LogEntry CreateLogEntry(long sequence, string text)

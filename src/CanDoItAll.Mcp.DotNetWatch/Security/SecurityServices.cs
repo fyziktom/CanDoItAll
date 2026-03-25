@@ -23,6 +23,17 @@ public sealed class PathGuard(RuntimeConfiguration configuration)
         return resolved;
     }
 
+    public string ResolveEntryPath(string path)
+    {
+        var resolved = ResolveInsideWorkspace(path);
+        if (!File.Exists(resolved))
+        {
+            throw new ToolInvocationException("ValidationError", $"Entry path '{resolved}' does not exist.", new { path = resolved });
+        }
+
+        return resolved;
+    }
+
     public string ResolveWorkingDirectory(string? workingDirectory, string projectPath)
     {
         var candidate = string.IsNullOrWhiteSpace(workingDirectory)

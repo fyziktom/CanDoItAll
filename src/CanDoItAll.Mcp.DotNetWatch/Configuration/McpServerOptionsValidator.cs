@@ -66,9 +66,41 @@ public sealed class McpServerOptionsValidator : IValidateOptions<McpServerOption
             failures.Add("Backend startup timeouts and poll intervals must be positive.");
         }
 
+        if (options.Bridge.PingTimeoutMs <= 0)
+        {
+            failures.Add("Bridge:PingTimeoutMs must be positive.");
+        }
+
+        if (options.Bridge.RepairRetryCount < 0)
+        {
+            failures.Add("Bridge:RepairRetryCount cannot be negative.");
+        }
+
         if (string.IsNullOrWhiteSpace(options.Backend.BindHost))
         {
             failures.Add("Backend:BindHost must not be empty.");
+        }
+
+        if (options.AtomicRuntime.RollbackRetentionCount <= 0)
+        {
+            failures.Add("AtomicRuntime:RollbackRetentionCount must be positive.");
+        }
+
+        if (options.Endpoints.CandidateHttpPortStart <= 0 ||
+            options.Endpoints.CandidateHttpPortEnd <= 0 ||
+            options.Endpoints.CandidateHttpPortEnd < options.Endpoints.CandidateHttpPortStart)
+        {
+            failures.Add("Endpoints candidate HTTP port range must be positive and ordered.");
+        }
+
+        if (options.ShadowHost.RetainedBuildCount <= 0)
+        {
+            failures.Add("ShadowHost:RetainedBuildCount must be positive.");
+        }
+
+        if (options.WorkflowGuidance.MaxSerializedCharacters <= 0)
+        {
+            failures.Add("WorkflowGuidance:MaxSerializedCharacters must be positive.");
         }
 
         foreach (var allowedRoot in options.Security.AllowedProjectRoots)
@@ -123,6 +155,25 @@ public sealed class McpServerOptionsValidator : IValidateOptions<McpServerOption
             catch (Exception ex)
             {
                 failures.Add($"Backend path '{resolvedBackendPath}' is not writable: {ex.Message}");
+            }
+        }
+
+        foreach (var workspacePath in new[] { options.AtomicRuntime.SlotRoot, options.Endpoints.LeasePath })
+        {
+            var resolvedWorkspacePath = ResolvePath(workspaceRoot, workspacePath);
+            try
+            {
+                var directory = Directory.Exists(resolvedWorkspacePath)
+                    ? resolvedWorkspacePath
+                    : Path.GetDirectoryName(resolvedWorkspacePath);
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+            }
+            catch (Exception ex)
+            {
+                failures.Add($"Workspace-managed path '{resolvedWorkspacePath}' is not writable: {ex.Message}");
             }
         }
 

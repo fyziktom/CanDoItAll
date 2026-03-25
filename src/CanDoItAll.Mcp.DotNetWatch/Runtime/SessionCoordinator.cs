@@ -3,6 +3,10 @@ using CanDoItAll.Mcp.DotNetWatch.Configuration;
 using CanDoItAll.Mcp.DotNetWatch.Diagnostics;
 using CanDoItAll.Mcp.DotNetWatch.Health;
 using CanDoItAll.Mcp.DotNetWatch.Operations;
+using CanDoItAll.Mcp.DotNetWatch.Runtime.Atomic;
+using CanDoItAll.Mcp.DotNetWatch.Runtime.Coordination;
+using CanDoItAll.Mcp.DotNetWatch.Runtime.Events;
+using CanDoItAll.Mcp.DotNetWatch.Runtime.LaunchSpecs;
 using CanDoItAll.Mcp.DotNetWatch.Security;
 
 namespace CanDoItAll.Mcp.DotNetWatch.Runtime;
@@ -12,11 +16,16 @@ public sealed class SessionCoordinator(
     ServerInstanceIdentity serverInstanceIdentity,
     AppRuntimeManager appRuntimeManager,
     WorkspaceExecutionLock executionLock,
+    ResourceScopePlanner resourceScopePlanner,
     OperationRegistry operationRegistry,
     HttpHealthProbe healthProbe,
     ProcessSupervisor processSupervisor,
     PathGuard pathGuard,
     EnvironmentOverlayFilter environmentOverlayFilter,
+    RuntimeSlotRegistry runtimeSlotRegistry,
+    RuntimeEndpointAllocator endpointAllocator,
+    AtomicUpdateCoordinator atomicUpdateCoordinator,
+    SessionEventJournal eventJournal,
     StartFailureDiagnoser diagnoser,
     AgentLogReducer logReducer,
     StaleProcessRegistry staleProcessRegistry,
@@ -30,6 +39,13 @@ public sealed class SessionCoordinator(
         var activeSessions = appRuntimeManager.GetActiveSessions().Select(static session => session.ToStatusData()).ToArray();
         var activeSession = activeSessions.FirstOrDefault();
         var activeOperations = operationRegistry.GetActiveOperations().Select(static operation => operation.ToStatusData()).ToArray();
+        var activeLogicalApps = activeSessions
+            .Select(static session => session.LogicalAppId)
+            .Where(static logicalAppId => !string.IsNullOrWhiteSpace(logicalAppId))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static logicalAppId => logicalAppId, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         var history = includeHistory
             ? new WorkspaceHistoryData(
                 appRuntimeManager.GetAllSessions().Take(WorkspaceHistoryLimit).Select(static session => session.ToStatusData()).ToArray(),
@@ -51,13 +67,41 @@ public sealed class SessionCoordinator(
             includeConfigSnapshot ? configuration.CreateRedactedSnapshot() : null,
             history)
         {
-            ActiveAppSessions = activeSessions
+            ActiveAppSessions = activeSessions,
+            LaneCapabilities =
+            [
+                new LaneCapabilityData(RuntimeLaneKind.SourceWatch, true, "Fast path for small source edits under dotnet watch."),
+                new LaneCapabilityData(RuntimeLaneKind.SourceRun, true, "Direct project run under backend management."),
+                new LaneCapabilityData(RuntimeLaneKind.BuildTest, true, "Isolated build and test operations."),
+                new LaneCapabilityData(RuntimeLaneKind.PublishedCandidate, configuration.AtomicRuntimeEnabled, "Published candidate runtime on isolated ports."),
+                new LaneCapabilityData(RuntimeLaneKind.PublishedActive, configuration.AtomicRuntimeEnabled, "Committed published runtime."),
+                new LaneCapabilityData(RuntimeLaneKind.ExternalExecutable, true, "Managed external executable launch.")
+            ],
+            AtomicRuntime = new AtomicRuntimeCapabilityData(
+                Enabled: configuration.AtomicRuntimeEnabled,
+                RollbackSupported: configuration.AtomicRuntimeEnabled,
+                EndpointLeasingEnabled: true),
+            ActiveLogicalApps = activeLogicalApps,
+            Slots = activeLogicalApps.Select(logicalAppId =>
+            {
+                var snapshot = runtimeSlotRegistry.GetSnapshot(logicalAppId);
+                return new SlotSummaryData(
+                    LogicalAppId: logicalAppId,
+                    ActiveSlotId: snapshot.App.CurrentSlotId,
+                    CandidateSlotId: snapshot.CandidateSlot?.SlotId,
+                    ActiveTransactionId: snapshot.App.LastCommittedTransactionId,
+                    RollbackAvailable: snapshot.App.RollbackAvailable);
+            }).ToArray()
         };
     }
 
     public async Task<AppStartData> StartAppAsync(
+        string? logicalAppId,
         string? projectPath,
         AppRunMode? mode,
+        AppLaunchType launchType,
+        RuntimeLaneKind? preferredLane,
+        string? entryPath,
         string? configurationName,
         string? framework,
         string? launchProfile,
@@ -70,21 +114,27 @@ public sealed class SessionCoordinator(
         AppWaitCondition waitFor,
         CancellationToken cancellationToken)
     {
-        await using var lease = await executionLock.AcquireMutationAsync("app-start", cancellationToken);
-
-        var resolvedProjectPath = pathGuard.ResolveProjectPath(projectPath);
-        var template = new AppStartTemplate(
-            resolvedProjectPath,
-            pathGuard.ResolveWorkingDirectory(workingDirectory, resolvedProjectPath),
-            mode ?? configuration.DefaultApp.Mode,
-            string.IsNullOrWhiteSpace(configurationName) ? configuration.DefaultApp.Configuration : configurationName,
-            string.IsNullOrWhiteSpace(framework) ? configuration.DefaultApp.Framework : framework,
-            string.IsNullOrWhiteSpace(launchProfile) ? configuration.DefaultApp.LaunchProfile : launchProfile,
-            arguments.Count == 0 ? configuration.DefaultApp.Arguments : arguments,
-            environmentOverlayFilter.Merge(configuration.DefaultApp.EnvironmentOverlay, environmentOverlay, configuration.UsePollingFileWatcher),
-            urls.Count == 0 ? configuration.DefaultApp.Urls : urls);
+        var template = ResolveAppStartTemplate(
+            logicalAppId,
+            projectPath,
+            mode,
+            launchType,
+            preferredLane,
+            entryPath,
+            configurationName,
+            framework,
+            launchProfile,
+            workingDirectory,
+            arguments,
+            environmentOverlay,
+            urls);
+        await using var lease = await executionLock.AcquireMutationAsync(
+            "app-start",
+            resourceScopePlanner.ForAppStart(template.LogicalAppId, template.ProjectPath).ResourceKeys,
+            cancellationToken);
 
         var (session, reused) = await appRuntimeManager.StartAsync(template, reuseIfCompatible, conflictPolicy, cancellationToken);
+        eventJournal.Append(session.LogicalAppId, session.SessionId, reused ? "session-reused" : "session-created", reused ? "Compatible session reused." : "Managed session created.", session.ToStatusData().Revision, session.ToStatusData().ActiveTransactionId, session.ToStatusData().SlotId);
 
         if (waitFor != AppWaitCondition.None)
         {
@@ -120,7 +170,15 @@ public sealed class SessionCoordinator(
             status.ObservedUrls,
             session.LogBuffer.CurrentSequence,
             status.LastKnownPid,
-            status.Watch);
+            status.Watch)
+        {
+            LogicalAppId = status.LogicalAppId,
+            LaneKind = status.LaneKind,
+            Revision = status.Revision,
+            SlotId = status.SlotId,
+            ActiveTransactionId = status.ActiveTransactionId,
+            LaunchType = status.LaunchType
+        };
     }
 
     public Task<AppStopData> StopAppAsync(string? sessionId, string reason, bool force, CancellationToken cancellationToken)
@@ -171,6 +229,72 @@ public sealed class SessionCoordinator(
         return new AppLogsData(session.SessionId, result.Entries, result.NextCursor, result.Truncated, result.TotalAvailableAfterCursor, result.FilterSummary);
     }
 
+    public AppEventsData GetAppEvents(string? logicalAppId, string? sessionId, long? cursor, int limit)
+    {
+        return eventJournal.Read(logicalAppId, sessionId, cursor, limit);
+    }
+
+    public async Task<AtomicUpdateData> UpdateAppAtomicAsync(
+        string? logicalAppId,
+        string? projectPath,
+        string configurationName,
+        string? framework,
+        IReadOnlyList<string> arguments,
+        IReadOnlyDictionary<string, string?>? environmentOverlay,
+        bool activateOnSuccess,
+        bool keepPreviousRuntimeWarm,
+        bool allowRollback,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        if (!configuration.AtomicRuntimeEnabled)
+        {
+            throw new ToolInvocationException("ValidationError", "Atomic runtime updates are disabled by configuration.");
+        }
+
+        var candidateLogicalAppId = string.IsNullOrWhiteSpace(logicalAppId)
+            ? Path.GetFileNameWithoutExtension(pathGuard.ResolveProjectPath(projectPath))
+            : logicalAppId.Trim();
+        var resolvedProjectPath = pathGuard.ResolveProjectPath(projectPath);
+        var slotId = runtimeSlotRegistry.SelectInactiveSlot(runtimeSlotRegistry.GetState(candidateLogicalAppId));
+        await using var lease = await executionLock.AcquireMutationAsync(
+            "app-update-atomic",
+            resourceScopePlanner.ForAtomicPrepare(candidateLogicalAppId, resolvedProjectPath, slotId).ResourceKeys,
+            cancellationToken);
+
+        return await atomicUpdateCoordinator.UpdateAsync(
+            logicalAppId,
+            projectPath,
+            string.IsNullOrWhiteSpace(configurationName) ? configuration.DefaultCandidateConfiguration : configurationName,
+            framework,
+            arguments,
+            environmentOverlay,
+            activateOnSuccess,
+            keepPreviousRuntimeWarm,
+            allowRollback,
+            timeout,
+            cancellationToken);
+    }
+
+    public async Task<AtomicRollbackData> RollbackAppAsync(string? logicalAppId, string? transactionId, CancellationToken cancellationToken)
+    {
+        if (!configuration.AtomicRuntimeEnabled)
+        {
+            throw new ToolInvocationException("RollbackFailed", "Atomic runtime updates are disabled by configuration.");
+        }
+
+        if (string.IsNullOrWhiteSpace(logicalAppId))
+        {
+            throw new ToolInvocationException("RollbackFailed", "logicalAppId is required.");
+        }
+
+        await using var lease = await executionLock.AcquireMutationAsync(
+            "app-rollback",
+            resourceScopePlanner.ForRollback(logicalAppId).ResourceKeys,
+            cancellationToken);
+        return await atomicUpdateCoordinator.RollbackAsync(logicalAppId, transactionId, cancellationToken);
+    }
+
     public async Task<AppWaitData> WaitForAppAsync(
         string? sessionId,
         AppWaitCondition condition,
@@ -202,6 +326,36 @@ public sealed class SessionCoordinator(
         {
             cancellationToken.ThrowIfCancellationRequested();
             var status = session.ToStatusData();
+
+            if (condition == AppWaitCondition.RevisionConfirmed &&
+                status.Revision is { IsConfirmed: true } &&
+                (!cursor.HasValue || status.LastCursor > cursor.Value))
+            {
+                return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+            }
+
+            if (condition == AppWaitCondition.TransactionPrepared &&
+                status.ActiveTransactionId is not null &&
+                status.LaneKind == RuntimeLaneKind.PublishedCandidate &&
+                status.State == AppLifecycleState.Healthy)
+            {
+                return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+            }
+
+            if (condition == AppWaitCondition.TransactionCommitted &&
+                status.ActiveTransactionId is not null &&
+                status.LaneKind == RuntimeLaneKind.PublishedActive &&
+                status.State == AppLifecycleState.Healthy)
+            {
+                return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+            }
+
+            if (condition == AppWaitCondition.RollbackCommitted &&
+                status.RollbackAvailable &&
+                status.State == AppLifecycleState.Healthy)
+            {
+                return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+            }
 
             if (condition == AppWaitCondition.Running &&
                 status.State is AppLifecycleState.Running or AppLifecycleState.Healthy or AppLifecycleState.Restarting)
@@ -517,7 +671,10 @@ public sealed class SessionCoordinator(
             timeout);
         operationRegistry.Add(operation);
 
-        var lease = await executionLock.AcquireMutationAsync($"{operationType}:{operationId}", cancellationToken);
+        var lease = await executionLock.AcquireMutationAsync(
+            $"{operationType}:{operationId}",
+            resourceScopePlanner.ForOperation(targetPath, activeSessions.Select(static session => session.LogicalAppId)).ResourceKeys,
+            cancellationToken);
 
         if (stoppedSessionIds.Count > 0)
         {
@@ -665,6 +822,94 @@ public sealed class SessionCoordinator(
         return operationRegistry.GetAllOperations().Take(WorkspaceHistoryLimit).Select(static operation => operation.ToStatusData()).ToArray();
     }
 
+    private AppStartTemplate ResolveAppStartTemplate(
+        string? logicalAppId,
+        string? projectPath,
+        AppRunMode? mode,
+        AppLaunchType launchType,
+        RuntimeLaneKind? preferredLane,
+        string? entryPath,
+        string? configurationName,
+        string? framework,
+        string? launchProfile,
+        string? workingDirectory,
+        IReadOnlyList<string> arguments,
+        IReadOnlyDictionary<string, string?>? environmentOverlay,
+        IReadOnlyList<string> urls)
+    {
+        var resolvedProjectPath = pathGuard.ResolveProjectPath(projectPath);
+        var resolvedEntryPath = string.IsNullOrWhiteSpace(entryPath) ? null : pathGuard.ResolveEntryPath(entryPath);
+        var effectiveLaunchType = launchType;
+        var resolvedLogicalAppId = string.IsNullOrWhiteSpace(logicalAppId)
+            ? Path.GetFileNameWithoutExtension(resolvedEntryPath ?? resolvedProjectPath)
+            : logicalAppId.Trim();
+        var effectiveLane = preferredLane ?? ResolveLaneKind(mode, effectiveLaunchType);
+        var effectiveMode = mode ?? (effectiveLane == RuntimeLaneKind.SourceWatch ? AppRunMode.WatchRun : AppRunMode.RunOnce);
+        var effectiveWorkingDirectory = effectiveLaunchType == AppLaunchType.Project
+            ? pathGuard.ResolveWorkingDirectory(workingDirectory, resolvedProjectPath)
+            : string.IsNullOrWhiteSpace(workingDirectory)
+                ? Path.GetDirectoryName(resolvedEntryPath ?? resolvedProjectPath) ?? configuration.WorkspaceRoot
+                : pathGuard.ResolveInsideWorkspace(workingDirectory);
+        EndpointLease? endpointLease = null;
+        IReadOnlyList<string> effectiveUrls;
+        if (urls.Count > 0)
+        {
+            effectiveUrls = urls;
+        }
+        else if (effectiveLaunchType == AppLaunchType.Project)
+        {
+            endpointLease = endpointAllocator.Acquire($"logical-app:{resolvedLogicalAppId}:{effectiveLane}");
+            effectiveUrls = [$"http://127.0.0.1:{endpointLease.HttpPort}"];
+        }
+        else
+        {
+            effectiveUrls = configuration.DefaultApp.Urls;
+        }
+
+        return new AppStartTemplate(
+            resolvedProjectPath,
+            effectiveWorkingDirectory,
+            effectiveMode,
+            string.IsNullOrWhiteSpace(configurationName) ? configuration.DefaultApp.Configuration : configurationName,
+            string.IsNullOrWhiteSpace(framework) ? configuration.DefaultApp.Framework : framework,
+            effectiveLaunchType == AppLaunchType.Project && string.IsNullOrWhiteSpace(launchProfile) ? configuration.DefaultApp.LaunchProfile : launchProfile,
+            arguments.Count == 0 ? configuration.DefaultApp.Arguments : arguments,
+            environmentOverlayFilter.Merge(configuration.DefaultApp.EnvironmentOverlay, environmentOverlay, configuration.UsePollingFileWatcher && effectiveLane == RuntimeLaneKind.SourceWatch),
+            effectiveUrls)
+        {
+            LogicalAppId = resolvedLogicalAppId,
+            LaunchType = effectiveLaunchType,
+            LaneKind = effectiveLane,
+            EntryPath = resolvedEntryPath,
+            EndpointLeaseId = endpointLease?.LeaseId,
+            HealthUrls = ResolveHealthUrls(effectiveUrls)
+        };
+    }
+
+    private static RuntimeLaneKind ResolveLaneKind(AppRunMode? mode, AppLaunchType launchType)
+    {
+        if (launchType == AppLaunchType.Project)
+        {
+            return (mode ?? AppRunMode.WatchRun) == AppRunMode.WatchRun
+                ? RuntimeLaneKind.SourceWatch
+                : RuntimeLaneKind.SourceRun;
+        }
+
+        return launchType == AppLaunchType.PublishedDll
+            ? RuntimeLaneKind.PublishedActive
+            : RuntimeLaneKind.ExternalExecutable;
+    }
+
+    private IReadOnlyList<Uri> ResolveHealthUrls(IReadOnlyList<string> urls)
+    {
+        if (urls.Count == 0)
+        {
+            return configuration.HealthUrls;
+        }
+
+        return urls.Select(url => new Uri($"{url.TrimEnd('/')}/_dev/runtime", UriKind.Absolute)).ToArray();
+    }
+
     private IEnumerable<OperationArtifactData> CollectArtifacts(string artifactsRoot)
     {
         if (!Directory.Exists(artifactsRoot))
@@ -703,7 +948,7 @@ public sealed class SessionCoordinator(
         var successes = 0;
         for (var attempt = 0; attempt < configuration.StableHealthSuccessCount; attempt++)
         {
-            var probe = await healthProbe.ProbeAsync(configuration.HealthUrls, cancellationToken);
+            var probe = await healthProbe.ProbeAsync(session.HealthUrls.Count > 0 ? session.HealthUrls : configuration.HealthUrls, cancellationToken);
             if (!probe.IsReady)
             {
                 session.MarkHealthFailure(probe);
@@ -845,6 +1090,10 @@ public sealed class SessionCoordinator(
             AppWaitCondition.QuietSinceCursor => "Application logs did not settle within the requested quiet period.",
             AppWaitCondition.WatchSettled => "The active dotnet watch generation did not settle within timeout.",
             AppWaitCondition.RestartCompleted => "The active dotnet watch restart did not complete within timeout.",
+            AppWaitCondition.RevisionConfirmed => "The active runtime revision was not confirmed within timeout.",
+            AppWaitCondition.TransactionPrepared => "The atomic candidate did not become ready within timeout.",
+            AppWaitCondition.TransactionCommitted => "The atomic transaction did not commit within timeout.",
+            AppWaitCondition.RollbackCommitted => "Rollback did not complete within timeout.",
             _ => $"Wait condition '{condition}' was not satisfied within timeout."
         };
     }
@@ -856,6 +1105,7 @@ public sealed class SessionCoordinator(
             return waitResult.Condition switch
             {
                 AppWaitCondition.Healthy or AppWaitCondition.Ready => "HealthTimeout",
+                AppWaitCondition.RevisionConfirmed or AppWaitCondition.TransactionPrepared or AppWaitCondition.TransactionCommitted or AppWaitCondition.RollbackCommitted => "ValidationTimeout",
                 _ => "Timeout"
             };
         }
@@ -889,7 +1139,15 @@ public sealed class SessionCoordinator(
             matchedLogEntry,
             diagnosticHint,
             status.Health,
-            status.Watch);
+            status.Watch)
+        {
+            LogicalAppId = status.LogicalAppId,
+            LaneKind = status.LaneKind,
+            Revision = status.Revision,
+            SlotId = status.SlotId,
+            ActiveTransactionId = status.ActiveTransactionId,
+            RollbackAvailable = status.RollbackAvailable
+        };
     }
 
     private static bool HasQuietPeriodElapsed(AppSession session, long cursor, TimeSpan quietPeriod, DateTimeOffset startedAt, bool requirePostCursorActivity)

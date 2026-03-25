@@ -76,6 +76,26 @@ public sealed class RuntimeConfiguration
         MachineStateRoot = ResolveMachineStateRoot();
         GlobalBackendCatalogDirectory = Path.Combine(MachineStateRoot, "backend-catalog");
 
+        BridgePingTimeout = TimeSpan.FromMilliseconds(options.Bridge.PingTimeoutMs);
+        BridgeRepairRetryCount = Math.Max(0, options.Bridge.RepairRetryCount);
+
+        AtomicRuntimeEnabled = options.AtomicRuntime.Enabled;
+        RuntimeSlotRoot = ResolvePath(WorkspaceRoot, options.AtomicRuntime.SlotRoot);
+        RollbackRetentionCount = Math.Max(1, options.AtomicRuntime.RollbackRetentionCount);
+        DefaultCandidateConfiguration = string.IsNullOrWhiteSpace(options.AtomicRuntime.DefaultCandidateConfiguration)
+            ? "Release"
+            : options.AtomicRuntime.DefaultCandidateConfiguration;
+
+        EndpointLeasePath = ResolvePath(WorkspaceRoot, options.Endpoints.LeasePath);
+        CandidateHttpPortStart = options.Endpoints.CandidateHttpPortStart;
+        CandidateHttpPortEnd = Math.Max(options.Endpoints.CandidateHttpPortStart, options.Endpoints.CandidateHttpPortEnd);
+
+        ShadowRetainedBuildCount = Math.Max(1, options.ShadowHost.RetainedBuildCount);
+
+        WorkflowGuidanceEnabled = options.WorkflowGuidance.Enabled;
+        WorkflowGuidanceMaxSerializedCharacters = Math.Max(64, options.WorkflowGuidance.MaxSerializedCharacters);
+        WorkflowGuidanceToolAllowList = new HashSet<string>(options.WorkflowGuidance.ToolAllowList, StringComparer.OrdinalIgnoreCase);
+
         DefaultAppWaitTimeout = TimeSpan.FromMilliseconds(options.Waits.DefaultAppWaitTimeoutMs);
         DefaultOperationWaitTimeout = TimeSpan.FromMilliseconds(options.Waits.DefaultOperationWaitTimeoutMs);
         DefaultPollInterval = TimeSpan.FromMilliseconds(options.Waits.DefaultPollIntervalMs);
@@ -96,6 +116,8 @@ public sealed class RuntimeConfiguration
         EnsureParentDirectoryExists(BackendRegistrationPath);
         EnsureParentDirectoryExists(BackendLaunchLockPath);
         Directory.CreateDirectory(GlobalBackendCatalogDirectory);
+        Directory.CreateDirectory(RuntimeSlotRoot);
+        EnsureParentDirectoryExists(EndpointLeasePath);
     }
 
     public string ServerName { get; }
@@ -186,6 +208,32 @@ public sealed class RuntimeConfiguration
 
     public string GlobalBackendCatalogDirectory { get; }
 
+    public TimeSpan BridgePingTimeout { get; }
+
+    public int BridgeRepairRetryCount { get; }
+
+    public bool AtomicRuntimeEnabled { get; }
+
+    public string RuntimeSlotRoot { get; }
+
+    public int RollbackRetentionCount { get; }
+
+    public string DefaultCandidateConfiguration { get; }
+
+    public string EndpointLeasePath { get; }
+
+    public int CandidateHttpPortStart { get; }
+
+    public int CandidateHttpPortEnd { get; }
+
+    public int ShadowRetainedBuildCount { get; }
+
+    public bool WorkflowGuidanceEnabled { get; }
+
+    public int WorkflowGuidanceMaxSerializedCharacters { get; }
+
+    public HashSet<string> WorkflowGuidanceToolAllowList { get; }
+
     public TimeSpan DefaultAppWaitTimeout { get; }
 
     public TimeSpan DefaultOperationWaitTimeout { get; }
@@ -250,6 +298,36 @@ public sealed class RuntimeConfiguration
                 ["launchLockPathRelative"] = GetRelativePath(BackendLaunchLockPath),
                 ["machineStateRoot"] = MachineStateRoot,
                 ["globalBackendCatalogDirectory"] = GlobalBackendCatalogDirectory
+            },
+            ["bridge"] = new Dictionary<string, object?>
+            {
+                ["pingTimeoutMs"] = (int)BridgePingTimeout.TotalMilliseconds,
+                ["repairRetryCount"] = BridgeRepairRetryCount
+            },
+            ["atomicRuntime"] = new Dictionary<string, object?>
+            {
+                ["enabled"] = AtomicRuntimeEnabled,
+                ["slotRoot"] = RuntimeSlotRoot,
+                ["slotRootRelative"] = GetRelativePath(RuntimeSlotRoot),
+                ["rollbackRetentionCount"] = RollbackRetentionCount,
+                ["defaultCandidateConfiguration"] = DefaultCandidateConfiguration
+            },
+            ["endpoints"] = new Dictionary<string, object?>
+            {
+                ["leasePath"] = EndpointLeasePath,
+                ["leasePathRelative"] = GetRelativePath(EndpointLeasePath),
+                ["candidateHttpPortStart"] = CandidateHttpPortStart,
+                ["candidateHttpPortEnd"] = CandidateHttpPortEnd
+            },
+            ["shadowHost"] = new Dictionary<string, object?>
+            {
+                ["retainedBuildCount"] = ShadowRetainedBuildCount
+            },
+            ["workflowGuidance"] = new Dictionary<string, object?>
+            {
+                ["enabled"] = WorkflowGuidanceEnabled,
+                ["maxSerializedCharacters"] = WorkflowGuidanceMaxSerializedCharacters,
+                ["toolAllowList"] = WorkflowGuidanceToolAllowList.ToArray()
             },
             ["defaultApp"] = new Dictionary<string, object?>
             {

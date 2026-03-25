@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using CanDoItAll.Mcp.DotNetWatch.Configuration;
 using CanDoItAll.Mcp.DotNetWatch.Health;
+using CanDoItAll.Mcp.DotNetWatch.Runtime.Coordination;
+using CanDoItAll.Mcp.DotNetWatch.Runtime.LaunchSpecs;
 using CanDoItAll.Mcp.DotNetWatch.Security;
 
 namespace CanDoItAll.Mcp.DotNetWatch.Runtime;
@@ -17,7 +19,89 @@ public sealed record AppStartTemplate(
     string? LaunchProfile,
     IReadOnlyList<string> Arguments,
     IReadOnlyDictionary<string, string> EnvironmentOverlay,
-    IReadOnlyList<string> Urls);
+    IReadOnlyList<string> Urls)
+{
+    public string LogicalAppId { get; init; } = BuildLogicalAppId(ProjectPath);
+
+    public AppLaunchType LaunchType { get; init; } = AppLaunchType.Project;
+
+    public RuntimeLaneKind LaneKind { get; init; } = Mode == AppRunMode.WatchRun ? RuntimeLaneKind.SourceWatch : RuntimeLaneKind.SourceRun;
+
+    public string? EntryPath { get; init; }
+
+    public string? SlotId { get; init; }
+
+    public string? ActiveTransactionId { get; init; }
+
+    public string? EndpointLeaseId { get; init; }
+
+    public RuntimeRevisionData? InitialRevision { get; init; }
+
+    public bool RollbackAvailable { get; init; }
+
+    public IReadOnlyList<Uri> HealthUrls { get; init; } = [];
+
+    public AppLaunchSpec ToLaunchSpec()
+    {
+        return LaunchType switch
+        {
+            AppLaunchType.Project => new ProjectLaunchSpec(
+                LogicalAppId,
+                LaneKind,
+                ProjectPath,
+                WorkingDirectory,
+                Configuration,
+                Framework,
+                LaunchProfile,
+                Arguments,
+                EnvironmentOverlay,
+                Urls,
+                HealthUrls),
+            AppLaunchType.PublishedDll => new PublishedDllLaunchSpec(
+                LogicalAppId,
+                LaneKind,
+                ProjectPath,
+                EntryPath ?? throw new InvalidOperationException("Published DLL launches require EntryPath."),
+                WorkingDirectory,
+                Configuration,
+                Framework,
+                Arguments,
+                EnvironmentOverlay,
+                Urls,
+                HealthUrls,
+                SlotId),
+            AppLaunchType.Executable => new ExecutableLaunchSpec(
+                LogicalAppId,
+                LaneKind,
+                EntryPath ?? throw new InvalidOperationException("Executable launches require EntryPath."),
+                WorkingDirectory,
+                ProjectPath,
+                Configuration,
+                Arguments,
+                EnvironmentOverlay,
+                Urls,
+                HealthUrls),
+            _ => throw new InvalidOperationException($"Unsupported launch type '{LaunchType}'.")
+        };
+    }
+
+    private static string BuildLogicalAppId(string projectPath)
+    {
+        var fileName = Path.GetFileNameWithoutExtension(projectPath);
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return "app";
+        }
+
+        var builder = new StringBuilder(fileName.Length);
+        foreach (var character in fileName)
+        {
+            builder.Append(char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-');
+        }
+
+        return builder.ToString().Trim('-');
+    }
+}
 
 public sealed record AppRebuildResult(string SessionId, string Strategy);
 
@@ -26,7 +110,14 @@ public sealed partial class AppSession
     private readonly object _gate = new();
     private readonly HashSet<string> _observedUrls = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _recentEvents = [];
+    private readonly List<Uri> _healthUrls = [];
     private readonly bool _healthEnabled;
+    private RuntimeLaneKind _laneKind;
+    private string? _slotId;
+    private string? _activeTransactionId;
+    private string? _endpointLeaseId;
+    private bool _rollbackAvailable;
+    private RuntimeRevisionData? _explicitRevision;
     private WatchProcessingState _watchState;
     private string _watchSummary;
     private bool _watchPendingChange;
@@ -47,15 +138,25 @@ public sealed partial class AppSession
     {
         SessionId = sessionId;
         CorrelationId = correlationId;
+        LogicalAppId = template.LogicalAppId;
         ProjectPath = template.ProjectPath;
+        EntryPath = template.EntryPath;
         WorkingDirectory = template.WorkingDirectory;
         Mode = template.Mode;
+        LaunchType = template.LaunchType;
+        _laneKind = template.LaneKind;
+        _slotId = template.SlotId;
+        _activeTransactionId = template.ActiveTransactionId;
+        _endpointLeaseId = template.EndpointLeaseId;
+        _rollbackAvailable = template.RollbackAvailable;
+        _explicitRevision = template.InitialRevision;
         Configuration = template.Configuration;
         Framework = template.Framework;
         LaunchProfile = template.LaunchProfile;
         Arguments = template.Arguments.ToArray();
         EnvironmentOverlay = new Dictionary<string, string>(template.EnvironmentOverlay, StringComparer.OrdinalIgnoreCase);
         RequestedUrls = template.Urls.ToArray();
+        _healthUrls.AddRange(template.HealthUrls);
         LogBuffer = logBuffer;
         _healthEnabled = healthEnabled;
         State = AppLifecycleState.Starting;
@@ -71,11 +172,17 @@ public sealed partial class AppSession
 
     public string CorrelationId { get; }
 
+    public string LogicalAppId { get; }
+
     public string ProjectPath { get; }
+
+    public string? EntryPath { get; }
 
     public string WorkingDirectory { get; }
 
     public AppRunMode Mode { get; }
+
+    public AppLaunchType LaunchType { get; }
 
     public string Configuration { get; }
 
@@ -88,6 +195,10 @@ public sealed partial class AppSession
     public IReadOnlyDictionary<string, string> EnvironmentOverlay { get; }
 
     public IReadOnlyList<string> RequestedUrls { get; }
+
+    public IReadOnlyList<Uri> HealthUrls => _healthUrls.ToArray();
+
+    public string? EndpointLeaseId => _endpointLeaseId;
 
     public RingLogBuffer LogBuffer { get; }
 
@@ -112,6 +223,31 @@ public sealed partial class AppSession
         lock (_gate)
         {
             Process = process;
+        }
+    }
+
+    public void UpdateAtomicState(
+        RuntimeLaneKind laneKind,
+        string? slotId,
+        string? activeTransactionId,
+        RuntimeRevisionData? revision,
+        bool rollbackAvailable)
+    {
+        lock (_gate)
+        {
+            _laneKind = laneKind;
+            _slotId = slotId;
+            _activeTransactionId = activeTransactionId;
+            _rollbackAvailable = rollbackAvailable;
+            _explicitRevision = revision ?? _explicitRevision;
+        }
+    }
+
+    public void SetRollbackAvailable(bool rollbackAvailable)
+    {
+        lock (_gate)
+        {
+            _rollbackAvailable = rollbackAvailable;
         }
     }
 
@@ -204,9 +340,19 @@ public sealed partial class AppSession
     {
         lock (_gate)
         {
-            if (!snapshot.IsReady || Mode != AppRunMode.WatchRun || !_watchPendingChange)
+            if (!snapshot.IsReady || !ProbeMatchesSessionLocked(snapshot))
             {
-                return snapshot.IsReady;
+                return false;
+            }
+
+            if (Mode != AppRunMode.WatchRun)
+            {
+                return true;
+            }
+
+            if (!_watchPendingChange)
+            {
+                return true;
             }
 
             if (_lastHotReloadOutcome == HotReloadOutcome.RestartRequired ||
@@ -252,6 +398,13 @@ public sealed partial class AppSession
     {
         lock (_gate)
         {
+            if (State is AppLifecycleState.Stopping or AppLifecycleState.Stopped)
+            {
+                Process = null;
+                _runtimePid = null;
+                return;
+            }
+
             LastExitCode = exitCode;
             Process = null;
             _runtimePid = null;
@@ -276,7 +429,19 @@ public sealed partial class AppSession
                 LaunchProfile,
                 Arguments.ToArray(),
                 new Dictionary<string, string>(EnvironmentOverlay, StringComparer.OrdinalIgnoreCase),
-                RequestedUrls.ToArray());
+                RequestedUrls.ToArray())
+            {
+                LogicalAppId = LogicalAppId,
+                LaunchType = LaunchType,
+                LaneKind = _laneKind,
+                EntryPath = EntryPath,
+                SlotId = _slotId,
+                ActiveTransactionId = _activeTransactionId,
+                EndpointLeaseId = _endpointLeaseId,
+                InitialRevision = _explicitRevision,
+                RollbackAvailable = _rollbackAvailable,
+                HealthUrls = _healthUrls.ToArray()
+            };
         }
     }
 
@@ -286,6 +451,9 @@ public sealed partial class AppSession
         {
             return string.Equals(ProjectPath, template.ProjectPath, StringComparison.OrdinalIgnoreCase) &&
                    Mode == template.Mode &&
+                   LaunchType == template.LaunchType &&
+                   _laneKind == template.LaneKind &&
+                   string.Equals(EntryPath, template.EntryPath, StringComparison.OrdinalIgnoreCase) &&
                    string.Equals(Configuration, template.Configuration, StringComparison.OrdinalIgnoreCase) &&
                    string.Equals(Framework, template.Framework, StringComparison.OrdinalIgnoreCase) &&
                    string.Equals(LaunchProfile, template.LaunchProfile, StringComparison.OrdinalIgnoreCase) &&
@@ -300,7 +468,7 @@ public sealed partial class AppSession
     {
         lock (_gate)
         {
-            return new AppStatusData(
+            var status = new AppStatusData(
                 SessionId,
                 CorrelationId,
                 State,
@@ -339,6 +507,17 @@ public sealed partial class AppSession
                         _lastWatchActivitySequence,
                         _lastWatchActivityUtc)
                     : null);
+            return status with
+            {
+                LogicalAppId = LogicalAppId,
+                LaneKind = _laneKind,
+                Revision = CreateRevisionLocked(),
+                SlotId = _slotId,
+                ActiveTransactionId = _activeTransactionId,
+                RollbackAvailable = _rollbackAvailable,
+                LaunchType = LaunchType,
+                EntryPath = EntryPath
+            };
         }
     }
 
@@ -669,6 +848,12 @@ public sealed partial class AppSession
         Transition(nextState, line);
     }
 
+    private bool ProbeMatchesSessionLocked(HealthSnapshot snapshot)
+    {
+        return string.Equals(snapshot.OwnerKind, "app", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(snapshot.OwnerId, SessionId, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void SyncObservedWatchIterationLocked(HealthSnapshot snapshot)
     {
         if (Mode != AppRunMode.WatchRun || !snapshot.WatchIteration.HasValue)
@@ -743,6 +928,31 @@ public sealed partial class AppSession
         Transition(AppLifecycleState.Restarting, summary);
     }
 
+    private RuntimeRevisionData CreateRevisionLocked()
+    {
+        if (_explicitRevision is not null)
+        {
+            return _explicitRevision;
+        }
+
+        if (_laneKind == RuntimeLaneKind.SourceWatch)
+        {
+            var iteration = _confirmedWatchIteration ?? _expectedWatchIteration ?? 0;
+            return new RuntimeRevisionData(
+                Kind: "WatchIteration",
+                Value: $"{LogicalAppId}:{iteration}",
+                ObservedUtc: _lastWatchActivityUtc ?? LastStartUtc,
+                IsConfirmed: !_watchPendingChange && iteration > 0);
+        }
+
+        var pid = Process?.Pid ?? _runtimePid ?? 0;
+        return new RuntimeRevisionData(
+            Kind: "ProcessInstance",
+            Value: $"{LastStartUtc:O}:{pid}",
+            ObservedUtc: LastStartUtc,
+            IsConfirmed: State is AppLifecycleState.Running or AppLifecycleState.Healthy);
+    }
+
     private static string NormalizeWatchLine(string text)
     {
         const string watchPrefix = "dotnet watch :";
@@ -789,6 +999,7 @@ public sealed class AppRuntimeManager(
     ServerInstanceIdentity serverInstanceIdentity,
     EnvironmentOverlayFilter environmentOverlayFilter,
     ProcessSupervisor processSupervisor,
+    RuntimeEndpointAllocator endpointAllocator,
     HttpHealthProbe healthProbe,
     ILogger<AppRuntimeManager> logger)
 {
@@ -818,6 +1029,26 @@ public sealed class AppRuntimeManager(
 
             _sessions.TryGetValue(sessionId, out var session);
             return session;
+        }
+    }
+
+    public AppSession? GetByLogicalAppId(string logicalAppId)
+    {
+        lock (_gate)
+        {
+            return ResolveActiveSessionsLocked()
+                .FirstOrDefault(session => string.Equals(session.LogicalAppId, logicalAppId, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    public void SetDefaultSession(string sessionId)
+    {
+        lock (_gate)
+        {
+            if (_sessions.ContainsKey(sessionId))
+            {
+                _defaultSessionId = sessionId;
+            }
         }
     }
 
@@ -917,6 +1148,7 @@ public sealed class AppRuntimeManager(
             {
                 logger.LogInformation("Managed app session {SessionId} exited with code {ExitCode}", session.SessionId, exitCode);
                 session.MarkExitedUnexpectedly(exitCode);
+                endpointAllocator.Release(session.EndpointLeaseId);
                 lock (_gate)
                 {
                     _activeSessionIds.Remove(session.SessionId);
@@ -949,6 +1181,7 @@ public sealed class AppRuntimeManager(
         session.MarkStopping(reason);
         var stopResult = await process.StopAsync(force, cancellationToken);
         session.MarkStopped(stopResult.ExitCode, reason);
+        endpointAllocator.Release(session.EndpointLeaseId);
 
         lock (_gate)
         {
@@ -987,23 +1220,24 @@ public sealed class AppRuntimeManager(
 
     private ManagedProcessStartInfo BuildProcessStartInfo(AppStartTemplate template, AppSession session, string correlationId)
     {
+        var launchSpec = template.ToLaunchSpec();
         var environment = environmentOverlayFilter.Merge(
             GetDefaultEnvironment(template, configuration.UsePollingFileWatcher),
             template.EnvironmentOverlay.ToDictionary(static pair => pair.Key, static pair => (string?)pair.Value, StringComparer.OrdinalIgnoreCase),
-            configuration.UsePollingFileWatcher);
+            configuration.UsePollingFileWatcher && template.LaneKind == RuntimeLaneKind.SourceWatch);
 
         var ownershipMarkers = ManagedProcessMarkers.CreateApplicationArguments("app", session.SessionId, configuration.WorkspaceRoot, serverInstanceIdentity.Id);
         var applicationArguments = BuildManagedApplicationArguments(template, ownershipMarkers);
         var artifactsRoot = BuildManagedArtifactsRoot(configuration.WorkspaceRoot, template);
         Directory.CreateDirectory(artifactsRoot);
-        var arguments = BuildManagedProcessArguments(template, applicationArguments, artifactsRoot).ToArray();
+        var processStart = BuildManagedProcessStartArguments(launchSpec, applicationArguments, artifactsRoot);
 
         return new ManagedProcessStartInfo(
             "app",
             session.SessionId,
-            "dotnet",
-            arguments,
-            template.WorkingDirectory,
+            processStart.Command,
+            processStart.Arguments,
+            launchSpec.WorkingDirectory,
             environment,
             correlationId,
             session.SessionVersion);
@@ -1024,58 +1258,94 @@ public sealed class AppRuntimeManager(
         return arguments;
     }
 
-    internal static IReadOnlyList<string> BuildManagedProcessArguments(
-        AppStartTemplate template,
+    internal static (string Command, IReadOnlyList<string> Arguments) BuildManagedProcessStartArguments(
+        AppLaunchSpec launchSpec,
         IReadOnlyList<string> applicationArguments,
         string artifactsRoot)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(artifactsRoot);
 
-        List<string> arguments;
-        if (template.Mode == AppRunMode.WatchRun)
+        if (launchSpec is ProjectLaunchSpec projectSpec && launchSpec.LaneKind == RuntimeLaneKind.SourceWatch)
         {
-            arguments =
+            List<string> arguments =
             [
                 "watch",
                 "--non-interactive",
-                "--project", template.ProjectPath,
+                "--project", projectSpec.ProjectPath!,
                 "--artifacts-path", artifactsRoot,
                 "run",
-                "--configuration", template.Configuration,
+                "--configuration", launchSpec.Configuration,
                 "--property:UseAppHost=false"
             ];
+
+            if (!string.IsNullOrWhiteSpace(launchSpec.Framework))
+            {
+                arguments.Add("--framework");
+                arguments.Add(launchSpec.Framework);
+            }
+
+            if (!string.IsNullOrWhiteSpace(launchSpec.LaunchProfile))
+            {
+                arguments.Add("--launch-profile");
+                arguments.Add(launchSpec.LaunchProfile);
+            }
+
+            if (applicationArguments.Count > 0)
+            {
+                arguments.Add("--");
+                arguments.AddRange(applicationArguments);
+            }
+
+            return ("dotnet", arguments);
         }
-        else
+
+        if (launchSpec is ProjectLaunchSpec runProjectSpec)
         {
-            arguments =
+            List<string> arguments =
             [
                 "run",
-                "--project", template.ProjectPath,
+                "--project", runProjectSpec.ProjectPath!,
                 "--artifacts-path", artifactsRoot,
-                "--configuration", template.Configuration,
+                "--configuration", launchSpec.Configuration,
                 "--property:UseAppHost=false"
             ];
+
+            if (!string.IsNullOrWhiteSpace(launchSpec.Framework))
+            {
+                arguments.Add("--framework");
+                arguments.Add(launchSpec.Framework);
+            }
+
+            if (!string.IsNullOrWhiteSpace(launchSpec.LaunchProfile))
+            {
+                arguments.Add("--launch-profile");
+                arguments.Add(launchSpec.LaunchProfile);
+            }
+
+            if (applicationArguments.Count > 0)
+            {
+                arguments.Add("--");
+                arguments.AddRange(applicationArguments);
+            }
+
+            return ("dotnet", arguments);
         }
 
-        if (!string.IsNullOrWhiteSpace(template.Framework))
+        if (launchSpec is PublishedDllLaunchSpec publishedDllSpec)
         {
-            arguments.Add("--framework");
-            arguments.Add(template.Framework);
-        }
-
-        if (!string.IsNullOrWhiteSpace(template.LaunchProfile))
-        {
-            arguments.Add("--launch-profile");
-            arguments.Add(template.LaunchProfile);
-        }
-
-        if (applicationArguments.Count > 0)
-        {
-            arguments.Add("--");
+            List<string> arguments = [publishedDllSpec.EntryPath!];
             arguments.AddRange(applicationArguments);
+            return ("dotnet", arguments);
         }
 
-        return arguments;
+        if (launchSpec is ExecutableLaunchSpec executableSpec)
+        {
+            List<string> arguments = [];
+            arguments.AddRange(applicationArguments);
+            return (executableSpec.EntryPath!, arguments);
+        }
+
+        throw new InvalidOperationException($"Unsupported launch specification '{launchSpec.GetType().Name}'.");
     }
 
     internal static string BuildManagedArtifactsRoot(string workspaceRoot, AppStartTemplate template)
@@ -1086,6 +1356,14 @@ public sealed class AppRuntimeManager(
         var projectName = SanitizePathSegment(Path.GetFileNameWithoutExtension(template.ProjectPath));
         var templateKey = ComputeTemplateKey(template);
         return Path.Combine(cacheRoot, $"{projectName}-{templateKey}");
+    }
+
+    internal static IReadOnlyList<string> BuildManagedProcessArguments(
+        AppStartTemplate template,
+        IReadOnlyList<string> applicationArguments,
+        string artifactsRoot)
+    {
+        return BuildManagedProcessStartArguments(template.ToLaunchSpec(), applicationArguments, artifactsRoot).Arguments;
     }
 
     private static IReadOnlyDictionary<string, string> GetDefaultEnvironment(AppStartTemplate template, bool usePollingWatcher)
@@ -1161,7 +1439,7 @@ public sealed class AppRuntimeManager(
                     return;
                 }
 
-                var probe = await healthProbe.ProbeAsync(configuration.HealthUrls, CancellationToken.None);
+                var probe = await healthProbe.ProbeAsync(session.HealthUrls.Count > 0 ? session.HealthUrls : configuration.HealthUrls, CancellationToken.None);
                 if (!probe.IsReady)
                 {
                     session.MarkHealthFailure(probe);
@@ -1218,6 +1496,8 @@ public sealed class AppRuntimeManager(
             template.ProjectPath,
             template.WorkingDirectory,
             template.Mode,
+            template.LaunchType,
+            template.EntryPath ?? string.Empty,
             template.Configuration,
             template.Framework ?? string.Empty,
             template.LaunchProfile ?? string.Empty);
@@ -1268,17 +1548,25 @@ public sealed class AppRuntimeManager(
 
     private static bool SessionConflicts(AppSession existing, AppStartTemplate requested)
     {
+        if (HasUrlOverlap(existing.RequestedUrls, requested.Urls))
+        {
+            return true;
+        }
+
+        var existingAtomicLane = existing.ToStatusData().LaneKind is RuntimeLaneKind.PublishedCandidate or RuntimeLaneKind.PublishedActive;
+        var requestedAtomicLane = requested.LaneKind is RuntimeLaneKind.PublishedCandidate or RuntimeLaneKind.PublishedActive;
+        if (existingAtomicLane || requestedAtomicLane)
+        {
+            return string.Equals(existing.EntryPath, requested.EntryPath, StringComparison.OrdinalIgnoreCase) &&
+                   !string.IsNullOrWhiteSpace(existing.EntryPath);
+        }
+
         if (string.Equals(existing.ProjectPath, requested.ProjectPath, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
         if (string.Equals(existing.WorkingDirectory, requested.WorkingDirectory, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        if (HasUrlOverlap(existing.RequestedUrls, requested.Urls))
         {
             return true;
         }

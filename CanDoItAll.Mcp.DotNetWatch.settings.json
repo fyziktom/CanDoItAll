@@ -59,6 +59,37 @@
       "tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj"
     ]
   },
+  "Bridge": {
+    "PingTimeoutMs": 5000,
+    "RepairRetryCount": 1
+  },
+  "AtomicRuntime": {
+    "Enabled": true,
+    "SlotRoot": ".mcp-state/runtime-slots",
+    "RollbackRetentionCount": 2,
+    "DefaultCandidateConfiguration": "Release"
+  },
+  "Endpoints": {
+    "LeasePath": ".mcp-state/runtime-endpoints/leases.json",
+    "CandidateHttpPortStart": 5500,
+    "CandidateHttpPortEnd": 5799
+  },
+  "ShadowHost": {
+    "RetainedBuildCount": 2
+  },
+  "WorkflowGuidance": {
+    "Enabled": true,
+    "MaxSerializedCharacters": 180,
+    "ToolAllowList": [
+      "candoitall_workspace_info",
+      "candoitall_app_status",
+      "candoitall_app_wait",
+      "candoitall_operation_status",
+      "candoitall_diagnose_start_failure",
+      "candoitall_app_update_atomic",
+      "candoitall_app_rollback"
+    ]
+  },
   "Logs": {
     "BufferCapacity": 5000,
     "PersistToFile": true,

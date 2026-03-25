@@ -21,6 +21,9 @@ internal sealed class BackendConnectionManager(
     public BackendConnectionInfo GetRequiredConnection()
         => _currentConnection ?? throw new InvalidOperationException("Backend connection has not been initialized.");
 
+    public BackendConnectionInfo? TryGetCurrentConnection()
+        => _currentConnection;
+
     public async Task<BackendConnectionInfo> EnsureReadyAsync(CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken);
@@ -74,6 +77,30 @@ internal sealed class BackendConnectionManager(
         }
     }
 
+    public async Task<bool> TryRepairAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            _currentConnection = null;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        try
+        {
+            await EnsureReadyAsync(cancellationToken);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Backend connection repair failed.");
+            return false;
+        }
+    }
+
     private async Task<bool> IsRegistrationUsableAsync(BackendRegistrationRecord registration, CancellationToken cancellationToken)
     {
         if (!registrationStore.IsLiveProcess(registration))
@@ -114,7 +141,7 @@ internal sealed class BackendConnectionManager(
         var client = new HttpClient
         {
             BaseAddress = new Uri(registration.BaseUrl, UriKind.Absolute),
-            Timeout = TimeSpan.FromSeconds(5)
+            Timeout = configuration.BridgePingTimeout
         };
         client.DefaultRequestHeaders.Add(BackendAuth.HeaderName, registration.AuthToken);
         return client;

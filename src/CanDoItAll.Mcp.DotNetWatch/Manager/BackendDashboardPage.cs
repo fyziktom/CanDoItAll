@@ -314,10 +314,18 @@ internal static class BackendDashboardPage
             <span class="${stateBadge(session.state)}">${escapeHtml(session.state)}</span>
           </div>
           <div class="meta-row">
+            <span>Logical App <strong>${escapeHtml(session.logicalAppId ?? "n/a")}</strong></span>
+            <span>Lane <strong>${escapeHtml(formatEnum(session.laneKind ?? "n/a"))}</strong></span>
             <span>Session <strong>${escapeHtml(session.sessionId)}</strong></span>
             <span>Watcher PID <strong>${escapeHtml(session.watch?.watcherPid ?? "n/a")}</strong></span>
             <span>Runtime PID <strong>${escapeHtml(session.watch?.runtimePid ?? session.lastKnownPid ?? "n/a")}</strong></span>
             <span>Mode <strong>${escapeHtml(formatEnum(session.mode))}</strong></span>
+          </div>
+          <div class="meta-row">
+            <span>Revision <strong>${escapeHtml(session.revision?.value ?? "n/a")}</strong></span>
+            <span>Slot <strong>${escapeHtml(session.slotId ?? "n/a")}</strong></span>
+            <span>Txn <strong>${escapeHtml(session.activeTransactionId ?? "n/a")}</strong></span>
+            <span>Rollback <strong>${escapeHtml(session.rollbackAvailable ? "yes" : "no")}</strong></span>
           </div>
           <div>${escapeHtml(session.watch?.summary || session.health?.summary || "No summary.")}</div>
           ${sessionActions(backend.backendId, session)}

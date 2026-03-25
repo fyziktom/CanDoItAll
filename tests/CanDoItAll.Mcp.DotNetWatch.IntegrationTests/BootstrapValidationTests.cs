@@ -214,4 +214,129 @@ public sealed class BootstrapValidationTests : IAsyncLifetime
         var bootstrapLog = await File.ReadAllTextAsync(bootstrapLogPath);
         Assert.Contains("wrapper start", bootstrapLog, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task WrapperShadowCleanup_RetainsOnlyCurrentAndPreviousBuildRoots()
+    {
+        var tempDirectory = Path.Combine(ValidationHarness.RepoRoot, ".mcp-state", "wrapper-retention-tests", Guid.NewGuid().ToString("N"));
+        var shadowArtifactsPath = Path.Combine(tempDirectory, "shadow");
+        Directory.CreateDirectory(tempDirectory);
+
+        try
+        {
+            await RunWrapperAsync(shadowArtifactsPath, forceRebuild: true);
+            await RunWrapperAsync(shadowArtifactsPath, forceRebuild: true);
+            await RunWrapperAsync(shadowArtifactsPath, forceRebuild: true);
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            await RunWrapperAsync(shadowArtifactsPath, forceRebuild: false);
+
+            var buildsRoot = Path.Combine(shadowArtifactsPath, "builds");
+            var buildDirectories = await WaitForRetainedBuildRootsAsync(buildsRoot, maximumCount: 2, timeout: TimeSpan.FromSeconds(10));
+
+            Assert.True(File.Exists(Path.Combine(shadowArtifactsPath, "current.json")));
+            Assert.True(File.Exists(Path.Combine(shadowArtifactsPath, "previous.json")));
+            Assert.True(buildDirectories.Length <= 2, $"Expected wrapper cleanup to retain at most two successful build roots, but found {buildDirectories.Length}:{Environment.NewLine}{string.Join(Environment.NewLine, buildDirectories)}");
+        }
+        finally
+        {
+            await TryDeleteDirectoryAsync(tempDirectory);
+        }
+    }
+
+    private static async Task RunWrapperAsync(string shadowArtifactsPath, bool forceRebuild)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo("powershell")
+            {
+                WorkingDirectory = ValidationHarness.RepoRoot,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false
+            }
+        };
+
+        process.StartInfo.ArgumentList.Add("-NoProfile");
+        process.StartInfo.ArgumentList.Add("-ExecutionPolicy");
+        process.StartInfo.ArgumentList.Add("Bypass");
+        process.StartInfo.ArgumentList.Add("-File");
+        process.StartInfo.ArgumentList.Add(ValidationHarness.WrapperScriptPath);
+        process.StartInfo.ArgumentList.Add("-ShadowArtifactsPath");
+        process.StartInfo.ArgumentList.Add(shadowArtifactsPath);
+        if (forceRebuild)
+        {
+            process.StartInfo.ArgumentList.Add("-ForceRebuild");
+        }
+
+        Assert.True(process.Start());
+        process.StandardInput.Close();
+
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+
+        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromMinutes(3));
+
+        var stdout = await stdoutTask;
+        var stderr = await stderrTask;
+
+        Assert.Equal(0, process.ExitCode);
+        Assert.True(File.Exists(Path.Combine(shadowArtifactsPath, "current.json")), $"Wrapper run did not produce a current shadow manifest. Stdout={stdout} Stderr={stderr}");
+    }
+
+    private static async Task TryDeleteDirectoryAsync(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        for (var attempt = 0; attempt < 6; attempt++)
+        {
+            try
+            {
+                Directory.Delete(path, recursive: true);
+                return;
+            }
+            catch (UnauthorizedAccessException) when (attempt < 5)
+            {
+                await Task.Delay(1000);
+            }
+            catch (IOException) when (attempt < 5)
+            {
+                await Task.Delay(1000);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return;
+            }
+            catch (IOException)
+            {
+                return;
+            }
+        }
+    }
+
+    private static async Task<string[]> WaitForRetainedBuildRootsAsync(string buildsRoot, int maximumCount, TimeSpan timeout)
+    {
+        var deadline = DateTimeOffset.UtcNow.Add(timeout);
+        string[] buildDirectories = [];
+
+        do
+        {
+            buildDirectories = Directory.Exists(buildsRoot)
+                ? Directory.GetDirectories(buildsRoot, "*", SearchOption.TopDirectoryOnly)
+                : [];
+
+            if (buildDirectories.Length <= maximumCount)
+            {
+                return buildDirectories;
+            }
+
+            await Task.Delay(500);
+        }
+        while (DateTimeOffset.UtcNow < deadline);
+
+        return buildDirectories;
+    }
 }
