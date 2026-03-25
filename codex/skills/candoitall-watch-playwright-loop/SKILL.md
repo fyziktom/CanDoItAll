@@ -36,6 +36,13 @@ Use one managed app session and one persistent Playwright page. The loop is only
 - Record the pre-edit cursor before every edit. Every wait must be tied to the cursor from the immediately preceding browser-validated state.
 - Never queue a second edit while the first edit is still waiting on watch or browser proof.
 
+## Shared backend rule
+
+- The machine should expose one shared `candoitall_dotnetwatch` MCP backed by the CanDoItAll install.
+- If the app under test lives in another repo, start that repo's `.csproj` through `candoitall_app_start` or the backend manager project picker.
+- Do not create a second repo-specific dotnetwatch MCP such as `<repo>_dotnetwatch`.
+- If the shared install is missing or stale, switch to `candoitall-dotnetwatch-setup` before doing UI work.
+
 ## Per-edit protocol
 
 1. Read `candoitall_app_status` and record `sessionId`, `revision`, and `lastCursor`.
@@ -110,3 +117,4 @@ Use the smallest proof that matches the edit.
 
 - Read [references/high-performance-loop.md](references/high-performance-loop.md) for the concrete fast-path and recovery checklist.
 - Read [references/observed-behaviors.md](references/observed-behaviors.md) for the tested heuristics behind these wait choices.
+- Use `candoitall-dotnetwatch-setup` first when the shared backend or machine wiring needs repair.

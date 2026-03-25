@@ -7,7 +7,8 @@ param(
     [switch]$SkipVsCodeConfig,
     [switch]$SkipProcessReset,
     [switch]$SkipSkillSync,
-    [switch]$SkipTrayStartupShortcut
+    [switch]$SkipTrayStartupShortcut,
+    [switch]$SkipTrayDesktopShortcut
 )
 
 $ErrorActionPreference = "Stop"
@@ -405,7 +406,7 @@ function Sync-RepoSkills {
     return $syncedSkillNames
 }
 
-function Set-StartupShortcut {
+function Set-Shortcut {
     param(
         [Parameter(Mandatory = $true)]
         [string]$ShortcutPath,
@@ -480,9 +481,21 @@ $manifestPath = Resolve-AbsolutePath (Join-Path $installRoot "install-manifest.j
 $shadowManifestPath = Resolve-AbsolutePath (Join-Path $RepoRoot ".artifacts\mcp-server-shadow\current.json")
 $vscodeMcpPath = Resolve-AbsolutePath (Join-Path $RepoRoot ".vscode\mcp.json")
 $startupShortcutPath = Resolve-AbsolutePath (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Startup\CanDoItAll DotNetWatch Tray.lnk")
+$desktopShortcutPath = Resolve-AbsolutePath (Join-Path ([Environment]::GetFolderPath("DesktopDirectory")) "CanDoItAll DotNetWatch Tray.lnk")
 $globalBackendCatalogDirectory = Resolve-AbsolutePath (Join-Path $env:LOCALAPPDATA "CanDoItAll.Mcp.DotNetWatch\backend-catalog")
+$installProcessNeedles = @(
+    "CanDoItAll.Mcp.SshOps.exe",
+    "CanDoItAll.Mcp.SshOps.dll",
+    "CanDoItAll.Manager.exe",
+    "CanDoItAll.Manager.dll",
+    "CanDoItAll.Mcp.DotNetWatch.Tray.exe",
+    "CanDoItAll.Mcp.DotNetWatch.Tray.dll"
+)
 
 New-Item -ItemType Directory -Force -Path $installRoot | Out-Null
+
+Write-Status "Stopping install-owned companion processes before publish"
+Stop-MatchingProcesses -Needles $installProcessNeedles
 
 if (-not $SkipProcessReset.IsPresent) {
     Write-Status "Stopping currently running MCP, manager, and tray processes"
@@ -490,12 +503,7 @@ if (-not $SkipProcessReset.IsPresent) {
         "CanDoItAll.Mcp.DotNetWatch.dll",
         "Start-CanDoItAllDotNetWatchMcp.ps1",
         ".artifacts\mcp-server-shadow",
-        "CanDoItAll.Mcp.SshOps.exe",
-        "CanDoItAll.Mcp.SshOps.dll",
-        "CanDoItAll.Manager.exe",
-        "CanDoItAll.Manager.dll",
-        "CanDoItAll.Mcp.DotNetWatch.Tray.exe",
-        "CanDoItAll.Mcp.DotNetWatch.Tray.dll"
+        $installProcessNeedles
     )
 
     Cleanup-WorkspaceBackendCatalog -CatalogDirectory $globalBackendCatalogDirectory -WorkspaceRoot $RepoRoot -SettingsPath $dotNetWatchSettingsPath
@@ -540,10 +548,18 @@ $trayArguments = @(
 
 if (-not $SkipTrayStartupShortcut.IsPresent) {
     Write-Status "Updating startup shortcut for tray app"
-    Set-StartupShortcut -ShortcutPath $startupShortcutPath -TargetPath $trayEntrypoint -Arguments (Format-ShortcutArguments -Arguments $trayArguments) -WorkingDirectory $RepoRoot
+    Set-Shortcut -ShortcutPath $startupShortcutPath -TargetPath $trayEntrypoint -Arguments (Format-ShortcutArguments -Arguments $trayArguments) -WorkingDirectory $RepoRoot
 }
 elseif (Test-Path -LiteralPath $startupShortcutPath) {
     Remove-Item -LiteralPath $startupShortcutPath -Force
+}
+
+if (-not $SkipTrayDesktopShortcut.IsPresent) {
+    Write-Status "Updating desktop shortcut for tray app"
+    Set-Shortcut -ShortcutPath $desktopShortcutPath -TargetPath $trayEntrypoint -Arguments (Format-ShortcutArguments -Arguments $trayArguments) -WorkingDirectory $RepoRoot
+}
+elseif (Test-Path -LiteralPath $desktopShortcutPath) {
+    Remove-Item -LiteralPath $desktopShortcutPath -Force
 }
 
 $syncedSkills = @()
@@ -579,6 +595,7 @@ $installManifest = @{
         installRoot = $trayInstallRoot
         entrypointPath = $trayEntrypoint
         startupShortcutPath = if ($SkipTrayStartupShortcut.IsPresent) { $null } else { $startupShortcutPath }
+        desktopShortcutPath = if ($SkipTrayDesktopShortcut.IsPresent) { $null } else { $desktopShortcutPath }
         arguments = $trayArguments
     }
     skills = @{
@@ -609,3 +626,4 @@ Write-Status "DotNetWatch shadow DLL: $($shadowManifest.shadowDllPath)"
 Write-Status "SshOps entrypoint: $sshOpsEntrypoint"
 Write-Status "Manager entrypoint: $managerEntrypoint"
 Write-Status "Tray entrypoint: $trayEntrypoint"
+Write-Status "Tray desktop shortcut: $desktopShortcutPath"
