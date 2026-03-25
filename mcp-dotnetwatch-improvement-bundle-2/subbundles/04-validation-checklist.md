@@ -13,7 +13,9 @@ Evidence:
 - `08-implementation-results.md`
 - `tests/CanDoItAll.Mcp.DotNetWatch.Tests`
 - `tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests`
+- `.vscode/mcp.json`
 
 Validation result:
 
 - the bundle now contains current evidence that managed watch plus browser validation is back under the `15s` target
+- the repo MCP config now uses the wrapper launcher and that contract is covered by integration tests

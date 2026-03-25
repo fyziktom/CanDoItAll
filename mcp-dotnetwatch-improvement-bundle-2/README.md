@@ -12,6 +12,7 @@ Implemented:
 - MCP adds `WatchReady` plus runtime-generation-aware `RevisionConfirmed`.
 - startup watch logs no longer create false pending edits before the first `Waiting for changes`.
 - the workspace default config now disables `DOTNET_USE_POLLING_FILE_WATCHER`.
+- the repo MCP config now launches through the wrapper script instead of a fixed shadow DLL path.
 - an isolated benchmark runner now exists so final measurements are not polluted by bridge/shadow registration churn.
 
 ## Acceptance Result
@@ -33,15 +34,17 @@ The hot-reload inner loop is back under the target on both benchmark files.
   - passed `35/35`
 - `dotnet test tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj --nologo --filter "FullyQualifiedName~AppStart_WaitHealthy_Stop_WorksAgainstCurrentRepo|FullyQualifiedName~SolutionBuild_StopAndResume_WorksAgainstCurrentRepo|FullyQualifiedName~TestsRun_StopAndResume_WorksAgainstCurrentRepo"`
   - passed `3/3`
+- `dotnet test tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj --nologo --filter "FullyQualifiedName~BootstrapValidationTests.RepositoryMcpConfig_UsesWrapperLauncher|FullyQualifiedName~BootstrapValidationTests.WrapperLaunch_CanServe_WorkspaceInfo_AndWriteBootstrapLog|FullyQualifiedName~ValidationMatrixTests.Backend_PersistsLiveSession_AcrossStdioServerReinstance"`
+  - passed `3/3`
 - isolated managed watch benchmark runner:
   - `tools/run_isolated_watch_benchmarks.ps1`
   - summary output: `artifacts/final-watch-benchmark-summary.json`
 
 ## Main Remaining Issues
 
-- the default bridge/shadow backend can still overwrite the shared backend registration file after failures or restarts and bring an older shadow-host binary back into play
 - cold watch startup in this environment still measured `59-82s`, which is better than the earlier broken flow but still slower than the user's local `~30s` startup baseline
 - the full integration test project did not complete within a `15m` timeout, so final validation used the focused app-start/app-wait/build-resume/test-resume slice
+- a tray/service manager remains out of scope for bundle 2; this bundle stops at wrapper-managed detached backend control
 
 ## Bundle Map
 

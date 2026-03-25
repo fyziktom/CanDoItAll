@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using CanDoItAll.Mcp.Core.Contracts;
 using CanDoItAll.Mcp.DotNetWatch;
 
@@ -9,6 +10,35 @@ public sealed class BootstrapValidationTests : IAsyncLifetime
     public Task InitializeAsync() => ValidationHarness.StopBackendIfPresentAsync();
 
     public Task DisposeAsync() => ValidationHarness.StopBackendIfPresentAsync();
+
+    [Fact]
+    public async Task RepositoryMcpConfig_UsesWrapperLauncher()
+    {
+        var mcpConfigPath = Path.Combine(ValidationHarness.RepoRoot, ".vscode", "mcp.json");
+        Assert.True(File.Exists(mcpConfigPath));
+
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(mcpConfigPath));
+        var server = document.RootElement
+            .GetProperty("servers")
+            .GetProperty("candoitall_dotnetwatch");
+
+        Assert.Equal("stdio", server.GetProperty("type").GetString());
+        Assert.Equal("powershell", server.GetProperty("command").GetString(), ignoreCase: true);
+
+        var args = server.GetProperty("args")
+            .EnumerateArray()
+            .Select(static value => value.GetString() ?? string.Empty)
+            .ToArray();
+
+        Assert.Contains("-File", args, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(
+            @"${workspaceFolder}\tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1",
+            args,
+            StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            args,
+            static value => value.Contains(@".artifacts\mcp-server-shadow\bin\CanDoItAll.Mcp.DotNetWatch\debug\CanDoItAll.Mcp.DotNetWatch.dll", StringComparison.OrdinalIgnoreCase));
+    }
 
     [Fact]
     public async Task InvalidSolutionPath_FailsFast_WithActionableError()

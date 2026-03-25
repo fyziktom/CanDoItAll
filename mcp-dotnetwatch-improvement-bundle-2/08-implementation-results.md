@@ -64,6 +64,12 @@ Why it exists:
 - that behavior polluted direct benchmark runs and occasionally reverted the live backend to an older shadow-host binary
 - the isolated runner launches the current debug build on its own backend registration file and benchmarks against that isolated endpoint only
 
+Bridge/shadow fix completed:
+
+- `.vscode/mcp.json` now launches `candoitall_dotnetwatch` through `tools/CanDoItAll.Mcp.DotNetWatch/Start-CanDoItAllDotNetWatchMcp.ps1`
+- this puts shadow-build refresh and manifest rotation back on the normal Codex launch path
+- `BootstrapValidationTests.RepositoryMcpConfig_UsesWrapperLauncher` protects that repo contract
+
 Final isolated summary:
 
 - backend binary marker: `378CBA6D6E7E63383921C752F8E64B56115A6AF7678C2B33CC4CF367E20E219D`
@@ -79,6 +85,10 @@ Passed:
   - `AppStart_WaitHealthy_Stop_WorksAgainstCurrentRepo`
   - `SolutionBuild_StopAndResume_WorksAgainstCurrentRepo`
   - `TestsRun_StopAndResume_WorksAgainstCurrentRepo`
+- `3/3` bridge/wrapper focused integration tests:
+  - `RepositoryMcpConfig_UsesWrapperLauncher`
+  - `WrapperLaunch_CanServe_WorkspaceInfo_AndWriteBootstrapLog`
+  - `Backend_PersistsLiveSession_AcrossStdioServerReinstance`
 
 Not completed in final pass:
 
@@ -86,6 +96,6 @@ Not completed in final pass:
 
 ## Remaining Architecture Issues
 
-- the bridge/shadow ownership model still allows the shared backend registration file to flip to a different backend after failures or repair attempts
-- that behavior can invalidate benchmark runs even when the runtime logic itself is fixed
-- the next repair should separate the persistent manager process from the MCP stdio bridge so MCP calls are clients of the manager, not competing owners of the same backend lifecycle
+- cold watch startup is still slower than the user's local baseline
+- the full integration suite still needs a broader timeout or decomposition strategy
+- a tray/service manager is still only an architecture option from `05-architecture-options.md`; it is not part of bundle 2

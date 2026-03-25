@@ -44,7 +44,7 @@ This workspace includes a custom MCP server (`candoitall_dotnetwatch`) that mana
 - Manages the full app lifecycle: start, stop, restart, health checks, build, test, log streaming.
 - Runs `dotnet watch run` under the hood so CSS/Razor hot-reload works in seconds without full rebuilds.
 - Provides health-check polling at `https://localhost:7271/_dev/runtime` so you know when changes are ready.
-- The server runs from a shadow-built artifact (`.artifacts/mcp-server-shadow/...`) so the repo itself can be rebuilt without colliding with the running MCP host.
+- The server is launched through `tools/CanDoItAll.Mcp.DotNetWatch/Start-CanDoItAllDotNetWatchMcp.ps1`, which rebuilds or reuses the current shadow host under `.artifacts/mcp-server-shadow/builds/...` and then launches the matching MCP binary.
 
 ### Default Workflow (always follow this order)
 
@@ -69,10 +69,10 @@ This workspace includes a custom MCP server (`candoitall_dotnetwatch`) that mana
 
 ### Shadow Build (refresh the MCP server)
 
-To update the server shadow copy after modifying `CanDoItAll.Mcp.DotNetWatch`:
+The wrapper is the default launch path and will refresh the shadow host automatically when the MCP source changes. If you need to force a wrapper-side rebuild manually, run:
 
-```
-dotnet build src\CanDoItAll.Mcp.DotNetWatch\CanDoItAll.Mcp.DotNetWatch.csproj -c Debug --artifacts-path .artifacts\mcp-server-shadow -p:UseAppHost=false
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1 -RepoRoot . -SettingsPath .\CanDoItAll.Mcp.DotNetWatch.settings.json -ForceRebuild
 ```
 
 ## Validation

@@ -2,10 +2,16 @@
   "servers": {
     "candoitall_dotnetwatch": {
       "type": "stdio",
-      "command": "dotnet",
+      "command": "powershell",
       "args": [
-        "${workspaceFolder}\\.artifacts\\mcp-server-shadow\\bin\\CanDoItAll.Mcp.DotNetWatch\\debug\\CanDoItAll.Mcp.DotNetWatch.dll",
-        "--settings",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\tools\\CanDoItAll.Mcp.DotNetWatch\\Start-CanDoItAllDotNetWatchMcp.ps1",
+        "-RepoRoot",
+        "${workspaceFolder}",
+        "-SettingsPath",
         "${workspaceFolder}\\CanDoItAll.Mcp.DotNetWatch.settings.json"
       ],
       "cwd": "${workspaceFolder}"
