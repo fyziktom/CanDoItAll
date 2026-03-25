@@ -18,77 +18,98 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
 <PageScaffold>
 <Header>
+<div class="pr-20 sm:pr-24">
 <PageHeader Eyebrow="Projects"
-Title="Project workspace"
-Description="Browse delivery work through compact cards, open a project overview in a modal, and only jump into focused tabs when the work needs more space.">
-<Actions>
-<button type="button"
-class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-data-testid="projects-new-button"
-@onclick="OpenNewProjectAsync">
-New project
-</button>
-<button type="button"
-class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="NavigateHome">
-Back to dashboard
-</button>
-</Actions>
+Compact="true"
+Title="Project workspace">
 </PageHeader>
+</div>
 </Header>
 
 <ChildContent>
-<div class="space-y-6">
-<SummaryTiles>
-<SummaryTile Label="Visible projects"
-Value="@FilteredProjectSummaries.Count.ToString()"
-HelperText="Cards that match the current search and status filters."
-Tone="info" />
-<SummaryTile Label="Active delivery"
-Value="@projectSummaries.Count(project => project.Status == ProjectStatus.Active).ToString()"
-HelperText="Projects that are currently in motion."
-Tone="success" />
-<SummaryTile Label="Draft backlog"
-Value="@projectSummaries.Count(project => project.Status == ProjectStatus.Draft).ToString()"
-HelperText="Projects still shaping scope or setup."
-Tone="neutral" />
-<SummaryTile Label="Latest change"
-Value="@LatestUpdatedProjectLabel"
-HelperText="@LatestUpdatedProjectHelper"
-Tone="warning" />
-</SummaryTiles>
-
-<section class="overflow-hidden rounded-[1.85rem] border border-slate-200 bg-white/92 shadow-sm shadow-slate-200/60">
-<div class="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 xl:flex-row xl:items-end xl:justify-between">
-<div class="space-y-2">
+<section class="flex min-h-[26rem] flex-col overflow-hidden rounded-[1.85rem] border border-slate-200 bg-white/92 shadow-sm shadow-slate-200/60"
+         data-testid="projects-board"
+         style="height: calc(100vh - 15rem);">
+<div class="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 xl:flex-row xl:items-center xl:justify-between"
+     data-testid="projects-command-bar">
+<div class="min-w-0 space-y-3">
 <div class="flex flex-wrap items-center gap-2">
-<h2 class="text-xl font-semibold tracking-tight text-slate-950">Project cards</h2>
+<h2 class="text-lg font-semibold tracking-tight text-slate-950">Portfolio board</h2>
 <StatusBadge Tone="info" Text="@($"{FilteredProjectSummaries.Count} visible")" />
 </div>
-<p class="max-w-3xl text-sm leading-6 text-slate-600">Keep the main surface focused on scanning and selecting. Details, editing, and dashboard actions move into the modal so the page can stay compact even with a large project set.</p>
+<p class="max-w-3xl text-sm leading-6 text-slate-600">Search, inspect, edit, and jump into dashboard, structure, or calendar from one compact board without losing the project list.</p>
+<div class="flex flex-wrap items-center gap-2 text-xs">
+<span class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 font-medium text-sky-700">
+<span class="text-[10px] font-bold uppercase tracking-[0.18em]">ACT</span>
+<span>@projectSummaries.Count(project => project.Status == ProjectStatus.Active) active</span>
+</span>
+<span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-600">
+<span class="text-[10px] font-bold uppercase tracking-[0.18em]">DRF</span>
+<span>@projectSummaries.Count(project => project.Status == ProjectStatus.Draft) draft</span>
+</span>
+<span class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 font-medium text-amber-700">
+<span class="text-[10px] font-bold uppercase tracking-[0.18em]">UPD</span>
+<span>@LatestUpdatedProjectLabel</span>
+</span>
+<span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600">
+<span class="text-[10px] font-bold uppercase tracking-[0.18em]">NOTE</span>
+<span>@LatestUpdatedProjectHelper</span>
+</span>
+</div>
 </div>
 
-<div class="flex flex-col gap-3 md:flex-row md:flex-wrap">
+<div class="flex w-full max-w-2xl flex-col gap-2">
+<div class="flex flex-wrap items-center justify-end gap-2">
+<button type="button"
+class="inline-flex h-9 items-center gap-2 rounded-xl bg-slate-900 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+data-testid="projects-new-button"
+@onclick="OpenNewProjectAsync">
+<span aria-hidden="true" class="text-base font-bold leading-none">+</span>
+<span>New</span>
+</button>
+<button type="button"
+class="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+@onclick="NavigateHome">
+<span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">DB</span>
+<span>Dashboard</span>
+</button>
+</div>
+<label class="relative block min-w-0 flex-1">
+<span class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+FIND
+</span>
 <input @bind="projectSearch"
 @bind:event="oninput"
-class="min-w-[15rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 pl-14 text-sm text-slate-700 shadow-sm"
 placeholder="Search by name or current phase" />
-<InputSelect @bind-Value="statusFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+</label>
+<div class="flex flex-wrap items-center gap-2">
+<label class="relative min-w-[12rem] flex-1 sm:flex-none">
+<span class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+STATUS
+</span>
+<InputSelect @bind-Value="statusFilter" class="w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 py-2 pl-[4.6rem] pr-9 text-sm text-slate-700 shadow-sm">
 <option value="">All statuses</option>
 @foreach (var status in Enum.GetValues<ProjectStatus>())
 {
 <option value="@status.ToString()">@status</option>
 }
 </InputSelect>
+<span class="pointer-events-none absolute inset-y-0 right-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+V
+</span>
+</label>
 <button type="button"
-class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
 @onclick="ResetFilters">
-Reset
+<span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">RST</span>
+<span>Reset</span>
 </button>
 </div>
 </div>
+</div>
 
-<div class="p-5">
+<div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" data-testid="projects-cards-scroll">
 @if (FilteredProjectSummaries.Count == 0)
 {
 <EmptyState Eyebrow="No matching projects"
@@ -105,56 +126,72 @@ New project
 }
 else
 {
-<div class="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
+<div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
 @foreach (var project in FilteredProjectSummaries)
 {
 <article class="@GetProjectCardCss(project.Status)" data-testid="project-card">
-<div class="flex items-start justify-between gap-4">
+<div class="flex items-start gap-3">
+<div class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-xs font-bold uppercase tracking-[0.18em] text-slate-600 shadow-sm">
+@GetProjectMonogram(project.Name)
+</div>
+<div class="min-w-0 flex-1">
+<div class="flex items-start justify-between gap-3">
 <div class="min-w-0">
 <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Project</p>
-<h3 class="mt-1.5 text-lg font-bold tracking-tight text-slate-950">@project.Name</h3>
-<p class="mt-1.5 text-sm leading-6 text-slate-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : $"Current phase: {project.CurrentPhase}")</p>
+<h3 class="mt-1 text-base font-bold tracking-tight text-slate-950">@project.Name</h3>
 </div>
 <StatusBadge Tone="@GetStatusTone(project.Status)" Text="@project.Status.ToString()" />
 </div>
-
-<div class="mt-4 grid gap-2.5 sm:grid-cols-3">
-<div class="rounded-xl border border-slate-100 bg-white/90 px-3.5 py-3">
-<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Phase count</p>
-<p class="mt-1.5 text-sm font-semibold text-slate-950">@project.PhaseCount</p>
-</div>
-<div class="rounded-xl border border-slate-100 bg-white/90 px-3.5 py-3">
-<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Last update</p>
-<p class="mt-1.5 text-sm font-semibold text-slate-950">@project.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
-</div>
-<div class="rounded-xl border border-slate-100 bg-white/90 px-3.5 py-3">
-<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Dashboard</p>
-<p class="mt-1.5 text-sm font-semibold text-slate-950">Overview tab ready</p>
+<p class="mt-2 text-sm leading-5 text-slate-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : project.CurrentPhase)</p>
 </div>
 </div>
 
-<div class="mt-4 flex flex-wrap items-center gap-2">
+<div class="mt-4 grid gap-2 sm:grid-cols-3">
+<div class="rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5">
+<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Phases</p>
+<p class="mt-1 text-sm font-semibold text-slate-950">@project.PhaseCount</p>
+</div>
+<div class="rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5">
+<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Updated</p>
+<p class="mt-1 text-sm font-semibold text-slate-950">@project.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
+</div>
+<div class="rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5">
+<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Surface</p>
+<p class="mt-1 text-sm font-semibold text-slate-950">Overview ready</p>
+</div>
+</div>
+
+<div class="mt-4 flex items-center justify-between gap-2 border-t border-white/70 pt-3">
 <button type="button"
-class="inline-flex items-center rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+class="inline-flex h-9 items-center gap-2 rounded-xl bg-slate-900 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
 data-testid="project-card-details-button"
 @onclick="@(() => OpenProjectPreviewAsync(project.Id))">
-Details
+<span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">VIEW</span>
+<span>View</span>
 </button>
+<div class="flex flex-wrap items-center gap-1.5">
 <button type="button"
-class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+class="@GetQuickActionButtonCss()"
+title="Open dashboard tab"
+aria-label="Open dashboard tab"
 @onclick="@(() => OpenProjectDashboard(project.Id))">
-Dashboard
+<span aria-hidden="true">DB</span>
 </button>
 <button type="button"
-class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+class="@GetQuickActionButtonCss()"
+title="Open structure"
+aria-label="Open structure"
 @onclick="@(() => OpenStructure(project.Id))">
-Structure
+<span aria-hidden="true">ST</span>
 </button>
 <button type="button"
-class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+class="@GetQuickActionButtonCss()"
+title="Open calendar"
+aria-label="Open calendar"
 @onclick="@(() => OpenCalendar(project.Id))">
-Calendar
+<span aria-hidden="true">CAL</span>
 </button>
+</div>
 </div>
 </article>
 }
@@ -162,7 +199,6 @@ Calendar
 }
 </div>
 </section>
-</div>
 </ChildContent>
 </PageScaffold>
 
@@ -913,7 +949,7 @@ ProjectStatus.Archived => "border-slate-300 bg-[linear-gradient(180deg,_rgba(248
 _ => "border-slate-200 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]"
 };
 
-return $"flex min-h-[17rem] flex-col rounded-[1.75rem] border p-5 shadow-sm shadow-slate-200/60 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/70 {accent}";
+return $"flex min-h-[13.75rem] flex-col rounded-[1.5rem] border p-4 shadow-sm shadow-slate-200/60 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/70 {accent}";
 }
 
 private static string GetStatusTone(ProjectStatus status)
@@ -943,6 +979,26 @@ private static string FormatTimestamp(DateTimeOffset? value)
 
 private static DateTime GetPhaseOrderKey(ProjectPhaseEditorModel phase)
 => phase.StartDateUtc ?? phase.EndDateUtc ?? DateTime.MaxValue;
+
+private static string GetQuickActionButtonCss()
+=> "inline-flex h-9 min-w-[2.85rem] items-center justify-center rounded-xl border border-slate-200 bg-white px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600 shadow-sm transition-colors hover:bg-slate-50";
+
+private static string GetProjectMonogram(string? name)
+{
+if (string.IsNullOrWhiteSpace(name))
+{
+return "PR";
+}
+
+var parts = name
+.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+.Where(part => part.Length > 0)
+.Take(2)
+.Select(part => char.ToUpperInvariant(part[0]))
+.ToArray();
+
+return parts.Length == 0 ? "PR" : new string(parts);
+}
 
 private sealed class StarterObjectDraft
 {
