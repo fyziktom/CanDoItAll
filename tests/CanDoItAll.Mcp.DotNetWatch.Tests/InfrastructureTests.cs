@@ -370,7 +370,7 @@ public sealed class InfrastructureTests
     }
 
     [Fact]
-    public void BuildManagedProcessArguments_UsesArtifactsCache_ForWatchRun()
+    public void BuildManagedProcessArguments_OmitsArtifactsCache_ForWatchRun()
     {
         var template = new AppStartTemplate(
             @"C:\repo\App.csproj",
@@ -390,8 +390,8 @@ public sealed class InfrastructureTests
 
         Assert.Equal("watch", arguments[0]);
         Assert.Contains("--non-interactive", arguments);
-        Assert.Contains("--artifacts-path", arguments);
-        Assert.Contains(@"C:\repo\.mcp-state\artifacts\app-projects\app-12345678", arguments);
+        Assert.DoesNotContain("--artifacts-path", arguments);
+        Assert.DoesNotContain(@"C:\repo\.mcp-state\artifacts\app-projects\app-12345678", arguments);
         Assert.Contains("--property:UseAppHost=false", arguments);
         Assert.Contains("--framework", arguments);
         Assert.Contains("net10.0", arguments);

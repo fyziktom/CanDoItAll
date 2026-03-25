@@ -123,11 +123,17 @@ public sealed partial class AppSession
     private bool _watchPendingChange;
     private int? _expectedWatchIteration;
     private int? _confirmedWatchIteration;
+    private long? _expectedHotReloadGeneration;
+    private long? _confirmedHotReloadGeneration;
+    private bool? _supportsHotReloadGeneration;
     private int? _runtimePid;
     private int? _restartBaselineRuntimePid;
     private HotReloadOutcome _lastHotReloadOutcome;
     private long? _lastWatchActivitySequence;
     private DateTimeOffset? _lastWatchActivityUtc;
+    private bool _watchReadyForHotReload;
+    private long? _watchReadyForHotReloadSequence;
+    private bool _watchHasReachedReadyState;
 
     public AppSession(
         string sessionId,
@@ -279,6 +285,8 @@ public sealed partial class AppSession
 
     public void MarkHealthy(HealthSnapshot snapshot)
     {
+        string summary;
+
         lock (_gate)
         {
             LastHealthSnapshot = snapshot;
@@ -289,18 +297,33 @@ public sealed partial class AppSession
 
             _runtimePid = snapshot.RuntimePid ?? _runtimePid;
             SyncObservedWatchIterationLocked(snapshot);
+            SyncObservedHotReloadGenerationLocked(snapshot);
 
             if (Mode == AppRunMode.WatchRun)
             {
-                _watchPendingChange = false;
-                _watchState = WatchProcessingState.WaitingForChanges;
-                _watchSummary = snapshot.Summary ?? "Watch generation is healthy.";
-                _lastWatchActivityUtc = DateTimeOffset.UtcNow;
-                _restartBaselineRuntimePid = null;
+                if (CanConfirmPendingGenerationLocked(snapshot))
+                {
+                    _watchPendingChange = false;
+                    _watchState = WatchProcessingState.WaitingForChanges;
+                    _watchSummary = snapshot.Summary ?? "Watch generation is healthy.";
+                    _lastWatchActivityUtc = DateTimeOffset.UtcNow;
+                    _restartBaselineRuntimePid = null;
+                }
+                else if (_watchPendingChange)
+                {
+                    _watchState = _lastHotReloadOutcome == HotReloadOutcome.Succeeded
+                        ? WatchProcessingState.HotReloadSucceeded
+                        : _watchState;
+                    _watchSummary = CreatePendingGenerationSummaryLocked();
+                }
             }
+
+            summary = Mode == AppRunMode.WatchRun && _watchPendingChange
+                ? _watchSummary
+                : snapshot.Summary ?? "Healthy.";
         }
 
-        Transition(AppLifecycleState.Healthy, snapshot.Summary ?? "Healthy.");
+        Transition(AppLifecycleState.Healthy, summary);
     }
 
     public void MarkHealthObserved(HealthSnapshot snapshot, string summary)
@@ -319,6 +342,7 @@ public sealed partial class AppSession
             }
 
             SyncObservedWatchIterationLocked(snapshot);
+            SyncObservedHotReloadGenerationLocked(snapshot);
         }
     }
 
@@ -333,6 +357,7 @@ public sealed partial class AppSession
             }
 
             SyncObservedWatchIterationLocked(snapshot);
+            SyncObservedHotReloadGenerationLocked(snapshot);
         }
     }
 
@@ -340,36 +365,7 @@ public sealed partial class AppSession
     {
         lock (_gate)
         {
-            if (!snapshot.IsReady || !ProbeMatchesSessionLocked(snapshot))
-            {
-                return false;
-            }
-
-            if (Mode != AppRunMode.WatchRun)
-            {
-                return true;
-            }
-
-            if (!_watchPendingChange)
-            {
-                return true;
-            }
-
-            if (_lastHotReloadOutcome == HotReloadOutcome.RestartRequired ||
-                _watchState is WatchProcessingState.RestartRequired or WatchProcessingState.ChildExited or WatchProcessingState.Building or WatchProcessingState.Launching)
-            {
-                if (_expectedWatchIteration.HasValue && snapshot.WatchIteration.HasValue)
-                {
-                    return snapshot.WatchIteration.Value >= _expectedWatchIteration.Value;
-                }
-
-                if (_restartBaselineRuntimePid.HasValue && snapshot.RuntimePid.HasValue)
-                {
-                    return snapshot.RuntimePid.Value != _restartBaselineRuntimePid.Value;
-                }
-            }
-
-            return true;
+            return ConfirmsCurrentGenerationLocked(snapshot);
         }
     }
 
@@ -389,6 +385,8 @@ public sealed partial class AppSession
             _watchPendingChange = false;
             _watchState = WatchProcessingState.Stopped;
             _watchSummary = reason;
+            _watchReadyForHotReload = false;
+            _watchReadyForHotReloadSequence = null;
         }
 
         Transition(AppLifecycleState.Stopped, reason);
@@ -411,6 +409,8 @@ public sealed partial class AppSession
             _watchPendingChange = false;
             _watchState = WatchProcessingState.Stopped;
             _watchSummary = "Managed process exited unexpectedly.";
+            _watchReadyForHotReload = false;
+            _watchReadyForHotReloadSequence = null;
         }
 
         Transition(AppLifecycleState.ExitedUnexpectedly, "Managed process exited unexpectedly.");
@@ -492,7 +492,10 @@ public sealed partial class AppSession
                         LastHealthSnapshot.Summary,
                         LastHealthSnapshot.IsReady,
                         LastHealthSnapshot.WatchIteration ?? _confirmedWatchIteration,
-                        LastHealthSnapshot.RuntimePid ?? _runtimePid),
+                        LastHealthSnapshot.RuntimePid ?? _runtimePid)
+                    {
+                        HotReloadGeneration = LastHealthSnapshot.HotReloadGeneration ?? _confirmedHotReloadGeneration
+                    },
                 _recentEvents.ToArray(),
                 Mode == AppRunMode.WatchRun
                     ? new WatchStatusData(
@@ -506,6 +509,12 @@ public sealed partial class AppSession
                         _lastHotReloadOutcome,
                         _lastWatchActivitySequence,
                         _lastWatchActivityUtc)
+                    {
+                        ExpectedHotReloadGeneration = _expectedHotReloadGeneration,
+                        ConfirmedHotReloadGeneration = _confirmedHotReloadGeneration,
+                        IsReadyForHotReload = _watchReadyForHotReload,
+                        ReadyForHotReloadSequence = _watchReadyForHotReloadSequence
+                    }
                     : null);
             return status with
             {
@@ -538,6 +547,8 @@ public sealed partial class AppSession
                     _watchPendingChange = false;
                     _watchState = WatchProcessingState.WaitingForChanges;
                     _watchSummary = "Application is waiting for changes.";
+                    _watchReadyForHotReload = false;
+                    _watchReadyForHotReloadSequence = null;
                     LastHealthSnapshot = new HealthSnapshot(
                         "Ready",
                         true,
@@ -581,6 +592,10 @@ public sealed partial class AppSession
             {
                 BeginWatchChange(WatchProcessingState.EvaluatingProjects, line, entry);
             }
+            else if (ShouldTrackPreReadyWatchProgress())
+            {
+                UpdateWatchProgressWithoutChange(WatchProcessingState.EvaluatingProjects, line, entry);
+            }
             else
             {
                 UpdateWatchPhase(WatchProcessingState.EvaluatingProjects, line, entry);
@@ -591,7 +606,14 @@ public sealed partial class AppSession
 
         if (line.Contains("Evaluation completed", StringComparison.OrdinalIgnoreCase))
         {
-            UpdateWatchPhase(WatchProcessingState.EvaluatingProjects, line, entry);
+            if (ShouldTrackPreReadyWatchProgress())
+            {
+                UpdateWatchProgressWithoutChange(WatchProcessingState.EvaluatingProjects, line, entry);
+            }
+            else
+            {
+                UpdateWatchPhase(WatchProcessingState.EvaluatingProjects, line, entry);
+            }
             return true;
         }
 
@@ -601,6 +623,10 @@ public sealed partial class AppSession
             if (ShouldBeginImplicitWatchChange())
             {
                 BeginWatchChange(WatchProcessingState.LoadingProjects, line, entry);
+            }
+            else if (ShouldTrackPreReadyWatchProgress())
+            {
+                UpdateWatchProgressWithoutChange(WatchProcessingState.LoadingProjects, line, entry);
             }
             else
             {
@@ -615,6 +641,10 @@ public sealed partial class AppSession
             if (ShouldBeginImplicitWatchChange())
             {
                 BeginWatchChange(WatchProcessingState.Building, line, entry);
+            }
+            else if (ShouldTrackPreReadyWatchProgress())
+            {
+                UpdateWatchProgressWithoutChange(WatchProcessingState.Building, line, entry);
             }
             else
             {
@@ -671,18 +701,27 @@ public sealed partial class AppSession
         if (line.Contains("Waiting for a file to change", StringComparison.OrdinalIgnoreCase) ||
             line.Contains("Waiting for changes", StringComparison.OrdinalIgnoreCase))
         {
+            if (!_watchPendingChange)
+            {
+                lock (_gate)
+                {
+                    _watchState = WatchProcessingState.WaitingForChanges;
+                    _watchSummary = line;
+                    _lastWatchActivitySequence = entry.Sequence;
+                    _lastWatchActivityUtc = entry.TimestampUtc;
+                    MarkWatchReadyForHotReloadLocked(entry);
+                    RecordEventLocked(line);
+                }
+
+                Transition(AppLifecycleState.Running, "Watch is waiting for changes.");
+                return true;
+            }
+
             UpdateWatchPhase(
                 WatchProcessingState.WaitingForChanges,
                 line,
                 entry,
-                healthSummary: _watchPendingChange
-                    ? "Watch is idle, waiting for the current generation to become healthy."
-                    : "Watch is waiting for the next change.");
-            if (!_watchPendingChange)
-            {
-                Transition(AppLifecycleState.Running, "Watch is waiting for changes.");
-            }
-
+                healthSummary: "Watch is idle, waiting for the current generation to become healthy.");
             return true;
         }
 
@@ -717,6 +756,14 @@ public sealed partial class AppSession
             _lastWatchActivitySequence = entry.Sequence;
             _lastWatchActivityUtc = entry.TimestampUtc;
             _lastHotReloadOutcome = HotReloadOutcome.None;
+            _watchReadyForHotReload = false;
+            _watchReadyForHotReloadSequence = null;
+            if (_confirmedHotReloadGeneration.HasValue)
+            {
+                var nextExpectedGeneration = _confirmedHotReloadGeneration.Value + 1;
+                _expectedHotReloadGeneration = Math.Max(_expectedHotReloadGeneration ?? nextExpectedGeneration, nextExpectedGeneration);
+            }
+
             InvalidateHealthLocked("Watch detected a file change.", entry.TimestampUtc);
             RecordEventLocked(line);
         }
@@ -740,6 +787,8 @@ public sealed partial class AppSession
             _watchSummary = line;
             _lastWatchActivitySequence = entry.Sequence;
             _lastWatchActivityUtc = entry.TimestampUtc;
+            _watchReadyForHotReload = false;
+            _watchReadyForHotReloadSequence = null;
 
             if (hotReloadOutcome.HasValue)
             {
@@ -783,6 +832,8 @@ public sealed partial class AppSession
             _lastWatchActivitySequence = entry.Sequence;
             _lastWatchActivityUtc = entry.TimestampUtc;
             _lastHotReloadOutcome = hotReloadOutcome;
+            _watchReadyForHotReload = false;
+            _watchReadyForHotReloadSequence = null;
             LastHealthSnapshot = new HealthSnapshot(
                 "Unhealthy",
                 false,
@@ -799,6 +850,20 @@ public sealed partial class AppSession
         Transition(AppLifecycleState.Failed, summary);
     }
 
+    private void UpdateWatchProgressWithoutChange(WatchProcessingState state, string line, LogEntry entry)
+    {
+        lock (_gate)
+        {
+            _watchState = state;
+            _watchSummary = line;
+            _lastWatchActivitySequence = entry.Sequence;
+            _lastWatchActivityUtc = entry.TimestampUtc;
+            _watchReadyForHotReload = false;
+            _watchReadyForHotReloadSequence = null;
+            RecordEventLocked(line);
+        }
+    }
+
     private void InvalidateHealthLocked(string summary, DateTimeOffset observedAtUtc)
     {
         LastHealthSnapshot = new HealthSnapshot(
@@ -810,48 +875,144 @@ public sealed partial class AppSession
             summary,
             _confirmedWatchIteration,
             _runtimePid,
-            LastHealthSnapshot?.ActiveUrls ?? _observedUrls.ToArray());
+            LastHealthSnapshot?.ActiveUrls ?? _observedUrls.ToArray())
+        {
+            HotReloadGeneration = LastHealthSnapshot?.HotReloadGeneration ?? _confirmedHotReloadGeneration
+        };
     }
 
     private void MarkWatchChangeApplied(string line, LogEntry entry, HotReloadOutcome hotReloadOutcome)
     {
         AppLifecycleState nextState;
+        string transitionSummary;
 
         lock (_gate)
         {
-            _watchPendingChange = false;
-            _watchState = WatchProcessingState.WaitingForChanges;
-            _watchSummary = line;
             _lastWatchActivitySequence = entry.Sequence;
             _lastWatchActivityUtc = entry.TimestampUtc;
             _lastHotReloadOutcome = hotReloadOutcome;
 
-            if (!_healthEnabled && _observedUrls.Count > 0)
+            if (_healthEnabled)
             {
-                LastHealthSnapshot = new HealthSnapshot(
-                    "Ready",
-                    true,
-                    LastHealthSnapshot?.LastSuccessUtc ?? entry.TimestampUtc,
-                    null,
-                    LastHealthSnapshot?.LastUrl ?? _observedUrls.LastOrDefault(),
-                    "Ready",
-                    _confirmedWatchIteration,
-                    _runtimePid,
-                    _observedUrls.ToArray());
+                _watchPendingChange = true;
+                _watchState = WatchProcessingState.HotReloadSucceeded;
+                _watchSummary = CreatePendingGenerationSummaryLocked();
+                _watchReadyForHotReload = false;
+                _watchReadyForHotReloadSequence = null;
+                InvalidateHealthLocked(_watchSummary, entry.TimestampUtc);
+                nextState = AppLifecycleState.Running;
+                transitionSummary = _watchSummary;
             }
+            else
+            {
+                _watchPendingChange = false;
+                _watchState = WatchProcessingState.WaitingForChanges;
+                _watchSummary = line;
+                _watchReadyForHotReload = true;
+                _watchReadyForHotReloadSequence = entry.Sequence;
+                if (_observedUrls.Count > 0)
+                {
+                    LastHealthSnapshot = new HealthSnapshot(
+                        "Ready",
+                        true,
+                        LastHealthSnapshot?.LastSuccessUtc ?? entry.TimestampUtc,
+                        null,
+                        LastHealthSnapshot?.LastUrl ?? _observedUrls.LastOrDefault(),
+                        "Ready",
+                        _confirmedWatchIteration,
+                        _runtimePid,
+                        _observedUrls.ToArray())
+                    {
+                        HotReloadGeneration = _confirmedHotReloadGeneration
+                    };
+                }
 
-            nextState = _healthEnabled && LastHealthSnapshot?.IsReady == true
-                ? AppLifecycleState.Healthy
-                : AppLifecycleState.Running;
+                nextState = LastHealthSnapshot?.IsReady == true
+                    ? AppLifecycleState.Healthy
+                    : AppLifecycleState.Running;
+                transitionSummary = line;
+            }
         }
 
-        Transition(nextState, line);
+        Transition(nextState, transitionSummary);
     }
 
     private bool ProbeMatchesSessionLocked(HealthSnapshot snapshot)
     {
         return string.Equals(snapshot.OwnerKind, "app", StringComparison.OrdinalIgnoreCase) &&
                string.Equals(snapshot.OwnerId, SessionId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool CanConfirmPendingGenerationLocked(HealthSnapshot snapshot)
+    {
+        return !_watchPendingChange || ConfirmsCurrentGenerationLocked(snapshot);
+    }
+
+    private bool ConfirmsCurrentGenerationLocked(HealthSnapshot snapshot)
+    {
+        if (!snapshot.IsReady || !ProbeMatchesSessionLocked(snapshot))
+        {
+            return false;
+        }
+
+        if (Mode != AppRunMode.WatchRun)
+        {
+            return true;
+        }
+
+        if (!_watchPendingChange)
+        {
+            return true;
+        }
+
+        if (_lastHotReloadOutcome == HotReloadOutcome.RestartRequired ||
+            _watchState is WatchProcessingState.RestartRequired or WatchProcessingState.ChildExited or WatchProcessingState.Building or WatchProcessingState.Launching)
+        {
+            if (_expectedWatchIteration.HasValue && snapshot.WatchIteration.HasValue)
+            {
+                return snapshot.WatchIteration.Value >= _expectedWatchIteration.Value;
+            }
+
+            if (_restartBaselineRuntimePid.HasValue && snapshot.RuntimePid.HasValue)
+            {
+                return snapshot.RuntimePid.Value != _restartBaselineRuntimePid.Value;
+            }
+        }
+
+        if (_supportsHotReloadGeneration == true && _expectedHotReloadGeneration.HasValue)
+        {
+            return snapshot.HotReloadGeneration.HasValue &&
+                   snapshot.HotReloadGeneration.Value >= _expectedHotReloadGeneration.Value;
+        }
+
+        return true;
+    }
+
+    private string CreatePendingGenerationSummaryLocked()
+    {
+        if (_expectedHotReloadGeneration.HasValue)
+        {
+            var currentGeneration = _confirmedHotReloadGeneration ?? LastHealthSnapshot?.HotReloadGeneration;
+            if (currentGeneration.HasValue && currentGeneration.Value < _expectedHotReloadGeneration.Value)
+            {
+                return $"Runtime is still on hot reload generation {currentGeneration.Value}; waiting for {_expectedHotReloadGeneration.Value}.";
+            }
+
+            return $"Waiting for hot reload generation {_expectedHotReloadGeneration.Value} to become healthy.";
+        }
+
+        if (_watchState == WatchProcessingState.HotReloadSucceeded ||
+            _lastHotReloadOutcome == HotReloadOutcome.Succeeded)
+        {
+            return "Hot reload reported success; waiting for runtime confirmation.";
+        }
+
+        if (_lastHotReloadOutcome == HotReloadOutcome.RestartRequired)
+        {
+            return "Watch has not yet confirmed the replacement runtime generation.";
+        }
+
+        return "Waiting for the active dotnet watch generation to become healthy.";
     }
 
     private void SyncObservedWatchIterationLocked(HealthSnapshot snapshot)
@@ -868,17 +1029,57 @@ public sealed partial class AppSession
             return;
         }
 
+        var iterationAdvanced = _confirmedWatchIteration.HasValue &&
+                                observedIteration > _confirmedWatchIteration.Value;
+
         if (!_watchPendingChange &&
-            _confirmedWatchIteration.HasValue &&
-            observedIteration > _confirmedWatchIteration.Value)
+            iterationAdvanced)
         {
-            SessionVersion += observedIteration - _confirmedWatchIteration.Value;
+            var previousConfirmedIteration = _confirmedWatchIteration.GetValueOrDefault();
+            SessionVersion += observedIteration - previousConfirmedIteration;
             _lastWatchActivityUtc = snapshot.LastSuccessUtc ?? snapshot.LastFailureUtc ?? DateTimeOffset.UtcNow;
             RecordEventLocked($"Health probe observed watch iteration {observedIteration}.");
         }
 
         _confirmedWatchIteration = observedIteration;
         _expectedWatchIteration = Math.Max(_expectedWatchIteration ?? observedIteration, observedIteration);
+
+        if (iterationAdvanced)
+        {
+            _confirmedHotReloadGeneration = snapshot.HotReloadGeneration;
+            _expectedHotReloadGeneration = snapshot.HotReloadGeneration;
+            if (snapshot.HotReloadGeneration.HasValue)
+            {
+                _supportsHotReloadGeneration = true;
+            }
+        }
+    }
+
+    private void SyncObservedHotReloadGenerationLocked(HealthSnapshot snapshot)
+    {
+        if (Mode != AppRunMode.WatchRun || !snapshot.HotReloadGeneration.HasValue)
+        {
+            return;
+        }
+
+        _supportsHotReloadGeneration = true;
+        var observedGeneration = snapshot.HotReloadGeneration.Value;
+        if (_confirmedHotReloadGeneration.HasValue &&
+            observedGeneration < _confirmedHotReloadGeneration.Value)
+        {
+            return;
+        }
+
+        if (!_watchPendingChange &&
+            _confirmedHotReloadGeneration.HasValue &&
+            observedGeneration > _confirmedHotReloadGeneration.Value)
+        {
+            _lastWatchActivityUtc = snapshot.LastSuccessUtc ?? snapshot.LastFailureUtc ?? DateTimeOffset.UtcNow;
+            RecordEventLocked($"Health probe observed hot reload generation {observedGeneration}.");
+        }
+
+        _confirmedHotReloadGeneration = observedGeneration;
+        _expectedHotReloadGeneration = Math.Max(_expectedHotReloadGeneration ?? observedGeneration, observedGeneration);
     }
 
     private bool ShouldBeginImplicitWatchChange()
@@ -886,9 +1087,21 @@ public sealed partial class AppSession
         lock (_gate)
         {
             return !_watchPendingChange &&
+                   _watchHasReachedReadyState &&
                    Mode == AppRunMode.WatchRun &&
                    (State is AppLifecycleState.Running or AppLifecycleState.Healthy) &&
                    (_confirmedWatchIteration.HasValue || LastHealthSnapshot?.IsReady == true);
+        }
+    }
+
+    private bool ShouldTrackPreReadyWatchProgress()
+    {
+        lock (_gate)
+        {
+            return !_watchPendingChange &&
+                   !_watchHasReachedReadyState &&
+                   Mode == AppRunMode.WatchRun &&
+                   (State is AppLifecycleState.Running or AppLifecycleState.Healthy);
         }
     }
 
@@ -912,6 +1125,8 @@ public sealed partial class AppSession
             _watchSummary = summary;
             _lastWatchActivityUtc = DateTimeOffset.UtcNow;
             _lastHotReloadOutcome = HotReloadOutcome.RestartRequired;
+            _watchReadyForHotReload = false;
+            _watchReadyForHotReloadSequence = null;
             _restartBaselineRuntimePid ??= _runtimePid;
             LastRestartUtc = _lastWatchActivityUtc;
 
@@ -938,11 +1153,14 @@ public sealed partial class AppSession
         if (_laneKind == RuntimeLaneKind.SourceWatch)
         {
             var iteration = _confirmedWatchIteration ?? _expectedWatchIteration ?? 0;
+            var hotReloadGeneration = _confirmedHotReloadGeneration ?? _expectedHotReloadGeneration;
             return new RuntimeRevisionData(
-                Kind: "WatchIteration",
-                Value: $"{LogicalAppId}:{iteration}",
+                Kind: hotReloadGeneration.HasValue ? "WatchGeneration" : "WatchIteration",
+                Value: hotReloadGeneration.HasValue
+                    ? $"{LogicalAppId}:{iteration}:g{hotReloadGeneration.Value}"
+                    : $"{LogicalAppId}:{iteration}",
                 ObservedUtc: _lastWatchActivityUtc ?? LastStartUtc,
-                IsConfirmed: !_watchPendingChange && iteration > 0);
+                IsConfirmed: !_watchPendingChange && (iteration > 0 || hotReloadGeneration > 0));
         }
 
         var pid = Process?.Pid ?? _runtimePid ?? 0;
@@ -985,6 +1203,13 @@ public sealed partial class AppSession
         {
             _recentEvents.RemoveAt(0);
         }
+    }
+
+    private void MarkWatchReadyForHotReloadLocked(LogEntry entry)
+    {
+        _watchReadyForHotReload = true;
+        _watchReadyForHotReloadSequence = entry.Sequence;
+        _watchHasReachedReadyState = true;
     }
 
     [GeneratedRegex(@"Now listening on:\s+(?<url>\S+)", RegexOptions.IgnoreCase)]
@@ -1229,7 +1454,11 @@ public sealed class AppRuntimeManager(
         var ownershipMarkers = ManagedProcessMarkers.CreateApplicationArguments("app", session.SessionId, configuration.WorkspaceRoot, serverInstanceIdentity.Id);
         var applicationArguments = BuildManagedApplicationArguments(template, ownershipMarkers);
         var artifactsRoot = BuildManagedArtifactsRoot(configuration.WorkspaceRoot, template);
-        Directory.CreateDirectory(artifactsRoot);
+        if (template.LaneKind != RuntimeLaneKind.SourceWatch)
+        {
+            Directory.CreateDirectory(artifactsRoot);
+        }
+
         var processStart = BuildManagedProcessStartArguments(launchSpec, applicationArguments, artifactsRoot);
 
         return new ManagedProcessStartInfo(
@@ -1272,7 +1501,6 @@ public sealed class AppRuntimeManager(
                 "watch",
                 "--non-interactive",
                 "--project", projectSpec.ProjectPath!,
-                "--artifacts-path", artifactsRoot,
                 "run",
                 "--configuration", launchSpec.Configuration,
                 "--property:UseAppHost=false"
@@ -1377,7 +1605,7 @@ public sealed class AppRuntimeManager(
             ["DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER"] = "1",
             ["DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH"] = "1",
             ["DOTNET_WATCH_SUPPRESS_EMOJIS"] = "1",
-            ["DOTNET_CLI_USE_MSBUILD_SERVER"] = "0",
+            ["DOTNET_CLI_USE_MSBUILD_SERVER"] = "1",
             ["ASPNETCORE_ENVIRONMENT"] = "Development",
             ["DOTNET_ENVIRONMENT"] = "Development"
         };

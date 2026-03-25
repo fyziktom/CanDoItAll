@@ -416,6 +416,22 @@ public sealed class SessionCoordinator(
                 }
             }
 
+            if (condition == AppWaitCondition.WatchReady &&
+                status.Watch is { IsReadyForHotReload: true } readyWatch &&
+                status.State is AppLifecycleState.Running or AppLifecycleState.Healthy &&
+                (!cursor.HasValue ||
+                 (readyWatch.ReadyForHotReloadSequence.HasValue && readyWatch.ReadyForHotReloadSequence.Value > cursor.Value)))
+            {
+                return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+            }
+
+            if (condition == AppWaitCondition.WatchReportedApplied &&
+                status.Watch is { LastHotReloadOutcome: HotReloadOutcome.Succeeded, LastActivitySequence: not null } watch &&
+                (!cursor.HasValue || watch.LastActivitySequence.Value > cursor.Value))
+            {
+                return CreateAppWaitResult(status, condition, startedAt, true, false, matchedLogEntry, null, session.LogBuffer.CurrentSequence);
+            }
+
             if (condition is AppWaitCondition.QuietSinceCursor or AppWaitCondition.WatchSettled)
             {
                 var quietSatisfied = HasQuietPeriodElapsed(session, quietCursor, quietPeriod, startedAt, requirePostCursorActivity: cursor.HasValue);
@@ -464,7 +480,7 @@ public sealed class SessionCoordinator(
 
         var currentStatus = session.ToStatusData();
         var timeoutHint = CreateTimeoutHint(condition);
-        if (condition is AppWaitCondition.Healthy or AppWaitCondition.Ready or AppWaitCondition.WatchSettled or AppWaitCondition.RestartCompleted)
+        if (condition is AppWaitCondition.Healthy or AppWaitCondition.Ready or AppWaitCondition.WatchReady or AppWaitCondition.WatchSettled or AppWaitCondition.RestartCompleted)
         {
             session.MarkHealthFailure(new HealthSnapshot(
                 "Unhealthy",
@@ -688,70 +704,80 @@ public sealed class SessionCoordinator(
         {
             await using var heldLease = lease;
             var artifactsRoot = Path.Combine(configuration.WorkspaceRoot, ".mcp-state", "artifacts", operationId);
+            var markerArguments = ManagedProcessMarkers.CreateMsBuildPropertyArguments("operation", operationId, configuration.WorkspaceRoot, serverInstanceIdentity.Id);
+            var resultsDirectory = operationType == OperationType.Test
+                ? Path.Combine(artifactsRoot, "test-results")
+                : null;
+            var injectNoRestore = ShouldInjectNoRestore(arguments);
             var environment = environmentOverlayFilter.Merge(
                 new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["DOTNET_CLI_UI_LANGUAGE"] = "en",
                     ["DOTNET_NOLOGO"] = "1",
                     ["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1",
-                    ["DOTNET_CLI_USE_MSBUILD_SERVER"] = "0"
+                    ["DOTNET_CLI_USE_MSBUILD_SERVER"] = "1"
                 },
                 environmentOverlay,
                 includePollingWatcher: false);
 
-            List<string> commandArguments = [operationType == OperationType.Build ? "build" : "test", targetPath, "--configuration", configurationName];
-            if (!string.IsNullOrWhiteSpace(framework))
+            if (!string.IsNullOrWhiteSpace(resultsDirectory))
             {
-                commandArguments.Add("--framework");
-                commandArguments.Add(framework);
-            }
-
-            commandArguments.Add("--artifacts-path");
-            commandArguments.Add(artifactsRoot);
-            commandArguments.AddRange(ManagedProcessMarkers.CreateMsBuildPropertyArguments("operation", operationId, configuration.WorkspaceRoot, serverInstanceIdentity.Id));
-            commandArguments.AddRange(arguments);
-
-            if (operationType == OperationType.Test && !commandArguments.Contains("--results-directory", StringComparer.OrdinalIgnoreCase))
-            {
-                var resultsDirectory = Path.Combine(artifactsRoot, "test-results");
                 Directory.CreateDirectory(resultsDirectory);
-                commandArguments.Add("--results-directory");
-                commandArguments.Add(resultsDirectory);
             }
+
+            var fastArguments = BuildOperationCommandArguments(
+                operationType,
+                targetPath,
+                configurationName,
+                framework,
+                injectNoRestore,
+                markerArguments,
+                arguments,
+                resultsDirectory);
+            var fallbackArguments = injectNoRestore
+                ? BuildOperationCommandArguments(
+                    operationType,
+                    targetPath,
+                    configurationName,
+                    framework,
+                    injectNoRestore: false,
+                    markerArguments,
+                    arguments,
+                    resultsDirectory)
+                : fastArguments;
 
             try
             {
-                var process = await processSupervisor.StartAsync(
-                    new ManagedProcessStartInfo(
-                        "operation",
-                        operationId,
-                        "dotnet",
-                        commandArguments,
-                        configuration.WorkspaceRoot,
-                        environment,
-                        correlationId,
-                        null),
-                    operation.LogBuffer,
-                    async entry =>
-                    {
-                        operation.NoteLog(entry);
-                        await Task.CompletedTask;
-                    },
-                    async exitCode =>
-                    {
-                        operation.MarkCompleted(exitCode, exitCode == 0 ? $"{operationType} succeeded." : $"{operationType} failed.");
-                        await Task.CompletedTask;
-                    },
+                var attemptCursor = operation.LogBuffer.CurrentSequence;
+                var exitCode = await RunOperationAttemptAsync(
+                    operation,
+                    operationId,
+                    correlationId,
+                    fastArguments,
+                    environment,
+                    timeout,
                     CancellationToken.None);
 
-                operation.AttachProcess(process);
-
-                using var timeoutCts = new CancellationTokenSource(timeout);
-                var exitCode = await process.Completion.WaitAsync(timeoutCts.Token);
-                if (operation.ToStatusData().State == OperationState.Running)
+                if (ShouldRetryWithoutNoRestore(injectNoRestore, exitCode, operation.LogBuffer, attemptCursor))
                 {
-                    operation.MarkCompleted(exitCode, exitCode == 0 ? $"{operationType} succeeded." : $"{operationType} failed.");
+                    operation.LogBuffer.Append(
+                        "SystemEvent",
+                        null,
+                        null,
+                        correlationId,
+                        $"Retrying {operationType} without --no-restore after restore-related failure.");
+                    attemptCursor = operation.LogBuffer.CurrentSequence;
+                    exitCode = await RunOperationAttemptAsync(
+                        operation,
+                        operationId,
+                        correlationId,
+                        fallbackArguments,
+                        environment,
+                        timeout,
+                        CancellationToken.None);
                 }
+
+                operation.MarkCompleted(exitCode, exitCode == 0 ? $"{operationType} succeeded." : $"{operationType} failed.");
             }
             catch (OperationCanceledException)
             {
@@ -815,6 +841,103 @@ public sealed class SessionCoordinator(
                 StoppedSessionIds = stoppedSessionIds
             },
             operation.LogBuffer.CurrentSequence);
+    }
+
+    private async Task<int?> RunOperationAttemptAsync(
+        OperationRecord operation,
+        string operationId,
+        string correlationId,
+        IReadOnlyList<string> commandArguments,
+        IReadOnlyDictionary<string, string> environment,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        var process = await processSupervisor.StartAsync(
+            new ManagedProcessStartInfo(
+                "operation",
+                operationId,
+                "dotnet",
+                commandArguments,
+                configuration.WorkspaceRoot,
+                environment,
+                correlationId,
+                null),
+            operation.LogBuffer,
+            async entry =>
+            {
+                operation.NoteLog(entry);
+                await Task.CompletedTask;
+            },
+            async _ =>
+            {
+                await Task.CompletedTask;
+            },
+            cancellationToken);
+
+        operation.AttachProcess(process);
+
+        using var timeoutCts = new CancellationTokenSource(timeout);
+        return await process.Completion.WaitAsync(timeoutCts.Token);
+    }
+
+    private static List<string> BuildOperationCommandArguments(
+        OperationType operationType,
+        string targetPath,
+        string configurationName,
+        string? framework,
+        bool injectNoRestore,
+        IReadOnlyList<string> markerArguments,
+        IReadOnlyList<string> arguments,
+        string? resultsDirectory)
+    {
+        List<string> commandArguments = [operationType == OperationType.Build ? "build" : "test", targetPath, "--configuration", configurationName];
+        if (!string.IsNullOrWhiteSpace(framework))
+        {
+            commandArguments.Add("--framework");
+            commandArguments.Add(framework);
+        }
+
+        if (injectNoRestore && !ContainsArgument(arguments, "--no-restore"))
+        {
+            commandArguments.Add("--no-restore");
+        }
+
+        commandArguments.AddRange(markerArguments);
+        commandArguments.AddRange(arguments);
+
+        if (operationType == OperationType.Test &&
+            !ContainsArgument(commandArguments, "--results-directory") &&
+            !string.IsNullOrWhiteSpace(resultsDirectory))
+        {
+            commandArguments.Add("--results-directory");
+            commandArguments.Add(resultsDirectory);
+        }
+
+        return commandArguments;
+    }
+
+    private static bool ShouldInjectNoRestore(IReadOnlyList<string> arguments)
+    {
+        return !ContainsArgument(arguments, "--no-restore") &&
+               !ContainsArgument(arguments, "--disable-build-servers");
+    }
+
+    private static bool ShouldRetryWithoutNoRestore(bool injectNoRestore, int? exitCode, RingLogBuffer logBuffer, long attemptCursor)
+    {
+        if (!injectNoRestore || exitCode == 0)
+        {
+            return false;
+        }
+
+        return logBuffer.GetAfter(attemptCursor).Any(entry =>
+            entry.Text.Contains("NETSDK1004", StringComparison.OrdinalIgnoreCase) ||
+            entry.Text.Contains("Run a NuGet package restore", StringComparison.OrdinalIgnoreCase) ||
+            entry.Text.Contains("project.assets.json", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool ContainsArgument(IEnumerable<string> arguments, string argument)
+    {
+        return arguments.Any(candidate => string.Equals(candidate, argument, StringComparison.OrdinalIgnoreCase));
     }
 
     private OperationStatusData[] GetHistoryOperations()
@@ -1087,8 +1210,10 @@ public sealed class SessionCoordinator(
         {
             AppWaitCondition.Healthy => "Health probe did not succeed within timeout.",
             AppWaitCondition.Ready => "Application did not become ready within timeout.",
+            AppWaitCondition.WatchReady => "dotnet watch did not reach a ready-for-edits state within timeout.",
             AppWaitCondition.QuietSinceCursor => "Application logs did not settle within the requested quiet period.",
             AppWaitCondition.WatchSettled => "The active dotnet watch generation did not settle within timeout.",
+            AppWaitCondition.WatchReportedApplied => "The active dotnet watch change was not reported as applied within timeout.",
             AppWaitCondition.RestartCompleted => "The active dotnet watch restart did not complete within timeout.",
             AppWaitCondition.RevisionConfirmed => "The active runtime revision was not confirmed within timeout.",
             AppWaitCondition.TransactionPrepared => "The atomic candidate did not become ready within timeout.",
@@ -1104,7 +1229,7 @@ public sealed class SessionCoordinator(
         {
             return waitResult.Condition switch
             {
-                AppWaitCondition.Healthy or AppWaitCondition.Ready => "HealthTimeout",
+                AppWaitCondition.Healthy or AppWaitCondition.Ready or AppWaitCondition.WatchReady => "HealthTimeout",
                 AppWaitCondition.RevisionConfirmed or AppWaitCondition.TransactionPrepared or AppWaitCondition.TransactionCommitted or AppWaitCondition.RollbackCommitted => "ValidationTimeout",
                 _ => "Timeout"
             };
@@ -1195,6 +1320,17 @@ public sealed class SessionCoordinator(
 
     private static string CreatePendingGenerationSummary(WatchStatusData? watch, HealthSnapshot probe)
     {
+        if (watch?.ExpectedHotReloadGeneration is long expectedGeneration)
+        {
+            var confirmedGeneration = probe.HotReloadGeneration ?? watch.ConfirmedHotReloadGeneration;
+            if (confirmedGeneration.HasValue && confirmedGeneration.Value < expectedGeneration)
+            {
+                return $"Runtime is still on hot reload generation {confirmedGeneration.Value}; waiting for {expectedGeneration}.";
+            }
+
+            return $"Waiting for hot reload generation {expectedGeneration} to become healthy.";
+        }
+
         if (watch?.ExpectedWatchIteration is int expectedIteration &&
             probe.WatchIteration is int confirmedIteration &&
             confirmedIteration < expectedIteration)

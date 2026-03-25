@@ -51,11 +51,13 @@ public enum AppWaitCondition
     None,
     Running,
     Ready,
+    WatchReady,
     Healthy,
     Stopped,
     QuietSinceCursor,
     LogMatch,
     RestartCompleted,
+    WatchReportedApplied,
     WatchSettled,
     RevisionConfirmed,
     TransactionPrepared,
@@ -211,7 +213,10 @@ public sealed record HealthData(
     string? Summary,
     bool IsReady,
     int? WatchIteration,
-    int? RuntimePid);
+    int? RuntimePid)
+{
+    public long? HotReloadGeneration { get; init; }
+}
 
 public sealed record WatchStatusData(
     WatchProcessingState State,
@@ -223,7 +228,16 @@ public sealed record WatchStatusData(
     int? ConfirmedWatchIteration,
     HotReloadOutcome LastHotReloadOutcome,
     long? LastActivitySequence,
-    DateTimeOffset? LastActivityUtc);
+    DateTimeOffset? LastActivityUtc)
+{
+    public long? ExpectedHotReloadGeneration { get; init; }
+
+    public long? ConfirmedHotReloadGeneration { get; init; }
+
+    public bool IsReadyForHotReload { get; init; }
+
+    public long? ReadyForHotReloadSequence { get; init; }
+}
 
 public sealed record AppStatusData(
     string SessionId,
