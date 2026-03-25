@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.Mcp.Core.Contracts;
 using CanDoItAll.Mcp.DotNetWatch;
+using CanDoItAll.Mcp.DotNetWatch.Backend;
 
 namespace CanDoItAll.Mcp.DotNetWatch.IntegrationTests;
 
@@ -246,6 +248,48 @@ public sealed class BootstrapValidationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task BackendMode_Rejects_DuplicateOwner_AndPreservesFirstBackend()
+    {
+        var tempDirectory = Path.Combine(ValidationHarness.RepoRoot, ".mcp-state", "backend-ownership-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDirectory);
+
+        var settingsPath = await CreateIsolatedBackendSettingsAsync(tempDirectory);
+        var registrationPath = Path.Combine(tempDirectory, "backend-registration.json");
+        var firstStdoutPath = Path.Combine(tempDirectory, "backend-1.stdout.log");
+        var firstStderrPath = Path.Combine(tempDirectory, "backend-1.stderr.log");
+        var secondStdoutPath = Path.Combine(tempDirectory, "backend-2.stdout.log");
+        var secondStderrPath = Path.Combine(tempDirectory, "backend-2.stderr.log");
+
+        var firstBackend = StartBackendProcess(settingsPath, "ownership-test-1", firstStdoutPath, firstStderrPath);
+        RunningBackendProcess? secondBackend = null;
+
+        try
+        {
+            var firstRegistration = await WaitForRegistrationAsync(registrationPath, TimeSpan.FromSeconds(30));
+            Assert.False(firstBackend.Process.HasExited);
+
+            secondBackend = StartBackendProcess(settingsPath, "ownership-test-2", secondStdoutPath, secondStderrPath);
+            await secondBackend.Process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(20));
+
+            var finalRegistration = await WaitForRegistrationAsync(registrationPath, TimeSpan.FromSeconds(10));
+            Assert.Equal(firstRegistration.BackendId, finalRegistration.BackendId);
+            Assert.Equal(0, secondBackend.Process.ExitCode);
+            Assert.False(firstBackend.Process.HasExited);
+        }
+        finally
+        {
+            if (secondBackend is not null)
+            {
+                await secondBackend.DisposeAsync();
+            }
+
+            await firstBackend.DisposeAsync();
+            await DeleteMatchingCatalogRecordsAsync(settingsPath);
+            await TryDeleteDirectoryAsync(tempDirectory);
+        }
+    }
+
+    [Fact]
     public async Task WrapperShadowCleanup_RetainsOnlyCurrentAndPreviousBuildRoots()
     {
         var tempDirectory = Path.Combine(ValidationHarness.RepoRoot, ".mcp-state", "wrapper-retention-tests", Guid.NewGuid().ToString("N"));
@@ -417,5 +461,148 @@ public sealed class BootstrapValidationTests : IAsyncLifetime
         while (DateTimeOffset.UtcNow < deadline);
 
         return buildDirectories;
+    }
+
+    private static async Task<string> CreateIsolatedBackendSettingsAsync(string tempDirectory)
+    {
+        var settingsNode = JsonNode.Parse(await File.ReadAllTextAsync(ValidationHarness.SettingsPath))?.AsObject()
+            ?? throw new InvalidOperationException("Could not parse the repository settings file.");
+        var logs = settingsNode["Logs"]?.AsObject() ?? throw new InvalidOperationException("Settings file is missing a Logs section.");
+        var process = settingsNode["Process"]?.AsObject() ?? throw new InvalidOperationException("Settings file is missing a Process section.");
+        var atomicRuntime = settingsNode["AtomicRuntime"]?.AsObject() ?? throw new InvalidOperationException("Settings file is missing an AtomicRuntime section.");
+        var endpoints = settingsNode["Endpoints"]?.AsObject() ?? throw new InvalidOperationException("Settings file is missing an Endpoints section.");
+        var backend = settingsNode["Backend"]?.AsObject();
+        if (backend is null)
+        {
+            backend = new JsonObject();
+            settingsNode["Backend"] = backend;
+        }
+
+        logs["Folder"] = Path.Combine(tempDirectory, "logs");
+        process["RegistryPath"] = Path.Combine(tempDirectory, "process-registry.json");
+        backend["RegistrationPath"] = Path.Combine(tempDirectory, "backend-registration.json");
+        atomicRuntime["SlotRoot"] = Path.Combine(tempDirectory, "runtime-slots");
+        endpoints["LeasePath"] = Path.Combine(tempDirectory, "runtime-endpoints.json");
+
+        var settingsPath = Path.Combine(tempDirectory, "isolated-settings.json");
+        await File.WriteAllTextAsync(settingsPath, settingsNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+        return settingsPath;
+    }
+
+    private static RunningBackendProcess StartBackendProcess(
+        string settingsPath,
+        string backendToken,
+        string stdoutPath,
+        string stderrPath)
+    {
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo("dotnet")
+            {
+                WorkingDirectory = ValidationHarness.RepoRoot,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false
+            }
+        };
+
+        process.StartInfo.ArgumentList.Add(ValidationHarness.ServerAssemblyPath);
+        process.StartInfo.ArgumentList.Add("--backend");
+        process.StartInfo.ArgumentList.Add("--settings");
+        process.StartInfo.ArgumentList.Add(settingsPath);
+        process.StartInfo.ArgumentList.Add("--backend-token");
+        process.StartInfo.ArgumentList.Add(backendToken);
+
+        Assert.True(process.Start());
+        return new RunningBackendProcess(
+            process,
+            process.StandardOutput.ReadToEndAsync(),
+            process.StandardError.ReadToEndAsync(),
+            stdoutPath,
+            stderrPath);
+    }
+
+    private static async Task<BackendRegistrationRecord> WaitForRegistrationAsync(string registrationPath, TimeSpan timeout)
+    {
+        var deadline = DateTimeOffset.UtcNow.Add(timeout);
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            if (File.Exists(registrationPath))
+            {
+                await using var stream = File.Open(registrationPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                var registration = await JsonSerializer.DeserializeAsync<BackendRegistrationRecord>(stream);
+                if (registration is not null)
+                {
+                    return registration;
+                }
+            }
+
+            await Task.Delay(250);
+        }
+
+        throw new TimeoutException($"Timed out waiting for backend registration at '{registrationPath}'.");
+    }
+
+    private static async Task DeleteMatchingCatalogRecordsAsync(string settingsPath)
+    {
+        var catalogDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "CanDoItAll.Mcp.DotNetWatch",
+            "backend-catalog");
+        if (!Directory.Exists(catalogDirectory))
+        {
+            return;
+        }
+
+        foreach (var path in Directory.GetFiles(catalogDirectory, "*.json", SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                await using var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                var record = await JsonSerializer.DeserializeAsync<BackendRegistrationRecord>(stream);
+                if (record?.Identity is null ||
+                    !string.Equals(record.Identity.WorkspaceRoot, ValidationHarness.RepoRoot, StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(record.Identity.SettingsPath, settingsPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                File.Delete(path);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private sealed class RunningBackendProcess(
+        Process process,
+        Task<string> stdoutTask,
+        Task<string> stderrTask,
+        string stdoutPath,
+        string stderrPath) : IAsyncDisposable
+    {
+        public Process Process { get; } = process;
+
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                if (!Process.HasExited)
+                {
+                    Process.Kill(entireProcessTree: true);
+                    await Process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(15));
+                }
+            }
+            catch
+            {
+            }
+
+            var stdout = await stdoutTask;
+            var stderr = await stderrTask;
+            await File.WriteAllTextAsync(stdoutPath, stdout);
+            await File.WriteAllTextAsync(stderrPath, stderr);
+            Process.Dispose();
+        }
     }
 }

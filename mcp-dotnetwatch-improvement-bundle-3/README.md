@@ -42,3 +42,4 @@ Implementation summary:
   - project browsing plus project-path launch controls for arbitrary `.csproj` files
   - support for sibling-repo project starts through configured external project roots
 - validated the manager against `C:\repositories\pveinvoicing\PVEInvoicing\PVEInvoicing\PVEInvoicing.csproj` with a Playwright-driven browser flow plus native Windows dialog automation, and wrote the result to `artifacts/manager-pveinvoicing-validation.json`
+- added a backend single-owner guard so the same workspace plus settings path cannot keep two live backend daemons at once; later launches now adopt the current owner when possible or fail fast with a conflict instead of replacing it

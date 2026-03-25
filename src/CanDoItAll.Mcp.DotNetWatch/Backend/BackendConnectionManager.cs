@@ -29,24 +29,41 @@ internal sealed class BackendConnectionManager(
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            if (_currentConnection is not null && await IsRegistrationUsableAsync(_currentConnection.Registration, cancellationToken))
+            if (_currentConnection is not null)
             {
-                return _currentConnection;
+                var currentCompatibility = await GetRegistrationCompatibilityAsync(_currentConnection.Registration, cancellationToken);
+                if (TryUseRegistration(_currentConnection.Registration, currentCompatibility))
+                {
+                    return _currentConnection!;
+                }
+
+                _currentConnection = null;
             }
 
             await using var launchLock = await AcquireLaunchLockAsync(cancellationToken);
 
             var existing = await registrationStore.ReadAsync(cancellationToken);
-            if (existing is not null && await IsRegistrationUsableAsync(existing, cancellationToken))
-            {
-                _currentConnection = new BackendConnectionInfo(existing);
-                return _currentConnection;
-            }
-
             if (existing is not null)
             {
-                TryKillRegisteredProcess(existing.ProcessId);
-                registrationStore.Delete();
+                var existingCompatibility = await GetRegistrationCompatibilityAsync(existing, cancellationToken);
+                if (TryUseRegistration(existing, existingCompatibility))
+                {
+                    return _currentConnection!;
+                }
+
+                switch (existingCompatibility)
+                {
+                    case RegistrationCompatibility.ConflictingOwner:
+                        throw new InvalidOperationException(CreateOwnershipConflictMessage(existing));
+                    case RegistrationCompatibility.UnreachableOwner:
+                        TryKillRegisteredProcess(existing.ProcessId);
+                        registrationStore.Delete();
+                        break;
+                    case RegistrationCompatibility.NotLive:
+                    case RegistrationCompatibility.None:
+                        registrationStore.Delete();
+                        break;
+                }
             }
 
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
@@ -57,12 +74,23 @@ internal sealed class BackendConnectionManager(
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var registration = await registrationStore.ReadAsync(cancellationToken);
-                if (registration is not null &&
-                    string.Equals(registration.AuthToken, token, StringComparison.Ordinal) &&
-                    await IsRegistrationUsableAsync(registration, cancellationToken))
+                if (registration is not null)
                 {
-                    _currentConnection = new BackendConnectionInfo(registration);
-                    return _currentConnection;
+                    var registrationCompatibility = await GetRegistrationCompatibilityAsync(registration, cancellationToken);
+                    if (TryUseRegistration(registration, registrationCompatibility))
+                    {
+                        return _currentConnection!;
+                    }
+
+                    switch (registrationCompatibility)
+                    {
+                        case RegistrationCompatibility.ConflictingOwner:
+                            throw new InvalidOperationException(CreateOwnershipConflictMessage(registration));
+                        case RegistrationCompatibility.NotLive:
+                        case RegistrationCompatibility.None:
+                            registrationStore.Delete();
+                            break;
+                    }
                 }
 
                 await Task.Delay(configuration.BackendStartupPollInterval, cancellationToken);
@@ -101,20 +129,32 @@ internal sealed class BackendConnectionManager(
         }
     }
 
-    private async Task<bool> IsRegistrationUsableAsync(BackendRegistrationRecord registration, CancellationToken cancellationToken)
+    private bool TryUseRegistration(BackendRegistrationRecord registration, RegistrationCompatibility compatibility)
+    {
+        if (compatibility is RegistrationCompatibility.Exact)
+        {
+            _currentConnection = new BackendConnectionInfo(registration);
+            return true;
+        }
+
+        if (compatibility is RegistrationCompatibility.Adoptable)
+        {
+            logger.LogInformation(
+                "Adopting a live backend with matching workspace/settings but a different binary marker. BackendId={BackendId}, ProcessId={ProcessId}",
+                registration.BackendId,
+                registration.ProcessId);
+            _currentConnection = new BackendConnectionInfo(registration);
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task<RegistrationCompatibility> GetRegistrationCompatibilityAsync(BackendRegistrationRecord registration, CancellationToken cancellationToken)
     {
         if (!registrationStore.IsLiveProcess(registration))
         {
-            return false;
-        }
-
-        if (!identityProvider.Matches(registration.Identity))
-        {
-            logger.LogInformation(
-                "Ignoring backend registration because identity does not match. RegisteredSettings={RegisteredSettings}, CurrentSettings={CurrentSettings}",
-                registration.Identity.SettingsPath,
-                identityProvider.Current.SettingsPath);
-            return false;
+            return RegistrationCompatibility.NotLive;
         }
 
         try
@@ -123,16 +163,42 @@ internal sealed class BackendConnectionManager(
             var response = await client.GetAsync("/api/backend/ping", cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return false;
+                return identityProvider.MatchesOwnerScope(registration.Identity)
+                    ? RegistrationCompatibility.UnreachableOwner
+                    : RegistrationCompatibility.None;
             }
 
             var ping = await response.Content.ReadFromJsonAsync<BackendPingResponse>(JsonOptions, cancellationToken);
-            return ping is not null && identityProvider.Matches(ping.Identity);
+            if (ping is null)
+            {
+                return identityProvider.MatchesOwnerScope(registration.Identity)
+                    ? RegistrationCompatibility.UnreachableOwner
+                    : RegistrationCompatibility.None;
+            }
+
+            if (identityProvider.Matches(ping.Identity))
+            {
+                return RegistrationCompatibility.Exact;
+            }
+
+            if (identityProvider.MatchesConfiguration(ping.Identity))
+            {
+                return RegistrationCompatibility.Adoptable;
+            }
+
+            if (identityProvider.MatchesOwnerScope(ping.Identity))
+            {
+                return RegistrationCompatibility.ConflictingOwner;
+            }
+
+            return RegistrationCompatibility.None;
         }
         catch (Exception ex)
         {
             logger.LogDebug(ex, "Backend registration at {BaseUrl} did not answer ping.", registration.BaseUrl);
-            return false;
+            return identityProvider.MatchesOwnerScope(registration.Identity)
+                ? RegistrationCompatibility.UnreachableOwner
+                : RegistrationCompatibility.None;
         }
     }
 
@@ -185,6 +251,21 @@ internal sealed class BackendConnectionManager(
         }
     }
 
+    private string CreateOwnershipConflictMessage(BackendRegistrationRecord registration)
+    {
+        return string.Join(
+            " ",
+            "A different backend is already running for this workspace/settings path.",
+            $"backendId='{registration.BackendId}'",
+            $"processId={registration.ProcessId}",
+            $"baseUrl='{registration.BaseUrl}'",
+            $"managerUrl='{registration.ManagerUrl}'",
+            $"registeredSettingsPath='{registration.Identity.SettingsPath}'",
+            $"registeredBinaryVersionMarker='{registration.Identity.BinaryVersionMarker}'",
+            $"currentBinaryVersionMarker='{identityProvider.Current.BinaryVersionMarker}'.",
+            "Use the tray recover/restart action if you need to replace the current owner.");
+    }
+
     private string CreateStartupTimeoutMessage(string expectedToken, BackendRegistrationRecord? observedRegistration)
     {
         var details = new List<string>
@@ -219,5 +300,15 @@ internal sealed class BackendConnectionManager(
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         options.Converters.Add(new JsonStringEnumConverter());
         return options;
+    }
+
+    private enum RegistrationCompatibility
+    {
+        None,
+        NotLive,
+        Exact,
+        Adoptable,
+        ConflictingOwner,
+        UnreachableOwner
     }
 }

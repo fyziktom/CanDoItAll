@@ -18,6 +18,8 @@ Code changes:
 - restored wrapper prepare-only support in `tools/CanDoItAll.Mcp.DotNetWatch/Start-CanDoItAllDotNetWatchMcp.ps1`
 - extended the backend manager surface in:
   - `src/CanDoItAll.Mcp.DotNetWatch/Backend/BackendModels.cs`
+  - `src/CanDoItAll.Mcp.DotNetWatch/Backend/BackendConnectionManager.cs`
+  - `src/CanDoItAll.Mcp.DotNetWatch/Backend/BackendWorkspaceOwnershipCoordinator.cs`
   - `src/CanDoItAll.Mcp.DotNetWatch/Manager/BackendManagerService.cs`
   - `src/CanDoItAll.Mcp.DotNetWatch/Manager/BackendDashboardPage.cs`
   - `src/CanDoItAll.Mcp.DotNetWatch/Manager/ProjectPathPicker.cs`
@@ -42,6 +44,9 @@ Validation:
   - `dotnet build tools\\CanDoItAll.Mcp.DotNetWatch.Tray\\CanDoItAll.Mcp.DotNetWatch.Tray.csproj --nologo`
 - unit tests passed:
   - `38/38` in `CanDoItAll.Mcp.DotNetWatch.Tests`
+- focused duplicate-owner backend validation passed:
+  - `BackendMode_Rejects_DuplicateOwner_AndPreservesFirstBackend`
+  - result: first backend stayed alive, the second backend exited, and the workspace registration remained bound to the original owner
 - focused wrapper and integration validation passed:
   - `5/5` in `CanDoItAll.Mcp.DotNetWatch.IntegrationTests`
 - resetup script passed on the live repo path and published:
@@ -87,6 +92,7 @@ Performance:
 - conclusion:
   - the tray process does not materially affect the hot-reload loop
   - the current shared benchmark path is slower than the bundle-2 isolated baseline for both tray-on and tray-off runs, so that regression is outside the tray bundle itself
+  - duplicate backend creation for the same workspace plus settings path is now blocked in backend mode instead of being left for tray recovery
 
 Residual risks:
 
@@ -94,3 +100,4 @@ Residual risks:
 - cold watch startup remains noisy in this benchmark path at roughly `85-97s`; bundle 3 did not target startup tuning
 - headless `recover` and `restart` completed successfully but emitted blank stdout in shell redirection during validation; follow-up `status` confirmed success, so this is a headless-output quirk rather than a tray-UI failure
 - native manager browse validation is sensitive to stale `Open` dialogs left behind by interrupted runs; before retrying the browse flow, clear old dialogs or the keyboard helper may attach to the wrong picker instance
+- one unrelated bootstrap validation still fails intermittently in `WrapperShadowCleanup_RetainsOnlyCurrentAndPreviousBuildRoots`; that pre-existing wrapper-retention issue is outside the single-owner backend repair
