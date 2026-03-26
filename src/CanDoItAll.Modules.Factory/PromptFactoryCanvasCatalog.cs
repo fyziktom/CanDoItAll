@@ -1,5 +1,5 @@
 using System.Text;
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Factory;
 
@@ -643,3 +643,5 @@ private static CanvasWorkbenchAction BuildComponentLeafAction(PromptBlockSummary
         return builder.ToString();
     }
 }
+
+

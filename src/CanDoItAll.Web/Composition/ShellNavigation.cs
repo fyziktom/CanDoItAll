@@ -36,3 +36,5 @@ public static class ShellNavigation
                currentRoute.StartsWith($"{navigationRoute}/", StringComparison.OrdinalIgnoreCase);
     }
 }
+
+

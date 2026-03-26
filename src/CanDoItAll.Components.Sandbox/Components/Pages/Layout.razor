@@ -1,0 +1,287 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@page "/groups/layout"
+@inherits CatalogPageBase
+
+<PageTitle>Layout</PageTitle>
+
+<CatalogPageFrame Group="@Group"
+                  Scenario="@CurrentScenario"
+                  Frame="@CurrentFrame"
+                  ExampleCount="@Examples.Count"
+                  HeroTitle="Page-level composition that uses width intentionally."
+                  HeroSummary="The layout page proves that shared shells, headers, rails, sections, and sticky actions still orient the user on both wide and constrained frames."
+                  DemoTitle="Layout system"
+                  DemoSummary="Page scaffolds, split regions, and sticky actions under the current scenario."
+                  ScenarioChanged="NavigateScenario"
+                  FrameChanged="NavigateFrame">
+    <Notes>
+        <div class="sandbox-proof-list">
+            <p>Wide layouts should use horizontal space on purpose instead of drifting into accidental narrow columns.</p>
+            <p>Mobile still needs a readable first viewport with a clear entry point into the page.</p>
+            <p>Shared shells should remove ad-hoc page structure rather than becoming decorative wrappers.</p>
+        </div>
+    </Notes>
+
+    <ChildContent>
+        @if (CurrentScenario == SandboxScenarioKey.LoadingState)
+        {
+            <LoadingState Eyebrow="Layout" Title="Composing the workspace shell" Description="The header, scaffold, and section rhythm stay legible while the content blocks load." />
+        }
+        else
+        {
+            <PageScaffold MaxWidthClass="max-w-[1280px]">
+                <Header>
+                    <PageHeader Eyebrow="Shared layout"
+                                Title="@WorkspaceTitle"
+                                Description="@WorkspaceDescription">
+                        <Actions>
+                            <Button Text="Share view" ButtonStyle="@(ButtonStyle.Light)" Variant="@(Variant.Outlined)" />
+                            <Button Text="Open checklist" />
+                        </Actions>
+                    </PageHeader>
+                </Header>
+
+                <Lead>
+                    <SummaryTiles>
+                        <SummaryTile Label="Regions" Value="@RegionCount.ToString()" HelperText="Primary content, supporting rail, and action footer stay structurally distinct." Tone="info" />
+                        <SummaryTile Label="Sections" Value="@SectionCount.ToString()" HelperText="Grouped sections should read clearly without extra chrome." Tone="success" />
+                        <SummaryTile Label="Viewport" Value="@ViewportLabel" HelperText="Frame changes should preserve orientation and hierarchy." Tone="warning" />
+                    </SummaryTiles>
+                </Lead>
+
+                <SecondaryRail>
+                    <SectionCard Title="Review rail" Description="The supporting rail should stay concise and useful.">
+                        <div class="sandbox-proof-list">
+                            <p>Use the right rail for compact context, not for duplicate content.</p>
+                            <p>Headings should make the page understandable before the user reads paragraphs.</p>
+                            <p>Sticky actions should close the flow, not dominate it.</p>
+                        </div>
+                    </SectionCard>
+
+                    <SectionCard Title="Current emphasis" Description="Scenario-specific expectations for this pass.">
+                        <div class="sandbox-proof-list">
+                            <p>@ScenarioRailCopy</p>
+                            <p>@WidthRailCopy</p>
+                        </div>
+                    </SectionCard>
+                </SecondaryRail>
+
+                <ChildContent>
+                    <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                        <FormSection Title="Primary workspace" Description="The main region should be able to hold operational content without collapsing the reading rhythm.">
+                            <div class="space-y-4">
+                                <TextBlock TextStyle="@(TextStyle.Subtitle1)" Value="Release acceptance workspace" />
+                                <TextBlock TextStyle="@(TextStyle.Body2)" Value="@WorkspaceCopy" />
+
+                                <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                                    @foreach (var metric in WorkspaceMetrics)
+                                    {
+                                        <SectionCard Title="@metric.Title" Description="@metric.Description">
+                                            <div class="space-y-2">
+                                                <TextBlock TextStyle="@(TextStyle.H4)" Value="@metric.Value" />
+                                                <StatusBadge Text="@metric.ToneLabel" Tone="@metric.Tone" />
+                                            </div>
+                                        </SectionCard>
+                                    }
+                                </div>
+                            </div>
+                        </FormSection>
+
+                        <SectionCard Title="Secondary workspace" Description="The supporting column still needs enough substance to justify its width.">
+                            <div class="sandbox-kv-list">
+                                @foreach (var item in SecondaryFacts)
+                                {
+                                    <div class="sandbox-kv-item">
+                                        <strong>@item.Label</strong>
+                                        <span>@item.Value</span>
+                                    </div>
+                                }
+                            </div>
+                        </SectionCard>
+                    </div>
+
+                    <ListDetailShell ListPaneWidth="22rem">
+                        <ListHeader>
+                            <PageHeader Eyebrow="List pane" Title="Shared records" Compact="true" />
+                        </ListHeader>
+                        <ListContent>
+                            <div class="sandbox-list">
+                                @foreach (var item in WorkspaceItems)
+                                {
+                                    <SelectionListItem IsSelected="@(item.Id == SelectedItem.Id)"
+                                                       Title="@item.Title"
+                                                       Eyebrow="@item.Eyebrow"
+                                                       Meta="@item.Meta"
+                                                       Summary="@item.Summary">
+                                        <Status>
+                                            <StatusBadge Text="@item.State" Tone="@item.Tone" />
+                                        </Status>
+                                    </SelectionListItem>
+                                }
+                            </div>
+                        </ListContent>
+                        <DetailHeader>
+                            <PageHeader Eyebrow="Detail pane" Title="Selected record" Compact="true" />
+                        </DetailHeader>
+                        <DetailContent>
+                            @if (CurrentScenario == SandboxScenarioKey.EmptyState)
+                            {
+                                <EmptyState Eyebrow="Layout" Title="No records in view" Description="The detail region should stay oriented even when the current filter returns nothing." />
+                            }
+                            else
+                            {
+                                <div class="space-y-4">
+                                    <TextBlock TextStyle="@(TextStyle.Subtitle1)" Value="@SelectedItem.Title" />
+                                    <TextBlock TextStyle="@(TextStyle.Body2)" Value="@SelectedItem.Summary" />
+                                    <Alert AlertStyle="@(AlertStyle.Info)">@SelectedItem.Detail</Alert>
+                                </div>
+                            }
+                        </DetailContent>
+                    </ListDetailShell>
+
+                    <StickyActionFooter StatusLabel="Layout state"
+                                        StatusMessage="@FooterMessage"
+                                        StatusTone="@FooterTone">
+                        <SecondaryActions>
+                            <Button Text="Save draft" ButtonStyle="@(ButtonStyle.Light)" Variant="@(Variant.Outlined)" Disabled="@IsActionDisabled" />
+                        </SecondaryActions>
+                        <PrimaryActions>
+                            <Button Text="@PrimaryActionText" Disabled="@IsActionDisabled" />
+                        </PrimaryActions>
+                        <DangerActions>
+                            <Button Text="Discard" ButtonStyle="@(ButtonStyle.Danger)" Variant="@(Variant.Text)" Disabled="@IsActionDisabled" />
+                        </DangerActions>
+                    </StickyActionFooter>
+                </ChildContent>
+            </PageScaffold>
+        }
+    </ChildContent>
+</CatalogPageFrame>
+
+@code {
+    private static readonly SandboxGroupDefinition Group = SandboxCatalogRegistry.GetGroup(SandboxGroupKey.Layout);
+    private static readonly IReadOnlyList<SandboxExampleDefinition> Examples = SandboxCatalogRegistry.GetExamples(SandboxGroupKey.Layout);
+
+    private string WorkspaceTitle => CurrentScenario == SandboxScenarioKey.LongText
+        ? "Migration acceptance workspace with extended release notes and validation guidance"
+        : "Migration acceptance workspace";
+
+    private string WorkspaceDescription => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => "Dense layout still needs a stable main column, a concise supporting rail, and action placement that does not fight the content.",
+        SandboxScenarioKey.EmptyState => "The shell should still orient the user even when the active list is empty and the detail panel has nothing to show yet.",
+        SandboxScenarioKey.LongText => "Longer page descriptions should not force the scaffold into awkward wrapping or a first viewport that feels like a document instead of a workspace.",
+        _ => "Shared page shells should make hierarchy, supporting context, and final actions obvious without inventing custom page structure."
+    };
+
+    private string WorkspaceCopy => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => "Dense workspace content compresses spacing slightly, but the header, key metrics, and detail region still need enough separation to stay scannable.",
+        SandboxScenarioKey.LongText => "Longer explanatory copy belongs in the main region, where it can keep a controlled reading width and still leave the rail available for compact operational context.",
+        _ => "The default layout keeps the main work in the primary region, keeps support context in the rail, and uses the sticky footer to close the flow cleanly."
+    };
+
+    private string ScenarioRailCopy => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => "This pass checks whether denser content still looks composed rather than over-packed.",
+        SandboxScenarioKey.EmptyState => "This pass checks whether the shell explains itself before any records are selected.",
+        SandboxScenarioKey.LongText => "This pass checks whether longer page copy stays readable without crushing the layout.",
+        _ => "This pass checks baseline composition and region clarity."
+    };
+
+    private string WidthRailCopy => CurrentFrame switch
+    {
+        SandboxFramePreset.Mobile => "Mobile should surface the headline, first metric, and next step without forcing horizontal scanning.",
+        SandboxFramePreset.Desktop => "Desktop should use breadth deliberately and avoid dead space between sections.",
+        _ => "The live viewport should keep the same hierarchy rules as the proof frames."
+    };
+
+    private string ViewportLabel => CurrentFrame switch
+    {
+        SandboxFramePreset.Mobile => "Mobile",
+        SandboxFramePreset.Desktop => "Desktop",
+        _ => "Live"
+    };
+
+    private int RegionCount => 3;
+
+    private int SectionCount => CurrentScenario == SandboxScenarioKey.DenseContent ? 5 : 4;
+
+    private bool IsActionDisabled => CurrentScenario == SandboxScenarioKey.EmptyState;
+
+    private string FooterMessage => CurrentScenario == SandboxScenarioKey.EmptyState
+        ? "Choose or create a record before the page-level actions become available."
+        : "Shared layout components should make the next step obvious without inventing one-off page wrappers.";
+
+    private string FooterTone => CurrentScenario == SandboxScenarioKey.EmptyState ? "warning" : "info";
+
+    private string PrimaryActionText => CurrentScenario == SandboxScenarioKey.LongText
+        ? "Approve workspace layout and capture proof bundle"
+        : "Approve layout";
+
+    private WorkspaceItem SelectedItem => WorkspaceItems[0];
+
+    private IReadOnlyList<WorkspaceMetric> WorkspaceMetrics => CurrentScenario == SandboxScenarioKey.DenseContent
+        ? DenseMetrics
+        : BaseMetrics;
+
+    private IReadOnlyList<WorkspaceFact> SecondaryFacts => CurrentScenario == SandboxScenarioKey.LongText
+        ? LongFacts
+        : BaseFacts;
+
+    private IReadOnlyList<WorkspaceItem> WorkspaceItems => CurrentScenario == SandboxScenarioKey.DenseContent
+        ? DenseItems
+        : BaseItems;
+
+    private static readonly IReadOnlyList<WorkspaceMetric> BaseMetrics =
+    [
+        new("Primary flow", "Review", "Focus stays on the main acceptance path without starving the support rail.", "Ready", "success"),
+        new("Secondary rail", "2 cards", "Supporting context stays compact and avoids duplicating main content.", "Balanced", "info")
+    ];
+
+    private static readonly IReadOnlyList<WorkspaceMetric> DenseMetrics =
+    [
+        new("Primary flow", "Review", "Focus stays on the main acceptance path without starving the support rail.", "Ready", "success"),
+        new("Secondary rail", "2 cards", "Supporting context stays compact and avoids duplicating main content.", "Balanced", "info"),
+        new("List-detail shell", "3 records", "The lower split region still reads clearly in a denser pass.", "Active", "warning")
+    ];
+
+    private static readonly IReadOnlyList<WorkspaceFact> BaseFacts =
+    [
+        new("Main width", "Intentional"),
+        new("Rail content", "Concise"),
+        new("Action placement", "Footer"),
+        new("Detail behavior", "Inline")
+    ];
+
+    private static readonly IReadOnlyList<WorkspaceFact> LongFacts =
+    [
+        new("Main width", "Protects readable line length"),
+        new("Rail content", "Still compact under longer copy"),
+        new("Action placement", "Footer closes the flow"),
+        new("Detail behavior", "Longer summaries still scan"),
+        new("Headline", "Can grow without breaking the shell")
+    ];
+
+    private static readonly IReadOnlyList<WorkspaceItem> BaseItems =
+    [
+        new("layout-shell", "Layout shell", "Header / rail", "Shared shell keeps main content, supporting rail, and sticky actions in distinct regions.", "Ready", "success", "The default page composition holds together without one-off wrappers."),
+        new("detail-pane", "Detail pane", "Split view", "The selected record has enough room for operational detail without hiding the list.", "Active", "info", "Split layout should preserve both orientation and detail context.")
+    ];
+
+    private static readonly IReadOnlyList<WorkspaceItem> DenseItems =
+    [
+        new("layout-shell", "Layout shell", "Header / rail", "Shared shell keeps main content, supporting rail, and sticky actions in distinct regions.", "Ready", "success", "The default page composition holds together without one-off wrappers."),
+        new("detail-pane", "Detail pane", "Split view", "The selected record has enough room for operational detail without hiding the list.", "Active", "info", "Split layout should preserve both orientation and detail context."),
+        new("dense-review", "Dense review lane", "Proof / actions", "Denser sections still need obvious grouping and a visible path to completion.", "Review", "warning", "Dense mode cannot become an undifferentiated grid of bordered boxes.")
+    ];
+
+    private sealed record WorkspaceMetric(string Title, string Value, string Description, string ToneLabel, string Tone);
+
+    private sealed record WorkspaceFact(string Label, string Value);
+
+    private sealed record WorkspaceItem(string Id, string Title, string Eyebrow, string Summary, string State, string Tone, string Detail)
+    {
+        public string Meta => Id;
+    }
+}

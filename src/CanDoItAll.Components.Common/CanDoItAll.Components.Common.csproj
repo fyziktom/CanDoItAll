@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>CanDoItAll.Components.Common</AssemblyName>
+    <RootNamespace>CanDoItAll.Components.Common</RootNamespace>
+  </PropertyGroup>
+
+</Project>

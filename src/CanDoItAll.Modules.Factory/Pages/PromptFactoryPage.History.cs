@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Factory.CanvasAdapters;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -196,3 +196,5 @@ public partial class PromptFactoryPage : IAsyncDisposable
         }
     }
 }
+
+

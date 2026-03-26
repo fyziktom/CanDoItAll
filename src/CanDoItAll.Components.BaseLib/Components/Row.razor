@@ -1,0 +1,29 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes("rz-row grid grid-cols-12", ResolveRowStyle())'>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public string? Gap { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveRowStyle()
+    {
+        var gap = string.IsNullOrWhiteSpace(Gap)
+            ? "0"
+            : Gap;
+
+        return $"display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:{gap};";
+    }
+}
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 using Bunit;
-using CanDoItAll.ComponentKit.Components;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 
@@ -38,3 +38,5 @@ public sealed class AppTabStripTests : TestContext
         Assert.Equal("projects", activated);
     }
 }
+
+

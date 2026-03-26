@@ -123,3 +123,5 @@ public sealed class ActivityService(
     public Task<IReadOnlyList<SearchResult>> SearchAsync(string query, int take = 12, CancellationToken cancellationToken = default)
         => searchIndexService.SearchAsync(query, take, cancellationToken);
 }
+
+

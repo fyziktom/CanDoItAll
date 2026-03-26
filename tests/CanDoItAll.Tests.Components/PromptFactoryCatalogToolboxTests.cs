@@ -21,3 +21,5 @@ public sealed class PromptFactoryCatalogToolboxTests
         Assert.Contains(actions, action => action.ActionId == "save-session");
     }
 }
+
+

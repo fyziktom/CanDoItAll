@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Factory;
@@ -254,3 +254,5 @@ static async Task<Guid> EnsurePromptSessionAsync(
 
     return sessionId;
 }
+
+

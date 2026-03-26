@@ -475,3 +475,5 @@ public sealed class ValidationService(
         return $"{errors} error(s), {warnings} warning(s), {findings.Count} total finding(s).";
     }
 }
+
+

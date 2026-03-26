@@ -9,7 +9,30 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Primitives\**\*.cs" />
+    <Compile Remove="Components\**\*.cs" />
+    <Content Remove="Components\**\*.razor" />
+    <None Remove="Components\**\*.razor.css" />
+    <Content Remove="wwwroot\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Components.Common\CanDoItAll.Components.Common.csproj" />
+    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Components\AppShellMode.cs" />
+    <Compile Include="Components\TuningBoundaryRequest.cs" />
+    <Content Include="Components\AppShell.razor" />
+    <Content Include="Components\AppTabStrip.razor" />
+    <Content Include="Components\TunableComponentBoundary.razor" />
   </ItemGroup>
 
 </Project>

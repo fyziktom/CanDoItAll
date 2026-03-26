@@ -1,6 +1,6 @@
 @attribute [Obsolete("Use CanvasCalendar with ProjectCalendarAdapter instead of ProjectEventsCalendar.")]
-@using CanDoItAll.ComponentKit.Canvas
-@using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Components.BaseLib
 
 @if (canvasSurface is not null)
 {
@@ -47,3 +47,5 @@
     private Task HandleStateChangedAsync(CanvasCalendarStateChangedEventArgs args)
         => ViewStateChanged.InvokeAsync(args.StateJson);
 }
+
+

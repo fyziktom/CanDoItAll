@@ -1,0 +1,57 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@using CanDoItAll.Components.CanvasLib
+
+<div class="cw-settings-preview cw-text-measure-preview" data-testid="@Snapshot.TestHookId">
+    <p class="cw-settings-label">@Snapshot.Label</p>
+    <div class="cw-theme-summary">
+        <div>
+            <p class="cw-theme-summary__title">@Snapshot.Title</p>
+            <p class="cw-panel-copy">@Snapshot.Summary</p>
+        </div>
+        <span class="cw-theme-pill">@Snapshot.StatePill</span>
+    </div>
+
+    <div class="cw-theme-metrics">
+        @foreach (var metric in Snapshot.Metrics)
+        {
+            <span class="cw-theme-metric">@metric</span>
+        }
+    </div>
+
+    <div class="cw-text-measure-preview__grid">
+        @foreach (var sample in Snapshot.Samples)
+        {
+            <article class="cw-text-measure-sample" data-truncated="@sample.Result.IsTruncated">
+                <div class="cw-text-measure-sample__header">
+                    <div>
+                        <p class="cw-text-measure-sample__label">@sample.Label</p>
+                        <p class="cw-text-measure-sample__constraint">@sample.ConstraintLabel</p>
+                    </div>
+                    <span class="cw-theme-pill">@sample.FontLabel</span>
+                </div>
+
+                <div class="cw-text-measure-sample__preview">
+                    <span class="cw-text-measure-sample__text"
+                          title="@(sample.Result.IsTruncated ? sample.FullText : sample.Label)">
+                        @sample.Result.DisplayText
+                    </span>
+                </div>
+
+                <div class="cw-theme-metrics">
+                    <span class="cw-theme-metric">@($"{sample.Result.LineCount} line{(sample.Result.LineCount == 1 ? string.Empty : "s")}")</span>
+                    <span class="cw-theme-metric">@($"{sample.Result.EstimatedWidth}px wide")</span>
+                    <span class="cw-theme-metric">@($"{sample.Result.EstimatedHeight}px tall")</span>
+                    @if (sample.Result.IsTruncated)
+                    {
+                        <span class="cw-theme-metric">Tooltip fallback</span>
+                    }
+                </div>
+            </article>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public TextMeasurePreviewSnapshot Snapshot { get; set; } = default!;
+}

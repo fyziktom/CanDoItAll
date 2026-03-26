@@ -1,0 +1,464 @@
+@namespace CanDoItAll.Components.BaseLib
+@using Microsoft.AspNetCore.Components.Web
+
+<CascadingValue Value="this" IsFixed="true">
+    <div style="display:none">
+        @if (TabItems is not null)
+        {
+            @TabItems
+        }
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+    </div>
+</CascadingValue>
+
+@{
+    var visibleItems = GetVisibleItems();
+    var selectedVisibleIndex = GetSelectedVisibleIndex(visibleItems);
+    var focusedVisibleIndex = GetFocusedVisibleIndex(visibleItems, selectedVisibleIndex);
+}
+
+@if (visibleItems.Count > 0)
+{
+    <div @attributes="BuildContainerAttributes()">
+        <div class="zy-tabs__list"
+             role="tablist"
+             aria-label="@ResolveAriaLabel()"
+             aria-orientation="@ResolveAriaOrientation()">
+            @for (var index = 0; index < visibleItems.Count; index++)
+            {
+                var visibleIndex = index;
+                var tab = visibleItems[visibleIndex];
+                var isSelected = visibleIndex == selectedVisibleIndex;
+                var isFocused = visibleIndex == focusedVisibleIndex;
+                var iconCssClass = ResolveIconCssClass(tab.Icon);
+                var tabId = GetTabId(visibleIndex);
+                var panelId = GetPanelId(visibleIndex);
+
+                <button @key="tab"
+                        @ref="tab.ButtonReference"
+                        @attributes="tab.AdditionalAttributes"
+                        type="button"
+                        id="@tabId"
+                        class="@BuildTabCssClass(isSelected)"
+                        role="tab"
+                        aria-selected="@(isSelected ? "true" : "false")"
+                        aria-controls="@panelId"
+                        aria-disabled="@(tab.Disabled ? "true" : "false")"
+                        tabindex="@(isFocused ? 0 : -1)"
+                        disabled="@tab.Disabled"
+                        @onfocus="@(() => HandleTabFocused(visibleIndex))"
+                        @onkeydown="@((args) => HandleTabKeyDownAsync(args, visibleIndex, visibleItems))"
+                        @onclick="@(() => SelectTabAsync(visibleIndex, userInitiated: true))">
+                    @if (iconCssClass is not null)
+                    {
+                        <i class="@($"rz-fa-icon {iconCssClass} zy-tabs__icon")" aria-hidden="true"></i>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(tab.Icon))
+                    {
+                        <span class="zy-tabs__icon zy-tabs__icon--fallback"
+                              title="@($"Unknown icon token: {tab.Icon}")"
+                              aria-hidden="true">@tab.Icon</span>
+                    }
+
+                    <span class="zy-tabs__tab-text">@ResolveTabText(tab)</span>
+
+                    @if (!string.IsNullOrWhiteSpace(tab.BadgeText))
+                    {
+                        <span class="zy-tabs__badge">@tab.BadgeText</span>
+                    }
+                </button>
+            }
+        </div>
+
+        <div class="zy-tabs__panels">
+            @if (RenderMode == TabRenderMode.Client)
+            {
+                @for (var index = 0; index < visibleItems.Count; index++)
+                {
+                    var tab = visibleItems[index];
+                    var isSelected = index == selectedVisibleIndex;
+
+                    <div @key="tab"
+                         id="@GetPanelId(index)"
+                         class="zy-tabs__panel"
+                         role="tabpanel"
+                         aria-labelledby="@GetTabId(index)"
+                         aria-hidden="@(!isSelected ? "true" : "false")"
+                         hidden="@(!isSelected)">
+                        @tab.ChildContent
+                    </div>
+                }
+            }
+            else if (selectedVisibleIndex >= 0)
+            {
+                var activeTab = visibleItems[selectedVisibleIndex];
+
+                <div @key="activeTab"
+                     id="@GetPanelId(selectedVisibleIndex)"
+                     class="zy-tabs__panel"
+                     role="tabpanel"
+                     aria-labelledby="@GetTabId(selectedVisibleIndex)">
+                    @activeTab.ChildContent
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private readonly List<TabsItem> items = [];
+    private readonly string componentId = $"zy-tabs-{Guid.NewGuid():N}";
+
+    private int focusedVisibleIndex = -1;
+    private int? pendingFocusVisibleIndex;
+
+    [Parameter]
+    public int SelectedIndex { get; set; }
+
+    [Parameter]
+    public EventCallback<int> SelectedIndexChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<int> Change { get; set; }
+
+    [Parameter]
+    public TabRenderMode RenderMode { get; set; } = TabRenderMode.Server;
+
+    [Parameter]
+    public TabPosition TabPosition { get; set; } = TabPosition.Top;
+
+    [Parameter]
+    public TabsVariant Variant { get; set; } = TabsVariant.WorkspacePrimary;
+
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    [Parameter]
+    public RenderFragment? TabItems { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        var visibleItems = GetVisibleItems();
+        var selectedVisibleIndex = GetSelectedVisibleIndex(visibleItems);
+        focusedVisibleIndex = GetFocusedVisibleIndex(visibleItems, selectedVisibleIndex);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!pendingFocusVisibleIndex.HasValue)
+        {
+            return;
+        }
+
+        var focusIndex = pendingFocusVisibleIndex.Value;
+        pendingFocusVisibleIndex = null;
+        var visibleItems = GetVisibleItems();
+
+        if (focusIndex >= 0 && focusIndex < visibleItems.Count)
+        {
+            await visibleItems[focusIndex].ButtonReference.FocusAsync();
+        }
+    }
+
+    internal void RegisterItem(TabsItem item)
+    {
+        if (items.Contains(item))
+        {
+            return;
+        }
+
+        items.Add(item);
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    internal void UnregisterItem(TabsItem item)
+    {
+        if (items.Remove(item))
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private IReadOnlyList<TabsItem> GetVisibleItems()
+    {
+        return items
+            .Where(item => item.Visible)
+            .ToArray();
+    }
+
+    private int GetSelectedVisibleIndex(IReadOnlyList<TabsItem> visibleItems)
+    {
+        if (visibleItems.Count == 0)
+        {
+            return -1;
+        }
+
+        var clampedIndex = Math.Clamp(SelectedIndex, 0, visibleItems.Count - 1);
+        if (!visibleItems[clampedIndex].Disabled)
+        {
+            return clampedIndex;
+        }
+
+        var nextEnabledIndex = FindEnabledIndex(visibleItems, clampedIndex + 1, visibleItems.Count - 1);
+        if (nextEnabledIndex >= 0)
+        {
+            return nextEnabledIndex;
+        }
+
+        var previousEnabledIndex = FindEnabledIndex(visibleItems, clampedIndex - 1, 0, reverse: true);
+        if (previousEnabledIndex >= 0)
+        {
+            return previousEnabledIndex;
+        }
+
+        return clampedIndex;
+    }
+
+    private int GetFocusedVisibleIndex(IReadOnlyList<TabsItem> visibleItems, int selectedVisibleIndex)
+    {
+        if (visibleItems.Count == 0)
+        {
+            return -1;
+        }
+
+        if (focusedVisibleIndex >= 0
+            && focusedVisibleIndex < visibleItems.Count
+            && !visibleItems[focusedVisibleIndex].Disabled)
+        {
+            return focusedVisibleIndex;
+        }
+
+        if (selectedVisibleIndex >= 0
+            && selectedVisibleIndex < visibleItems.Count
+            && !visibleItems[selectedVisibleIndex].Disabled)
+        {
+            return selectedVisibleIndex;
+        }
+
+        var firstEnabledIndex = FindEnabledIndex(visibleItems, 0, visibleItems.Count - 1);
+        return firstEnabledIndex >= 0
+            ? firstEnabledIndex
+            : 0;
+    }
+
+    private async Task HandleTabKeyDownAsync(
+        KeyboardEventArgs args,
+        int currentVisibleIndex,
+        IReadOnlyList<TabsItem> visibleItems)
+    {
+        if (args.Key is "Enter" or " " or "Spacebar")
+        {
+            await SelectTabAsync(currentVisibleIndex, userInitiated: true);
+            return;
+        }
+
+        var nextVisibleIndex = args.Key switch
+        {
+            "ArrowLeft" when IsHorizontal => FindPreviousEnabledIndex(visibleItems, currentVisibleIndex),
+            "ArrowRight" when IsHorizontal => FindNextEnabledIndex(visibleItems, currentVisibleIndex),
+            "ArrowUp" when !IsHorizontal => FindPreviousEnabledIndex(visibleItems, currentVisibleIndex),
+            "ArrowDown" when !IsHorizontal => FindNextEnabledIndex(visibleItems, currentVisibleIndex),
+            "Home" => FindEnabledIndex(visibleItems, 0, visibleItems.Count - 1),
+            "End" => FindEnabledIndex(visibleItems, visibleItems.Count - 1, 0, reverse: true),
+            _ => -1
+        };
+
+        if (nextVisibleIndex < 0 || nextVisibleIndex == currentVisibleIndex)
+        {
+            return;
+        }
+
+        focusedVisibleIndex = nextVisibleIndex;
+        pendingFocusVisibleIndex = nextVisibleIndex;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleTabFocused(int visibleIndex)
+    {
+        focusedVisibleIndex = visibleIndex;
+    }
+
+    private async Task SelectTabAsync(int visibleIndex, bool userInitiated)
+    {
+        var visibleItems = GetVisibleItems();
+        if (visibleIndex < 0
+            || visibleIndex >= visibleItems.Count
+            || visibleItems[visibleIndex].Disabled)
+        {
+            return;
+        }
+
+        var currentSelectedIndex = GetSelectedVisibleIndex(visibleItems);
+        focusedVisibleIndex = visibleIndex;
+
+        if (currentSelectedIndex == visibleIndex)
+        {
+            return;
+        }
+
+        SelectedIndex = visibleIndex;
+        await SelectedIndexChanged.InvokeAsync(SelectedIndex);
+
+        if (userInitiated)
+        {
+            await Change.InvokeAsync(SelectedIndex);
+        }
+    }
+
+    private IReadOnlyDictionary<string, object>? BuildContainerAttributes()
+    {
+        var cssClass = string.Join(
+            ' ',
+            [
+                "zy-tabs",
+                ResolveVariantCssClass(),
+                ResolvePositionCssClass(),
+                IsHorizontal ? "zy-tabs--horizontal" : "zy-tabs--vertical"
+            ]);
+
+        return AdditionalAttributes.WithClass(cssClass);
+    }
+
+    private string BuildTabCssClass(bool isSelected)
+    {
+        return isSelected
+            ? "zy-tabs__tab is-active"
+            : "zy-tabs__tab";
+    }
+
+    private string ResolveVariantCssClass()
+    {
+        return Variant switch
+        {
+            TabsVariant.WorkspaceSecondary => "zy-tabs--variant-workspace-secondary",
+            TabsVariant.WorkspaceTertiary => "zy-tabs--variant-workspace-tertiary",
+            TabsVariant.ModalCompact => "zy-tabs--variant-modal-compact",
+            TabsVariant.Workstation => "zy-tabs--variant-workstation",
+            _ => "zy-tabs--variant-workspace-primary"
+        };
+    }
+
+    private string ResolvePositionCssClass()
+    {
+        return TabPosition switch
+        {
+            TabPosition.Bottom => "zy-tabs--position-bottom",
+            TabPosition.Left => "zy-tabs--position-left",
+            TabPosition.Right => "zy-tabs--position-right",
+            _ => "zy-tabs--position-top"
+        };
+    }
+
+    private string ResolveAriaLabel()
+    {
+        return string.IsNullOrWhiteSpace(AriaLabel)
+            ? "Tabs"
+            : AriaLabel;
+    }
+
+    private string ResolveAriaOrientation()
+    {
+        return IsHorizontal ? "horizontal" : "vertical";
+    }
+
+    private string GetTabId(int visibleIndex)
+    {
+        return $"{componentId}-tab-{visibleIndex}";
+    }
+
+    private string GetPanelId(int visibleIndex)
+    {
+        return $"{componentId}-panel-{visibleIndex}";
+    }
+
+    private int FindNextEnabledIndex(IReadOnlyList<TabsItem> visibleItems, int currentVisibleIndex)
+    {
+        for (var index = currentVisibleIndex + 1; index < visibleItems.Count; index++)
+        {
+            if (!visibleItems[index].Disabled)
+            {
+                return index;
+            }
+        }
+
+        return FindEnabledIndex(visibleItems, 0, currentVisibleIndex - 1);
+    }
+
+    private int FindPreviousEnabledIndex(IReadOnlyList<TabsItem> visibleItems, int currentVisibleIndex)
+    {
+        for (var index = currentVisibleIndex - 1; index >= 0; index--)
+        {
+            if (!visibleItems[index].Disabled)
+            {
+                return index;
+            }
+        }
+
+        return FindEnabledIndex(visibleItems, visibleItems.Count - 1, currentVisibleIndex + 1, reverse: true);
+    }
+
+    private static int FindEnabledIndex(
+        IReadOnlyList<TabsItem> visibleItems,
+        int startIndex,
+        int endIndex,
+        bool reverse = false)
+    {
+        if (visibleItems.Count == 0)
+        {
+            return -1;
+        }
+
+        if (!reverse)
+        {
+            for (var index = Math.Max(0, startIndex); index <= Math.Min(endIndex, visibleItems.Count - 1); index++)
+            {
+                if (!visibleItems[index].Disabled)
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+
+        for (var index = Math.Min(startIndex, visibleItems.Count - 1); index >= Math.Max(0, endIndex); index--)
+        {
+            if (!visibleItems[index].Disabled)
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private static string ResolveTabText(TabsItem item)
+    {
+        return string.IsNullOrWhiteSpace(item.Text)
+            ? "Tab"
+            : item.Text;
+    }
+
+    private static string? ResolveIconCssClass(string? iconToken)
+    {
+        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        {
+            return cssClass;
+        }
+
+        return null;
+    }
+
+    private bool IsHorizontal => TabPosition is TabPosition.Top or TabPosition.Bottom;
+}
+
+

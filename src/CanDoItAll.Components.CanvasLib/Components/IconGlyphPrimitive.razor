@@ -1,0 +1,26 @@
+@namespace CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Components.CanvasLib
+
+<CanvasBoundaryCard TestHookId="@Snapshot.TestHookId"
+                           Label="@Snapshot.Label"
+                           Title="@Snapshot.Title"
+                           Summary="@Snapshot.Summary"
+                           StatePill="@Snapshot.StatePill"
+                           Metrics="@Snapshot.Metrics">
+    <div class="cw-preview-icon-grid">
+        @foreach (var glyph in Snapshot.Glyphs)
+        {
+            <div class="cw-preview-icon-tile">
+                <span class="cw-preview-icon-tile__glyph">@glyph.Glyph</span>
+                <span class="cw-preview-icon-tile__label">@glyph.Label</span>
+            </div>
+        }
+    </div>
+</CanvasBoundaryCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public IconGlyphPrimitiveSnapshot Snapshot { get; set; } = default!;
+}
+
+

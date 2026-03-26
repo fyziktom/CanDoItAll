@@ -1,0 +1,18 @@
+@namespace CanDoItAll.Components.BaseLib
+<div @attributes='AdditionalAttributes.WithClass("rz-layout min-h-dvh")'>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+}
+
+
+
+
+
+

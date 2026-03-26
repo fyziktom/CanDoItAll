@@ -1,0 +1,152 @@
+@namespace CanDoItAll.Components.BaseLib
+@typeparam TValue
+
+<input type="range"
+       @attributes='AdditionalAttributes.WithClass("rz-slider h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200")'
+       value="@FormatValue(Value)"
+       min="@FormatNumber(Min)"
+       max="@FormatNumber(Max)"
+       step="@FormatNumber(Step)"
+       @onchange="OnChangedAsync"
+        />
+
+@code {
+    [Parameter]
+    public TValue? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<TValue?> ValueChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<TValue?> Change { get; set; }
+
+    [Parameter]
+    public object? Min { get; set; } = 0m;
+
+    [Parameter]
+    public object? Max { get; set; } = 100m;
+
+    [Parameter]
+    public object? Step { get; set; } = 1m;
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private async Task OnChangedAsync(ChangeEventArgs args)
+    {
+        var text = args.Value?.ToString();
+        if (!decimal.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var rawValue)
+            && !decimal.TryParse(text, out rawValue))
+        {
+            await ValueChanged.InvokeAsync(Value);
+            await Change.InvokeAsync(Value);
+            return;
+        }
+
+        var min = ReadDecimal(Min) ?? 0m;
+        var max = ReadDecimal(Max) ?? 100m;
+        var clamped = Math.Clamp(rawValue, min, max);
+        if (!TryConvert(clamped, out var converted))
+        {
+            await ValueChanged.InvokeAsync(Value);
+            await Change.InvokeAsync(Value);
+            return;
+        }
+
+        Value = converted;
+        await ValueChanged.InvokeAsync(converted);
+        await Change.InvokeAsync(converted);
+    }
+
+    private static bool TryConvert(decimal value, out TValue? converted)
+    {
+        var targetType = Nullable.GetUnderlyingType(typeof(TValue)) ?? typeof(TValue);
+        try
+        {
+            object boxed = targetType == typeof(int)
+                ? (int)Math.Round(value)
+                : targetType == typeof(double)
+                    ? (double)value
+                    : targetType == typeof(float)
+                        ? (float)value
+                        : targetType == typeof(decimal)
+                            ? value
+                            : Convert.ChangeType(value, targetType, System.Globalization.CultureInfo.InvariantCulture)!;
+            converted = (TValue?)boxed;
+            return true;
+        }
+        catch
+        {
+            converted = default;
+            return false;
+        }
+    }
+
+    private static string? FormatValue(TValue? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        return Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static string? FormatNumber(object? value)
+    {
+        var numeric = ReadDecimal(value);
+        return numeric?.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static decimal? ReadDecimal(object? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (value is decimal decimalValue)
+        {
+            return decimalValue;
+        }
+
+        if (value is double doubleValue)
+        {
+            return (decimal)doubleValue;
+        }
+
+        if (value is float floatValue)
+        {
+            return (decimal)floatValue;
+        }
+
+        if (value is int intValue)
+        {
+            return intValue;
+        }
+
+        if (value is long longValue)
+        {
+            return longValue;
+        }
+
+        if (value is string text && decimal.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+        {
+            return parsed;
+        }
+
+        if (value is string fallback && decimal.TryParse(fallback, out parsed))
+        {
+            return parsed;
+        }
+
+        return null;
+    }
+}
+
+
+
+
+
+
+

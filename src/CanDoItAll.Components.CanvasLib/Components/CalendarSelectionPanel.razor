@@ -1,0 +1,121 @@
+@namespace CanDoItAll.Components.CanvasLib
+@implements IAsyncDisposable
+@using CanDoItAll.Components.CanvasLib
+@inject IJSRuntime JsRuntime
+
+<CanvasBoundaryCard TestHookId="@Snapshot.TestHookId"
+                           Label="@Snapshot.Label"
+                           Title="@Snapshot.Title"
+                           Summary="@Snapshot.Summary"
+                           StatePill="@Snapshot.StatePill"
+                           Metrics="@Snapshot.Metrics">
+    <div class="space-y-4" @ref="host">
+        <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+            <p class="text-lg font-semibold text-slate-950">@Snapshot.EventTitle</p>
+            <p class="mt-1 text-sm text-slate-600">@Snapshot.EventSubtitle</p>
+            <p class="mt-3 text-sm text-slate-700">@Snapshot.TimeRangeLabel</p>
+        </div>
+
+        <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-[1.4rem] border border-slate-200 bg-slate-50/85 px-4 py-4">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Linked playlists</p>
+                <div class="mt-3 space-y-2">
+                    @if (Snapshot.LinkedPlaylists.Count == 0)
+                    {
+                        <p class="text-sm text-slate-500">No linked playlists.</p>
+                    }
+                    else
+                    {
+                        @foreach (var playlist in Snapshot.LinkedPlaylists)
+                        {
+                            <div class="rounded-xl bg-white px-3 py-3">
+                                <strong class="text-sm text-slate-950">@playlist.Title</strong>
+                                <p class="mt-1 text-sm text-slate-600">@playlist.Subtitle</p>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            <div class="rounded-[1.4rem] border border-slate-200 bg-slate-50/85 px-4 py-4">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Checklist</p>
+                <div class="mt-3 space-y-2">
+                    @if (Snapshot.ChecklistRows.Count == 0)
+                    {
+                        <p class="text-sm text-slate-500">No checklist rows.</p>
+                    }
+                    else
+                    {
+                        @foreach (var row in Snapshot.ChecklistRows)
+                        {
+                            <div class="rounded-xl bg-white px-3 py-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <strong class="text-sm text-slate-950">@row.Label</strong>
+                                    <span class="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">@row.Status</span>
+                                </div>
+                                <p class="mt-1 text-sm text-slate-600">@row.Note</p>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</CanvasBoundaryCard>
+
+@code {
+    private readonly CanvasSceneHost sceneHost = new();
+    private ElementReference host;
+    private string? pendingSnapshotKey;
+
+    [Parameter, EditorRequired]
+    public CalendarSelectionPanelSnapshot Snapshot { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        pendingSnapshotKey = SerializationPersistencePack.Serialize(Snapshot);
+        sceneHost.QueueSync(
+            pendingSnapshotKey,
+            !string.Equals(sceneHost.AppliedStateKey, pendingSnapshotKey, StringComparison.Ordinal));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var bridge = new JsInteropBridge(JsRuntime);
+        if (sceneHost.ShouldCreate())
+        {
+            await bridge.InvokeVoidAsync("CanDoItAll.calendarSelectionPanel.create", host, Snapshot);
+            sceneHost.MarkApplied();
+            return;
+        }
+
+        if (!sceneHost.ShouldUpdate())
+        {
+            return;
+        }
+
+        await bridge.InvokeVoidAsync("CanDoItAll.calendarSelectionPanel.update", host, Snapshot);
+        sceneHost.MarkApplied();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        try
+        {
+            await new JsInteropBridge(JsRuntime).InvokeVoidAsync("CanDoItAll.calendarSelectionPanel.dispose", host);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+}
+
+

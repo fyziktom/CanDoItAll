@@ -35,3 +35,5 @@ public partial class PromptFactoryPage
         await JS.InvokeVoidAsync("CanDoItAll.promptFactory.mountFloatingInspector", floatingInspectorPanel, floatingInspectorHandle);
     }
 }
+
+

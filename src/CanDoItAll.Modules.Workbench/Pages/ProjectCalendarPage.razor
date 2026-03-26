@@ -8,8 +8,8 @@ deps: ProjectWorkbenchService, NavigationManager
 risks: stale-event-selection, wrong-artifact-route
 tests: component:ProjectCalendarPageTests, e2e:workbench-calendar
 *@
-@using CanDoItAll.ComponentKit.Canvas
-@using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Components.BaseLib
 @inject ProjectWorkbenchService ProjectWorkbenchService
 @inject NavigationManager Navigation
 
@@ -47,10 +47,10 @@ else
                 <SummaryTile Label="Statuses" Value="@surface.Events.Select(item => item.Status).Distinct(StringComparer.OrdinalIgnoreCase).Count().ToString()" HelperText="Distinct status labels in the current schedule." />
             </SummaryTiles>
 
-            <div class="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+            <div class="space-y-5">
                 <SectionCard Title="Project calendar" Description="The JavaScript calendar wrapper owns rendering while selection, view persistence, and artifact opening stay typed in .NET.">
                     <CanvasCalendar Surface="canvasSurface"
-                                    HostClass="min-h-[36rem] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                                    HostClass="min-h-[36rem] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
                                     SelectionChanged="HandleEventSelectedAsync"
                                     StateChanged="HandleViewStateChangedAsync" />
                 </SectionCard>
@@ -110,7 +110,7 @@ else
                 <div class="mt-5 grid gap-5 xl:grid-cols-3">
                     <CalendarMiniMonthNavigator Snapshot="@MiniMonthSnapshot" />
                     <CalendarExportMenu Snapshot="@ExportMenuSnapshot" />
-                    <CanvasBoundaryPreviewCard TestHookId="project-calendar-state-parser"
+                    <CanvasBoundaryCard TestHookId="project-calendar-state-parser"
                                                Label="Project calendar state parser"
                                                Title="Persisted calendar state now resolves through one typed parser"
                                                Summary="The page no longer probes raw JSON for selected event, scope, view, and timezone values. Those defaults and migrations now normalize through `ProjectCalendarStateParser`."
@@ -134,7 +134,7 @@ else
                                 <p class="mt-2 text-sm text-slate-950">@StateParserSelectedEventLabel</p>
                             </div>
                         </div>
-                    </CanvasBoundaryPreviewCard>
+                    </CanvasBoundaryCard>
                 </div>
 
                 <div class="mt-5">
@@ -295,3 +295,5 @@ else
         };
     }
 }
+
+

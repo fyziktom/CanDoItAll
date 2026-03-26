@@ -13,3 +13,5 @@ public static class ActivityModuleServiceCollectionExtensions
 }
 
 public static class ActivityModuleAssemblyMarker;
+
+

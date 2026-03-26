@@ -1,9 +1,13 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/CanDoItAll.ComponentKit/CanDoItAll.ComponentKit.csproj" />
     <Project Path="src/CanDoItAll.Components/CanDoItAll.Components.csproj" />
+    <Project Path="src/CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj" />
+    <Project Path="src/CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj" />
+    <Project Path="src/CanDoItAll.Components.Common/CanDoItAll.Components.Common.csproj" />
+    <Project Path="src/CanDoItAll.Components.Sandbox/CanDoItAll.Components.Sandbox.csproj" />
     <Project Path="src/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
     <Project Path="src/CanDoItAll.Mcp.Core/CanDoItAll.Mcp.Core.csproj" />
+    <Project Path="src/CanDoItAll.Mcp.Components/CanDoItAll.Mcp.Components.csproj" />
     <Project Path="src/CanDoItAll.Mcp.DotNetWatch/CanDoItAll.Mcp.DotNetWatch.csproj" />
     <Project Path="src/CanDoItAll.Mcp.LocalRuntime/CanDoItAll.Mcp.LocalRuntime.csproj" />
     <Project Path="src/CanDoItAll.Mcp.SshOps/CanDoItAll.Mcp.SshOps.csproj" />
@@ -22,6 +26,7 @@
     <Project Path="src/CanDoItAll.Web/CanDoItAll.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/CanDoItAll.Mcp.Components.Tests/CanDoItAll.Mcp.Components.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.DotNetWatch.Tests/CanDoItAll.Mcp.DotNetWatch.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />

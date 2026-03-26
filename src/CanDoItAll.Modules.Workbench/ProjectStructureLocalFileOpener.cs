@@ -137,3 +137,5 @@ public sealed class ProjectStructureLocalFileOpener(
             .Replace('/', Path.DirectorySeparatorChar);
     }
 }
+
+

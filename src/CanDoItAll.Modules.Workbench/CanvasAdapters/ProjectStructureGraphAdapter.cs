@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.CanvasAdapters;
@@ -364,3 +364,5 @@ public sealed class ProjectStructureGraphAdapter
         return expanded;
     }
 }
+
+

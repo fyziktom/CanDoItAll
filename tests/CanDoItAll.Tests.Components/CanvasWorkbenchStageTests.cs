@@ -1,7 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
-using CanDoItAll.ComponentKit.Canvas;
-using CanDoItAll.ComponentKit.Components;
+using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Components.BaseLib;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -37,3 +37,5 @@ public sealed class CanvasWorkbenchStageTests
         Assert.Contains("Supporting content", cut.Markup);
     }
 }
+
+

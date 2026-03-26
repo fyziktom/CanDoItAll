@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
@@ -82,3 +82,5 @@ public sealed class ProjectStructurePlacementPolicyTests
             string.Empty,
             0);
 }
+
+

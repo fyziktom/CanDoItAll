@@ -1,0 +1,39 @@
+@namespace CanDoItAll.Components.BaseLib
+@implements IDisposable
+
+@code {
+    [CascadingParameter]
+    private Steps? Parent { get; set; }
+
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public string? Icon { get; set; }
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Parent?.RegisterItem(this);
+    }
+
+    protected override void OnParametersSet()
+    {
+        Parent?.RegisterItem(this);
+    }
+
+    public void Dispose()
+    {
+        Parent?.UnregisterItem(this);
+    }
+}
+
+

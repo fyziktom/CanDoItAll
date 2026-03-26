@@ -1,0 +1,243 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@page "/groups/inputs"
+@inherits CatalogPageBase
+
+<PageTitle>Inputs</PageTitle>
+
+<CatalogPageFrame Group="@Group"
+                  Scenario="@CurrentScenario"
+                  Frame="@CurrentFrame"
+                  ExampleCount="@Examples.Count"
+                  HeroTitle="Explicit field state, predictable form rhythm, and fast review."
+                  HeroSummary="The inputs page proves that shared field components stay understandable with realistic content, disabled states, long text, and mobile stacking."
+                  DemoTitle="Input surfaces"
+                  DemoSummary="A shared intake form under the current scenario."
+                  ScenarioChanged="NavigateScenario"
+                  FrameChanged="NavigateFrame">
+    <Notes>
+        <div class="sandbox-proof-list">
+            <p>Keep labels, helper copy, and field spacing legible before validation or decoration is added.</p>
+            <p>Dense mode should stack more data, not shrink the affordances into noise.</p>
+            <p>Disabled mode still needs to explain what the user is looking at.</p>
+        </div>
+    </Notes>
+
+    <ChildContent>
+        @if (CurrentScenario == SandboxScenarioKey.LoadingState)
+        {
+            <LoadingState Eyebrow="Inputs" Title="Loading intake draft" Description="Field surfaces stay oriented while the draft and validation metadata load." />
+        }
+        else if (CurrentScenario == SandboxScenarioKey.EmptyState)
+        {
+            <EmptyState Eyebrow="Inputs" Title="No draft selected" Description="Choose or create a draft before editing title, status, due dates, and reviewer settings." />
+        }
+        else
+        {
+            <FormSection Title="Review intake" Description="A realistic form with text, numeric, selection, and boolean inputs.">
+                <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                    <FormField Text="Title">
+                        <TextBox Value="@FormState.Title"
+                                 ValueChanged="HandleTitleChanged"
+                                 Placeholder="@TitlePlaceholder"
+                                 Disabled="@IsDisabled" />
+                    </FormField>
+
+                    <FormField Text="Owner">
+                        <TextBox Value="@FormState.Owner"
+                                 ValueChanged="HandleOwnerChanged"
+                                 Placeholder="Owner or reviewer"
+                                 Disabled="@IsDisabled" />
+                    </FormField>
+
+                    <FormField Text="Status">
+                        <DropDown TValue="string"
+                                  Data="@StatusOptions"
+                                  TextProperty="@nameof(SelectOption.Text)"
+                                  ValueProperty="@nameof(SelectOption.Value)"
+                                  Value="@FormState.Status"
+                                  ValueChanged="HandleStatusChanged"
+                                  Placeholder="Select status"
+                                  Disabled="@IsDisabled" />
+                    </FormField>
+
+                    <FormField Text="Confidence">
+                        <Numeric TValue="int"
+                                 Value="@FormState.Confidence"
+                                 ValueChanged="HandleConfidenceChanged"
+                                 Min="0"
+                                 Max="100"
+                                 Step="5"
+                                 Disabled="@IsDisabled" />
+                    </FormField>
+
+                    <FormField Text="Password">
+                        <Password Value="@FormState.Secret"
+                                  ValueChanged="HandleSecretChanged"
+                                  Placeholder="Shared secret"
+                                  Disabled="@IsDisabled" />
+                    </FormField>
+
+                    <FormField Text="Reminders">
+                        <div class="flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-white px-4 py-3">
+                            <div class="space-y-1">
+                                <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="Send daily reminders" />
+                                <TextBlock TextStyle="@(TextStyle.Caption)" Value="Keep reviewers aligned before the approval window closes." />
+                            </div>
+                            <Switch Value="@FormState.RemindersEnabled"
+                                    ValueChanged="HandleReminderChanged"
+                                    Disabled="@IsDisabled" />
+                        </div>
+                    </FormField>
+                </div>
+            </FormSection>
+
+            <SectionCard Title="Notes and toggles" Description="Longer text and binary settings should remain stable when the surface gets denser.">
+                <div class="space-y-4">
+                    <FormField Text="Notes">
+                        <TextArea Value="@FormState.Notes"
+                                  ValueChanged="HandleNotesChanged"
+                                  Rows="@(CurrentScenario == SandboxScenarioKey.DenseContent ? 5 : 7)"
+                                  Placeholder="@NotesPlaceholder"
+                                  Disabled="@IsDisabled" />
+                    </FormField>
+
+                    <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                        <div class="rounded-[1rem] border border-slate-200 bg-white px-4 py-3">
+                            <div class="flex items-start gap-3">
+                                <CheckBox TValue="bool" Value="@FormState.RequiresApproval" ValueChanged="HandleApprovalChanged" Disabled="@IsDisabled" />
+                                <div class="space-y-1">
+                                    <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="Requires approval" />
+                                    <TextBlock TextStyle="@(TextStyle.Caption)" Value="Gate release until the designated reviewer signs off." />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-[1rem] border border-slate-200 bg-white px-4 py-3">
+                            <div class="flex items-start gap-3">
+                                <CheckBox TValue="bool" Value="@FormState.PublishExternally" ValueChanged="HandlePublishChanged" Disabled="@IsDisabled" />
+                                <div class="space-y-1">
+                                    <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="Publish externally" />
+                                    <TextBlock TextStyle="@(TextStyle.Caption)" Value="Expose the final draft to downstream reporting and partner tooling." />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </SectionCard>
+        }
+    </ChildContent>
+</CatalogPageFrame>
+
+@code {
+    private static readonly SandboxGroupDefinition Group = SandboxCatalogRegistry.GetGroup(SandboxGroupKey.Inputs);
+    private static readonly IReadOnlyList<SandboxExampleDefinition> Examples = SandboxCatalogRegistry.GetExamples(SandboxGroupKey.Inputs);
+    private static readonly IReadOnlyList<SelectOption> StatusOptions =
+    [
+        new("Draft", "Draft"),
+        new("Review", "Review"),
+        new("Blocked", "Blocked"),
+        new("Approved", "Approved")
+    ];
+
+    private InputFormState FormState => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => new(
+            "Quarterly migration review",
+            "Architecture steward",
+            "Review",
+            85,
+            "dense-secret",
+            true,
+            true,
+            false,
+            "Carry audit notes, dependent packages, and release guardrails through a tighter review lane so the screen proves it can hold more context without collapsing."),
+        SandboxScenarioKey.LongText => new(
+            "Quarterly migration review with extended ownership and escalation notes for all teams involved",
+            "Platform architecture review board",
+            "Review",
+            90,
+            "long-secret",
+            true,
+            true,
+            false,
+            "This scenario intentionally uses a longer note so the textarea, labels, and spacing show whether the shared field components can tolerate more editorial copy without turning the page into an unreadable wall of text."),
+        _ => new(
+            "Component validation pass",
+            "Design systems owner",
+            "Draft",
+            70,
+            "secret-token",
+            true,
+            false,
+            true,
+            "Capture enough context for the reviewer to understand the request without reading surrounding application code.")
+    };
+
+    private bool IsDisabled => CurrentScenario == SandboxScenarioKey.DisabledState;
+
+    private string TitlePlaceholder => CurrentScenario == SandboxScenarioKey.LongText
+        ? "Long titles should wrap predictably and still read well."
+        : "Short, clear summary";
+
+    private string NotesPlaceholder => CurrentScenario == SandboxScenarioKey.DenseContent
+        ? "Dense scenario notes stay compact but legible."
+        : "Explain context, risk, and reviewer expectations.";
+
+    private Task HandleTitleChanged(string? value)
+    {
+        return Task.CompletedTask;
+    }
+
+    private Task HandleOwnerChanged(string? value)
+    {
+        return Task.CompletedTask;
+    }
+
+    private Task HandleStatusChanged(string? value)
+    {
+        return Task.CompletedTask;
+    }
+
+    private Task HandleConfidenceChanged(int value)
+    {
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSecretChanged(string? value)
+    {
+        return Task.CompletedTask;
+    }
+
+    private Task HandleReminderChanged(bool value)
+    {
+        return Task.CompletedTask;
+    }
+
+    private Task HandleNotesChanged(string? value)
+    {
+        return Task.CompletedTask;
+    }
+
+    private Task HandleApprovalChanged(bool value)
+    {
+        return Task.CompletedTask;
+    }
+
+    private Task HandlePublishChanged(bool value)
+    {
+        return Task.CompletedTask;
+    }
+
+    private sealed record SelectOption(string Text, string Value);
+
+    private sealed record InputFormState(
+        string Title,
+        string Owner,
+        string Status,
+        int Confidence,
+        string Secret,
+        bool RemindersEnabled,
+        bool RequiresApproval,
+        bool PublishExternally,
+        string Notes);
+}

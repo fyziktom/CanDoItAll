@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Workbench;
 
 namespace CanDoItAll.Tests.Components;
@@ -47,3 +47,5 @@ public sealed class ProjectCalendarStateParserTests
         Assert.Null(state.SelectedEventId);
     }
 }
+
+

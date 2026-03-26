@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Workbench.CanvasAdapters;
 
@@ -49,3 +49,5 @@ public sealed class ProjectStructurePlacementPolicy
             : sourceNode?.Id;
     }
 }
+
+

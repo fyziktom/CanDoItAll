@@ -1,5 +1,5 @@
 using System.IO;
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Factory.CanvasAdapters;
 
@@ -892,3 +892,5 @@ public sealed record PromptFactorySessionGraphRequest(
     string SetupStatusLabel,
     bool SetupIsReady,
     int MissingSetupFieldCount);
+
+

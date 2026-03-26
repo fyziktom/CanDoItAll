@@ -545,3 +545,5 @@ public partial class PromptFactoryPage
         int SelectedCount,
         IReadOnlyList<PromptBlockSummary> Blocks);
 }
+
+

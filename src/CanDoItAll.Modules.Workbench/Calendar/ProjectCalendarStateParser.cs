@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -105,3 +105,5 @@ public static class ProjectCalendarStateParser
         public string? SelectedEventId { get; set; }
     }
 }
+
+

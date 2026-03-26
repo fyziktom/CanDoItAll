@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -26,3 +26,5 @@ public sealed class CanvasThemeTokenPackTests
         Assert.Contains(pack.BuildMetrics(), metric => metric.Contains("Stage radius", StringComparison.Ordinal));
     }
 }
+
+

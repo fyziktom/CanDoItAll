@@ -1,0 +1,156 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@page "/groups/foundations"
+@inherits CatalogPageBase
+
+<PageTitle>Foundations</PageTitle>
+
+<CatalogPageFrame Group="@Group"
+                  Scenario="@CurrentScenario"
+                  Frame="@CurrentFrame"
+                  ExampleCount="@Examples.Count"
+                  HeroTitle="Typography, surface rhythm, and icon scanning."
+                  HeroSummary="The foundation page proves that shared tokens still read clearly when the interface is sparse, dense, empty, or carrying long editorial copy."
+                  DemoTitle="Foundation system"
+                  DemoSummary="Type scale, icon rhythm, and spacing surfaces under the current scenario."
+                  ScenarioChanged="NavigateScenario"
+                  FrameChanged="NavigateFrame">
+    <Notes>
+        <div class="sandbox-proof-list">
+            <p>Type should stay readable before color or decoration does any work.</p>
+            <p>Spacing needs to hold both the generous and dense variants without falling into a card mosaic.</p>
+            <p>Long text cannot cause accidental narrow columns or broken icon alignment.</p>
+        </div>
+    </Notes>
+
+    <ChildContent>
+        @if (CurrentScenario == SandboxScenarioKey.LoadingState)
+        {
+            <LoadingState Eyebrow="Foundations" Title="Loading typographic specimens" Description="The foundation page still communicates structure while token previews are loading." />
+        }
+        else if (CurrentScenario == SandboxScenarioKey.EmptyState)
+        {
+            <EmptyState Eyebrow="Foundations" Title="No token pack selected" Description="Choose a foundation pack to inspect type scale, spacing, and icon alignment across the catalog." />
+        }
+        else
+        {
+            <FormSection Title="Type scale" Description="Shared text styles should stay calm, readable, and easy to scan in sequence.">
+                <div class="space-y-4">
+                    @foreach (var specimen in TypeSpecimens)
+                    {
+                        <div class="space-y-1">
+                            <TextBlock TextStyle="@(TextStyle.Eyebrow)" Value="@specimen.Label" />
+                            <TextBlock TextStyle="@specimen.Style" Value="@specimen.Value" />
+                        </div>
+                    }
+                </div>
+            </FormSection>
+
+            <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                <SectionCard Title="Surface rhythm" Description="Spacing, copy length, and support metrics need to feel deliberate without additional chrome.">
+                    <div class="space-y-4">
+                        <TextBlock TextStyle="@(TextStyle.Subtitle1)" Value="Workspace review cadence" />
+                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="@SurfaceParagraph" />
+                        <SummaryTiles>
+                            <SummaryTile Label="Desktop cadence" Value="24px" HelperText="Default section spacing for the generous pass." Tone="info" />
+                            <SummaryTile Label="Dense cadence" Value="16px" HelperText="Compact variant used when the page carries more metadata." Tone="success" />
+                            <SummaryTile Label="Reading line" Value="66 ch" HelperText="Long copy still needs a controlled reading width." />
+                            <SummaryTile Label="Icon offset" Value="12px" HelperText="Support icons should align to the text rhythm." Tone="warning" />
+                        </SummaryTiles>
+                    </div>
+                </SectionCard>
+
+                <SectionCard Title="Icon language" Description="Icons should support scanning rather than act like decoration.">
+                    <div class="sandbox-demo-grid sandbox-demo-grid--three">
+                        @foreach (var icon in IconTokens)
+                        {
+                            <div class="sandbox-icon-tile">
+                                <Icon Name="@icon.Token" />
+                                <div class="space-y-1">
+                                    <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="@icon.Label" />
+                                    <TextBlock TextStyle="@(TextStyle.Caption)" Value="@icon.Token" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </SectionCard>
+            </div>
+        }
+    </ChildContent>
+</CatalogPageFrame>
+
+@code {
+    private static readonly SandboxGroupDefinition Group = SandboxCatalogRegistry.GetGroup(SandboxGroupKey.Foundations);
+    private static readonly IReadOnlyList<SandboxExampleDefinition> Examples = SandboxCatalogRegistry.GetExamples(SandboxGroupKey.Foundations);
+
+    private IReadOnlyList<TypeSpecimen> TypeSpecimens => CurrentScenario == SandboxScenarioKey.DenseContent
+        ? DenseTypeSpecimens
+        : CurrentScenario == SandboxScenarioKey.LongText
+            ? LongTextTypeSpecimens
+            : BaseTypeSpecimens;
+
+    private string SurfaceParagraph => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => "Dense surfaces reduce whitespace but still preserve grouping through headings, helper copy, and contained summary tiles. The page should feel brisk, not cramped.",
+        SandboxScenarioKey.LongText => "Long explanatory copy should remain readable without collapsing into a narrow, uncomfortable measure. When the catalog carries more editorial guidance, the surrounding surfaces still need to feel stable and intentional.",
+        SandboxScenarioKey.DisabledState => "Foundation surfaces in disabled mode should mute emphasis without flattening hierarchy. The user still needs to understand the structure even when interaction is unavailable.",
+        _ => "The generous default keeps the page calm, gives typography room to breathe, and lets the headings explain the layout before color or decoration has to."
+    };
+
+    private IReadOnlyList<IconToken> IconTokens => CurrentScenario == SandboxScenarioKey.DenseContent
+        ? DenseIcons
+        : BaseIcons;
+
+    private static readonly IReadOnlyList<TypeSpecimen> BaseTypeSpecimens =
+    [
+        new("Hero / H1", TextStyle.H1, "Component acceptance starts with clear hierarchy."),
+        new("Section / H3", TextStyle.H3, "Surfaces should still scan when decorative styling is stripped away."),
+        new("Subtitle", TextStyle.Subtitle1, "Shared patterns need calm supporting language."),
+        new("Body", TextStyle.Body2, "Readable body copy should survive dense layouts and mobile widths."),
+        new("Caption", TextStyle.Caption, "Small labels support scanning without overwhelming the page.")
+    ];
+
+    private static readonly IReadOnlyList<TypeSpecimen> DenseTypeSpecimens =
+    [
+        new("Hero / H1", TextStyle.H1, "Dense review surfaces still need a strong opening line."),
+        new("Section / H3", TextStyle.H3, "Dense subheads keep adjacent blocks understandable."),
+        new("Subtitle", TextStyle.Subtitle2, "Metadata headings can compact slightly without losing emphasis."),
+        new("Body", TextStyle.Body2, "Dense copy uses tighter stacking, not smaller text."),
+        new("Muted", TextStyle.Muted, "Muted helper text should remain readable inside compact lists.")
+    ];
+
+    private static readonly IReadOnlyList<TypeSpecimen> LongTextTypeSpecimens =
+    [
+        new("Hero / H1", TextStyle.H1, "Component acceptance still depends on fast comprehension even when the page needs to carry longer guidance for newer contributors."),
+        new("Section / H3", TextStyle.H3, "Longer explanatory headings cannot push the page into awkward wrapping or broken visual rhythm."),
+        new("Body", TextStyle.Body2, "Long-form helper copy must stay readable across the full-width shell without turning the first viewport into a wall of text."),
+        new("Note", TextStyle.Note, "Support notes remain short, but they also need a stable line length when the primary copy grows."),
+        new("Caption", TextStyle.Caption, "The smallest text still needs enough contrast to be usable.")
+    ];
+
+    private static readonly IReadOnlyList<IconToken> BaseIcons =
+    [
+        new("plus", "Create"),
+        new("filter", "Filter"),
+        new("calendar", "Schedule"),
+        new("circle_info", "Context"),
+        new("floppy_disk", "Save"),
+        new("triangle_exclamation", "Warning")
+    ];
+
+    private static readonly IReadOnlyList<IconToken> DenseIcons =
+    [
+        new("plus", "Create"),
+        new("filter", "Filter"),
+        new("calendar", "Schedule"),
+        new("circle_info", "Context"),
+        new("floppy_disk", "Save"),
+        new("triangle_exclamation", "Warning"),
+        new("diagram_project", "Flow"),
+        new("bars_staggered", "Density"),
+        new("magnifying_glass", "Inspect")
+    ];
+
+    private sealed record TypeSpecimen(string Label, TextStyle Style, string Value);
+
+    private sealed record IconToken(string Token, string Label);
+}

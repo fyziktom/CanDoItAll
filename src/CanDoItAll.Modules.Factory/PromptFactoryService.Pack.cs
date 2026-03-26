@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Factory;
 
@@ -326,3 +326,5 @@ private static string BuildContentPreview(string? content)
 
     private sealed record ResolvedPromptBlock(PromptBlockDefinition Definition, string RenderedContent);
 }
+
+

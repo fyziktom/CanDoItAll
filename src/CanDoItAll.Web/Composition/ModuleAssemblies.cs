@@ -30,3 +30,5 @@ public static class ModuleAssemblies
         typeof(WorkspaceModuleAssemblyMarker).Assembly
     ];
 }
+
+

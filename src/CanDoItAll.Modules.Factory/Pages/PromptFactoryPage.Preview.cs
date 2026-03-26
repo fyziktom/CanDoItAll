@@ -351,3 +351,5 @@ public partial class PromptFactoryPage
 
     private sealed record PromptPreviewModel(string Kicker, string Title, string Description, string Text);
 }
+
+

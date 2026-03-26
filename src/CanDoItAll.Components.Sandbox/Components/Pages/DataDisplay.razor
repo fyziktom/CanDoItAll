@@ -1,0 +1,281 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@page "/groups/data-display"
+@inherits CatalogPageBase
+
+<PageTitle>Data Display</PageTitle>
+
+<CatalogPageFrame Group="@Group"
+                  Scenario="@CurrentScenario"
+                  Frame="@CurrentFrame"
+                  ExampleCount="@Examples.Count"
+                  HeroTitle="Cards, summaries, and rows that keep metadata readable."
+                  HeroSummary="The data display page proves that shared cards and list rows can handle denser metadata, longer labels, and empty results without losing hierarchy."
+                  DemoTitle="Data display surfaces"
+                  DemoSummary="Summary tiles, cards, and selection rows for the current scenario."
+                  ScenarioChanged="NavigateScenario"
+                  FrameChanged="NavigateFrame">
+    <Notes>
+        <div class="sandbox-proof-list">
+            <p>Dense metadata should still read as grouped information instead of raw text piled into cards.</p>
+            <p>Long labels cannot collapse the card rhythm or force awkward truncation everywhere.</p>
+            <p>The empty state should feel like part of the shared system, not an afterthought.</p>
+        </div>
+    </Notes>
+
+    <ChildContent>
+        @if (CurrentScenario == SandboxScenarioKey.LoadingState)
+        {
+            <LoadingState Eyebrow="Data display" Title="Loading summary surface" Description="Cards and list rows keep their structure while the record set and computed metrics load." />
+        }
+        else if (CurrentScenario == SandboxScenarioKey.EmptyState)
+        {
+            <EmptyState Eyebrow="Data display" Title="No results" Description="Adjust the current filters or add records before the shared card and list views can render detail." />
+        }
+        else
+        {
+            <SectionCard Title="Summary strip" Description="High-signal metrics should lead the page without becoming a dashboard wallpaper.">
+                <SummaryTiles>
+                    @foreach (var tile in Tiles)
+                    {
+                        <SummaryTile Label="@tile.Label"
+                                     Value="@tile.Value"
+                                     HelperText="@tile.HelperText"
+                                     Tone="@tile.Tone" />
+                    }
+                </SummaryTiles>
+            </SectionCard>
+
+            <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                @foreach (var card in Cards)
+                {
+                    <Card>
+                        <div class="space-y-4">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div class="space-y-1">
+                                    <TextBlock TextStyle="@(TextStyle.Eyebrow)" Value="@card.Eyebrow" />
+                                    <TextBlock TextStyle="@(TextStyle.Subtitle1)" Value="@card.Title" />
+                                    <TextBlock TextStyle="@(TextStyle.Body2)" Value="@card.Summary" />
+                                </div>
+                                <StatusBadge Text="@card.State" Tone="@card.Tone" />
+                            </div>
+
+                            <div class="sandbox-kv-list">
+                                @foreach (var fact in card.Facts)
+                                {
+                                    <div class="sandbox-kv-item">
+                                        <strong>@fact.Label</strong>
+                                        <span>@fact.Value</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </Card>
+                }
+            </div>
+
+            <SectionCard Title="Selection rows" Description="List-style display surfaces should preserve scanability and action clarity.">
+                <div class="sandbox-list">
+                    @foreach (var row in Rows)
+                    {
+                        <SelectionListItem Title="@row.Title"
+                                           Eyebrow="@row.Eyebrow"
+                                           Meta="@row.Meta"
+                                           Summary="@row.Summary">
+                            <Status>
+                                <StatusBadge Text="@row.State" Tone="@row.Tone" />
+                            </Status>
+                            <Actions>
+                                <Button Text="Open"
+                                        ButtonStyle="@(ButtonStyle.Light)"
+                                        Variant="@(Variant.Outlined)"
+                                        Disabled="@IsDisabled" />
+                            </Actions>
+                            <ChildContent>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach (var chip in row.Chips)
+                                    {
+                                        <StatusBadge Text="@chip.Text" Tone="@chip.Tone" />
+                                    }
+                                </div>
+                            </ChildContent>
+                        </SelectionListItem>
+                    }
+                </div>
+            </SectionCard>
+        }
+    </ChildContent>
+</CatalogPageFrame>
+
+@code {
+    private static readonly SandboxGroupDefinition Group = SandboxCatalogRegistry.GetGroup(SandboxGroupKey.DataDisplay);
+    private static readonly IReadOnlyList<SandboxExampleDefinition> Examples = SandboxCatalogRegistry.GetExamples(SandboxGroupKey.DataDisplay);
+
+    private bool IsDisabled => CurrentScenario == SandboxScenarioKey.DisabledState;
+
+    private IReadOnlyList<SummaryTileModel> Tiles => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => DenseTiles,
+        SandboxScenarioKey.LongText => LongTiles,
+        _ => BaseTiles
+    };
+
+    private IReadOnlyList<DisplayCardModel> Cards => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => DenseCards,
+        SandboxScenarioKey.LongText => LongCards,
+        _ => BaseCards
+    };
+
+    private IReadOnlyList<DisplayRowModel> Rows => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => DenseRows,
+        SandboxScenarioKey.LongText => LongRows,
+        _ => BaseRows
+    };
+
+    private static readonly IReadOnlyList<SummaryTileModel> BaseTiles =
+    [
+        new("Records", "24", "Stable item count for the shared review view.", "info"),
+        new("Warnings", "3", "Rows with follow-up or proof gaps still outstanding.", "warning"),
+        new("Ready", "18", "Items that can move forward without more layout work.", "success"),
+        new("Owners", "6", "Distinct ownership labels still visible in the shared system.", "neutral")
+    ];
+
+    private static readonly IReadOnlyList<SummaryTileModel> DenseTiles =
+    [
+        new("Records", "58", "Dense mode proves the page can absorb more metadata.", "info"),
+        new("Warnings", "7", "Some records still need screenshot or copy review.", "warning"),
+        new("Ready", "39", "Most records remain easy to scan in the denser pass.", "success"),
+        new("Groups", "9", "Shared grouping labels remain visible without extra UI chrome.", "neutral")
+    ];
+
+    private static readonly IReadOnlyList<SummaryTileModel> LongTiles =
+    [
+        new("Records", "24", "Stable item count for the shared review view.", "info"),
+        new("Longest title", "92 ch", "Longer labels should remain readable without destroying hierarchy.", "warning"),
+        new("Ready", "18", "Items that can move forward without more layout work.", "success"),
+        new("Visible context", "High", "Longer descriptions still keep supporting facts nearby.", "neutral")
+    ];
+
+    private static readonly IReadOnlyList<DisplayCardModel> BaseCards =
+    [
+        new(
+            "Summary card",
+            "Migration review",
+            "Shared component uptake stays visible through a stable card shell and supporting metadata.",
+            "Healthy",
+            "success",
+            [
+                new("Owner", "Architecture"),
+                new("Scope", "Base + canvas"),
+                new("Updated", "Today")
+            ]),
+        new(
+            "Fact card",
+            "Canvas acceptance",
+            "Calendar and workbench boundaries keep their state model, chrome, and preview evidence readable inside the same display system.",
+            "Review",
+            "warning",
+            [
+                new("Workbench", "Ready"),
+                new("Calendar", "Ready"),
+                new("Proof", "Pending dense capture")
+            ])
+    ];
+
+    private static readonly IReadOnlyList<DisplayCardModel> DenseCards =
+    [
+        new(
+            "Summary card",
+            "Migration review",
+            "Shared component uptake stays visible through a stable card shell and supporting metadata.",
+            "Healthy",
+            "success",
+            [
+                new("Owner", "Architecture"),
+                new("Scope", "Base + canvas"),
+                new("Updated", "Today"),
+                new("Packages", "5")
+            ]),
+        new(
+            "Fact card",
+            "Canvas acceptance",
+            "Calendar and workbench boundaries keep their state model, chrome, and preview evidence readable inside the same display system.",
+            "Review",
+            "warning",
+            [
+                new("Workbench", "Ready"),
+                new("Calendar", "Ready"),
+                new("Proof", "Pending dense capture"),
+                new("Screenshot set", "Desktop + mobile")
+            ])
+    ];
+
+    private static readonly IReadOnlyList<DisplayCardModel> LongCards =
+    [
+        new(
+            "Summary card",
+            "Migration review with extended ownership and rollout notes",
+            "Longer descriptions should stay readable inside the same card shell and keep their supporting metadata nearby instead of forcing separate explanatory panels.",
+            "Healthy",
+            "success",
+            [
+                new("Owner", "Architecture working group"),
+                new("Scope", "Base library and canvas extraction"),
+                new("Updated", "Today")
+            ]),
+        new(
+            "Fact card",
+            "Canvas acceptance for workbench, floating windows, and calendar surfaces",
+            "The second card proves that longer titles and summaries still preserve card rhythm, status placement, and scanning order.",
+            "Review",
+            "warning",
+            [
+                new("Workbench", "Ready"),
+                new("Calendar", "Ready"),
+                new("Proof", "Pending dense capture")
+            ])
+    ];
+
+    private static readonly IReadOnlyList<DisplayRowModel> BaseRows =
+    [
+        new("Shell registry", "Catalog", "groups / routes", "Each shared group page feeds both the sandbox navigation and the future MCP search index.", "Ready", "success", [new("Catalog", "info"), new("Shared", "neutral")]),
+        new("Canvas contract", "Canvas", "surface / state", "Workbench and calendar contracts keep typed surfaces and reusable preview evidence.", "Active", "info", [new("Typed", "success"), new("Preview", "warning")])
+    ];
+
+    private static readonly IReadOnlyList<DisplayRowModel> DenseRows =
+    [
+        new("Shell registry", "Catalog", "groups / routes", "Each shared group page feeds both the sandbox navigation and the future MCP search index.", "Ready", "success", [new("Catalog", "info"), new("Shared", "neutral")]),
+        new("Canvas contract", "Canvas", "surface / state", "Workbench and calendar contracts keep typed surfaces and reusable preview evidence.", "Active", "info", [new("Typed", "success"), new("Preview", "warning")]),
+        new("Screenshot proof", "Validation", "desktop / mobile", "Dense and empty proof captures stay attached to the same shared group model.", "Pending", "warning", [new("Dense", "warning"), new("Empty", "success")])
+    ];
+
+    private static readonly IReadOnlyList<DisplayRowModel> LongRows =
+    [
+        new("Shell registry with extended explanatory summary", "Catalog", "groups / routes", "Longer row summaries still need clear separation between the title, metadata, supporting chips, and the open action.", "Ready", "success", [new("Catalog", "info"), new("Shared", "neutral")]),
+        new("Canvas contract and boundary previews", "Canvas", "surface / state", "Longer row labels should not break the right edge or hide the state treatment on narrower frames.", "Active", "info", [new("Typed", "success"), new("Preview", "warning")])
+    ];
+
+    private sealed record SummaryTileModel(string Label, string Value, string HelperText, string Tone);
+
+    private sealed record DisplayCardFact(string Label, string Value);
+
+    private sealed record DisplayCardModel(
+        string Eyebrow,
+        string Title,
+        string Summary,
+        string State,
+        string Tone,
+        IReadOnlyList<DisplayCardFact> Facts);
+
+    private sealed record DisplayRowChip(string Text, string Tone);
+
+    private sealed record DisplayRowModel(
+        string Title,
+        string Eyebrow,
+        string Meta,
+        string Summary,
+        string State,
+        string Tone,
+        IReadOnlyList<DisplayRowChip> Chips);
+}

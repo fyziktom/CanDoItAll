@@ -7,3 +7,5 @@ public sealed class AutomationWorkspaceService(IBackgroundJobTracker backgroundJ
     public Task<IReadOnlyList<BackgroundJobSummary>> ListJobsAsync(CancellationToken cancellationToken = default)
         => backgroundJobTracker.ListAsync(cancellationToken);
 }
+
+

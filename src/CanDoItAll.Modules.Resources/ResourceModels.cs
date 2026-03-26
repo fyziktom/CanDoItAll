@@ -499,3 +499,5 @@ public sealed class ResourcesService(
         return Guid.TryParse(trimmed, out var parsed) ? parsed : null;
     }
 }
+
+

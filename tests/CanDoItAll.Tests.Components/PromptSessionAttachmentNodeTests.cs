@@ -47,3 +47,5 @@ public sealed class PromptSessionAttachmentNodeTests
         Assert.Contains(node.FooterChips, chip => chip.Text == "architecture-spec.pdf");
     }
 }
+
+
