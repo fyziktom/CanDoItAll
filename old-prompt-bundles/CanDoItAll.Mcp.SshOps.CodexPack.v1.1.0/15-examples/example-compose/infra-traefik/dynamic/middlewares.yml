@@ -1,6 +1,0 @@
-http:
-  middlewares:
-    traefik-dashboard-auth:
-      basicAuth:
-        users:
-          - "admin:REPLACE_WITH_HTPASSWD_HASH"
