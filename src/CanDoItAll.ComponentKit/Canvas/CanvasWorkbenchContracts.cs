@@ -126,6 +126,8 @@ public sealed class CanvasWorkbenchUiState
 
     public Dictionary<string, CanvasWorkbenchPoint> ManualPositions { get; set; } = [];
 
+    public Dictionary<string, CanvasWorkbenchWindowState> WindowStates { get; set; } = [];
+
     public double Zoom { get; set; } = 1;
 
     public double PanX { get; set; } = 90;
@@ -154,6 +156,7 @@ public sealed class CanvasWorkbenchUiState
             var state = JsonSerializer.Deserialize<CanvasWorkbenchUiState>(json, SerializerOptions) ?? new CanvasWorkbenchUiState();
             state.SelectedNodeIds = SelectionModel.From(state.SelectedNodeIds).ToList();
             state.CollapsedNodeIds = NormalizeStringList(state.CollapsedNodeIds);
+            state.WindowStates = NormalizeWindowStates(state.WindowStates);
             return state;
         }
         catch
@@ -171,6 +174,7 @@ public sealed class CanvasWorkbenchUiState
             CollapsedNodeIds = NormalizeStringList(CollapsedNodeIds),
             GroupFrames = GroupFrames,
             ManualPositions = ManualPositions,
+            WindowStates = NormalizeWindowStates(WindowStates),
             Zoom = Zoom,
             PanX = PanX,
             PanY = PanY,
@@ -202,6 +206,69 @@ public sealed class CanvasWorkbenchUiState
 
         return normalized;
     }
+
+    private static Dictionary<string, CanvasWorkbenchWindowState> NormalizeWindowStates(
+        IReadOnlyDictionary<string, CanvasWorkbenchWindowState>? values)
+    {
+        var normalized = new Dictionary<string, CanvasWorkbenchWindowState>(StringComparer.Ordinal);
+
+        foreach (var (key, value) in values ?? new Dictionary<string, CanvasWorkbenchWindowState>())
+        {
+            var normalizedKey = key?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedKey))
+            {
+                continue;
+            }
+
+            normalized[normalizedKey] = CanvasWorkbenchWindowState.Normalize(value);
+        }
+
+        return normalized;
+    }
+}
+
+public sealed class CanvasWorkbenchWindowState
+{
+    public bool IsVisible { get; set; } = true;
+
+    public bool IsMinimized { get; set; }
+
+    public double? Left { get; set; }
+
+    public double? Top { get; set; }
+
+    public double? Width { get; set; }
+
+    public double? Height { get; set; }
+
+    public bool HasCustomGeometry
+        => Left.HasValue || Top.HasValue || Width.HasValue || Height.HasValue;
+
+    public CanvasWorkbenchWindowState Clone()
+        => new()
+        {
+            IsVisible = IsVisible,
+            IsMinimized = IsMinimized,
+            Left = Left,
+            Top = Top,
+            Width = Width,
+            Height = Height
+        };
+
+    public static CanvasWorkbenchWindowState Normalize(CanvasWorkbenchWindowState? value)
+    {
+        var normalized = value?.Clone() ?? new CanvasWorkbenchWindowState();
+        normalized.Left = NormalizeDimension(normalized.Left);
+        normalized.Top = NormalizeDimension(normalized.Top);
+        normalized.Width = NormalizeDimension(normalized.Width);
+        normalized.Height = NormalizeDimension(normalized.Height);
+        return normalized;
+    }
+
+    private static double? NormalizeDimension(double? value)
+        => value.HasValue && value.Value > 0
+            ? Math.Round(value.Value, 2, MidpointRounding.AwayFromZero)
+            : null;
 }
 
 public sealed class CanvasWorkbenchChrome

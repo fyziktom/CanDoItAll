@@ -8,7 +8,7 @@
      style="@ThemeStyle"
      data-theme-key="@ThemeTokens.ThemeKey">
     <div class="cw-workbench-frame">
-        <div class="cw-toolbar">
+        <div class="cw-toolbar" data-cw-toolbar="true">
             <div class="cw-toolbar-group cw-toolbar-group--left">
                 @if (Surface.Chrome.ShowQuickCreateRail && Surface.Chrome.QuickCreateActions.Count > 0)
                 {
@@ -38,7 +38,7 @@
                 @ToolbarLeftContent
             </div>
 
-            <div class="cw-toolbar-group">
+            <div class="cw-toolbar-group cw-toolbar-group--utility">
                 <button type="button"
                         class="cw-toolbar-action cw-toolbar-action--icon"
                         aria-label="Fit canvas"

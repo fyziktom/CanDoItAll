@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.ComponentKit.Canvas;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
@@ -10,6 +11,46 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructurePageTests
 {
+    [Fact]
+    public async Task Renders_selection_and_health_as_floating_windows_without_stage_inspector_column()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Windowed Structure Project";
+        project.Description = "Verify floating workbench windows.";
+        project.Objective = "Keep inspector and health in the canvas.";
+        project.CurrentPhase = "Validation";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        await workbenchService.SeedProjectObjectsAsync(
+            projectId,
+            [
+                new ProjectObjectSeedRequest(
+                    ProjectObjectType.Note,
+                    "Floating window note",
+                    "Window seed",
+                    "Exercise the selection window.")
+            ]);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Inspector", cut.Markup);
+            Assert.Contains("Health", cut.Markup);
+            Assert.Contains("project-structure-selection-window", cut.Markup);
+            Assert.Contains("project-structure-validation-window", cut.Markup);
+            Assert.DoesNotContain("cw-inspector-column", cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
     [Fact]
     public async Task Renders_shared_structure_workbench_and_updates_inspector_from_outline_selection()
     {
@@ -124,6 +165,78 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Persisted_multi_select_state_renders_common_actions_in_selection_window()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Persisted Multi Select";
+        project.Description = "Verify the shared multi-select action surface.";
+        project.Objective = "Restore batch actions from saved workbench state.";
+        project.CurrentPhase = "Validation";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var feature = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Feature block",
+                "Feature cluster",
+                "Use for multi-select shared actions.",
+                $"project:{projectId}",
+                620,
+                220,
+                null,
+                null,
+                "feature"));
+
+        var support = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Support block",
+                "Support cluster",
+                "Use for multi-select shared actions.",
+                $"project:{projectId}",
+                860,
+                360,
+                null,
+                null,
+                "support"));
+
+        await workbenchService.SaveViewStateAsync(
+            projectId,
+            "structure",
+            new CanvasWorkbenchUiState
+            {
+                SelectedNodeIds = [feature.Id, support.Id],
+                WindowStates = new Dictionary<string, CanvasWorkbenchWindowState>(StringComparer.Ordinal)
+                {
+                    ["project-structure.selection"] = new CanvasWorkbenchWindowState { IsVisible = true },
+                    ["project-structure.health"] = new CanvasWorkbenchWindowState { IsVisible = true }
+                }
+            }.ToJson());
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("2 nodes selected", cut.Markup);
+            Assert.Contains("Grouping", cut.Markup);
+            Assert.Contains(">P1<", cut.Markup);
+            Assert.Contains(">50%<", cut.Markup);
+            Assert.Contains(">Question<", cut.Markup);
+            Assert.Contains(">Border<", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Pdf_attachment_nodes_render_inline_preview_and_open_modal_without_navigation()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -194,5 +307,62 @@ public sealed class ProjectStructurePageTests
         });
 
         Assert.Equal(uriBeforeOpen, navigation.Uri);
+    }
+
+    [Fact]
+    public async Task Audio_attachment_nodes_render_audio_preview_and_local_open_action_when_host_supports_it()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Audio Preview Project";
+        project.Description = "Verify audio and local-open coverage.";
+        project.Objective = "Keep audio attachment handling inside project structure.";
+        project.CurrentPhase = "Review";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var audioNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "Interview clip",
+                "Uploaded audio",
+                "Audio preview coverage",
+                $"project:{projectId}",
+                540,
+                260,
+                null,
+                null,
+                string.Empty,
+                new ProjectObjectMediaPayload(
+                    "interview-clip.mp3",
+                    "audio/mpeg",
+                    Convert.ToBase64String(new byte[] { 0x49, 0x44, 0x33, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x21 }))));
+
+        await workbenchService.SaveViewStateAsync(
+            projectId,
+            "structure",
+            new CanvasWorkbenchUiState
+            {
+                SelectedNodeIds = [audioNode.Id]
+            }.ToJson());
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Interview clip", cut.Markup);
+            Assert.Contains("project-structure-audio-preview", cut.Markup);
+            Assert.Contains("audio/mpeg", cut.Markup);
+            Assert.Contains("Open locally", cut.Markup);
+            Assert.Contains("Expand preview", cut.Markup);
+        });
     }
 }

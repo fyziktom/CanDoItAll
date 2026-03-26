@@ -13,6 +13,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.Modules.Workbench.CanvasAdapters
 @using CanDoItAll.SharedKernel
 @inject ProjectWorkbenchService ProjectWorkbenchService
+@inject IProjectStructureLocalFileOpener LocalFileOpener
 @inject NavigationManager Navigation
 
 <PageTitle>Project Structure</PageTitle>
@@ -48,73 +49,116 @@ else
                                  NodeEdited="HandleNodeEditedAsync"
                                  NodeOpened="HandleNodeOpenedAsync"
                                  StateChanged="HandleCanvasStateChangedAsync">
+                    <ToolbarLeftContent>
+                        <div class="project-structure-toolbar-windows">
+                            <button type="button"
+                                    class="cw-toolbar-action project-structure-toolbar-toggle @(SelectionWindowState.IsVisible ? "is-active" : string.Empty)"
+                                    title="Show or hide the selection panel"
+                                    @onclick="@(() => ToggleWindowAsync(SelectionWindowKey))">
+                                Inspector
+                            </button>
+                            <button type="button"
+                                    class="cw-toolbar-action project-structure-toolbar-toggle @(HealthWindowState.IsVisible ? "is-active" : string.Empty)"
+                                    title="Show or hide canvas health"
+                                    @onclick="@(() => ToggleWindowAsync(HealthWindowKey))">
+                                Health
+                            </button>
+                        </div>
+                    </ToolbarLeftContent>
                     <OverlayContent>
-                        @if (canvasValidationOverlay.IsVisible)
+                        @if (HealthWindowState.IsVisible)
                         {
-                            <section class="project-structure-validation-overlay"
-                                     aria-label="Project structure validation overlay"
-                                     data-testid="project-structure-validation-overlay">
-                                <div class="project-structure-validation-overlay__header">
-                                    <p class="cw-panel-kicker">Project validation overlay</p>
-                                    <h3 class="cw-panel-title">Canvas health</h3>
-                                    <p class="cw-panel-copy">Surface dependency and review issues directly in the structure canvas before syncing or publishing.</p>
-                                </div>
-                                <div class="project-structure-validation-overlay__metrics">
-                                    <div class="project-structure-validation-overlay__metric" data-validation-metric="blocked">
-                                        <span>Blocked</span>
-                                        <strong>@canvasValidationOverlay.BlockedCount</strong>
+                            <CanvasFloatingWindow WindowId="@HealthWindowKey"
+                                                  TestId="project-structure-validation-window"
+                                                  AriaLabel="Project structure canvas health"
+                                                  Kicker="Canvas health"
+                                                  Title="Canvas health"
+                                                  Summary="Validation pressure stays in the canvas now, but the toolbar safe zone remains clear."
+                                                  DefaultPlacement="top-left"
+                                                  DefaultWidth="320"
+                                                  DefaultHeight="326"
+                                                  MinWidth="280"
+                                                  MinHeight="220"
+                                                  State="@HealthWindowState"
+                                                  StateChanged="HandleHealthWindowStateChangedAsync">
+                                <section class="project-structure-validation-overlay"
+                                         aria-label="Project structure validation overlay"
+                                         data-testid="project-structure-validation-overlay">
+                                    <div class="project-structure-validation-overlay__header">
+                                        <p class="cw-panel-kicker">Project validation overlay</p>
+                                        <h3 class="cw-panel-title">Canvas health</h3>
+                                        <p class="cw-panel-copy">Surface dependency and review issues directly in the structure canvas without blocking the toolbar.</p>
                                     </div>
-                                    <div class="project-structure-validation-overlay__metric" data-validation-metric="review">
-                                        <span>Review</span>
-                                        <strong>@canvasValidationOverlay.ReviewCount</strong>
+                                    <div class="project-structure-validation-overlay__metrics">
+                                        <div class="project-structure-validation-overlay__metric" data-validation-metric="blocked">
+                                            <span>Blocked</span>
+                                            <strong>@canvasValidationOverlay.BlockedCount</strong>
+                                        </div>
+                                        <div class="project-structure-validation-overlay__metric" data-validation-metric="review">
+                                            <span>Review</span>
+                                            <strong>@canvasValidationOverlay.ReviewCount</strong>
+                                        </div>
+                                        <div class="project-structure-validation-overlay__metric" data-validation-metric="priority">
+                                            <span>Priority</span>
+                                            <strong>@canvasValidationOverlay.PriorityCount</strong>
+                                        </div>
+                                        <div class="project-structure-validation-overlay__metric" data-validation-metric="selection">
+                                            <span>Selected issues</span>
+                                            <strong>@canvasValidationOverlay.SelectedIssueCount</strong>
+                                        </div>
                                     </div>
-                                    <div class="project-structure-validation-overlay__metric" data-validation-metric="priority">
-                                        <span>Priority</span>
-                                        <strong>@canvasValidationOverlay.PriorityCount</strong>
-                                    </div>
-                                    <div class="project-structure-validation-overlay__metric" data-validation-metric="selection">
-                                        <span>Selected issues</span>
-                                        <strong>@canvasValidationOverlay.SelectedIssueCount</strong>
-                                    </div>
-                                </div>
-                                @if (canvasValidationOverlay.SpotlightNodes.Count > 0)
-                                {
-                                    <div class="project-structure-validation-overlay__spotlight">
-                                        <span>Spotlight</span>
-                                        <ul>
-                                            @foreach (var nodeTitle in canvasValidationOverlay.SpotlightNodes)
-                                            {
-                                                <li>@nodeTitle</li>
-                                            }
-                                        </ul>
-                                    </div>
-                                }
-                                @if (selectedNode is not null && canvasValidationOverlay.SelectedIssueCount > 0)
-                                {
-                                    <div class="project-structure-validation-overlay__actions">
-                                        <button type="button"
-                                                class="cw-button"
-                                                data-tone="accent"
-                                                @onclick="RunSelectedValidationAsync">
-                                            Validate selected
-                                        </button>
-                                    </div>
-                                }
-                            </section>
+                                    @if (canvasValidationOverlay.SpotlightNodes.Count > 0)
+                                    {
+                                        <div class="project-structure-validation-overlay__spotlight">
+                                            <span>Spotlight</span>
+                                            <ul>
+                                                @foreach (var nodeTitle in canvasValidationOverlay.SpotlightNodes)
+                                                {
+                                                    <li>@nodeTitle</li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
+                                    @if (selectedNode is not null && canvasValidationOverlay.SelectedIssueCount > 0)
+                                    {
+                                        <div class="project-structure-validation-overlay__actions">
+                                            <button type="button"
+                                                    class="cw-button"
+                                                    data-tone="accent"
+                                                    @onclick="RunSelectedValidationAsync">
+                                                Validate selected
+                                            </button>
+                                        </div>
+                                    }
+                                </section>
+                            </CanvasFloatingWindow>
                         }
-                    </OverlayContent>
-                </CanvasWorkbench>
-            </Canvas>
-            <Inspector>
+                        @if (SelectionWindowState.IsVisible)
+                        {
+                            <CanvasFloatingWindow WindowId="@SelectionWindowKey"
+                                                  TestId="project-structure-selection-window"
+                                                  AriaLabel="Project structure selection panel"
+                                                  Kicker="Selection panel"
+                                                  Title="@SelectionWindowTitle"
+                                                  Summary="@SelectionWindowSummary"
+                                                  DefaultPlacement="top-right"
+                                                  DefaultWidth="420"
+                                                  DefaultHeight="640"
+                                                  MinWidth="320"
+                                                  MinHeight="240"
+                                                  MaxWidth="520"
+                                                  State="@SelectionWindowState"
+                                                  StateChanged="HandleSelectionWindowStateChangedAsync">
                 @if (selectedNodes.Count == 0)
                 {
                     <div class="cw-empty-state">
-                        <p class="cw-panel-kicker">Inspector</p>
+                        <p class="cw-panel-kicker">Canvas selection</p>
                         <h3>Select a project object</h3>
-                        <p>Selection drives the mirrored editor surface, typed actions, grouped create tooling, and adjacent create behavior.</p>
+                        <p>Pick a node to edit its status, attachments, and next-step actions without leaving the canvas.</p>
                         <div class="cw-chip-row">
-                            <span class="cw-node__chip">Alt + drag</span>
+                            <span class="cw-node__chip">Click</span>
                             <span class="cw-node__chip">Ctrl + Shift + click</span>
+                            <span class="cw-node__chip">Alt + drag</span>
                             <span class="cw-node__chip">Right-click</span>
                         </div>
                     </div>
@@ -125,15 +169,62 @@ else
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Multi-select</p>
                             <h3 class="cw-panel-title">@($"{selectedNodes.Count} nodes selected")</h3>
-                            <p class="cw-panel-copy">Batch movement is available on the canvas. The inspector stays readable by showing the current selection set, shared progress controls, and the adaptive border actions.</p>
+                            <p class="cw-panel-copy">Batch movement stays on the canvas. Shared status, progress, marker, priority, and grouping controls stay here.</p>
                             <div class="cw-button-row">
                                 <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearSelectionAsync">Clear selection</button>
                                 <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => SelectNodeAsync(selectedNodes[0].Id))">Focus first</button>
-                                <button type="button" class="cw-button" data-tone="sky" @onclick="CreateSelectionBorderAsync">Border</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearSelectionBordersAsync">Clear border</button>
-                                <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplySelectionStatusAsync("In progress"))'>In progress</button>
-                                <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplySelectionStatusAsync("Done"))'>Done</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplySelectionStatusAsync("N/A"))'>N/A</button>
+                            </div>
+                        </div>
+
+                        <div class="cw-panel-card project-structure-batch-card">
+                            @if (CanApplySelectionStatus)
+                            {
+                                <div class="project-structure-action-band">
+                                    <span>Status</span>
+                                    <div class="cw-button-row">
+                                        <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplySelectionStatusAsync("In progress"))'>In progress</button>
+                                        <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplySelectionStatusAsync("Done"))'>Done</button>
+                                        <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplySelectionStatusAsync("N/A"))'>N/A</button>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="project-structure-action-band">
+                                <span>Progress</span>
+                                <div class="cw-button-row">
+                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyProgressAsync(selectedNodeIds, "progress", 0))'>0%</button>
+                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyProgressAsync(selectedNodeIds, "progress", 25))'>25%</button>
+                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyProgressAsync(selectedNodeIds, "progress", 50))'>50%</button>
+                                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplyProgressAsync(selectedNodeIds, "progress", 100))'>100%</button>
+                                </div>
+                            </div>
+
+                            <div class="project-structure-action-band">
+                                <span>Marker</span>
+                                <div class="cw-button-row">
+                                    <button type="button" class="cw-button" data-tone="accent" @onclick='@(() => ApplyMarkerAsync(selectedNodeIds, "question", "sky", "Question"))'>Question</button>
+                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyMarkerAsync(selectedNodeIds, "idea", "accent", "Idea"))'>Idea</button>
+                                    <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplyMarkerAsync(selectedNodeIds, "risk", "danger", "Risk"))'>Risk</button>
+                                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplyMarkerAsync(selectedNodeIds, string.Empty, string.Empty, string.Empty))'>Clear</button>
+                                </div>
+                            </div>
+
+                            <div class="project-structure-action-band">
+                                <span>Priority</span>
+                                <div class="cw-button-row">
+                                    <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplyPriorityAsync(selectedNodeIds, 1))'>P1</button>
+                                    <button type="button" class="cw-button" data-tone="accent" @onclick='@(() => ApplyPriorityAsync(selectedNodeIds, 2))'>P2</button>
+                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyPriorityAsync(selectedNodeIds, 3))'>P3</button>
+                                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplyPriorityAsync(selectedNodeIds, 0))'>Clear</button>
+                                </div>
+                            </div>
+
+                            <div class="project-structure-action-band">
+                                <span>Grouping</span>
+                                <div class="cw-button-row">
+                                    <button type="button" class="cw-button" data-tone="sky" @onclick="CreateSelectionBorderAsync">Border</button>
+                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearSelectionBordersAsync">Clear border</button>
+                                </div>
                             </div>
                         </div>
 
@@ -188,6 +279,18 @@ else
                                     <span>Location</span>
                                     <strong>@($"{Math.Round(selectedNode.X)}, {Math.Round(selectedNode.Y)}")</strong>
                                 </div>
+                                <div class="cw-summary-tile">
+                                    <span>Progress</span>
+                                    <strong>@ResolveProgressLabel(selectedNode)</strong>
+                                </div>
+                                <div class="cw-summary-tile">
+                                    <span>Priority</span>
+                                    <strong>@ResolvePriorityLabel(selectedNode)</strong>
+                                </div>
+                                <div class="cw-summary-tile">
+                                    <span>Marker</span>
+                                    <strong>@ResolveMarkerLabel(selectedNode)</strong>
+                                </div>
                             </div>
                         </div>
 
@@ -205,6 +308,9 @@ else
                                         break;
                                     case AttachmentPreviewKind.Video:
                                         <video class="cw-media-preview" controls preload="metadata" src="@selectedNode.Route"></video>
+                                        break;
+                                    case AttachmentPreviewKind.Audio:
+                                        <audio class="project-structure-audio-preview" controls preload="metadata" src="@selectedNode.Route"></audio>
                                         break;
                                     case AttachmentPreviewKind.Document:
                                         <iframe class="project-structure-document-preview"
@@ -232,6 +338,15 @@ else
                                 </div>
 
                                 <div class="cw-button-row">
+                                    @if (CanShowLocalOpen(selectedNode))
+                                    {
+                                        <button type="button"
+                                                class="cw-button"
+                                                data-tone="primary"
+                                                @onclick="@(() => OpenAttachmentLocallyAsync(selectedNode))">
+                                            Open locally
+                                        </button>
+                                    }
                                     @if (CanRenderAttachmentPreview(selectedNode))
                                     {
                                         <button type="button"
@@ -250,6 +365,13 @@ else
                                         Open in new tab
                                     </a>
                                 </div>
+
+                                @if (IsLocalOpenFeedbackVisible(selectedNode))
+                                {
+                                    <div class="project-structure-inline-feedback" data-tone="@localOpenFeedbackTone">
+                                        @localOpenFeedback
+                                    </div>
+                                }
                             </div>
                         }
 
@@ -296,7 +418,11 @@ else
                         </div>
                     </div>
                 }
-            </Inspector>
+                            </CanvasFloatingWindow>
+                        }
+                    </OverlayContent>
+                </CanvasWorkbench>
+            </Canvas>
             <Supporting>
                 <div class="cw-panel-card project-structure-support-card project-structure-support-card--outline">
                     <p class="cw-panel-kicker">Outline</p>
@@ -402,6 +528,15 @@ else
                 </div>
 
                 <div class="project-structure-preview-dialog__actions">
+                    @if (CanShowLocalOpen(previewNode))
+                    {
+                        <button type="button"
+                                class="cw-button"
+                                data-tone="primary"
+                                @onclick="@(() => OpenAttachmentLocallyAsync(previewNode))">
+                            Open locally
+                        </button>
+                    }
                     <a class="cw-button"
                        data-tone="ghost"
                        href="@previewNode.Route"
@@ -427,6 +562,12 @@ else
                                preload="metadata"
                                src="@previewNode.Route"></video>
                         break;
+                    case AttachmentPreviewKind.Audio:
+                        <audio class="project-structure-audio-preview project-structure-preview-dialog__audio"
+                               controls
+                               preload="metadata"
+                               src="@previewNode.Route"></audio>
+                        break;
                     case AttachmentPreviewKind.Document:
                         <iframe class="project-structure-preview-dialog__frame"
                                 src="@ResolveAttachmentPreviewSource(previewNode)"
@@ -439,6 +580,9 @@ else
 }
 
 @code {
+    private const string SelectionWindowKey = "project-structure.selection";
+    private const string HealthWindowKey = "project-structure.health";
+
     [Parameter]
     public Guid ProjectId { get; set; }
 
@@ -452,6 +596,9 @@ else
     private string? linkModeSourceId;
     private string? currentViewStateJson;
     private ProjectStructureNode? previewNode;
+    private string? localOpenFeedback;
+    private string? localOpenFeedbackNodeId;
+    private string localOpenFeedbackTone = "neutral";
     private Guid loadedProjectId;
 
     private IReadOnlyList<CanvasWorkbenchStat> stageStats =>
@@ -481,6 +628,23 @@ else
         surface?.Nodes.Where(node => selectedNodeIds.Contains(node.Id, StringComparer.Ordinal)).ToList() ?? [];
 
     private ProjectStructureNode? selectedNode => selectedNodes.FirstOrDefault();
+    private CanvasWorkbenchWindowState SelectionWindowState => ResolveWindowState(SelectionWindowKey);
+    private CanvasWorkbenchWindowState HealthWindowState => ResolveWindowState(HealthWindowKey);
+    private string SelectionWindowTitle
+        => selectedNodes.Count switch
+        {
+            0 => "Selection",
+            1 => selectedNode?.Title ?? "Selection",
+            _ => $"{selectedNodes.Count} selected"
+        };
+    private string SelectionWindowSummary
+        => selectedNodes.Count switch
+        {
+            0 => "Keep the next action, attachment preview, and selection guidance inside the canvas.",
+            1 => "Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.",
+            _ => "Batch-update shared fields, review the selection set, and keep grouping actions close to the canvas."
+        };
+    private bool CanApplySelectionStatus => selectedNodes.Count > 0 && selectedNodes.All(IsCanvasStatusMutable);
     private ProjectStructureNode? ActionCatalogPreviewNode
         => selectedNode ?? surface?.Nodes.FirstOrDefault(node => node.ObjectType != ProjectObjectType.ProjectRoot) ?? surface?.Nodes.FirstOrDefault();
     private IReadOnlyList<CanvasWorkbenchAction> ActionCatalogPreviewQuickActions
@@ -1026,6 +1190,48 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
+    private CanvasWorkbenchWindowState ResolveWindowState(string key)
+    {
+        var uiState = ResolveEditableUiState();
+        return uiState.WindowStates.TryGetValue(key, out var state)
+            ? CanvasWorkbenchWindowState.Normalize(state)
+            : new CanvasWorkbenchWindowState();
+    }
+
+    private Task HandleSelectionWindowStateChangedAsync(CanvasWorkbenchWindowState state)
+        => PersistWindowStateAsync(SelectionWindowKey, state);
+
+    private Task HandleHealthWindowStateChangedAsync(CanvasWorkbenchWindowState state)
+        => PersistWindowStateAsync(HealthWindowKey, state);
+
+    private async Task ToggleWindowAsync(string key)
+    {
+        var state = ResolveWindowState(key);
+        if (!state.IsVisible)
+        {
+            state.IsVisible = true;
+            state.IsMinimized = false;
+        }
+        else if (state.IsMinimized)
+        {
+            state.IsMinimized = false;
+        }
+        else
+        {
+            state.IsVisible = false;
+            state.IsMinimized = false;
+        }
+
+        await PersistWindowStateAsync(key, state);
+    }
+
+    private async Task PersistWindowStateAsync(string key, CanvasWorkbenchWindowState state)
+    {
+        var uiState = ResolveEditableUiState();
+        uiState.WindowStates[key] = CanvasWorkbenchWindowState.Normalize(state);
+        await PersistCanvasUiStateAsync(uiState);
+    }
+
     private static string ResolveCreatedTitle(ProjectStructureCreateLeafDefinition definition, CanvasWorkbenchCreateActionRequest request)
         => !string.IsNullOrWhiteSpace(request.Title)
             ? request.Title.Trim()
@@ -1116,6 +1322,43 @@ else
         return normalized.Length <= 64 ? normalized : $"{normalized[..61]}...";
     }
 
+    private string ResolveProgressLabel(ProjectStructureNode node)
+        => node.ProgressPercent > 0 || string.Equals(node.ProgressMode, "progress", StringComparison.OrdinalIgnoreCase)
+            ? $"{Math.Clamp(node.ProgressPercent, 0, 100)}%"
+            : "Unset";
+
+    private static string ResolvePriorityLabel(ProjectStructureNode node)
+        => node.Priority > 0 ? $"P{node.Priority}" : "None";
+
+    private static string ResolveMarkerLabel(ProjectStructureNode node)
+        => string.IsNullOrWhiteSpace(node.MarkerLabel) ? "None" : node.MarkerLabel;
+
+    private static string ResolveAttachmentKindLabel(ProjectStructureNode node)
+        => ResolveAttachmentPreviewKind(node) switch
+        {
+            AttachmentPreviewKind.Image => "Image",
+            AttachmentPreviewKind.Video => "Video",
+            AttachmentPreviewKind.Audio => "Audio",
+            AttachmentPreviewKind.Document => "Document",
+            _ => "File"
+        };
+
+    private bool CanShowLocalOpen(ProjectStructureNode? node)
+        => LocalFileOpener.IsAvailable && LocalFileOpener.CanOpen(node);
+
+    private bool IsLocalOpenFeedbackVisible(ProjectStructureNode node)
+        => string.Equals(localOpenFeedbackNodeId, node.Id, StringComparison.Ordinal) &&
+            !string.IsNullOrWhiteSpace(localOpenFeedback);
+
+    private async Task OpenAttachmentLocallyAsync(ProjectStructureNode node)
+    {
+        var result = await LocalFileOpener.OpenAsync(node);
+        localOpenFeedbackNodeId = node.Id;
+        localOpenFeedback = result.Message;
+        localOpenFeedbackTone = result.IsSuccess ? "mint" : "warn";
+        await InvokeAsync(StateHasChanged);
+    }
+
 
     private static int ResolveOutlineWeight(ProjectObjectType objectType) => objectType switch
     {
@@ -1161,6 +1404,11 @@ else
             return AttachmentPreviewKind.Video;
         }
 
+        if (contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
+        {
+            return AttachmentPreviewKind.Audio;
+        }
+
         if (IsDocumentAttachment(node, contentType))
         {
             return AttachmentPreviewKind.Document;
@@ -1193,6 +1441,9 @@ else
 
         return ResolveAttachmentExtension(node) switch
         {
+            ".mp3" => "audio/mpeg",
+            ".m4a" => "audio/mp4",
+            ".ogg" => "audio/ogg",
             ".pdf" => "application/pdf",
             ".json" => "application/json",
             ".xml" => "application/xml",
@@ -1201,6 +1452,11 @@ else
             ".csv" => "text/csv",
             ".log" => "text/plain",
             ".yaml" or ".yml" => "text/yaml",
+            ".wav" => "audio/wav",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".xls" => "application/vnd.ms-excel",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
             _ => node.MediaContentType?.Trim() ?? string.Empty
         };
     }
@@ -1220,6 +1476,7 @@ else
         {
             AttachmentPreviewKind.Image => "The image stays attached to this node and can expand without leaving the structure canvas.",
             AttachmentPreviewKind.Video => "The video stays attached to this node and can expand without leaving the structure canvas.",
+            AttachmentPreviewKind.Audio => "Audio files now stay playable in the selection panel and can still jump into a desktop app when needed.",
             AttachmentPreviewKind.Document when ResolveAttachmentContentType(node).Equals("application/pdf", StringComparison.OrdinalIgnoreCase)
                 => "PDF files now render directly in the inspector and can expand into a focused modal preview.",
             AttachmentPreviewKind.Document
@@ -1259,6 +1516,7 @@ else
         None,
         Image,
         Video,
+        Audio,
         Document
     }
 
