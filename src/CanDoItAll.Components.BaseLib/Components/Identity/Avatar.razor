@@ -1,0 +1,48 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+@if (!string.IsNullOrWhiteSpace(ImageUrl))
+{
+    <img src="@ImageUrl"
+         alt="@Alt"
+         @attributes='BuildAttributes(ResolveCssClass())' />
+}
+else
+{
+    <span @attributes='BuildAttributes(ResolveCssClass())'>
+        @FallbackText
+    </span>
+}
+
+@code {
+    [Parameter]
+    public string? ImageUrl { get; set; }
+
+    [Parameter]
+    public string? Alt { get; set; }
+
+    [Parameter]
+    public string? FallbackText { get; set; }
+
+    [Parameter]
+    public AvatarSize Size { get; set; } = AvatarSize.Medium;
+
+    [Parameter]
+    public AvatarShape Shape { get; set; } = AvatarShape.Circle;
+
+    private string ResolveCssClass()
+    {
+        var sizeCss = Size switch
+        {
+            AvatarSize.Small => "h-8 w-8 text-xs",
+            AvatarSize.Large => "h-14 w-14 text-base",
+            _ => "h-10 w-10 text-sm"
+        };
+
+        var shapeCss = Shape == AvatarShape.Rounded
+            ? "rounded-2xl"
+            : "rounded-full";
+
+        return $"{shapeCss} {sizeCss} inline-flex shrink-0 items-center justify-center overflow-hidden border border-slate-200 bg-slate-100 font-semibold uppercase tracking-[0.18em] text-slate-600";
+    }
+}

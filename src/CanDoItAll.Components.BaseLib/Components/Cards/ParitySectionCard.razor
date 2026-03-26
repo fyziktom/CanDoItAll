@@ -1,0 +1,23 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+@if (AsArticle)
+{
+    <article @attributes='BuildAttributes("rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm")'>
+        @ChildContent
+    </article>
+}
+else
+{
+    <section @attributes='BuildAttributes("rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm")'>
+        @ChildContent
+    </section>
+}
+
+@code {
+    [Parameter]
+    public bool AsArticle { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

@@ -1,0 +1,60 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+@if (!string.IsNullOrWhiteSpace(Href))
+{
+    <a href="@Href"
+       target="@Target"
+       rel="@Rel"
+       @attributes='BuildAttributes(Ghost ? "inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" : "inline-flex items-center justify-center rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800")'>
+        @RenderContent()
+    </a>
+}
+else
+{
+    <button type="@Type"
+            disabled="@Disabled"
+            @attributes='BuildAttributes(Ghost ? "inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" : "inline-flex items-center justify-center rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50")'
+            @onclick="Click">
+        @RenderContent()
+    </button>
+}
+
+@code {
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public bool Ghost { get; set; }
+
+    [Parameter]
+    public string? Href { get; set; }
+
+    [Parameter]
+    public string? Rel { get; set; }
+
+    [Parameter]
+    public string? Target { get; set; }
+
+    [Parameter]
+    public string Type { get; set; } = "button";
+
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> Click { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private RenderFragment RenderContent()
+    {
+        if (ChildContent is not null)
+        {
+            return ChildContent;
+        }
+
+        return builder => builder.AddContent(0, Text);
+    }
+}

@@ -1,0 +1,31 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes("space-y-1")'>
+    <h3 class="text-lg font-semibold tracking-tight text-slate-950">
+        @if (string.IsNullOrWhiteSpace(Href))
+        {
+            @Title
+        }
+        else
+        {
+            <a class="hover:text-sky-700" href="@Href">@Title</a>
+        }
+    </h3>
+
+    @if (!string.IsNullOrWhiteSpace(Subtitle))
+    {
+        <p class="text-sm leading-6 text-slate-500">@Subtitle</p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Subtitle { get; set; }
+
+    [Parameter]
+    public string? Href { get; set; }
+}

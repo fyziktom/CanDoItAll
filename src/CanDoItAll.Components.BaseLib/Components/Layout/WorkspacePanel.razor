@@ -1,0 +1,33 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<article @attributes='BuildAttributes(ResolveCssClass())'>
+    @ChildContent
+</article>
+
+@code {
+    [Parameter]
+    public WorkspacePanelTone Tone { get; set; } = WorkspacePanelTone.Default;
+
+    [Parameter]
+    public bool Wide { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveCssClass()
+    {
+        var toneCss = Tone == WorkspacePanelTone.Ghost
+            ? "border-dashed border-slate-300 bg-slate-50/80"
+            : "border-slate-200 bg-white";
+
+        var widthCss = Wide
+            ? "lg:col-span-2"
+            : string.Empty;
+
+        return CssClassBuilder.Join(
+            "rounded-[1.5rem] border p-5 shadow-sm",
+            toneCss,
+            widthCss);
+    }
+}

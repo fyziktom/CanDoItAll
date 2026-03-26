@@ -1,0 +1,21 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<span @attributes='BuildAttributes("inline-flex items-center rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700")'>
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+    else
+    {
+        @Text
+    }
+</span>
+
+@code {
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

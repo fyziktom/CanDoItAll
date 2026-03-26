@@ -1,0 +1,22 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<span @attributes='BuildAttributes("text-sm font-medium text-slate-700")'>@RenderContent()</span>
+
+@code {
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private RenderFragment RenderContent()
+    {
+        if (ChildContent is not null)
+        {
+            return ChildContent;
+        }
+
+        return builder => builder.AddContent(0, Text);
+    }
+}

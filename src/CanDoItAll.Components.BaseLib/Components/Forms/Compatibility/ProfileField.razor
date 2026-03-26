@@ -1,0 +1,40 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<label @attributes='BuildAttributes(ResolveCssClass())'>
+    @ChildContent
+</label>
+
+@code {
+    [Parameter]
+    public bool Third { get; set; }
+
+    [Parameter]
+    public bool Full { get; set; }
+
+    [Parameter]
+    public bool Compact { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveCssClass()
+    {
+        if (Full)
+        {
+            return "flex w-full flex-col gap-2";
+        }
+
+        if (Third)
+        {
+            return "flex w-full flex-col gap-2 lg:max-w-[calc(33.333%-0.5rem)]";
+        }
+
+        if (Compact)
+        {
+            return "flex w-full flex-col gap-1.5 lg:max-w-xs";
+        }
+
+        return "flex w-full flex-col gap-2 lg:max-w-sm";
+    }
+}

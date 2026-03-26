@@ -1,0 +1,53 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+@if (Click.HasDelegate)
+{
+    <button type="@Type"
+            @attributes='BuildAttributes(ResolveCssClass())'
+            @onclick="Click">
+        @RenderContent()
+    </button>
+}
+else
+{
+    <div @attributes='BuildAttributes(ResolveCssClass())'>
+        @RenderContent()
+    </div>
+}
+
+@code {
+    [Parameter]
+    public PriceBarTone Tone { get; set; } = PriceBarTone.Default;
+
+    [Parameter]
+    public string Type { get; set; } = "button";
+
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> Click { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveCssClass()
+    {
+        var toneCss = Tone == PriceBarTone.Success
+            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+            : "border-slate-200 bg-slate-50 text-slate-700";
+
+        return $"inline-flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold {toneCss}";
+    }
+
+    private RenderFragment RenderContent()
+    {
+        if (ChildContent is not null)
+        {
+            return ChildContent;
+        }
+
+        return builder => builder.AddContent(0, Text);
+    }
+}

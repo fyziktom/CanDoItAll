@@ -1,0 +1,234 @@
+@namespace CanDoItAll.Components.BaseLib
+@typeparam TItem
+@using Microsoft.AspNetCore.Components.Web
+
+@{
+    var items = Items ?? Array.Empty<TItem>();
+}
+
+<div class="@RootClass" data-testid="@RootTestId">
+    <div class="@ChromeClass">
+        <div class="@ControlsClass">
+            <div class="@TabsClass" role="tablist" aria-label="@AriaLabel">
+                @for (var index = 0; index < items.Count; index++)
+                {
+                    var itemIndex = index;
+                    var item = items[itemIndex];
+                    var isActive = EqualityComparer<TItem>.Default.Equals(SelectedItem, item);
+
+                    <button type="button"
+                            @ref="buttonReferences[itemIndex].Reference"
+                            id="@GetTabId(itemIndex)"
+                            class="@BuildTabCssClass(isActive)"
+                            role="tab"
+                            aria-selected="@(isActive ? "true" : "false")"
+                            aria-controls="@GetPanelId(itemIndex)"
+                            tabindex="@(isActive ? 0 : -1)"
+                            data-testid="@ResolveTabTestId(item)"
+                            @onkeydown="@((args) => HandleTabKeyDownAsync(args, itemIndex, items))"
+                            @onclick="@(() => SelectItemAsync(item, itemIndex))">
+                        @ResolveTabLabel(item)
+                    </button>
+                }
+            </div>
+
+            <button type="button"
+                    class="@ToggleClass"
+                    data-testid="@ToggleTestId"
+                    aria-expanded="@(!IsCollapsed ? "true" : "false")"
+                    @onclick="OnToggleCollapsed">
+                @(IsCollapsed ? CollapsedToggleLabel : ExpandedToggleLabel)
+            </button>
+        </div>
+    </div>
+
+    @if (!IsCollapsed && items.Count > 0)
+    {
+        <div class="@PanelClass" data-testid="@PanelTestId">
+            @for (var index = 0; index < items.Count; index++)
+            {
+                var itemIndex = index;
+                var item = items[itemIndex];
+                var isActive = EqualityComparer<TItem>.Default.Equals(SelectedItem, item);
+
+                <div id="@GetPanelId(itemIndex)"
+                     role="tabpanel"
+                     aria-labelledby="@GetTabId(itemIndex)"
+                     aria-hidden="@(!isActive ? "true" : "false")"
+                     hidden="@(!isActive)">
+                    @PanelContent(item)
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private readonly string componentId = $"ribbon-{Guid.NewGuid():N}";
+    private readonly List<ButtonReferenceSlot> buttonReferences = [];
+    private int? pendingFocusIndex;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<TItem> Items { get; set; } = Array.Empty<TItem>();
+
+    [Parameter, EditorRequired]
+    public TItem SelectedItem { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<TItem> PanelContent { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<TItem> SelectedItemChanged { get; set; }
+
+    [Parameter]
+    public bool IsCollapsed { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleCollapsed { get; set; }
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Ribbon tools";
+
+    [Parameter]
+    public string RootClass { get; set; } = "space-y-3";
+
+    [Parameter]
+    public string ChromeClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ControlsClass { get; set; } = "flex flex-wrap items-center justify-between gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-3";
+
+    [Parameter]
+    public string TabsClass { get; set; } = "flex flex-wrap items-center gap-2";
+
+    [Parameter]
+    public string TabClass { get; set; } = "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50";
+
+    [Parameter]
+    public string ActiveTabClass { get; set; } = "border-slate-900 bg-slate-900 text-white hover:bg-slate-800";
+
+    [Parameter]
+    public string ToggleClass { get; set; } = "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600";
+
+    [Parameter]
+    public string PanelClass { get; set; } = "rounded-[1.5rem] border border-slate-200 bg-white p-4";
+
+    [Parameter]
+    public string? RootTestId { get; set; }
+
+    [Parameter]
+    public string? ToggleTestId { get; set; }
+
+    [Parameter]
+    public string? PanelTestId { get; set; }
+
+    [Parameter]
+    public Func<TItem, string>? TabLabel { get; set; }
+
+    [Parameter]
+    public Func<TItem, string>? TabTestId { get; set; }
+
+    [Parameter]
+    public string ExpandedToggleLabel { get; set; } = "Collapse";
+
+    [Parameter]
+    public string CollapsedToggleLabel { get; set; } = "Expand";
+
+    protected override void OnParametersSet()
+    {
+        while (buttonReferences.Count < Items.Count)
+        {
+            buttonReferences.Add(new ButtonReferenceSlot());
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!pendingFocusIndex.HasValue)
+        {
+            return;
+        }
+
+        var focusIndex = pendingFocusIndex.Value;
+        pendingFocusIndex = null;
+        if (focusIndex < 0 || focusIndex >= Items.Count || focusIndex >= buttonReferences.Count)
+        {
+            return;
+        }
+
+        await buttonReferences[focusIndex].Reference.FocusAsync();
+    }
+
+    private string BuildTabCssClass(bool isActive)
+    {
+        return isActive
+            ? CssClassBuilder.Join(TabClass, ActiveTabClass)
+            : TabClass;
+    }
+
+    private string ResolveTabLabel(TItem item)
+    {
+        return TabLabel?.Invoke(item) ?? item?.ToString() ?? string.Empty;
+    }
+
+    private string? ResolveTabTestId(TItem item)
+    {
+        return TabTestId?.Invoke(item);
+    }
+
+    private string GetTabId(int index)
+    {
+        return $"{componentId}-tab-{index}";
+    }
+
+    private string GetPanelId(int index)
+    {
+        return $"{componentId}-panel-{index}";
+    }
+
+    private async Task SelectItemAsync(TItem item, int index)
+    {
+        if (EqualityComparer<TItem>.Default.Equals(SelectedItem, item))
+        {
+            return;
+        }
+
+        pendingFocusIndex = index;
+        await SelectedItemChanged.InvokeAsync(item);
+    }
+
+    private async Task HandleTabKeyDownAsync(KeyboardEventArgs args, int currentIndex, IReadOnlyList<TItem> items)
+    {
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        if (args.Key is "Enter" or " " or "Spacebar")
+        {
+            await SelectItemAsync(items[currentIndex], currentIndex);
+            return;
+        }
+
+        var nextIndex = args.Key switch
+        {
+            "ArrowLeft" => currentIndex == 0 ? items.Count - 1 : currentIndex - 1,
+            "ArrowRight" => currentIndex == items.Count - 1 ? 0 : currentIndex + 1,
+            "Home" => 0,
+            "End" => items.Count - 1,
+            _ => -1
+        };
+
+        if (nextIndex < 0 || nextIndex == currentIndex)
+        {
+            return;
+        }
+
+        await SelectItemAsync(items[nextIndex], nextIndex);
+    }
+
+    private sealed class ButtonReferenceSlot
+    {
+        public ElementReference Reference { get; set; }
+    }
+}

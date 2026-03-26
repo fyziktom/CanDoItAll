@@ -1,0 +1,76 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<article class="@ResolveCssClass()"
+         style="@ComputedStyle">
+    @if (IsWithIcon && !string.IsNullOrWhiteSpace(Icon))
+    {
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/70 text-slate-700">
+            <Icon Name="@Icon" />
+        </span>
+    }
+    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">@Label</span>
+    <strong class="text-2xl font-semibold tracking-tight text-[var(--stat-color,#0f172a)]">@Value</strong>
+</article>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Value { get; set; } = "0";
+
+    [Parameter]
+    public string? CssClass { get; set; }
+
+    [Parameter]
+    public string? Color { get; set; }
+
+    [Parameter]
+    public string? TextColor { get; set; }
+
+    [Parameter]
+    public string Size { get; set; } = "small";
+
+    [Parameter]
+    public bool IsWithIcon { get; set; }
+
+    [Parameter]
+    public string? Icon { get; set; }
+
+    private string ResolveCssClass()
+    {
+        var sizeCss = Size switch
+        {
+            "large" => "min-h-40 p-6",
+            "normal" => "min-h-32 p-5",
+            _ => "min-h-28 p-4"
+        };
+
+        return CssClassBuilder.Join(
+            "flex flex-col gap-3 rounded-[1.4rem] border border-slate-200 bg-[var(--stat-bg,rgba(255,255,255,0.98))] shadow-sm",
+            sizeCss,
+            CssClass);
+    }
+
+    private string? ComputedStyle
+    {
+        get
+        {
+            var parts = new List<string>(2);
+
+            if (!string.IsNullOrWhiteSpace(Color))
+            {
+                parts.Add($"--stat-bg:{Color}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(TextColor))
+            {
+                parts.Add($"--stat-color:{TextColor}");
+            }
+
+            return parts.Count > 0
+                ? string.Join(';', parts)
+                : null;
+        }
+    }
+}

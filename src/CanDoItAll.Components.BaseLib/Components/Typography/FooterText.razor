@@ -1,0 +1,16 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<TextBlock Class="@Class" TextStyle="TextStyle.Footer" Value="@Text">
+    @ChildContent
+</TextBlock>
+
+@code {
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}
