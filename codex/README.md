@@ -10,13 +10,10 @@ It includes these custom skills:
 - `candoitall-watch-playwright-loop`
 - `candoitall-dotnetwatch-setup`
 
-It also depends on these public sibling skills from `dotnet/skills`:
+It also depends on these public sibling skills:
 
-- `frontend-skill`
-- `playwright`
-- `screenshot`
-- `imagegen`
-- `mtp-hot-reload`
+- From `openai/skills`: `frontend-skill`, `playwright`, `screenshot`, `imagegen`
+- From `dotnet/skills`: `mtp-hot-reload`
 
 ## Install Or Refresh Skills
 
@@ -29,8 +26,8 @@ powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skil
 That script:
 
 - copies the custom CanDoItAll skills from this repo into `$CODEX_HOME\skills`
-- clones or updates the public `dotnet/skills` repo into a temp cache
-- finds the required public sibling skills by name
+- clones or updates the public `openai/skills` and `dotnet/skills` repos into temp caches
+- finds the required public sibling skills by name in the correct upstream repo
 - installs those sibling skills into the same Codex home
 
 ## Useful Options
