@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$CodexHome = $(if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME ".codex" }),
+    [string]$OpenAiSkillsRepoUrl = "https://github.com/openai/skills.git",
+    [string]$OpenAiSkillsCache = $(Join-Path $env:TEMP "codex-openai-skills-cache"),
     [string]$DotNetSkillsRepoUrl = "https://github.com/dotnet/skills.git",
     [string]$DotNetSkillsCache = $(Join-Path $env:TEMP "codex-dotnet-skills-cache"),
     [switch]$SkipCustomSkills,
@@ -21,12 +23,26 @@ $customSkillNames = @(
     "candoitall-dotnetwatch-setup"
 )
 
-$publicSkillNames = @(
-    "frontend-skill",
-    "playwright",
-    "screenshot",
-    "imagegen",
-    "mtp-hot-reload"
+$publicSkillSources = @(
+    [pscustomobject]@{
+        Name           = "openai/skills"
+        RepoUrl        = $OpenAiSkillsRepoUrl
+        CacheDirectory = $OpenAiSkillsCache
+        SkillNames     = @(
+            "frontend-skill",
+            "playwright",
+            "screenshot",
+            "imagegen"
+        )
+    },
+    [pscustomobject]@{
+        Name           = "dotnet/skills"
+        RepoUrl        = $DotNetSkillsRepoUrl
+        CacheDirectory = $DotNetSkillsCache
+        SkillNames     = @(
+            "mtp-hot-reload"
+        )
+    }
 )
 
 $installedSkills = New-Object System.Collections.Generic.List[object]
@@ -89,17 +105,21 @@ function Install-SkillDirectory {
 
 function Ensure-Git {
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        throw "git is required to install public sibling skills from dotnet/skills."
+        throw "git is required to install public sibling skills."
     }
 }
 
-function Sync-DotNetSkillsRepository {
-    param([string]$CacheDirectory)
+function Sync-GitRepository {
+    param(
+        [string]$RepositoryName,
+        [string]$RepositoryUrl,
+        [string]$CacheDirectory
+    )
 
     Ensure-Git
 
     if (Test-Path (Join-Path $CacheDirectory ".git")) {
-        Write-Step "Updating cached dotnet/skills repository"
+        Write-Step "Updating cached $RepositoryName repository"
         git -C $CacheDirectory fetch --depth 1 origin main | Out-Null
         git -C $CacheDirectory reset --hard origin/main | Out-Null
         git -C $CacheDirectory clean -fd | Out-Null
@@ -113,8 +133,8 @@ function Sync-DotNetSkillsRepository {
     $cacheParent = Split-Path -Parent $CacheDirectory
     Ensure-Directory -Path $cacheParent
 
-    Write-Step "Cloning dotnet/skills into cache"
-    git clone --depth 1 $DotNetSkillsRepoUrl $CacheDirectory | Out-Null
+    Write-Step "Cloning $RepositoryName into cache"
+    git clone --depth 1 $RepositoryUrl $CacheDirectory | Out-Null
 }
 
 Ensure-Directory -Path $targetSkillRoot
@@ -128,12 +148,17 @@ if (-not $SkipCustomSkills) {
 }
 
 if (-not $SkipPublicSkills) {
-    Sync-DotNetSkillsRepository -CacheDirectory $DotNetSkillsCache
+    foreach ($publicSkillSource in $publicSkillSources) {
+        Sync-GitRepository `
+            -RepositoryName $publicSkillSource.Name `
+            -RepositoryUrl $publicSkillSource.RepoUrl `
+            -CacheDirectory $publicSkillSource.CacheDirectory
 
-    Write-Step "Installing public sibling skills from dotnet/skills"
-    foreach ($skillName in $publicSkillNames) {
-        $sourceDirectory = Find-SkillDirectory -Root $DotNetSkillsCache -SkillName $skillName
-        Install-SkillDirectory -SourceDirectory $sourceDirectory -SkillName $skillName -Origin "dotnet/skills"
+        Write-Step "Installing public sibling skills from $($publicSkillSource.Name)"
+        foreach ($skillName in $publicSkillSource.SkillNames) {
+            $sourceDirectory = Find-SkillDirectory -Root $publicSkillSource.CacheDirectory -SkillName $skillName
+            Install-SkillDirectory -SourceDirectory $sourceDirectory -SkillName $skillName -Origin $publicSkillSource.Name
+        }
     }
 }
 
