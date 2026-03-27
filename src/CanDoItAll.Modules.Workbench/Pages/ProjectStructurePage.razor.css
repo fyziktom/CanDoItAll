@@ -80,6 +80,9 @@
 .project-structure-toolbox {
     display: grid;
     gap: 0.85rem;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    min-height: 0;
+    height: 100%;
 }
 
 .project-structure-toolbox__header-meta {
@@ -95,17 +98,37 @@
 .project-structure-toolbox__body {
     min-height: 0;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
 }
 
 .project-structure-toolbox__sections {
     min-height: 0;
     overflow: auto;
-    padding-right: 0.2rem;
+    padding-right: 0.35rem;
+    padding-bottom: 0.2rem;
+    overscroll-behavior: contain;
     scrollbar-width: thin;
 }
 
 .project-structure-toolbox .cw-context-toolbox__item {
     min-height: 3.05rem;
+}
+
+.project-structure-toolbox .cw-context-toolbox__section-summary {
+    padding: 0.72rem 0.82rem;
+}
+
+.project-structure-toolbox .cw-context-toolbox__section-body,
+.project-structure-toolbox .cw-context-toolbox__item-list {
+    gap: 0.45rem;
+    padding: 0 0.7rem 0.7rem;
+}
+
+.project-structure-toolbox .cw-context-toolbox__item {
+    border-radius: 0.78rem;
+    padding: 0.66rem 0.72rem;
 }
 
 .project-structure-page .cw-floating-window .cw-panel-card,

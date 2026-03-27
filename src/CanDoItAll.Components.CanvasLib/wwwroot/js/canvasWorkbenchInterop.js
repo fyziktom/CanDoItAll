@@ -3347,6 +3347,41 @@
         return { composer, card };
     }
 
+    function createComposerWizard(document, steps) {
+        if (!Array.isArray(steps) || steps.length === 0) {
+            return null;
+        }
+
+        const wizard = createElement(document, "ol", "cw-canvas-composer__wizard");
+        for (const step of steps) {
+            const item = createElement(document, "li", "cw-canvas-composer__wizard-item");
+            item.appendChild(createElement(document, "span", "cw-canvas-composer__wizard-step", `Step ${step.number}`));
+            item.appendChild(createElement(document, "strong", "cw-canvas-composer__wizard-label", step.title));
+            wizard.appendChild(item);
+        }
+
+        return wizard;
+    }
+
+    function createComposerSection(document, stepNumber, title, description) {
+        const section = createElement(document, "section", "cw-canvas-composer__section");
+        const header = createElement(document, "div", "cw-canvas-composer__section-header");
+        header.appendChild(createElement(document, "span", "cw-canvas-composer__section-step", String(stepNumber).padStart(2, "0")));
+
+        const copy = createElement(document, "div", "cw-canvas-composer__section-copy");
+        copy.appendChild(createElement(document, "strong", null, title));
+        if (description) {
+            copy.appendChild(createElement(document, "small", null, description));
+        }
+
+        header.appendChild(copy);
+
+        const body = createElement(document, "div", "cw-canvas-composer__section-body");
+        section.appendChild(header);
+        section.appendChild(body);
+        return { section, body };
+    }
+
     function updateComposerFileState(composer) {
         if (!composer) {
             return;
@@ -3370,14 +3405,33 @@
         closeComposer(state, { focusHost: false });
 
         const shell = decorateComposerShell(state, `Create ${action.label || "item"}`, action.label || "Create", "dialog");
-        const fields = createElement(state.document, "div", "cw-canvas-composer__fields");
+        const dialogBody = createElement(state.document, "div", "cw-canvas-composer__dialog-body");
+        const overview = createElement(state.document, "div", "cw-canvas-composer__overview");
+        const scroll = createElement(state.document, "div", "cw-canvas-composer__scroll");
+        const sectionSteps = [];
+        const appendSection = (title, description) => {
+            const stepNumber = sectionSteps.length + 1;
+            sectionSteps.push({ number: stepNumber, title });
+            const section = createComposerSection(state.document, stepNumber, title, description);
+            scroll.appendChild(section.section);
+            return section.body;
+        };
         const showDefaultTextFields = action.showDefaultTextFields !== false;
         let titleInput = null;
         let subtitleInput = null;
         let notesInput = null;
-        let deferredNotesField = null;
+        let defaultFields = null;
+        let notesFields = null;
+
+        if (action.description) {
+            overview.appendChild(createElement(state.document, "p", "cw-canvas-composer__intro", action.description));
+        }
 
         if (showDefaultTextFields) {
+            const detailsSection = appendSection("Details", "Name the item and keep the create request readable on the canvas.");
+            defaultFields = createElement(state.document, "div", "cw-canvas-composer__fields");
+            detailsSection.appendChild(defaultFields);
+
             const titleField = createElement(state.document, "label", "cw-canvas-composer__field");
             titleField.appendChild(createElement(state.document, "span", null, action.titleLabel || "Title"));
             titleInput = createElement(state.document, "input", "cw-canvas-composer__input");
@@ -3385,7 +3439,7 @@
             titleInput.value = request?.title || "";
             titleInput.placeholder = action.titlePlaceholder || "";
             titleField.appendChild(titleInput);
-            fields.appendChild(titleField);
+            defaultFields.appendChild(titleField);
 
             const subtitleField = createElement(state.document, "label", "cw-canvas-composer__field");
             subtitleField.appendChild(createElement(state.document, "span", null, action.subtitleLabel || "Subtitle"));
@@ -3394,7 +3448,7 @@
             subtitleInput.value = request?.subtitle || "";
             subtitleInput.placeholder = action.subtitlePlaceholder || "";
             subtitleField.appendChild(subtitleInput);
-            fields.appendChild(subtitleField);
+            defaultFields.appendChild(subtitleField);
 
             const notesField = createElement(state.document, "label", "cw-canvas-composer__field");
             notesField.appendChild(createElement(state.document, "span", null, action.notesLabel || "Notes"));
@@ -3402,12 +3456,15 @@
             notesInput.value = request?.notes || "";
             notesInput.placeholder = action.notesPlaceholder || "";
             notesField.appendChild(notesInput);
-            if (action.requiresFile) {
-                deferredNotesField = notesField;
-            }
-            else {
-                fields.appendChild(notesField);
-            }
+
+            const notesSection = appendSection(
+                "Notes",
+                action.requiresFile
+                    ? "Capture the supporting context after the required file is attached."
+                    : "Capture the supporting context and next-step guidance for the new item.");
+            notesFields = createElement(state.document, "div", "cw-canvas-composer__fields");
+            notesFields.appendChild(notesField);
+            notesSection.appendChild(notesFields);
         }
 
         const inputValueLookup = new Map();
@@ -3423,6 +3480,13 @@
         }
 
         const inputFieldEntries = [];
+        let inputFields = null;
+        if ((action.inputFields || []).length > 0) {
+            const inputsSection = appendSection("Inputs", "Complete the typed fields required before the item can be created.");
+            inputFields = createElement(state.document, "div", "cw-canvas-composer__fields");
+            inputsSection.appendChild(inputFields);
+        }
+
         for (const field of action.inputFields || []) {
             const fieldWrapper = createElement(state.document, "label", "cw-canvas-composer__field");
             fieldWrapper.appendChild(createElement(
@@ -3464,7 +3528,7 @@
                 input.placeholder = field.placeholder || "";
             }
             fieldWrapper.appendChild(input);
-            fields.appendChild(fieldWrapper);
+            inputFields.appendChild(fieldWrapper);
             const notifyInputChanged = () => {
                 if (state.composer) {
                     updateComposerFileState(state.composer);
@@ -3483,6 +3547,11 @@
         let fileSummary = null;
         let fileInput = null;
         if (action.requiresFile) {
+            const uploadSection = appendSection(
+                "Attachment",
+                action.supportsDragDrop
+                    ? "Drop the required file here or choose it from disk."
+                    : "Choose the required file from disk before you create the item.");
             const uploadField = createElement(state.document, "div", "cw-canvas-composer__upload");
             const uploadTitle = createElement(state.document, "span", "cw-canvas-composer__upload-title", action.filePrompt || "Drop a file here or choose one.");
             uploadField.appendChild(uploadTitle);
@@ -3507,7 +3576,7 @@
             dropZone.appendChild(dropCopy);
             dropZone.appendChild(fileSummary);
             uploadField.appendChild(dropZone);
-            fields.appendChild(uploadField);
+            uploadSection.appendChild(uploadField);
 
             const assignUpload = async file => {
                 uploadedFile = await readFileAsUpload(file);
@@ -3584,8 +3653,9 @@
             }
         }
 
-        if (deferredNotesField) {
-            fields.appendChild(deferredNotesField);
+        const wizard = createComposerWizard(state.document, sectionSteps);
+        if (wizard) {
+            overview.appendChild(wizard);
         }
 
         const actions = createElement(state.document, "div", "cw-canvas-composer__actions");
@@ -3602,10 +3672,11 @@
         create.addEventListener("click", () => commitComposer(state));
         actions.appendChild(create);
 
-        shell.card.appendChild(fields);
-        if (action.description) {
-            shell.card.appendChild(createElement(state.document, "p", "cw-canvas-composer__copy", action.description));
+        if (overview.childElementCount > 0) {
+            dialogBody.appendChild(overview);
         }
+        dialogBody.appendChild(scroll);
+        shell.card.appendChild(dialogBody);
         shell.card.appendChild(actions);
 
         state.composer = {

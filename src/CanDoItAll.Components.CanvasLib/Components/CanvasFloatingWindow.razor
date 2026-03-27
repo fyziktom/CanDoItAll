@@ -1,5 +1,6 @@
 @namespace CanDoItAll.Components.CanvasLib
 @implements IAsyncDisposable
+@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.CanvasLib
 @inject IJSRuntime JsRuntime
 
@@ -22,14 +23,16 @@
                 <button type="button"
                         class="cw-floating-window__action"
                         aria-label="@RestoreLabel"
+                        title="@RestoreLabel"
                         @onclick="RestoreWindowAsync">
-                    Open
+                    <Icon Name="expand" />
                 </button>
                 <button type="button"
                         class="cw-floating-window__action"
                         aria-label="@HideLabel"
+                        title="@HideLabel"
                         @onclick="HideWindowAsync">
-                    Hide
+                    <Icon Name="visibility_off" />
                 </button>
             </div>
         </div>
@@ -53,21 +56,24 @@
                 <button type="button"
                         class="cw-floating-window__action"
                         aria-label="@MinimizeLabel"
+                        title="@MinimizeLabel"
                         @onclick="MinimizeWindowAsync">
-                    Min
+                    <Icon Name="minimize" />
                 </button>
                 <button type="button"
                         class="cw-floating-window__action"
                         aria-label="@NormalizeLabel"
+                        title="@NormalizeLabel"
                         disabled="@IsNormalized"
                         @onclick="NormalizeWindowAsync">
-                    Reset
+                    <Icon Name="restart_alt" />
                 </button>
                 <button type="button"
                         class="cw-floating-window__action"
                         aria-label="@HideLabel"
+                        title="@HideLabel"
                         @onclick="HideWindowAsync">
-                    Hide
+                    <Icon Name="visibility_off" />
                 </button>
             </div>
         </header>
@@ -130,13 +136,13 @@
     public bool AllowResize { get; set; } = true;
 
     [Parameter]
-    public string RestoreLabel { get; set; } = "Restore window";
+    public string RestoreLabel { get; set; } = "Expand window";
 
     [Parameter]
     public string MinimizeLabel { get; set; } = "Minimize window";
 
     [Parameter]
-    public string NormalizeLabel { get; set; } = "Restore default position and size";
+    public string NormalizeLabel { get; set; } = "Restart window position and size";
 
     [Parameter]
     public string HideLabel { get; set; } = "Hide window";

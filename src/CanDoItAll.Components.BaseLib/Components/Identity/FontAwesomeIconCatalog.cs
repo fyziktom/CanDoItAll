@@ -37,6 +37,7 @@ internal static class FontAwesomeIconCatalog
         ["developer_mode"] = "fa-solid fa-code",
         ["download"] = "fa-solid fa-download",
         ["draw"] = "fa-solid fa-pen",
+        ["expand"] = "fa-solid fa-up-right-and-down-left-from-center",
         ["expand_less"] = "fa-solid fa-chevron-up",
         ["expand_more"] = "fa-solid fa-chevron-down",
         ["favorite"] = "fa-solid fa-heart",
@@ -61,6 +62,7 @@ internal static class FontAwesomeIconCatalog
         ["looks_two"] = "fa-solid fa-list-ol",
         ["manage_accounts"] = "fa-solid fa-users-gear",
         ["menu"] = "fa-solid fa-bars",
+        ["minimize"] = "fa-solid fa-window-minimize",
         ["monitor_heart"] = "fa-solid fa-heart-pulse",
         ["music_note"] = "fa-solid fa-music",
         ["network_ping"] = "fa-solid fa-signal",
@@ -113,6 +115,7 @@ internal static class FontAwesomeIconCatalog
         ["upload_file"] = "fa-solid fa-file-arrow-up",
         ["usb"] = "fa-brands fa-usb",
         ["visibility"] = "fa-solid fa-eye",
+        ["visibility_off"] = "fa-solid fa-eye-slash",
         ["volume_up"] = "fa-solid fa-volume-high",
         ["workspace_premium"] = "fa-solid fa-crown"
     };
