@@ -3,6 +3,7 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
+using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,8 +46,11 @@ public sealed class ProjectStructurePageTests
         {
             Assert.Contains("Inspector", cut.Markup);
             Assert.Contains("Health", cut.Markup);
+            Assert.Contains("Blocks", cut.Markup);
             Assert.Contains("project-structure-selection-window", cut.Markup);
             Assert.Contains("project-structure-validation-window", cut.Markup);
+            Assert.Contains("project-structure-toolbox-window", cut.Markup);
+            Assert.Contains("project-structure-standard-blocks-toolbox", cut.Markup);
             Assert.DoesNotContain("cw-inspector-column", cut.Markup, StringComparison.Ordinal);
         });
     }
@@ -100,9 +104,10 @@ public sealed class ProjectStructurePageTests
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Create next to source", cut.Markup);
+            Assert.Contains("Open standard blocks", cut.Markup);
             Assert.Contains("Architecture note", cut.Markup);
             Assert.Contains("Tracks the first implementation idea", cut.Markup);
-            Assert.Contains("Assets", cut.Markup);
+            Assert.Contains("project-structure-standard-blocks-toolbox", cut.Markup);
             Assert.Contains(">Link<", cut.Markup);
             Assert.Contains(">Image<", cut.Markup);
             Assert.Contains(">Video<", cut.Markup);
@@ -237,6 +242,220 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Selected_nodes_with_children_open_summary_modal_and_show_export_actions()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Summary Modal Project";
+        project.Description = "Verify the progress summary modal.";
+        project.Objective = "Expose summary exports from the selection window.";
+        project.CurrentPhase = "Execution";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var feature = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Execution feature",
+                "Delivery branch",
+                "Use this node as the summary root.",
+                $"project:{projectId}",
+                520,
+                240,
+                null,
+                null,
+                "feature"));
+
+        await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Ship checklist",
+                "Ready for release",
+                "Confirm the rollout tasks.",
+                feature.Id,
+                780,
+                340,
+                new DateTimeOffset(2026, 3, 28, 9, 0, 0, TimeSpan.Zero),
+                new DateTimeOffset(2026, 3, 29, 18, 0, 0, TimeSpan.Zero),
+                "task"));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, feature.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Execution feature", cut.Markup);
+            Assert.Contains(">Summary<", cut.Markup);
+        });
+
+        cut.FindAll("button")
+            .First(button => string.Equals(button.TextContent.Trim(), "Summary", StringComparison.Ordinal))
+            .Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Export XLSX", cut.Markup);
+            Assert.Contains("Export Gantt", cut.Markup);
+            Assert.Contains("Ship checklist", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task Selected_mermaid_nodes_open_viewer_modal_with_detected_diagram_type()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Mermaid Viewer Project";
+        project.Description = "Verify Mermaid viewing from project structure.";
+        project.Objective = "Open Mermaid source in a typed viewer.";
+        project.CurrentPhase = "Review";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var mermaidMetadata = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            File = new ProjectFileMetadata
+            {
+                FileSubtype = ProjectFileSubtype.Mermaid,
+                MermaidDiagramKind = MermaidDiagramKind.Gantt
+            }
+        });
+
+        var mermaidNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "Release gantt",
+                "Mermaid file",
+                "gantt\n    title Release plan\n    section Build\n    Kickoff :done, task1, 2026-03-28, 1d",
+                $"project:{projectId}",
+                560,
+                260,
+                null,
+                null,
+                "mermaid",
+                null,
+                mermaidMetadata));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, mermaidNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Mermaid viewer", cut.Markup);
+            Assert.Contains("View Mermaid", cut.Markup);
+        });
+
+        cut.FindAll("button")
+            .First(button => string.Equals(button.TextContent.Trim(), "View Mermaid", StringComparison.Ordinal))
+            .Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Detected diagram type: Gantt", cut.Markup);
+            Assert.Contains("Release plan", cut.Markup);
+            Assert.Contains("Kickoff", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task Transcript_nodes_open_confirmation_dialog_with_provider_selection()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var workspaceService = harness.Context.Services.GetRequiredService<WorkspaceService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Transcript Workflow Project";
+        project.Description = "Verify transcript confirmation and provider selection.";
+        project.Objective = "Require confirmation before sending transcript actions.";
+        project.CurrentPhase = "Review";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var providerSave = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
+        {
+            Name = "Local llama",
+            ProviderKind = ProviderKind.OllamaLocal,
+            BaseUrl = "http://localhost:11434",
+            DefaultModel = "llama3.1",
+            TimeoutSeconds = 30,
+            IsEnabled = true
+        });
+
+        Assert.True(providerSave.IsSuccess);
+
+        var transcriptMetadata = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            Transcript = new ProjectTranscriptMetadata
+            {
+                TranscriptText = "Alice promised the rollout checklist and Bob owes the final screenshots.",
+                LastProviderName = "Legacy reviewer"
+            }
+        });
+
+        var transcriptNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Transcript,
+                "Workshop transcript",
+                "Client call",
+                "Alice promised the rollout checklist and Bob owes the final screenshots.",
+                $"project:{projectId}",
+                540,
+                280,
+                null,
+                null,
+                null,
+                null,
+                transcriptMetadata));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, transcriptNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(">Summarize<", cut.Markup);
+            Assert.Contains(">Find my tasks<", cut.Markup);
+            Assert.Contains(">Find others delivery to me<", cut.Markup);
+        });
+
+        cut.FindAll("button")
+            .First(button => string.Equals(button.TextContent.Trim(), "Find my tasks", StringComparison.Ordinal))
+            .Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("This action will send transcript content to an external or local provider.", cut.Markup);
+            Assert.Contains("Local llama", cut.Markup);
+            Assert.Contains("Select a provider", cut.Markup);
+            Assert.Contains("Last provider: Legacy reviewer", cut.Markup);
+            Assert.Contains("Send request", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Pdf_attachment_nodes_render_inline_preview_and_open_modal_without_navigation()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -365,6 +584,19 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Expand preview", cut.Markup);
         });
     }
+
+    private static Task SaveSelectedNodeStateAsync(ProjectWorkbenchService workbenchService, Guid projectId, params string[] selectedNodeIds)
+        => workbenchService.SaveViewStateAsync(
+            projectId,
+            "structure",
+            new CanvasWorkbenchUiState
+            {
+                SelectedNodeIds = selectedNodeIds.ToList(),
+                WindowStates = new Dictionary<string, CanvasWorkbenchWindowState>(StringComparer.Ordinal)
+                {
+                    ["project-structure.selection"] = new CanvasWorkbenchWindowState { IsVisible = true }
+                }
+            }.ToJson());
 }
 
 

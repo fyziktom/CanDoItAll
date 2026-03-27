@@ -18,7 +18,8 @@ public static class ProjectWorkbenchSchemaInitializer
         ("MarkerIcon", """TEXT NOT NULL DEFAULT ''"""),
         ("MarkerTone", """TEXT NOT NULL DEFAULT ''"""),
         ("MarkerLabel", """TEXT NOT NULL DEFAULT ''"""),
-        ("Priority", """INTEGER NOT NULL DEFAULT 0""")
+        ("Priority", """INTEGER NOT NULL DEFAULT 0"""),
+        ("MetadataJson", """TEXT NOT NULL DEFAULT '{{}}'""")
     ];
 
     private static readonly string[] RequiredTables =
@@ -53,6 +54,7 @@ public static class ProjectWorkbenchSchemaInitializer
             "MarkerTone" TEXT NOT NULL DEFAULT '',
             "MarkerLabel" TEXT NOT NULL DEFAULT '',
             "Priority" INTEGER NOT NULL DEFAULT 0,
+            "MetadataJson" TEXT NOT NULL DEFAULT '{{}}',
             "ParentNodeKey" TEXT NULL,
             "PositionX" REAL NOT NULL,
             "PositionY" REAL NOT NULL,

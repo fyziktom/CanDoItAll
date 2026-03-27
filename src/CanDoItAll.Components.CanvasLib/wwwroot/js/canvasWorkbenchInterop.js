@@ -110,7 +110,15 @@
             label: field?.label || field?.key || "Value",
             placeholder: field?.placeholder || "",
             inputMode: field?.inputMode || "text",
-            isRequired: !!field?.isRequired
+            isRequired: !!field?.isRequired,
+            options: Array.isArray(field?.options)
+                ? field.options
+                    .filter(option => option && (option.value || option.label))
+                    .map(option => ({
+                        value: option.value || "",
+                        label: option.label || option.value || ""
+                    }))
+                : []
         };
     }
 
@@ -1060,6 +1068,7 @@
 
     function renderLinks(state, visibleNodes) {
         state.links.innerHTML = "";
+        ensureLinkMarkers(state);
         ensureLayoutPositions(state, visibleNodes);
         const visible = new Set(visibleNodes.map(node => node.id));
 
@@ -1094,8 +1103,52 @@
             path.setAttribute("stroke-linecap", "round");
             path.setAttribute("stroke-linejoin", "round");
             path.setAttribute("class", link.isUserAuthored ? "cw-link-path is-flow" : "cw-link-path");
+            if (shouldRenderArrow(link)) {
+                path.setAttribute("marker-end", link.isUserAuthored ? "url(#cw-link-arrow-user)" : "url(#cw-link-arrow-system)");
+            }
+
             state.links.appendChild(path);
         }
+    }
+
+    function ensureLinkMarkers(state) {
+        if (!state.links || state.links.querySelector("defs")) {
+            return;
+        }
+
+        const defs = createSvgElement(state.document, "defs");
+        defs.appendChild(createLinkMarker(state.document, "cw-link-arrow-user", "rgba(14, 165, 233, 0.86)"));
+        defs.appendChild(createLinkMarker(state.document, "cw-link-arrow-system", "rgba(100, 116, 139, 0.56)"));
+        state.links.appendChild(defs);
+    }
+
+    function createLinkMarker(document, markerId, fill) {
+        const marker = createSvgElement(document, "marker");
+        marker.setAttribute("id", markerId);
+        marker.setAttribute("markerWidth", "12");
+        marker.setAttribute("markerHeight", "12");
+        marker.setAttribute("refX", "10");
+        marker.setAttribute("refY", "6");
+        marker.setAttribute("orient", "auto");
+        marker.setAttribute("markerUnits", "strokeWidth");
+
+        const path = createSvgElement(document, "path");
+        path.setAttribute("d", "M 0 0 L 12 6 L 0 12 z");
+        path.setAttribute("fill", fill);
+        marker.appendChild(path);
+        return marker;
+    }
+
+    function shouldRenderArrow(link) {
+        if (!link) {
+            return false;
+        }
+
+        const kind = (link.kind || "").toLowerCase();
+        return !!link.isUserAuthored ||
+            kind === "dependson" ||
+            kind === "derivedfrom" ||
+            kind === "uses";
     }
 
     function getExpandedFrameNodeIds(state, frame) {
@@ -3140,11 +3193,31 @@
     }
 
     function submitCreateRequest(state, payload, options) {
+        const createSignature = JSON.stringify({
+            actionId: payload?.actionId || "",
+            sourceNodeId: payload?.sourceNodeId || null,
+            parentNodeId: payload?.parentNodeId || null,
+            placementKind: payload?.placementKind || "child",
+            objectSubtype: payload?.objectSubtype || "",
+            title: payload?.title || "",
+            subtitle: payload?.subtitle || "",
+            notes: payload?.notes || "",
+            uploadedFileName: payload?.uploadedFile?.fileName || "",
+            inputValues: Array.isArray(payload?.inputValues) ? payload.inputValues : []
+        });
+        const requestedAt = Date.now();
+        if (state.lastCreateSignature === createSignature &&
+            requestedAt - (state.lastCreateRequestedAt || 0) < 450) {
+            return;
+        }
+
+        state.lastCreateSignature = createSignature;
+        state.lastCreateRequestedAt = requestedAt;
         state.pendingCreate = {
             actionId: payload?.actionId || "",
             sourceNodeId: payload?.sourceNodeId || null,
             placementKind: payload?.placementKind || "child",
-            requestedAt: Date.now(),
+            requestedAt,
             focusHost: options?.focusHost !== false
         };
         state.dotNetRef.invokeMethodAsync("OnCreateAction", JSON.stringify(payload));
@@ -3302,6 +3375,7 @@
         let titleInput = null;
         let subtitleInput = null;
         let notesInput = null;
+        let deferredNotesField = null;
 
         if (showDefaultTextFields) {
             const titleField = createElement(state.document, "label", "cw-canvas-composer__field");
@@ -3328,7 +3402,12 @@
             notesInput.value = request?.notes || "";
             notesInput.placeholder = action.notesPlaceholder || "";
             notesField.appendChild(notesInput);
-            fields.appendChild(notesField);
+            if (action.requiresFile) {
+                deferredNotesField = notesField;
+            }
+            else {
+                fields.appendChild(notesField);
+            }
         }
 
         const inputValueLookup = new Map();
@@ -3354,23 +3433,45 @@
 
             const inputMode = (field.inputMode || "text").toLowerCase();
             const isMultiline = inputMode === "textarea" || inputMode === "multiline";
+            const isSelect = inputMode === "select";
             const input = createElement(
                 state.document,
-                isMultiline ? "textarea" : "input",
+                isSelect ? "select" : (isMultiline ? "textarea" : "input"),
                 isMultiline ? "cw-canvas-composer__textarea" : "cw-canvas-composer__input");
-            if (!isMultiline) {
-                input.type = inputMode === "url" ? "url" : "text";
+            if (isSelect) {
+                const placeholderValue = field.placeholder || "Select an option";
+                const placeholderOption = createElement(state.document, "option", null, placeholderValue);
+                placeholderOption.value = "";
+                input.appendChild(placeholderOption);
+                for (const option of field.options || []) {
+                    const optionElement = createElement(state.document, "option", null, option.label || option.value || "");
+                    optionElement.value = option.value || "";
+                    input.appendChild(optionElement);
+                }
+            }
+            else if (!isMultiline) {
+                input.type = inputMode === "url" ? "url" :
+                    inputMode === "date" ? "date" :
+                        inputMode === "datetime-local" ? "datetime-local" :
+                            inputMode === "number" ? "number" :
+                                inputMode === "email" ? "email" :
+                                    inputMode === "tel" ? "tel" :
+                                        "text";
             }
 
             input.value = inputValueLookup.get(field.key) || "";
-            input.placeholder = field.placeholder || "";
+            if (!isSelect) {
+                input.placeholder = field.placeholder || "";
+            }
             fieldWrapper.appendChild(input);
             fields.appendChild(fieldWrapper);
-            input.addEventListener("input", () => {
+            const notifyInputChanged = () => {
                 if (state.composer) {
                     updateComposerFileState(state.composer);
                 }
-            });
+            };
+            input.addEventListener("input", notifyInputChanged);
+            input.addEventListener("change", notifyInputChanged);
             inputFieldEntries.push({
                 key: field.key,
                 input,
@@ -3481,6 +3582,10 @@
                     await assignUpload(file);
                 });
             }
+        }
+
+        if (deferredNotesField) {
+            fields.appendChild(deferredNotesField);
         }
 
         const actions = createElement(state.document, "div", "cw-canvas-composer__actions");
@@ -5031,6 +5136,8 @@
             containingBlockOverride: null,
             resizeObserver: null,
             lastPointerTarget: null,
+            lastCreateSignature: "",
+            lastCreateRequestedAt: 0,
             recentDoubleActivationAt: 0,
             wheelZoom: null,
             measuredNodeSizes: new Map(),
@@ -5108,6 +5215,131 @@
 
             state.pendingCreate = null;
         }
+    }
+
+    async function exportImageData(host) {
+        const state = host?.__canvasWorkbenchState;
+        if (!state) {
+            return null;
+        }
+
+        const bounds = host.getBoundingClientRect();
+        const width = Math.max(1, Math.ceil(bounds.width));
+        const height = Math.max(1, Math.ceil(bounds.height));
+        const clonedHost = cloneWorkbenchForExport(host, width, height);
+        if (!clonedHost) {
+            return null;
+        }
+
+        const serializer = new XMLSerializer();
+        const svgMarkup = [
+            `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+            `<foreignObject width="100%" height="100%">`,
+            serializer.serializeToString(clonedHost),
+            `</foreignObject>`,
+            `</svg>`
+        ].join("");
+
+        const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgMarkup)}`;
+        const image = await loadImage(svgDataUrl, 12000);
+        const canvas = state.document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        if (!context) {
+            return null;
+        }
+
+        context.fillStyle = "rgba(248, 250, 252, 1)";
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+        return canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
+    }
+
+    function cloneWorkbenchForExport(host, width, height) {
+        const clone = host.cloneNode(true);
+        const sourceElements = [host, ...host.querySelectorAll("*")];
+        const cloneElements = [clone, ...clone.querySelectorAll("*")];
+        if (sourceElements.length !== cloneElements.length) {
+            return null;
+        }
+
+        for (let index = 0; index < sourceElements.length; index += 1) {
+            copyComputedStyles(sourceElements[index], cloneElements[index]);
+        }
+
+        clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+        clone.style.margin = "0";
+        clone.style.width = `${width}px`;
+        clone.style.height = `${height}px`;
+        clone.style.overflow = "hidden";
+
+        for (const selector of [
+            ".cw-context-menu",
+            ".cw-workbench__popover",
+            ".cw-status-notice",
+            ".cw-minimap",
+            ".cw-diagnostics",
+            ".cw-marquee",
+            ".cw-workbench__guide-layer",
+            ".cw-workbench__debug-layer",
+            ".cw-workbench__anchor-layer",
+            ".cw-workbench__transform-layer"
+        ]) {
+            clone.querySelectorAll(selector).forEach(element => element.remove());
+        }
+
+        return clone;
+    }
+
+    function copyComputedStyles(source, target) {
+        if (!source || !target) {
+            return;
+        }
+
+        const computedStyle = window.getComputedStyle(source);
+        const cssText = Array.from(computedStyle)
+            .map(name => `${name}:${computedStyle.getPropertyValue(name)};`)
+            .join("");
+        target.setAttribute("style", cssText);
+    }
+
+    function loadImage(sourceUrl, timeoutMs = 10000) {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            let completed = false;
+            const timeoutHandle = window.setTimeout(() => {
+                if (completed) {
+                    return;
+                }
+
+                completed = true;
+                image.onload = null;
+                image.onerror = null;
+                reject(new Error(`Timed out loading exported image after ${timeoutMs}ms.`));
+            }, timeoutMs);
+
+            image.onload = () => {
+                if (completed) {
+                    return;
+                }
+
+                completed = true;
+                window.clearTimeout(timeoutHandle);
+                resolve(image);
+            };
+            image.onerror = () => {
+                if (completed) {
+                    return;
+                }
+
+                completed = true;
+                window.clearTimeout(timeoutHandle);
+                reject(new Error("Failed to load the exported workbench image."));
+            };
+            image.decoding = "sync";
+            image.src = sourceUrl;
+        });
     }
 
     root.canvasWorkbench = {
@@ -5212,6 +5444,12 @@
             const state = host.__canvasWorkbenchState;
             return state ? serializeState(state) : JSON.stringify({});
         },
+        getViewportSnapshot() {
+            return {
+                width: window.innerWidth || 0,
+                height: window.innerHeight || 0
+            };
+        },
         selectNodes(host, nodeIds, primaryNodeId) {
             const state = host.__canvasWorkbenchState;
             if (!state) {
@@ -5237,6 +5475,9 @@
 
             resize(state);
             render(state);
+        },
+        exportImageData(host) {
+            return exportImageData(host);
         },
         dispose(host) {
             if (!host) {

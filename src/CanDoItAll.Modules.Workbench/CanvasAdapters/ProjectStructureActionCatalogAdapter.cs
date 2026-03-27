@@ -10,12 +10,16 @@ public sealed class ProjectStructureActionCatalogAdapter
         var actions = new List<CanvasWorkbenchAction>
         {
             new() { ActionId = "open", Label = "Open", MenuLabel = "Open", Description = "Open the linked artifact or routed workspace.", Icon = "open", Tone = "accent" },
+            new() { ActionId = "summary", Label = "Summary", MenuLabel = "Summary", Description = "Open the hierarchical progress summary and export tools.", Icon = "summary", Tone = "sky" },
             new() { ActionId = "connect", Label = "Connect", MenuLabel = "Connect", Description = "Use the selected node as the source for a dependency link.", Icon = "link", Tone = "neutral" },
+            new() { ActionId = "reconnect", Label = "Reconnect", MenuLabel = "Reconnect", Description = "Pick a new parent node for this branch explicitly.", Icon = "relink", Tone = "primary" },
+            new() { ActionId = "disconnect", Label = "Disconnect", MenuLabel = "Disconnect", Description = "Detach this node from its current parent without deleting it.", Icon = "unlink", Tone = "ghost" },
             BuildProgressAction(),
             BuildMarkerAction(),
             BuildPriorityAction(),
             new() { ActionId = "validate", Label = "Validate", MenuLabel = "Validate", Description = "Open project validation tooling from this node.", Icon = "qa", Tone = "mint" },
-            new() { ActionId = "test", Label = "Test", MenuLabel = "Test", Description = "Open test planning and evidence flows.", Icon = "test", Tone = "warn" }
+            new() { ActionId = "test", Label = "Test", MenuLabel = "Test", Description = "Open test planning and evidence flows.", Icon = "test", Tone = "warn" },
+            new() { ActionId = "delete", Label = "Delete", MenuLabel = "Delete", Description = "Delete this node, with confirmation when the impact is not trivial.", Icon = "delete", Tone = "danger" }
         };
 
         if (node.ObjectType == ProjectObjectType.PromptFlow)
@@ -29,6 +33,43 @@ public sealed class ProjectStructureActionCatalogAdapter
                 Icon = "flow",
                 Tone = "sky"
             });
+        }
+
+        if (node.ObjectType == ProjectObjectType.Recording)
+        {
+            actions.Insert(2, new CanvasWorkbenchAction
+            {
+                ActionId = "transcript:create",
+                Label = "Create transcript",
+                MenuLabel = "Transcript",
+                Description = "Create a transcript beneath this recording and preserve the source relationship.",
+                Icon = "transcript",
+                Tone = "mint"
+            });
+        }
+
+        if (node.ObjectType == ProjectObjectType.Transcript)
+        {
+            actions.Insert(2, new CanvasWorkbenchAction
+            {
+                ActionId = "transcript-llm",
+                Label = "LLM actions",
+                MenuLabel = "LLM",
+                Description = "Run transcript actions with explicit confirmation and provider selection.",
+                Icon = "ai",
+                Tone = "accent",
+                Children =
+                [
+                    new CanvasWorkbenchAction { ActionId = "transcript:summarize", Label = "Summarize", MenuLabel = "Summarize", Description = "Summarize this transcript with a selected provider.", Icon = "summary", Tone = "accent", MenuSize = "compact" },
+                    new CanvasWorkbenchAction { ActionId = "transcript:find-my-tasks", Label = "Find my tasks", MenuLabel = "My tasks", Description = "Extract work assigned to you from this transcript.", Icon = "task", Tone = "warn", MenuSize = "compact" },
+                    new CanvasWorkbenchAction { ActionId = "transcript:find-others-deliveries", Label = "Find others delivery to me", MenuLabel = "Others to me", Description = "Extract promised deliveries coming back to you.", Icon = "deliver", Tone = "sky", MenuSize = "compact" }
+                ]
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(node.ParentId))
+        {
+            actions.RemoveAll(action => action.ActionId is "disconnect" or "reconnect");
         }
 
         if (node.ObjectType == ProjectObjectType.PromptStep)

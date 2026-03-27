@@ -11,12 +11,17 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
     private Task? _stdoutPump;
     private Task? _stderrPump;
     private string? _workspaceRoot;
+    private string? _databaseConnectionString;
 
     public string BaseUrl { get; } = Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_BASEURL") ?? "http://127.0.0.1:5188";
 
     public IPlaywright Playwright { get; private set; } = default!;
 
     public IBrowser Browser { get; private set; } = default!;
+
+    public string? DatabaseConnectionString => _databaseConnectionString;
+
+    public string? StorageWorkspaceRoot => _workspaceRoot is null ? null : Path.Combine(_workspaceRoot, "workspace");
 
     public async Task InitializeAsync()
     {
@@ -35,6 +40,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
         var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
         var databasePath = Path.Combine(_workspaceRoot, "playwright.db");
+        _databaseConnectionString = $"Data Source={databasePath}";
         var processStartInfo = new ProcessStartInfo("dotnet", $"run --no-build --no-launch-profile --project src/CanDoItAll.Web --urls {BaseUrl}")
         {
             WorkingDirectory = repoRoot,
@@ -47,7 +53,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         processStartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
         processStartInfo.Environment["DOTNET_ENVIRONMENT"] = "Development";
         processStartInfo.Environment["Database__Provider"] = "Sqlite";
-        processStartInfo.Environment["Database__ConnectionString"] = $"Data Source={databasePath}";
+        processStartInfo.Environment["Database__ConnectionString"] = _databaseConnectionString;
         processStartInfo.Environment["Storage__WorkspaceRoot"] = Path.Combine(_workspaceRoot, "workspace");
         processStartInfo.Environment["DevelopmentManager__TuningModeEnabled"] = "false";
 
@@ -91,7 +97,16 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
         if (_workspaceRoot is not null && Directory.Exists(_workspaceRoot))
         {
-            DeleteDirectoryWithRetry(_workspaceRoot);
+            try
+            {
+                DeleteDirectoryWithRetry(_workspaceRoot);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
         }
     }
 

@@ -55,7 +55,33 @@ public sealed class ProjectStructurePlacementPolicyTests
         Assert.Equal("source", ProjectStructurePlacementPolicy.ResolveParentNodeId(sourceNode, childRequest));
     }
 
-    private static ProjectStructureNode CreateNode(string id, string parentId, double x, double y)
+    [Fact]
+    public void Child_placement_follows_the_anchor_side_relative_to_its_parent()
+    {
+        var parentNode = CreateNode("parent", null, 620, 260);
+        var leftBranch = CreateNode("left-branch", "parent", 320, 260);
+        var request = new CanvasWorkbenchCreateActionRequest(
+            "add-note",
+            "left-branch",
+            0,
+            0,
+            null,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            "child",
+            "command",
+            string.Empty,
+            null);
+
+        var placement = new ProjectStructurePlacementPolicy().ResolveCreatePlacement([parentNode, leftBranch], leftBranch, leftBranch, request);
+
+        Assert.NotNull(placement.X);
+        Assert.NotNull(placement.Y);
+        Assert.True(placement.X < leftBranch.X);
+    }
+
+    private static ProjectStructureNode CreateNode(string id, string? parentId, double x, double y)
         => new(
             id,
             parentId,

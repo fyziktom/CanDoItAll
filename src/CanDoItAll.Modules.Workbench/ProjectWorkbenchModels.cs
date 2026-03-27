@@ -45,6 +45,7 @@ public sealed class ProjectObjectRecord : IProjectObject
     public string MarkerTone { get; set; } = string.Empty;
     public string MarkerLabel { get; set; } = string.Empty;
     public int Priority { get; set; }
+    public string MetadataJson { get; set; } = "{}";
     public string? ParentNodeKey { get; set; }
     public double PositionX { get; set; }
     public double PositionY { get; set; }
@@ -76,6 +77,7 @@ internal sealed class ProjectObjectRecordConfiguration : IEntityTypeConfiguratio
         builder.Property(item => item.MarkerIcon).HasMaxLength(80);
         builder.Property(item => item.MarkerTone).HasMaxLength(40);
         builder.Property(item => item.MarkerLabel).HasMaxLength(120);
+        builder.Property(item => item.MetadataJson).HasColumnType("TEXT");
         builder.Property(item => item.ParentNodeKey).HasMaxLength(160);
         builder.HasIndex(item => new { item.ProjectId, item.NodeKey }).IsUnique();
     }
@@ -149,7 +151,10 @@ public sealed record ProjectStructureNode(
     string MarkerIcon,
     string MarkerTone,
     string MarkerLabel,
-    int Priority);
+    int Priority,
+    DateTimeOffset? StartUtc = null,
+    DateTimeOffset? EndUtc = null,
+    string MetadataJson = "{}");
 
 public sealed record ProjectStructureLink(string SourceId, string TargetId, ProjectObjectLinkKind Kind, bool IsUserAuthored);
 
@@ -190,7 +195,8 @@ public sealed record ProjectObjectCreateRequest(
     DateTimeOffset? StartUtc = null,
     DateTimeOffset? EndUtc = null,
     string? ObjectSubtype = null,
-    ProjectObjectMediaPayload? Media = null);
+    ProjectObjectMediaPayload? Media = null,
+    string? MetadataJson = null);
 
 public sealed record ProjectObjectSeedRequest(
     ProjectObjectType ObjectType,
@@ -199,7 +205,8 @@ public sealed record ProjectObjectSeedRequest(
     string Notes,
     DateTimeOffset? StartUtc = null,
     DateTimeOffset? EndUtc = null,
-    string? ObjectSubtype = null);
+    string? ObjectSubtype = null,
+    string? MetadataJson = null);
 
 public sealed record ProjectObjectMediaPayload(
     string FileName,
@@ -311,6 +318,7 @@ public sealed class ProjectWorkbenchService(
         var media = await SaveMediaAsync(projectId, request.ObjectType, request.Media, cancellationToken);
         var route = media?.Route ?? $"/projects/{projectId}/structure";
         var artifactKind = media?.ArtifactKind ?? request.ObjectType.ToString();
+        var metadataJson = ResolveMetadataJson(request.ObjectType, request.ObjectSubtype, request.MetadataJson, media);
 
         var record = new ProjectObjectRecord
         {
@@ -329,6 +337,7 @@ public sealed class ProjectWorkbenchService(
             MediaOriginalFileName = media?.OriginalFileName ?? string.Empty,
             ProgressMode = "progress",
             ProgressPercent = 0,
+            MetadataJson = metadataJson,
             ParentNodeKey = request.ParentNodeKey,
             PositionX = position.Item1,
             PositionY = position.Item2,
@@ -384,6 +393,7 @@ public sealed class ProjectWorkbenchService(
                 ObjectSubtype = seed.ObjectSubtype?.Trim() ?? string.Empty,
                 ProgressMode = "progress",
                 ProgressPercent = 0,
+                MetadataJson = ResolveMetadataJson(seed.ObjectType, seed.ObjectSubtype, seed.MetadataJson, null),
                 PositionX = position.Item1,
                 PositionY = position.Item2,
                 StartUtc = seed.StartUtc,
@@ -410,6 +420,110 @@ public sealed class ProjectWorkbenchService(
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await UpsertLinkAsync(dbContext, projectId, sourceNodeKey, targetNodeKey, linkKind, isSystemManaged: false, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<ProjectStructureNode?> ReparentObjectAsync(
+        Guid projectId,
+        string nodeKey,
+        string? parentNodeKey,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var node = await dbContext.Set<ProjectObjectRecord>()
+            .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
+        if (node is null)
+        {
+            return null;
+        }
+
+        var normalizedParentNodeKey = string.IsNullOrWhiteSpace(parentNodeKey)
+            ? null
+            : parentNodeKey.Trim();
+        if (string.Equals(node.ParentNodeKey, normalizedParentNodeKey, StringComparison.Ordinal))
+        {
+            return MapStructureNode(node);
+        }
+
+        var parentLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+            .Where(item => item.ProjectId == projectId &&
+                item.TargetNodeKey == node.NodeKey &&
+                !item.IsSystemManaged &&
+                (item.LinkKind == ProjectObjectLinkKind.BelongsTo || item.LinkKind == ProjectObjectLinkKind.Contains))
+            .ToListAsync(cancellationToken);
+        if (parentLinks.Count > 0)
+        {
+            dbContext.RemoveRange(parentLinks);
+        }
+
+        node.ParentNodeKey = normalizedParentNodeKey;
+        node.UpdatedAtUtc = clock.GetUtcNow();
+
+        if (!string.IsNullOrWhiteSpace(normalizedParentNodeKey))
+        {
+            await UpsertLinkAsync(dbContext, projectId, normalizedParentNodeKey, node.NodeKey, ProjectObjectLinkKind.BelongsTo, isSystemManaged: false, cancellationToken);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return MapStructureNode(node);
+    }
+
+    public async Task<int> DeleteObjectAsync(Guid projectId, string nodeKey, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var records = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == projectId)
+            .ToListAsync(cancellationToken);
+        var root = records.FirstOrDefault(item => item.NodeKey == nodeKey && !item.IsSystemManaged);
+        if (root is null)
+        {
+            return 0;
+        }
+
+        var childrenByParent = records
+            .Where(item => !item.IsSystemManaged && !string.IsNullOrWhiteSpace(item.ParentNodeKey))
+            .GroupBy(item => item.ParentNodeKey!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+        var keysToDelete = new HashSet<string>(StringComparer.Ordinal);
+        var queue = new Queue<string>();
+        queue.Enqueue(root.NodeKey);
+
+        while (queue.Count > 0)
+        {
+            var currentNodeKey = queue.Dequeue();
+            if (!keysToDelete.Add(currentNodeKey))
+            {
+                continue;
+            }
+
+            if (!childrenByParent.TryGetValue(currentNodeKey, out var children))
+            {
+                continue;
+            }
+
+            foreach (var child in children)
+            {
+                queue.Enqueue(child.NodeKey);
+            }
+        }
+
+        var linksToDelete = await dbContext.Set<ProjectObjectLinkRecord>()
+            .Where(item => item.ProjectId == projectId &&
+                (keysToDelete.Contains(item.SourceNodeKey) || keysToDelete.Contains(item.TargetNodeKey)))
+            .ToListAsync(cancellationToken);
+        if (linksToDelete.Count > 0)
+        {
+            dbContext.RemoveRange(linksToDelete);
+        }
+
+        var recordsToDelete = records
+            .Where(item => !item.IsSystemManaged && keysToDelete.Contains(item.NodeKey))
+            .ToList();
+        dbContext.RemoveRange(recordsToDelete);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return recordsToDelete.Count;
     }
 
     public async Task MoveObjectAsync(Guid projectId, string nodeKey, double x, double y, CancellationToken cancellationToken = default)
@@ -449,6 +563,42 @@ public sealed class ProjectWorkbenchService(
         node.Title = string.IsNullOrWhiteSpace(title) ? node.Title : title.Trim();
         node.Subtitle = subtitle?.Trim() ?? string.Empty;
         node.Notes = notes?.Trim() ?? string.Empty;
+        node.UpdatedAtUtc = clock.GetUtcNow();
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return MapStructureNode(node);
+    }
+
+    public async Task<ProjectStructureNode?> UpdateObjectMetadataAsync(
+        Guid projectId,
+        string nodeKey,
+        string metadataJson,
+        string? notes = null,
+        string? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var node = await dbContext.Set<ProjectObjectRecord>()
+            .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
+        if (node is null)
+        {
+            return null;
+        }
+
+        node.MetadataJson = ResolveMetadataJson(node.ObjectType, node.ObjectSubtype, metadataJson, null);
+        if (notes is not null)
+        {
+            node.Notes = notes.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            node.Status = status.Trim();
+            var progress = ResolveStatusBackedProgress(node.Status);
+            node.ProgressMode = progress.Mode;
+            node.ProgressPercent = progress.Percent;
+        }
+
         node.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
         return MapStructureNode(node);
@@ -1128,6 +1278,41 @@ public sealed class ProjectWorkbenchService(
         return end > start ? viewStateJson[start..end] : "month";
     }
 
+    private static string ResolveMetadataJson(
+        ProjectObjectType objectType,
+        string? objectSubtype,
+        string? metadataJson,
+        SavedMediaDescriptor? media)
+    {
+        var metadata = string.IsNullOrWhiteSpace(metadataJson)
+            ? new ProjectObjectMetadataEnvelope()
+            : ProjectObjectMetadataSerializer.Parse(metadataJson);
+
+        if (objectType is ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset)
+        {
+            metadata.File ??= new ProjectFileMetadata();
+            metadata.File.FileSubtype = objectType switch
+            {
+                ProjectObjectType.ImageAsset => ProjectFileSubtype.Image,
+                ProjectObjectType.VideoAsset => ProjectFileSubtype.Video,
+                _ when metadata.File.FileSubtype == ProjectFileSubtype.Unknown =>
+                    ProjectObjectMetadataSerializer.InferFileSubtype(
+                        objectSubtype ?? string.Empty,
+                        media?.OriginalFileName ?? string.Empty,
+                        media?.ContentType ?? string.Empty),
+                _ => metadata.File.FileSubtype
+            };
+        }
+
+        if (objectType == ProjectObjectType.Link && metadata.Link is null)
+        {
+            metadata.Link = new ProjectLinkMetadata();
+        }
+
+        ProjectObjectMetadataSerializer.Validate(objectType, objectSubtype ?? string.Empty, metadata);
+        return ProjectObjectMetadataSerializer.Serialize(metadata);
+    }
+
     private static ProjectStructureNode MapStructureNode(ProjectObjectRecord record)
     {
         var profile = ResolveVisualProfile(record.ObjectType, record.ObjectSubtype, record.Status);
@@ -1176,12 +1361,25 @@ public sealed class ProjectWorkbenchService(
             record.MarkerIcon,
             record.MarkerTone,
             record.MarkerLabel,
-            record.Priority);
+            record.Priority,
+            record.StartUtc,
+            record.EndUtc,
+            string.IsNullOrWhiteSpace(record.MetadataJson) ? "{}" : record.MetadataJson);
     }
 
     private static string ResolveSubtypeBadge(ProjectObjectType objectType, string objectSubtype) => objectType switch
     {
         ProjectObjectType.ProjectBlock => ResolveBlockSubtypeLabel(objectSubtype),
+        ProjectObjectType.Meeting => ProjectStructureCanvasCatalog.ResolveNodeLabel(new ProjectStructureNode(string.Empty, null, ProjectObjectType.Meeting, objectSubtype, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, null, string.Empty, string.Empty, string.Empty, 0, 0, new ProjectObjectVisualProfile("rect", "#0f172a", "NT", "Note"), [], string.Empty, 0, string.Empty, string.Empty, string.Empty, 0)),
+        ProjectObjectType.Participant => objectSubtype switch
+        {
+            "team-block" => "Team block",
+            "team-section" => "Team section",
+            "ai-agent" => "AI agent",
+            _ => ProjectStructureCanvasCatalog.ResolveNodeLabel(new ProjectStructureNode(string.Empty, null, ProjectObjectType.Participant, objectSubtype, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, null, string.Empty, string.Empty, string.Empty, 0, 0, new ProjectObjectVisualProfile("rect", "#0f172a", "NT", "Note"), [], string.Empty, 0, string.Empty, string.Empty, string.Empty, 0))
+        },
+        ProjectObjectType.WorkItem or ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.Script or ProjectObjectType.Environment or ProjectObjectType.Infrastructure
+            => ProjectStructureCanvasCatalog.ResolveNodeLabel(new ProjectStructureNode(string.Empty, null, objectType, objectSubtype, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, null, string.Empty, string.Empty, string.Empty, 0, 0, new ProjectObjectVisualProfile("rect", "#0f172a", "NT", "Note"), [], string.Empty, 0, string.Empty, string.Empty, string.Empty, 0)),
         _ => objectSubtype
     };
 
@@ -1191,12 +1389,33 @@ public sealed class ProjectWorkbenchService(
         ProjectObjectType.Phase => new("pill", "#2563eb", "PH", "Phase"),
         ProjectObjectType.Milestone => new("diamond", "#d97706", "MS", "Milestone"),
         ProjectObjectType.ProjectBlock => ResolveProjectBlockVisualProfile(objectSubtype),
-        ProjectObjectType.Repository => new("rect", "#0891b2", "RE", "Repo"),
-        ProjectObjectType.File => new("rect", "#14b8a6", "FI", "File"),
+        ProjectObjectType.Meeting => objectSubtype switch
+        {
+            "onsite" => new("diamond", "#d97706", "ME", "Onsite"),
+            _ => new("diamond", "#0ea5e9", "ME", "Meeting")
+        },
+        ProjectObjectType.Recording => new("pill", "#8b5cf6", "RC", "Recording"),
+        ProjectObjectType.Transcript => new("rect", "#14b8a6", "TR", "Transcript"),
+        ProjectObjectType.Participant => objectSubtype switch
+        {
+            "hr" => new("hex", "#38bdf8", "HR", "HR"),
+            "team-block" => new("hex", "#2563eb", "TB", "Team"),
+            "team-section" => new("hex", "#1d4ed8", "TS", "Section"),
+            "freelancer" => new("hex", "#a855f7", "FR", "Freelancer"),
+            "partner" => new("hex", "#16a34a", "PA", "Partner"),
+            "ai-agent" => new("hex", "#0f766e", "AI", "AI"),
+            _ => new("hex", "#475569", "PT", "Participant")
+        },
+        ProjectObjectType.WorkItem => ResolveWorkItemVisualProfile(objectSubtype),
+        ProjectObjectType.Repository => ResolveRepositoryVisualProfile(objectSubtype),
+        ProjectObjectType.File => ResolveFileVisualProfile(objectSubtype),
         ProjectObjectType.ImageAsset => new("rect", "#ec4899", "IM", "Image"),
         ProjectObjectType.VideoAsset => new("rect", "#7c3aed", "VD", "Video"),
         ProjectObjectType.Link => new("circle", "#38bdf8", "LN", "Link"),
         ProjectObjectType.Connector => new("circle", "#8b5cf6", "CN", "Connector"),
+        ProjectObjectType.Script => ResolveScriptVisualProfile(objectSubtype),
+        ProjectObjectType.Environment => ResolveEnvironmentVisualProfile(objectSubtype),
+        ProjectObjectType.Infrastructure => ResolveInfrastructureVisualProfile(objectSubtype),
         ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession => new("hex", "#0f766e", "PF", "Prompt"),
         ProjectObjectType.PromptStep => new("pill", "#14b8a6", "ST", "Step"),
         ProjectObjectType.ValidationRun => new("diamond", status.Contains("Approved", StringComparison.OrdinalIgnoreCase) ? "#16a34a" : "#dc2626", "VL", "Validate"),
@@ -1212,7 +1431,9 @@ public sealed class ProjectWorkbenchService(
             ProjectObjectType.ProjectRoot => (140, 240),
             ProjectObjectType.Phase => (420, 120 + (index * 150)),
             ProjectObjectType.ProjectBlock => (760, 420 + (index * 110)),
-            ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector or ProjectObjectType.SecretReference => (760, 100 + (index * 120)),
+            ProjectObjectType.Meeting or ProjectObjectType.Participant or ProjectObjectType.WorkItem => (760, 100 + (index * 120)),
+            ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector or ProjectObjectType.SecretReference or ProjectObjectType.Script or ProjectObjectType.Environment => (1040, 100 + (index * 120)),
+            ProjectObjectType.Recording or ProjectObjectType.Transcript or ProjectObjectType.Infrastructure => (1320, 100 + (index * 120)),
             ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession => (1080, 100 + (index * 150)),
             ProjectObjectType.PromptStep => (1400, 100 + (index * 120)),
             ProjectObjectType.ValidationRun => (780, 580 + (index * 120)),
@@ -1292,11 +1513,83 @@ public sealed class ProjectWorkbenchService(
             "research" => new("hex", "#0891b2", "RS", "Research"),
             "delivery" => new("hex", "#d97706", "DL", "Delivery"),
             "operations" => new("hex", "#475569", "OP", "Operations"),
+            "deployment" => new("hex", "#ea580c", "DP", "Deployment"),
+            "repos" => new("hex", "#0284c7", "RP", "Repos"),
+            "dockers" => new("hex", "#0f766e", "DK", "Dockers"),
+            "task-flow" => new("hex", "#2563eb", "TF", "Task flow"),
+            "backlog" => new("hex", "#7c3aed", "BG", "Backlog"),
+            "server" => new("hex", "#b91c1c", "SV", "Server"),
             "risk" => new("hex", "#dc2626", "RK", "Risk"),
             "compliance" => new("hex", "#7c2d12", "CP", "Compliance"),
             "support" => new("hex", "#0284c7", "SP", "Support"),
             _ => new("hex", "#334155", "BL", "Block")
         };
+
+    private static ProjectObjectVisualProfile ResolveWorkItemVisualProfile(string objectSubtype) => objectSubtype switch
+    {
+        "task" => new("pill", "#d97706", "TK", "Task"),
+        "issue" => new("pill", "#dc2626", "IS", "Issue"),
+        "revision" => new("pill", "#8b5cf6", "RV", "Revision"),
+        "feedback" => new("pill", "#0284c7", "FB", "Feedback"),
+        "payment" => new("pill", "#16a34a", "PM", "Payment"),
+        "send" => new("pill", "#2563eb", "SD", "Send"),
+        _ => new("pill", "#475569", "WK", "Work")
+    };
+
+    private static ProjectObjectVisualProfile ResolveRepositoryVisualProfile(string objectSubtype) => objectSubtype switch
+    {
+        "remote" => new("rect", "#0f766e", "GH", "Remote"),
+        "local" => new("rect", "#0891b2", "RE", "Local"),
+        "folder" => new("rect", "#2563eb", "FD", "Folder"),
+        _ => new("rect", "#0891b2", "RE", "Repo")
+    };
+
+    private static ProjectObjectVisualProfile ResolveFileVisualProfile(string objectSubtype) => objectSubtype switch
+    {
+        "pdf" => new("rect", "#dc2626", "PDF", "PDF"),
+        "excel" => new("rect", "#16a34a", "XLS", "Excel"),
+        "docx" => new("rect", "#2563eb", "DOC", "Docx"),
+        "markdown" => new("rect", "#0284c7", "MD", "Markdown"),
+        "mermaid" => new("rect", "#7c3aed", "MMD", "Mermaid"),
+        "screenshot" => new("rect", "#db2777", "SS", "Screenshot"),
+        "log" => new("rect", "#475569", "LOG", "Log"),
+        "archive" => new("rect", "#4338ca", "ZIP", "Archive"),
+        "audio" => new("rect", "#0f766e", "AUD", "Audio"),
+        "json" => new("rect", "#64748b", "JS", "JSON"),
+        "text" => new("rect", "#64748b", "TXT", "Text"),
+        _ => new("rect", "#14b8a6", "FI", "File")
+    };
+
+    private static ProjectObjectVisualProfile ResolveScriptVisualProfile(string objectSubtype) => objectSubtype switch
+    {
+        "powershell" => new("diamond", "#2563eb", "PS", "PowerShell"),
+        "console" => new("diamond", "#0f766e", "CS", "Console"),
+        "ef-migration" => new("diamond", "#d97706", "EF", "Migration"),
+        "tailwind-watch" => new("diamond", "#0ea5e9", "TW", "Tailwind"),
+        _ => new("diamond", "#475569", "SC", "Script")
+    };
+
+    private static ProjectObjectVisualProfile ResolveEnvironmentVisualProfile(string objectSubtype) => objectSubtype switch
+    {
+        "python" => new("hex", "#16a34a", "PY", "Python"),
+        "dotnet-runtime" => new("hex", "#2563eb", ".NET", "Runtime"),
+        "dotnet-watch" => new("hex", "#0ea5e9", "DW", "Watch"),
+        "dotnet-release" => new("hex", "#d97706", "REL", "Release"),
+        _ => new("hex", "#475569", "ENV", "Environment")
+    };
+
+    private static ProjectObjectVisualProfile ResolveInfrastructureVisualProfile(string objectSubtype) => objectSubtype switch
+    {
+        "remote-server" => new("hex", "#b91c1c", "SV", "Server"),
+        "domain" => new("hex", "#0284c7", "DNS", "Domain"),
+        "dns-record" => new("hex", "#0ea5e9", "DNS", "DNS"),
+        "docker-mode" => new("hex", "#0f766e", "DK", "Docker"),
+        "database" => new("hex", "#7c3aed", "DB", "Database"),
+        "deployment-folder" => new("hex", "#2563eb", "FD", "Folder"),
+        "key-reference" => new("hex", "#be123c", "KEY", "Key"),
+        "ai-link" => new("hex", "#0f766e", "AI", "AI"),
+        _ => new("hex", "#475569", "INF", "Infrastructure")
+    };
 
     private static string ResolveBlockSubtypeLabel(string objectSubtype) => objectSubtype switch
     {

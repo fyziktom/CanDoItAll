@@ -5,6 +5,15 @@
     flex-wrap: nowrap;
 }
 
+.pf-toolbar-toggle {
+    min-width: 6.75rem;
+}
+
+.pf-toolbar-toggle.is-active {
+    border-color: rgba(14, 116, 144, 0.24);
+    background: rgba(236, 253, 245, 0.94);
+}
+
 .pf-recommendation-overlay {
     position: absolute;
     top: 5.1rem;
@@ -74,6 +83,89 @@
     align-items: center;
     gap: 0.55rem;
     flex-wrap: wrap;
+}
+
+.pf-components-toolbox {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.pf-components-toolbox__body {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.9rem;
+}
+
+.pf-components-toolbox__item-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    align-items: start;
+}
+
+.pf-components-toolbox__preview-toggle {
+    min-height: 2.6rem;
+    padding: 0.38rem 0.7rem;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    border-radius: 0.95rem;
+    background: rgba(255, 255, 255, 0.92);
+    color: rgba(15, 23, 42, 0.82);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.pf-components-toolbox__preview-toggle:hover,
+.pf-components-toolbox__preview-toggle:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(14, 116, 144, 0.28);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.pf-components-toolbox__popover {
+    position: fixed;
+    z-index: 240;
+    display: grid;
+    gap: 0.7rem;
+    max-height: min(30rem, calc(100dvh - 3rem));
+    padding: 1rem 1.05rem;
+    border: 1px solid rgba(14, 116, 144, 0.2);
+    border-radius: 1.15rem;
+    background:
+        radial-gradient(circle at top right, rgba(191, 219, 254, 0.28), transparent 48%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.97));
+    box-shadow: 0 24px 52px rgba(15, 23, 42, 0.2);
+    backdrop-filter: blur(14px);
+    overflow: auto;
+    scrollbar-width: thin;
+}
+
+.pf-components-toolbox__popover[data-placement="left"] {
+    transform-origin: right top;
+}
+
+.pf-components-toolbox__popover[data-placement="right"] {
+    transform-origin: left top;
+}
+
+.pf-components-toolbox__popover[data-placement="overlay"] {
+    transform-origin: center top;
+}
+
+.pf-components-toolbox__preview-content {
+    margin: 0;
+    padding: 0.95rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 1rem;
+    background: rgba(15, 23, 42, 0.96);
+    color: rgba(226, 232, 240, 0.96);
+    font-family: "IBM Plex Mono", "Cascadia Code", "Consolas", monospace;
+    font-size: 0.76rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow: auto;
 }
 
 .pf-floating-inspector {
@@ -1203,5 +1295,11 @@
     .pf-scroll-panel,
     .pf-scroll-panel--tall {
         max-height: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .pf-components-toolbox__popover {
+        max-height: min(24rem, calc(100dvh - 2.5rem));
     }
 }

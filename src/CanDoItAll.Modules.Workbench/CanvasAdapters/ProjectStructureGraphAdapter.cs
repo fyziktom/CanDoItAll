@@ -190,9 +190,14 @@ public sealed class ProjectStructureGraphAdapter
 
     private static string ResolvePalette(ProjectStructureNode node) => node.ObjectType switch
     {
-        ProjectObjectType.Repository or ProjectObjectType.File => "sky",
+        ProjectObjectType.Meeting => "sky",
+        ProjectObjectType.Recording or ProjectObjectType.Transcript => "accent",
+        ProjectObjectType.Participant => "primary",
+        ProjectObjectType.WorkItem => "warn",
+        ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.Script or ProjectObjectType.Environment => "sky",
         ProjectObjectType.ImageAsset or ProjectObjectType.Decision => "rose",
         ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector => "violet",
+        ProjectObjectType.Infrastructure => "danger",
         ProjectObjectType.Milestone or ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => "amber",
         ProjectObjectType.ValidationRun or ProjectObjectType.Note or ProjectObjectType.ProjectBlock => "mint",
         ProjectObjectType.SecretReference => "rose",
@@ -200,27 +205,7 @@ public sealed class ProjectStructureGraphAdapter
     };
 
     private static string BuildLeadText(ProjectStructureNode node)
-    {
-        if (node.ObjectType == ProjectObjectType.Note)
-        {
-            return string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes;
-        }
-
-        if (node.ObjectType is ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset &&
-            !string.IsNullOrWhiteSpace(node.MediaOriginalFileName))
-        {
-            return node.MediaOriginalFileName;
-        }
-
-        if (!string.IsNullOrWhiteSpace(node.Notes))
-        {
-            return node.Notes;
-        }
-
-        return string.IsNullOrWhiteSpace(node.Subtitle)
-            ? $"Status: {node.Status}"
-            : node.Subtitle;
-    }
+        => ProjectStructureNodeDescriptor.BuildLeadText(node);
 
     private static (string Kind, string PreviewUrl) ResolveMediaPresentation(ProjectStructureNode node)
     {

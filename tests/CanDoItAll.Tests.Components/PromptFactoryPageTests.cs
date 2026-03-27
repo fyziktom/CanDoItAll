@@ -3,6 +3,7 @@ using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Factory.Pages;
 using CanDoItAll.Modules.Projects;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -19,6 +20,10 @@ public sealed class PromptFactoryPageTests
         {
             Assert.Single(cut.FindAll("[data-testid='prompt-factory-undo']"));
             Assert.Single(cut.FindAll("[data-testid='prompt-factory-redo']"));
+            Assert.Single(cut.FindAll("[data-testid='prompt-factory-components-toolbox-toggle']"));
+            Assert.Single(cut.FindAll("[data-testid='prompt-factory-components-toolbox-window']"));
+            Assert.Single(cut.FindAll("[data-testid='prompt-factory-components-toolbox']"));
+            Assert.Empty(cut.FindAll("[data-testid='prompt-factory-component-preview-popover']"));
             Assert.Single(cut.FindAll("[data-testid='prompt-factory-undo-redo-adapter']"));
             Assert.Single(cut.FindAll("[data-testid='chip-badge-primitive']"));
             Assert.Single(cut.FindAll("[data-testid='connector-path-primitive']"));
@@ -35,6 +40,35 @@ public sealed class PromptFactoryPageTests
             Assert.Contains("Prompt Factory tabs", cut.Markup);
             Assert.Contains("Canvas inspector", cut.Markup);
         });
+    }
+
+    [Fact]
+    public async Task Eye_preview_opens_floating_component_popover()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var cut = harness.Context.RenderComponent<PromptFactoryPage>();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".pf-components-toolbox__preview-toggle")));
+
+        var previewButton = cut.FindAll("button")
+            .First(button => (button.GetAttribute("aria-label") ?? string.Empty).StartsWith("Preview ", StringComparison.Ordinal));
+        var previewedComponentName = previewButton.GetAttribute("aria-label")!["Preview ".Length..];
+
+        previewButton.TriggerEvent("onmouseenter", new MouseEventArgs
+        {
+            ClientX = 220,
+            ClientY = 168
+        });
+
+        cut.WaitForAssertion(() =>
+        {
+            var popover = cut.Find("[data-testid='prompt-factory-component-preview-popover']");
+            Assert.Equal("right", popover.GetAttribute("data-placement"));
+            Assert.Contains(previewedComponentName, popover.TextContent);
+        });
+
+        previewButton.TriggerEvent("onmouseleave", new MouseEventArgs());
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='prompt-factory-component-preview-popover']")));
     }
 
     [Fact]

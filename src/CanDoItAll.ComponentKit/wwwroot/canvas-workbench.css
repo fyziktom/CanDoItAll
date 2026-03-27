@@ -214,6 +214,14 @@ body.cw-body-lock {
     --cw-menu-scale: 1;
 }
 
+.cw-stage-surface:has(.cw-canvas-composer) .cw-canvas-host {
+    z-index: 32;
+}
+
+.cw-stage-surface:has(.cw-canvas-composer) .cw-floating-window {
+    pointer-events: none;
+}
+
 .cw-workbench-shell.is-maximized .cw-canvas-host {
     height: 100dvh;
     min-height: 100dvh;
@@ -2731,7 +2739,7 @@ body.cw-body-lock {
 
 .cw-canvas-composer {
     position: absolute;
-    z-index: 10;
+    z-index: 18;
     width: min(22rem, calc(100% - 2rem));
 }
 

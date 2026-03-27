@@ -689,6 +689,16 @@
         await CreateActionInvoked.InvokeAsync(request);
     }
 
+    public async Task<string?> CaptureImageAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return null;
+        }
+
+        return await JsRuntime.InvokeAsync<string?>("CanDoItAll.canvasWorkbench.exportImageData", host);
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (sceneHost.IsInitialized)

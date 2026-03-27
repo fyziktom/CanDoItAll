@@ -3302,6 +3302,7 @@
         let titleInput = null;
         let subtitleInput = null;
         let notesInput = null;
+        let deferredNotesField = null;
 
         if (showDefaultTextFields) {
             const titleField = createElement(state.document, "label", "cw-canvas-composer__field");
@@ -3328,7 +3329,12 @@
             notesInput.value = request?.notes || "";
             notesInput.placeholder = action.notesPlaceholder || "";
             notesField.appendChild(notesInput);
-            fields.appendChild(notesField);
+            if (action.requiresFile) {
+                deferredNotesField = notesField;
+            }
+            else {
+                fields.appendChild(notesField);
+            }
         }
 
         const inputValueLookup = new Map();
@@ -3481,6 +3487,10 @@
                     await assignUpload(file);
                 });
             }
+        }
+
+        if (deferredNotesField) {
+            fields.appendChild(deferredNotesField);
         }
 
         const actions = createElement(state.document, "div", "cw-canvas-composer__actions");

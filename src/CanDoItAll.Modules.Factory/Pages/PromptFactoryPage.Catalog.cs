@@ -408,6 +408,12 @@ public partial class PromptFactoryPage
 
     private async Task<bool> HandleCatalogContextActionAsync(string actionId)
     {
+        if (string.Equals(actionId, "catalog-components", StringComparison.Ordinal))
+        {
+            await OpenComponentsToolboxAsync();
+            return true;
+        }
+
         if (actionId.StartsWith("blueprint:set:", StringComparison.Ordinal))
         {
             await SelectBlueprintByKeyAsync(actionId["blueprint:set:".Length..]);
@@ -497,6 +503,11 @@ public partial class PromptFactoryPage
 
     private async Task<bool> HandleCatalogCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
     {
+        if (!createActionDeduplicator.ShouldProcess(request, DateTimeOffset.UtcNow))
+        {
+            return true;
+        }
+
         if (request.ActionId.StartsWith("component:add:", StringComparison.Ordinal))
         {
             await AddComponentByKeyAsync(request.ActionId["component:add:".Length..], request.InputValues ?? []);

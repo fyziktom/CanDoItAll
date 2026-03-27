@@ -162,6 +162,101 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         Assert.Equal(manifest.TotalItemCount, results.Count);
     }
 
+    [Fact]
+    public async Task Prompt_factory_artifacts_capture_toolbox_preview_and_single_add_flow()
+    {
+        var repoRoot = GetRepoRoot();
+        var screenshotsRoot = Path.Combine(repoRoot, "artifacts", "screenshots");
+        var i21Root = Path.Combine(screenshotsRoot, "i21");
+        var i22Root = Path.Combine(screenshotsRoot, "i22");
+        var i24Root = Path.Combine(screenshotsRoot, "i24");
+
+        ResetDirectory(i21Root);
+        ResetDirectory(i22Root);
+        ResetDirectory(i24Root);
+
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1900,
+                Height = 1200
+            }
+        });
+
+        var page = await context.NewPageAsync();
+        await LoadPromptFactoryAsync(page);
+        await ResetSessionAsync(page);
+
+        var toolboxWindow = page.GetByTestId("prompt-factory-components-toolbox-window");
+        await toolboxWindow.WaitForAsync();
+        await page.WaitForSelectorAsync("text=112 items");
+
+        await CaptureWorkspaceAsync(page, Path.Combine(i21Root, "01-primary-state.png"));
+
+        var search = page.Locator("[data-testid='prompt-factory-components-toolbox'] .cw-context-toolbox__search");
+        await search.FillAsync("validation");
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const items = Array.from(document.querySelectorAll('[data-testid^=""prompt-factory-component-""]'));
+                return items.length > 0 &&
+                    items.some(item => (item.textContent || '').toLowerCase().includes('validation'));
+            }");
+        await CaptureWorkspaceAsync(page, Path.Combine(i21Root, "02-secondary-state.png"));
+
+        await page.EvaluateAsync(
+            @"() => {
+                const body = document.querySelector('[data-testid=""prompt-factory-components-toolbox""] .pf-components-toolbox__body');
+                if (!(body instanceof HTMLElement)) {
+                    return;
+                }
+
+                body.scrollTop = Math.max(420, body.scrollHeight * 0.58);
+            }");
+        await page.WaitForTimeoutAsync(180);
+        await CaptureWorkspaceAsync(page, Path.Combine(i21Root, "03-interaction-result.png"));
+
+        await search.FillAsync("architecture lead");
+        await page.GetByTestId("prompt-factory-component-role-architecture-lead").WaitForAsync();
+        await HoverComponentPreviewAsync(page, "role-architecture-lead");
+        await AssertComponentPreviewPlacementAsync(page, "right");
+        await CaptureWorkspaceAsync(page, Path.Combine(i22Root, "01-primary-state.png"));
+
+        await DragFloatingWindowAsync(page, "prompt-factory-components-toolbox-window", 1600, 86);
+        await HoverComponentPreviewAsync(page, "role-architecture-lead");
+        await AssertComponentPreviewPlacementAsync(page, "left");
+        await CaptureWorkspaceAsync(page, Path.Combine(i22Root, "02-secondary-state.png"));
+
+        await page.Keyboard.PressAsync("Escape");
+        await ResetSessionAsync(page);
+        var resetWindowButton = page.GetByTestId("prompt-factory-components-toolbox-window")
+            .GetByRole(AriaRole.Button, new() { Name = "Reset", Exact = true });
+        if (await WaitForLocatorAsync(resetWindowButton, 1_000))
+        {
+            await resetWindowButton.ClickAsync();
+            await page.WaitForTimeoutAsync(180);
+        }
+
+        await search.FillAsync("senior reviewer");
+        await page.GetByTestId("prompt-factory-component-role-senior-reviewer").WaitForAsync();
+        await CaptureWorkspaceAsync(page, Path.Combine(i24Root, "01-primary-state.png"));
+        await InvokeCanvasCreateActionAsync(page, "component:add:role-senior-reviewer", []);
+        await InvokeCanvasCreateActionAsync(page, "component:add:role-senior-reviewer", []);
+        await WaitForNodeAsync(page, "selection:component:role-senior-reviewer");
+        Assert.Equal(
+            1,
+            await page.Locator(".cw-node[data-node-id='selection:component:role-senior-reviewer']").CountAsync());
+
+        var selectedComponentCount = await page.EvaluateAsync<int>(
+            @"() => document.querySelectorAll('.cw-node[data-node-id^=""selection:component:""]').length");
+        Assert.Equal(1, selectedComponentCount);
+        await CaptureWorkspaceAsync(page, Path.Combine(i24Root, "02-secondary-state.png"));
+
+        await FocusCanvasNodeAsync(page, "selection:component:role-senior-reviewer");
+        await CaptureCanvasStageAsync(page, Path.Combine(i24Root, "03-interaction-result.png"));
+    }
+
     private async Task VerifyPromptGalleryAsync(IPage page, VerificationManifest manifest, string artifactsRoot)
     {
         var screenshotPath = Path.Combine(artifactsRoot, "prompt-gallery-imported-catalog.png");
@@ -201,29 +296,18 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         var slug = $"{index:000}-{component.Key}";
         var entryPath = Path.Combine(artifactsRoot, $"{slug}-{(component.TemplateTokens.Count > 0 ? "specify" : "menu")}.png");
         var resultPath = Path.Combine(artifactsRoot, $"{slug}-added.png");
-        var sectionKey = ResolveComponentSection(component.GroupKey);
-        var menuPath = new[]
-        {
-            "catalog-components",
-            $"catalog-components:{sectionKey}",
-            $"catalog-group:{component.GroupKey}",
-            $"component:add:{component.Key}"
-        };
 
         await FocusCanvasNodeAsync(page, "session-root");
-        await AssertCanvasActionAvailableAsync(page, menuPath[^1]);
+        await OpenComponentCatalogAsync(page, component);
 
-        IReadOnlyList<TokenValue> tokenValues = component.TemplateTokens
-            .Select(token => new TokenValue(token, BuildTokenValue(component.Key, token)))
-            .ToList();
+        IReadOnlyList<TokenValue> tokenValues = [];
         await CaptureCanvasStageAsync(page, entryPath);
+        await ClickToolboxItemAsync(page, component);
         if (component.TemplateTokens.Count > 0)
         {
-            await InvokeCanvasCreateActionAsync(page, menuPath[^1], tokenValues);
-        }
-        else
-        {
-            await InvokeCanvasCreateActionAsync(page, menuPath[^1], []);
+            await WaitForComposerAsync(page);
+            tokenValues = await FillComponentComposerAsync(page, component);
+            await SubmitComposerAsync(page);
         }
 
         var nodeId = $"selection:component:{component.Key}";
@@ -246,12 +330,12 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
             Name = component.Name,
             Passed = true,
             UsedModal = component.TemplateTokens.Count > 0,
-            MenuPath = string.Join(" > ", menuPath),
+            MenuPath = $"components-toolbox > search > prompt-factory-component-{component.Key}",
             EntryScreenshotPath = entryPath,
             ResultScreenshotPath = resultPath,
             Notes = tokenValues.Count > 0
-                ? $"Configured {tokenValues.Count} token value(s) and verified the node text."
-                : "Verified the node was added from the canvas menu."
+                ? $"Configured {tokenValues.Count} token value(s) from the toolbox composer and verified the node text."
+                : "Verified the node was added from the floating components toolbox."
         };
     }
 
@@ -468,6 +552,12 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         await page.Locator(".cw-stage-surface").ScreenshotAsync(new() { Path = path });
     }
 
+    private static async Task CaptureWorkspaceAsync(IPage page, string path)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await page.Locator(".cw-workbench-shell").ScreenshotAsync(new() { Path = path });
+    }
+
     private static async Task FocusCanvasNodeAsync(IPage page, string nodeId, int zoomPercent = 100)
     {
         await page.EvaluateAsync(
@@ -626,40 +716,33 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
     private static async Task OpenComponentCatalogAsync(IPage page, VerificationComponent component)
     {
         var searchLabel = ResolveComponentCatalogLabel(component.Name);
+        var toolboxWindow = page.GetByTestId("prompt-factory-components-toolbox-window");
+        if (!await WaitForLocatorAsync(toolboxWindow, 1_000))
+        {
+            await page.GetByTestId("prompt-factory-components-toolbox-toggle").ClickAsync();
+            await toolboxWindow.WaitForAsync();
+        }
 
         for (var attempt = 1; attempt <= 3; attempt++)
         {
             try
             {
-                await CloseTransientUiAsync(page);
-                await OpenQuickCreateMenuAsync(page);
-                await ActivateMenuActionAsync(page, "catalog-components");
+                var search = page.Locator("[data-testid='prompt-factory-components-toolbox'] .cw-context-toolbox__search");
+                await search.WaitForAsync();
+                await search.FillAsync(string.Empty);
+                await search.FillAsync(searchLabel);
                 await page.WaitForFunctionAsync(
-                    @"() => !!document.querySelector('.cw-context-toolbox input[aria-label=""Search prompt components""]')");
-                await page.EvaluateAsync(
-                    @"value => {
-                        const search = document.querySelector('.cw-context-toolbox input[aria-label=""Search prompt components""]');
-                        if (!(search instanceof HTMLInputElement)) {
-                            return false;
-                        }
-
-                        search.value = value;
-                        search.dispatchEvent(new Event('input', { bubbles: true }));
-                        search.dispatchEvent(new Event('change', { bubbles: true }));
-                        return true;
-                    }",
-                    searchLabel);
-                await page.WaitForFunctionAsync(
-                    @"expectedLabel => {
-                        return Array.from(document.querySelectorAll('.cw-context-toolbox__item strong'))
-                            .some(label => (label.textContent || '').trim() === expectedLabel);
-                    }",
-                    searchLabel);
+                    @"testId => !!document.querySelector(`[data-testid=""${testId}""]`)",
+                    $"prompt-factory-component-{component.Key}");
                 return;
             }
             catch when (attempt < 3)
             {
-                await CloseTransientUiAsync(page);
+                var search = page.Locator("[data-testid='prompt-factory-components-toolbox'] .cw-context-toolbox__search");
+                if (await search.CountAsync() > 0)
+                {
+                    await search.FillAsync(string.Empty);
+                }
                 await page.WaitForTimeoutAsync(120);
             }
         }
@@ -727,27 +810,57 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
 
     private static async Task ClickToolboxItemAsync(IPage page, VerificationComponent component)
     {
-        var label = ResolveComponentCatalogLabel(component.Name);
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            try
+            {
+                var button = page.GetByTestId($"prompt-factory-component-{component.Key}");
+                await button.WaitForAsync();
+                await button.ClickAsync();
+                return;
+            }
+            catch when (attempt < 3)
+            {
+                await page.WaitForTimeoutAsync(120);
+            }
+        }
+
+        throw new InvalidOperationException($"Could not click the toolbox item for '{component.Key}'.");
+    }
+
+    private static async Task HoverComponentPreviewAsync(IPage page, string componentKey)
+    {
+        var previewToggle = page.GetByTestId($"prompt-factory-component-{componentKey}")
+            .Locator("xpath=ancestor::div[contains(@class,'pf-components-toolbox__item-row')]")
+            .Locator(".pf-components-toolbox__preview-toggle");
+        await previewToggle.WaitForAsync();
+        await previewToggle.HoverAsync();
+        await page.GetByTestId("prompt-factory-component-preview-popover").WaitForAsync();
+    }
+
+    private static async Task AssertComponentPreviewPlacementAsync(IPage page, string placement)
+    {
         await page.WaitForFunctionAsync(
-            @"expectedLabel => {
-                return Array.from(document.querySelectorAll('.cw-context-toolbox__item strong'))
-                    .some(node => (node.textContent || '').trim() === expectedLabel);
+            @"expectedPlacement => {
+                const popover = document.querySelector('[data-testid=""prompt-factory-component-preview-popover""]');
+                return popover?.getAttribute('data-placement') === expectedPlacement;
             }",
-            label);
+            placement);
+    }
 
-        var clicked = await page.EvaluateAsync<bool>(
-            @"expectedLabel => {
-                const items = Array.from(document.querySelectorAll('.cw-context-toolbox__item'));
-                const match = items.find(item => item.querySelector('strong')?.textContent?.trim() === expectedLabel);
-                if (!(match instanceof HTMLButtonElement)) {
-                    return false;
-                }
+    private static async Task DragFloatingWindowAsync(IPage page, string testId, float targetX, float targetY)
+    {
+        var dragHandle = page.GetByTestId(testId).Locator(".cw-floating-window__drag");
+        await dragHandle.WaitForAsync();
 
-                match.click();
-                return true;
-            }",
-            label);
-        Assert.True(clicked, $"Expected component catalog item '{component.Key}' to be clickable.");
+        var bounds = await dragHandle.BoundingBoxAsync();
+        Assert.NotNull(bounds);
+
+        await page.Mouse.MoveAsync((float)(bounds!.X + (bounds.Width / 2)), (float)(bounds.Y + (bounds.Height / 2)));
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(targetX, targetY, new MouseMoveOptions { Steps = 14 });
+        await page.Mouse.UpAsync();
+        await page.WaitForTimeoutAsync(220);
     }
 
     private static async Task OpenQuickCreateMenuAsync(IPage page)
