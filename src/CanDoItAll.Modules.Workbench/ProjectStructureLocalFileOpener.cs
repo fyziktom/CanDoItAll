@@ -47,6 +47,11 @@ public sealed class ProjectStructureLocalFileOpener(
             return Task.FromResult(new ProjectStructureLocalFileOpenResult(false, failureMessage));
         }
 
+        if (!OperatingSystem.IsWindows())
+        {
+            return Task.FromResult(new ProjectStructureLocalFileOpenResult(false, "Local open is not available on this host."));
+        }
+
         try
         {
             using var process = Process.Start(new ProcessStartInfo

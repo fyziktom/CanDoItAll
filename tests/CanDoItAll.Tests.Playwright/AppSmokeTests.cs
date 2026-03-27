@@ -498,14 +498,12 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
         var i04Root = Path.Combine(screenshotsRoot, "i04");
         var i08Root = Path.Combine(screenshotsRoot, "i08");
         var i17Root = Path.Combine(screenshotsRoot, "i17");
-        var i18Root = Path.Combine(screenshotsRoot, "i18");
         var i19Root = Path.Combine(screenshotsRoot, "i19");
         var i23Root = Path.Combine(screenshotsRoot, "i23");
 
         ResetDirectory(i04Root);
         ResetDirectory(i08Root);
         ResetDirectory(i17Root);
-        ResetDirectory(i18Root);
         ResetDirectory(i19Root);
         ResetDirectory(i23Root);
 

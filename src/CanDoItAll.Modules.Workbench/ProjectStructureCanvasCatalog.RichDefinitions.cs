@@ -5,7 +5,7 @@ namespace CanDoItAll.Modules.Workbench;
 
 internal static partial class ProjectStructureCanvasCatalog
 {
-    private static readonly IReadOnlyList<ProjectStructureCreateLeafDefinition> RichCreateLeafDefinitions =
+    private static readonly ProjectStructureCreateLeafDefinition[] RichCreateLeafDefinitions =
     [
         new("add-block-deployment", ProjectObjectType.ProjectBlock, "deployment", "blocks", "Deployment block", "Map rollout work, release gates, and deployment readiness.", "ship", "warn", "Deployment block", "Block name", "Deployment lane", "Release", "Target release or environment", "Description", "What this deployment block covers"),
         new("add-block-repos", ProjectObjectType.ProjectBlock, "repos", "blocks", "Repos block", "Group repository, branch, and source-control concerns.", "repo", "mint", "Repos block", "Block name", "Repository map", "Scope", "App, service, or workspace", "Description", "How repositories are organized"),

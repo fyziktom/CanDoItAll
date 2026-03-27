@@ -172,9 +172,11 @@ public static class ProjectWorkbenchSchemaInitializer
                 continue;
             }
 
+#pragma warning disable EF1002
             await dbContext.Database.ExecuteSqlRawAsync(
                 $"""ALTER TABLE "Workbench_ProjectObjects" ADD COLUMN "{requiredColumn.Name}" {requiredColumn.Definition};""",
                 cancellationToken);
+#pragma warning restore EF1002
         }
     }
 

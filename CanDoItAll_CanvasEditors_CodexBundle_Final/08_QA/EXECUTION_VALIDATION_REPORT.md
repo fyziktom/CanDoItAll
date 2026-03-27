@@ -22,7 +22,7 @@ This bundle execution was completed and validated for:
 dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj -m:1 /nodeReuse:false /p:UseSharedCompilation=false
 ```
 
-Result: pass
+Result: pass, `0` warnings, `0` errors
 
 ### Components
 
@@ -43,7 +43,7 @@ Result: pass, `9/9`
 ### Playwright
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj -m:1 --no-build /nodeReuse:false /p:UseSharedCompilation=false
+dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj -m:1 /nodeReuse:false /p:UseSharedCompilation=false
 ```
 
 Result: pass, `10/10`
@@ -59,9 +59,9 @@ Result: pass, `25` items, `153/153` mapped notes, `0` validation errors
 ### Artifact-producing Playwright checks
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj -m:1 --no-build --filter "FullyQualifiedName~Project_structure_artifacts_capture_required_canvas_evidence" /nodeReuse:false /p:UseSharedCompilation=false
-dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj -m:1 --no-build --filter "FullyQualifiedName~Project_structure_export_image_capture_generates_i18_artifacts" /nodeReuse:false /p:UseSharedCompilation=false
-dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj -m:1 --no-build --filter "FullyQualifiedName~Prompt_factory_artifacts_capture_toolbox_preview_and_single_add_flow" /nodeReuse:false /p:UseSharedCompilation=false
+dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj -m:1 --filter "FullyQualifiedName~Project_structure_artifacts_capture_required_canvas_evidence" /nodeReuse:false /p:UseSharedCompilation=false
+dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj -m:1 --filter "FullyQualifiedName~Project_structure_export_image_capture_generates_i18_artifacts" /nodeReuse:false /p:UseSharedCompilation=false
+dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj -m:1 --filter "FullyQualifiedName~Prompt_factory_artifacts_capture_toolbox_preview_and_single_add_flow" /nodeReuse:false /p:UseSharedCompilation=false
 ```
 
 Result: pass
@@ -84,4 +84,5 @@ Result: pass
 
 - The `i18` before/after placement comparison uses preserved historical Playwright captures for the pre-fix and fixed side-aware link layout, plus a live regenerated export-image artifact on the current build.
 - The export-image path was hardened during this execution so it no longer hangs indefinitely in headless Chromium.
-- Final build and test runs completed successfully with no blocking warnings.
+- The dedicated `i18` export-image evidence now survives combined artifact runs because the broader structure-artifact test no longer resets the `i18` folder.
+- Final build and test runs completed successfully with `0` warnings and `0` errors.
