@@ -60,6 +60,37 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Health_window_defaults_to_an_offset_that_keeps_the_toolbox_clear()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Offset Health Window Project";
+        project.Description = "Verify the default health-window placement.";
+        project.Objective = "Keep the toolbox clear on first render.";
+        project.CurrentPhase = "Review";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var windows = cut.FindComponents<CanvasFloatingWindow>();
+            var toolboxWindow = Assert.Single(windows, candidate => string.Equals(candidate.Instance.TestId, "project-structure-toolbox-window", StringComparison.Ordinal));
+            var healthWindow = Assert.Single(windows, candidate => string.Equals(candidate.Instance.TestId, "project-structure-validation-window", StringComparison.Ordinal));
+
+            Assert.Null(toolboxWindow.Instance.State.Left);
+            Assert.Equal(462d, healthWindow.Instance.State.Left);
+            Assert.True(healthWindow.Instance.State.IsVisible);
+        });
+    }
+
+    [Fact]
     public async Task Renders_shared_structure_workbench_and_updates_inspector_from_outline_selection()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -786,6 +817,73 @@ public sealed class ProjectStructurePageTests
             .ToList();
         Assert.Contains("Edit", actionLabels);
         Assert.Equal("Delete", actionLabels.Last());
+    }
+
+    [Fact]
+    public async Task File_selection_panel_uses_semantic_badges_and_suppresses_duplicate_type_metadata()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Selection Badge Project";
+        project.Description = "Verify file badge semantics and duplicate suppression.";
+        project.Objective = "Keep file selection panels concise and readable.";
+        project.CurrentPhase = "Review";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var excelNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "Customers with fake emails",
+                "Import source",
+                "Workbook used for validation coverage.",
+                $"project:{projectId}",
+                620,
+                280,
+                null,
+                null,
+                "excel",
+                new ProjectObjectMediaPayload(
+                    "customers.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    Convert.ToBase64String("excel selection coverage"u8.ToArray()))));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, excelNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Show advanced details help", cut.Markup);
+            Assert.Contains("project-structure-selection-badge-excel", cut.Markup);
+            Assert.Contains("project-structure-selection-badge-uploaded", cut.Markup);
+        });
+
+        var advancedDetails = cut.Find("[data-testid='project-structure-advanced-details']");
+        Assert.DoesNotContain("Kind", advancedDetails.TextContent, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll("[data-testid='project-structure-node-facts']"));
+
+        var excelBadge = cut.Find("[data-testid='project-structure-selection-badge-excel']");
+        Assert.Equal("FileExcel", excelBadge.GetAttribute("data-badge-style"));
+
+        var uploadedBadge = cut.Find("[data-testid='project-structure-selection-badge-uploaded']");
+        Assert.Equal("Uploaded", uploadedBadge.GetAttribute("data-badge-style"));
+
+        var helpButton = cut.Find("button[aria-label='Show advanced details help']");
+        Assert.Contains("pf-help-popover__toggle--compact", helpButton.GetAttribute("class"), StringComparison.Ordinal);
+        helpButton.Click();
+        cut.WaitForAssertion(() =>
+        {
+            var helpPanel = cut.Find(".pf-help-popover__panel--above-end");
+            Assert.Contains("artifact metadata", helpPanel.TextContent, StringComparison.Ordinal);
+        });
     }
 
     [Fact]

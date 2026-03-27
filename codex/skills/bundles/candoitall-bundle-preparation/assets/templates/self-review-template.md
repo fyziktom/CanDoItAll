@@ -7,6 +7,7 @@ Status: `Pending`
 - Confirm that the raw inputs are preserved.
 - Confirm that the normalized requirements are explicit.
 - Confirm that each subbundle has acceptance and proof rules.
+- Confirm that UI-relevant subbundles include browser-validation logging instructions.
 
 ## Senior C# Blazor Architect Review
 
@@ -15,6 +16,7 @@ Status: `Pending`
 - Confirm that the architecture and boundaries are clear.
 - Confirm that the subbundle split is technically coherent.
 - Confirm that the validation strategy fits the affected code.
+- Confirm that the browser-validation plan is specific enough to prevent “no browser was opened” execution gaps.
 
 ## Senior Manager Review
 
@@ -23,6 +25,7 @@ Status: `Pending`
 - Confirm that sequencing is explicit.
 - Confirm that the critical path is clear.
 - Confirm that the handoff is implementation-ready.
+- Confirm that the execution report already has a browser-validation analytics section to fill in during implementation.
 
 ## Remaining Assumptions
 

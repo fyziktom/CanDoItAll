@@ -49,11 +49,14 @@ SUBBUNDLE_HEADING_GROUPS = [
     ("## Do Not Do",),
     ("## Acceptance Checklist",),
     ("## Proof Required",),
+    ("## Browser Validation Logging",),
     ("## Suggested Agent Prompt",),
 ]
 
 FEEDBACK_EXECUTION_REPORT_HEADINGS = [
     "## Status",
+    "## Browser Validation Analytics",
+    "## Analytics Review",
     "## Raw Note Closure",
 ]
 
@@ -165,6 +168,15 @@ def validate_feedback_execution_report(path: Path) -> list[str]:
 
     if "| Raw note | Status | Proof |" not in raw_note_section:
         issues.append(f"{path}: ## Raw Note Closure must include the '| Raw note | Status | Proof |' table header")
+
+    browser_analytics_section = extract_markdown_section(content, "## Browser Validation Analytics")
+    if browser_analytics_section is None:
+        return issues
+
+    if "| Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |" not in browser_analytics_section:
+        issues.append(
+            f"{path}: ## Browser Validation Analytics must include the '| Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |' table header"
+        )
 
     return issues
 

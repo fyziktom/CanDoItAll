@@ -32,3 +32,4 @@ This bundle is a coordination and execution package for `{{BUNDLE_NAME}}`.
 
 - Bundle preparation status: `Draft`
 - Execution status: `Not started`
+- Browser validation analytics: `Not started`

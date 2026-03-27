@@ -87,7 +87,7 @@ else
                                                   Summary="Search the shared block catalog, drag the window where you need it, and create against the currently selected source."
                                                   BodyClass="project-structure-toolbox-window__body"
                                                   DefaultPlacement="top-left"
-                                                  DefaultWidth="430"
+                                                  DefaultWidth="@ToolboxWindowDefaultWidth"
                                                   DefaultHeight="500"
                                                   MinWidth="320"
                                                   MinHeight="240"
@@ -361,11 +361,19 @@ else
                             <h3 class="cw-panel-title">@selectedNode.Title</h3>
                             <p class="cw-panel-copy">@SelectedNodeLeadText</p>
 
-                            <div class="cw-chip-row">
-                                <span class="cw-node__chip tone-accent">@selectedNode.Status</span>
-                                @foreach (var badge in selectedNode.Badges)
+                            <div class="cw-chip-row project-structure-selection-chip-row">
+                                <span class="cw-node__chip project-structure-selection-chip project-structure-selection-chip--status"
+                                      data-testid="project-structure-selection-status"
+                                      data-badge-style="Status">
+                                    @selectedNode.Status
+                                </span>
+                                @foreach (var badge in SelectedNodeBadgePresentations)
                                 {
-                                    <span class="cw-node__chip">@badge</span>
+                                    <span class="cw-node__chip project-structure-selection-chip"
+                                          data-testid="@badge.TestId"
+                                          data-badge-style="@badge.Style">
+                                        @badge.Text
+                                    </span>
                                 }
                             </div>
 
@@ -549,8 +557,21 @@ else
                                      data-testid="project-structure-advanced-details">
                                 <summary class="project-structure-advanced-details__summary">
                                     <span class="project-structure-advanced-details__summary-copy">
-                                        <strong>Advanced details</strong>
-                                        <small>Artifact, kind, location, and structured metadata</small>
+                                        <span class="project-structure-advanced-details__summary-heading">
+                                            <strong>Advanced details</strong>
+                                            <span class="project-structure-advanced-details__help"
+                                                  @onclick:stopPropagation="true"
+                                                  @onclick:preventDefault="true">
+                                                <HelpPopover RootClass="pf-help-popover project-structure-help-popover"
+                                                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                                                             PanelClass="pf-help-popover__panel pf-help-popover__panel--above-end"
+                                                             AriaLabel="Show advanced details help"
+                                                             Title="Show advanced details help"
+                                                             Heading="Advanced details"
+                                                             Body="@AdvancedDetailsHelpBody"
+                                                             Tip="@AdvancedDetailsHelpTip" />
+                                            </span>
+                                        </span>
                                     </span>
                                     <span class="project-structure-advanced-details__summary-icon" aria-hidden="true">
                                         <Icon Name="expand_more" />
@@ -561,10 +582,6 @@ else
                                         <div class="cw-summary-tile">
                                             <span>Artifact</span>
                                             <strong>@selectedNode.ArtifactKind</strong>
-                                        </div>
-                                        <div class="cw-summary-tile">
-                                            <span>Kind</span>
-                                            <strong>@selectedNode.VisualProfile.AccentBadge</strong>
                                         </div>
                                         <div class="cw-summary-tile">
                                             <span>Location</span>
@@ -971,6 +988,10 @@ else
 @code {
     private const string SelectionWindowKey = "project-structure.selection";
     private const string HealthWindowKey = "project-structure.health";
+    private const double ToolboxWindowDefaultWidth = 430;
+    private const double DefaultCanvasWindowMargin = 16;
+    private const double DefaultCanvasWindowGap = 16;
+    private const double HealthWindowDefaultLeft = ToolboxWindowDefaultWidth + DefaultCanvasWindowMargin + DefaultCanvasWindowGap;
 
     [Parameter]
     public Guid ProjectId { get; set; }
@@ -1019,7 +1040,7 @@ else
 
     private ProjectStructureNode? selectedNode => selectedNodes.FirstOrDefault();
     private CanvasWorkbenchWindowState SelectionWindowState => ResolveWindowState(SelectionWindowKey);
-    private CanvasWorkbenchWindowState HealthWindowState => ResolveWindowState(HealthWindowKey);
+    private CanvasWorkbenchWindowState HealthWindowState => ResolveHealthWindowState();
     private string SelectionWindowTitle
         => selectedNodes.Count switch
         {
@@ -1659,6 +1680,19 @@ else
         return uiState.WindowStates.TryGetValue(key, out var state)
             ? CanvasWorkbenchWindowState.Normalize(state)
             : new CanvasWorkbenchWindowState();
+    }
+
+    private CanvasWorkbenchWindowState ResolveHealthWindowState()
+    {
+        var state = ResolveWindowState(HealthWindowKey);
+        if (state.HasCustomGeometry)
+        {
+            return state;
+        }
+
+        var offsetState = state.Clone();
+        offsetState.Left = HealthWindowDefaultLeft;
+        return CanvasWorkbenchWindowState.Normalize(offsetState);
     }
 
     private Task HandleSelectionWindowStateChangedAsync(CanvasWorkbenchWindowState state)

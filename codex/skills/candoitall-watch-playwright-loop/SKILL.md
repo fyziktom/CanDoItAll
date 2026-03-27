@@ -29,7 +29,8 @@ Use one managed app session and one persistent Playwright page. The loop is only
 7. Make one nearby edit.
 8. Wait from the pre-edit cursor with the correct `candoitall_app_wait` condition.
 9. Re-check the same Playwright page.
-10. Only continue if browser truth matches the intended change.
+10. Record the validation result in the bundle analytics or linked evidence file.
+11. Only continue if browser truth matches the intended change.
 
 ## Session contract
 
@@ -52,7 +53,8 @@ Use one managed app session and one persistent Playwright page. The loop is only
 3. Call `candoitall_app_wait` with the matching condition and the recorded cursor.
 4. Refresh the same Playwright page only after the wait succeeds when the edit type requires refresh.
 5. Prove the exact intended change with DOM, computed-style, and visual checks.
-6. Move to the next edit only after the proof passes.
+6. Log the route, viewport, Playwright MCP actions, assertions, and screenshot paths used for that proof.
+7. Move to the next edit only after the proof passes.
 
 ## Performance rules
 
@@ -87,6 +89,12 @@ Use the smallest proof that matches the edit.
 - Use `browser_evaluate` for exact DOM, text, class, and computed-style checks.
 - Use screenshots as evidence after the DOM proof, not as the only proof.
 - On the first layout pass, capture a large-screen screenshot after the browser is maximized and answer the visual questions from the bundle execution reference.
+- Record at least one analytics entry per validation pass with route, viewport, Playwright MCP actions, assertions, screenshot path, and pass or fail outcome.
+- When validating overlays such as tooltips, help affordances, menus, or floating popovers, prove the open state with both geometry and visual evidence:
+  - open the overlay in Playwright
+  - check bounding boxes or computed style when needed
+  - verify the content is not clipped by the viewport or its parent container
+  - verify the overlay is not hidden behind adjacent floating windows or chrome
 - If any answer about readability, overlap, spacing, alignment, or space usage is not acceptable, fix that before proceeding.
 - Prefer one exact assertion over a broad page snapshot. Proof should name the element, text, class, or style that changed.
 - For responsive checks, resize or reuse the same page context instead of reopening the route in a fresh browser session.
@@ -94,6 +102,7 @@ Use the smallest proof that matches the edit.
 - Refresh only after the managed wait completes.
 - Because automatic browser refresh is suppressed, expect to refresh manually for markup and C# edits.
 - Use the `screenshot` skill when browser capture is insufficient or when desktop/window context matters.
+- If you cannot produce a real Playwright MCP interaction for the current validation target, stop and document the blocker instead of guessing.
 
 ## Recovery rules
 

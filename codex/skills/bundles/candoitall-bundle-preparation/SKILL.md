@@ -25,9 +25,10 @@ Turn messy inputs into a bundle that an implementation agent can execute without
 6. Create the bundle structure with `scripts/scaffold_bundle.py` or mirror that structure manually if the bundle already exists.
 7. Split execution into numbered subbundles. Every subbundle must be independently actionable and should own a coherent slice of work.
 8. Write reusable implementation and QA prompts under `shared-prompts`.
-9. Complete traceability so every requirement points to at least one concrete bundle file.
-10. Run `scripts/validate_bundle.py` before declaring the bundle ready.
-11. Finish the self-review from QA, architect, and manager perspectives. Do not mark the bundle ready while any of those three reviews is incomplete or inconclusive.
+9. Pre-create browser-validation logging instructions for each subbundle and seed the execution report with a browser-validation analytics section.
+10. Complete traceability so every requirement points to at least one concrete bundle file.
+11. Run `scripts/validate_bundle.py` before declaring the bundle ready.
+12. Finish the self-review from QA, architect, and manager perspectives. Do not mark the bundle ready while any of those three reviews is incomplete or inconclusive.
 
 ## Bundle Contract
 
@@ -66,6 +67,7 @@ Every subbundle README must include:
 - `## Do Not Do`
 - `## Acceptance Checklist`
 - `## Proof Required`
+- `## Browser Validation Logging`
 - `## Suggested Agent Prompt`
 
 Do not create vague “misc cleanup” or “remaining fixes” buckets. If the work cannot be named precisely, the bundle is not ready yet.
@@ -102,6 +104,12 @@ When the feedback source includes screenshots, layout complaints, or desktop act
 - plan the first browser validation pass in a maximized headed browser window or an equivalent large-screen desktop viewport that fills the available work area
 - plan a large-screen screenshot capture for real visual review, not just as an artifact to attach
 - add the visual validation question set to the QA prompt and subbundle proof requirements
+- plan how each UI subbundle will log browser-validation analytics: route, viewport, Playwright MCP actions, assertions, screenshot paths, and result
+- if the change touches overlays such as tooltips, help affordances, dropdowns, menus, dialogs, or floating-window popovers, explicitly plan open-state proof for:
+  - full readable content
+  - no clipping by the viewport or parent container
+  - no harmful lateral overflow
+  - correct layering above neighboring chrome or floating windows
 - after desktop validation is planned, add a narrower-width pass when the change affects layout or responsive behavior
 - plan host-level proof for shell launch, file open, admin elevation, or other desktop integrations
 - use the `screenshot` skill when fullscreen, active-window, or OS-level capture is needed beyond what Playwright can see
@@ -121,6 +129,7 @@ When the likely implementation loop includes repeated test churn:
 - Make acceptance criteria observable. Prefer concrete browser, test, build, and artifact proof over subjective claims.
 - Expand UI validation beyond “does it work.” Require readability, spacing, hierarchy, alignment, affordance, shared-component usage, and space-use checks.
 - For UI work, require that screenshots are actually reviewed against explicit questions, not merely attached.
+- For UI work, require that the bundle already says where the browser-validation analytics will be recorded and what counts as sufficient Playwright proof.
 - Preserve the rule from the successful packs: the bundle is a coordination artifact first, not a place to sneak in implementation work.
 - Do not silently weaken raw feedback scope during normalization. If you narrow scope, show the exception list and make the follow-up path explicit inside the bundle.
 
@@ -144,7 +153,8 @@ The validator is not just a folder-shape check.
 
 - subbundle READMEs must include `## Status`
 - subbundle `## Exact Source References` must contain absolute paths that already exist
-- feedback-profile execution reports must already include `## Status` and `## Raw Note Closure`
+- subbundle READMEs must include `## Browser Validation Logging`, using `N/A` only when the subbundle does not affect browser-visible or host-visible proof
+- feedback-profile execution reports must already include `## Status`, `## Browser Validation Analytics`, `## Analytics Review`, and `## Raw Note Closure`
 - if validation fails, repair the bundle before calling it ready
 
 Keep these checks in mind while preparing the bundle so the first validation pass is not a surprise.

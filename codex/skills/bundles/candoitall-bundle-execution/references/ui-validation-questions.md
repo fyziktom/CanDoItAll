@@ -15,6 +15,9 @@ Use these questions during UI validation. They are not optional for screenshot-d
 - Is any text clipped, faded into the background, or competing with nearby chrome?
 - Is anything overlaying or colliding with something else?
 - Are menus, tooltips, dropdowns, dialogs, floating windows, and inspectors layered correctly?
+- When those overlays are open, is all of the intended content visible without container clipping or viewport clipping?
+- When those overlays are open, do they stay clear of harmful left or right overflow that cuts off content?
+- When those overlays are open, do they render above neighboring windows and chrome instead of hiding behind them?
 
 ## Layout Quality
 

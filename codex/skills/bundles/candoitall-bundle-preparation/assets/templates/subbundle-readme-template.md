@@ -41,6 +41,14 @@
 - List the commands, screenshots, artifact paths, or DOM checks required to prove completion.
 - If this subbundle changes UI, require a maximized large-screen browser pass, screenshot review, and narrower-width follow-up when layout is affected.
 
+## Browser Validation Logging
+
+- Record the target route or window under test.
+- Record the required viewport passes.
+- Record the Playwright MCP actions or assertions that must happen before the subbundle can close.
+- Record the screenshot file names or evidence paths that should appear in the execution report.
+- Use `N/A` only when this subbundle does not affect browser-visible or host-visible proof.
+
 ## Suggested Agent Prompt
 
 ```text

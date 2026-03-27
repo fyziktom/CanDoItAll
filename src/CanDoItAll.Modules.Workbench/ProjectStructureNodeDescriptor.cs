@@ -143,7 +143,7 @@ internal static class ProjectStructureNodeDescriptor
                 break;
         }
 
-        return facts;
+        return FilterFacts(node, facts);
     }
 
     public static string BuildLeadText(ProjectStructureNode node)
@@ -199,6 +199,19 @@ internal static class ProjectStructureNodeDescriptor
         }
     }
 
+    private static IReadOnlyList<ProjectStructureNodeFact> FilterFacts(ProjectStructureNode node, IReadOnlyList<ProjectStructureNodeFact> facts)
+    {
+        if (facts.Count == 0)
+        {
+            return facts;
+        }
+
+        var surfacedLabels = BuildSurfacedLabels(node);
+        return facts
+            .Where(fact => !ShouldSuppressFact(fact, surfacedLabels))
+            .ToList();
+    }
+
     private static string HumanizeEnum<TEnum>(TEnum? value)
         where TEnum : struct, Enum
         => value.HasValue ? HumanizeToken(value.Value.ToString()) : string.Empty;
@@ -228,6 +241,63 @@ internal static class ProjectStructureNodeDescriptor
         return normalized.Length <= maxLength
             ? normalized
             : normalized[..maxLength].TrimEnd() + "...";
+    }
+
+    private static HashSet<string> BuildSurfacedLabels(ProjectStructureNode node)
+    {
+        var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ProjectStructureCanvasCatalog.ResolveNodeLabel(node),
+            node.VisualProfile.AccentBadge
+        };
+
+        foreach (var badge in node.Badges)
+        {
+            labels.Add(badge);
+        }
+
+        return labels;
+    }
+
+    private static bool ShouldSuppressFact(ProjectStructureNodeFact fact, IReadOnlySet<string> surfacedLabels)
+    {
+        if (fact.Label is not ("Type" or "Kind" or "Mode"))
+        {
+            return false;
+        }
+
+        var normalizedValue = NormalizeFactValue(fact.Value);
+        if (string.IsNullOrWhiteSpace(normalizedValue))
+        {
+            return false;
+        }
+
+        foreach (var surfacedLabel in surfacedLabels)
+        {
+            var normalizedLabel = NormalizeFactValue(surfacedLabel);
+            if (string.IsNullOrWhiteSpace(normalizedLabel))
+            {
+                continue;
+            }
+
+            if (normalizedLabel.Contains(normalizedValue, StringComparison.OrdinalIgnoreCase) ||
+                normalizedValue.Contains(normalizedLabel, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string NormalizeFactValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return string.Concat(value.Where(char.IsLetterOrDigit));
     }
 
     private static string BuildFactLeadText(
