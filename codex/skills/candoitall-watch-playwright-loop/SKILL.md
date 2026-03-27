@@ -12,6 +12,7 @@ Use one managed app session and one persistent Playwright page. The loop is only
 - keep hot-reload loops near plain `dotnet watch` speed
 - use Playwright as the browser truth, not the watch log
 - prevent overlapping edits, repeated waits, and stale-page confusion
+- tune the layout from a large-screen view first, then narrow it down responsively
 
 ## Required loop
 
@@ -19,15 +20,16 @@ Use one managed app session and one persistent Playwright page. The loop is only
 2. Start or reuse the app with `candoitall_app_start`.
 3. Wait for `WatchReady` before beginning UI edits.
 4. Open one Playwright page on the target route and keep it open.
-5. Capture a baseline with `candoitall_app_status`:
+5. Maximize the browser window, or resize it to fill the available large-screen desktop work area before the first layout judgement.
+6. Capture a baseline with `candoitall_app_status`:
    - `sessionId`
    - `lastCursor`
    - `revision`
    - `watch.lastHotReloadOutcome`
-6. Make one nearby edit.
-7. Wait from the pre-edit cursor with the correct `candoitall_app_wait` condition.
-8. Re-check the same Playwright page.
-9. Only continue if browser truth matches the intended change.
+7. Make one nearby edit.
+8. Wait from the pre-edit cursor with the correct `candoitall_app_wait` condition.
+9. Re-check the same Playwright page.
+10. Only continue if browser truth matches the intended change.
 
 ## Session contract
 
@@ -49,7 +51,7 @@ Use one managed app session and one persistent Playwright page. The loop is only
 2. Make one file change in the effective UI surface.
 3. Call `candoitall_app_wait` with the matching condition and the recorded cursor.
 4. Refresh the same Playwright page only after the wait succeeds when the edit type requires refresh.
-5. Prove the exact intended change with DOM or computed-style checks.
+5. Prove the exact intended change with DOM, computed-style, and visual checks.
 6. Move to the next edit only after the proof passes.
 
 ## Performance rules
@@ -84,11 +86,14 @@ Use the smallest proof that matches the edit.
 
 - Use `browser_evaluate` for exact DOM, text, class, and computed-style checks.
 - Use screenshots as evidence after the DOM proof, not as the only proof.
+- On the first layout pass, capture a large-screen screenshot after the browser is maximized and answer the visual questions from the bundle execution reference.
+- If any answer about readability, overlap, spacing, alignment, or space usage is not acceptable, fix that before proceeding.
 - Prefer one exact assertion over a broad page snapshot. Proof should name the element, text, class, or style that changed.
 - For responsive checks, resize or reuse the same page context instead of reopening the route in a fresh browser session.
 - Re-check desktop, tablet, and mobile after meaningful UI changes.
 - Refresh only after the managed wait completes.
 - Because automatic browser refresh is suppressed, expect to refresh manually for markup and C# edits.
+- Use the `screenshot` skill when browser capture is insufficient or when desktop/window context matters.
 
 ## Recovery rules
 

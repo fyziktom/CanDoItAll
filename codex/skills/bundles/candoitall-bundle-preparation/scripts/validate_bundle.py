@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import re
 
 COMMON_DIRECTORIES = [
     "inputs",
@@ -39,6 +40,7 @@ REQUIRED_FILES = [
 ]
 
 SUBBUNDLE_HEADING_GROUPS = [
+    ("## Status",),
     ("## Objective",),
     ("## Covered Inputs", "## Covered Notes"),
     ("## Exact Source References",),
@@ -48,6 +50,11 @@ SUBBUNDLE_HEADING_GROUPS = [
     ("## Acceptance Checklist",),
     ("## Proof Required",),
     ("## Suggested Agent Prompt",),
+]
+
+FEEDBACK_EXECUTION_REPORT_HEADINGS = [
+    "## Status",
+    "## Raw Note Closure",
 ]
 
 
@@ -80,6 +87,85 @@ def validate_subbundle_readme(path: Path) -> list[str]:
         if not any(heading in content for heading in heading_group):
             issues.append(f"{path}: missing one of {', '.join(heading_group)}")
 
+    issues.extend(validate_exact_source_references(path, content))
+    return issues
+
+
+def extract_markdown_section(content: str, heading: str) -> str | None:
+    lines = content.splitlines()
+    start_index: int | None = None
+
+    for index, line in enumerate(lines):
+        if line.strip() == heading:
+            start_index = index + 1
+            break
+
+    if start_index is None:
+        return None
+
+    end_index = len(lines)
+    for index in range(start_index, len(lines)):
+        if lines[index].startswith("## "):
+            end_index = index
+            break
+
+    return "\n".join(lines[start_index:end_index])
+
+
+def extract_bullet_values(section_content: str) -> list[str]:
+    values: list[str] = []
+    for line in section_content.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("- "):
+            continue
+
+        value = stripped[2:].strip()
+        exact_match = re.fullmatch(r"`([^`]+)`", value)
+        if exact_match is not None:
+            value = exact_match.group(1).strip()
+
+        values.append(value)
+
+    return values
+
+
+def validate_exact_source_references(path: Path, content: str) -> list[str]:
+    section_content = extract_markdown_section(content, "## Exact Source References")
+    if section_content is None:
+        return []
+
+    references = extract_bullet_values(section_content)
+    if not references:
+        return [f"{path}: ## Exact Source References must include at least one markdown bullet path"]
+
+    issues: list[str] = []
+    for reference in references:
+        reference_path = Path(reference)
+        if not reference_path.is_absolute():
+            issues.append(f"{path}: source reference is not an absolute path: {reference}")
+            continue
+
+        if not reference_path.exists():
+            issues.append(f"{path}: source reference does not exist: {reference}")
+
+    return issues
+
+
+def validate_feedback_execution_report(path: Path) -> list[str]:
+    content = path.read_text(encoding="utf-8")
+    issues: list[str] = []
+
+    for heading in FEEDBACK_EXECUTION_REPORT_HEADINGS:
+        if heading not in content:
+            issues.append(f"{path}: missing required heading {heading}")
+
+    raw_note_section = extract_markdown_section(content, "## Raw Note Closure")
+    if raw_note_section is None:
+        return issues
+
+    if "| Raw note | Status | Proof |" not in raw_note_section:
+        issues.append(f"{path}: ## Raw Note Closure must include the '| Raw note | Status | Proof |' table header")
+
     return issues
 
 
@@ -106,6 +192,11 @@ def main() -> int:
                 issues.append(f"Missing README.md in {subbundle_directory}")
                 continue
             issues.extend(validate_subbundle_readme(readme_path))
+
+    if arguments.profile == "feedback":
+        execution_report_path = bundle_path / "reviews" / "01-execution-report.md"
+        if execution_report_path.is_file():
+            issues.extend(validate_feedback_execution_report(execution_report_path))
 
     if issues:
         print("Bundle validation failed:")

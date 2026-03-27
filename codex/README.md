@@ -1,0 +1,54 @@
+# Codex Skills
+
+This repo ships a portable CanDoItAll Codex skill pack under `codex/skills`.
+
+It includes these custom skills:
+
+- `candoitall-bundle-workflow`
+- `candoitall-bundle-preparation`
+- `candoitall-bundle-execution`
+- `candoitall-watch-playwright-loop`
+- `candoitall-dotnetwatch-setup`
+
+It also depends on these public sibling skills from `dotnet/skills`:
+
+- `frontend-skill`
+- `playwright`
+- `screenshot`
+- `imagegen`
+- `mtp-hot-reload`
+
+## Install Or Refresh Skills
+
+From the repo root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1
+```
+
+That script:
+
+- copies the custom CanDoItAll skills from this repo into `$CODEX_HOME\skills`
+- clones or updates the public `dotnet/skills` repo into a temp cache
+- finds the required public sibling skills by name
+- installs those sibling skills into the same Codex home
+
+## Useful Options
+
+Install only the custom repo-backed skills:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1 -SkipPublicSkills
+```
+
+Install into a different Codex home:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1 -CodexHome "D:\CodexHome"
+```
+
+## Notes
+
+- The bundle skills now assume real browser validation through Playwright MCP plus the `playwright` skill for UI-heavy work.
+- Large-screen validation comes first: maximize the browser window or fill the available desktop work area, capture a screenshot, review it, then continue to narrower widths.
+- `imagegen` is a planning aid only when UI direction is unclear; it does not replace shipped browser proof.

@@ -1,5 +1,9 @@
 # {{SUBBUNDLE_TITLE}}
 
+## Status
+
+- `Ready`
+
 ## Objective
 
 - Describe the outcome of this subbundle.
@@ -20,6 +24,10 @@
 
 1. Add the exact ordered steps.
 
+## Scope Exceptions
+
+- Add explicit exceptions when any raw note cannot be fully closed in this phase.
+
 ## Do Not Do
 
 - List the boundaries for this phase.
@@ -31,6 +39,7 @@
 ## Proof Required
 
 - List the commands, screenshots, artifact paths, or DOM checks required to prove completion.
+- If this subbundle changes UI, require a maximized large-screen browser pass, screenshot review, and narrower-width follow-up when layout is affected.
 
 ## Suggested Agent Prompt
 

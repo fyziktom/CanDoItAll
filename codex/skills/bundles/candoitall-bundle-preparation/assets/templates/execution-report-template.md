@@ -1,14 +1,22 @@
 # Execution Report
 
-Date: `Pending`
+## Status
 
-## Executed Scope
+- Execution state: `Not started`
 
-- List the completed subbundles or items.
+## Commands
 
-## Validation
+- List the targeted commands and their outcomes.
 
-- List the commands and browser checks that proved completion.
+## Browser Artifacts
+
+- List screenshot, fullscreen, or host-capture artifact paths when UI or desktop proof is involved.
+
+## Raw Note Closure
+
+| Raw note | Status | Proof |
+| --- | --- | --- |
+| `N001` | `Not started` | Pending implementation |
 
 ## Residual Risks
 

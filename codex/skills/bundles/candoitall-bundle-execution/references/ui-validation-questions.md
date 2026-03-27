@@ -1,14 +1,45 @@
 # UI Validation Questions
 
-Ask these questions during UI validation:
+Use these questions during UI validation. They are not optional for screenshot-driven or layout-sensitive work.
 
-- Can I read all text comfortably at normal zoom?
-- Will a new user understand the hierarchy, actions, and state changes?
-- Is any spacing, sizing, or alignment visually disruptive?
-- Are shared components used where they should be, instead of ad hoc `div` and `span` structures?
-- Is the available space used intentionally, without awkward empty zones or cramped clusters?
-- Do modal, floating, and overlay surfaces layer correctly above the canvas or surrounding layout?
-- Are controls reachable without hidden scrolling traps?
-- Does the surface still behave correctly at desktop and narrower widths when the change affects layout?
-- Do icons, badges, and file-type cues remain visible on their backgrounds?
-- Does the resulting UI still feel like the existing app, not a disconnected one-off patch?
+## First Pass Environment
+
+- Start in a maximized headed browser window or the largest practical desktop viewport on the current machine.
+- Capture a fullscreen or full-page screenshot from that large-screen pass.
+- Do the first visual judgement there before shrinking to narrower widths.
+- After the large-screen pass is acceptable, continue with narrower desktop, tablet, or mobile widths when the change affects layout or responsiveness.
+
+## Readability And Overlap
+
+- Can I read all texts properly without zooming?
+- Is any text clipped, faded into the background, or competing with nearby chrome?
+- Is anything overlaying or colliding with something else?
+- Are menus, tooltips, dropdowns, dialogs, floating windows, and inspectors layered correctly?
+
+## Layout Quality
+
+- Is any component too large, too small, or visually disproportionate?
+- Are there awkward gaps, unused zones, cramped clusters, or broken alignments?
+- Are components aligned and justified consistently?
+- Are we using the available space intentionally on the page?
+- Are scroll containers obvious and usable, without hidden scrolling traps?
+
+## System And Consistency
+
+- Are shared components used where they should be, instead of ad hoc structures?
+- Does the surface still feel like the existing app rather than a disconnected one-off patch?
+- Do badges, icons, markers, and file-type cues remain visible on their backgrounds?
+- Does the interaction model remain understandable for a new user?
+
+## Frontend Skill Questions
+
+When the screen is visually led, also ask:
+
+- Is there one clear visual anchor or primary working surface?
+- Is the hierarchy obvious in one glance?
+- Would the layout still feel intentional if decorative shadows or effects were removed?
+- Does motion, if present, improve comprehension rather than distract?
+
+## Action Rule
+
+If any answer is not acceptable, tune the layout, interaction, or composition and rerun the validation loop. Do not close the subbundle because “the test passed” while the screenshot still looks wrong.
