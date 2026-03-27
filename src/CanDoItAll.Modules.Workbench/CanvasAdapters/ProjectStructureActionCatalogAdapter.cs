@@ -192,7 +192,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             Description = "Update progress for the selected item or active selection.",
             Icon = "progress",
             Tone = "mint",
-            SubmenuLayout = "compact-ring",
+            SubmenuLayout = "compact-hive",
             Children = BuildProgressPresetActions()
         };
 
@@ -259,7 +259,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             Description = "Attach a fast visual note marker to the selected item or active selection.",
             Icon = "marker",
             Tone = "primary",
-            SubmenuLayout = "compact-ring",
+            SubmenuLayout = "compact-hive",
             Children =
             [
                 new() { ActionId = "marker:none", Label = "Clear", MenuLabel = "Clear", Description = "Remove the current marker.", Icon = "marker-none", Tone = "ghost", MenuSize = "compact" },
@@ -285,7 +285,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             Description = "Attach a numbered priority badge to the selected item or active selection.",
             Icon = "priority",
             Tone = "warn",
-            SubmenuLayout = "compact-ring",
+            SubmenuLayout = "compact-hive",
             Children =
             [
                 new() { ActionId = "priority:0", Label = "0", MenuLabel = "0", Description = "Clear the priority badge.", Icon = "priority-0", Tone = "ghost", MenuSize = "compact" },

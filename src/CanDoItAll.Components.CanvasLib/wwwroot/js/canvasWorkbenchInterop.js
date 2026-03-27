@@ -1,5 +1,6 @@
 (function () {
     const root = window.CanDoItAll = window.CanDoItAll || {};
+    const contextSubmenuHoverDelayMs = 500;
     const MIN_ZOOM = 0.15;
     const MAX_ZOOM = 1.75;
     function getTextMeasureService() {
@@ -1285,13 +1286,54 @@
         return { mode: "na", angle: 360, centerText: "-", title: "Not applicable" };
     }
 
-    function createProgressBadge(document, progressMode, progressPercent, extraClassName) {
+    function createProgressBadge(document, progressMode, progressPercent, extraClassName, centerTextOverride, titleOverride) {
         const display = resolveProgressDisplay(progressMode, progressPercent);
         const marker = createElement(document, "span", `cw-node__progress is-${display.mode}${extraClassName ? ` ${extraClassName}` : ""}`);
         marker.style.setProperty("--cw-progress-angle", `${display.angle}deg`);
-        marker.title = display.title;
-        marker.appendChild(createElement(document, "span", "cw-node__progress-center", display.centerText));
+        const centerText = typeof centerTextOverride === "string"
+            ? centerTextOverride
+            : display.centerText;
+        marker.title = titleOverride || display.title;
+        if (centerText.length === 0) {
+            marker.classList.add("is-empty-center");
+        }
+        else if (centerText.length > 2) {
+            marker.classList.add("has-long-text");
+        }
+        marker.appendChild(createElement(document, "span", "cw-node__progress-center", centerText));
         return marker;
+    }
+
+    function resolveProgressPresetBadgeOptions(iconKey) {
+        const token = iconKey.substring("progress-".length);
+        const numericPercent = Number(token);
+        if (token === "na") {
+            return {
+                progressMode: "na",
+                progressPercent: 0,
+                centerText: "N/A",
+                title: "Not applicable"
+            };
+        }
+
+        if (token === "started") {
+            return {
+                progressMode: "started",
+                progressPercent: 0,
+                centerText: "",
+                title: "Started"
+            };
+        }
+
+        const progressPercent = Number.isFinite(numericPercent)
+            ? clamp(Math.round(numericPercent), 0, 100)
+            : 0;
+        return {
+            progressMode: progressPercent >= 100 ? "complete" : "progress",
+            progressPercent,
+            centerText: `${progressPercent}%`,
+            title: `${progressPercent}% complete`
+        };
     }
 
     function resolveMarkerGlyph(markerIcon) {
@@ -2466,6 +2508,7 @@
     }
 
     function clearContextMenu(state) {
+        cancelPendingContextSubmenu(state);
         state.contextMenu.innerHTML = "";
         state.contextMenu.style.display = "none";
         state.contextMenuState = null;
@@ -2618,6 +2661,11 @@
         return normalizeMenuActionScale(state?.ui?.menuActionScale);
     }
 
+    function isCompactHiveLayout(layout) {
+        const normalizedLayout = (layout || "").toLowerCase();
+        return normalizedLayout === "compact-hive" || normalizedLayout === "compact-ring";
+    }
+
     function resolveMenuActionVariant(action) {
         const actionId = (action?.actionId || "").toLowerCase();
         if (actionId.startsWith("progress:")) {
@@ -2641,9 +2689,11 @@
         const scale = getMenuScale(state);
         switch (resolveMenuActionVariant(action)) {
             case "progress-preset":
+                return { halfWidth: round(39 * scale), halfHeight: round(34 * scale) };
             case "marker-preset":
-                return { halfWidth: round(34 * scale), halfHeight: round(29 * scale) };
+                return { halfWidth: round(41 * scale), halfHeight: round(35 * scale) };
             case "priority-preset":
+                return { halfWidth: round(31 * scale), halfHeight: round(27 * scale) };
             case "compact":
                 return { halfWidth: round(29 * scale), halfHeight: round(25 * scale) };
             default:
@@ -2795,10 +2845,14 @@
         const iconContainer = createElement(state.document, "span", "cw-context-menu__icon");
 
         if (iconKey.startsWith("progress-")) {
-            const token = iconKey.substring("progress-".length);
-            const progressMode = token === "na" ? "na" : token === "started" ? "started" : (Number(token) >= 100 ? "complete" : "progress");
-            const progressPercent = Number.isFinite(Number(token)) ? Number(token) : 0;
-            iconContainer.appendChild(createProgressBadge(state.document, progressMode, progressPercent, "cw-node__progress--menu"));
+            const preset = resolveProgressPresetBadgeOptions(iconKey);
+            iconContainer.appendChild(createProgressBadge(
+                state.document,
+                preset.progressMode,
+                preset.progressPercent,
+                "cw-node__progress--menu",
+                preset.centerText,
+                preset.title));
             return iconContainer;
         }
 
@@ -2861,31 +2915,82 @@
         return offsets;
     }
 
-    function getCompactRingOffsets(count, radius, startAngle) {
+    function buildCompactHiveCoordinates(count) {
         if (count <= 0) {
             return [];
         }
 
-        const offsets = [];
-        const resolvedRadius = typeof radius === "number" ? radius : 72;
-        const resolvedStartAngle = typeof startAngle === "number" ? startAngle : -90;
-        for (let index = 0; index < count; index++) {
-            const angle = ((resolvedStartAngle + ((360 / count) * index)) * Math.PI) / 180;
-            offsets.push({
-                x: Math.cos(angle) * resolvedRadius,
-                y: Math.sin(angle) * resolvedRadius
-            });
+        const directions = [
+            { q: 1, r: 0 },
+            { q: 1, r: -1 },
+            { q: 0, r: -1 },
+            { q: -1, r: 0 },
+            { q: -1, r: 1 },
+            { q: 0, r: 1 }
+        ];
+        const coordinates = [];
+        for (let ring = 1; coordinates.length < count; ring++) {
+            let q = -ring;
+            let r = ring;
+            for (let directionIndex = 0; directionIndex < directions.length && coordinates.length < count; directionIndex++) {
+                const direction = directions[directionIndex];
+                for (let step = 0; step < ring && coordinates.length < count; step++) {
+                    coordinates.push({ q, r });
+                    q += direction.q;
+                    r += direction.r;
+                }
+            }
         }
 
-        return offsets;
+        return coordinates;
     }
 
-    function resolveContextMenuOffsets(actions, baseRadius, ringStep, layout) {
-        if ((layout || "").toLowerCase() === "compact-ring") {
-            return getCompactRingOffsets(actions.length, typeof baseRadius === "number" ? baseRadius : 72, -90);
+    function getCompactHiveOffsets(state, actions) {
+        if (!actions?.length) {
+            return [];
+        }
+
+        let maxHalfWidth = 34;
+        let maxHalfHeight = 29;
+        actions.forEach(action => {
+            const metrics = getActionMetrics(state, action);
+            maxHalfWidth = Math.max(maxHalfWidth, metrics.halfWidth);
+            maxHalfHeight = Math.max(maxHalfHeight, metrics.halfHeight);
+        });
+
+        const size = Math.max(maxHalfWidth + 7, round(((maxHalfHeight + 6) / Math.sqrt(3)) * 2));
+        const horizontalStep = size * 2.1;
+        const verticalStep = Math.max(maxHalfHeight * 2 + 24, size * 2.32);
+        return buildCompactHiveCoordinates(actions.length).map(coordinate => ({
+            x: round(coordinate.q * horizontalStep),
+            y: round((coordinate.r + (coordinate.q / 2)) * verticalStep)
+        }));
+    }
+
+    function resolveContextMenuOffsets(state, actions, baseRadius, ringStep, layout) {
+        if (isCompactHiveLayout(layout)) {
+            return getCompactHiveOffsets(state, actions);
         }
 
         return getRadialOffsets(actions.length, baseRadius, ringStep);
+    }
+
+    function resolveContextMenuSafeTop(state) {
+        const hostRect = state.host.getBoundingClientRect();
+        const workbenchFrame = state.host.closest(".cw-workbench-frame");
+        const toolbars = workbenchFrame
+            ? Array.from(workbenchFrame.querySelectorAll(".cw-toolbar"))
+                .filter(toolbar => toolbar instanceof HTMLElement)
+            : [];
+        if (!toolbars.length) {
+            return 0;
+        }
+
+        const safeBottom = toolbars.reduce((maxBottom, toolbar) => {
+            const toolbarRect = toolbar.getBoundingClientRect();
+            return Math.max(maxBottom, toolbarRect.bottom);
+        }, 0);
+        return Math.max(0, Math.round(safeBottom - hostRect.top + 12));
     }
 
     function getContextMenuLayerBounds(state, originOffset, offsets, radius, actions) {
@@ -2931,7 +3036,7 @@
         const hostRect = state.host.getBoundingClientRect();
         const visibleMinX = -rootCenter.x;
         const visibleMaxX = hostRect.width - rootCenter.x;
-        const visibleMinY = -rootCenter.y;
+        const visibleMinY = resolveContextMenuSafeTop(state) - rootCenter.y;
         const visibleMaxY = hostRect.height - rootCenter.y;
         let shiftX = 0;
         let shiftY = 0;
@@ -2962,8 +3067,9 @@
         const hostRect = state.host.getBoundingClientRect();
         const radius = getContextMenuOrbitRadius(state, offsets || [], actions || []);
         const bounds = getContextMenuLayerBounds(state, { x: 0, y: 0 }, offsets || [], radius, actions || []);
+        const safeTop = resolveContextMenuSafeTop(state);
         const x = round(clamp(center.x, -bounds.minX, Math.max(-bounds.minX, hostRect.width - bounds.maxX)));
-        const y = round(clamp(center.y, -bounds.minY, Math.max(-bounds.minY, hostRect.height - bounds.maxY)));
+        const y = round(clamp(center.y, safeTop - bounds.minY, Math.max(safeTop - bounds.minY, hostRect.height - bounds.maxY)));
         state.contextMenu.style.left = `${x}px`;
         state.contextMenu.style.top = `${y}px`;
         return { x, y };
@@ -3017,6 +3123,8 @@
             return;
         }
 
+        cancelPendingContextSubmenu(state, pending => (pending.ownerDepth + 1) >= depth);
+
         for (let index = layers.length - 1; index >= depth; index--) {
             layers[index].element.remove();
         }
@@ -3036,10 +3144,11 @@
             const layer = layers[depth];
             const entry = layer?.actionEntries?.get(hoveredAction.dataset.actionId || "");
             if (entry?.action?.children?.length) {
-                openContextSubmenu(state, layer, entry.options, entry.action, entry.offset);
+                scheduleContextSubmenuOpen(state, layer, entry.options, entry.action, entry.offset, hoveredAction);
                 return;
             }
 
+            cancelPendingContextSubmenu(state);
             closeContextMenuLayersFrom(state, depth + 1);
             return;
         }
@@ -3060,17 +3169,101 @@
             }
         }
 
+        cancelPendingContextSubmenu(state, pending => pending.ownerDepth > deepestContainingLayer);
         closeContextMenuLayersFrom(state, deepestContainingLayer + 1);
     }
 
     function resolveSubmenuOrigin(parentLayer, offset, layout) {
         const length = Math.hypot(offset.x, offset.y) || 1;
-        const outwardDistance = (layout || "").toLowerCase() === "compact-ring"
-            ? Math.max(92, round(parentLayer.radius * 0.26))
+        const outwardDistance = isCompactHiveLayout(layout)
+            ? Math.max(112, round(parentLayer.radius * 0.34))
             : Math.max(108, round(parentLayer.radius * 0.34));
         return {
             x: round(parentLayer.originOffset.x + offset.x + ((offset.x / length) * outwardDistance)),
             y: round(parentLayer.originOffset.y + offset.y + ((offset.y / length) * outwardDistance))
+        };
+    }
+
+    function ensureSubmenuLoadingIndicator(state, button) {
+        let indicator = button.querySelector(".cw-context-menu__loading-indicator");
+        if (indicator) {
+            return indicator;
+        }
+
+        indicator = createElement(state.document, "span", "cw-context-menu__loading-indicator");
+        indicator.appendChild(createElement(state.document, "span", "cw-context-menu__loading-ring"));
+        button.appendChild(indicator);
+        return indicator;
+    }
+
+    function clearSubmenuLoadingIndicator(button) {
+        if (!(button instanceof HTMLElement)) {
+            return;
+        }
+
+        button.classList.remove("is-submenu-loading");
+        button.querySelector(".cw-context-menu__loading-indicator")?.remove();
+    }
+
+    function cancelPendingContextSubmenu(state, predicate) {
+        const pending = state.contextMenuState?.pendingSubmenu;
+        if (!pending) {
+            return;
+        }
+
+        if (typeof predicate === "function" && !predicate(pending)) {
+            return;
+        }
+
+        window.clearTimeout(pending.timerId);
+        clearSubmenuLoadingIndicator(pending.button);
+        state.contextMenuState.pendingSubmenu = null;
+    }
+
+    function scheduleContextSubmenuOpen(state, parentLayer, options, action, offset, button) {
+        if (!action?.children?.length || !state.contextMenuState) {
+            cancelPendingContextSubmenu(state);
+            return;
+        }
+
+        const nextDepth = parentLayer.depth + 1;
+        const existingLayer = state.contextMenuState.layers?.[nextDepth];
+        if (existingLayer &&
+            existingLayer.ownerActionId === action.actionId &&
+            existingLayer.ownerDepth === parentLayer.depth) {
+            cancelPendingContextSubmenu(state);
+            return;
+        }
+
+        const pending = state.contextMenuState.pendingSubmenu;
+        if (pending &&
+            pending.ownerActionId === action.actionId &&
+            pending.ownerDepth === parentLayer.depth) {
+            return;
+        }
+
+        cancelPendingContextSubmenu(state);
+        if (!(button instanceof HTMLElement)) {
+            return;
+        }
+
+        ensureSubmenuLoadingIndicator(state, button);
+        button.classList.add("is-submenu-loading");
+
+        const timerId = window.setTimeout(() => {
+            if (!state.contextMenuState?.pendingSubmenu || state.contextMenuState.pendingSubmenu.timerId !== timerId) {
+                return;
+            }
+
+            cancelPendingContextSubmenu(state);
+            openContextSubmenu(state, parentLayer, options, action, offset);
+        }, contextSubmenuHoverDelayMs);
+
+        state.contextMenuState.pendingSubmenu = {
+            timerId,
+            ownerActionId: action.actionId || "",
+            ownerDepth: parentLayer.depth,
+            button
         };
     }
 
@@ -3178,6 +3371,63 @@
             ownerDepth: typeof options.ownerDepth === "number" ? options.ownerDepth : -1,
             actionEntries: new Map()
         };
+    }
+
+    function shiftContextMenuLayerOrigin(layerState, deltaX, deltaY) {
+        if (!layerState || (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5)) {
+            return;
+        }
+
+        layerState.originOffset = {
+            x: round(layerState.originOffset.x + deltaX),
+            y: round(layerState.originOffset.y + deltaY)
+        };
+
+        if (layerState.mode === "panel") {
+            layerState.panel.style.left = `${layerState.originOffset.x}px`;
+            layerState.panel.style.top = `${layerState.originOffset.y}px`;
+            const panelSize = getToolboxPanelSize();
+            layerState.bounds = getToolboxPanelBounds(layerState.originOffset, panelSize);
+            return;
+        }
+
+        layerState.backdrop.style.setProperty("--cw-orbit-x", `${layerState.originOffset.x}px`);
+        layerState.backdrop.style.setProperty("--cw-orbit-y", `${layerState.originOffset.y}px`);
+        layerState.orbit.style.setProperty("--cw-orbit-x", `${layerState.originOffset.x}px`);
+        layerState.orbit.style.setProperty("--cw-orbit-y", `${layerState.originOffset.y}px`);
+    }
+
+    function nudgeContextMenuLayerIntoVisibleHost(state, layerState) {
+        if (!layerState?.element?.isConnected) {
+            return;
+        }
+
+        const hostRect = state.host.getBoundingClientRect();
+        const safeTop = hostRect.top + resolveContextMenuSafeTop(state);
+        const sideMargin = 12;
+        const targetRect = layerState.mode === "panel"
+            ? layerState.panel.getBoundingClientRect()
+            : layerState.orbit.getBoundingClientRect();
+        let shiftX = 0;
+        let shiftY = 0;
+
+        if (targetRect.left < (hostRect.left + sideMargin)) {
+            shiftX += (hostRect.left + sideMargin) - targetRect.left;
+        }
+
+        if (targetRect.right > (hostRect.right - sideMargin)) {
+            shiftX -= targetRect.right - (hostRect.right - sideMargin);
+        }
+
+        if (targetRect.top < safeTop) {
+            shiftY += safeTop - targetRect.top;
+        }
+
+        if (targetRect.bottom > (hostRect.bottom - sideMargin)) {
+            shiftY -= targetRect.bottom - (hostRect.bottom - sideMargin);
+        }
+
+        shiftContextMenuLayerOrigin(layerState, shiftX, shiftY);
     }
 
     function resolveQuickCreateSourceNode(state) {
@@ -3831,6 +4081,7 @@
     }
 
     function openContextSubmenu(state, parentLayer, options, action, offset) {
+        cancelPendingContextSubmenu(state);
         const nextDepth = parentLayer.depth + 1;
         const existingLayer = state.contextMenuState?.layers?.[nextDepth];
         if (existingLayer &&
@@ -3870,13 +4121,14 @@
 
             state.contextMenu.appendChild(submenuLayer.element);
             state.contextMenuState.layers.push(submenuLayer);
+            nudgeContextMenuLayerIntoVisibleHost(state, submenuLayer);
             return;
         }
 
         const menuScale = getMenuScale(state);
-        const submenuBaseRadius = (submenuLayout === "compact-ring" ? 74 : 80) * menuScale;
-        const submenuRingStep = (submenuLayout === "compact-ring" ? 0 : 64) * menuScale;
-        const submenuOffsets = resolveContextMenuOffsets(action.children || [], submenuBaseRadius, submenuRingStep, submenuLayout);
+        const submenuBaseRadius = (isCompactHiveLayout(submenuLayout) ? 74 : 80) * menuScale;
+        const submenuRingStep = (isCompactHiveLayout(submenuLayout) ? 0 : 64) * menuScale;
+        const submenuOffsets = resolveContextMenuOffsets(state, action.children || [], submenuBaseRadius, submenuRingStep, submenuLayout);
         const submenuRadius = getContextMenuOrbitRadius(state, submenuOffsets, action.children || []);
         const submenuOrigin = clampLayerOriginToHost(
             state,
@@ -3908,6 +4160,7 @@
 
         state.contextMenu.appendChild(submenuLayer.element);
         state.contextMenuState.layers.push(submenuLayer);
+        nudgeContextMenuLayerIntoVisibleHost(state, submenuLayer);
     }
 
     function openContextSubmenuByActionId(state, actionId) {
@@ -3922,7 +4175,7 @@
     }
 
     function renderContextMenuLayer(state, layerState, options) {
-        const offsets = options.offsets || resolveContextMenuOffsets(options.actions, options.baseRadius, options.ringStep, options.submenuLayout);
+        const offsets = options.offsets || resolveContextMenuOffsets(state, options.actions, options.baseRadius, options.ringStep, options.submenuLayout);
         layerState.actionEntries = new Map();
         layerState.radius = getContextMenuOrbitRadius(state, offsets, options.actions);
         layerState.orbit.style.setProperty("--cw-orbit-size", `${round(layerState.radius * 2)}px`);
@@ -3957,17 +4210,20 @@
             button.addEventListener("pointerdown", event => event.stopPropagation());
             button.addEventListener("pointermove", event => {
                 event.stopPropagation();
-                if (action.children?.length) {
-                    openContextSubmenu(state, layerState, options, action, offset);
-                }
             });
             button.addEventListener("pointerenter", () => {
                 if (!action.children?.length) {
+                    cancelPendingContextSubmenu(state);
                     closeContextMenuLayersFrom(state, (options.depth || 0) + 1);
                     return;
                 }
 
-                openContextSubmenu(state, layerState, options, action, offset);
+                scheduleContextSubmenuOpen(state, layerState, options, action, offset, button);
+            });
+            button.addEventListener("pointerleave", () => {
+                cancelPendingContextSubmenu(
+                    state,
+                    pending => pending.ownerActionId === (action.actionId || "") && pending.ownerDepth === layerState.depth);
             });
             button.addEventListener("click", event => {
                 event.stopPropagation();
@@ -4204,7 +4460,7 @@
         const hostPoint = getHostPoint(state, options.clientX, options.clientY);
         state.contextMenu.style.display = "block";
         const menuScale = getMenuScale(state);
-        const rootOffsets = resolveContextMenuOffsets(actions, 84 * menuScale, 62 * menuScale, "");
+        const rootOffsets = resolveContextMenuOffsets(state, actions, 84 * menuScale, 62 * menuScale, "");
         const rootCenter = positionContextMenu(state, hostPoint, rootOffsets, actions);
         state.contextMenuState = {
             node: options.node || null,
@@ -4213,7 +4469,8 @@
             clientY: options.clientY,
             placementKind: options.placementKind || (options.node ? "child" : "canvas"),
             rootCenter,
-            layers: []
+            layers: [],
+            pendingSubmenu: null
         };
 
         const rootLayer = createContextMenuLayer(state, {

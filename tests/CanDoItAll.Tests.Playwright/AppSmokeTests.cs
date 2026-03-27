@@ -682,6 +682,107 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
     }
 
     [Fact]
+    public async Task Project_structure_feedback6_context_menu_is_validated_in_browser()
+    {
+        var repoRoot = GetRepoRoot();
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "feedback6");
+        ResetDirectory(artifactsDir);
+
+        await using var context = await fixture.Browser.NewContextAsync(new()
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1900,
+                Height = 1200
+            }
+        });
+
+        var page = await context.NewPageAsync();
+        await CreateProjectAsync(page, "Playwright Feedback 6 Validation", "Validation");
+
+        const string rootSelector = ".cw-node[data-node-id^='project:']";
+
+        await FocusCanvasRootAsync(page);
+        await SetCanvasZoomPercentAsync(page, 100);
+
+        await OpenCanvasContextMenuAsync(page, rootSelector);
+        await page.Mouse.MoveAsync(8, 8);
+        await page.WaitForTimeoutAsync(80);
+        await HoverContextMenuActionAsync(page, "progress");
+        Assert.True(await page.Locator(".cw-context-menu__action[data-action-id='progress'].is-submenu-loading .cw-context-menu__loading-indicator").IsVisibleAsync());
+        Assert.False(await WaitForMenuActionAsync(page, "progress:10", 200), "Expected the progress submenu to stay closed during the hover-delay window.");
+        await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "01-progress-loading-delay.png"), FullPage = true });
+        await page.Mouse.MoveAsync(8, 8);
+        await page.WaitForTimeoutAsync(450);
+        Assert.Equal(0, await page.Locator(".cw-context-menu__action[data-action-id='progress:10']").CountAsync());
+        Assert.Equal(0, await page.Locator(".cw-context-menu__action[data-action-id='progress'] .cw-context-menu__loading-indicator").CountAsync());
+        await page.Keyboard.PressAsync("Escape");
+
+        await OpenCanvasContextMenuAsync(page, rootSelector);
+        await page.Mouse.MoveAsync(8, 8);
+        await page.WaitForTimeoutAsync(80);
+        await HoverContextMenuActionAsync(page, "progress");
+        Assert.True(await WaitForMenuActionAsync(page, "progress:10", 1_000), "Expected the progress submenu to open after the hover-delay window.");
+        var progressLayout = await ReadContextMenuLayerSnapshotAsync(page, "progress:");
+        Assert.Equal("10%", progressLayout.Actions.First(action => action.ActionId == "progress:10").CenterText);
+        Assert.Equal("N/A", progressLayout.Actions.First(action => action.ActionId == "progress:na").CenterText);
+        Assert.True(string.IsNullOrWhiteSpace(progressLayout.Actions.First(action => action.ActionId == "progress:started").CenterText));
+        Assert.True(CountDistinctBands(progressLayout.Actions.Select(action => action.DistanceFromCore), 26) >= 2, "Expected the progress submenu to use multiple hive distance bands instead of a single circular ring.");
+        Assert.All(
+            progressLayout.Actions,
+            action => Assert.True(
+                action.Top >= progressLayout.ToolbarBottom + 4,
+                $"Expected progress submenu action '{action.ActionId}' to stay below the toolbar. top={action.Top}, toolbarBottom={progressLayout.ToolbarBottom}, hostTop={progressLayout.HostTop}, safeTop={progressLayout.SafeTop}, rootCenterY={progressLayout.RootCenterY}."));
+        await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "02-progress-submenu-hive.png"), FullPage = true });
+        AssertMenuActionsDoNotOverlap(progressLayout.Actions, 18, "progress submenu");
+        await page.Locator(".cw-context-menu__action[data-action-id='progress:30']").ClickAsync(new() { Force = true });
+        await page.WaitForFunctionAsync(
+            @"selector => {
+                const node = document.querySelector(selector);
+                return !!node && node.querySelector('.cw-node__progress')?.getAttribute('title')?.includes('30%') === true;
+            }",
+            rootSelector);
+
+        await OpenCanvasContextMenuAsync(page, rootSelector);
+        await page.Mouse.MoveAsync(8, 8);
+        await page.WaitForTimeoutAsync(80);
+        await HoverContextMenuActionAsync(page, "marker");
+        Assert.True(await WaitForMenuActionAsync(page, "marker:question", 1_000), "Expected the marker submenu to open after the hover-delay window.");
+        var markerLayout = await ReadContextMenuLayerSnapshotAsync(page, "marker:");
+        Assert.True(CountDistinctBands(markerLayout.Actions.Select(action => action.DistanceFromCore), 26) >= 2, "Expected the marker submenu to use multiple hive distance bands instead of a single circular ring.");
+        Assert.All(
+            markerLayout.Actions,
+            action => Assert.True(
+                action.Top >= markerLayout.ToolbarBottom + 4,
+                $"Expected marker submenu action '{action.ActionId}' to stay below the toolbar. top={action.Top}, toolbarBottom={markerLayout.ToolbarBottom}, hostTop={markerLayout.HostTop}, safeTop={markerLayout.SafeTop}, rootCenterY={markerLayout.RootCenterY}."));
+        await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "03-marker-submenu-hive.png"), FullPage = true });
+        AssertMenuActionsDoNotOverlap(markerLayout.Actions, 18, "marker submenu");
+        await page.Locator(".cw-context-menu__action[data-action-id='marker:money']").ClickAsync(new() { Force = true });
+        await page.WaitForFunctionAsync(
+            @"selector => {
+                const node = document.querySelector(selector);
+                return !!node && node.querySelector('.cw-node__marker')?.textContent?.includes('$') === true;
+            }",
+            rootSelector);
+
+        await OpenCanvasContextMenuAsync(page, rootSelector);
+        await page.Mouse.MoveAsync(8, 8);
+        await page.WaitForTimeoutAsync(80);
+        await HoverContextMenuActionAsync(page, "priority");
+        Assert.True(await WaitForMenuActionAsync(page, "priority:2", 1_000), "Expected the priority submenu to stay functional after the shared menu layout changes.");
+        await page.Locator(".cw-context-menu__action[data-action-id='priority:2']").ClickAsync(new() { Force = true });
+        await page.WaitForFunctionAsync(
+            @"selector => {
+                const node = document.querySelector(selector);
+                return !!node && node.querySelector('.cw-node__priority')?.textContent?.trim() === '2';
+            }",
+            rootSelector);
+
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
     public async Task Project_structure_artifacts_capture_required_canvas_evidence()
     {
         var repoRoot = GetRepoRoot();
@@ -1601,22 +1702,29 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
 
     private static async Task OpenContextSubmenuAsync(IPage page, string actionId)
     {
+        var action = page.Locator($".cw-context-menu__action[data-action-id='{actionId}']").Last;
+        await action.WaitForAsync();
+        await action.HoverAsync();
+    }
+
+    private static async Task HoverContextMenuActionAsync(IPage page, string actionId)
+    {
         var selector = $".cw-context-menu__action[data-action-id='{actionId}']";
-        await page.Locator(selector).WaitForAsync();
+        await page.Locator(selector).Last.WaitForAsync();
         await page.EvaluateAsync(
             @"actionSelector => {
-                const action = document.querySelector(actionSelector);
+                const matches = Array.from(document.querySelectorAll(actionSelector));
+                const action = matches.length > 0 ? matches[matches.length - 1] : null;
                 if (!(action instanceof HTMLElement)) {
                     return;
                 }
 
-                for (const type of ['pointerenter', 'mouseenter', 'mouseover', 'mousemove']) {
-                    action.dispatchEvent(new MouseEvent(type, {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window
-                    }));
-                }
+                action.dispatchEvent(new PointerEvent('pointerenter', {
+                    bubbles: true,
+                    cancelable: true,
+                    pointerType: 'mouse',
+                    isPrimary: true
+                }));
             }",
             selector);
     }
@@ -1868,6 +1976,92 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
                 };
             }",
             actionId);
+
+    private static Task<CanvasMenuLayerSnapshot> ReadContextMenuLayerSnapshotAsync(IPage page, string actionIdPrefix)
+        => page.EvaluateAsync<CanvasMenuLayerSnapshot>(
+            @"requestedPrefix => {
+                const host = document.querySelector('.cw-canvas-host');
+                const frame = host?.closest('.cw-workbench-frame');
+                const toolbars = frame ? Array.from(frame.querySelectorAll('.cw-toolbar')) : [];
+                const toolbarBottom = toolbars.reduce((maxBottom, toolbar) => Math.max(maxBottom, toolbar.getBoundingClientRect().bottom), 0);
+                const hostTop = host?.getBoundingClientRect().top ?? 0;
+                const safeTop = Math.max(0, Math.round(toolbarBottom - hostTop + 12));
+                const layers = Array.from(document.querySelectorAll('.cw-context-menu__layer'));
+                const activeLayer = layers.length > 0 ? layers[layers.length - 1] : null;
+                const core = activeLayer?.querySelector('.cw-context-menu__core');
+                const coreRect = core?.getBoundingClientRect();
+                const coreCenterX = coreRect ? coreRect.left + (coreRect.width / 2) : 0;
+                const coreCenterY = coreRect ? coreRect.top + (coreRect.height / 2) : 0;
+                const actions = Array.from(activeLayer?.querySelectorAll(`.cw-context-menu__action[data-action-id^=""${requestedPrefix}""]`) || []);
+                return {
+                    toolbarBottom,
+                    hostTop,
+                    safeTop,
+                    rootCenterY: host?.__canvasWorkbenchState?.contextMenuState?.rootCenter?.y ?? 0,
+                    actions: actions.map(action => {
+                        const rect = action.getBoundingClientRect();
+                        const centerX = rect.left + (rect.width / 2);
+                        const centerY = rect.top + (rect.height / 2);
+                        return {
+                            actionId: action.getAttribute('data-action-id') || '',
+                            left: rect.left,
+                            top: rect.top,
+                            right: rect.right,
+                            bottom: rect.bottom,
+                            centerX,
+                            centerY,
+                            distanceFromCore: Math.hypot(centerX - coreCenterX, centerY - coreCenterY),
+                            centerText: action.querySelector('.cw-node__progress-center')?.textContent?.trim() || ''
+                        };
+                    })
+                };
+            }",
+            actionIdPrefix);
+
+    private static int CountDistinctBands(IEnumerable<double> values, double tolerance)
+    {
+        var ordered = values
+            .OrderBy(value => value)
+            .ToList();
+        if (ordered.Count == 0)
+        {
+            return 0;
+        }
+
+        var bands = 1;
+        var bandStart = ordered[0];
+        for (var index = 1; index < ordered.Count; index++)
+        {
+            if (Math.Abs(ordered[index] - bandStart) <= tolerance)
+            {
+                continue;
+            }
+
+            bands += 1;
+            bandStart = ordered[index];
+        }
+
+        return bands;
+    }
+
+    private static void AssertMenuActionsDoNotOverlap(IReadOnlyList<CanvasMenuActionSnapshot> actions, double tolerance, string phase)
+    {
+        for (var index = 0; index < actions.Count; index++)
+        {
+            var first = actions[index];
+            for (var compareIndex = index + 1; compareIndex < actions.Count; compareIndex++)
+            {
+                var second = actions[compareIndex];
+                var left = Math.Max(first.Left + tolerance, second.Left + tolerance);
+                var right = Math.Min(first.Right - tolerance, second.Right - tolerance);
+                var top = Math.Max(first.Top + tolerance, second.Top + tolerance);
+                var bottom = Math.Min(first.Bottom - tolerance, second.Bottom - tolerance);
+                Assert.False(
+                    right > left && bottom > top,
+                    $"{phase} still has overlapping actions: {first.ActionId} <-> {second.ActionId}.");
+            }
+        }
+    }
 
     private static async Task AssertNoCanvasNodeOverlapsAsync(IPage page, string phase)
     {
@@ -2355,6 +2549,40 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
         public int Width { get; set; }
 
         public int Height { get; set; }
+    }
+
+    private sealed class CanvasMenuLayerSnapshot
+    {
+        public double ToolbarBottom { get; set; }
+
+        public double HostTop { get; set; }
+
+        public double SafeTop { get; set; }
+
+        public double RootCenterY { get; set; }
+
+        public CanvasMenuActionSnapshot[] Actions { get; set; } = [];
+    }
+
+    private sealed class CanvasMenuActionSnapshot
+    {
+        public string ActionId { get; set; } = string.Empty;
+
+        public double Left { get; set; }
+
+        public double Top { get; set; }
+
+        public double Right { get; set; }
+
+        public double Bottom { get; set; }
+
+        public double CenterX { get; set; }
+
+        public double CenterY { get; set; }
+
+        public double DistanceFromCore { get; set; }
+
+        public string CenterText { get; set; } = string.Empty;
     }
 
     private sealed class CanvasNodeOverlap

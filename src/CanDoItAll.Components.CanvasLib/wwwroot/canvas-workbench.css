@@ -1798,26 +1798,36 @@ body.cw-body-lock {
 }
 
 .cw-node__progress--menu {
-    width: 1.08rem;
-    height: 1.08rem;
+    width: 1.68rem;
+    height: 1.68rem;
 }
 
 .cw-node__progress--menu::after {
-    inset: 0.19rem;
+    inset: 0.24rem;
 }
 
 .cw-node__progress--menu .cw-node__progress-center {
-    font-size: 0.5rem;
+    white-space: nowrap;
+    font-size: 0.56rem;
+    letter-spacing: -0.03em;
+}
+
+.cw-node__progress--menu.has-long-text .cw-node__progress-center {
+    font-size: 0.44rem;
+}
+
+.cw-node__progress--menu.is-empty-center .cw-node__progress-center {
+    display: none;
 }
 
 .cw-context-menu__action.is-progress-preset .cw-node__progress--menu,
 .cw-context-menu__action.is-marker-preset .cw-node__badge--menu {
-    width: calc(1.38rem * var(--cw-menu-scale, 1));
-    height: calc(1.38rem * var(--cw-menu-scale, 1));
+    width: calc(1.82rem * var(--cw-menu-scale, 1));
+    height: calc(1.82rem * var(--cw-menu-scale, 1));
 }
 
 .cw-context-menu__action.is-progress-preset .cw-node__progress--menu::after {
-    inset: calc(0.23rem * var(--cw-menu-scale, 1));
+    inset: calc(0.27rem * var(--cw-menu-scale, 1));
 }
 
 .cw-node__badge {
@@ -2129,15 +2139,19 @@ body.cw-body-lock {
 
 .cw-context-menu__action.is-progress-preset,
 .cw-context-menu__action.is-marker-preset {
-    width: calc(3.34rem * var(--cw-menu-scale, 1));
-    min-height: calc(2.96rem * var(--cw-menu-scale, 1));
-    padding: calc(0.12rem * var(--cw-menu-scale, 1));
+    width: calc(3.92rem * var(--cw-menu-scale, 1));
+    min-height: calc(3.48rem * var(--cw-menu-scale, 1));
+    padding: calc(0.16rem * var(--cw-menu-scale, 1));
 }
 
 .cw-context-menu__action.is-priority-preset {
-    width: calc(2.86rem * var(--cw-menu-scale, 1));
-    min-height: calc(2.52rem * var(--cw-menu-scale, 1));
+    width: calc(3.04rem * var(--cw-menu-scale, 1));
+    min-height: calc(2.72rem * var(--cw-menu-scale, 1));
     padding: calc(0.04rem * var(--cw-menu-scale, 1));
+    grid-template-rows: 1fr;
+}
+
+.cw-context-menu__action.is-progress-preset {
     grid-template-rows: 1fr;
 }
 
@@ -2179,8 +2193,12 @@ body.cw-body-lock {
 
 .cw-context-menu__action.is-progress-preset .cw-context-menu__label,
 .cw-context-menu__action.is-marker-preset .cw-context-menu__label {
-    max-width: calc(2.44rem * var(--cw-menu-scale, 1));
-    font-size: 0.64rem;
+    max-width: calc(2.82rem * var(--cw-menu-scale, 1));
+    font-size: 0.72rem;
+}
+
+.cw-context-menu__action.is-progress-preset .cw-context-menu__label {
+    display: none;
 }
 
 .cw-context-menu__action.is-priority-preset .cw-context-menu__label {
@@ -2210,6 +2228,11 @@ body.cw-body-lock {
     font-size: calc(0.92rem * var(--cw-menu-scale, 1));
 }
 
+.cw-context-menu__action.is-progress-preset .cw-context-menu__icon {
+    min-height: auto;
+    transform: none;
+}
+
 .cw-context-menu__caret {
     position: absolute;
     top: 0.24rem;
@@ -2217,6 +2240,57 @@ body.cw-body-lock {
     display: block;
     font-size: 0.78rem;
     font-weight: 900;
+}
+
+.cw-context-menu__action.is-submenu-loading {
+    box-shadow:
+        0 18px 28px rgba(15, 23, 42, 0.18),
+        0 0 0 2px rgba(250, 204, 21, 0.34) inset;
+}
+
+.cw-context-menu__loading-indicator {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.3rem;
+    width: 0.88rem;
+    height: 0.88rem;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+}
+
+.cw-context-menu__loading-ring {
+    --cw-loading-angle: 0deg;
+    position: relative;
+    width: 0.88rem;
+    height: 0.88rem;
+    border-radius: 999px;
+    background: conic-gradient(#fbbf24 var(--cw-loading-angle), rgba(255, 255, 255, 0.22) 0);
+    animation: cw-context-menu-loading-ring 500ms linear forwards;
+}
+
+.cw-context-menu__loading-ring::after {
+    content: "";
+    position: absolute;
+    inset: 0.16rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.94);
+}
+
+@property --cw-loading-angle {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+}
+
+@keyframes cw-context-menu-loading-ring {
+    from {
+        --cw-loading-angle: 0deg;
+    }
+
+    to {
+        --cw-loading-angle: 360deg;
+    }
 }
 
 .cw-context-menu__action.tone-neutral {
