@@ -51,6 +51,8 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("project-structure-validation-window", cut.Markup);
             Assert.Contains("project-structure-toolbox-window", cut.Markup);
             Assert.Contains("project-structure-standard-blocks-toolbox", cut.Markup);
+            Assert.DoesNotContain("Project structure toolbox", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("Search the shared block catalog", cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain("cw-inspector-column", cut.Markup, StringComparison.Ordinal);
         });
     }
@@ -108,13 +110,31 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Architecture note", cut.Markup);
             Assert.Contains("Tracks the first implementation idea", cut.Markup);
             Assert.Contains("project-structure-standard-blocks-toolbox", cut.Markup);
-            Assert.Contains(">Link<", cut.Markup);
-            Assert.Contains(">Image<", cut.Markup);
-            Assert.Contains(">Video<", cut.Markup);
-            Assert.Contains(">Secret<", cut.Markup);
-            Assert.Contains(">Feature block<", cut.Markup);
-            Assert.Contains(">Support block<", cut.Markup);
-            Assert.Contains(">Test plan<", cut.Markup);
+            Assert.Contains("project-structure-toolbox-group-capture", cut.Markup);
+            Assert.Contains("project-structure-toolbox-group-work", cut.Markup);
+            Assert.Contains("project-structure-toolbox-group-assets", cut.Markup);
+            Assert.DoesNotContain("project-structure-toolbox-group-body-work", cut.Markup, StringComparison.Ordinal);
+        });
+
+        cut.Find("[data-testid='project-structure-toolbox-group-work']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-toolbox-group-body-work", cut.Markup);
+            Assert.Contains(">Task<", cut.Markup);
+            Assert.Contains(">Issue<", cut.Markup);
+            Assert.Contains("fa-list-check", cut.Markup);
+            Assert.DoesNotContain("project-structure-toolbox-group-body-capture", cut.Markup, StringComparison.Ordinal);
+        });
+
+        cut.Find("input.project-structure-toolbox__search").Input("pdf");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-toolbox-group-body-assets", cut.Markup);
+            Assert.Contains("project-structure-toolbox-add-file-pdf", cut.Markup);
+            Assert.Contains("fa-file-pdf", cut.Markup);
+            Assert.DoesNotContain("Unknown icon token", cut.Markup, StringComparison.Ordinal);
         });
     }
 

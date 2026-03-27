@@ -4,7 +4,7 @@
 @using CanDoItAll.Components.CanvasLib
 @inject IJSRuntime JsRuntime
 
-<section class="cw-floating-window @(State.IsMinimized ? "is-minimized" : string.Empty)"
+<section class="cw-floating-window @(State.IsMinimized ? "is-minimized" : string.Empty) @(!ShowHeader ? "is-headerless" : string.Empty)"
          data-testid="@TestId"
          aria-label="@AriaLabel"
          @ref="host"
@@ -39,44 +39,47 @@
     }
     else
     {
-        <header class="cw-floating-window__header">
-            <div class="cw-floating-window__drag" data-cw-window-drag="true">
-                @if (!string.IsNullOrWhiteSpace(Kicker))
-                {
-                    <p class="cw-panel-kicker">@Kicker</p>
-                }
-                <h3 class="cw-floating-window__title">@Title</h3>
-                @if (!string.IsNullOrWhiteSpace(Summary))
-                {
-                    <p class="cw-floating-window__summary">@Summary</p>
-                }
-            </div>
+        @if (ShowHeader)
+        {
+            <header class="cw-floating-window__header">
+                <div class="cw-floating-window__drag" data-cw-window-drag="true">
+                    @if (!string.IsNullOrWhiteSpace(Kicker))
+                    {
+                        <p class="cw-panel-kicker">@Kicker</p>
+                    }
+                    <h3 class="cw-floating-window__title">@Title</h3>
+                    @if (!string.IsNullOrWhiteSpace(Summary))
+                    {
+                        <p class="cw-floating-window__summary">@Summary</p>
+                    }
+                </div>
 
-            <div class="cw-floating-window__actions">
-                <button type="button"
-                        class="cw-floating-window__action"
-                        aria-label="@MinimizeLabel"
-                        title="@MinimizeLabel"
-                        @onclick="MinimizeWindowAsync">
-                    <Icon Name="minimize" />
-                </button>
-                <button type="button"
-                        class="cw-floating-window__action"
-                        aria-label="@NormalizeLabel"
-                        title="@NormalizeLabel"
-                        disabled="@IsNormalized"
-                        @onclick="NormalizeWindowAsync">
-                    <Icon Name="restart_alt" />
-                </button>
-                <button type="button"
-                        class="cw-floating-window__action"
-                        aria-label="@HideLabel"
-                        title="@HideLabel"
-                        @onclick="HideWindowAsync">
-                    <Icon Name="visibility_off" />
-                </button>
-            </div>
-        </header>
+                <div class="cw-floating-window__actions">
+                    <button type="button"
+                            class="cw-floating-window__action"
+                            aria-label="@MinimizeLabel"
+                            title="@MinimizeLabel"
+                            @onclick="MinimizeWindowAsync">
+                        <Icon Name="minimize" />
+                    </button>
+                    <button type="button"
+                            class="cw-floating-window__action"
+                            aria-label="@NormalizeLabel"
+                            title="@NormalizeLabel"
+                            disabled="@IsNormalized"
+                            @onclick="NormalizeWindowAsync">
+                        <Icon Name="restart_alt" />
+                    </button>
+                    <button type="button"
+                            class="cw-floating-window__action"
+                            aria-label="@HideLabel"
+                            title="@HideLabel"
+                            @onclick="HideWindowAsync">
+                        <Icon Name="visibility_off" />
+                    </button>
+                </div>
+            </header>
+        }
 
         <div class="cw-floating-window__body @BodyClass">
             @ChildContent
@@ -146,6 +149,9 @@
 
     [Parameter]
     public string HideLabel { get; set; } = "Hide window";
+
+    [Parameter]
+    public bool ShowHeader { get; set; } = true;
 
     [Parameter, EditorRequired]
     public CanvasWorkbenchWindowState State { get; set; } = new();

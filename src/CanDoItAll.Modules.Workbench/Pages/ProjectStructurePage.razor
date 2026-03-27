@@ -84,12 +84,15 @@ else
                                                   Kicker="Standard blocks"
                                                   Title="Project structure toolbox"
                                                   Summary="Search the shared block catalog, stay inside the canvas, and create against the currently selected source without falling back to the old accordion stack."
+                                                  ShowHeader="false"
+                                                  BodyClass="project-structure-toolbox-window__body"
                                                   DefaultPlacement="top-left"
                                                   DefaultWidth="430"
-                                                  DefaultHeight="620"
+                                                  DefaultHeight="460"
                                                   MinWidth="320"
                                                   MinHeight="240"
                                                   MaxWidth="520"
+                                                  MaxHeight="460"
                                                   State="@ToolboxWindowState"
                                                   StateChanged="HandleToolboxWindowStateChangedAsync">
                                 <section class="cw-context-toolbox project-structure-toolbox"
@@ -125,34 +128,48 @@ else
                                             {
                                                 @foreach (var group in ToolboxCreateGroups)
                                                 {
-                                                    <details class="cw-context-toolbox__section" open>
-                                                        <summary class="cw-context-toolbox__section-summary">
+                                                    <section class="cw-context-toolbox__section"
+                                                             data-testid="@($"project-structure-toolbox-group-shell-{group.Key}")">
+                                                        <button type="button"
+                                                                class="cw-context-toolbox__section-summary project-structure-toolbox__section-summary"
+                                                                data-testid="@($"project-structure-toolbox-group-{group.Key}")"
+                                                                aria-expanded="@(group.IsOpen ? "true" : "false")"
+                                                                @onclick="@(() => ExpandToolboxGroup(group.Key))">
                                                             <span class="cw-context-toolbox__section-copy">
                                                                 <strong>@group.Label</strong>
                                                                 <small>@group.Description</small>
                                                             </span>
-                                                            <span class="cw-context-toolbox__section-badge tone-accent">@group.Actions.Count</span>
-                                                        </summary>
-                                                        <div class="cw-context-toolbox__section-body">
-                                                            <div class="cw-context-toolbox__item-list">
-                                                                @foreach (var action in group.Actions)
-                                                                {
-                                                                    <button type="button"
-                                                                            class="cw-context-toolbox__item"
-                                                                            data-testid="@($"project-structure-toolbox-{action.ActionId}")"
-                                                                            @onclick="@(() => OpenCreateDialogAsync(action))">
-                                                                        <span class="cw-context-toolbox__item-icon">
-                                                                            <span class="cw-context-menu__glyph">@action.Icon</span>
-                                                                        </span>
-                                                                        <span class="cw-context-toolbox__item-body">
-                                                                            <strong>@action.Label</strong>
-                                                                            <small>@action.Description</small>
-                                                                        </span>
-                                                                    </button>
-                                                                }
+                                                            <span class="project-structure-toolbox__section-summary-meta">
+                                                                <span class="cw-context-toolbox__section-badge tone-accent">@group.Actions.Count</span>
+                                                                <span class="project-structure-toolbox__section-toggle-icon" aria-hidden="true">
+                                                                    <Icon Name="@(group.IsOpen ? "expand_less" : "expand_more")" />
+                                                                </span>
+                                                            </span>
+                                                        </button>
+                                                        @if (group.IsOpen)
+                                                        {
+                                                            <div class="cw-context-toolbox__section-body"
+                                                                 data-testid="@($"project-structure-toolbox-group-body-{group.Key}")">
+                                                                <div class="cw-context-toolbox__item-list">
+                                                                    @foreach (var action in group.Actions)
+                                                                    {
+                                                                        <button type="button"
+                                                                                class="cw-context-toolbox__item"
+                                                                                data-testid="@($"project-structure-toolbox-{action.ActionId}")"
+                                                                                @onclick="@(() => OpenCreateDialogAsync(action))">
+                                                                            <span class="cw-context-toolbox__item-icon">
+                                                                                <Icon Name="@action.Icon" />
+                                                                            </span>
+                                                                            <span class="cw-context-toolbox__item-body">
+                                                                                <strong>@action.Label</strong>
+                                                                                <small>@action.Description</small>
+                                                                            </span>
+                                                                        </button>
+                                                                    }
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    </details>
+                                                        }
+                                                    </section>
                                                 }
                                             }
                                         </div>

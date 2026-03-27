@@ -20,6 +20,10 @@
 - `src/CanDoItAll.Components.CanvasLib/wwwroot/canvas-workbench.css`
 - `tests/CanDoItAll.Tests.Components/CanvasFloatingWindowTests.cs`
 
+## Follow-up
+
+- Browser visibility, black icon color, and screenshot evidence are captured in `Item 04`.
+
 ## Status
 
-`Done and validated`
+`Implemented; browser visibility closure completed later`

@@ -194,7 +194,8 @@ public sealed class ProjectStructureGraphAdapter
         ProjectObjectType.Recording or ProjectObjectType.Transcript => "accent",
         ProjectObjectType.Participant => "primary",
         ProjectObjectType.WorkItem => "warn",
-        ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.Script or ProjectObjectType.Environment => "sky",
+        ProjectObjectType.Repository or ProjectObjectType.Script or ProjectObjectType.Environment => "sky",
+        ProjectObjectType.File => ResolveFilePalette(node.ObjectSubtype),
         ProjectObjectType.ImageAsset or ProjectObjectType.Decision => "rose",
         ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector => "violet",
         ProjectObjectType.Infrastructure => "danger",
@@ -202,6 +203,16 @@ public sealed class ProjectStructureGraphAdapter
         ProjectObjectType.ValidationRun or ProjectObjectType.Note or ProjectObjectType.ProjectBlock => "mint",
         ProjectObjectType.SecretReference => "rose",
         _ => "neutral"
+    };
+
+    private static string ResolveFilePalette(string objectSubtype) => objectSubtype switch
+    {
+        "pdf" or "screenshot" => "rose",
+        "excel" or "audio" => "mint",
+        "docx" or "markdown" => "sky",
+        "mermaid" or "archive" => "violet",
+        "text" or "json" or "log" => "amber",
+        _ => "sky"
     };
 
     private static string BuildLeadText(ProjectStructureNode node)

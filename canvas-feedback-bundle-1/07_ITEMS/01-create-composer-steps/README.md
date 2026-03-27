@@ -17,4 +17,4 @@
 
 ## Status
 
-`Done and validated`
+`Done and historically validated`

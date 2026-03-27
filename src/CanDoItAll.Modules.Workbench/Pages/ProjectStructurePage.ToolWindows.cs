@@ -6,6 +6,7 @@ public partial class ProjectStructurePage
 {
     private const string ToolboxWindowKey = "project-structure.toolbox";
     private string structureToolboxSearchText = string.Empty;
+    private string? expandedToolboxGroupKey;
 
     private CanvasWorkbenchWindowState ToolboxWindowState => ResolveToolboxWindowState();
 
@@ -16,6 +17,9 @@ public partial class ProjectStructurePage
         => selectedNode is null
             ? "Canvas root"
             : selectedNode.Title;
+
+    private bool HasToolboxSearch
+        => !string.IsNullOrWhiteSpace(structureToolboxSearchText);
 
     private Task HandleToolboxWindowStateChangedAsync(CanvasWorkbenchWindowState state)
         => PersistWindowStateAsync(ToolboxWindowKey, state);
@@ -43,7 +47,8 @@ public partial class ProjectStructurePage
     }
 
     private IReadOnlyList<ProjectStructureInspectorCreateGroup> BuildToolboxCreateGroups()
-        => BuildInspectorCreateGroups(selectedNode?.ObjectType)
+    {
+        var groups = BuildInspectorCreateGroups(selectedNode?.ObjectType)
             .Select(group =>
             {
                 var actions = group.Actions
@@ -55,9 +60,49 @@ public partial class ProjectStructurePage
             .Where(group => group.Actions.Count > 0)
             .ToList();
 
+        if (groups.Count == 0)
+        {
+            expandedToolboxGroupKey = null;
+            return groups;
+        }
+
+        if (HasToolboxSearch)
+        {
+            return groups
+                .Select(group => group with { IsOpen = true })
+                .ToList();
+        }
+
+        expandedToolboxGroupKey = ResolveExpandedToolboxGroupKey(groups);
+        return groups
+            .Select(group => group with { IsOpen = string.Equals(group.Key, expandedToolboxGroupKey, StringComparison.Ordinal) })
+            .ToList();
+    }
+
+    private void ExpandToolboxGroup(string groupKey)
+    {
+        if (HasToolboxSearch)
+        {
+            return;
+        }
+
+        expandedToolboxGroupKey = groupKey;
+    }
+
+    private string ResolveExpandedToolboxGroupKey(IReadOnlyList<ProjectStructureInspectorCreateGroup> groups)
+    {
+        if (!string.IsNullOrWhiteSpace(expandedToolboxGroupKey) &&
+            groups.Any(group => string.Equals(group.Key, expandedToolboxGroupKey, StringComparison.Ordinal)))
+        {
+            return expandedToolboxGroupKey;
+        }
+
+        return groups.FirstOrDefault(group => group.IsOpen)?.Key ?? groups[0].Key;
+    }
+
     private bool MatchesStructureToolboxSearch(CanvasWorkbenchAction action)
     {
-        if (string.IsNullOrWhiteSpace(structureToolboxSearchText))
+        if (!HasToolboxSearch)
         {
             return true;
         }

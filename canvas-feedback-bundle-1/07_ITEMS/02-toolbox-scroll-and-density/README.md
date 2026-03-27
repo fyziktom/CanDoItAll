@@ -6,14 +6,18 @@
 
 ## Scope
 
-- Fix the project structure toolbox body so it behaves as a single-column explorer surface.
-- Ensure the toolbox sections scroll inside the floating window.
-- Improve density slightly without introducing a new toolbox component.
+- Apply the baseline project structure toolbox layout correction.
+- Move the toolbox body to a single-column explorer surface.
+- Establish the initial dense toolbox styling without introducing a new component.
 
 ## Implemented in
 
 - `src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor.css`
 
+## Follow-up
+
+- Runtime closure for duplicate chrome, accordion behavior, search-result movement, and icon rendering is captured in `Item 05`.
+
 ## Status
 
-`Done and validated`
+`Implemented; runtime closure completed later`

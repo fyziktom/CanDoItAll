@@ -455,6 +455,10 @@ body.cw-body-lock {
     pointer-events: auto;
 }
 
+.cw-floating-window.is-headerless {
+    grid-template-rows: minmax(0, 1fr);
+}
+
 .cw-floating-window.is-dragging {
     box-shadow: 0 28px 56px rgba(15, 23, 42, 0.22);
 }
@@ -542,13 +546,15 @@ body.cw-body-lock {
     border: 1px solid rgba(148, 163, 184, 0.28);
     border-radius: 0.72rem;
     background: rgba(255, 255, 255, 0.92);
-    color: rgba(15, 23, 42, 0.9);
+    color: #000;
     line-height: 1;
     transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .cw-floating-window__action .rz-icon,
+.cw-floating-window__action .rz-fa-icon,
 .cw-floating-window__action .rz-icon-fallback {
+    color: #000;
     font-size: 0.9rem;
 }
 

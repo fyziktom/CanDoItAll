@@ -491,6 +491,228 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
     }
 
     [Fact]
+    public async Task Project_structure_feedback_fixes_are_validated_in_browser()
+    {
+        var repoRoot = GetRepoRoot();
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "feedback1");
+        ResetDirectory(artifactsDir);
+
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1900,
+                Height = 1200
+            }
+        });
+
+        var page = await context.NewPageAsync();
+        var projectId = await CreateProjectAsync(page, "Playwright Feedback Validation", "Validation");
+        var projectRootId = await ReadNodeIdAsync(page, ".cw-node[data-node-id^='project:']");
+
+        var pdfId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-file-pdf",
+            projectRootId,
+            projectRootId,
+            "Architecture evidence PDF",
+            "docs/architecture",
+            "Typed PDF validation node.",
+            uploadedFile: BuildUploadedFile(
+                "architecture-evidence.pdf",
+                "application/pdf",
+                "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF"));
+
+        var excelId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-file-excel",
+            projectRootId,
+            projectRootId,
+            "Validation workbook",
+            "reports",
+            "Typed spreadsheet validation node.",
+            uploadedFile: BuildUploadedFile(
+                "validation-workbook.csv",
+                "text/csv",
+                "name,status\nexports,ready\nsummary,ready"));
+
+        var docxId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-file-docx",
+            projectRootId,
+            projectRootId,
+            "Project brief docx",
+            "docs/briefs",
+            "Typed docx validation node.",
+            uploadedFile: BuildUploadedFile(
+                "project-brief.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "Fake docx payload for UI validation."));
+
+        await FocusCanvasRootAsync(page);
+        await SetCanvasZoomPercentAsync(page, 100);
+
+        var selectionWindow = page.GetByTestId("project-structure-selection-window");
+        await selectionWindow.WaitForAsync();
+        var actionColors = await page.EvaluateAsync<string[]>(
+            @"() => Array.from(document.querySelectorAll('[data-testid=""project-structure-selection-window""] .cw-floating-window__action'))
+                .map(action => getComputedStyle(action).color)");
+        Assert.NotEmpty(actionColors);
+        Assert.All(actionColors, color => Assert.Equal("rgb(0, 0, 0)", color));
+        await selectionWindow.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "01-window-icon-actions.png") });
+
+        await EnsureFloatingWindowExpandedAsync(page, "project-structure-toolbox-window");
+        var toolboxWindow = page.GetByTestId("project-structure-toolbox-window");
+        Assert.Equal(0, await page.Locator("[data-testid='project-structure-toolbox-window'] .cw-floating-window__header").CountAsync());
+
+        var structureToolboxSearch = page.Locator("[data-testid='project-structure-standard-blocks-toolbox'] .project-structure-toolbox__search");
+        var toolboxSections = page.Locator("[data-testid='project-structure-standard-blocks-toolbox'] .project-structure-toolbox__sections");
+        await structureToolboxSearch.WaitForAsync();
+        await structureToolboxSearch.FillAsync("a");
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const toolbox = document.querySelector('[data-testid=""project-structure-standard-blocks-toolbox""]');
+                if (!toolbox) {
+                    return false;
+                }
+
+                return toolbox.querySelectorAll('.cw-context-toolbox__item').length > 0 &&
+                    toolbox.querySelectorAll('.rz-fa-icon').length > 0 &&
+                    toolbox.querySelectorAll('.rz-icon-fallback').length === 0;
+            }");
+        await page.WaitForTimeoutAsync(250);
+
+        var firstVisibleItemTopBeforeScroll = await page.EvaluateAsync<double>(
+            @"() => {
+                const item = document.querySelector('[data-testid=""project-structure-standard-blocks-toolbox""] .cw-context-toolbox__item');
+                return item instanceof HTMLElement
+                    ? item.getBoundingClientRect().top
+                    : 0;
+            }");
+        await toolboxSections.HoverAsync();
+        await page.Mouse.WheelAsync(0, 1400);
+        await page.WaitForTimeoutAsync(180);
+
+        var toolboxScrollState = await page.EvaluateAsync<ToolboxScrollState>(
+            @"() => {
+                const sections = document.querySelector('[data-testid=""project-structure-standard-blocks-toolbox""] .project-structure-toolbox__sections');
+                const window = document.querySelector('[data-testid=""project-structure-toolbox-window""]');
+                const body = window?.querySelector('.cw-floating-window__body');
+                const toolbox = document.querySelector('[data-testid=""project-structure-standard-blocks-toolbox""]');
+                if (!(sections instanceof HTMLElement)) {
+                    return {
+                        scrollTop: 0,
+                        scrollHeight: 0,
+                        clientHeight: 0,
+                        bodyScrollTop: 0,
+                        bodyScrollHeight: 0,
+                        bodyClientHeight: 0,
+                        openGroupCount: 0,
+                        itemCount: 0,
+                        visibleItemCount: 0,
+                        windowHeight: 0
+                    };
+                }
+
+                const items = Array.from(sections.querySelectorAll('.cw-context-toolbox__item'));
+                return {
+                    scrollTop: sections.scrollTop,
+                    scrollHeight: sections.scrollHeight,
+                    clientHeight: sections.clientHeight,
+                    bodyScrollTop: body instanceof HTMLElement ? body.scrollTop : 0,
+                    bodyScrollHeight: body instanceof HTMLElement ? body.scrollHeight : 0,
+                    bodyClientHeight: body instanceof HTMLElement ? body.clientHeight : 0,
+                    openGroupCount: toolbox ? toolbox.querySelectorAll('[data-testid^=""project-structure-toolbox-group-body-""]').length : 0,
+                    itemCount: items.length,
+                    visibleItemCount: items.filter(item => item instanceof HTMLElement && item.getBoundingClientRect().height > 1 && item.getBoundingClientRect().width > 1).length,
+                    firstItemTop: items.length > 0 && items[0] instanceof HTMLElement ? items[0].getBoundingClientRect().top : 0,
+                    windowHeight: window instanceof HTMLElement ? window.getBoundingClientRect().height : 0
+                };
+            }");
+        await toolboxWindow.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "02-toolbox-accordion-search.png") });
+        Assert.True(
+            toolboxScrollState.VisibleItemCount >= 20,
+            $"Expected a large visible toolbox result set for scroll validation, but openGroupCount={toolboxScrollState.OpenGroupCount}; itemCount={toolboxScrollState.ItemCount}; visibleItemCount={toolboxScrollState.VisibleItemCount}; windowHeight={toolboxScrollState.WindowHeight}.");
+        Assert.True(
+            toolboxScrollState.ScrollTop > 0 ||
+            toolboxScrollState.BodyScrollTop > 0 ||
+            toolboxScrollState.FirstItemTop < firstVisibleItemTopBeforeScroll - 4,
+            $"Expected toolbox search results to move after wheel input, but firstItemTopBefore={firstVisibleItemTopBeforeScroll}; firstItemTopAfter={toolboxScrollState.FirstItemTop}; sections: scrollTop={toolboxScrollState.ScrollTop} scrollHeight={toolboxScrollState.ScrollHeight} clientHeight={toolboxScrollState.ClientHeight}; body: scrollTop={toolboxScrollState.BodyScrollTop} scrollHeight={toolboxScrollState.BodyScrollHeight} clientHeight={toolboxScrollState.BodyClientHeight}; openGroupCount={toolboxScrollState.OpenGroupCount}; itemCount={toolboxScrollState.ItemCount}; visibleItemCount={toolboxScrollState.VisibleItemCount}; windowHeight={toolboxScrollState.WindowHeight}.");
+        await structureToolboxSearch.FillAsync("pdf");
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const toolbox = document.querySelector('[data-testid=""project-structure-standard-blocks-toolbox""]');
+                if (!toolbox) {
+                    return false;
+                }
+
+                return toolbox.querySelectorAll('.cw-context-toolbox__item').length > 0 &&
+                    (toolbox.textContent || '').toLowerCase().includes('pdf') &&
+                    toolbox.querySelectorAll('.fa-file-pdf').length > 0;
+            }");
+        await toolboxWindow.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "02-toolbox-accordion-search.png") });
+        await structureToolboxSearch.FillAsync(string.Empty);
+
+        await SetCanvasZoomPercentAsync(page, 58);
+
+        var paletteSnapshot = await page.EvaluateAsync<FilePaletteSnapshot>(
+            @"selectors => {
+                const readPalette = selector => document.querySelector(selector)?.getAttribute('data-palette') ?? '';
+                return {
+                    pdf: readPalette(selectors.pdf),
+                    excel: readPalette(selectors.excel),
+                    docx: readPalette(selectors.docx)
+                };
+            }",
+            new
+            {
+                pdf = SelectorForNodeId(pdfId),
+                excel = SelectorForNodeId(excelId),
+                docx = SelectorForNodeId(docxId)
+            });
+        Assert.Equal("rose", paletteSnapshot.Pdf);
+        Assert.Equal("mint", paletteSnapshot.Excel);
+        Assert.Equal("sky", paletteSnapshot.Docx);
+
+        await page.GetByRole(AriaRole.Button, new() { Name = "Toggle maximize" }).ClickAsync();
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') === true");
+
+        await EnsureCanvasSelectionAsync(page, SelectorForNodeId(pdfId));
+        var pdfNode = page.Locator(SelectorForNodeId(pdfId));
+        await pdfNode.WaitForAsync();
+        await pdfNode.DblClickAsync();
+
+        var previewDialog = page.Locator(".project-structure-preview-dialog").First;
+        await previewDialog.WaitForAsync();
+
+        var previewLayerState = await page.EvaluateAsync<PreviewLayerState>(
+            @"() => {
+                const shell = document.querySelector('.cw-workbench-shell');
+                const backdrop = document.querySelector('.project-structure-preview-backdrop');
+                const dialog = document.querySelector('.project-structure-preview-dialog');
+                if (!(shell instanceof HTMLElement) || !(backdrop instanceof HTMLElement) || !(dialog instanceof HTMLElement)) {
+                    return { shellZIndex: 0, backdropZIndex: 0, dialogOwnsCenterPoint: false };
+                }
+
+                const shellZIndex = Number.parseInt(getComputedStyle(shell).zIndex || '0', 10);
+                const backdropZIndex = Number.parseInt(getComputedStyle(backdrop).zIndex || '0', 10);
+                const rect = dialog.getBoundingClientRect();
+                const centerTarget = document.elementFromPoint(rect.left + (rect.width / 2), rect.top + 32);
+                return {
+                    shellZIndex,
+                    backdropZIndex,
+                    dialogOwnsCenterPoint: !!centerTarget && dialog.contains(centerTarget)
+                };
+            }");
+        Assert.True(previewLayerState.BackdropZIndex > previewLayerState.ShellZIndex);
+        Assert.True(previewLayerState.DialogOwnsCenterPoint);
+        await previewDialog.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "03-maximized-pdf-preview.png") });
+
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
     public async Task Project_structure_artifacts_capture_required_canvas_evidence()
     {
         var repoRoot = GetRepoRoot();
@@ -676,7 +898,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
         await FocusCanvasRootAsync(page);
         await SetCanvasZoomPercentAsync(page, 58);
 
-        await page.GetByTestId("project-structure-toolbox-window").WaitForAsync();
+        await EnsureFloatingWindowExpandedAsync(page, "project-structure-toolbox-window");
         await CaptureWorkbenchShellAsync(page, Path.Combine(i23Root, "01-primary-state.png"));
         var structureToolboxSearch = page.Locator("[data-testid='project-structure-standard-blocks-toolbox'] .project-structure-toolbox__search");
         await structureToolboxSearch.FillAsync("task");
@@ -689,9 +911,9 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
         await CaptureWorkbenchShellAsync(page, Path.Combine(i23Root, "02-secondary-state.png"));
         await page.EvaluateAsync(
             @"() => {
-                const body = document.querySelector('[data-testid=""project-structure-standard-blocks-toolbox""] .project-structure-toolbox__body');
-                if (body instanceof HTMLElement) {
-                    body.scrollTop = Math.max(260, body.scrollHeight * 0.35);
+                const sections = document.querySelector('[data-testid=""project-structure-standard-blocks-toolbox""] .project-structure-toolbox__sections');
+                if (sections instanceof HTMLElement) {
+                    sections.scrollTop = Math.max(260, sections.scrollHeight * 0.35);
                 }
             }");
         await page.WaitForTimeoutAsync(180);
@@ -2044,6 +2266,25 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
         await locator.ScreenshotAsync(new() { Path = path });
     }
 
+    private static async Task EnsureFloatingWindowExpandedAsync(IPage page, string testId)
+    {
+        var window = page.GetByTestId(testId);
+        await window.WaitForAsync();
+
+        if (!await window.EvaluateAsync<bool>("node => node.classList.contains('is-minimized')"))
+        {
+            return;
+        }
+
+        await window.GetByRole(AriaRole.Button, new() { Name = "Expand window" }).ClickAsync();
+        await page.WaitForFunctionAsync(
+            @"requestedTestId => {
+                const element = document.querySelector(`[data-testid=""${requestedTestId}""]`);
+                return !!element && !element.classList.contains('is-minimized');
+            }",
+            testId);
+    }
+
     private sealed class CanvasFocusState
     {
         public string? SelectedId { get; set; }
@@ -2113,6 +2354,49 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
         public double OrbitX { get; set; }
 
         public double OrbitY { get; set; }
+    }
+
+    private sealed class ToolboxScrollState
+    {
+        public double ScrollTop { get; set; }
+
+        public double ScrollHeight { get; set; }
+
+        public double ClientHeight { get; set; }
+
+        public double BodyScrollTop { get; set; }
+
+        public double BodyScrollHeight { get; set; }
+
+        public double BodyClientHeight { get; set; }
+
+        public int OpenGroupCount { get; set; }
+
+        public int ItemCount { get; set; }
+
+        public int VisibleItemCount { get; set; }
+
+        public double FirstItemTop { get; set; }
+
+        public double WindowHeight { get; set; }
+    }
+
+    private sealed class FilePaletteSnapshot
+    {
+        public string Pdf { get; set; } = string.Empty;
+
+        public string Excel { get; set; } = string.Empty;
+
+        public string Docx { get; set; } = string.Empty;
+    }
+
+    private sealed class PreviewLayerState
+    {
+        public int ShellZIndex { get; set; }
+
+        public int BackdropZIndex { get; set; }
+
+        public bool DialogOwnsCenterPoint { get; set; }
     }
 
     private sealed record CanvasInputValueSeed(string Key, string Value);

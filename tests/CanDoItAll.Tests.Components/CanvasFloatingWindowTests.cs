@@ -52,4 +52,23 @@ public sealed class CanvasFloatingWindowTests
         Assert.DoesNotContain(">Hide<", cut.Markup, StringComparison.Ordinal);
         context.JSInterop.VerifyInvoke("CanDoItAll.canvasFloatingWindow.create");
     }
+
+    [Fact]
+    public void Expanded_window_can_hide_standard_header_when_custom_surface_owns_the_chrome()
+    {
+        using var context = new TestContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = context.RenderComponent<CanvasFloatingWindow>(
+            parameters => parameters
+                .Add(component => component.WindowId, "toolbox")
+                .Add(component => component.Title, "Toolbox")
+                .Add(component => component.ShowHeader, false)
+                .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true })
+                .Add(component => component.ChildContent, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Body</div>"))));
+
+        Assert.DoesNotContain("cw-floating-window__header", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(">Body<", cut.Markup);
+        context.JSInterop.VerifyInvoke("CanDoItAll.canvasFloatingWindow.create");
+    }
 }

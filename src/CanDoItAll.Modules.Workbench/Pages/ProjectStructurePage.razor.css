@@ -77,12 +77,41 @@
     background: rgba(239, 246, 255, 0.92);
 }
 
+.project-structure-page .cw-floating-window[data-testid="project-structure-toolbox-window"] {
+    gap: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.project-structure-page .cw-floating-window[data-testid="project-structure-toolbox-window"]::after {
+    display: none;
+}
+
+.project-structure-page .cw-floating-window[data-testid="project-structure-toolbox-window"] .cw-floating-window__body,
+.project-structure-toolbox-window__body {
+    min-height: 0;
+    height: 100%;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
+    padding-right: 0;
+}
+
 .project-structure-toolbox {
+    box-sizing: border-box;
+    position: static;
+    width: auto;
+    max-height: none;
     display: grid;
     gap: 0.85rem;
     grid-template-rows: auto auto minmax(0, 1fr);
     min-height: 0;
     height: 100%;
+    padding: 1rem;
+    border-radius: 1.25rem;
 }
 
 .project-structure-toolbox__header-meta {
@@ -97,6 +126,7 @@
 
 .project-structure-toolbox__body {
     min-height: 0;
+    height: 100%;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
@@ -120,6 +150,39 @@
     padding: 0.72rem 0.82rem;
 }
 
+.project-structure-toolbox__section-summary {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+}
+
+.project-structure-toolbox__section-summary-meta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    margin-left: auto;
+    flex: none;
+}
+
+.project-structure-toolbox__section-toggle-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 0.7rem;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(248, 250, 252, 0.92);
+}
+
+.project-structure-toolbox__section-toggle-icon .rz-fa-icon,
+.project-structure-toolbox__section-toggle-icon .rz-icon-fallback {
+    font-size: 0.82rem;
+}
+
 .project-structure-toolbox .cw-context-toolbox__section-body,
 .project-structure-toolbox .cw-context-toolbox__item-list {
     gap: 0.45rem;
@@ -129,6 +192,12 @@
 .project-structure-toolbox .cw-context-toolbox__item {
     border-radius: 0.78rem;
     padding: 0.66rem 0.72rem;
+}
+
+.project-structure-toolbox .cw-context-toolbox__item-icon .rz-fa-icon,
+.project-structure-toolbox .cw-context-toolbox__item-icon .rz-icon-fallback {
+    color: #f8fafc;
+    font-size: 1rem;
 }
 
 .project-structure-page .cw-floating-window .cw-panel-card,
@@ -272,7 +341,7 @@
 .project-structure-preview-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 60;
+    z-index: 900;
     display: flex;
     align-items: center;
     justify-content: center;
