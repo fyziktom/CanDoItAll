@@ -70,6 +70,7 @@ internal static class ProjectStructureNodeDescriptor
                 break;
             case ProjectObjectType.Script:
                 AddIfValue(facts, "Command", metadata.Script?.Command);
+                AddIfValue(facts, "Args", metadata.Script?.Arguments);
                 AddIfValue(facts, "Path", metadata.Script?.ScriptPath);
                 AddIfValue(facts, "Work dir", metadata.Script?.WorkingDirectory);
                 break;
@@ -77,6 +78,8 @@ internal static class ProjectStructureNodeDescriptor
                 AddIfValue(facts, "Kind", HumanizeEnum(metadata.Environment?.EnvironmentKind));
                 AddIfValue(facts, "Provider", HumanizeEnum(metadata.Environment?.PythonProvider));
                 AddIfValue(facts, "Name", metadata.Environment?.EnvironmentName);
+                AddIfValue(facts, "Project", metadata.Environment?.ProjectPath);
+                AddIfValue(facts, "Profile", metadata.Environment?.LaunchProfileName);
                 AddIfValue(facts, "URL", metadata.Environment?.LocalhostUrl);
                 break;
             case ProjectObjectType.Infrastructure:

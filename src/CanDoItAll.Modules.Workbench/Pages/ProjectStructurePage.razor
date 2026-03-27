@@ -15,6 +15,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.SharedKernel
 @inject ProjectWorkbenchService ProjectWorkbenchService
 @inject IProjectStructureLocalFileOpener LocalFileOpener
+@inject IProjectStructureRuntimeLauncher RuntimeLauncher
 @inject WorkspaceService WorkspaceService
 @inject ProviderExecutionService ProviderExecutionService
 @inject NavigationManager Navigation
@@ -536,8 +537,26 @@ else
                         }
 
                         <div class="cw-panel-card">
+                            @{
+                                var runtimeLaunch = RuntimeLauncher.Resolve(selectedNode);
+                            }
                             <p class="cw-panel-kicker">Node actions</p>
                             <div class="cw-button-row">
+                                @if (RuntimeLauncher.IsAvailable && runtimeLaunch.IsSuccess)
+                                {
+                                    <button type="button"
+                                            class="cw-button"
+                                            data-tone="accent"
+                                            @onclick="@(() => LaunchRuntimeAsync(selectedNode, false))">
+                                        Open PowerShell
+                                    </button>
+                                    <button type="button"
+                                            class="cw-button"
+                                            data-tone="warn"
+                                            @onclick="@(() => LaunchRuntimeAsync(selectedNode, true))">
+                                        Open PowerShell (Admin)
+                                    </button>
+                                }
                                 @foreach (var command in ResolveInspectorCommands(selectedNode))
                                 {
                                     <button type="button" class="cw-button" data-tone="primary" @onclick="@(() => ExecuteCommandAsync(command))">@ResolveCommandLabel(command)</button>

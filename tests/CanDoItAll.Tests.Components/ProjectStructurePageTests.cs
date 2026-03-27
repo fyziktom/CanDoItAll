@@ -606,6 +606,117 @@ public sealed class ProjectStructurePageTests
         });
     }
 
+    [Fact]
+    public async Task Launchable_runtime_nodes_render_powershell_actions_and_surface_launch_feedback()
+    {
+        var runtimeLauncher = new TestRuntimeLauncher();
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => services.AddSingleton<IProjectStructureRuntimeLauncher>(runtimeLauncher));
+
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Runtime Launch Project";
+        project.Description = "Verify runtime launch actions.";
+        project.Objective = "Launch runtime nodes from the selection panel.";
+        project.CurrentPhase = "Execution";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var runtimeNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Environment,
+                "API runtime",
+                "dotnet watch",
+                "Launch the selected runtime from the inspector.",
+                $"project:{projectId}",
+                620,
+                280,
+                null,
+                null,
+                "dotnet-watch",
+                null,
+                ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                {
+                    Environment = new ProjectEnvironmentMetadata
+                    {
+                        EnvironmentKind = ProjectEnvironmentKind.DotNetWatch,
+                        ProjectPath = @"C:\repos\api\Api.csproj",
+                        LaunchProfileName = "https"
+                    }
+                })));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, runtimeNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Open PowerShell", cut.Markup);
+            Assert.Contains("Open PowerShell (Admin)", cut.Markup);
+        });
+
+        cut.FindAll("button")
+            .First(button => string.Equals(button.TextContent.Trim(), "Open PowerShell (Admin)", StringComparison.Ordinal))
+            .Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Opened elevated PowerShell and started dotnet watch.", cut.Markup);
+        });
+
+        Assert.Single(runtimeLauncher.Requests);
+        Assert.Equal(runtimeNode.Id, runtimeLauncher.Requests[0].NodeId);
+        Assert.True(runtimeLauncher.Requests[0].RunAsAdministrator);
+    }
+
+    [Fact]
+    public async Task Non_launchable_nodes_do_not_render_runtime_launch_actions()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => services.AddSingleton<IProjectStructureRuntimeLauncher>(new TestRuntimeLauncher()));
+
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "No Runtime Launch";
+        project.Description = "Verify unsupported nodes stay clean.";
+        project.Objective = "Do not show runtime launch buttons on non-runtime nodes.";
+        project.CurrentPhase = "Review";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var noteNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Design note",
+                "Context",
+                "Notes should not expose runtime launch actions.",
+                $"project:{projectId}",
+                500,
+                240));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, noteNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("Open PowerShell", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("Open PowerShell (Admin)", cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
     private static Task SaveSelectedNodeStateAsync(ProjectWorkbenchService workbenchService, Guid projectId, params string[] selectedNodeIds)
         => workbenchService.SaveViewStateAsync(
             projectId,
@@ -618,6 +729,34 @@ public sealed class ProjectStructurePageTests
                     ["project-structure.selection"] = new CanvasWorkbenchWindowState { IsVisible = true }
                 }
             }.ToJson());
+
+    private sealed class TestRuntimeLauncher : IProjectStructureRuntimeLauncher
+    {
+        public bool IsAvailable => true;
+
+        public List<(string NodeId, bool RunAsAdministrator)> Requests { get; } = [];
+
+        public ProjectStructureRuntimeLaunchResolution Resolve(ProjectStructureNode? node)
+            => node?.ObjectType is ProjectObjectType.Environment or ProjectObjectType.Script
+                ? new(
+                    new ProjectStructureRuntimeLaunchPlan(
+                        @"C:\repos\api",
+                        "Set-Location -LiteralPath 'C:\\repos\\api'",
+                        "dotnet watch --project 'C:\\repos\\api\\Api.csproj' run --launch-profile 'https'",
+                        "dotnet watch",
+                        new ProjectStructureRuntimeLaunchTarget("project path", @"C:\repos\api\Api.csproj", false)),
+                    "Launch plan resolved.")
+                : new(null, "PowerShell launch is only available for runtime-capable nodes.");
+
+        public Task<ProjectStructureRuntimeLaunchResult> LaunchAsync(ProjectStructureNode node, bool runAsAdministrator, CancellationToken cancellationToken = default)
+        {
+            Requests.Add((node.Id, runAsAdministrator));
+            var message = runAsAdministrator
+                ? "Opened elevated PowerShell and started dotnet watch."
+                : "Opened PowerShell and started dotnet watch.";
+            return Task.FromResult(new ProjectStructureRuntimeLaunchResult(true, message));
+        }
+    }
 }
 
 
