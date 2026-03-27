@@ -1,0 +1,81 @@
+@namespace CanDoItAll.Components.CanvasLib
+@implements IAsyncDisposable
+@using CanDoItAll.Components.CanvasLib
+@inject IJSRuntime JsRuntime
+
+<CanvasBoundaryCard TestHookId="@Snapshot.TestHookId"
+                           Label="@Snapshot.Label"
+                           Title="@Snapshot.Title"
+                           Summary="@Snapshot.Summary"
+                           StatePill="@Snapshot.StatePill"
+                           Metrics="@Snapshot.Metrics">
+    <div class="grid gap-3 md:grid-cols-3" @ref="host">
+        @foreach (var format in Snapshot.Formats)
+        {
+            <div class="rounded-[1.4rem] border border-slate-200 bg-white/80 px-4 py-4 @(format.IsPrimary ? "ring-2 ring-sky-200" : string.Empty)">
+                <p class="text-sm font-semibold text-slate-950">@format.Label</p>
+                <p class="mt-2 text-sm text-slate-600">@format.Description</p>
+                <span class="mt-4 inline-flex rounded-full @(format.IsPrimary ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600") px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
+                    @(format.IsPrimary ? "Primary" : "Available")
+                </span>
+            </div>
+        }
+    </div>
+</CanvasBoundaryCard>
+
+@code {
+    private readonly CanvasSceneHost sceneHost = new();
+    private ElementReference host;
+    private string? pendingSnapshotKey;
+
+    [Parameter, EditorRequired]
+    public CalendarExportMenuSnapshot Snapshot { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        pendingSnapshotKey = SerializationPersistencePack.Serialize(Snapshot);
+        sceneHost.QueueSync(
+            pendingSnapshotKey,
+            !string.Equals(sceneHost.AppliedStateKey, pendingSnapshotKey, StringComparison.Ordinal));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var bridge = new JsInteropBridge(JsRuntime);
+        if (sceneHost.ShouldCreate())
+        {
+            await bridge.InvokeVoidAsync("CanDoItAll.calendarExportMenu.create", host, Snapshot);
+            sceneHost.MarkApplied();
+            return;
+        }
+
+        if (!sceneHost.ShouldUpdate())
+        {
+            return;
+        }
+
+        await bridge.InvokeVoidAsync("CanDoItAll.calendarExportMenu.update", host, Snapshot);
+        sceneHost.MarkApplied();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        try
+        {
+            await new JsInteropBridge(JsRuntime).InvokeVoidAsync("CanDoItAll.calendarExportMenu.dispose", host);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+}
+
+

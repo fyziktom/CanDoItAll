@@ -1,5 +1,5 @@
-using CanDoItAll.ComponentKit.Components;
 using CanDoItAll.Components;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Readiness;
@@ -33,7 +33,7 @@ builder.Services.AddRazorComponents()
     // is too small for screenshots and other evidence files added from the canvas wizard.
     .AddHubOptions(options => options.MaximumReceiveMessageSize = promptAttachmentMessageLimitBytes);
 
-builder.Services.AddCanDoItAllComponents();
+builder.Services.AddCanDoItAllBaseLib();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, ModuleAssemblies.All);
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
 builder.Services.AddScoped<IWorkbenchStateStore, BrowserWorkspaceStateStore>();
@@ -127,3 +127,5 @@ await using (var scope = app.Services.CreateAsyncScope())
 app.Run();
 
 public partial class Program;
+
+

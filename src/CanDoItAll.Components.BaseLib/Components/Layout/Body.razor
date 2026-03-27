@@ -1,0 +1,17 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<main @attributes='BuildAttributes("rz-body")'>
+    @ChildContent
+</main>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}
+
+
+
+
+
+

@@ -1,0 +1,87 @@
+@namespace CanDoItAll.Components.CanvasLib
+@implements IAsyncDisposable
+@using CanDoItAll.Components.CanvasLib
+@inject IJSRuntime JsRuntime
+
+<CanvasBoundaryCard TestHookId="@Snapshot.TestHookId"
+                           Label="@Snapshot.Label"
+                           Title="@Snapshot.Title"
+                           Summary="@Snapshot.Summary"
+                           StatePill="@Snapshot.StatePill"
+                           Metrics="@Snapshot.Metrics">
+    <div class="cw-preview-svg-shell" @ref="host">
+        <svg class="cw-preview-svg" viewBox="0 0 300 130" role="img" aria-label="Connector path preview">
+            @foreach (var segment in Snapshot.Segments)
+            {
+                <line class="cw-preview-connector" data-tone="@segment.Tone"
+                      x1="@segment.StartX"
+                      y1="@segment.StartY"
+                      x2="@segment.EndX"
+                      y2="@segment.EndY" />
+            }
+        </svg>
+        <div class="cw-preview-legend">
+            @foreach (var segment in Snapshot.Segments)
+            {
+                <span class="cw-preview-chip" data-tone="@segment.Tone">@segment.Label</span>
+            }
+        </div>
+    </div>
+</CanvasBoundaryCard>
+
+@code {
+    private readonly CanvasSceneHost sceneHost = new();
+    private ElementReference host;
+    private string? pendingSnapshotKey;
+
+    [Parameter, EditorRequired]
+    public ConnectorPathPrimitiveSnapshot Snapshot { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        pendingSnapshotKey = SerializationPersistencePack.Serialize(Snapshot);
+        sceneHost.QueueSync(
+            pendingSnapshotKey,
+            !string.Equals(sceneHost.AppliedStateKey, pendingSnapshotKey, StringComparison.Ordinal));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var bridge = new JsInteropBridge(JsRuntime);
+        if (sceneHost.ShouldCreate())
+        {
+            await bridge.InvokeVoidAsync("CanDoItAll.connectorPathPrimitive.create", host, Snapshot);
+            sceneHost.MarkApplied();
+            return;
+        }
+
+        if (!sceneHost.ShouldUpdate())
+        {
+            return;
+        }
+
+        await bridge.InvokeVoidAsync("CanDoItAll.connectorPathPrimitive.update", host, Snapshot);
+        sceneHost.MarkApplied();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        try
+        {
+            await new JsInteropBridge(JsRuntime).InvokeVoidAsync("CanDoItAll.connectorPathPrimitive.dispose", host);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+}
+
+

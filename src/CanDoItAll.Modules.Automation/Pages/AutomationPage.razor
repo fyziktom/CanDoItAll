@@ -8,7 +8,7 @@ deps: AutomationWorkspaceService
 risks: hidden-job-failure, stale-status
 tests: component:AutomationPageTests, e2e:automation-smoke
 *@
-@using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Infrastructure.BackgroundJobs
 @inject AutomationWorkspaceService AutomationWorkspaceService
 
@@ -114,3 +114,5 @@ tests: component:AutomationPageTests, e2e:automation-smoke
         _ => "neutral"
     };
 }
+
+

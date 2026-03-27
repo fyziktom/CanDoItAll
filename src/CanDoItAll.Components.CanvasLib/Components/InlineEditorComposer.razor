@@ -1,0 +1,74 @@
+@namespace CanDoItAll.Components.CanvasLib
+@implements IAsyncDisposable
+@using CanDoItAll.Components.CanvasLib
+@inject IJSRuntime JsRuntime
+
+<CanvasBoundaryCard TestHookId="@Snapshot.TestHookId"
+                           Label="@Snapshot.Label"
+                           Title="@Snapshot.Title"
+                           Summary="@Snapshot.Summary"
+                           StatePill="@Snapshot.StatePill"
+                           Metrics="@Snapshot.Metrics">
+    <div class="cw-preview-editor" @ref="host">
+        <label class="cw-preview-editor__label">@Snapshot.Placeholder</label>
+        <textarea class="cw-preview-editor__textarea" readonly>@Snapshot.DraftLabel</textarea>
+        <button type="button" class="cw-preview-editor__submit">@Snapshot.SubmitLabel</button>
+    </div>
+</CanvasBoundaryCard>
+
+@code {
+    private readonly CanvasSceneHost sceneHost = new();
+    private ElementReference host;
+    private string? pendingSnapshotKey;
+
+    [Parameter, EditorRequired]
+    public InlineEditorComposerSnapshot Snapshot { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        pendingSnapshotKey = SerializationPersistencePack.Serialize(Snapshot);
+        sceneHost.QueueSync(
+            pendingSnapshotKey,
+            !string.Equals(sceneHost.AppliedStateKey, pendingSnapshotKey, StringComparison.Ordinal));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var bridge = new JsInteropBridge(JsRuntime);
+        if (sceneHost.ShouldCreate())
+        {
+            await bridge.InvokeVoidAsync("CanDoItAll.inlineEditorComposer.create", host, Snapshot);
+            sceneHost.MarkApplied();
+            return;
+        }
+
+        if (!sceneHost.ShouldUpdate())
+        {
+            return;
+        }
+
+        await bridge.InvokeVoidAsync("CanDoItAll.inlineEditorComposer.update", host, Snapshot);
+        sceneHost.MarkApplied();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        try
+        {
+            await new JsInteropBridge(JsRuntime).InvokeVoidAsync("CanDoItAll.inlineEditorComposer.dispose", host);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+}
+
+

@@ -8,7 +8,7 @@ deps: ActivityService, NavigationManager
 risks: empty-search-state, stale-route-links
 tests: component:ActivityPageTests, e2e:activity-smoke
 *@
-@using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Infrastructure.Search
 @inject ActivityService ActivityService
 @inject NavigationManager Navigation
@@ -152,3 +152,5 @@ tests: component:ActivityPageTests, e2e:activity-smoke
     private void OpenResult(SearchResult result)
         => Navigation.NavigateTo(result.Route);
 }
+
+

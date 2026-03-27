@@ -1,0 +1,41 @@
+@namespace CanDoItAll.Components.BaseLib
+<span class="@ResolveCssClass()">@Text</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Tone { get; set; } = "neutral";
+
+    [Parameter]
+    public BadgeTone? TypedTone { get; set; }
+
+    private string ResolveCssClass()
+    {
+        var resolvedTone = TypedTone switch
+        {
+            BadgeTone.Success => "success",
+            BadgeTone.Warn => "warning",
+            BadgeTone.Accent => "info",
+            BadgeTone.Info => "info",
+            BadgeTone.Promo => "accent",
+            BadgeTone.Rank => "accent",
+            _ => Tone
+        };
+
+        var toneCss = resolvedTone.ToLowerInvariant() switch
+        {
+            "success" => "border-emerald-200 bg-emerald-50 text-emerald-700",
+            "warning" => "border-amber-200 bg-amber-50 text-amber-800",
+            "danger" => "border-rose-200 bg-rose-50 text-rose-700",
+            "info" => "border-sky-200 bg-sky-50 text-sky-700",
+            "accent" => "border-violet-200 bg-violet-50 text-violet-700",
+            _ => "border-slate-200 bg-slate-100 text-slate-700"
+        };
+
+        return $"inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium {toneCss}";
+    }
+}
+
+

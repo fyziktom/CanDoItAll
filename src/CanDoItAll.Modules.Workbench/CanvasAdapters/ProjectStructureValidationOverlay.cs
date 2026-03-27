@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.CanvasAdapters;
@@ -95,3 +95,5 @@ public sealed record ProjectStructureValidationOverlaySummary(
     int PriorityCount,
     int SelectedIssueCount,
     IReadOnlyList<string> SpotlightNodes);
+
+

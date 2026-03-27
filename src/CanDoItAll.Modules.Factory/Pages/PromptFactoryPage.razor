@@ -8,8 +8,8 @@ deps: PromptFactoryService, ProjectsService, ResourcesService, WorkspaceService
 risks: missing-project-context, stale-run-routing, unsaved-node-edits
 tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 *@
-@using CanDoItAll.ComponentKit.Canvas
-@using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Factory.CanvasAdapters
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Resources
@@ -94,7 +94,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                     aria-label="Undo"
                                     disabled="@(!CanUndo)"
                                     @onclick="UndoAsync">
-                                <span class="cw-toolbar-symbol" aria-hidden="true">↶</span>
+                                <span class="cw-toolbar-symbol" aria-hidden="true">â†¶</span>
                                 <span class="sr-only">Undo</span>
                             </button>
                             <button type="button"
@@ -104,7 +104,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                     aria-label="Redo"
                                     disabled="@(!CanRedo)"
                                     @onclick="RedoAsync">
-                                <span class="cw-toolbar-symbol" aria-hidden="true">↷</span>
+                                <span class="cw-toolbar-symbol" aria-hidden="true">â†·</span>
                                 <span class="sr-only">Redo</span>
                             </button>
                         </div>
@@ -455,7 +455,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Prompt step</p>
                             <h3 class="cw-panel-title">@selectedPromptNode.Title</h3>
-                            <p class="cw-panel-copy">@selectedPromptNode.BranchLabel · step @selectedPromptNode.Sequence</p>
+                            <p class="cw-panel-copy">@selectedPromptNode.BranchLabel Â· step @selectedPromptNode.Sequence</p>
                             <div class="cw-chip-row">
                                 <span class="cw-node__chip tone-accent">@selectedPromptNode.State</span>
                                 @if (selectedPromptNode.ParentNodeId.HasValue)
@@ -527,7 +527,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                 {
                                     <button type="button" class="cw-list-item" @onclick="@(() => SelectPromptCanvasNodeAsync(node.Id))">
                                         <strong>@node.Title</strong>
-                                        <span>@node.State · step @node.Sequence</span>
+                                        <span>@node.State Â· step @node.Sequence</span>
                                     </button>
                                 }
                             </div>
@@ -587,7 +587,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
             </CanvasWorkbenchStage>
 
             <div class="mt-5">
-                <CanvasBoundaryPreviewCard TestHookId="prompt-factory-undo-redo-adapter"
+                <CanvasBoundaryCard TestHookId="prompt-factory-undo-redo-adapter"
                                            Label="Prompt Factory undo redo adapter"
                                            Title="Prompt editing history now resolves through one domain adapter"
                                            Summary="Canvas selection, inspector tab state, and prompt-session snapshots are captured together so shared history infrastructure can drive toolbar buttons and keyboard shortcuts."
@@ -625,7 +625,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         </div>
                     </div>
-                </CanvasBoundaryPreviewCard>
+                </CanvasBoundaryCard>
             </div>
 
             <div class="mt-5 grid gap-5 xl:grid-cols-2 2xl:grid-cols-3">
@@ -1669,7 +1669,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         {
                             <label class="cw-list-item">
                                 <strong>@block.Name</strong>
-                                <span>@block.BlockKind · @block.Summary</span>
+                                <span>@block.BlockKind Â· @block.Summary</span>
                                 <input type="checkbox"
                                        checked="@editor.SelectedBlockIds.Contains(block.Id)"
                                        @onchange="args => ToggleBlock(block.Id, ReadCheckboxValue(args))" />
@@ -1790,7 +1790,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         {
                             <div class="cw-list-item">
                                 <strong>@group.Name</strong>
-                                <span>@($"{group.ComponentCount} components · {group.Purpose}")</span>
+                                <span>@($"{group.ComponentCount} components Â· {group.Purpose}")</span>
                             </div>
                         }
                     </div>
@@ -1816,7 +1816,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             {
                                 <label class="cw-list-item">
                                     <strong>@resource.Name</strong>
-                                    <span>@resource.ResourceKind · @resource.ValidationStatus · @resource.Sensitivity</span>
+                                    <span>@resource.ResourceKind Â· @resource.ValidationStatus Â· @resource.Sensitivity</span>
                                     <input type="checkbox"
                                            checked="@editor.SelectedResourceIds.Contains(resource.Id)"
                                            @onchange="args => ToggleResource(resource.Id, ReadCheckboxValue(args))" />
@@ -2284,7 +2284,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                     Kind = "prompt step",
                     Icon = "ST",
                     Title = node.Title,
-                    Subtitle = $"{node.BranchLabel} · step {node.Sequence}",
+                    Subtitle = $"{node.BranchLabel} Â· step {node.Sequence}",
                     LeadText = string.IsNullOrWhiteSpace(node.Notes) ? "Prompt step ready for review." : node.Notes,
                     Status = node.State.ToString(),
                     BranchLabel = node.BranchLabel,
@@ -2457,7 +2457,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
             if (TryParsePromptCanvasNodeId(selectedId, out var nodeId) &&
                 editor.Nodes.FirstOrDefault(node => node.Id == nodeId) is { } promptNode)
             {
-                yield return (promptNode.Title, $"{promptNode.BranchLabel} · {promptNode.State}");
+                yield return (promptNode.Title, $"{promptNode.BranchLabel} Â· {promptNode.State}");
                 continue;
             }
 
@@ -3077,3 +3077,5 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         _ => false
     };
 }
+
+

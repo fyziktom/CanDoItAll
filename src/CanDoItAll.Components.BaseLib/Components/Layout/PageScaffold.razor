@@ -1,0 +1,69 @@
+@namespace CanDoItAll.Components.BaseLib
+<div class="@ResolveContainerClass()">
+    @if (Header is not null)
+    {
+        <div class="space-y-3">
+            @Header
+        </div>
+    }
+
+    @if (Lead is not null)
+    {
+        <div class="space-y-4">
+            @Lead
+        </div>
+    }
+
+    @if (SecondaryRail is not null)
+    {
+        <div class="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_18rem]">
+            <div class="min-w-0 space-y-6">
+                @ChildContent
+            </div>
+
+            <aside class="space-y-4">
+                @SecondaryRail
+            </aside>
+        </div>
+    }
+    else if (ChildContent is not null)
+    {
+        <div class="space-y-6">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public PageScaffoldMode Mode { get; set; } = PageScaffoldMode.Standard;
+
+    [Parameter]
+    public string? MaxWidthClass { get; set; }
+
+    [Parameter]
+    public RenderFragment? Header { get; set; }
+
+    [Parameter]
+    public RenderFragment? Lead { get; set; }
+
+    [Parameter]
+    public RenderFragment? SecondaryRail { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveContainerClass()
+    {
+        var maxWidthClass = !string.IsNullOrWhiteSpace(MaxWidthClass)
+            ? MaxWidthClass
+            : Mode == PageScaffoldMode.FocusWorkbench
+                ? "max-w-full"
+                : "max-w-[1500px]";
+
+        var spacingClass = Mode == PageScaffoldMode.FocusWorkbench ? "gap-3" : "gap-4";
+        return $"mx-auto flex w-full min-w-0 flex-col {spacingClass} {maxWidthClass}";
+    }
+}
+
+

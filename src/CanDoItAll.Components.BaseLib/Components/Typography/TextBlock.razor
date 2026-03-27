@@ -1,0 +1,99 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+@switch (ResolveTag())
+{
+    case "h1":
+        <h1 @attributes='BuildAttributes(ResolveCssClass())'>@RenderContent()</h1>
+        break;
+    case "h2":
+        <h2 @attributes='BuildAttributes(ResolveCssClass())'>@RenderContent()</h2>
+        break;
+    case "h3":
+        <h3 @attributes='BuildAttributes(ResolveCssClass())'>@RenderContent()</h3>
+        break;
+    case "h4":
+        <h4 @attributes='BuildAttributes(ResolveCssClass())'>@RenderContent()</h4>
+        break;
+    case "h5":
+        <h5 @attributes='BuildAttributes(ResolveCssClass())'>@RenderContent()</h5>
+        break;
+    case "h6":
+        <h6 @attributes='BuildAttributes(ResolveCssClass())'>@RenderContent()</h6>
+        break;
+    case "span":
+        <span @attributes='BuildAttributes(ResolveCssClass())'>@RenderContent()</span>
+        break;
+    default:
+        <p @attributes='BuildAttributes(ResolveCssClass())'>@RenderContent()</p>
+        break;
+}
+
+@code {
+    [Parameter]
+    public TextStyle TextStyle { get; set; } = TextStyle.Body1;
+
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveTag()
+    {
+        return TextStyle switch
+        {
+            TextStyle.H1 => "h1",
+            TextStyle.H2 => "h2",
+            TextStyle.H3 => "h3",
+            TextStyle.H4 => "h4",
+            TextStyle.H5 => "h5",
+            TextStyle.H6 => "h6",
+            TextStyle.Small => "span",
+            TextStyle.Mono => "span",
+            TextStyle.Footer => "span",
+            TextStyle.Caption => "span",
+            _ => "p"
+        };
+    }
+
+    private string ResolveCssClass()
+    {
+        return TextStyle switch
+        {
+            TextStyle.H1 => "rz-text text-4xl font-semibold text-slate-950",
+            TextStyle.H2 => "rz-text text-3xl font-semibold text-slate-900",
+            TextStyle.H3 => "rz-text text-2xl font-semibold text-slate-900",
+            TextStyle.H4 => "rz-text text-xl font-semibold text-slate-900",
+            TextStyle.H5 => "rz-text text-lg font-semibold text-slate-900",
+            TextStyle.H6 => "rz-text text-base font-semibold uppercase tracking-[0.18em] text-slate-700",
+            TextStyle.Subtitle1 => "rz-text text-lg font-semibold text-slate-800",
+            TextStyle.Subtitle2 => "rz-text text-base font-semibold text-slate-700",
+            TextStyle.Small => "rz-text text-xs text-slate-500",
+            TextStyle.Note => "rz-text text-sm text-slate-600",
+            TextStyle.Eyebrow => "rz-text text-xs font-semibold uppercase tracking-[0.18em] text-slate-500",
+            TextStyle.Mono => "rz-text font-mono text-xs text-slate-600",
+            TextStyle.Footer => "rz-text text-xs uppercase tracking-[0.18em] text-slate-500",
+            TextStyle.Muted => "rz-text text-sm text-slate-500",
+            TextStyle.Caption => "rz-text text-xs text-slate-500",
+            TextStyle.Body2 => "rz-text text-sm text-slate-700",
+            _ => "rz-text text-base text-slate-700"
+        };
+    }
+
+    private RenderFragment RenderContent()
+    {
+        if (ChildContent is not null)
+        {
+            return ChildContent;
+        }
+
+        return builder => builder.AddContent(0, Value);
+    }
+}
+
+
+
+
+
+
+

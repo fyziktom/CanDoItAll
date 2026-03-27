@@ -1,0 +1,75 @@
+@namespace CanDoItAll.Components.BaseLib
+@typeparam TItem
+@implements IDisposable
+
+@code {
+    private System.Reflection.PropertyInfo? cachedProperty;
+
+    [CascadingParameter]
+    private DataGrid<TItem>? Parent { get; set; }
+
+    [Parameter]
+    public string? Property { get; set; }
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public RenderFragment<TItem>? Template { get; set; }
+
+    internal string HeaderText => string.IsNullOrWhiteSpace(Title)
+        ? Property ?? string.Empty
+        : Title;
+
+    protected override void OnInitialized()
+    {
+        Parent?.RegisterColumn(this);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (cachedProperty is null && !string.IsNullOrWhiteSpace(Property))
+        {
+            cachedProperty = typeof(TItem).GetProperty(Property);
+        }
+
+        Parent?.RegisterColumn(this);
+    }
+
+    internal RenderFragment RenderCell(TItem item)
+    {
+        if (Template is not null)
+        {
+            return Template(item);
+        }
+
+        return builder =>
+        {
+            var value = ReadPropertyValue(item);
+            builder.AddContent(0, value?.ToString());
+        };
+    }
+
+    private object? ReadPropertyValue(TItem item)
+    {
+        if (item is null)
+        {
+            return null;
+        }
+
+        if (cachedProperty is null)
+        {
+            return item;
+        }
+
+        return cachedProperty.GetValue(item);
+    }
+
+    public void Dispose()
+    {
+        Parent?.UnregisterColumn(this);
+    }
+}
+
+
+

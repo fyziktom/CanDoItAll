@@ -16,3 +16,5 @@ public static class WorkbenchModuleServiceCollectionExtensions
 }
 
 public static class WorkbenchModuleAssemblyMarker;
+
+

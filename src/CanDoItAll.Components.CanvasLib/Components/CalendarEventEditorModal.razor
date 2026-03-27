@@ -1,0 +1,106 @@
+@namespace CanDoItAll.Components.CanvasLib
+@implements IAsyncDisposable
+@using CanDoItAll.Components.CanvasLib
+@inject IJSRuntime JsRuntime
+
+<CanvasBoundaryCard TestHookId="@Snapshot.TestHookId"
+                           Label="@Snapshot.Label"
+                           Title="@Snapshot.Title"
+                           Summary="@Snapshot.Summary"
+                           StatePill="@Snapshot.StatePill"
+                           Metrics="@Snapshot.Metrics">
+    <div class="space-y-4" @ref="host">
+        <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">@Snapshot.ModeLabel</p>
+                    <p class="mt-1 text-sm text-slate-600">Typed editor fields and validation now live on their own boundary.</p>
+                </div>
+                <span class="rounded-full bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">@Snapshot.StatePill</span>
+            </div>
+            <div class="mt-4 grid gap-3 md:grid-cols-2">
+                @foreach (var field in Snapshot.Fields)
+                {
+                    <div class="rounded-2xl bg-slate-50 px-3 py-3">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">@field.Label</p>
+                        <p class="mt-2 text-sm text-slate-950">@field.Value</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="rounded-[1.4rem] border border-dashed border-slate-300 bg-slate-50/90 px-4 py-4">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Validation</p>
+            @if (Snapshot.ValidationMessages.Count == 0)
+            {
+                <p class="mt-3 text-sm text-emerald-700">All required editor fields are present.</p>
+            }
+            else
+            {
+                <ul class="mt-3 space-y-2 text-sm text-amber-700">
+                    @foreach (var message in Snapshot.ValidationMessages)
+                    {
+                        <li>@message</li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</CanvasBoundaryCard>
+
+@code {
+    private readonly CanvasSceneHost sceneHost = new();
+    private ElementReference host;
+    private string? pendingSnapshotKey;
+
+    [Parameter, EditorRequired]
+    public CalendarEventEditorModalSnapshot Snapshot { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        pendingSnapshotKey = SerializationPersistencePack.Serialize(Snapshot);
+        sceneHost.QueueSync(
+            pendingSnapshotKey,
+            !string.Equals(sceneHost.AppliedStateKey, pendingSnapshotKey, StringComparison.Ordinal));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var bridge = new JsInteropBridge(JsRuntime);
+        if (sceneHost.ShouldCreate())
+        {
+            await bridge.InvokeVoidAsync("CanDoItAll.calendarEventEditorModal.create", host, Snapshot);
+            sceneHost.MarkApplied();
+            return;
+        }
+
+        if (!sceneHost.ShouldUpdate())
+        {
+            return;
+        }
+
+        await bridge.InvokeVoidAsync("CanDoItAll.calendarEventEditorModal.update", host, Snapshot);
+        sceneHost.MarkApplied();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        try
+        {
+            await new JsInteropBridge(JsRuntime).InvokeVoidAsync("CanDoItAll.calendarEventEditorModal.dispose", host);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+}
+
+

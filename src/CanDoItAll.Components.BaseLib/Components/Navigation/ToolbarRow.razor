@@ -1,0 +1,11 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes("zy-sheet-toolbar-row")'>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

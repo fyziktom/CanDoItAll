@@ -12,3 +12,5 @@ public static class ResourcesModuleServiceCollectionExtensions
 }
 
 public static class ResourcesModuleAssemblyMarker;
+
+

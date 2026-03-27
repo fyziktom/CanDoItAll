@@ -1,0 +1,11 @@
+@namespace CanDoItAll.Components.BaseLib
+<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}
+
+

@@ -1,0 +1,100 @@
+@namespace CanDoItAll.Components.CanvasLib
+@implements IAsyncDisposable
+@using CanDoItAll.Components.CanvasLib
+@inject IJSRuntime JsRuntime
+
+<div class="cw-accessibility-mirror @(Snapshot.EnableDiagnostics ? "is-debug" : string.Empty)"
+     data-testid="@Snapshot.TestHookId"
+     data-surface-kind="@Snapshot.SurfaceKind"
+     @ref="host">
+    <div class="cw-sr-only" aria-live="polite">@Snapshot.LiveAnnouncement</div>
+
+    <section class="cw-sr-only"
+             role="region"
+             aria-label="@Snapshot.RegionLabel">
+        <h3>@Snapshot.RegionLabel</h3>
+        <p>@Snapshot.SummaryLabel</p>
+
+        <ul>
+            @foreach (var item in Snapshot.Items)
+            {
+                <li aria-current="@(item.IsPrimary ? "true" : null)">
+                    <span>
+                        @item.Label
+                    </span>
+                    @if (!string.IsNullOrWhiteSpace(item.Description))
+                    {
+                        <span>@item.Description</span>
+                    }
+                </li>
+            }
+        </ul>
+    </section>
+
+    @if (Snapshot.EnableDiagnostics)
+    {
+        <aside class="cw-accessibility-mirror__debug" data-testid="accessibility-mirror-debug">
+            <p class="cw-help-kicker">Accessibility mirror</p>
+            <h4>@Snapshot.SummaryLabel</h4>
+            <p class="cw-accessibility-mirror__debug-copy">@Snapshot.LiveAnnouncement</p>
+            <p class="cw-accessibility-mirror__debug-copy">@($"{Snapshot.Items.Count} mirrored items ready for assistive navigation.")</p>
+        </aside>
+    }
+</div>
+
+@code {
+    private readonly CanvasSceneHost sceneHost = new();
+    private ElementReference host;
+    private string? pendingSnapshotKey;
+
+    [Parameter, EditorRequired]
+    public AccessibilityMirrorSnapshot Snapshot { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        pendingSnapshotKey = SerializationPersistencePack.Serialize(Snapshot);
+        sceneHost.QueueSync(
+            pendingSnapshotKey,
+            !string.Equals(sceneHost.AppliedStateKey, pendingSnapshotKey, StringComparison.Ordinal));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var bridge = new JsInteropBridge(JsRuntime);
+        if (sceneHost.ShouldCreate())
+        {
+            await bridge.InvokeVoidAsync("CanDoItAll.accessibilityMirrorLayer.create", host, Snapshot);
+            sceneHost.MarkApplied();
+            return;
+        }
+
+        if (!sceneHost.ShouldUpdate())
+        {
+            return;
+        }
+
+        await bridge.InvokeVoidAsync("CanDoItAll.accessibilityMirrorLayer.update", host, Snapshot);
+        sceneHost.MarkApplied();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        try
+        {
+            await new JsInteropBridge(JsRuntime).InvokeVoidAsync("CanDoItAll.accessibilityMirrorLayer.dispose", host);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+}
+
+

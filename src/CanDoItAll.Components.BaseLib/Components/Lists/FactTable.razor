@@ -1,0 +1,11 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes("grid gap-3 rounded-[1.35rem] border border-slate-200 bg-slate-50/80 p-4 text-sm")'>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

@@ -1,0 +1,95 @@
+@namespace CanDoItAll.Components.BaseLib
+@implements IDisposable
+@inject NotificationService NotificationService
+
+<div class="rz-notification fixed right-4 top-4 z-50 flex max-w-sm flex-col gap-2">
+    @foreach (var toast in toasts)
+    {
+        <div class="rounded-2xl border px-4 py-3 shadow-lg @GetSeverityCss(toast.Message.Severity)">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0 space-y-1">
+                    @if (!string.IsNullOrWhiteSpace(toast.Message.Summary))
+                    {
+                        <div class="text-sm font-semibold">@toast.Message.Summary</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(toast.Message.Detail))
+                    {
+                        <div class="text-sm leading-6">@toast.Message.Detail</div>
+                    }
+                </div>
+                <button type="button"
+                        class="text-xs font-semibold uppercase tracking-[0.18em]"
+                        @onclick="@(() => DismissToastAsync(toast))">
+                    Close
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<ToastEntry> toasts = [];
+
+    protected override void OnInitialized()
+    {
+        NotificationService.Notification += HandleNotification;
+    }
+
+    private void HandleNotification(NotificationMessage message)
+    {
+        var entry = new ToastEntry(Guid.NewGuid(), message);
+        toasts.Add(entry);
+        _ = InvokeAsync(StateHasChanged);
+        _ = RemoveToastLaterAsync(entry);
+    }
+
+    private async Task RemoveToastLaterAsync(ToastEntry entry)
+    {
+        var duration = entry.Message.Duration <= 0
+            ? 2500
+            : entry.Message.Duration;
+
+        try
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(duration));
+            if (toasts.Remove(entry))
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    private Task DismissToastAsync(ToastEntry entry)
+    {
+        if (toasts.Remove(entry))
+        {
+            return InvokeAsync(StateHasChanged);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static string GetSeverityCss(NotificationSeverity severity)
+    {
+        return severity switch
+        {
+            NotificationSeverity.Success => "border-emerald-300 bg-emerald-50 text-emerald-900",
+            NotificationSeverity.Warning => "border-amber-300 bg-amber-50 text-amber-900",
+            NotificationSeverity.Error => "border-red-300 bg-red-50 text-red-900",
+            _ => "border-sky-300 bg-sky-50 text-sky-900"
+        };
+    }
+
+    public void Dispose()
+    {
+        NotificationService.Notification -= HandleNotification;
+    }
+
+    private sealed record ToastEntry(Guid Id, NotificationMessage Message);
+}
+
+
+

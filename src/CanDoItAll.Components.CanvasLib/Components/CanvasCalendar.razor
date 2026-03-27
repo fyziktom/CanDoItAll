@@ -1,0 +1,251 @@
+@namespace CanDoItAll.Components.CanvasLib
+@implements IAsyncDisposable
+@using CanDoItAll.Components.CanvasLib
+@inject IJSRuntime JsRuntime
+
+<div class="cdi-canvas-calendar-shell"
+     style="@ThemeStyle"
+     data-theme-key="@ThemeTokens.ThemeKey">
+    <div @ref="host" class="@BuildHostClass()"></div>
+    <AccessibilityMirrorLayer Snapshot="@AccessibilitySnapshot" />
+</div>
+
+@code {
+    private static readonly CanvasThemeTokenPack ThemeTokens = CanvasThemeTokenPack.Default;
+    private readonly CanvasSceneHost sceneHost = new();
+    private ElementReference host;
+    private DotNetObjectReference<CanvasCalendar>? objectReference;
+    private string? pendingSurfaceKey;
+
+    [Parameter, EditorRequired]
+    public CanvasCalendarSurface Surface { get; set; } = default!;
+
+    [Parameter]
+    public string HostClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<CanvasCalendarSelectionChangedEventArgs> SelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<CanvasCalendarStateChangedEventArgs> StateChanged { get; set; }
+
+    [Parameter]
+    public Func<CanvasCalendarSaveRequest, Task<CanvasCalendarEvent?>>? SaveEventAsync { get; set; }
+
+    [Parameter]
+    public Func<CanvasCalendarDeleteRequest, Task>? DeleteEventAsync { get; set; }
+
+    [Parameter]
+    public Func<CanvasCalendarPlaylistSearchRequest, Task<IReadOnlyList<CanvasCalendarPlaylist>>>? SearchPlaylistsAsync { get; set; }
+
+    [Parameter]
+    public Func<CanvasCalendarPlaylistMutationRequest, Task<CanvasCalendarEvent?>>? LinkPlaylistAsync { get; set; }
+
+    [Parameter]
+    public Func<CanvasCalendarPlaylistMutationRequest, Task<CanvasCalendarEvent?>>? ClonePlaylistAsync { get; set; }
+
+    [Parameter]
+    public Func<CanvasCalendarPlaylistMutationRequest, Task<CanvasCalendarEvent?>>? UnlinkPlaylistAsync { get; set; }
+
+    [Parameter]
+    public Func<CanvasCalendarExportRequest, Task>? ExportAsync { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        pendingSurfaceKey = SerializationPersistencePack.Serialize(Surface);
+        sceneHost.QueueSync(
+            pendingSurfaceKey,
+            !string.Equals(sceneHost.AppliedStateKey, pendingSurfaceKey, StringComparison.Ordinal));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        objectReference ??= DotNetObjectReference.Create(this);
+        var bridge = new JsInteropBridge(JsRuntime);
+        if (sceneHost.ShouldCreate())
+        {
+            await bridge.InvokeVoidAsync("CanDoItAll.canvasCalendar.create", host, objectReference, Surface);
+            MarkSurfaceApplied();
+            return;
+        }
+
+        if (!sceneHost.ShouldUpdate())
+        {
+            return;
+        }
+
+        await bridge.InvokeVoidAsync("CanDoItAll.canvasCalendar.update", host, Surface);
+        MarkSurfaceApplied();
+    }
+
+    [JSInvokable]
+    public async Task<string?> OnEventSave(string eventJson, string contextJson, string mode)
+    {
+        var calendarEvent = Deserialize<CanvasCalendarEvent>(eventJson) ?? new CanvasCalendarEvent();
+        var context = Deserialize<CanvasCalendarOperationContext>(contextJson) ?? new CanvasCalendarOperationContext();
+        if (SaveEventAsync is null)
+        {
+            return SerializationPersistencePack.Serialize(calendarEvent);
+        }
+
+        var result = await SaveEventAsync(new CanvasCalendarSaveRequest(calendarEvent, context, mode));
+        return SerializationPersistencePack.Serialize(result ?? calendarEvent);
+    }
+
+    [JSInvokable]
+    public Task OnEventDelete(string eventJson, string contextJson)
+    {
+        if (DeleteEventAsync is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        var calendarEvent = Deserialize<CanvasCalendarEvent>(eventJson) ?? new CanvasCalendarEvent();
+        var context = Deserialize<CanvasCalendarOperationContext>(contextJson) ?? new CanvasCalendarOperationContext();
+        return DeleteEventAsync(new CanvasCalendarDeleteRequest(calendarEvent, context));
+    }
+
+    [JSInvokable]
+    public async Task<string> OnPlaylistSearch(string query, string eventJson, string contextJson)
+    {
+        if (SearchPlaylistsAsync is null)
+        {
+            return "[]";
+        }
+
+        var calendarEvent = Deserialize<CanvasCalendarEvent>(eventJson);
+        var context = Deserialize<CanvasCalendarOperationContext>(contextJson) ?? new CanvasCalendarOperationContext();
+        var results = await SearchPlaylistsAsync(new CanvasCalendarPlaylistSearchRequest(query, calendarEvent, context));
+        return SerializationPersistencePack.Serialize(results ?? Array.Empty<CanvasCalendarPlaylist>());
+    }
+
+    [JSInvokable]
+    public Task<string?> OnPlaylistLink(string eventJson, string playlistJson, string contextJson)
+    {
+        return HandlePlaylistMutationAsync(eventJson, playlistJson, contextJson, LinkPlaylistAsync);
+    }
+
+    [JSInvokable]
+    public Task<string?> OnPlaylistClone(string eventJson, string playlistJson, string contextJson)
+    {
+        return HandlePlaylistMutationAsync(eventJson, playlistJson, contextJson, ClonePlaylistAsync);
+    }
+
+    [JSInvokable]
+    public Task<string?> OnPlaylistUnlink(string eventJson, string playlistJson, string contextJson)
+    {
+        return HandlePlaylistMutationAsync(eventJson, playlistJson, contextJson, UnlinkPlaylistAsync);
+    }
+
+    [JSInvokable]
+    public Task OnSelectionChanged(string selectedEventJson, string contextJson)
+    {
+        if (!SelectionChanged.HasDelegate)
+        {
+            return Task.CompletedTask;
+        }
+
+        var selectedEvent = Deserialize<CanvasCalendarEvent>(selectedEventJson);
+        var context = Deserialize<CanvasCalendarOperationContext>(contextJson) ?? new CanvasCalendarOperationContext();
+        return SelectionChanged.InvokeAsync(new CanvasCalendarSelectionChangedEventArgs(selectedEvent, context));
+    }
+
+    [JSInvokable]
+    public Task OnStateChanged(string stateJson, string? selectedEventId, string selectedDate, string view, string scope, string timezone)
+    {
+        if (!StateChanged.HasDelegate)
+        {
+            return Task.CompletedTask;
+        }
+
+        return StateChanged.InvokeAsync(new CanvasCalendarStateChangedEventArgs(
+            stateJson,
+            string.IsNullOrWhiteSpace(selectedEventId) ? null : selectedEventId,
+            selectedDate,
+            view,
+            scope,
+            timezone));
+    }
+
+    [JSInvokable]
+    public Task OnExportRequested(string format, string visibleEventsJson, string contextJson)
+    {
+        if (ExportAsync is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        var visibleEvents = Deserialize<List<CanvasCalendarEvent>>(visibleEventsJson) ?? [];
+        var context = Deserialize<CanvasCalendarOperationContext>(contextJson) ?? new CanvasCalendarOperationContext();
+        return ExportAsync(new CanvasCalendarExportRequest(format, visibleEvents, context));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (sceneHost.IsInitialized)
+        {
+            try
+            {
+                await new JsInteropBridge(JsRuntime).InvokeVoidAsync("CanDoItAll.canvasCalendar.dispose", host);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+            catch (JSException)
+            {
+            }
+        }
+
+        objectReference?.Dispose();
+    }
+
+    private static T? Deserialize<T>(string json)
+        => SerializationPersistencePack.Deserialize<T>(json);
+
+    private string ThemeStyle => ThemeTokens.ToInlineStyle();
+
+    private AccessibilityMirrorSnapshot AccessibilitySnapshot
+        => AccessibilityMirrorLayerFactory.CreateForCalendar(Surface);
+
+    private async Task<string?> HandlePlaylistMutationAsync(
+        string eventJson,
+        string playlistJson,
+        string contextJson,
+        Func<CanvasCalendarPlaylistMutationRequest, Task<CanvasCalendarEvent?>>? callback)
+    {
+        var calendarEvent = Deserialize<CanvasCalendarEvent>(eventJson) ?? new CanvasCalendarEvent();
+        var playlist = Deserialize<CanvasCalendarPlaylist>(playlistJson) ?? new CanvasCalendarPlaylist();
+        var context = Deserialize<CanvasCalendarOperationContext>(contextJson) ?? new CanvasCalendarOperationContext();
+
+        if (callback is null)
+        {
+            return SerializationPersistencePack.Serialize(calendarEvent);
+        }
+
+        var result = await callback(new CanvasCalendarPlaylistMutationRequest(calendarEvent, playlist, context));
+        return SerializationPersistencePack.Serialize(result ?? calendarEvent);
+    }
+
+    private string BuildHostClass()
+    {
+        var classes = new List<string>
+        {
+            "cdi-canvas-calendar-host",
+            "zy-calendar-host-workspace"
+        };
+
+        if (!string.IsNullOrWhiteSpace(HostClass))
+        {
+            classes.Add(HostClass);
+        }
+
+        return string.Join(' ', classes);
+    }
+
+    private void MarkSurfaceApplied()
+    {
+        sceneHost.MarkApplied();
+    }
+}
+
+

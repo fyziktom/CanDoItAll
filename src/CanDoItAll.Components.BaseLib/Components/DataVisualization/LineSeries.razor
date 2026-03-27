@@ -1,0 +1,90 @@
+@namespace CanDoItAll.Components.BaseLib
+@implements IDisposable
+
+@code {
+    [CascadingParameter]
+    private Chart? Parent { get; set; }
+
+    [Parameter]
+    public System.Collections.IEnumerable? Data { get; set; }
+
+    [Parameter]
+    public string? CategoryProperty { get; set; }
+
+    [Parameter]
+    public string? ValueProperty { get; set; }
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public bool Smooth { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Parent?.RegisterSeries(this);
+    }
+
+    protected override void OnParametersSet()
+    {
+        Parent?.RegisterSeries(this);
+    }
+
+    internal IReadOnlyList<double> ReadValues()
+    {
+        if (Data is null)
+        {
+            return [];
+        }
+
+        var values = new List<double>();
+        foreach (var item in Data)
+        {
+            var value = ResolveValue(item);
+            if (value.HasValue)
+            {
+                values.Add(value.Value);
+            }
+        }
+
+        return values;
+    }
+
+    private double? ResolveValue(object? item)
+    {
+        if (item is null)
+        {
+            return null;
+        }
+
+        object? rawValue = item;
+        if (!string.IsNullOrWhiteSpace(ValueProperty))
+        {
+            var property = item.GetType().GetProperty(ValueProperty);
+            rawValue = property?.GetValue(item);
+        }
+
+        if (rawValue is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return Convert.ToDouble(rawValue, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public void Dispose()
+    {
+        Parent?.UnregisterSeries(this);
+    }
+}
+
+
+
+

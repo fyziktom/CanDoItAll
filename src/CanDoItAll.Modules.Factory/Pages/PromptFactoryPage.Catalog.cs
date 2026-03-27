@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Factory.CanvasAdapters;
 using CanDoItAll.SharedKernel;
 
@@ -1089,3 +1089,5 @@ public partial class PromptFactoryPage
             _ => "mint"
         };
 }
+
+

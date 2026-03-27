@@ -1,0 +1,11 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes("flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500")'>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

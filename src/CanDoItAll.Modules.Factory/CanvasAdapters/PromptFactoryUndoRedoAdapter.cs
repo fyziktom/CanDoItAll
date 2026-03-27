@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Factory.CanvasAdapters;
 
@@ -88,3 +88,5 @@ public sealed class PromptFactoryUndoRedoAdapter
     private static string SerializeSnapshot(PromptFactoryEditorModel snapshot)
         => JsonSerializer.Serialize(snapshot, SerializerOptions);
 }
+
+

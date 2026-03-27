@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-    <ProjectReference Include="..\CanDoItAll.ComponentKit\CanDoItAll.ComponentKit.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components\CanDoItAll.Components.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj" />
@@ -31,3 +32,6 @@
   </ItemGroup>
 
 </Project>
+
+
+

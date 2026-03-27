@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Factory.CanvasAdapters;
 
@@ -177,3 +177,5 @@ public sealed record RecommendationOverlayItem(
     string Label,
     string Detail,
     string Tone);
+
+

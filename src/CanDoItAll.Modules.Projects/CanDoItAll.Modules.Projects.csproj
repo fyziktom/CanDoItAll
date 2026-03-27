@@ -16,10 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CanDoItAll.ComponentKit\CanDoItAll.ComponentKit.csproj" />
-    <ProjectReference Include="..\CanDoItAll.Components\CanDoItAll.Components.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
+
+
+

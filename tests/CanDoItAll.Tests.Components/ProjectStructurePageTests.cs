@@ -1,5 +1,5 @@
 using Bunit;
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
@@ -366,3 +366,5 @@ public sealed class ProjectStructurePageTests
         });
     }
 }
+
+

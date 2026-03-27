@@ -12,3 +12,5 @@ public static class AutomationModuleServiceCollectionExtensions
 }
 
 public static class AutomationModuleAssemblyMarker;
+
+

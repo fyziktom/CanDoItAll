@@ -1,0 +1,48 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<label @attributes='BuildAttributes(ResolveCssClass())'>
+    @ChildContent
+</label>
+
+@code {
+    [Parameter]
+    public bool Third { get; set; }
+
+    [Parameter]
+    public bool Full { get; set; }
+
+    [Parameter]
+    public bool Compact { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveCssClass()
+    {
+        var compatibilityCss = Full
+            ? "zy-seller-profile-field zy-seller-profile-field--full"
+            : Third
+                ? "zy-seller-profile-field zy-seller-profile-field--third"
+                : Compact
+                    ? "zy-seller-profile-field zy-seller-profile-field--compact"
+                    : "zy-seller-profile-field";
+
+        if (Full)
+        {
+            return BuildClass("flex w-full flex-col gap-2", compatibilityCss);
+        }
+
+        if (Third)
+        {
+            return BuildClass("flex w-full flex-col gap-2", compatibilityCss);
+        }
+
+        if (Compact)
+        {
+            return BuildClass("flex w-full flex-col gap-1.5", compatibilityCss);
+        }
+
+        return BuildClass("flex w-full flex-col gap-2", compatibilityCss);
+    }
+}

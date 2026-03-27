@@ -12,3 +12,5 @@ public static class PromptsModuleServiceCollectionExtensions
 }
 
 public static class PromptsModuleAssemblyMarker;
+
+

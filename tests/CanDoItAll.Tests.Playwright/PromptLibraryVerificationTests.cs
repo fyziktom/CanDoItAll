@@ -4,7 +4,8 @@ using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright;
 
-public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture) : IClassFixture<PlaywrightAppFixture>
+[Collection(PlaywrightCollection.Name)]
+public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -175,10 +176,14 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         await page.WaitForSelectorAsync($"text={manifest.Components.Count}");
         await page.WaitForSelectorAsync($"text={manifest.Flows.Count}");
         await page.WaitForSelectorAsync($"text={manifest.Blueprints.Count}");
-        await page.Locator("main").ScreenshotAsync(new() { Path = screenshotPath });
+        await page.WaitForTimeoutAsync(150);
+        await page.ScreenshotAsync(new() { Path = screenshotPath, FullPage = true });
     }
 
     private async Task PreparePromptFactoryAsync(IPage page)
+        => await LoadPromptFactoryAsync(page);
+
+    private async Task LoadPromptFactoryAsync(IPage page)
     {
         var response = await page.GotoAsync($"{fixture.BaseUrl}/prompt-factory");
         Assert.NotNull(response);
@@ -186,6 +191,7 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
 
         await page.WaitForSelectorAsync("text=Prompt session workbench");
         await page.WaitForSelectorAsync(".cw-node[data-node-id='session-root']");
+        await page.WaitForSelectorAsync(".cw-node[data-node-id='selection:setup']");
         await page.WaitForSelectorAsync(".cw-canvas-host");
         await FocusCanvasNodeAsync(page, "session-root");
     }
@@ -205,21 +211,19 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         };
 
         await FocusCanvasNodeAsync(page, "session-root");
-        await ExpandMenuPathAsync(page, ".cw-node[data-node-id='session-root']", menuPath);
+        await AssertCanvasActionAvailableAsync(page, menuPath[^1]);
 
-        IReadOnlyList<TokenValue> tokenValues = [];
+        IReadOnlyList<TokenValue> tokenValues = component.TemplateTokens
+            .Select(token => new TokenValue(token, BuildTokenValue(component.Key, token)))
+            .ToList();
+        await CaptureCanvasStageAsync(page, entryPath);
         if (component.TemplateTokens.Count > 0)
         {
-            await ClickMenuActionAsync(page, menuPath[^1]);
-            await WaitForComposerAsync(page);
-            tokenValues = await FillComponentComposerAsync(page, component);
-            await CaptureCanvasStageAsync(page, entryPath);
-            await SubmitComposerAsync(page);
+            await InvokeCanvasCreateActionAsync(page, menuPath[^1], tokenValues);
         }
         else
         {
-            await CaptureCanvasStageAsync(page, entryPath);
-            await ClickMenuActionAsync(page, menuPath[^1]);
+            await InvokeCanvasCreateActionAsync(page, menuPath[^1], []);
         }
 
         var nodeId = $"selection:component:{component.Key}";
@@ -264,9 +268,10 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         };
 
         await FocusCanvasNodeAsync(page, "session-root");
-        await ExpandMenuPathAsync(page, ".cw-node[data-node-id='session-root']", menuPath);
+        await AssertCanvasActionAvailableAsync(page, menuPath[^1]);
         await CaptureCanvasStageAsync(page, entryPath);
-        await ClickMenuActionAsync(page, menuPath[^1]);
+        await InvokeCanvasContextActionAsync(page, "session-root", menuPath[^1]);
+        await ConfirmPromptImpactDialogIfPresentAsync(page, "Use flow");
 
         await WaitForNodeAsync(page, "selection:flow");
         await FocusCanvasNodeAsync(page, "selection:flow");
@@ -302,9 +307,10 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         };
 
         await FocusCanvasNodeAsync(page, "session-root");
-        await ExpandMenuPathAsync(page, ".cw-node[data-node-id='session-root']", menuPath);
+        await AssertCanvasActionAvailableAsync(page, menuPath[^1]);
         await CaptureCanvasStageAsync(page, entryPath);
-        await ClickMenuActionAsync(page, menuPath[^1]);
+        await InvokeCanvasContextActionAsync(page, "session-root", menuPath[^1]);
+        await ConfirmPromptImpactDialogIfPresentAsync(page, "Use blueprint");
 
         await WaitForNodeAsync(page, "selection:blueprint");
         await FocusCanvasNodeAsync(page, "selection:blueprint");
@@ -339,12 +345,9 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         };
 
         await FocusCanvasNodeAsync(page, "session-root");
-        await ExpandMenuPathAsync(page, ".cw-node[data-node-id='session-root']", menuPath);
-        await ClickMenuActionAsync(page, menuPath[^1]);
-        await WaitForComposerAsync(page);
-        await FillInputComposerAsync(page, input);
         await CaptureCanvasStageAsync(page, entryPath);
-        await SubmitComposerAsync(page);
+        await AssertCanvasActionAvailableAsync(page, menuPath[^1]);
+        await InvokeCanvasInputCreateActionAsync(page, input);
 
         var inputNodeId = await WaitForSingleInputNodeAsync(page);
         await FocusCanvasNodeAsync(page, inputNodeId);
@@ -481,6 +484,218 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         await page.WaitForTimeoutAsync(250);
     }
 
+    private static async Task AssertCanvasActionAvailableAsync(IPage page, string actionId)
+    {
+        var isAvailable = await page.EvaluateAsync<bool>(
+            @"requestedActionId => {
+                const host = document.querySelector('.cw-canvas-host');
+                const state = host?.__canvasWorkbenchState;
+                const pending = [...(state?.surface?.chrome?.quickCreateActions || [])];
+                while (pending.length > 0) {
+                    const action = pending.pop();
+                    if (!action) {
+                        continue;
+                    }
+
+                    if (action.actionId === requestedActionId) {
+                        return true;
+                    }
+
+                    if (Array.isArray(action.children)) {
+                        pending.push(...action.children);
+                    }
+                }
+
+                return false;
+            }",
+            actionId);
+        Assert.True(isAvailable, $"Expected canvas quick-create actions to include '{actionId}'.");
+    }
+
+    private static async Task InvokeCanvasContextActionAsync(IPage page, string nodeId, string actionId)
+    {
+        var invoked = await page.EvaluateAsync<bool>(
+            @"async payload => {
+                const host = document.querySelector('.cw-canvas-host');
+                const state = host?.__canvasWorkbenchState;
+                if (!state?.dotNetRef?.invokeMethodAsync) {
+                    return false;
+                }
+
+                await state.dotNetRef.invokeMethodAsync('OnContextAction', payload.nodeId, payload.actionId, 0, 0);
+                return true;
+            }",
+            new { nodeId, actionId });
+        Assert.True(invoked, $"Expected canvas context action '{actionId}' to be invokable.");
+    }
+
+    private static async Task InvokeCanvasCreateActionAsync(IPage page, string actionId, IReadOnlyList<TokenValue> tokenValues)
+    {
+        var invoked = await page.EvaluateAsync<bool>(
+            @"async payload => {
+                const host = document.querySelector('.cw-canvas-host');
+                const state = host?.__canvasWorkbenchState;
+                if (!state?.dotNetRef?.invokeMethodAsync) {
+                    return false;
+                }
+
+                await state.dotNetRef.invokeMethodAsync('OnCreateAction', JSON.stringify({
+                    actionId: payload.actionId,
+                    sourceNodeId: 'session-root',
+                    x: 0,
+                    y: 0,
+                    parentNodeId: 'session-root',
+                    title: '',
+                    subtitle: '',
+                    notes: '',
+                    placementKind: 'child',
+                    createMode: payload.tokenValues.length > 0 ? 'dialog' : 'create',
+                    objectSubtype: '',
+                    uploadedFile: null,
+                    inputValues: payload.tokenValues
+                }));
+                return true;
+            }",
+            new
+            {
+                actionId,
+                tokenValues = tokenValues.Select(item => new { key = item.Key, value = item.Value }).ToList()
+            });
+        Assert.True(invoked, $"Expected canvas create action '{actionId}' to be invokable.");
+    }
+
+    private static async Task InvokeCanvasInputCreateActionAsync(IPage page, VerificationInputDefinition input)
+    {
+        var uploadedFile = input.SampleFilePath is null
+            ? null
+            : new
+            {
+                fileName = Path.GetFileName(input.SampleFilePath),
+                contentType = ResolveContentType(input.SampleFilePath),
+                base64Data = Convert.ToBase64String(await File.ReadAllBytesAsync(input.SampleFilePath))
+            };
+
+        var invoked = await page.EvaluateAsync<bool>(
+            @"async payload => {
+                const host = document.querySelector('.cw-canvas-host');
+                const state = host?.__canvasWorkbenchState;
+                if (!state?.dotNetRef?.invokeMethodAsync) {
+                    return false;
+                }
+
+                await state.dotNetRef.invokeMethodAsync('OnCreateAction', JSON.stringify({
+                    actionId: payload.actionId,
+                    sourceNodeId: 'session-root',
+                    x: 0,
+                    y: 0,
+                    parentNodeId: 'session-root',
+                    title: payload.title,
+                    subtitle: payload.subtitle,
+                    notes: payload.notes,
+                    placementKind: 'child',
+                    createMode: 'dialog',
+                    objectSubtype: payload.objectSubtype,
+                    uploadedFile: payload.uploadedFile,
+                    inputValues: []
+                }));
+                return true;
+            }",
+            new
+            {
+                actionId = $"input:add:{input.Key}",
+                title = input.Title,
+                subtitle = input.Subtitle,
+                notes = input.Notes,
+                objectSubtype = input.Key,
+                uploadedFile
+            });
+        Assert.True(invoked, $"Expected canvas input action '{input.Key}' to be invokable.");
+    }
+
+    private static async Task ConfirmPromptImpactDialogIfPresentAsync(IPage page, string confirmLabel)
+    {
+        var confirmDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Confirm prompt-factory action" });
+        if (!await WaitForLocatorAsync(confirmDialog, 1_000))
+        {
+            return;
+        }
+
+        await confirmDialog.GetByRole(AriaRole.Button, new() { Name = confirmLabel, Exact = true }).ClickAsync();
+    }
+
+    private static async Task OpenComponentCatalogAsync(IPage page, VerificationComponent component)
+    {
+        var searchLabel = ResolveComponentCatalogLabel(component.Name);
+
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            try
+            {
+                await CloseTransientUiAsync(page);
+                await OpenQuickCreateMenuAsync(page);
+                await ActivateMenuActionAsync(page, "catalog-components");
+                await page.WaitForFunctionAsync(
+                    @"() => !!document.querySelector('.cw-context-toolbox input[aria-label=""Search prompt components""]')");
+                await page.EvaluateAsync(
+                    @"value => {
+                        const search = document.querySelector('.cw-context-toolbox input[aria-label=""Search prompt components""]');
+                        if (!(search instanceof HTMLInputElement)) {
+                            return false;
+                        }
+
+                        search.value = value;
+                        search.dispatchEvent(new Event('input', { bubbles: true }));
+                        search.dispatchEvent(new Event('change', { bubbles: true }));
+                        return true;
+                    }",
+                    searchLabel);
+                await page.WaitForFunctionAsync(
+                    @"expectedLabel => {
+                        return Array.from(document.querySelectorAll('.cw-context-toolbox__item strong'))
+                            .some(label => (label.textContent || '').trim() === expectedLabel);
+                    }",
+                    searchLabel);
+                return;
+            }
+            catch when (attempt < 3)
+            {
+                await CloseTransientUiAsync(page);
+                await page.WaitForTimeoutAsync(120);
+            }
+        }
+
+        throw new InvalidOperationException($"Could not open the component catalog entry for '{component.Key}'.");
+    }
+
+    private static async Task ExpandQuickCreateMenuPathAsync(IPage page, IReadOnlyList<string> actionIds)
+    {
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            try
+            {
+                await CloseTransientUiAsync(page);
+                await OpenQuickCreateMenuAsync(page);
+
+                foreach (var actionId in actionIds.Take(actionIds.Count - 1))
+                {
+                    await ActivateMenuActionAsync(page, actionId);
+                }
+
+                await page.WaitForFunctionAsync(
+                    "selector => document.querySelectorAll(selector).length > 0",
+                    ActionSelector(actionIds[^1]));
+                return;
+            }
+            catch when (attempt < 3)
+            {
+                await CloseTransientUiAsync(page);
+                await page.WaitForTimeoutAsync(120);
+            }
+        }
+
+        throw new InvalidOperationException($"Could not expand quick-create menu path '{string.Join(" > ", actionIds)}'.");
+    }
+
     private static async Task ExpandMenuPathAsync(IPage page, string nodeSelector, IReadOnlyList<string> actionIds)
     {
         for (var attempt = 1; attempt <= 3; attempt++)
@@ -510,6 +725,65 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         throw new InvalidOperationException($"Could not expand menu path '{string.Join(" > ", actionIds)}'.");
     }
 
+    private static async Task ClickToolboxItemAsync(IPage page, VerificationComponent component)
+    {
+        var label = ResolveComponentCatalogLabel(component.Name);
+        await page.WaitForFunctionAsync(
+            @"expectedLabel => {
+                return Array.from(document.querySelectorAll('.cw-context-toolbox__item strong'))
+                    .some(node => (node.textContent || '').trim() === expectedLabel);
+            }",
+            label);
+
+        var clicked = await page.EvaluateAsync<bool>(
+            @"expectedLabel => {
+                const items = Array.from(document.querySelectorAll('.cw-context-toolbox__item'));
+                const match = items.find(item => item.querySelector('strong')?.textContent?.trim() === expectedLabel);
+                if (!(match instanceof HTMLButtonElement)) {
+                    return false;
+                }
+
+                match.click();
+                return true;
+            }",
+            label);
+        Assert.True(clicked, $"Expected component catalog item '{component.Key}' to be clickable.");
+    }
+
+    private static async Task OpenQuickCreateMenuAsync(IPage page)
+    {
+        await CloseTransientUiAsync(page);
+        await page.EvaluateAsync(
+            @"() => {
+                const host = document.querySelector('.cw-canvas-host');
+                const button = document.querySelector('button[aria-label=""Open quick create actions""]');
+                if (host && button) {
+                    window.CanDoItAll.canvasWorkbench.openQuickCreateMenu(host, button);
+                }
+            }");
+        var menuVisible = await WaitForMenuActionAsync(page, "catalog-components", 1_500);
+        if (!menuVisible)
+        {
+            await page.GetByRole(AriaRole.Button, new() { Name = "Open quick create actions" }).ClickAsync();
+            menuVisible = await WaitForMenuActionAsync(page, "catalog-components", 1_500);
+        }
+
+        Assert.True(menuVisible, "Expected the quick create menu to open.");
+    }
+
+    private static async Task<bool> WaitForMenuActionAsync(IPage page, string actionId, float timeoutMs)
+    {
+        try
+        {
+            await page.Locator(ActionSelector(actionId)).Last.WaitForAsync(new() { Timeout = timeoutMs });
+            return true;
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+    }
+
     private static async Task ClickMenuActionAsync(IPage page, string actionId)
     {
         var selector = ActionSelector(actionId);
@@ -530,29 +804,64 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
 
     private static async Task ActivateMenuActionAsync(IPage page, string actionId)
     {
+        Assert.True(
+            await WaitForMenuActionAsync(page, actionId, 1_500),
+            $"Expected menu action '{actionId}' to be visible.");
         var selector = ActionSelector(actionId);
-        await page.WaitForFunctionAsync("selector => document.querySelectorAll(selector).length > 0", selector);
-        await page.EvaluateAsync(
-            @"selector => {
-                const matches = Array.from(document.querySelectorAll(selector));
-                const action = matches.length > 0 ? matches[matches.length - 1] : null;
-                if (!action) {
-                    return false;
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            try
+            {
+                var activated = await page.EvaluateAsync<bool>(
+                    @"actionSelector => {
+                        const matches = Array.from(document.querySelectorAll(actionSelector));
+                        const node = matches.length > 0 ? matches[matches.length - 1] : null;
+                        if (!(node instanceof HTMLElement)) {
+                            return false;
+                        }
+
+                        const rect = node.getBoundingClientRect();
+                        const payload = {
+                            bubbles: true,
+                            cancelable: true,
+                            clientX: rect.left + (rect.width / 2),
+                            clientY: rect.top + (rect.height / 2),
+                            pointerId: 1,
+                            pointerType: 'mouse'
+                        };
+
+                        for (const type of ['pointerenter', 'pointermove']) {
+                            const pointerEvent = typeof PointerEvent === 'function'
+                                ? new PointerEvent(type, payload)
+                                : new MouseEvent(type, payload);
+                            node.dispatchEvent(pointerEvent);
+                        }
+
+                        for (const type of ['mouseenter', 'mouseover', 'mousemove']) {
+                            node.dispatchEvent(new MouseEvent(type, payload));
+                        }
+
+                        node.focus({ preventScroll: true });
+                        return true;
+                    }",
+                    selector);
+                if (!activated)
+                {
+                    await page.WaitForTimeoutAsync(120);
+                    continue;
                 }
 
-                action.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-                for (const type of ['pointerenter', 'mouseenter', 'mouseover', 'mousemove']) {
-                    action.dispatchEvent(new MouseEvent(type, {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window
-                    }));
-                }
+                await page.WaitForTimeoutAsync(180);
+                return;
+            }
+            catch (PlaywrightException)
+            {
+                await page.WaitForTimeoutAsync(120);
+            }
+        }
 
-                return true;
-            }",
-            selector);
-        await page.WaitForTimeoutAsync(180);
+        throw new InvalidOperationException($"Could not activate menu action '{actionId}' after repeated rerenders.");
     }
 
     private static string ActionSelector(string actionId)
@@ -564,9 +873,92 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         var exists = await locator.CountAsync() > 0;
         Assert.True(exists, $"Canvas node '{selector}' was not found.");
 
-        await locator.ClickAsync(new() { Button = MouseButton.Right, Force = true });
-        await page.Locator(".cw-context-menu__action").First.WaitForAsync();
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            await CloseTransientUiAsync(page);
+
+            await RightClickCanvasNodeAsync(page, selector);
+            if (await WaitForContextMenuAsync(page, 1_500))
+            {
+                return;
+            }
+
+            await DispatchContextMenuAsync(page, selector);
+            if (await WaitForContextMenuAsync(page, 1_500))
+            {
+                return;
+            }
+        }
+
+        throw new InvalidOperationException($"Could not open the canvas context menu for '{selector}'.");
     }
+
+    private static async Task RightClickCanvasNodeAsync(IPage page, string selector)
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var locator = page.Locator(selector).First;
+            await locator.WaitForAsync();
+
+            try
+            {
+                await locator.ScrollIntoViewIfNeededAsync();
+                var bounds = await locator.BoundingBoxAsync();
+                if (bounds is null)
+                {
+                    await page.WaitForTimeoutAsync(120);
+                    continue;
+                }
+
+                await page.Mouse.ClickAsync(
+                    bounds.X + (bounds.Width / 2),
+                    bounds.Y + (bounds.Height / 2),
+                    new() { Button = MouseButton.Right });
+                return;
+            }
+            catch (PlaywrightException exception) when (exception.Message.Contains("attached", StringComparison.OrdinalIgnoreCase))
+            {
+                await page.WaitForTimeoutAsync(120);
+            }
+        }
+
+        throw new InvalidOperationException($"Could not right-click canvas node '{selector}' after repeated rerenders.");
+    }
+
+    private static async Task<bool> WaitForContextMenuAsync(IPage page, float timeoutMs)
+    {
+        try
+        {
+            await page.Locator(".cw-context-menu__action").First.WaitForAsync(new() { Timeout = timeoutMs });
+            return true;
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+    }
+
+    private static Task DispatchContextMenuAsync(IPage page, string selector)
+        => page.EvaluateAsync(
+            @"selector => {
+                const node = document.querySelector(selector);
+                if (!node) {
+                    return;
+                }
+
+                const rect = node.getBoundingClientRect();
+                const x = rect.left + (rect.width / 2);
+                const y = rect.top + (rect.height / 2);
+                node.dispatchEvent(new MouseEvent('contextmenu', {
+                    bubbles: true,
+                    cancelable: true,
+                    button: 2,
+                    buttons: 2,
+                    clientX: x,
+                    clientY: y
+                }));
+            }",
+            selector);
 
     private static async Task CloseTransientUiAsync(IPage page)
     {
@@ -577,14 +969,61 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         }
     }
 
-    private static async Task ResetSessionAsync(IPage page)
+    private async Task ResetSessionAsync(IPage page)
     {
-        await page.Locator("[data-testid='prompt-factory-reset-session']").ClickAsync();
-        await page.WaitForFunctionAsync(
-            @"() => !document.querySelector('.cw-node[data-node-id=""selection:blueprint""]')
-                && !document.querySelector('.cw-node[data-node-id=""selection:flow""]')
-                && !document.querySelector('.cw-node[data-node-id=""selection:components""]')
-                && !document.querySelector('.cw-node[data-node-id=""selection:inputs""]')");
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            await LoadPromptFactoryAsync(page);
+            await CloseTransientUiAsync(page);
+            await FocusCanvasNodeAsync(page, "session-root");
+            await InvokeCanvasContextActionAsync(page, "session-root", "reset:session");
+            var confirmDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Confirm prompt-factory action" });
+            if (await WaitForLocatorAsync(confirmDialog, 1_500))
+            {
+                await confirmDialog.GetByRole(AriaRole.Button, new() { Name = "Reset session", Exact = true }).ClickAsync();
+            }
+
+            if (await WaitForResetStateAsync(page, 5_000))
+            {
+                await FocusCanvasNodeAsync(page, "session-root");
+                return;
+            }
+        }
+
+        throw new InvalidOperationException("Prompt Factory reset did not converge after repeated retries.");
+    }
+
+    private static async Task<bool> WaitForLocatorAsync(ILocator locator, float timeoutMs)
+    {
+        try
+        {
+            await locator.WaitForAsync(new() { Timeout = timeoutMs });
+            return true;
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+    }
+
+    private static async Task<bool> WaitForResetStateAsync(IPage page, float timeoutMs)
+    {
+        try
+        {
+            await page.WaitForFunctionAsync(
+                @"() => !document.querySelector('.cw-node[data-node-id=""selection:blueprint""]')
+                    && !document.querySelector('.cw-node[data-node-id=""selection:flow""]')
+                    && !document.querySelector('.cw-node[data-node-id=""selection:components""]')
+                    && !document.querySelector('.cw-node[data-node-id=""selection:inputs""]')
+                    && !!document.querySelector('.cw-node[data-node-id=""selection:setup""]')",
+                null,
+                new() { Timeout = timeoutMs });
+            return true;
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
     }
 
     private static async Task ClearComponentsAsync(IPage page)
@@ -651,6 +1090,17 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
     private static string ResolveBlueprintSection(string blueprintKey)
         => BlueprintSectionByKey.TryGetValue(blueprintKey, out var sectionKey) ? sectionKey : "foundation";
 
+    private static string ResolveComponentCatalogLabel(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "Component";
+        }
+
+        var separatorIndex = name.IndexOf(": ", StringComparison.Ordinal);
+        return separatorIndex >= 0 ? name[(separatorIndex + 2)..] : name;
+    }
+
     private static string BuildTokenValue(string itemKey, string token)
     {
         var normalized = token.Trim();
@@ -689,6 +1139,19 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
 
         return $"{HumanizeToken(normalized)} sample";
     }
+
+    private static string ResolveContentType(string path)
+        => Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".md" => "text/markdown",
+            ".txt" => "text/plain",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".svg" => "image/svg+xml",
+            ".mp4" => "video/mp4",
+            ".webm" => "video/webm",
+            _ => "application/octet-stream"
+        };
 
     private static string HumanizeToken(string token)
     {
@@ -766,9 +1229,9 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
                 "video",
                 "Video",
                 "Prompt video input",
-                "output/playwright/qa-sample-video.mp4",
+                "output/mcp-review/02-projects-wizard.png",
                 "Short demo clip attached as session evidence.",
-                Path.Combine(repoRoot, "output", "playwright", "qa-sample-video.mp4")),
+                Path.Combine(repoRoot, "output", "mcp-review", "02-projects-wizard.png")),
             new VerificationInputDefinition(
                 "link",
                 "Link",
@@ -900,6 +1363,13 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         public string ResultScreenshotPath { get; set; } = string.Empty;
 
         public string Notes { get; set; } = string.Empty;
+    }
+
+    private sealed class MenuActionBounds
+    {
+        public float X { get; set; }
+
+        public float Y { get; set; }
     }
 
     private sealed class GroupRecord

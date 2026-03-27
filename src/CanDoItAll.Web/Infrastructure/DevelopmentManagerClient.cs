@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using CanDoItAll.ComponentKit.Components;
+using CanDoItAll.Components;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Options;
@@ -148,3 +148,5 @@ public sealed class DevelopmentManagerClient(HttpClient httpClient, IOptions<Dev
 
     private sealed record ManagerErrorEnvelope(string Error);
 }
+
+

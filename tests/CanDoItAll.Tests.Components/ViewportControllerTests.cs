@@ -1,6 +1,6 @@
 using Bunit;
-using CanDoItAll.ComponentKit.Canvas;
-using CanDoItAll.ComponentKit.Components;
+using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Components.BaseLib;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -137,3 +137,5 @@ public sealed class ViewportControllerTests
         Assert.Contains("Scene center 190, 154", cut.Markup);
     }
 }
+
+

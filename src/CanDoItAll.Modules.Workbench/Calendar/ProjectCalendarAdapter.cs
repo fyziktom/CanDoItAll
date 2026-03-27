@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -73,3 +73,5 @@ public static class ProjectCalendarAdapter
             }
         };
 }
+
+

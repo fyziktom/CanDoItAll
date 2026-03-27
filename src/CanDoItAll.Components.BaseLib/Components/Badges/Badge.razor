@@ -1,0 +1,81 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+@if (!string.IsNullOrWhiteSpace(Href))
+{
+    <a href="@Href"
+       target="@Target"
+       rel="@Rel"
+       @attributes='BuildAttributes(ResolveCssClass())'>
+        @RenderContent()
+    </a>
+}
+else if (Click.HasDelegate || Button)
+{
+    <button type="@Type"
+            @attributes='BuildAttributes(ResolveCssClass())'
+            @onclick="Click">
+        @RenderContent()
+    </button>
+}
+else
+{
+    <span @attributes='BuildAttributes(ResolveCssClass())'>
+        @RenderContent()
+    </span>
+}
+
+@code {
+    [Parameter]
+    public BadgeTone Tone { get; set; } = BadgeTone.Default;
+
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public bool Button { get; set; }
+
+    [Parameter]
+    public string Type { get; set; } = "button";
+
+    [Parameter]
+    public string? Href { get; set; }
+
+    [Parameter]
+    public string? Target { get; set; }
+
+    [Parameter]
+    public string? Rel { get; set; }
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> Click { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveCssClass()
+    {
+        var toneCss = Tone switch
+        {
+            BadgeTone.Promo => "border-violet-200 bg-violet-50 text-violet-700",
+            BadgeTone.Success => "border-emerald-200 bg-emerald-50 text-emerald-700",
+            BadgeTone.Warn => "border-amber-200 bg-amber-50 text-amber-800",
+            BadgeTone.Accent => "border-sky-200 bg-sky-50 text-sky-700",
+            BadgeTone.Rank => "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700",
+            BadgeTone.Info => "border-cyan-200 bg-cyan-50 text-cyan-700",
+            _ => "border-slate-200 bg-slate-100 text-slate-700"
+        };
+
+        return $"inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] {toneCss}";
+    }
+
+    private RenderFragment RenderContent()
+    {
+        if (ChildContent is not null)
+        {
+            return ChildContent;
+        }
+
+        return builder => builder.AddContent(0, Text);
+    }
+}

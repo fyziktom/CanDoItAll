@@ -1,0 +1,11 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<label @attributes='BuildAttributes("flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700")'>
+    @ChildContent
+</label>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

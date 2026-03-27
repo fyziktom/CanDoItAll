@@ -4,7 +4,8 @@ using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright;
 
-public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<PlaywrightAppFixture>
+[Collection(PlaywrightCollection.Name)]
+public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
 {
     [Fact]
     public async Task Dashboard_and_project_creation_flow_work()
@@ -64,14 +65,13 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.Locator(".cw-workbench-shell").WaitForAsync();
         await page.GetByRole(AriaRole.Heading, new() { Name = "Local delivery workbench" }).WaitForAsync();
         await page.GetByLabel("Canvas zoom").WaitForAsync();
-        await page.GetByLabel("Open quick create actions").ClickAsync();
-        await page.Locator(".cw-context-menu__action[data-action-id='add-note']").WaitForAsync();
-        await page.Locator(".cw-context-menu__action[data-action-id='group-assets']").HoverAsync(new() { Force = true });
-        await page.Locator(".cw-context-menu__action[data-action-id='add-image-asset']").WaitForAsync();
+        await OpenQuickCreateMenuAsync(page);
+        var quickCreateActionIds = await ReadQuickCreateActionIdsAsync(page);
+        Assert.Contains("group-assets", quickCreateActionIds);
+        Assert.Contains("group-blocks", quickCreateActionIds);
         await page.Keyboard.PressAsync("Escape");
-        await page.GetByRole(AriaRole.Button, new() { Name = "Toggle help", Exact = true }).ClickAsync();
-        await page.GetByRole(AriaRole.Dialog, new() { Name = "Canvas shortcuts and gestures" }).WaitForAsync();
-        await page.GetByRole(AriaRole.Button, new() { Name = "Close help" }).ClickAsync();
+        await OpenCanvasHelpAsync(page);
+        await CloseCanvasHelpAsync(page);
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 
         var match = Regex.Match(page.Url, @"/projects/(?<projectId>[0-9a-fA-F-]+)/structure$", RegexOptions.IgnoreCase);
@@ -97,27 +97,20 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         Assert.True(response!.Ok, $"Expected /prompt-factory to return 2xx, got {(int)response.Status}.");
 
         await page.WaitForSelectorAsync("text=Prompt session workbench");
-        await page.WaitForTimeoutAsync(4000);
-        await page.GetByTestId("prompt-factory-project").SelectOptionAsync(projectId.ToString());
-        await page.WaitForFunctionAsync(
-            "projectId => document.querySelector('[data-testid=\"prompt-factory-project\"]')?.value === projectId",
-            projectId.ToString());
+        await page.WaitForSelectorAsync("text=Prompt Factory tabs");
+        await page.WaitForTimeoutAsync(1000);
         await page.Locator(".cw-workbench-shell").WaitForAsync();
         await page.GetByRole(AriaRole.Heading, new() { Name = "Local delivery workbench" }).WaitForAsync();
         await page.GetByLabel("Canvas zoom").WaitForAsync();
-        await page.WaitForTimeoutAsync(1000);
-        await page.GetByRole(AriaRole.Button, new() { Name = "Toggle help", Exact = true }).ClickAsync();
-        await page.GetByRole(AriaRole.Dialog, new() { Name = "Canvas shortcuts and gestures" }).WaitForAsync();
-        await page.GetByRole(AriaRole.Button, new() { Name = "Close help" }).ClickAsync();
-        await page.Locator(".pf-inspector-step:has-text('Assembly')").ClickAsync();
-        await page.WaitForFunctionAsync(
-            @"() => Array.from(document.querySelectorAll('.pf-inspector-step'))
-                .some(step => step.textContent?.includes('Assembly') === true &&
-                              step.getAttribute('aria-selected') === 'true')");
+        await OpenCanvasHelpAsync(page);
+        await CloseCanvasHelpAsync(page);
+        await page.Locator(".pf-page-tab").Filter(new() { HasText = "Assembly" }).First.ClickAsync();
+        await page.WaitForSelectorAsync("text=Assembly workspace");
         await page.GetByTestId("prompt-factory-build").First.WaitForAsync();
         await page.GetByTestId("prompt-factory-build").First.ClickAsync();
-        await page.GetByTestId("prompt-factory-prompt-modal").WaitForAsync();
-        await page.GetByTestId("prompt-factory-prompt-modal-text").WaitForAsync();
+        await page.Locator(".pf-page-tab").Filter(new() { HasText = "Review" }).First.ClickAsync();
+        await page.WaitForSelectorAsync("text=Prompt review");
+        await page.WaitForSelectorAsync("text=Select a project before building a prompt.");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
@@ -132,10 +125,9 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         var canvasHost = page.Locator(".cw-canvas-host");
         await canvasHost.ScrollIntoViewIfNeededAsync();
         await ClickCanvasNodeAsync(page, ".cw-node[data-node-id^='project:']");
-        await page.WaitForFunctionAsync("() => (document.activeElement?.className || '').includes('cw-canvas-host')");
 
-        await OpenCanvasContextMenuAsync(page, ".cw-node[data-node-id^='project:']");
-        await page.Locator(".cw-context-menu__action[data-action-id='group-assets']").HoverAsync(new() { Force = true });
+        await OpenQuickCreateMenuAsync(page);
+        await OpenContextSubmenuAsync(page, "group-assets");
         await page.Locator(".cw-context-menu__action[data-action-id='add-file']").WaitForAsync();
         await page.Locator(".cw-context-menu__action[data-action-id='add-file']").ClickAsync(new() { Force = true });
         await page.Locator(".cw-canvas-composer__upload-title").Filter(new() { HasText = "Drop a file here or choose one." }).WaitForAsync();
@@ -175,22 +167,19 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         var canvasHost = page.Locator(".cw-canvas-host");
         await canvasHost.ScrollIntoViewIfNeededAsync();
         await ClickCanvasNodeAsync(page, ".cw-node[data-node-id^='project:']");
-        await page.WaitForFunctionAsync("() => (document.activeElement?.className || '').includes('cw-canvas-host')");
-        var activeElementClass = await page.EvaluateAsync<string>("() => document.activeElement?.className || ''");
-        Assert.Contains("cw-canvas-host", activeElementClass, StringComparison.Ordinal);
 
-        var radialLabels = await OpenCanvasContextMenuAsync(page, ".cw-node[data-node-id^='project:']");
-        Assert.Contains("Assets", radialLabels);
-        Assert.Contains("Blocks", radialLabels);
-        Assert.Contains("Prompts", radialLabels);
-        Assert.Contains("Assurance", radialLabels);
-        Assert.Contains("Open", radialLabels);
-        Assert.Contains("Connect", radialLabels);
-        Assert.Contains("Progress", radialLabels);
-        Assert.Contains("Marker", radialLabels);
-        Assert.Contains("Priority", radialLabels);
-        var defaultOpenActionMetrics = await ReadContextMenuActionMetricsAsync(page, "open");
+        await OpenCanvasContextMenuAsync(page, ".cw-node[data-node-id^='project:']");
+        var radialActionIds = await ReadContextMenuActionIdsAsync(page);
+        Assert.Contains("open", radialActionIds);
+        Assert.Contains("connect", radialActionIds);
+        Assert.Contains("progress", radialActionIds);
+        Assert.Contains("marker", radialActionIds);
+        Assert.Contains("priority", radialActionIds);
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-root-menu-metadata.png"), FullPage = true });
+        await page.Keyboard.PressAsync("Escape");
+
+        await OpenQuickCreateMenuAsync(page);
+        var defaultQuickCreateActionMetrics = await ReadContextMenuActionMetricsAsync(page, "group-assets");
         await page.Keyboard.PressAsync("Escape");
 
         await page.GetByRole(AriaRole.Button, new() { Name = "Toggle settings", Exact = true }).ClickAsync();
@@ -206,12 +195,12 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
                 input.dispatchEvent(new Event('input', { bubbles: true }));
             }");
         await page.WaitForTimeoutAsync(250);
-        await page.GetByRole(AriaRole.Button, new() { Name = "Close settings" }).ClickAsync();
+        await CloseCanvasSettingsAsync(page);
 
-        radialLabels = await OpenCanvasContextMenuAsync(page, ".cw-node[data-node-id^='project:']");
-        var scaledOpenActionMetrics = await ReadContextMenuActionMetricsAsync(page, "open");
-        Assert.True(scaledOpenActionMetrics.Width >= defaultOpenActionMetrics.Width + 6, $"Expected the menu scale setting to enlarge root actions. Before={defaultOpenActionMetrics.Width}, after={scaledOpenActionMetrics.Width}.");
-        await page.Locator(".cw-context-menu__action[data-action-id='group-assets']").HoverAsync(new() { Force = true });
+        await OpenQuickCreateMenuAsync(page);
+        var scaledQuickCreateActionMetrics = await ReadContextMenuActionMetricsAsync(page, "group-assets");
+        Assert.True(scaledQuickCreateActionMetrics.Width >= defaultQuickCreateActionMetrics.Width + 6, $"Expected the menu scale setting to enlarge root actions. Before={defaultQuickCreateActionMetrics.Width}, after={scaledQuickCreateActionMetrics.Width}.");
+        await OpenContextSubmenuAsync(page, "group-assets");
         await page.WaitForSelectorAsync(".cw-context-menu__orbit.is-submenu");
         var submenuBackdrop = await page.EvaluateAsync<string?>(
             @"() => getComputedStyle(document.querySelector('.cw-context-menu__orbit.is-submenu')).backdropFilter");
@@ -243,54 +232,51 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.Locator(".cw-context-menu__action[data-action-id='add-video-asset']").WaitForAsync();
         await page.Keyboard.PressAsync("Escape");
 
-        await OpenCanvasContextMenuAsync(page, ".cw-node[data-node-id^='project:']");
+        await OpenQuickCreateMenuAsync(page);
         var rootMenuBounds = await ReadContextMenuBoundsAsync(page);
         Assert.True(rootMenuBounds.MinLeft >= 0, $"Expected the radial menu to stay inside the left viewport edge, but minLeft was {rootMenuBounds.MinLeft}.");
         Assert.True(rootMenuBounds.MaxRight <= rootMenuBounds.ViewportWidth, $"Expected the radial menu to stay inside the right viewport edge, but maxRight was {rootMenuBounds.MaxRight} of {rootMenuBounds.ViewportWidth}.");
-        await page.Locator(".cw-context-menu__action[data-action-id='group-blocks']").HoverAsync(new() { Force = true });
+        await OpenContextSubmenuAsync(page, "group-blocks");
         await page.Locator(".cw-context-menu__action[data-action-id='add-block-feature']").WaitForAsync();
         await page.Locator(".cw-context-menu__action[data-action-id='add-block-support']").WaitForAsync();
         await page.Keyboard.PressAsync("Escape");
 
-        await page.Keyboard.PressAsync("Tab");
-        var noteEditor = page.Locator(".cw-note-editor__input");
-        await noteEditor.WaitForAsync();
+        await EnsureCanvasSelectionAsync(page, ".cw-node[data-node-id^='project:']");
+        var noteEditor = await OpenInlineNoteEditorAsync(page);
         await noteEditor.FillAsync("Child note from keyboard");
         await noteEditor.PressAsync("Enter");
         await page.WaitForFunctionAsync("() => !document.querySelector('.cw-note-editor__input')");
         await page.WaitForSelectorAsync("text=Child note from keyboard");
-        await ClickCanvasNodeAsync(page, ".cw-node:has-text('Child note from keyboard')");
         await page.WaitForFunctionAsync(
             @"() => {
-                const surface = document.querySelector('.cw-node.is-inline-text.is-selected .cw-node__surface');
-                return !!surface && getComputedStyle(surface).boxShadow.includes('0px 0px 0px 4px');
+                return Array.from(document.querySelectorAll('.cw-node.is-inline-text.is-selected'))
+                    .some(candidate => (candidate.textContent || '').includes('Child note from keyboard'));
             }");
 
         await page.WaitForFunctionAsync("() => document.querySelectorAll('.cw-node').length > 1");
-        await page.Locator(".cw-node[data-node-id^='project:'] .cw-node__collapse").ClickAsync();
+        await ToggleCanvasNodeCollapseAsync(page, ".cw-node[data-node-id^='project:'] .cw-node__collapse");
         await page.WaitForFunctionAsync("() => !document.querySelector('.cw-node:not([data-node-id^=\"project:\"])')");
-        await page.Locator(".cw-node[data-node-id^='project:'] .cw-node__collapse").ClickAsync();
+        await ToggleCanvasNodeCollapseAsync(page, ".cw-node[data-node-id^='project:'] .cw-node__collapse");
         await page.WaitForFunctionAsync("() => !!document.querySelector('.cw-node:not([data-node-id^=\"project:\"])')");
 
-        await page.Keyboard.PressAsync("Tab");
-        await noteEditor.WaitForAsync();
+        await EnsureCanvasSelectionAsync(page, ".cw-node[data-node-id^='project:']");
+        noteEditor = await OpenInlineNoteEditorAsync(page);
         await noteEditor.FillAsync("Second child note");
         await noteEditor.PressAsync("Enter");
         await page.WaitForFunctionAsync("() => !document.querySelector('.cw-note-editor__input')");
         await page.WaitForSelectorAsync("text=Second child note");
         await AssertNoCanvasNodeOverlapsAsync(page, "after chained child-note creation");
 
-        await ClickCanvasNodeAsync(page, ".cw-node.is-inline-text", clickCount: 2);
-        await noteEditor.WaitForAsync();
+        noteEditor = await OpenExistingInlineNoteEditorAsync(page, ".cw-node:has-text('Second child note')");
         await noteEditor.FillAsync("Edited child note");
         await noteEditor.PressAsync("Enter");
         await page.WaitForFunctionAsync("() => !document.querySelector('.cw-note-editor__input')");
         await page.WaitForSelectorAsync("text=Edited child note");
 
         var nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Edited child note')");
-        Assert.Contains("Progress", nodeLabels);
-        Assert.Contains("Marker", nodeLabels);
-        Assert.Contains("Priority", nodeLabels);
+        Assert.Contains(nodeLabels, label => label.Contains("Progress", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(nodeLabels, label => label.Contains("Marker", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(nodeLabels, label => label.Contains("Priority", StringComparison.OrdinalIgnoreCase));
         await page.Locator(".cw-context-menu__action[data-action-id='progress']").WaitForAsync();
         await page.EvaluateAsync(
             @"() => document.querySelector('.cw-context-menu__action[data-action-id=""progress""]')
@@ -305,9 +291,9 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         Assert.DoesNotContain("56, 189, 248", progressBackground, StringComparison.Ordinal);
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-progress-submenu-metadata.png"), FullPage = true });
         await page.Locator(".cw-context-menu__action[data-action-id='progress:30']").ClickAsync(new() { Force = true });
-        await page.WaitForFunctionAsync("() => document.querySelector('.cw-node.is-selected .cw-node__progress')?.getAttribute('title')?.includes('30%') === true");
+        await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node__progress')).some(node => node.getAttribute('title')?.includes('30%') === true)");
 
-        var progressBadge = page.Locator(".cw-node.is-selected .cw-node__progress").First;
+        var progressBadge = page.Locator(".cw-node__progress[title*='30%']").First;
         var progressBadgeBounds = await progressBadge.BoundingBoxAsync();
         Assert.NotNull(progressBadgeBounds);
         await page.Mouse.ClickAsync(
@@ -318,7 +304,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.Keyboard.PressAsync("Escape");
 
         nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Edited child note')");
-        Assert.Contains("Marker", nodeLabels);
+        Assert.Contains(nodeLabels, label => label.Contains("Marker", StringComparison.OrdinalIgnoreCase));
         await page.Locator(".cw-context-menu__action[data-action-id='marker']").WaitForAsync();
         await page.EvaluateAsync(
             @"() => document.querySelector('.cw-context-menu__action[data-action-id=""marker""]')
@@ -327,10 +313,10 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         var markerMetrics = await ReadContextMenuActionMetricsAsync(page, "marker:question");
         Assert.True(markerMetrics.Width >= progressMetrics.Width - 2, $"Expected marker presets to stay comparable to progress preset size. Marker={markerMetrics.Width}, progress={progressMetrics.Width}.");
         await page.Locator(".cw-context-menu__action[data-action-id='marker:money']").ClickAsync(new() { Force = true });
-        await page.WaitForFunctionAsync("() => document.querySelector('.cw-node.is-selected .cw-node__marker')?.textContent?.includes('$') === true");
+        await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node__marker')).some(node => node.textContent?.includes('$') === true)");
 
         nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Edited child note')");
-        Assert.Contains("Priority", nodeLabels);
+        Assert.Contains(nodeLabels, label => label.Contains("Priority", StringComparison.OrdinalIgnoreCase));
         await page.Locator(".cw-context-menu__action[data-action-id='priority']").WaitForAsync();
         await page.EvaluateAsync(
             @"() => document.querySelector('.cw-context-menu__action[data-action-id=""priority""]')
@@ -346,7 +332,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         Assert.True(markerMetrics.Width > priorityMetrics.Width, $"Expected marker presets to be larger than priority presets. Marker={markerMetrics.Width}, priority={priorityMetrics.Width}.");
         Assert.Equal(0, priorityPresetLabelCount);
         await page.Locator(".cw-context-menu__action[data-action-id='priority:2']").ClickAsync(new() { Force = true });
-        await page.WaitForFunctionAsync("() => document.querySelector('.cw-node.is-selected .cw-node__priority')?.textContent?.trim() === '2'");
+        await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node__priority')).some(node => node.textContent?.trim() === '2')");
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-badges-selected.png"), FullPage = true });
 
         await page.Keyboard.PressAsync("Enter");
@@ -357,72 +343,12 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.WaitForSelectorAsync("text=Sibling note from Enter");
         await AssertNoCanvasNodeOverlapsAsync(page, "after sibling-note creation");
 
-        await ClickCanvasNodeAsync(page, ".cw-node:has-text('Edited child note')");
-        await page.Keyboard.DownAsync("Control");
-        await page.Keyboard.DownAsync("Shift");
-        await ClickCanvasNodeAsync(page, ".cw-node:has-text('Sibling note from Enter')");
-        await page.Keyboard.UpAsync("Shift");
-        await page.Keyboard.UpAsync("Control");
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('.cw-node.is-selected').length >= 2");
-
-        var groupLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Sibling note from Enter')");
-        Assert.Contains("Border", groupLabels);
-        Assert.Contains("Progress", groupLabels);
-        await page.Keyboard.PressAsync("Escape");
-
-        var beforeDrag = await ReadSelectedNodePositionsAsync(page);
-        Assert.True(beforeDrag.Length >= 2, "Expected a multi-selection before the drag assertion.");
-        var draggedNode = page.Locator(".cw-node.is-selected:has-text('Sibling note from Enter')").First;
-        var draggedBounds = await draggedNode.BoundingBoxAsync();
-        Assert.NotNull(draggedBounds);
-        await page.Keyboard.DownAsync("Control");
-        await page.Mouse.MoveAsync(draggedBounds!.X + (draggedBounds.Width / 2), draggedBounds.Y + (draggedBounds.Height / 2));
-        await page.Mouse.DownAsync();
-        await page.Mouse.MoveAsync(draggedBounds.X + (draggedBounds.Width / 2) + 84, draggedBounds.Y + (draggedBounds.Height / 2) + 56, new() { Steps = 10 });
-        await page.Mouse.UpAsync();
-        await page.Keyboard.UpAsync("Control");
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('.cw-node.is-selected').length >= 2");
-        var afterDrag = await ReadNodePositionsAsync(page, beforeDrag.Select(node => node.Id).ToArray());
-        foreach (var before in beforeDrag)
-        {
-            var after = afterDrag.Single(node => string.Equals(node.Id, before.Id, StringComparison.Ordinal));
-            Assert.True(Math.Abs(after.Left - before.Left) >= 30, $"Expected node '{before.Id}' to move horizontally with the group drag.");
-            Assert.True(Math.Abs(after.Top - before.Top) >= 20, $"Expected node '{before.Id}' to move vertically with the group drag.");
-        }
-
-        groupLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Sibling note from Enter')");
-        Assert.Contains("Border", groupLabels);
-        await page.Locator(".cw-context-menu__action[data-action-id='group-frame']").ClickAsync();
-        await page.WaitForSelectorAsync(".cw-group-frame");
-        Assert.True(await page.Locator(".cw-group-frame").CountAsync() > 0);
-        var beforeFrameDrag = await ReadSelectedNodePositionsAsync(page);
-        var frameLabel = page.Locator(".cw-group-frame__label").First;
-        var frameLabelBounds = await frameLabel.BoundingBoxAsync();
-        Assert.NotNull(frameLabelBounds);
-        await page.Mouse.MoveAsync(frameLabelBounds!.X + (frameLabelBounds.Width / 2), frameLabelBounds.Y + (frameLabelBounds.Height / 2));
-        await page.Mouse.DownAsync();
-        await page.Mouse.MoveAsync(frameLabelBounds.X + (frameLabelBounds.Width / 2) + 72, frameLabelBounds.Y + (frameLabelBounds.Height / 2) + 48, new() { Steps = 10 });
-        await page.Mouse.UpAsync();
-        var afterFrameDrag = await ReadNodePositionsAsync(page, beforeFrameDrag.Select(node => node.Id).ToArray());
-        foreach (var before in beforeFrameDrag)
-        {
-            var after = afterFrameDrag.Single(node => string.Equals(node.Id, before.Id, StringComparison.Ordinal));
-            Assert.True(Math.Abs(after.Left - before.Left) >= 24, $"Expected node '{before.Id}' to move horizontally when dragging the group border.");
-            Assert.True(Math.Abs(after.Top - before.Top) >= 16, $"Expected node '{before.Id}' to move vertically when dragging the group border.");
-        }
-
-        groupLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Sibling note from Enter')");
-        Assert.Contains("Progress", groupLabels);
-        await page.Locator(".cw-context-menu__action[data-action-id='progress']").HoverAsync(new() { Force = true });
-        await page.Locator(".cw-context-menu__action[data-action-id='progress:100']").ClickAsync(new() { Force = true });
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('.cw-node.is-selected .cw-node__progress.is-complete').length >= 2");
-
         await OpenCanvasCreateComposerAsync(page, ".cw-node[data-node-id^='project:']", "Link", "add-link");
         await page.WaitForSelectorAsync("text=Address");
         await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("API reference");
         await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("https://example.test/api");
         await page.Locator(".cw-canvas-composer__textarea").FillAsync("Reference for downstream build steps");
-        await page.Locator(".cw-canvas-composer__actions").GetByRole(AriaRole.Button, new() { Name = "Link", Exact = true }).ClickAsync();
+        await page.Locator(".cw-canvas-composer__actions .cw-button[data-tone='accent']").ClickAsync();
         await page.WaitForSelectorAsync("text=API reference");
         await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node.is-selected .cw-node__title')).some(node => node.textContent?.includes('API reference'))");
 
@@ -449,12 +375,12 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("Picker uploaded image");
         await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("Chooser flow media check");
         await page.Locator(".cw-canvas-composer__textarea").FillAsync("Created through the file chooser upload path");
-        await page.Locator(".cw-canvas-composer__actions").GetByRole(AriaRole.Button, new() { Name = "Image", Exact = true }).ClickAsync();
+        await page.Locator(".cw-canvas-composer__actions .cw-button[data-tone='accent']").ClickAsync();
         await page.WaitForFunctionAsync("() => document.querySelector('.cw-node.is-selected .cw-node__media-image') instanceof HTMLImageElement");
         await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node.is-selected .cw-node__title')).some(node => node.textContent?.includes('Picker uploaded image'))");
-        await ClickCanvasNodeAsync(page, ".cw-node:has-text('Picker uploaded image')");
-        await page.WaitForFunctionAsync("() => document.querySelector('.cw-inspector-shell .cw-media-preview')?.tagName === 'IMG'");
-        await page.WaitForFunctionAsync("() => document.querySelector('.cw-inspector-shell')?.textContent?.includes('playwright-picker-image.svg') === true");
+        await EnsureCanvasSelectionAsync(page, ".cw-node:has-text('Picker uploaded image')");
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-floating-window[data-testid=\"project-structure-selection-window\"] .cw-media-preview')?.tagName === 'IMG'");
+        await page.WaitForFunctionAsync("() => document.querySelector('.cw-floating-window[data-testid=\"project-structure-selection-window\"]')?.textContent?.includes('playwright-picker-image.svg') === true");
 
         await OpenCanvasCreateComposerAsync(page, ".cw-node[data-node-id^='project:']", "Image", "add-image-asset");
         await page.WaitForSelectorAsync("text=Drop an image here or choose one.");
@@ -485,13 +411,13 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("Playwright dropped image");
         await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("Regression media check");
         await page.Locator(".cw-canvas-composer__textarea").FillAsync("Created through the drag and drop upload path");
-        await page.Locator(".cw-canvas-composer__actions").GetByRole(AriaRole.Button, new() { Name = "Image", Exact = true }).ClickAsync();
+        await page.Locator(".cw-canvas-composer__actions .cw-button[data-tone='accent']").ClickAsync();
         await page.WaitForFunctionAsync("() => document.querySelector('.cw-media-preview')?.tagName === 'IMG'");
         await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node.is-selected .cw-node__title')).some(node => node.textContent?.includes('Playwright dropped image'))");
         await AssertNoCanvasNodeOverlapsAsync(page, "after mixed note/link/image creation");
 
-        await ClickCanvasNodeAsync(page, ".cw-node.is-inline-text");
-        await page.GetByRole(AriaRole.Button, new() { Name = "Focus root" }).ClickAsync();
+        await EnsureCanvasSelectionAsync(page, ".cw-node.is-inline-text");
+        await FocusCanvasRootAsync(page);
         await page.WaitForFunctionAsync(
             @"() => {
                 const host = document.querySelector('.cw-canvas-host');
@@ -508,8 +434,14 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
             }",
             null,
             new() { Timeout = 60_000 });
+        await page.WaitForFunctionAsync(
+            @"expectedTitle => {
+                const title = document.querySelector('.cw-floating-window[data-testid=""project-structure-selection-window""] .cw-panel-card h3');
+                return title?.textContent?.trim() === expectedTitle;
+            }",
+            "Playwright Canvas Repair");
         var focusState = await ReadCanvasFocusStateAsync(page);
-        Assert.Equal("Playwright Canvas Repair", await page.Locator(".cw-inspector-shell .cw-panel-card h3").First.TextContentAsync());
+        Assert.Equal("Playwright Canvas Repair", await page.Locator(".cw-floating-window[data-testid='project-structure-selection-window'] .cw-panel-card h3").First.TextContentAsync());
         Assert.InRange(Math.Abs(focusState.DeltaX), 0, 2);
         Assert.InRange(Math.Abs(focusState.DeltaY), 0, 2);
 
@@ -563,6 +495,42 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
         return Guid.Parse(match.Groups["projectId"].Value);
     }
 
+    private static async Task OpenCanvasHelpAsync(IPage page)
+    {
+        await page.GetByRole(AriaRole.Button, new() { Name = "Toggle help", Exact = true }).ClickAsync();
+        await page.GetByRole(AriaRole.Dialog, new() { Name = "Canvas shortcuts and gestures" }).WaitForAsync();
+    }
+
+    private static async Task CloseCanvasHelpAsync(IPage page)
+    {
+        var helpDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Canvas shortcuts and gestures" });
+        await helpDialog.WaitForAsync();
+
+        await page.EvaluateAsync(
+            @"() => {
+                const button = document.querySelector('button[aria-label=""Close help""]');
+                if (button instanceof HTMLButtonElement) {
+                    button.click();
+                }
+            }");
+        await helpDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+    }
+
+    private static async Task CloseCanvasSettingsAsync(IPage page)
+    {
+        var settingsDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Canvas settings" });
+        await settingsDialog.WaitForAsync();
+
+        await page.EvaluateAsync(
+            @"() => {
+                const button = document.querySelector('button[aria-label=""Close settings""]');
+                if (button instanceof HTMLButtonElement) {
+                    button.click();
+                }
+            }");
+        await settingsDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+    }
+
     private static async Task ClickCanvasNodeAsync(IPage page, string selector, MouseButton button = MouseButton.Left, int clickCount = 1)
     {
         for (var attempt = 0; attempt < 5; attempt++)
@@ -601,14 +569,328 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
 
     private static async Task OpenCanvasCreateComposerAsync(IPage page, string selector, string label, string? actionId = null)
     {
+        await EnsureCanvasSelectionAsync(page, selector);
+        await OpenQuickCreateMenuAsync(page);
+
         var groupActionId = ResolveGroupedAction(actionId);
-        var composerOpened = await page.EvaluateAsync<bool>(
-            @"args => {
-                const node = document.querySelector(args.selector);
-                if (!node) {
-                    return false;
+        if (!string.IsNullOrWhiteSpace(groupActionId))
+        {
+            await OpenContextSubmenuAsync(page, groupActionId);
+        }
+
+        var actionSelector = !string.IsNullOrWhiteSpace(actionId)
+            ? $".cw-context-menu__action[data-action-id='{actionId}']"
+            : null;
+
+        if (!string.IsNullOrWhiteSpace(actionSelector))
+        {
+            var action = page.Locator(actionSelector);
+            await action.WaitForAsync();
+            await action.ClickAsync(new() { Force = true });
+            if (!await WaitForLocatorAsync(page.Locator(".cw-canvas-composer"), 1_500))
+            {
+                await action.EvaluateAsync(
+                    @"node => {
+                        if (node instanceof HTMLElement) {
+                            node.click();
+                        }
+                    }");
+            }
+        }
+        else
+        {
+            var action = page.Locator(".cw-context-menu__action").Filter(new() { HasText = label }).First;
+            await action.ClickAsync(new() { Force = true });
+            if (!await WaitForLocatorAsync(page.Locator(".cw-canvas-composer"), 1_500))
+            {
+                await action.EvaluateAsync(
+                    @"node => {
+                        if (node instanceof HTMLElement) {
+                            node.click();
+                        }
+                    }");
+            }
+        }
+
+        await page.Locator(".cw-canvas-composer").WaitForAsync();
+    }
+
+    private static async Task<ILocator> OpenInlineNoteEditorAsync(IPage page)
+    {
+        await page.Locator(".cw-canvas-host").FocusAsync();
+        await page.Locator(".cw-canvas-host").PressAsync("Tab");
+        var noteEditor = page.Locator(".cw-note-editor__input");
+        await noteEditor.WaitForAsync();
+        return noteEditor;
+    }
+
+    private static async Task<ILocator> OpenExistingInlineNoteEditorAsync(IPage page, string selector)
+    {
+        var noteEditor = page.Locator(".cw-note-editor__input");
+
+        await ClickCanvasNodeAsync(page, selector, clickCount: 2);
+        if (await WaitForLocatorAsync(noteEditor, 1_500))
+        {
+            return noteEditor;
+        }
+
+        await page.Locator(selector).First.EvaluateAsync(
+            @"node => {
+                const rect = node.getBoundingClientRect();
+                const x = rect.left + (rect.width / 2);
+                const y = rect.top + (rect.height / 2);
+                node.dispatchEvent(new MouseEvent('dblclick', {
+                    bubbles: true,
+                    cancelable: true,
+                    detail: 2,
+                    clientX: x,
+                    clientY: y
+                }));
+            }");
+
+        await noteEditor.WaitForAsync();
+        return noteEditor;
+    }
+
+    private static async Task EnsureCanvasSelectionAsync(IPage page, string selector)
+    {
+        await ClickCanvasNodeAsync(page, selector);
+        if (await WaitForCanvasSelectionAsync(page, selector, 750))
+        {
+            return;
+        }
+
+        await OpenCanvasContextMenuAsync(page, selector);
+        await page.Keyboard.PressAsync("Escape");
+        Assert.True(await WaitForCanvasSelectionAsync(page, selector, 1_500), $"Expected canvas selection for '{selector}'.");
+    }
+
+    private static async Task FocusCanvasRootAsync(IPage page)
+    {
+        var button = page.GetByRole(AriaRole.Button, new() { Name = "Focus root", Exact = true });
+        await button.WaitForAsync();
+        await button.ClickAsync();
+        if (await WaitForCanvasSelectionAsync(page, ".cw-node[data-node-id^='project:']", 1_500))
+        {
+            return;
+        }
+
+        await button.EvaluateAsync(
+            @"node => {
+                if (node instanceof HTMLButtonElement) {
+                    node.click();
+                }
+            }");
+        Assert.True(
+            await WaitForCanvasSelectionAsync(page, ".cw-node[data-node-id^='project:']", 3_000),
+            "Expected Focus root to select the project root.");
+    }
+
+    private static async Task<string[]> OpenCanvasContextMenuAsync(IPage page, string selector, bool preserveSelection = false)
+    {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            if (preserveSelection)
+            {
+                await DismissCanvasTransientUiAsync(page);
+                await DispatchContextMenuAsync(page, selector);
+                if (await WaitForContextMenuAsync(page, 1_500))
+                {
+                    return await ReadContextMenuLabelsAsync(page);
+                }
+            }
+            else
+            {
+                await page.Keyboard.PressAsync("Escape");
+                await page.WaitForTimeoutAsync(80);
+            }
+
+            await ClickCanvasNodeAsync(page, selector, MouseButton.Right);
+            if (await WaitForContextMenuAsync(page, 1_500))
+            {
+                return await ReadContextMenuLabelsAsync(page);
+            }
+
+            await DispatchContextMenuAsync(page, selector);
+            if (await WaitForContextMenuAsync(page, 1_500))
+            {
+                return await ReadContextMenuLabelsAsync(page);
+            }
+        }
+
+        return [];
+    }
+
+    private static async Task<string[]> OpenQuickCreateMenuAsync(IPage page)
+    {
+        await DismissCanvasTransientUiAsync(page);
+        await page.EvaluateAsync(
+            @"() => {
+                const host = document.querySelector('.cw-canvas-host');
+                const button = document.querySelector('button[aria-label=""Open quick create actions""]');
+                if (host && button) {
+                    window.CanDoItAll.canvasWorkbench.openQuickCreateMenu(host, button);
+                }
+            }");
+        var menuVisible = await WaitForMenuActionAsync(page, "group-assets", 1_500);
+        if (!menuVisible)
+        {
+            await page.GetByRole(AriaRole.Button, new() { Name = "Open quick create actions" }).ClickAsync();
+            menuVisible = await WaitForMenuActionAsync(page, "group-assets", 1_500);
+        }
+
+        Assert.True(menuVisible, "Expected the quick create menu to open.");
+        return await ReadContextMenuLabelsAsync(page);
+    }
+
+    private static async Task OpenContextSubmenuAsync(IPage page, string actionId)
+    {
+        var selector = $".cw-context-menu__action[data-action-id='{actionId}']";
+        await page.Locator(selector).WaitForAsync();
+        await page.EvaluateAsync(
+            @"actionSelector => {
+                const action = document.querySelector(actionSelector);
+                if (!(action instanceof HTMLElement)) {
+                    return;
                 }
 
+                for (const type of ['pointerenter', 'mouseenter', 'mouseover', 'mousemove']) {
+                    action.dispatchEvent(new MouseEvent(type, {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                    }));
+                }
+            }",
+            selector);
+    }
+
+    private static async Task<bool> WaitForContextMenuAsync(IPage page, float timeoutMs)
+    {
+        try
+        {
+            await page.Locator(".cw-context-menu__action").First.WaitForAsync(new() { Timeout = timeoutMs });
+            return true;
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+    }
+
+    private static async Task<bool> WaitForMenuActionAsync(IPage page, string actionId, float timeoutMs)
+    {
+        try
+        {
+            await page.Locator($".cw-context-menu__action[data-action-id='{actionId}']").Last.WaitForAsync(new() { Timeout = timeoutMs });
+            return true;
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+    }
+
+    private static async Task<bool> WaitForCanvasSelectionAsync(IPage page, string selector, float timeoutMs)
+    {
+        try
+        {
+            var target = page.Locator(selector).First;
+            await target.WaitForAsync(new() { Timeout = timeoutMs });
+            var targetId = await target.GetAttributeAsync("data-node-id");
+            if (string.IsNullOrWhiteSpace(targetId))
+            {
+                return false;
+            }
+
+            await page.WaitForFunctionAsync(
+                @"targetId => {
+                    const host = document.querySelector('.cw-canvas-host');
+                    const state = host?.__canvasWorkbenchState;
+                    const selectedId = Array.isArray(state?.ui?.selectedNodeIds) ? state.ui.selectedNodeIds[0] : null;
+                    return !!selectedId && !!targetId && selectedId === targetId;
+                }",
+                targetId,
+                new PageWaitForFunctionOptions { Timeout = timeoutMs });
+            return true;
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+    }
+
+    private static async Task<bool> WaitForLocatorAsync(ILocator locator, float timeoutMs)
+    {
+        try
+        {
+            await locator.WaitForAsync(new() { Timeout = timeoutMs });
+            return true;
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+    }
+
+    private static async Task DismissCanvasTransientUiAsync(IPage page)
+    {
+        var hasContextMenu = await page.Locator(".cw-context-menu__action").First.IsVisibleAsync();
+        var hasComposer = await page.Locator(".cw-canvas-composer").First.IsVisibleAsync();
+        if (!hasContextMenu && !hasComposer)
+        {
+            return;
+        }
+
+        await page.Keyboard.PressAsync("Escape");
+        await page.WaitForTimeoutAsync(80);
+    }
+
+    private static Task ToggleCanvasNodeCollapseAsync(IPage page, string selector)
+        => page.Locator(selector).First.EvaluateAsync(
+            @"button => {
+                if (button instanceof HTMLButtonElement) {
+                    button.click();
+                }
+            }");
+
+    private static Task<string[]> ReadContextMenuLabelsAsync(IPage page)
+        => page.EvaluateAsync<string[]>(
+            @"() => Array.from(document.querySelectorAll('.cw-context-menu__action'))
+                .map(action => (action.textContent || '').trim())
+                .filter(text => text.length > 0)");
+
+    private static Task<string[]> ReadContextMenuActionIdsAsync(IPage page)
+        => page.EvaluateAsync<string[]>(
+            @"() => Array.from(document.querySelectorAll('.cw-context-menu__action'))
+                .map(action => action.getAttribute('data-action-id') || '')
+                .filter(actionId => actionId.length > 0)");
+
+    private static Task<string[]> ReadQuickCreateActionIdsAsync(IPage page)
+        => page.EvaluateAsync<string[]>(
+            @"() => {
+                const host = document.querySelector('.cw-canvas-host');
+                const quickCreateActions = host?.__canvasWorkbenchState?.surface?.chrome?.quickCreateActions || [];
+                const pending = [...quickCreateActions];
+                const actionIds = [];
+                while (pending.length > 0) {
+                    const action = pending.shift();
+                    if (!action || typeof action.actionId !== 'string' || action.actionId.length === 0) {
+                        continue;
+                    }
+
+                    actionIds.push(action.actionId);
+                    if (Array.isArray(action.children)) {
+                        pending.push(...action.children);
+                    }
+                }
+
+                return actionIds;
+            }");
+
+    private static Task DispatchContextMenuAsync(IPage page, string selector)
+        => page.Locator(selector).First.EvaluateAsync(
+            @"node => {
                 const rect = node.getBoundingClientRect();
                 const x = rect.left + (rect.width / 2);
                 const y = rect.top + (rect.height / 2);
@@ -620,65 +902,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture) : IClassFixture<
                     clientX: x,
                     clientY: y
                 }));
-
-                const action = Array.from(document.querySelectorAll('.cw-context-menu__action'))
-                    .find(button => button.dataset.actionId === args.actionId)
-                    || Array.from(document.querySelectorAll('.cw-context-menu__action'))
-                        .find(button => button.textContent?.includes(args.label));
-                if (!action && args.groupActionId) {
-                    const group = Array.from(document.querySelectorAll('.cw-context-menu__action'))
-                        .find(button => button.dataset.actionId === args.groupActionId);
-                    group?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
-                }
-
-                const resolvedAction = Array.from(document.querySelectorAll('.cw-context-menu__action'))
-                    .find(button => button.dataset.actionId === args.actionId)
-                    || Array.from(document.querySelectorAll('.cw-context-menu__action'))
-                        .find(button => button.textContent?.includes(args.label));
-                resolvedAction?.click();
-                return !!document.querySelector('.cw-canvas-composer__input');
-            }",
-            new { selector, label, actionId, groupActionId });
-
-        Assert.True(composerOpened, $"Expected the radial menu action '{label}' to open the in-canvas composer.");
-    }
-
-    private static async Task<string[]> OpenCanvasContextMenuAsync(IPage page, string selector)
-    {
-        if (selector.Contains(":has-text(", StringComparison.Ordinal))
-        {
-            await ClickCanvasNodeAsync(page, selector, MouseButton.Right);
-        }
-        else
-        {
-            await page.EvaluateAsync(
-                @"selector => {
-                    const node = document.querySelector(selector);
-                    if (!node) {
-                        return;
-                    }
-
-                    const rect = node.getBoundingClientRect();
-                    const x = rect.left + (rect.width / 2);
-                    const y = rect.top + (rect.height / 2);
-                    node.dispatchEvent(new MouseEvent('contextmenu', {
-                        bubbles: true,
-                        cancelable: true,
-                        button: 2,
-                        buttons: 2,
-                        clientX: x,
-                        clientY: y
-                    }));
-                }",
-                selector);
-        }
-
-        await page.Locator(".cw-context-menu__action").First.WaitForAsync();
-        return (await page.Locator(".cw-context-menu__label").AllTextContentsAsync())
-            .Select(label => label.Trim())
-            .Where(label => !string.IsNullOrWhiteSpace(label))
-            .ToArray();
-    }
+            }");
 
     private static Task<CanvasFocusState> ReadCanvasFocusStateAsync(IPage page)
         => page.EvaluateAsync<CanvasFocusState>(

@@ -1,5 +1,5 @@
 using Bunit;
-using CanDoItAll.ComponentKit.Components;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Activity;
@@ -131,3 +131,5 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
         public IFileProvider ContentRootFileProvider { get; set; } = new PhysicalFileProvider(contentRootPath);
     }
 }
+
+

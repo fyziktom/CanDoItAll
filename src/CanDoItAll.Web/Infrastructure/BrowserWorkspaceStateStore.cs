@@ -26,3 +26,5 @@ public sealed class BrowserWorkspaceStateStore(IJSRuntime jsRuntime) : IWorkbenc
         await jsRuntime.InvokeVoidAsync("CanDoItAll.browserState.save", cancellationToken, StorageKey, payload);
     }
 }
+
+

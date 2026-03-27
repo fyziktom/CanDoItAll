@@ -1,0 +1,14 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<article @attributes='BuildAttributes(Package ? "zy-sheet-card zy-sheet-card--package" : "zy-sheet-card")'>
+    @ChildContent
+</article>
+
+@code {
+    [Parameter]
+    public bool Package { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

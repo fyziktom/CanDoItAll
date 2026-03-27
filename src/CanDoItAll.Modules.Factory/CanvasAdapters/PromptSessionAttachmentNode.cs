@@ -1,5 +1,5 @@
 using System.IO;
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Factory.CanvasAdapters;
 
@@ -167,3 +167,5 @@ public static class PromptSessionAttachmentNode
             _ => "mint"
         };
 }
+
+

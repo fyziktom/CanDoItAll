@@ -1,0 +1,11 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<nav @attributes='BuildAttributes("flex flex-col gap-2 text-sm text-slate-600")'>
+    @ChildContent
+</nav>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

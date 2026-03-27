@@ -1,0 +1,18 @@
+@namespace CanDoItAll.Components.BaseLib
+<header @attributes='AdditionalAttributes.WithClass("rz-header")'>
+    @ChildContent
+</header>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+}
+
+
+
+
+
+

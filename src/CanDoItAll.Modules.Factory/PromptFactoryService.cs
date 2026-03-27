@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.BackgroundJobs;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
@@ -1555,3 +1555,5 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
 
     private sealed record PromptRunNodeSeed(Guid? PromptBlockDefinitionId, string Title, string Notes, int Sequence);
 }
+
+

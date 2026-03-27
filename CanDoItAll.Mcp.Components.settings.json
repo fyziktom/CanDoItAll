@@ -1,0 +1,11 @@
+{
+  "Server": {
+    "Name": "CanDoItAll.Mcp.Components",
+    "WorkspaceRoot": "."
+  },
+  "Catalog": {
+    "BaseLibRoot": "src/CanDoItAll.Components.BaseLib",
+    "CanvasLibRoot": "src/CanDoItAll.Components.CanvasLib",
+    "SandboxRoot": "src/CanDoItAll.Components.Sandbox"
+  }
+}

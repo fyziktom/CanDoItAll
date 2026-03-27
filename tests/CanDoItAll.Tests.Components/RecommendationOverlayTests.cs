@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Factory.CanvasAdapters;
 
@@ -108,3 +108,5 @@ public sealed class RecommendationOverlayTests
         Assert.Contains(annotations, annotation => annotation.ActionId == "apply-recommendations");
     }
 }
+
+

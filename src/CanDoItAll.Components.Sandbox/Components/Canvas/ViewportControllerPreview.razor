@@ -1,0 +1,73 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@using System.Globalization
+@using CanDoItAll.Components.CanvasLib
+
+<div class="cw-settings-preview cw-viewport-controller-preview" data-testid="@Snapshot.TestHookId">
+    <p class="cw-settings-label">@Snapshot.Label</p>
+    <div class="cw-theme-summary">
+        <div>
+            <p class="cw-theme-summary__title">@Snapshot.Title</p>
+            <p class="cw-panel-copy">@Snapshot.Summary</p>
+        </div>
+        <span class="cw-theme-pill">@Snapshot.StatePill</span>
+    </div>
+
+    <div class="cw-theme-metrics">
+        @foreach (var metric in Snapshot.Metrics)
+        {
+            <span class="cw-theme-metric">@metric</span>
+        }
+    </div>
+
+    <div class="cw-viewport-controller-preview__stage" style="@StageStyle">
+        <div class="cw-viewport-controller-preview__grid"></div>
+        <div class="cw-viewport-controller-preview__window">
+            <span>Current</span>
+            <strong>@Snapshot.CurrentZoomLabel</strong>
+        </div>
+        <div class="cw-viewport-controller-preview__fit">
+            <span>Fit</span>
+            <strong>@Snapshot.FitZoomLabel</strong>
+        </div>
+        <div class="cw-viewport-controller-preview__focus">
+            <span class="cw-viewport-controller-preview__focus-dot"></span>
+            <span class="cw-viewport-controller-preview__focus-label">@Snapshot.FocusNodeLabel</span>
+        </div>
+        <div class="cw-viewport-controller-preview__legend">
+            <span class="cw-theme-metric">Pan @Snapshot.CurrentPanLabel</span>
+            <span class="cw-theme-metric">Scene center @Snapshot.SceneCenterLabel</span>
+        </div>
+    </div>
+
+    <div class="cw-viewport-controller-preview__cards">
+        @foreach (var card in Snapshot.Cards)
+        {
+            <article class="cw-viewport-controller-preview__card">
+                <div class="cw-viewport-controller-preview__card-header">
+                    <strong>@card.Label</strong>
+                    <span class="cw-theme-pill">@card.ValueLabel</span>
+                </div>
+                <p>@card.Summary</p>
+            </article>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ViewportControllerPreviewSnapshot Snapshot { get; set; } = default!;
+
+    private string StageStyle => string.Join(
+        ";",
+        [
+            $"--cw-vp-focus-x:{FormatPercent(Snapshot.FocusXPercent)}",
+            $"--cw-vp-focus-y:{FormatPercent(Snapshot.FocusYPercent)}",
+            $"--cw-vp-window-left:{FormatPercent(Snapshot.ViewportLeftPercent)}",
+            $"--cw-vp-window-top:{FormatPercent(Snapshot.ViewportTopPercent)}",
+            $"--cw-vp-window-width:{FormatPercent(Snapshot.ViewportWidthPercent)}",
+            $"--cw-vp-window-height:{FormatPercent(Snapshot.ViewportHeightPercent)}"
+        ]);
+
+    private static string FormatPercent(double value)
+        => $"{value.ToString("0.##", CultureInfo.InvariantCulture)}%";
+}

@@ -1,0 +1,150 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@page "/"
+@inject NavigationManager Navigation
+
+<PageTitle>Components Sandbox</PageTitle>
+
+<div class="sandbox-page">
+    <PageScaffold MaxWidthClass="max-w-[1720px]">
+        <Header>
+            <PageHeader Eyebrow="Shared UI" Title="Component catalog" Description="Use the sandbox as the acceptance gate for BaseLib and CanvasLib. Every group has a dedicated route, scenario coverage, and screenshot proof." />
+        </Header>
+
+        <Lead>
+            <div class="sandbox-hero">
+                <div class="sandbox-hero__copy">
+                    <span class="sandbox-hero__eyebrow">Visual thesis</span>
+                    <h2 class="sandbox-hero__title">A calm laboratory for behavior, state, and proof.</h2>
+                    <p class="sandbox-hero__summary">The catalog avoids decorative hero sections and card mosaics. Each group page focuses on scanning, state variation, and whether the shared components still feel intentional under pressure.</p>
+                    <div class="sandbox-hero__chips">
+                        <StatusBadge Text="Sticky group nav" Tone="info" />
+                        <StatusBadge Text="Scenario switching" Tone="success" />
+                        <StatusBadge Text="Mobile + desktop proof" Tone="warning" />
+                    </div>
+                </div>
+
+                <SummaryTiles>
+                    <SummaryTile Label="Groups" Value="@SandboxCatalogRegistry.Groups.Count.ToString()" HelperText="Every shared component group has a dedicated page." Tone="info" />
+                    <SummaryTile Label="Examples" Value="@SandboxCatalogRegistry.Examples.Count.ToString()" HelperText="Curated scenarios drive screenshots and MCP answers." Tone="success" />
+                    <SummaryTile Label="Required states" Value="Happy / Dense / Empty" HelperText="Loading, disabled, and long-text states appear where relevant." Tone="warning" />
+                    <SummaryTile Label="Output" Value="Screenshot proof" HelperText="Desktop 1440px and mobile 390px are part of the acceptance bar." />
+                </SummaryTiles>
+            </div>
+        </Lead>
+
+        <SecondaryRail>
+            <SectionCard Title="Acceptance Gate" Description="The sandbox only counts if the catalog is tuned after screenshots.">
+                <div class="sandbox-proof-list">
+                    @foreach (var question in SandboxCatalogRegistry.ValidationQuestions.Take(6))
+                    {
+                        <p>@question</p>
+                    }
+                </div>
+            </SectionCard>
+        </SecondaryRail>
+
+        <ChildContent>
+            <div class="sandbox-home-grid">
+                <ListDetailShell ListPaneWidth="28rem">
+                    <ListHeader>
+                        <div class="space-y-1">
+                            <TextBlock TextStyle="@(TextStyle.Eyebrow)" Value="Groups" />
+                            <TextBlock TextStyle="@(TextStyle.Subtitle1)" Value="Navigate by function" />
+                        </div>
+                    </ListHeader>
+
+                    <ListContent>
+                        <div class="sandbox-list">
+                            @foreach (var group in SandboxCatalogRegistry.Groups)
+                            {
+                                <SelectionListItem IsSelected="@(group.Key == selectedGroupKey)"
+                                                   Title="@group.Title"
+                                                   Eyebrow="@group.FocusAreas.First()"
+                                                   Meta="@group.Route"
+                                                   Summary="@group.Summary"
+                                                   OnSelect="@(() => SelectGroup(group.Key))">
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach (var focusArea in group.FocusAreas.Take(3))
+                                        {
+                                            <StatusBadge Text="@focusArea" Tone="info" />
+                                        }
+                                    </div>
+                                </SelectionListItem>
+                            }
+                        </div>
+                    </ListContent>
+
+                    <DetailHeader>
+                        <div class="space-y-1">
+                            <TextBlock TextStyle="@(TextStyle.Eyebrow)" Value="Selected group" />
+                            <TextBlock TextStyle="@(TextStyle.Subtitle1)" Value="@SelectedGroup.Title" />
+                        </div>
+                    </DetailHeader>
+
+                    <DetailContent>
+                        <div class="space-y-6">
+                            <TextBlock TextStyle="@(TextStyle.Body2)" Value="@SelectedGroup.Summary" />
+
+                            <FormSection Title="Coverage focus" Description="These are the areas the screenshots must make obvious.">
+                                <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                                    @foreach (var note in SelectedGroup.ProofNotes)
+                                    {
+                                        <Card>
+                                            <div class="space-y-2">
+                                                <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="@note" />
+                                                <TextBlock TextStyle="@(TextStyle.Note)" Value="Tune spacing, hierarchy, or variant usage if the proof is weak or uncertain." />
+                                            </div>
+                                        </Card>
+                                    }
+                                </div>
+                            </FormSection>
+
+                            <SectionCard Title="Example routes" Description="The same routes back the future MCP example responses.">
+                                <div class="sandbox-list">
+                                    @foreach (var example in SelectedExamples)
+                                    {
+                                        <SelectionListItem Title="@example.Title"
+                                                           Eyebrow="@example.Scenario.ToLabel()"
+                                                           Meta="@example.Route"
+                                                           Summary="@example.Summary">
+                                            <div class="flex flex-wrap gap-2">
+                                                @foreach (var componentName in example.ComponentNames.Take(3))
+                                                {
+                                                    <StatusBadge Text="@componentName" Tone="neutral" />
+                                                }
+                                            </div>
+                                        </SelectionListItem>
+                                    }
+                                </div>
+                            </SectionCard>
+
+                            <div class="flex flex-wrap gap-3">
+                                <Button Text="Open happy path" Click="@(() => NavigateTo(SelectedGroup.Route))" />
+                                <Button Text="Open dense proof" ButtonStyle="@(ButtonStyle.Light)" Variant="@(Variant.Outlined)" Click="@(() => NavigateTo($"{SelectedGroup.Route}?scenario=dense-content"))" />
+                                <Button Text="Open empty proof" ButtonStyle="@(ButtonStyle.Light)" Variant="@(Variant.Outlined)" Click="@(() => NavigateTo($"{SelectedGroup.Route}?scenario=empty-state"))" />
+                            </div>
+                        </div>
+                    </DetailContent>
+                </ListDetailShell>
+            </div>
+        </ChildContent>
+    </PageScaffold>
+</div>
+
+@code {
+    private SandboxGroupKey selectedGroupKey = SandboxGroupKey.Foundations;
+
+    private SandboxGroupDefinition SelectedGroup => SandboxCatalogRegistry.GetGroup(selectedGroupKey);
+
+    private IReadOnlyList<SandboxExampleDefinition> SelectedExamples => SandboxCatalogRegistry.GetExamples(selectedGroupKey);
+
+    private void SelectGroup(SandboxGroupKey key)
+    {
+        selectedGroupKey = key;
+    }
+
+    private void NavigateTo(string route)
+    {
+        Navigation.NavigateTo(route);
+    }
+}

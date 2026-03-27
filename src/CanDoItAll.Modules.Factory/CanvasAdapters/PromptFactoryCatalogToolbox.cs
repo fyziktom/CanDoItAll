@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Factory.CanvasAdapters;
 
@@ -22,3 +22,5 @@ public static class PromptFactoryCatalogToolbox
     public static IReadOnlyList<CanvasWorkbenchAction> BuildInputNodeActions(string attachmentId)
         => PromptFactoryCanvasCatalog.BuildInputNodeActions(attachmentId);
 }
+
+

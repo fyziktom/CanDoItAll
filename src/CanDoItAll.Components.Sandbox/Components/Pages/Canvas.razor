@@ -1,0 +1,230 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@page "/groups/canvas"
+@inherits CatalogPageBase
+
+<PageTitle>Canvas</PageTitle>
+
+<CatalogPageFrame Group="@Group"
+                  Scenario="@CurrentScenario"
+                  Frame="@CurrentFrame"
+                  ExampleCount="@Examples.Count"
+                  HeroTitle="Typed workbench and calendar surfaces with sandbox-owned proof assets."
+                  HeroSummary="The canvas page keeps the runtime workbench and calendar real while moving boundary previews, validation cards, and acceptance evidence into the sandbox catalog."
+                  DemoTitle="Canvas surfaces"
+                  DemoSummary="Workbench, calendar, floating windows, and boundary previews for the current scenario."
+                  ScenarioChanged="NavigateScenario"
+                  FrameChanged="NavigateFrame">
+    <Notes>
+        <div class="sandbox-proof-list">
+            <p>The runtime workbench should stay focused on authoring behavior rather than carrying preview-only diagnostics.</p>
+            <p>Floating windows, selection state, and viewport updates must stay typed across the shared contracts.</p>
+            <p>Canvas proof assets belong in the sandbox so dense and empty scenarios can be reviewed without touching the runtime pages.</p>
+        </div>
+    </Notes>
+
+    <ChildContent>
+        <SectionCard Title="Workbench runtime" Description="The extracted workbench remains real and interactive while the proof content lives alongside it.">
+            <div class="sandbox-canvas-host">
+                <CanvasWorkbench Surface="@WorkbenchSurface"
+                                 SelectionChanged="HandleWorkbenchSelectionChanged"
+                                 StateChanged="HandleWorkbenchStateChanged">
+                    <ToolbarLeftContent>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <StatusBadge Text="Catalog demo" Tone="info" />
+                            @if (CurrentScenario == SandboxScenarioKey.DenseContent)
+                            {
+                                <StatusBadge Text="Dense review" Tone="warning" />
+                            }
+                            @if (CurrentScenario == SandboxScenarioKey.DisabledState)
+                            {
+                                <StatusBadge Text="Read only" Tone="warning" />
+                            }
+                        </div>
+                    </ToolbarLeftContent>
+
+                    <OverlayContent>
+                        @if (InspectorWindowState.IsVisible)
+                        {
+                            <CanvasFloatingWindow WindowId="@SandboxCanvasSamples.InspectorWindowId"
+                                                  TestId="sandbox-canvas-inspector"
+                                                  AriaLabel="Sandbox canvas inspector"
+                                                  Kicker="Sandbox overlay"
+                                                  Title="Selection context"
+                                                  Summary="@InspectorSummary"
+                                                  DefaultPlacement="top-right"
+                                                  DefaultWidth="380"
+                                                  DefaultHeight="420"
+                                                  MinWidth="300"
+                                                  MinHeight="220"
+                                                  State="@InspectorWindowState"
+                                                  StateChanged="HandleInspectorWindowStateChanged">
+                                <div class="sandbox-floating-window-copy">
+                                    <StatusBadge Text="@ScenarioBadgeText" Tone="@ScenarioBadgeTone" />
+                                    <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="Selected node" />
+                                    <TextBlock TextStyle="@(TextStyle.Body2)" Value="@SelectedWorkbenchNodeLabel" />
+                                    <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="Why this matters" />
+                                    <TextBlock TextStyle="@(TextStyle.Body2)" Value="Floating context stays inside the shared canvas system, so runtime pages do not need to rebuild inspector chrome for every use case." />
+                                </div>
+                            </CanvasFloatingWindow>
+                        }
+                    </OverlayContent>
+                </CanvasWorkbench>
+            </div>
+        </SectionCard>
+
+        <div class="sandbox-demo-grid sandbox-demo-grid--two">
+            <SectionCard Title="Calendar runtime" Description="The shared calendar surface stays typed and keeps its state model outside the JavaScript widget.">
+                <CanvasCalendar Surface="@CurrentCalendarSurface"
+                                HostClass="min-h-[36rem] overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50/80"
+                                SelectionChanged="HandleCalendarSelectionChanged"
+                                StateChanged="HandleCalendarStateChanged" />
+            </SectionCard>
+
+            <SectionCard Title="Calendar boundary cards" Description="Selection, export, mini-month, and time-grid previews are reviewable without entering the runtime page.">
+                <div class="space-y-4">
+                    <CalendarSelectionPanel Snapshot="@CalendarSelectionSnapshot" />
+                    <CalendarExportMenu Snapshot="@CalendarExportSnapshot" />
+                    <CalendarMiniMonthNavigator Snapshot="@CalendarMiniMonthSnapshot" />
+                    @if (CurrentCalendarSurface.Events.Count > 0)
+                    {
+                        <CalendarTimeGridRenderer Snapshot="@CalendarTimeGridSnapshot" />
+                    }
+                </div>
+            </SectionCard>
+        </div>
+
+        <SectionCard Title="Canvas preview assets" Description="Core workbench boundaries remain inspectable inside the sandbox rather than the runtime workbench.">
+            <div class="sandbox-demo-grid sandbox-demo-grid--three">
+                <CanvasSceneHostPreview Snapshot="@SceneHostSnapshot" />
+                <LayerStackPreview Snapshot="@LayerStackSnapshot" />
+                <ViewportControllerPreview Snapshot="@ViewportSnapshot" />
+                <SerializationPersistencePackPreview Snapshot="@SerializationSnapshot" />
+                <TextMeasureServicePreview Snapshot="@TextMeasureSnapshot" />
+                <JsInteropBridgePreview Snapshot="@InteropSnapshot" />
+                <CommandHistoryStorePreview Snapshot="@CommandHistorySnapshot" />
+                <AnimationTimelinePreview Snapshot="@AnimationSnapshot" />
+            </div>
+        </SectionCard>
+    </ChildContent>
+</CatalogPageFrame>
+
+@code {
+    private static readonly SandboxGroupDefinition Group = SandboxCatalogRegistry.GetGroup(SandboxGroupKey.Canvas);
+    private static readonly IReadOnlyList<SandboxExampleDefinition> Examples = SandboxCatalogRegistry.GetExamples(SandboxGroupKey.Canvas);
+
+    private SandboxScenarioKey? initializedScenario;
+    private CanvasWorkbenchUiState workbenchUiState = SandboxCanvasSamples.CreateWorkbenchUiState(SandboxScenarioKey.HappyPath);
+    private CanvasWorkbenchWindowState inspectorWindowState = SandboxCanvasSamples.CreateInspectorWindowState(SandboxScenarioKey.HappyPath);
+    private CanvasCalendarSurface currentCalendarSurface = SandboxCanvasSamples.CreateCalendarSurface(SandboxScenarioKey.HappyPath);
+
+    private CanvasWorkbenchSurface WorkbenchSurface => SandboxCanvasSamples.CreateWorkbenchSurface(CurrentScenario, workbenchUiState, inspectorWindowState);
+
+    private CanvasWorkbenchWindowState InspectorWindowState => inspectorWindowState;
+
+    private CanvasCalendarSurface CurrentCalendarSurface => currentCalendarSurface;
+
+    private string InspectorSummary => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => "Dense review still leaves room for floating context without obscuring the toolbar or stage.",
+        SandboxScenarioKey.DisabledState => "Read-only state keeps the same shared window treatment while muting edit intent.",
+        SandboxScenarioKey.LongText => "Longer node titles and supporting copy should still fit the floating window comfortably.",
+        _ => "The floating window demonstrates shared overlay behavior on top of the real workbench."
+    };
+
+    private string SelectedWorkbenchNodeLabel
+        => WorkbenchSurface.Nodes
+            .FirstOrDefault(node => workbenchUiState.SelectedNodeIds.Contains(node.Id, StringComparer.Ordinal))?.Title
+            ?? "Nothing selected";
+
+    private string ScenarioBadgeText => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => "Dense pass",
+        SandboxScenarioKey.DisabledState => "Read only",
+        SandboxScenarioKey.EmptyState => "Empty",
+        SandboxScenarioKey.LongText => "Long text",
+        _ => "Happy path"
+    };
+
+    private string ScenarioBadgeTone => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => "warning",
+        SandboxScenarioKey.DisabledState => "warning",
+        SandboxScenarioKey.EmptyState => "info",
+        _ => "success"
+    };
+
+    private CalendarSelectionPanelSnapshot CalendarSelectionSnapshot => CalendarSelectionPanelFactory.Create(CurrentCalendarSurface);
+
+    private CalendarExportMenuSnapshot CalendarExportSnapshot => CalendarExportMenuFactory.Create(CurrentCalendarSurface);
+
+    private CalendarMiniMonthNavigatorSnapshot CalendarMiniMonthSnapshot => CalendarMiniMonthNavigatorFactory.Create(CurrentCalendarSurface);
+
+    private CalendarTimeGridRendererSnapshot CalendarTimeGridSnapshot => CalendarTimeGridRendererFactory.Create(CurrentCalendarSurface);
+
+    private CanvasSceneHostPreviewSnapshot SceneHostSnapshot => CanvasSceneHostPreviewFactory.CreateForWorkbench(WorkbenchSurface);
+
+    private LayerStackPreviewSnapshot LayerStackSnapshot => LayerStackPreviewFactory.CreateForWorkbench();
+
+    private ViewportControllerPreviewSnapshot ViewportSnapshot => ViewportControllerPreviewFactory.CreateForWorkbench(WorkbenchSurface);
+
+    private SerializationPersistencePackPreviewSnapshot SerializationSnapshot => SerializationPersistencePackPreviewFactory.CreateForWorkbench(WorkbenchSurface);
+
+    private TextMeasurePreviewSnapshot TextMeasureSnapshot => TextMeasurePreviewFactory.CreateForWorkbench(WorkbenchSurface);
+
+    private JsInteropBridgePreviewSnapshot InteropSnapshot => JsInteropBridgePreviewFactory.CreateForWorkbench(WorkbenchSurface);
+
+    private CommandHistoryStorePreviewSnapshot CommandHistorySnapshot => CommandHistoryStorePreviewFactory.CreateForWorkbench(WorkbenchSurface);
+
+    private AnimationTimelinePreviewSnapshot AnimationSnapshot => AnimationTimelinePreviewFactory.CreateForWorkbench(WorkbenchSurface);
+
+    protected override void OnParametersSet()
+    {
+        if (initializedScenario == CurrentScenario)
+        {
+            return;
+        }
+
+        initializedScenario = CurrentScenario;
+        workbenchUiState = SandboxCanvasSamples.CreateWorkbenchUiState(CurrentScenario);
+        inspectorWindowState = SandboxCanvasSamples.CreateInspectorWindowState(CurrentScenario);
+        currentCalendarSurface = SandboxCanvasSamples.CreateCalendarSurface(CurrentScenario);
+    }
+
+    private Task HandleWorkbenchSelectionChanged(CanvasWorkbenchSelectionChangedEventArgs args)
+    {
+        workbenchUiState.SelectedNodeIds = [.. args.SelectedNodeIds];
+        return Task.CompletedTask;
+    }
+
+    private Task HandleWorkbenchStateChanged(string json)
+    {
+        workbenchUiState = CanvasWorkbenchUiState.Parse(json);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleInspectorWindowStateChanged(CanvasWorkbenchWindowState state)
+    {
+        inspectorWindowState = CanvasWorkbenchWindowState.Normalize(state);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleCalendarSelectionChanged(CanvasCalendarSelectionChangedEventArgs args)
+    {
+        currentCalendarSurface.SelectedEventId = args.SelectedEvent?.EventId ?? args.SelectedEvent?.Id ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleCalendarStateChanged(CanvasCalendarStateChangedEventArgs args)
+    {
+        currentCalendarSurface.ViewStateJson = args.StateJson;
+        currentCalendarSurface.SelectedDate = args.SelectedDate;
+        currentCalendarSurface.InitialView = args.View;
+        currentCalendarSurface.Timezone = args.Timezone;
+        if (!string.IsNullOrWhiteSpace(args.SelectedEventId))
+        {
+            currentCalendarSurface.SelectedEventId = args.SelectedEventId;
+        }
+
+        return Task.CompletedTask;
+    }
+}

@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Factory.CanvasAdapters;
 
@@ -67,3 +67,5 @@ public static class PromptRunBranchLane
             new CanvasWorkbenchAction { ActionId = "branch-selected", Label = "Branch", Icon = "fork", Tone = "warn" }
         ];
 }
+
+

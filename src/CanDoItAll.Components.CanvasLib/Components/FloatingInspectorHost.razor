@@ -1,0 +1,77 @@
+@namespace CanDoItAll.Components.CanvasLib
+@implements IAsyncDisposable
+@using CanDoItAll.Components.CanvasLib
+@inject IJSRuntime JsRuntime
+
+<CanvasBoundaryCard TestHookId="@Snapshot.TestHookId"
+                           Label="@Snapshot.Label"
+                           Title="@Snapshot.Title"
+                           Summary="@Snapshot.Summary"
+                           StatePill="@Snapshot.StatePill"
+                           Metrics="@Snapshot.Metrics">
+    <div class="cw-preview-floating-host" @ref="host">
+        <div class="cw-preview-floating-host__canvas"></div>
+        <aside class="cw-preview-floating-host__panel @(Snapshot.IsDetached ? "is-detached" : null)">
+            <span class="cw-preview-floating-host__tab">@Snapshot.ActiveTab</span>
+            <p class="cw-preview-floating-host__title">@Snapshot.InspectorTitle</p>
+            <p class="cw-preview-floating-host__body">@Snapshot.InspectorBody</p>
+        </aside>
+    </div>
+</CanvasBoundaryCard>
+
+@code {
+    private readonly CanvasSceneHost sceneHost = new();
+    private ElementReference host;
+    private string? pendingSnapshotKey;
+
+    [Parameter, EditorRequired]
+    public FloatingInspectorHostSnapshot Snapshot { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        pendingSnapshotKey = SerializationPersistencePack.Serialize(Snapshot);
+        sceneHost.QueueSync(
+            pendingSnapshotKey,
+            !string.Equals(sceneHost.AppliedStateKey, pendingSnapshotKey, StringComparison.Ordinal));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var bridge = new JsInteropBridge(JsRuntime);
+        if (sceneHost.ShouldCreate())
+        {
+            await bridge.InvokeVoidAsync("CanDoItAll.floatingInspectorHost.create", host, Snapshot);
+            sceneHost.MarkApplied();
+            return;
+        }
+
+        if (!sceneHost.ShouldUpdate())
+        {
+            return;
+        }
+
+        await bridge.InvokeVoidAsync("CanDoItAll.floatingInspectorHost.update", host, Snapshot);
+        sceneHost.MarkApplied();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        try
+        {
+            await new JsInteropBridge(JsRuntime).InvokeVoidAsync("CanDoItAll.floatingInspectorHost.dispose", host);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+}
+
+

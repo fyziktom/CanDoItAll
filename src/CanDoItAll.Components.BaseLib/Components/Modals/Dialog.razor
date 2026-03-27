@@ -1,0 +1,138 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+@if (IsOpen)
+{
+    <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6"
+         data-testid="@TestId">
+        <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm"
+             @onclick="HandleBackdropCloseAsync"></div>
+
+        <section class="@ResolveDialogCssClass()"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-label="@ResolvedAriaLabel"
+                 @onclick:stopPropagation="true">
+            <header class="flex flex-col gap-4 border-b border-slate-200 px-6 py-5">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0 space-y-1">
+                        @if (!string.IsNullOrWhiteSpace(Eyebrow))
+                        {
+                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">@Eyebrow</div>
+                        }
+
+                        <h2 class="text-2xl font-semibold tracking-tight text-slate-950">@Title</h2>
+
+                        @if (!string.IsNullOrWhiteSpace(Subtitle))
+                        {
+                            <p class="max-w-3xl text-sm leading-6 text-slate-600">@Subtitle</p>
+                        }
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        @if (HeaderActions is not null)
+                        {
+                            @HeaderActions
+                        }
+
+                        @if (ShowCloseButton)
+                        {
+                            <button type="button"
+                                    class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                                    aria-label="Close"
+                                    @onclick="HandleCloseAsync">
+                                <span aria-hidden="true">x</span>
+                                <span>Close</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto px-6 py-6">
+                @ChildContent
+            </div>
+
+            @if (Footer is not null)
+            {
+                <footer class="border-t border-slate-200 bg-slate-50/90 px-6 py-4">
+                    @Footer
+                </footer>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Eyebrow { get; set; }
+
+    [Parameter]
+    public string? Subtitle { get; set; }
+
+    [Parameter]
+    public ModalSize Size { get; set; } = ModalSize.Medium;
+
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    [Parameter]
+    public bool CloseOnBackdrop { get; set; } = true;
+
+    [Parameter]
+    public bool ShowCloseButton { get; set; } = true;
+
+    [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? Footer { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private string ResolvedAriaLabel => string.IsNullOrWhiteSpace(AriaLabel) ? Title : AriaLabel;
+
+    private string ResolveDialogCssClass()
+    {
+        var sizeCss = Size switch
+        {
+            ModalSize.Compact => "max-w-2xl",
+            ModalSize.Wide => "max-w-6xl",
+            ModalSize.Full => "h-[92vh] max-w-[min(96rem,100%)]",
+            _ => "max-w-4xl"
+        };
+
+        return CssClassBuilder.Join(
+            "relative z-[71] flex max-h-[92vh] w-full flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/25",
+            sizeCss,
+            Class);
+    }
+
+    private Task HandleCloseAsync()
+    {
+        return OnClose.InvokeAsync();
+    }
+
+    private Task HandleBackdropCloseAsync()
+    {
+        return CloseOnBackdrop
+            ? OnClose.InvokeAsync()
+            : Task.CompletedTask;
+    }
+}
+
+
+

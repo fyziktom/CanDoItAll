@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -22,7 +22,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\CanDoItAll.Web\CanDoItAll.Web.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.ComponentKit\CanDoItAll.ComponentKit.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Components\CanDoItAll.Components.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Components.Sandbox\CanDoItAll.Components.Sandbox.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
@@ -30,3 +33,6 @@
   </ItemGroup>
 
 </Project>
+
+
+

@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Factory.CanvasAdapters;
 
@@ -48,3 +48,5 @@ public sealed class PromptFactoryUndoRedoAdapterTests
         Assert.Contains($"node:{nodeId:N}", snapshot.CanvasUiStateJson);
     }
 }
+
+

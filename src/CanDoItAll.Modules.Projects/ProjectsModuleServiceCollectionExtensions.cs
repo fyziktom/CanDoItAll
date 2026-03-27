@@ -12,3 +12,5 @@ public static class ProjectsModuleServiceCollectionExtensions
 }
 
 public static class ProjectsModuleAssemblyMarker;
+
+

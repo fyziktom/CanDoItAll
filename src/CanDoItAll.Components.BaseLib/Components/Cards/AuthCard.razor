@@ -1,0 +1,11 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<main @attributes='BuildAttributes("mx-auto w-full max-w-lg rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8")'>
+    @ChildContent
+</main>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

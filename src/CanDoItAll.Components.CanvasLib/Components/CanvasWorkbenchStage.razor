@@ -1,0 +1,85 @@
+@namespace CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Components.CanvasLib
+
+<section class="cw-editor-shell">
+    <div class="cw-main-grid @(Inspector is null ? "cw-main-grid--canvas-only" : string.Empty)">
+        <div class="cw-stage-column">
+            <div class="cw-stage-header">
+                @if (!string.IsNullOrWhiteSpace(Eyebrow))
+                {
+                    <p class="cw-stage-eyebrow">@Eyebrow</p>
+                }
+
+                <div class="cw-stage-header-row">
+                    <div class="cw-stage-heading">
+                        <div class="cw-stage-title-row">
+                            <h2 class="cw-stage-title">@Title</h2>
+                            @HeaderActions
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Description))
+                        {
+                            <p class="cw-stage-description">@Description</p>
+                        }
+                    </div>
+
+                    @if (Stats.Count > 0)
+                    {
+                        <div class="cw-stage-stats">
+                            @foreach (var stat in Stats)
+                            {
+                                <div class="cw-stat-chip" data-tone="@stat.Tone">
+                                    <span>@stat.Label</span>
+                                    <strong>@stat.Value</strong>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @Canvas
+        </div>
+
+        @if (Inspector is not null)
+        {
+            <aside class="cw-inspector-shell">
+                @Inspector
+            </aside>
+        }
+    </div>
+
+    @if (Supporting is not null)
+    {
+        <div class="cw-support-grid">
+            @Supporting
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string Eyebrow { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Description { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<CanvasWorkbenchStat> Stats { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public RenderFragment Canvas { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? Inspector { get; set; }
+
+    [Parameter]
+    public RenderFragment? Supporting { get; set; }
+}
+
+

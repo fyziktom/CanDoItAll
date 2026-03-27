@@ -12,3 +12,5 @@ public static class ValidationModuleServiceCollectionExtensions
 }
 
 public static class ValidationModuleAssemblyMarker;
+
+

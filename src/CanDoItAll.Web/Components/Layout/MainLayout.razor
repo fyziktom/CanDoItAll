@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @implements IDisposable
-@using CanDoItAll.ComponentKit.Components
+@using CanDoItAll.Components
+@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Infrastructure.Configuration
 @using CanDoItAll.Modules.Factory
 @using CanDoItAll.Modules.Projects
@@ -764,3 +765,5 @@
 
     private sealed record ClipboardImagePayload(string FileName, string ContentType, string ContentBase64);
 }
+
+

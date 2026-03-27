@@ -1,0 +1,39 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+@if (Inline)
+{
+    <span @attributes='BuildAttributes("text-xs text-slate-500")'>@RenderContent()</span>
+}
+else if (Paragraph)
+{
+    <p @attributes='BuildAttributes("text-xs leading-5 text-slate-500")'>@RenderContent()</p>
+}
+else
+{
+    <div @attributes='BuildAttributes("text-xs leading-5 text-slate-500")'>@RenderContent()</div>
+}
+
+@code {
+    [Parameter]
+    public bool Inline { get; set; }
+
+    [Parameter]
+    public bool Paragraph { get; set; }
+
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private RenderFragment RenderContent()
+    {
+        if (ChildContent is not null)
+        {
+            return ChildContent;
+        }
+
+        return builder => builder.AddContent(0, Text);
+    }
+}

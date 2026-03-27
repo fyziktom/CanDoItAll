@@ -1,0 +1,35 @@
+@namespace CanDoItAll.Components.BaseLib
+<div @attributes='AdditionalAttributes.WithClass("rz-progress-track h-2 w-full rounded bg-slate-200")'>
+    <div class="rz-progress-fill h-2 rounded bg-indigo-500" style="@BuildFillStyle()"></div>
+</div>
+
+@code {
+    [Parameter]
+    public double Value { get; set; }
+
+    [Parameter]
+    public double Min { get; set; }
+
+    [Parameter]
+    public double Max { get; set; } = 100;
+
+    [Parameter]
+    public string? Unit { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string BuildFillStyle()
+    {
+        var range = Math.Max(0.00001, Max - Min);
+        var normalized = Math.Clamp((Value - Min) / range, 0, 1);
+        var percent = normalized * 100;
+        return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"width:{percent:F2}%");
+    }
+}
+
+
+
+
+
+

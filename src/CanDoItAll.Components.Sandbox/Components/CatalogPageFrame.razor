@@ -1,0 +1,144 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+
+<div class="sandbox-page">
+    <PageScaffold MaxWidthClass="max-w-[1720px]">
+        <Header>
+            <PageHeader Eyebrow="Components Sandbox" Title="@Group.Title" Description="@Group.Summary">
+                <Actions>
+                    <Button Text="Catalog index" ButtonStyle="@(ButtonStyle.Light)" Href="/" />
+                </Actions>
+            </PageHeader>
+        </Header>
+
+        <Lead>
+            <div class="sandbox-hero">
+                <div class="sandbox-hero__copy">
+                    <span class="sandbox-hero__eyebrow">@HeroEyebrow</span>
+                    <h2 class="sandbox-hero__title">@HeroTitle</h2>
+                    <p class="sandbox-hero__summary">@HeroSummary</p>
+                    <div class="sandbox-hero__chips">
+                        @foreach (var focusArea in Group.FocusAreas)
+                        {
+                            <StatusBadge Text="@focusArea" Tone="info" />
+                        }
+                    </div>
+                </div>
+
+                <SummaryTiles>
+                    <SummaryTile Label="Scenario" Value="@Scenario.ToLabel()" HelperText="@Scenario.ToSummary()" Tone="info" />
+                    <SummaryTile Label="Preview Frame" Value="@Frame.ToLabel()" HelperText="Use a constrained frame or the live viewport to verify composition." />
+                    <SummaryTile Label="Examples" Value="@ExampleCount.ToString()" HelperText="Curated examples from the registry feed the future MCP index." Tone="success" />
+                    <SummaryTile Label="Proof Rule" Value="Dense + Empty" HelperText="Each group needs at least dense and empty screenshot proof." Tone="warning" />
+                </SummaryTiles>
+            </div>
+        </Lead>
+
+        <SecondaryRail>
+            <SectionCard Title="Proof Notes" Description="Keep the page understandable at a glance.">
+                <div class="sandbox-proof-list">
+                    @foreach (var note in Group.ProofNotes)
+                    {
+                        <p>@note</p>
+                    }
+                </div>
+            </SectionCard>
+
+            <SectionCard Title="Validation Questions" Description="Review these before accepting the screenshots.">
+                <div class="sandbox-proof-list">
+                    @foreach (var question in SandboxCatalogRegistry.ValidationQuestions.Take(5))
+                    {
+                        <p>@question</p>
+                    }
+                </div>
+            </SectionCard>
+
+            @if (Notes is not null)
+            {
+                <SectionCard Title="Scenario Notes" Description="Coverage notes tied to the current demo.">
+                    @Notes
+                </SectionCard>
+            }
+        </SecondaryRail>
+
+        <ChildContent>
+            <div class="sandbox-page-section">
+                <SectionCard Title="@DemoTitle" Description="@DemoSummary">
+                    <div class="sandbox-demo-toolbar">
+                        <SecondaryTabs Items="@ScenarioTabs"
+                                       SelectedKey="@Scenario.ToSlug()"
+                                       SelectedKeyChanged="HandleScenarioChanged" />
+
+                        <div class="sandbox-frame-toggle">
+                            @foreach (var preset in FramePresets)
+                            {
+                                <Button Text="@preset.ToLabel()"
+                                        ButtonStyle="@(preset == Frame ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                        Variant="@(preset == Frame ? Variant.Filled : Variant.Outlined)"
+                                        Click="@(() => FrameChanged.InvokeAsync(preset))" />
+                            }
+                        </div>
+                    </div>
+
+                    <Alert AlertStyle="@(AlertStyle.Info)">
+                        @Scenario.ToSummary()
+                    </Alert>
+
+                    <div class="sandbox-demo-frame @Frame.ToSurfaceClass()" data-testid="sandbox-demo-surface">
+                        <div class="sandbox-demo-stage">
+                            @ChildContent
+                        </div>
+                    </div>
+                </SectionCard>
+            </div>
+        </ChildContent>
+    </PageScaffold>
+</div>
+
+@code {
+    private static readonly IReadOnlyList<SecondaryTabItem> ScenarioTabs = SandboxScenarioKeyExtensions.BuildTabs();
+    private static readonly IReadOnlyList<SandboxFramePreset> FramePresets = Enum.GetValues<SandboxFramePreset>();
+
+    [Parameter, EditorRequired]
+    public SandboxGroupDefinition Group { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public SandboxScenarioKey Scenario { get; set; }
+
+    [Parameter, EditorRequired]
+    public SandboxFramePreset Frame { get; set; }
+
+    [Parameter]
+    public string HeroEyebrow { get; set; } = "Group focus";
+
+    [Parameter, EditorRequired]
+    public string HeroTitle { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string HeroSummary { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string DemoTitle { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string DemoSummary { get; set; } = string.Empty;
+
+    [Parameter]
+    public int ExampleCount { get; set; }
+
+    [Parameter]
+    public EventCallback<SandboxScenarioKey> ScenarioChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<SandboxFramePreset> FrameChanged { get; set; }
+
+    [Parameter]
+    public RenderFragment? Notes { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private Task HandleScenarioChanged(string key)
+    {
+        return ScenarioChanged.InvokeAsync(SandboxScenarioKeyExtensions.Parse(key));
+    }
+}

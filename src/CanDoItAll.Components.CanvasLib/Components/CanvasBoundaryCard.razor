@@ -1,0 +1,49 @@
+@namespace CanDoItAll.Components.CanvasLib
+
+<div class="cw-settings-preview" data-testid="@TestHookId">
+    <p class="cw-settings-label">@Label</p>
+    <div class="cw-theme-summary">
+        <div>
+            <p class="cw-theme-summary__title">@Title</p>
+            <p class="cw-panel-copy">@Summary</p>
+        </div>
+        <span class="cw-theme-pill">@StatePill</span>
+    </div>
+
+    <div class="cw-theme-metrics">
+        @foreach (var metric in Metrics)
+        {
+            <span class="cw-theme-metric">@metric</span>
+        }
+    </div>
+
+    @if (ChildContent is not null)
+    {
+        <div class="cw-boundary-preview">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string TestHookId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Summary { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string StatePill { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<string> Metrics { get; set; } = [];
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

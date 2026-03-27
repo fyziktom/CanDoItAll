@@ -62,3 +62,5 @@ public sealed class ProjectStructureActionCatalogAdapterTests
             string.Empty,
             0);
 }
+
+

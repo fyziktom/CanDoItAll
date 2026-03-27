@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>CanDoItAll.Components.BaseLib</AssemblyName>
+    <RootNamespace>CanDoItAll.Components.BaseLib</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.Components.Common\CanDoItAll.Components.Common.csproj" />
+  </ItemGroup>
+
+</Project>

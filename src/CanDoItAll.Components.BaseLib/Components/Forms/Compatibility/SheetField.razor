@@ -1,0 +1,34 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+@if (AsLabel)
+{
+    <label @attributes='BuildAttributes("zy-sheet-field")'>
+        @if (Icon is not null)
+        {
+            <span class="text-slate-400">@Icon</span>
+        }
+        @ChildContent
+    </label>
+}
+else
+{
+    <div @attributes='BuildAttributes("zy-sheet-field")'>
+        @if (Icon is not null)
+        {
+            <span class="text-slate-400">@Icon</span>
+        }
+        @ChildContent
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool AsLabel { get; set; } = true;
+
+    [Parameter]
+    public RenderFragment? Icon { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

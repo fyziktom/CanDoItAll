@@ -1,0 +1,87 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@implements IAsyncDisposable
+@using CanDoItAll.Components.CanvasLib
+@using Microsoft.JSInterop
+@inject IJSRuntime JsRuntime
+
+<div class="cw-settings-preview cw-animation-timeline-preview"
+     data-testid="@Snapshot.TestHookId"
+     @ref="host">
+    <p class="cw-settings-label">@Snapshot.Label</p>
+
+    <div class="cw-theme-summary">
+        <div>
+            <p class="cw-theme-summary__title">@Snapshot.Title</p>
+            <p class="cw-panel-copy">@Snapshot.Summary</p>
+        </div>
+        <span class="cw-theme-pill">@Snapshot.StatePill</span>
+    </div>
+
+    <div class="cw-animation-stage" aria-hidden="true">
+        <div class="cw-animation-node cw-animation-node--source">Focus</div>
+        <div class="cw-animation-connector"></div>
+        <div class="cw-animation-node cw-animation-node--target">Frame</div>
+        <div class="cw-animation-guide cw-animation-guide--vertical"></div>
+        <div class="cw-animation-guide cw-animation-guide--horizontal"></div>
+        <div class="cw-animation-badge">Pulse</div>
+    </div>
+
+    <div class="cw-animation-track-grid">
+        @foreach (var phase in Snapshot.Phases)
+        {
+            <article class="cw-animation-track" data-phase-key="@phase.Key" data-active="false">
+                <div class="cw-animation-track__header">
+                    <strong>@phase.Label</strong>
+                    <span class="cw-theme-pill">@phase.DurationLabel</span>
+                </div>
+                <p>@phase.Summary</p>
+                <div class="cw-animation-track__meter">
+                    <span class="cw-animation-track__fill"></span>
+                </div>
+            </article>
+        }
+    </div>
+
+    <div class="cw-theme-metrics">
+        @foreach (var metric in Snapshot.Metrics)
+        {
+            <span class="cw-theme-metric">@metric</span>
+        }
+        <span class="cw-theme-metric">@Snapshot.ReducedMotionLabel</span>
+    </div>
+</div>
+
+@code {
+    private ElementReference host;
+    private bool mounted;
+
+    [Parameter, EditorRequired]
+    public AnimationTimelinePreviewSnapshot Snapshot { get; set; } = default!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.animationTimeline.mountPreview", host);
+        mounted = true;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!mounted)
+        {
+            return;
+        }
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.animationTimeline.disposePreview", host);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+}

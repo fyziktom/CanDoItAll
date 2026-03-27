@@ -1,0 +1,335 @@
+@namespace CanDoItAll.Components
+@using CanDoItAll.SharedKernel
+
+<div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_24%),linear-gradient(180deg,_#f8fbff_0%,_#edf3fb_100%)] text-slate-900">
+    <div class="mx-auto flex min-h-screen max-w-[1840px] gap-4 px-3 py-3 sm:px-4 lg:px-5">
+        <aside class="hidden shrink-0 overflow-y-auto rounded-[2rem] border border-white/70 bg-slate-950 text-slate-100 shadow-2xl shadow-slate-900/10 xl:block @(Mode == AppShellMode.FocusWorkbench ? "w-64 p-4" : "w-72 p-5")">
+                <div class="mb-7 space-y-4">
+                    <div class="space-y-1">
+                        <p class="text-xs font-semibold uppercase tracking-[0.35em] text-sky-300">CanDoItAll</p>
+                        <h1 class="@(Mode == AppShellMode.FocusWorkbench ? "text-xl" : "text-2xl") font-semibold tracking-tight text-white">Local delivery workbench</h1>
+                        <p class="text-sm leading-6 text-slate-400">Projects, prompts, validation, scheduling, and evidence in one recoverable workspace.</p>
+                    </div>
+
+                    @if (Workspaces.Count > 0)
+                    {
+                        <div class="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                            <p class="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">Workspace</p>
+                            @foreach (var workspace in Workspaces)
+                            {
+                                <button type="button"
+                                        class="w-full rounded-2xl px-3 py-3 text-left transition @(workspace.Id == ActiveWorkspaceId ? "bg-sky-400/15 text-white" : "text-slate-300 hover:bg-white/5 hover:text-white")"
+                                        @onclick="() => SelectWorkspace.InvokeAsync(workspace.Id)">
+                                    <span class="block text-sm font-semibold">@workspace.Title</span>
+                                    <span class="mt-1 block text-xs leading-5 text-slate-400">@workspace.Description</span>
+                                </button>
+                            }
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(ProjectContextTitle))
+                    {
+                        <div class="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-3">
+                            <p class="text-[10px] font-semibold uppercase tracking-[0.28em] text-sky-300">Project Context</p>
+                            <p class="mt-2 text-sm font-semibold text-white">@ProjectContextTitle</p>
+                            @if (!string.IsNullOrWhiteSpace(PhaseContextTitle))
+                            {
+                                <p class="mt-1 text-xs text-slate-300">@PhaseContextTitle</p>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <nav class="space-y-2">
+                    @foreach (var item in NavigationItems)
+                    {
+                        var normalizedCurrentRoute = string.IsNullOrWhiteSpace(CurrentRoute) ? "/" : $"/{CurrentRoute.TrimStart('/')}";
+                        var isActive = IsRouteMatch(normalizedCurrentRoute, item.Route);
+                        <button type="button"
+                                class="flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition @(isActive ? "bg-sky-400/15 text-white" : "text-slate-300 hover:bg-white/5 hover:text-white")"
+                                @onclick="() => Navigate.InvokeAsync(item.Route)">
+                            <span class="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold uppercase">@item.Icon</span>
+                            <span class="space-y-1">
+                                <span class="block text-sm font-semibold">@item.Title</span>
+                                <span class="block text-xs leading-5 text-slate-400">@item.Description</span>
+                            </span>
+                        </button>
+                    }
+                </nav>
+
+                @if (OpenedProjects.Count > 0)
+                {
+                    <div class="mt-8 space-y-2">
+                        <p class="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">Opened Projects</p>
+                        @foreach (var item in OpenedProjects)
+                        {
+                            <button type="button"
+                                    class="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-left transition hover:bg-white/10"
+                                    @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
+                                <span class="block text-sm font-semibold text-white">@item.Title</span>
+                                <span class="mt-1 block text-xs text-slate-400">@item.TabKind / @item.Route</span>
+                            </button>
+                        }
+                    </div>
+                }
+
+                @if (OpenedSessions.Count > 0)
+                {
+                    <div class="mt-8 space-y-2">
+                        <p class="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">Prompt Sessions</p>
+                        @foreach (var item in OpenedSessions)
+                        {
+                            <button type="button"
+                                    class="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-left transition hover:bg-white/10"
+                                    @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
+                                <span class="block text-sm font-semibold text-white">@item.Title</span>
+                                <span class="mt-1 block text-xs text-slate-400">@item.Route</span>
+                            </button>
+                        }
+                    </div>
+                }
+        </aside>
+
+        <main class="flex min-w-0 flex-1 flex-col gap-2">
+            <details class="rounded-[1.5rem] border border-white/80 bg-white/90 px-4 py-3 shadow-lg shadow-slate-200/40 backdrop-blur xl:hidden">
+                <summary class="cursor-pointer list-none text-sm font-semibold text-slate-900">
+                    Workspace navigation
+                </summary>
+                <div class="mt-4 space-y-4">
+                    @if (Workspaces.Count > 0)
+                    {
+                        <div class="grid gap-2 md:grid-cols-3">
+                            @foreach (var workspace in Workspaces)
+                            {
+                                <button type="button"
+                                        class="rounded-2xl border px-3 py-3 text-left transition @(workspace.Id == ActiveWorkspaceId ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white")"
+                                        @onclick="() => SelectWorkspace.InvokeAsync(workspace.Id)">
+                                    <span class="block text-sm font-semibold">@workspace.Title</span>
+                                    <span class="mt-1 block text-xs leading-5 @(workspace.Id == ActiveWorkspaceId ? "text-slate-200" : "text-slate-500")">@workspace.Description</span>
+                                </button>
+                            }
+                        </div>
+                    }
+
+                    <div class="grid gap-2 lg:grid-cols-2">
+                        @foreach (var item in NavigationItems)
+                        {
+                            var normalizedCurrentRoute = string.IsNullOrWhiteSpace(CurrentRoute) ? "/" : $"/{CurrentRoute.TrimStart('/')}";
+                            var isActive = IsRouteMatch(normalizedCurrentRoute, item.Route);
+                            <button type="button"
+                                    class="rounded-2xl border px-3 py-3 text-left transition @(isActive ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white")"
+                                    @onclick="() => Navigate.InvokeAsync(item.Route)">
+                                <span class="text-xs font-semibold uppercase tracking-[0.2em] @(isActive ? "text-slate-200" : "text-slate-500")">@item.Icon</span>
+                                <span class="mt-2 block text-sm font-semibold">@item.Title</span>
+                                <span class="mt-1 block text-xs leading-5 @(isActive ? "text-slate-200" : "text-slate-500")">@item.Description</span>
+                            </button>
+                        }
+                    </div>
+
+                    @if (OpenedProjects.Count > 0 || OpenedSessions.Count > 0)
+                    {
+                        <div class="grid gap-4 lg:grid-cols-2">
+                            @if (OpenedProjects.Count > 0)
+                            {
+                                <div class="space-y-2">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Opened Projects</p>
+                                    @foreach (var item in OpenedProjects)
+                                    {
+                                        <button type="button"
+                                                class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                                                @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
+                                            <span class="block font-semibold text-slate-900">@item.Title</span>
+                                            <span class="mt-1 block text-xs text-slate-500">@item.Route</span>
+                                        </button>
+                                    }
+                                </div>
+                            }
+
+                            @if (OpenedSessions.Count > 0)
+                            {
+                                <div class="space-y-2">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Prompt Sessions</p>
+                                    @foreach (var item in OpenedSessions)
+                                    {
+                                        <button type="button"
+                                                class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                                                @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
+                                            <span class="block font-semibold text-slate-900">@item.Title</span>
+                                            <span class="mt-1 block text-xs text-slate-500">@item.Route</span>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </details>
+
+            @if (TopBar is not null)
+            {
+                <div class="rounded-xl border border-white/80 bg-white/88 px-4 py-2.5 shadow-sm shadow-slate-200/40 backdrop-blur">
+                    @TopBar
+                </div>
+            }
+
+            <AppTabStrip Items="Tabs"
+                         RecentTabs="RecentTabs"
+                         ActiveTabId="ActiveTabId"
+                         ShowActiveSummary="ShowTabSummary"
+                         Compact="@(Mode == AppShellMode.FocusWorkbench)"
+                         Activate="SelectTab"
+                         Close="CloseTab"
+                         MoveLeft="MoveLeft"
+                         MoveRight="MoveRight"
+                         TogglePin="ToggleTabPin"
+                         ToggleSleep="ToggleTabSleep"
+                         CloseOthers="CloseOtherTabs"
+                         CloseRight="CloseTabsToRight"
+                         CloseBackground="CloseBackgroundTabs"
+                         ReopenRecent="ReopenRecentTab" />
+
+            <div class="@(ShowRightRail ? "grid gap-2 2xl:grid-cols-[minmax(0,1fr)_20rem]" : "block")">
+                @if (Mode == AppShellMode.FocusWorkbench)
+                {
+                    <div class="min-w-0">
+                        @Body
+                    </div>
+                }
+                else
+                {
+                    <section class="min-w-0 rounded-[1.85rem] border border-white/80 bg-white/92 p-5 shadow-xl shadow-slate-200/60 backdrop-blur lg:p-6">
+                        @Body
+                    </section>
+                }
+
+                @if (ShowRightRail)
+                {
+                    <aside class="hidden rounded-[1.85rem] border border-white/80 bg-white/88 p-5 shadow-lg shadow-slate-200/50 backdrop-blur 2xl:block">
+                        @RightRail
+                    </aside>
+                }
+            </div>
+
+            @if ((ShowRightRail || ShowCollapsedRail) && RightRail is not null)
+            {
+                <details class="rounded-[1.5rem] border border-white/80 bg-white/90 px-4 py-3 shadow-lg shadow-slate-200/40 backdrop-blur @(ShowRightRail ? "2xl:hidden" : string.Empty)">
+                    <summary class="cursor-pointer list-none text-sm font-semibold text-slate-900">
+                        @CollapsedRailLabel
+                    </summary>
+                    <div class="mt-4">
+                        @RightRail
+                    </div>
+                </details>
+            }
+        </main>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public AppShellMode Mode { get; set; } = AppShellMode.StandardPage;
+
+    [Parameter]
+    public bool ShowRightRail { get; set; } = true;
+
+    [Parameter]
+    public bool ShowCollapsedRail { get; set; }
+
+    [Parameter]
+    public bool ShowTabSummary { get; set; } = true;
+
+    [Parameter]
+    public string CollapsedRailLabel { get; set; } = "Workspace context";
+
+    [Parameter]
+    public IReadOnlyList<ShellNavigationItem> NavigationItems { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<ShellWorkspaceItem> Workspaces { get; set; } = [];
+
+    [Parameter]
+    public string ActiveWorkspaceId { get; set; } = string.Empty;
+
+    [Parameter]
+    public string CurrentRoute { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<WorkbenchTabState> Tabs { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<WorkbenchTabState> RecentTabs { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<WorkbenchTabState> OpenedProjects { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<WorkbenchTabState> OpenedSessions { get; set; } = [];
+
+    [Parameter]
+    public string? ActiveTabId { get; set; }
+
+    [Parameter]
+    public string? ProjectContextTitle { get; set; }
+
+    [Parameter]
+    public string? PhaseContextTitle { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectWorkspace { get; set; }
+
+    [Parameter]
+    public EventCallback<string> Navigate { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OpenWorkbenchItem { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectTab { get; set; }
+
+    [Parameter]
+    public EventCallback<string> CloseTab { get; set; }
+
+    [Parameter]
+    public EventCallback<string> MoveLeft { get; set; }
+
+    [Parameter]
+    public EventCallback<string> MoveRight { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ToggleTabPin { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ToggleTabSleep { get; set; }
+
+    [Parameter]
+    public EventCallback<string> CloseOtherTabs { get; set; }
+
+    [Parameter]
+    public EventCallback<string> CloseTabsToRight { get; set; }
+
+    [Parameter]
+    public EventCallback<string> CloseBackgroundTabs { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ReopenRecentTab { get; set; }
+
+    [Parameter]
+    public RenderFragment? TopBar { get; set; }
+
+    [Parameter]
+    public RenderFragment? Body { get; set; }
+
+    [Parameter]
+    public RenderFragment? RightRail { get; set; }
+
+    private static bool IsRouteMatch(string currentRoute, string navigationRoute)
+    {
+        if (string.Equals(navigationRoute, "/", StringComparison.Ordinal))
+        {
+            return string.Equals(currentRoute, "/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return string.Equals(currentRoute, navigationRoute, StringComparison.OrdinalIgnoreCase) ||
+               currentRoute.StartsWith($"{navigationRoute}/", StringComparison.OrdinalIgnoreCase);
+    }
+}

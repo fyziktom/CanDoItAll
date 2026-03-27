@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Factory.CanvasAdapters;
 using CanDoItAll.Modules.Workbench;
@@ -284,3 +284,5 @@ public sealed class CanvasAdapterTests
         Assert.Null(snapshot.SelectedNodeId);
     }
 }
+
+

@@ -1,4 +1,4 @@
-using CanDoItAll.ComponentKit.Canvas;
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -324,3 +324,5 @@ internal static class ProjectStructureCanvasCatalog
         return normalized;
     }
 }
+
+

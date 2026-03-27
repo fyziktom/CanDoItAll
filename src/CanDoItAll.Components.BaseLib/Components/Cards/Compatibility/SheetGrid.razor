@@ -1,0 +1,14 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes(Packages ? "zy-sheet-grid zy-sheet-grid--packages" : "zy-sheet-grid")'>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public bool Packages { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

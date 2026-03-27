@@ -41,7 +41,7 @@ services.AddCanDoItAllComponents();
 
 Load:
 
-- `_content/CanDoItAll.Components/css/output.css`
+- `_content/CanDoItAll.Components.BaseLib/css/output.css`
 
 Without that CSS, component markup still renders, but the intended visual system is incomplete.
 

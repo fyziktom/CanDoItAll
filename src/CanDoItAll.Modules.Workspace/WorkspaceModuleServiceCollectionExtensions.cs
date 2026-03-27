@@ -18,3 +18,5 @@ public static class WorkspaceModuleServiceCollectionExtensions
 }
 
 public static class WorkspaceModuleAssemblyMarker;
+
+

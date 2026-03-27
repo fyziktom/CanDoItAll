@@ -1,0 +1,10 @@
+.zy-workspace-split {
+    display: grid;
+    gap: 1rem;
+}
+
+@media (min-width: 1280px) {
+    .zy-workspace-split {
+        grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+    }
+}

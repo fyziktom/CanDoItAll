@@ -1,0 +1,42 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes("rz-col", ResolveColumnStyle())'>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public int? Size { get; set; }
+
+    [Parameter]
+    public int? SizeMD { get; set; }
+
+    [Parameter]
+    public int? SizeXL { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveColumnStyle()
+    {
+        var size = NormalizeSize(Size ?? 12);
+        var sizeMd = NormalizeSize(SizeMD ?? size);
+        var sizeXl = NormalizeSize(SizeXL ?? sizeMd);
+
+        return string.Create(
+            System.Globalization.CultureInfo.InvariantCulture,
+            $"--rz-col-size:{size};--rz-col-md-size:{sizeMd};--rz-col-xl-size:{sizeXl};");
+    }
+
+    private static int NormalizeSize(int size)
+    {
+        return Math.Clamp(size, 1, 12);
+    }
+}
+
+
+
+
+
+
