@@ -1,21 +1,21 @@
 @namespace CanDoItAll.Components.BaseLib
 @using Microsoft.AspNetCore.Components.Web
 
-<div class="space-y-2" data-testid="@TestId">
-    <div class="flex flex-wrap items-center gap-2 rounded-[1.35rem] border border-slate-200 bg-white px-3 py-3 @(Disabled ? "opacity-60" : string.Empty)">
+<div class="zy-tag-textedit" data-testid="@TestId">
+    <div class="zy-tag-textedit__surface @(Disabled ? "is-disabled" : string.Empty)">
         @foreach (var tag in Value)
         {
-            <button class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700"
+            <button class="zy-tag-textedit__chip zy-tag-textedit__chip--@GetChipColorIndex(tag)"
                     type="button"
                     @onclick="@(() => RemoveTagAsync(tag))"
                     disabled="@Disabled">
                 <span>@tag</span>
-                <span aria-hidden="true">&times;</span>
+                <span class="zy-tag-textedit__chip-x" aria-hidden="true">&times;</span>
             </button>
         }
 
         <input id="@InputId"
-               class="min-w-[10rem] flex-1 border-0 bg-transparent p-0 text-sm text-slate-700 outline-none"
+               class="zy-tag-textedit__input"
                value="@pendingValue"
                @oninput="HandleInputAsync"
                @onkeydown="HandleKeyDownAsync"
@@ -29,14 +29,14 @@
 
     @if (isFocused && MatchingSuggestions.Count > 0)
     {
-        <div class="flex flex-wrap gap-2">
+        <div class="zy-tag-textedit__suggestions">
             @foreach (var suggestion in MatchingSuggestions)
             {
-                <button class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                <button class="zy-tag-textedit__suggestion zy-tag-textedit__suggestion--@GetChipColorIndex(suggestion)"
                         type="button"
                         @onclick="@(() => AddSuggestedTagAsync(suggestion))"
                         disabled="@Disabled">
-                    #@suggestion
+                    <span>#@suggestion</span>
                 </button>
             }
         </div>
@@ -44,7 +44,7 @@
 
     @if (!string.IsNullOrWhiteSpace(Hint))
     {
-        <div class="text-xs leading-5 text-slate-500">@Hint</div>
+        <div class="zy-tag-textedit__hint">@Hint</div>
     }
 </div>
 
@@ -87,6 +87,17 @@
 
     private string pendingValue = string.Empty;
     private bool isFocused;
+
+    private static int GetChipColorIndex(string tag)
+    {
+        var hash = 0;
+        foreach (var character in tag)
+        {
+            hash = (hash << 5) - hash + character;
+        }
+
+        return Math.Abs(hash) % 10;
+    }
 
     private IReadOnlyList<string> MatchingSuggestions => Suggestions
         .Select(item => TagTextValueNormalizer.Normalize(item, MaxLength))
