@@ -3,7 +3,7 @@
 
 @if (AsLabel)
 {
-    <label @attributes='BuildAttributes("flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700")'>
+    <label @attributes='BuildAttributes("zy-sheet-field")'>
         @if (Icon is not null)
         {
             <span class="text-slate-400">@Icon</span>
@@ -13,7 +13,7 @@
 }
 else
 {
-    <div @attributes='BuildAttributes("flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700")'>
+    <div @attributes='BuildAttributes("zy-sheet-field")'>
         @if (Icon is not null)
         {
             <span class="text-slate-400">@Icon</span>

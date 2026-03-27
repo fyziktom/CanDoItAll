@@ -61,6 +61,22 @@
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
   }
 
+  .zy-sheet-field .zy-tag-textedit__surface {
+    flex: 1 1 auto;
+    min-height: auto;
+    flex-wrap: wrap;
+    align-items: center;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .zy-sheet-field .zy-tag-textedit__hint {
+    display: none;
+  }
+
   .zy-tag-textedit__surface:focus-within {
     border-color: rgba(16, 185, 129, 0.82);
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
@@ -226,6 +242,163 @@
     font-size: 0.78rem;
     line-height: 1.45;
   }
+
+  .zy-sheet-section {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .zy-sheet-toolbar {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 1.35rem;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+  }
+
+  .zy-sheet-toolbar-row {
+    display: grid;
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  .zy-sheet-toolbar-fields {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  }
+
+  .zy-sheet-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .zy-sheet-field {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    background: rgba(255, 255, 255, 0.96);
+    color: #334155;
+    font-size: 0.875rem;
+    line-height: 1.35;
+  }
+
+  .zy-sheet-field--search,
+  .zy-sheet-field--tag {
+    min-width: 0;
+  }
+
+  .zy-sheet-field--submit-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .zy-sheet-grid {
+    display: grid;
+    gap: 1rem;
+    justify-content: start;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 24rem));
+    align-items: stretch;
+  }
+
+  .zy-sheet-grid--packages {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20.75rem), 26rem));
+  }
+
+  .zy-sheet-card {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    gap: 0.85rem;
+    align-content: start;
+    padding: 1.25rem;
+    border-radius: 1.5rem;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+  }
+
+  .zy-sheet-card--package {
+    gap: 1rem;
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.98));
+  }
+
+  .zy-stat-card-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .zy-stat-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    min-width: 0;
+    padding: 0.34rem 0.62rem;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 999px;
+    background: var(--stat-bg, rgba(255, 255, 255, 0.98));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  }
+
+  .zy-stat-card__icon {
+    color: var(--stat-color, #7c3aed);
+    line-height: 1;
+  }
+
+  .zy-stat-card__label {
+    font-size: 0.49rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgba(71, 85, 105, 0.82);
+    white-space: nowrap;
+  }
+
+  .zy-stat-card__value {
+    font-size: 0.9rem;
+    line-height: 1;
+    font-weight: 900;
+    color: var(--stat-color, #0f172a);
+    white-space: nowrap;
+  }
+
+  .zy-stat-card--sm {
+    padding: 0.3rem 0.54rem;
+  }
+
+  .zy-stat-card--sm .zy-stat-card__label {
+    font-size: 0.45rem;
+  }
+
+  .zy-stat-card--sm .zy-stat-card__value {
+    font-size: 0.78rem;
+  }
+
+  .zy-stat-card--lg {
+    padding: 0.4rem 0.74rem;
+  }
+
+  .zy-stat-card--lg .zy-stat-card__label {
+    font-size: 0.52rem;
+  }
+
+  .zy-stat-card--lg .zy-stat-card__value {
+    font-size: 0.96rem;
+  }
 }
 
 @media (min-width: 768px) {
@@ -237,5 +410,14 @@
 @media (min-width: 1280px) {
   .rz-col {
     grid-column: span var(--rz-col-xl-size, var(--rz-col-md-size, var(--rz-col-size))) / span var(--rz-col-xl-size, var(--rz-col-md-size, var(--rz-col-size)));
+  }
+
+  .zy-sheet-toolbar-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .zy-sheet-toolbar-actions {
+    justify-content: flex-end;
   }
 }

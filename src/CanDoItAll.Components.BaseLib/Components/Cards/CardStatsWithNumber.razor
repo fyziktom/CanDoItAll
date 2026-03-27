@@ -4,12 +4,12 @@
          style="@ComputedStyle">
     @if (IsWithIcon && !string.IsNullOrWhiteSpace(Icon))
     {
-        <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/70 text-slate-700">
+        <span class="zy-stat-card__icon">
             <Icon Name="@Icon" />
         </span>
     }
-    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">@Label</span>
-    <strong class="text-2xl font-semibold tracking-tight text-[var(--stat-color,#0f172a)]">@Value</strong>
+    <span class="zy-stat-card__label">@Label</span>
+    <strong class="zy-stat-card__value">@Value</strong>
 </article>
 
 @code {
@@ -41,13 +41,13 @@
     {
         var sizeCss = Size switch
         {
-            "large" => "min-h-40 p-6",
-            "normal" => "min-h-32 p-5",
-            _ => "min-h-28 p-4"
+            "large" => "zy-stat-card--lg",
+            "normal" => string.Empty,
+            _ => "zy-stat-card--sm"
         };
 
         return CssClassBuilder.Join(
-            "flex flex-col gap-3 rounded-[1.4rem] border border-slate-200 bg-[var(--stat-bg,rgba(255,255,255,0.98))] shadow-sm",
+            "zy-stat-card",
             sizeCss,
             CssClass);
     }
