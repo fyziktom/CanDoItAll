@@ -35,6 +35,8 @@ public sealed class CanvasWorkbenchNode
 
     public string LeadText { get; set; } = string.Empty;
 
+    public CanvasWorkbenchCompactPath? CompactPath { get; set; }
+
     public string Status { get; set; } = string.Empty;
 
     public string BranchLabel { get; set; } = string.Empty;
@@ -94,6 +96,17 @@ public sealed class CanvasWorkbenchNode
     public List<CanvasWorkbenchAnnotation> Annotations { get; set; } = [];
 
     public List<CanvasWorkbenchAction> ContextActions { get; set; } = [];
+}
+
+public sealed class CanvasWorkbenchCompactPath
+{
+    public string Label { get; set; } = string.Empty;
+
+    public string DisplayText { get; set; } = string.Empty;
+
+    public string FullPath { get; set; } = string.Empty;
+
+    public string PromotedText { get; set; } = string.Empty;
 }
 
 public sealed class CanvasWorkbenchLink

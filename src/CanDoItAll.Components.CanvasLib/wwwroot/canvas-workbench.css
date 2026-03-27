@@ -606,6 +606,16 @@ body.cw-body-lock {
     backdrop-filter: blur(6px);
 }
 
+.cw-help-overlay--settings {
+    align-items: start;
+    justify-items: center;
+    padding-top: clamp(5.75rem, 12vh, 7rem);
+}
+
+.cw-workbench-shell.is-maximized .cw-help-overlay--settings {
+    padding-top: clamp(4.9rem, 10vh, 6.1rem);
+}
+
 .cw-help-card {
     width: min(42rem, calc(100% - 2rem));
     max-height: calc(100% - 2rem);
@@ -1949,6 +1959,68 @@ body.cw-body-lock {
     opacity: 0.86;
     font-size: 0.9rem;
     line-height: 1.45;
+}
+
+.cw-node__path-file {
+    margin: 0;
+    color: inherit;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+}
+
+.cw-node__path-button {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.58rem 0.72rem;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 0.95rem;
+    background: rgba(248, 250, 252, 0.9);
+    color: inherit;
+    text-align: left;
+    font: inherit;
+    line-height: 1.2;
+    transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.cw-node__path-button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(14, 165, 233, 0.28);
+    box-shadow: 0 12px 20px rgba(15, 23, 42, 0.08);
+}
+
+.cw-node__path-button[data-copied="true"] {
+    border-color: rgba(4, 120, 87, 0.34);
+    background: rgba(236, 253, 245, 0.94);
+}
+
+.cw-node__path-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    color: inherit;
+    font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cw-node__path-action {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+    font-size: 0.8rem;
+    font-weight: 900;
+    line-height: 1;
 }
 
 .cw-node__chips {
@@ -4179,6 +4251,10 @@ body.cw-body-lock {
     .cw-help-grid,
     .cw-form-grid--split {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cw-help-overlay--settings {
+        padding-top: 1rem;
     }
 
     .cw-hint-pill {

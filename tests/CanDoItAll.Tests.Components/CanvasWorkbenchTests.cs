@@ -50,6 +50,37 @@ public sealed class CanvasWorkbenchTests
         Assert.Contains("Interaction vocabulary", cut.Markup);
         context.JSInterop.VerifyInvoke("CanDoItAll.canvasWorkbench.create");
     }
+
+    [Fact]
+    public void Workbench_uses_settings_icon_and_marks_settings_overlay_with_toolbar_safe_modifier()
+    {
+        using var context = new TestContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var surface = new CanvasWorkbenchSurface
+        {
+            Nodes =
+            [
+                new CanvasWorkbenchNode
+                {
+                    Id = "root",
+                    Title = "Root node",
+                    X = 120,
+                    Y = 160
+                }
+            ]
+        };
+
+        var cut = context.RenderComponent<CanvasWorkbench>(
+            parameters => parameters.Add(component => component.Surface, surface));
+
+        cut.Find("button[aria-label='Toggle settings']").Click();
+
+        Assert.Contains("canvas-settings-overlay", cut.Markup);
+        Assert.Contains("cw-help-overlay--settings", cut.Markup);
+        Assert.Contains("Canvas settings", cut.Markup);
+        Assert.DoesNotContain(">cfg<", cut.Markup, StringComparison.Ordinal);
+    }
 }
 
 

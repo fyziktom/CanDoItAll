@@ -1092,6 +1092,195 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
     }
 
     [Fact]
+    public async Task Project_structure_feedback_7_is_validated_in_browser()
+    {
+        var repoRoot = GetRepoRoot();
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "feedback7");
+        ResetDirectory(artifactsDir);
+
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1600,
+                Height = 1100
+            }
+        });
+        var page = await context.NewPageAsync();
+
+        var projectId = await CreateProjectAsync(page, "Playwright Feedback 7", "Execution");
+        var projectRootId = await ReadNodeIdAsync(page, ".cw-node[data-node-id^='project:']");
+        const string repositoryPath = @"C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench";
+        const string runtimeProjectPath = @"C:\repositories\pveinvoicing\src\PVEInvoicing.ServerApp\PVEInvoicing.csproj";
+
+        var repositoryId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-repository-local",
+            projectRootId,
+            projectRootId,
+            "Main repository",
+            "Workspace clone",
+            "Keep repository nodes readable on the canvas.",
+            [
+                new CanvasInputValueSeed("repositoryMode", "localRepository"),
+                new CanvasInputValueSeed("localPath", repositoryPath),
+                new CanvasInputValueSeed("defaultBranch", "main")
+            ]);
+
+        var runtimeId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-environment-dotnet-watch",
+            projectRootId,
+            projectRootId,
+            "API runtime",
+            "dotnet watch",
+            "Launch the runtime from the quick action modal.",
+            [
+                new CanvasInputValueSeed("environmentKind", "dotNetWatch"),
+                new CanvasInputValueSeed("projectPath", runtimeProjectPath),
+                new CanvasInputValueSeed("launchProfileName", "https")
+            ]);
+
+        var promptFlowId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-prompt-flow",
+            projectRootId,
+            projectRootId,
+            "Checkout assistant flow",
+            "Prompt orchestration",
+            "Open the wizard in a new tab from the quick action modal.");
+
+        await FocusCanvasRootAsync(page);
+        await SetCanvasZoomPercentAsync(page, 72);
+        await page.WaitForTimeoutAsync(250);
+        await CaptureWorkbenchShellAsync(page, Path.Combine(artifactsDir, "01-workbench-state.png"));
+
+        await page.EvaluateAsync(
+            @"() => {
+                const clipboard = {
+                    writeText: async value => {
+                        window.__feedback7CopiedPath = value;
+                    },
+                    readText: async () => window.__feedback7CopiedPath || ''
+                };
+
+                try {
+                    Object.defineProperty(navigator, 'clipboard', {
+                        configurable: true,
+                        value: clipboard
+                    });
+                } catch {
+                    navigator.clipboard = clipboard;
+                }
+            }");
+
+        var runtimeSelector = SelectorForNodeId(runtimeId);
+        await EnsureCanvasSelectionAsync(page, runtimeSelector);
+        await page.WaitForFunctionAsync(
+            @"args => {
+                const node = document.querySelector(args.selector);
+                if (!(node instanceof HTMLElement)) {
+                    return false;
+                }
+
+                const text = node.textContent || '';
+                return text.includes(args.fileName) &&
+                    !text.includes(args.fullPath) &&
+                    !!node.querySelector('.cw-node__path-button');
+            }",
+            new
+            {
+                selector = runtimeSelector,
+                fileName = "PVEInvoicing.csproj",
+                fullPath = runtimeProjectPath
+            });
+
+        var runtimePathButton = page.Locator($"{runtimeSelector} .cw-node__path-button");
+        await runtimePathButton.WaitForAsync();
+        Assert.Equal(runtimeProjectPath, await runtimePathButton.GetAttributeAsync("title"));
+        await runtimePathButton.ClickAsync();
+        await page.WaitForFunctionAsync(
+            @"selector => {
+                const button = document.querySelector(selector);
+                return button instanceof HTMLButtonElement &&
+                    button.getAttribute('data-copied') === 'true' &&
+                    window.__feedback7CopiedPath === button.getAttribute('title');
+            }",
+            $"{runtimeSelector} .cw-node__path-button");
+
+        var repositorySelector = SelectorForNodeId(repositoryId);
+        await EnsureCanvasSelectionAsync(page, repositorySelector);
+        await page.WaitForFunctionAsync(
+            @"args => {
+                const node = document.querySelector(args.selector);
+                if (!(node instanceof HTMLElement)) {
+                    return false;
+                }
+
+                const text = node.textContent || '';
+                return text.includes('Main repository') &&
+                    !text.includes(args.fullPath) &&
+                    !!node.querySelector('.cw-node__path-button');
+            }",
+            new
+            {
+                selector = repositorySelector,
+                fullPath = repositoryPath
+            });
+        Assert.Equal(repositoryPath, await page.Locator($"{repositorySelector} .cw-node__path-button").GetAttributeAsync("title"));
+
+        var promptSelector = SelectorForNodeId(promptFlowId);
+        await EnsureCanvasSelectionAsync(page, promptSelector);
+        await page.Locator(promptSelector).DblClickAsync();
+
+        var quickActionDialog = page.GetByTestId("project-structure-node-quick-actions");
+        await quickActionDialog.WaitForAsync();
+        var editQuickAction = page.GetByTestId("project-structure-quick-action-edit");
+        var primaryQuickAction = page.GetByTestId("project-structure-quick-action-primary");
+        await editQuickAction.WaitForAsync();
+        await primaryQuickAction.WaitForAsync();
+        Assert.Contains("Edit", await editQuickAction.TextContentAsync(), StringComparison.Ordinal);
+        Assert.Contains("Open Wizard in New Tab", await primaryQuickAction.TextContentAsync(), StringComparison.Ordinal);
+        await CaptureLocatorAsync(quickActionDialog, Path.Combine(artifactsDir, "02-prompt-quick-actions.png"));
+
+        var popupTask = context.WaitForPageAsync();
+        await primaryQuickAction.ClickAsync();
+        var popup = await popupTask;
+        await popup.WaitForURLAsync("**/prompt-factory?sessionId=*");
+        await popup.CloseAsync();
+
+        await EnsureCanvasSelectionAsync(page, runtimeSelector);
+        await page.Locator(runtimeSelector).DblClickAsync();
+        quickActionDialog = page.GetByTestId("project-structure-node-quick-actions");
+        await quickActionDialog.WaitForAsync();
+        primaryQuickAction = page.GetByTestId("project-structure-quick-action-primary");
+        await primaryQuickAction.WaitForAsync();
+        Assert.Contains("Run PowerShell", await primaryQuickAction.TextContentAsync(), StringComparison.Ordinal);
+        await quickActionDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
+
+        var settingsButton = page.GetByRole(AriaRole.Button, new() { Name = "Toggle settings", Exact = true });
+        var settingsButtonText = await settingsButton.TextContentAsync();
+        Assert.DoesNotContain("cfg", settingsButtonText ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+
+        var toolbarBounds = await page.Locator(".cw-toolbar").BoundingBoxAsync();
+        Assert.NotNull(toolbarBounds);
+        await settingsButton.ClickAsync();
+
+        var settingsOverlay = page.GetByTestId("canvas-settings-overlay");
+        var settingsDialog = settingsOverlay.GetByRole(AriaRole.Dialog, new() { Name = "Canvas settings" });
+        await settingsDialog.WaitForAsync();
+        var settingsBounds = await settingsDialog.BoundingBoxAsync();
+        Assert.NotNull(settingsBounds);
+        Assert.True(
+            settingsBounds!.Y >= toolbarBounds!.Y + toolbarBounds.Height - 1,
+            $"Expected settings dialog to render below the toolbar safe zone. DialogTop={settingsBounds.Y}, ToolbarBottom={toolbarBounds.Y + toolbarBounds.Height}.");
+        await CaptureLocatorAsync(settingsDialog, Path.Combine(artifactsDir, "03-settings-safe-zone.png"));
+
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
     public async Task Project_structure_export_image_capture_generates_i18_artifacts()
     {
         var repoRoot = GetRepoRoot();

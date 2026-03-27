@@ -4,8 +4,55 @@ namespace CanDoItAll.Modules.Workbench;
 
 internal sealed record ProjectStructureNodeFact(string Label, string Value);
 
+internal sealed record ProjectStructureCompactPathPresentation(
+    string Label,
+    string DisplayText,
+    string FullPath,
+    string PromotedText);
+
+internal sealed record ProjectStructureNodeLeadPresentation(
+    string LeadText,
+    ProjectStructureCompactPathPresentation? CompactPath);
+
 internal static class ProjectStructureNodeDescriptor
 {
+    private static readonly HashSet<string> KnownFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".bat",
+        ".cmd",
+        ".config",
+        ".cs",
+        ".csproj",
+        ".csv",
+        ".docx",
+        ".gif",
+        ".jpeg",
+        ".jpg",
+        ".json",
+        ".log",
+        ".md",
+        ".mp3",
+        ".mp4",
+        ".pdf",
+        ".png",
+        ".ps1",
+        ".py",
+        ".razor",
+        ".sh",
+        ".sln",
+        ".slnx",
+        ".sql",
+        ".svg",
+        ".ts",
+        ".tsx",
+        ".txt",
+        ".xlsx",
+        ".xml",
+        ".yaml",
+        ".yml",
+        ".zip"
+    };
+
     public static IReadOnlyList<ProjectStructureNodeFact> BuildFacts(ProjectStructureNode node)
     {
         var facts = new List<ProjectStructureNodeFact>();
@@ -100,35 +147,39 @@ internal static class ProjectStructureNodeDescriptor
     }
 
     public static string BuildLeadText(ProjectStructureNode node)
+        => BuildLeadPresentation(node).LeadText;
+
+    public static ProjectStructureNodeLeadPresentation BuildLeadPresentation(ProjectStructureNode node)
     {
         if (node.ObjectType == ProjectObjectType.Note)
         {
-            return string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes;
+            return new(string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes, null);
         }
 
         if (node.ObjectType is ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset &&
             !string.IsNullOrWhiteSpace(node.MediaOriginalFileName))
         {
-            return node.MediaOriginalFileName;
+            return new(node.MediaOriginalFileName, null);
         }
 
-        var facts = BuildFacts(node)
-            .Take(2)
-            .Select(fact => $"{fact.Label}: {fact.Value}")
-            .ToList();
-        if (facts.Count > 0)
+        var facts = BuildFacts(node);
+        var compactPath = TryBuildCompactPath(facts);
+        var leadText = BuildFactLeadText(facts, compactPath);
+        if (!string.IsNullOrWhiteSpace(leadText))
         {
-            return string.Join(" | ", facts);
+            return new(leadText, compactPath);
         }
 
         if (!string.IsNullOrWhiteSpace(node.Notes))
         {
-            return node.Notes;
+            return new(node.Notes, compactPath);
         }
 
-        return string.IsNullOrWhiteSpace(node.Subtitle)
-            ? $"Status: {node.Status}"
-            : node.Subtitle;
+        return new(
+            string.IsNullOrWhiteSpace(node.Subtitle)
+                ? $"Status: {node.Status}"
+                : node.Subtitle,
+            compactPath);
     }
 
     private static void AddScheduledFacts(List<ProjectStructureNodeFact> facts, ProjectStructureNode node)
@@ -177,5 +228,146 @@ internal static class ProjectStructureNodeDescriptor
         return normalized.Length <= maxLength
             ? normalized
             : normalized[..maxLength].TrimEnd() + "...";
+    }
+
+    private static string BuildFactLeadText(
+        IReadOnlyList<ProjectStructureNodeFact> facts,
+        ProjectStructureCompactPathPresentation? compactPath)
+    {
+        var leadFacts = facts
+            .Take(2)
+            .Where(fact => compactPath is null || !string.Equals(fact.Value, compactPath.FullPath, StringComparison.Ordinal))
+            .Select(fact => $"{fact.Label}: {fact.Value}")
+            .ToList();
+
+        return leadFacts.Count > 0
+            ? string.Join(" | ", leadFacts)
+            : string.Empty;
+    }
+
+    private static ProjectStructureCompactPathPresentation? TryBuildCompactPath(IReadOnlyList<ProjectStructureNodeFact> facts)
+    {
+        foreach (var fact in facts)
+        {
+            if (!LooksLikePathFact(fact))
+            {
+                continue;
+            }
+
+            var fullPath = fact.Value.Trim();
+            var promotedText = TryResolveFileName(fullPath);
+            return new(
+                fact.Label,
+                BuildCompactPathText(fullPath, !string.IsNullOrWhiteSpace(promotedText)),
+                fullPath,
+                promotedText);
+        }
+
+        return null;
+    }
+
+    private static bool LooksLikePathFact(ProjectStructureNodeFact fact)
+    {
+        if (!string.IsNullOrWhiteSpace(fact.Value) &&
+            fact.Value.Contains("://", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return fact.Label is "Path" or "Project" or "Work dir" or "Source" &&
+            LooksLikePathValue(fact.Value);
+    }
+
+    private static bool LooksLikePathValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var candidate = value.Trim();
+        return candidate.Contains('\\') ||
+            candidate.Contains('/');
+    }
+
+    private static string BuildCompactPathText(string fullPath, bool omitLeaf)
+    {
+        if (string.IsNullOrWhiteSpace(fullPath))
+        {
+            return string.Empty;
+        }
+
+        var separator = fullPath.Contains('\\', StringComparison.Ordinal) ? '\\' : '/';
+        var segments = fullPath
+            .Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
+
+        if (omitLeaf && segments.Count > 0)
+        {
+            segments.RemoveAt(segments.Count - 1);
+        }
+
+        if (segments.Count == 0 || fullPath.Length <= 36)
+        {
+            return fullPath;
+        }
+
+        var root = TryResolvePathRoot(fullPath, separator);
+        if (segments.Count == 1)
+        {
+            return $"{root}{segments[0]}";
+        }
+
+        return $"{root}{segments[0]}{separator}...{separator}{segments[^1]}";
+    }
+
+    private static string TryResolveFileName(string fullPath)
+    {
+        var leaf = fullPath
+            .Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries)
+            .LastOrDefault()?
+            .Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(leaf) || leaf[0] == '.')
+        {
+            return string.Empty;
+        }
+
+        var extensionIndex = leaf.LastIndexOf('.');
+        if (extensionIndex <= 0 || extensionIndex == leaf.Length - 1)
+        {
+            return string.Empty;
+        }
+
+        var extension = leaf[extensionIndex..];
+        return KnownFileExtensions.Contains(extension)
+            ? leaf
+            : string.Empty;
+    }
+
+    private static string TryResolvePathRoot(string fullPath, char separator)
+    {
+        if (fullPath.Length >= 3 &&
+            char.IsLetter(fullPath[0]) &&
+            fullPath[1] == ':' &&
+            (fullPath[2] == '\\' || fullPath[2] == '/'))
+        {
+            return $"{fullPath[..2]}{separator}";
+        }
+
+        if (fullPath.StartsWith(@"\\", StringComparison.Ordinal))
+        {
+            var segments = fullPath
+                .Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries)
+                .Take(2)
+                .ToList();
+            if (segments.Count == 2)
+            {
+                return $"{separator}{separator}{segments[0]}{separator}{segments[1]}{separator}";
+            }
+        }
+
+        return fullPath.Length > 0 && fullPath[0] == separator
+            ? separator.ToString()
+            : string.Empty;
     }
 }

@@ -119,6 +119,7 @@ public sealed class ProjectStructureGraphAdapter
         var isInlineTextNode = node.ObjectType == ProjectObjectType.Note && string.IsNullOrWhiteSpace(node.Subtitle);
         var progress = ResolveProgress(node);
         var (mediaKind, mediaPreviewUrl) = ResolveMediaPresentation(node);
+        var leadPresentation = ProjectStructureNodeDescriptor.BuildLeadPresentation(node);
 
         return new CanvasWorkbenchNode
         {
@@ -129,7 +130,8 @@ public sealed class ProjectStructureGraphAdapter
             Icon = node.VisualProfile.Icon,
             Title = node.Title,
             Subtitle = node.Subtitle,
-            LeadText = BuildLeadText(node),
+            LeadText = leadPresentation.LeadText,
+            CompactPath = MapCompactPath(leadPresentation.CompactPath),
             Status = node.Status,
             BranchLabel = node.ObjectType is ProjectObjectType.Phase or ProjectObjectType.PromptSession ? "Branch" : string.Empty,
             AccentColor = node.VisualProfile.AccentColor,
@@ -217,6 +219,17 @@ public sealed class ProjectStructureGraphAdapter
 
     private static string BuildLeadText(ProjectStructureNode node)
         => ProjectStructureNodeDescriptor.BuildLeadText(node);
+
+    private static CanvasWorkbenchCompactPath? MapCompactPath(ProjectStructureCompactPathPresentation? compactPath)
+        => compactPath is null
+            ? null
+            : new CanvasWorkbenchCompactPath
+            {
+                Label = compactPath.Label,
+                DisplayText = compactPath.DisplayText,
+                FullPath = compactPath.FullPath,
+                PromotedText = compactPath.PromotedText
+            };
 
     private static (string Kind, string PreviewUrl) ResolveMediaPresentation(ProjectStructureNode node)
     {

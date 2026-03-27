@@ -592,6 +592,50 @@ else
                 }
                             </CanvasFloatingWindow>
                         }
+                        @if (quickActionDialog is not null)
+                        {
+                            <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseQuickActionDialog">
+                                <div class="project-structure-preview-dialog project-structure-quick-action-dialog"
+                                     role="dialog"
+                                     aria-modal="true"
+                                     aria-label="@($"{quickActionDialog.Title} quick actions")"
+                                     data-testid="project-structure-node-quick-actions"
+                                     @onclick:stopPropagation="true">
+                                    <div class="project-structure-preview-dialog__header">
+                                        <div class="project-structure-preview-dialog__copy">
+                                            <p class="cw-panel-kicker">Node quick actions</p>
+                                            <h3 class="cw-panel-title">@quickActionDialog.Title</h3>
+                                            <p class="cw-panel-copy">@quickActionDialog.Copy</p>
+                                        </div>
+
+                                        <div class="project-structure-preview-dialog__actions">
+                                            <span class="cw-node__chip">@quickActionDialog.NodeLabel</span>
+                                            <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseQuickActionDialog">Close</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="project-structure-preview-dialog__body project-structure-quick-action-dialog__body">
+                                        <div class="project-structure-quick-action-grid">
+                                            @foreach (var action in new[] { quickActionDialog.EditAction, quickActionDialog.PrimaryAction })
+                                            {
+                                                <button type="button"
+                                                        class="cw-button project-structure-quick-action-card"
+                                                        data-tone="@action.Tone"
+                                                        data-testid="@(action.ExecutionKind == ProjectStructureQuickActionExecutionKind.Edit ? "project-structure-quick-action-edit" : "project-structure-quick-action-primary")"
+                                                        disabled="@action.IsDisabled"
+                                                        @onclick="@(() => ExecuteQuickActionAsync(action))">
+                                                    <span class="project-structure-quick-action-card__icon" aria-hidden="true">
+                                                        <Icon Name="@action.Icon" />
+                                                    </span>
+                                                    <strong>@action.Label</strong>
+                                                    <small>@action.Description</small>
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                         @if (previewNode is not null)
                         {
                             <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseAttachmentPreview">
@@ -1070,6 +1114,12 @@ else
             previewNode = reloadedSurface.Nodes.FirstOrDefault(node => string.Equals(node.Id, previewNode.Id, StringComparison.Ordinal));
         }
 
+        if (quickActionDialog is not null)
+        {
+            var dialogNode = reloadedSurface.Nodes.FirstOrDefault(node => string.Equals(node.Id, quickActionDialog.NodeId, StringComparison.Ordinal));
+            quickActionDialog = dialogNode is null ? null : BuildQuickActionDialog(dialogNode);
+        }
+
         selectedNodeIds = uiState.SelectedNodeIds
             .Where(id => reloadedSurface.Nodes.Any(node => string.Equals(node.Id, id, StringComparison.Ordinal)))
             .ToList();
@@ -1188,7 +1238,7 @@ else
     }
 
     private Task HandleNodeOpenedAsync(string nodeId)
-        => ExecuteCommandAsync(ProjectStructureCommandKind.Open, nodeId);
+        => ExecuteCommandAsync(ProjectStructureCommandKind.Open, nodeId, allowQuickActionDialog: true);
 
     private async Task HandleContextActionAsync(CanvasWorkbenchContextActionRequest request)
         => await HandleCanvasActionAsync(request.ActionId, request.NodeId, request.X, request.Y);
@@ -1294,7 +1344,7 @@ else
                 await ExecuteCommandAsync(ProjectStructureCommandKind.Test, nodeId);
                 break;
             case "open":
-                await HandleNodeOpenedAsync(nodeId ?? string.Empty);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Open, nodeId);
                 break;
             case "wizard":
                 await ExecuteCommandAsync(ProjectStructureCommandKind.Wizard, nodeId);
@@ -1323,7 +1373,11 @@ else
         }
     }
 
-    private async Task ExecuteCommandAsync(ProjectStructureCommandKind commandKind, string? nodeId = null)
+    private async Task ExecuteCommandAsync(
+        ProjectStructureCommandKind commandKind,
+        string? nodeId = null,
+        bool allowQuickActionDialog = false,
+        bool openInNewTab = false)
     {
         var targetNodeId = nodeId ?? selectedNode?.Id;
         if (string.IsNullOrWhiteSpace(targetNodeId))
@@ -1336,16 +1390,33 @@ else
             attachmentNode is not null &&
             CanRenderAttachmentPreview(attachmentNode))
         {
+            CloseQuickActionDialog();
             OpenAttachmentPreview(attachmentNode);
             await InvokeAsync(StateHasChanged);
             return;
         }
 
+        if (allowQuickActionDialog &&
+            commandKind == ProjectStructureCommandKind.Open &&
+            attachmentNode is not null)
+        {
+            OpenQuickActionDialog(attachmentNode);
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        CloseQuickActionDialog();
         var artifact = await ProjectWorkbenchService.ExecuteNodeCommandAsync(ProjectId, targetNodeId, commandKind);
         linkModeSourceId = null;
         await ReloadSurfaceAsync(targetNodeId);
         if (artifact is not null)
         {
+            if (openInNewTab)
+            {
+                await OpenArtifactInNewTabAsync(artifact.Route);
+                return;
+            }
+
             Navigation.NavigateTo(artifact.Route);
         }
     }

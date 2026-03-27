@@ -84,7 +84,7 @@
                         aria-label="Toggle settings"
                         title="Canvas settings"
                         @onclick="ToggleSettings">
-                    <span class="cw-toolbar-symbol" aria-hidden="true">cfg</span>
+                    <Icon Name="settings" />
                     <span class="sr-only">Canvas settings</span>
                 </button>
 
@@ -165,7 +165,7 @@
 
         @if (settingsOpen)
         {
-            <div class="cw-help-overlay">
+            <div class="cw-help-overlay cw-help-overlay--settings" data-testid="canvas-settings-overlay">
                 <div class="cw-help-card cw-settings-card" role="dialog" aria-modal="false" aria-label="Canvas settings">
                     <div class="cw-help-card__header">
                         <div>

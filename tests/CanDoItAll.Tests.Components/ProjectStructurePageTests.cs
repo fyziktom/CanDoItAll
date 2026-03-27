@@ -2,6 +2,7 @@ using Bunit;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -197,6 +198,69 @@ public sealed class ProjectStructurePageTests
 
         Assert.Contains("/prompt-factory?sessionId=", navigation.Uri, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(created.ArtifactId!.Value.ToString(), navigation.Uri, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Double_clicking_prompt_flow_nodes_opens_quick_action_modal_and_wizard_new_tab_action()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Prompt Flow Quick Action";
+        project.Description = "Verify prompt-flow double-click behavior.";
+        project.Objective = "Keep the canvas open while the wizard opens in a new tab.";
+        project.CurrentPhase = "Execution";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var flowNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.PromptFlow,
+                "Checkout assistant flow",
+                "Prompt orchestration",
+                "Drive the checkout assistant prompt flow from the structure canvas.",
+                $"project:{projectId}",
+                460,
+                240));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Checkout assistant flow", cut.Markup));
+
+        var uriBeforeOpen = navigation.Uri;
+        await OpenNodeFromCanvasAsync(cut, flowNode.Id);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-node-quick-actions", cut.Markup);
+            Assert.Contains("Open Wizard in New Tab", cut.Markup);
+            Assert.Contains(">Edit<", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-quick-action-primary']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("project-structure-node-quick-actions", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains(
+                harness.Context.JSInterop.Invocations,
+                invocation => string.Equals(invocation.Identifier, "open", StringComparison.Ordinal));
+        });
+
+        var invocation = harness.Context.JSInterop.Invocations
+            .Last(candidate => string.Equals(candidate.Identifier, "open", StringComparison.Ordinal));
+        var route = Assert.IsType<string>(invocation.Arguments[0]);
+
+        Assert.Contains("/prompt-factory?sessionId=", route, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(flowNode.ArtifactId!.Value.ToString(), route, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(uriBeforeOpen, navigation.Uri);
     }
 
     [Fact]
@@ -560,6 +624,57 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Double_clicking_pdf_attachment_nodes_keeps_preview_modal_behavior()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "PDF Double Click Project";
+        project.Description = "Verify attachment preview wins over quick actions.";
+        project.Objective = "Keep previewable attachments in the existing modal flow.";
+        project.CurrentPhase = "Review";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var pdfBytes = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("%PDF-1.7 quick action coverage"));
+        var pdfNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "Architecture spec",
+                "Uploaded PDF",
+                "Attachment preview coverage",
+                $"project:{projectId}",
+                520,
+                260,
+                null,
+                null,
+                string.Empty,
+                new ProjectObjectMediaPayload("architecture.pdf", "application/pdf", pdfBytes)));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Architecture spec", cut.Markup));
+
+        var uriBeforeOpen = navigation.Uri;
+        await OpenNodeFromCanvasAsync(cut, pdfNode.Id);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-preview-dialog", cut.Markup);
+            Assert.DoesNotContain("project-structure-node-quick-actions", cut.Markup, StringComparison.Ordinal);
+        });
+
+        Assert.Equal(uriBeforeOpen, navigation.Uri);
+    }
+
+    [Fact]
     public async Task Audio_attachment_nodes_render_audio_preview_and_local_open_action_when_host_supports_it()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -913,6 +1028,77 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Double_clicking_launchable_runtime_nodes_opens_quick_action_modal_and_runs_powershell()
+    {
+        var runtimeLauncher = new TestRuntimeLauncher();
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => services.AddSingleton<IProjectStructureRuntimeLauncher>(runtimeLauncher));
+
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Runtime Quick Action Project";
+        project.Description = "Verify runtime double-click actions.";
+        project.Objective = "Launch PowerShell from the quick action modal.";
+        project.CurrentPhase = "Execution";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var runtimeNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Environment,
+                "API runtime",
+                "dotnet watch",
+                "Launch the runtime from a quick action modal.",
+                $"project:{projectId}",
+                540,
+                260,
+                null,
+                null,
+                "dotnet-watch",
+                null,
+                ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                {
+                    Environment = new ProjectEnvironmentMetadata
+                    {
+                        EnvironmentKind = ProjectEnvironmentKind.DotNetWatch,
+                        ProjectPath = @"C:\repos\api\Api.csproj",
+                        LaunchProfileName = "https"
+                    }
+                })));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("API runtime", cut.Markup));
+
+        await OpenNodeFromCanvasAsync(cut, runtimeNode.Id);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-node-quick-actions", cut.Markup);
+            Assert.Contains("Run PowerShell", cut.Markup);
+            Assert.Contains(">Edit<", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-quick-action-primary']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Opened PowerShell and started dotnet watch.", cut.Markup);
+            Assert.DoesNotContain("project-structure-node-quick-actions", cut.Markup, StringComparison.Ordinal);
+        });
+
+        Assert.Single(runtimeLauncher.Requests);
+        Assert.Equal(runtimeNode.Id, runtimeLauncher.Requests[0].NodeId);
+        Assert.False(runtimeLauncher.Requests[0].RunAsAdministrator);
+    }
+
+    [Fact]
     public async Task Non_launchable_nodes_do_not_render_runtime_launch_actions()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(
@@ -954,6 +1140,110 @@ public sealed class ProjectStructurePageTests
         });
     }
 
+    [Fact]
+    public async Task File_backed_nodes_map_compact_path_payload_with_promoted_file_name()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Compact Path Project";
+        project.Description = "Verify compact path payload mapping.";
+        project.Objective = "Promote file names on file-backed paths.";
+        project.CurrentPhase = "Execution";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var runtimeNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Environment,
+                "Billing API runtime",
+                "dotnet watch",
+                "Use the compact path payload for project files.",
+                $"project:{projectId}",
+                540,
+                260,
+                null,
+                null,
+                "dotnet-watch",
+                null,
+                ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                {
+                    Environment = new ProjectEnvironmentMetadata
+                    {
+                        EnvironmentKind = ProjectEnvironmentKind.DotNetWatch,
+                        ProjectPath = @"C:\repositories\pveinvoicing\src\PVEInvoicing.ServerApp\PVEInvoicing.csproj",
+                        LaunchProfileName = "https"
+                    }
+                })));
+
+        var surface = await workbenchService.GetStructureAsync(projectId);
+        var adaptedNode = BuildCanvasNode(surface, runtimeNode.Id);
+
+        Assert.NotNull(adaptedNode.CompactPath);
+        Assert.Equal(@"C:\repositories\pveinvoicing\src\PVEInvoicing.ServerApp\PVEInvoicing.csproj", adaptedNode.CompactPath!.FullPath);
+        Assert.Equal("PVEInvoicing.csproj", adaptedNode.CompactPath.PromotedText);
+        Assert.Contains("...", adaptedNode.CompactPath.DisplayText, StringComparison.Ordinal);
+        Assert.DoesNotContain(adaptedNode.CompactPath.FullPath, adaptedNode.LeadText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Repository_nodes_strip_full_path_from_lead_text_when_compact_path_is_present()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Repository Path Project";
+        project.Description = "Verify lead text no longer dumps full paths.";
+        project.Objective = "Keep repository cards readable.";
+        project.CurrentPhase = "Discovery";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var repositoryNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Repository,
+                "Main repository",
+                "Workspace clone",
+                "Repository cards should not dump long local paths.",
+                $"project:{projectId}",
+                500,
+                220,
+                null,
+                null,
+                "git",
+                null,
+                ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                {
+                    Repository = new ProjectRepositoryMetadata
+                    {
+                        RepositoryMode = ProjectRepositoryMode.LocalRepository,
+                        LocalPath = @"C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench",
+                        RepositoryUrl = "https://github.com/example/CanDoItAll",
+                        DefaultBranch = "main"
+                    }
+                })));
+
+        var surface = await workbenchService.GetStructureAsync(projectId);
+        var adaptedNode = BuildCanvasNode(surface, repositoryNode.Id);
+
+        Assert.NotNull(adaptedNode.CompactPath);
+        Assert.DoesNotContain(@"C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench", adaptedNode.LeadText, StringComparison.Ordinal);
+        Assert.Contains("Mode: git", adaptedNode.LeadText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(string.Empty, adaptedNode.CompactPath!.PromotedText);
+    }
+
     private static Task SaveSelectedNodeStateAsync(ProjectWorkbenchService workbenchService, Guid projectId, params string[] selectedNodeIds)
         => workbenchService.SaveViewStateAsync(
             projectId,
@@ -966,6 +1256,21 @@ public sealed class ProjectStructurePageTests
                     ["project-structure.selection"] = new CanvasWorkbenchWindowState { IsVisible = true }
                 }
             }.ToJson());
+
+    private static CanvasWorkbenchNode BuildCanvasNode(ProjectStructureSurface surface, string nodeId)
+    {
+        var adapter = new ProjectStructureGraphAdapter();
+        var canvasSurface = adapter.BuildSurface(
+            surface,
+            new CanvasWorkbenchUiState(),
+            new CanvasWorkbenchChrome(),
+            new ProjectStructureActionCatalogAdapter());
+
+        return Assert.Single(canvasSurface.Nodes, node => node.Id == nodeId);
+    }
+
+    private static Task OpenNodeFromCanvasAsync(IRenderedComponent<ProjectStructurePage> cut, string nodeId)
+        => cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnNodeOpened(nodeId));
 
     private sealed class TestRuntimeLauncher : IProjectStructureRuntimeLauncher
     {

@@ -186,6 +186,20 @@
         };
     }
 
+    function normalizeCompactPath(path) {
+        const fullPath = typeof path?.fullPath === "string" ? path.fullPath.trim() : "";
+        if (!fullPath) {
+            return null;
+        }
+
+        return {
+            label: path?.label || "Path",
+            displayText: path?.displayText || fullPath,
+            fullPath,
+            promotedText: path?.promotedText || ""
+        };
+    }
+
     function normalizeDiagnosticsOptions(options) {
         return {
             isEnabled: !!options?.isEnabled,
@@ -316,6 +330,7 @@
                 mediaPreviewAlt: node?.mediaPreviewAlt || node?.title || "",
                 mediaContentType: node?.mediaContentType || "",
                 mediaFileName: node?.mediaFileName || "",
+                compactPath: normalizeCompactPath(node?.compactPath),
                 progressMode: node?.progressMode || "na",
                 progressPercent: normalizeProgressPercent(node?.progressPercent),
                 markerIcon: node?.markerIcon || "",
@@ -1459,6 +1474,67 @@
         return media;
     }
 
+    async function copyCompactPath(state, button, compactPath) {
+        if (!compactPath?.fullPath) {
+            return;
+        }
+
+        const didCopy = await writeClipboardText(compactPath.fullPath);
+        if (!didCopy) {
+            showStatusNotice(state, "Clipboard access is unavailable for this path", "warn");
+            return;
+        }
+
+        if (button.__cwCopyResetHandle) {
+            window.clearTimeout(button.__cwCopyResetHandle);
+        }
+
+        button.dataset.copied = "true";
+        const icon = button.querySelector(".cw-node__path-action");
+        if (icon) {
+            icon.textContent = resolveActionGlyph("qa");
+        }
+
+        showStatusNotice(state, `${compactPath.label || "Path"} copied`, "success");
+        button.__cwCopyResetHandle = window.setTimeout(() => {
+            button.dataset.copied = "false";
+            if (icon) {
+                icon.textContent = resolveActionGlyph("copy");
+            }
+
+            button.__cwCopyResetHandle = 0;
+        }, 2000);
+    }
+
+    function createCompactPathButton(state, node) {
+        const compactPath = node?.compactPath;
+        if (!compactPath?.fullPath) {
+            return null;
+        }
+
+        const button = applyFullTextTooltip(
+            createElement(state.document, "button", "cw-node__path-button"),
+            compactPath.fullPath);
+        button.type = "button";
+        button.dataset.copied = "false";
+        button.setAttribute("aria-label", `${compactPath.label || "Path"}: ${compactPath.fullPath}`);
+        button.addEventListener("pointerdown", event => event.stopPropagation());
+        button.addEventListener("pointerup", event => event.stopPropagation());
+        button.addEventListener("dblclick", event => event.stopPropagation());
+        button.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            void copyCompactPath(state, button, compactPath);
+        });
+
+        const text = createElement(state.document, "span", "cw-node__path-text", compactPath.displayText || compactPath.fullPath);
+        const action = createElement(state.document, "span", "cw-node__path-action", resolveActionGlyph("copy"));
+        action.setAttribute("aria-hidden", "true");
+        button.appendChild(text);
+        button.appendChild(action);
+        return button;
+    }
+
     function renderStandardNode(state, node, nodeElement) {
         const surface = createElement(state.document, "div", "cw-node__surface");
         const header = createElement(state.document, "div", "cw-node__header");
@@ -1497,10 +1573,23 @@
                 node.subtitle));
         }
 
+        if (node.compactPath?.promotedText &&
+            node.compactPath.promotedText !== node.title &&
+            node.compactPath.promotedText !== node.subtitle) {
+            surface.appendChild(applyFullTextTooltip(
+                createElement(state.document, "p", "cw-node__path-file", node.compactPath.promotedText),
+                node.compactPath.promotedText));
+        }
+
         if (node.leadText) {
             surface.appendChild(applyFullTextTooltip(
                 createElement(state.document, "p", "cw-node__lead", node.leadText),
                 node.leadText));
+        }
+
+        const compactPathButton = createCompactPathButton(state, node);
+        if (compactPathButton) {
+            surface.appendChild(compactPathButton);
         }
 
         renderNodeAnnotations(state, node, surface);
@@ -2176,13 +2265,15 @@
 
     async function writeClipboardText(payload) {
         if (!navigator?.clipboard?.writeText || !payload) {
-            return;
+            return false;
         }
 
         try {
             await navigator.clipboard.writeText(payload);
+            return true;
         }
         catch {
+            return false;
         }
     }
 
@@ -2761,6 +2852,8 @@
         switch ((icon || "").toLowerCase()) {
             case "open":
                 return "\u2197";
+            case "copy":
+                return "\u2398";
             case "link":
             case "plug":
                 return "\u21C4";
