@@ -7,6 +7,7 @@ using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -604,6 +605,233 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Open locally", cut.Markup);
             Assert.Contains("Expand preview", cut.Markup);
         });
+    }
+
+    [Fact]
+    public async Task Selected_nodes_render_advanced_details_and_keep_delete_last_in_action_order()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Inspector Layout Project";
+        project.Description = "Verify advanced details layout.";
+        project.Objective = "Tighten the selection panel information architecture.";
+        project.CurrentPhase = "Review";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var block = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Main AMU server",
+                "Server lane",
+                "Operational server block.",
+                $"project:{projectId}",
+                620,
+                280,
+                null,
+                null,
+                "server"));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, block.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Advanced details", cut.Markup);
+            Assert.DoesNotContain("Typed details", cut.Markup, StringComparison.Ordinal);
+        });
+
+        var quickSignals = cut.Find("[data-testid='project-structure-quick-signals']");
+        Assert.Contains("Progress", quickSignals.TextContent);
+        Assert.Contains("Priority", quickSignals.TextContent);
+        Assert.Contains("Marker", quickSignals.TextContent);
+
+        var advancedDetails = cut.Find("[data-testid='project-structure-advanced-details']");
+        Assert.False(advancedDetails.HasAttribute("open"));
+
+        var actionLabels = cut.FindAll("[data-testid='project-structure-node-actions'] button")
+            .Select(button => button.TextContent.Trim())
+            .ToList();
+        Assert.Contains("Edit", actionLabels);
+        Assert.Equal("Delete", actionLabels.Last());
+    }
+
+    [Fact]
+    public async Task Edit_actions_open_prefilled_canvas_composer_for_supported_nodes()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Edit Composer Project";
+        project.Description = "Verify edit composer prefill.";
+        project.Objective = "Open the shared composer with current node values.";
+        project.CurrentPhase = "Execution";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var runtimeNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Environment,
+                "API runtime",
+                "dotnet watch",
+                "Launch the selected runtime from the inspector.",
+                $"project:{projectId}",
+                620,
+                280,
+                null,
+                null,
+                "dotnet-watch",
+                null,
+                ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                {
+                    Environment = new ProjectEnvironmentMetadata
+                    {
+                        EnvironmentKind = ProjectEnvironmentKind.DotNetWatch,
+                        ProjectPath = @"C:\repos\api\Api.csproj",
+                        LaunchProfileName = "https",
+                        RuntimeProtocol = ProjectRuntimeProtocol.Https,
+                        LocalhostUrl = "https://localhost:7143",
+                        RepositoryResourceId = Guid.NewGuid()
+                    }
+                })));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, runtimeNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Edit", cut.Markup);
+        });
+
+        cut.FindAll("[data-testid='project-structure-node-actions'] button")
+            .First(button => string.Equals(button.TextContent.Trim(), "Edit", StringComparison.Ordinal))
+            .Click();
+
+        harness.Context.JSInterop.VerifyInvoke("CanDoItAll.canvasWorkbench.openCreateComposer");
+
+        var invocation = harness.Context.JSInterop.Invocations
+            .Last(candidate => string.Equals(candidate.Identifier, "CanDoItAll.canvasWorkbench.openCreateComposer", StringComparison.Ordinal));
+        var action = Assert.IsType<CanvasWorkbenchAction>(invocation.Arguments[1]);
+        var request = Assert.IsType<CanvasWorkbenchCreateActionRequest>(invocation.Arguments[2]);
+
+        Assert.Equal("edit:add-environment-dotnet-watch", action.ActionId);
+        Assert.Equal("Save changes", action.SubmitLabel);
+        Assert.DoesNotContain(action.InputFields, field => string.Equals(field.Key, "repositoryRef", StringComparison.Ordinal));
+
+        Assert.Equal("API runtime", request.Title);
+        Assert.Equal("dotnet watch", request.Subtitle);
+        Assert.Equal("Launch the selected runtime from the inspector.", request.Notes);
+        Assert.Contains(request.InputValues!, value => value.Key == "environmentKind" && value.Value == "dotNetWatch");
+        Assert.Contains(request.InputValues!, value => value.Key == "projectPath" && value.Value == @"C:\repos\api\Api.csproj");
+        Assert.Contains(request.InputValues!, value => value.Key == "launchProfileName" && value.Value == "https");
+        Assert.Contains(request.InputValues!, value => value.Key == "localhostUrl" && value.Value == "https://localhost:7143");
+    }
+
+    [Fact]
+    public async Task Edit_create_actions_update_existing_nodes_and_refresh_selection_panel()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Edit Update Project";
+        project.Description = "Verify edit submission updates existing nodes.";
+        project.Objective = "Persist shared-composer edits against the selected node.";
+        project.CurrentPhase = "Execution";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var runtimeNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Environment,
+                "API runtime",
+                "dotnet watch",
+                "Original runtime description.",
+                $"project:{projectId}",
+                620,
+                280,
+                null,
+                null,
+                "dotnet-watch",
+                null,
+                ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                {
+                    Environment = new ProjectEnvironmentMetadata
+                    {
+                        EnvironmentKind = ProjectEnvironmentKind.DotNetWatch,
+                        ProjectPath = @"C:\repos\api\Api.csproj",
+                        LaunchProfileName = "https",
+                        RuntimeProtocol = ProjectRuntimeProtocol.Https,
+                        LocalhostUrl = "https://localhost:7143"
+                    }
+                })));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, runtimeNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(
+            new CanvasWorkbenchCreateActionRequest(
+                "edit:add-environment-dotnet-watch",
+                runtimeNode.Id,
+                runtimeNode.X,
+                runtimeNode.Y,
+                runtimeNode.ParentId,
+                "API runtime updated",
+                "Release host",
+                "Edited runtime description.",
+                "edit",
+                "dialog",
+                "dotnet-watch",
+                null,
+                [
+                    new CanvasWorkbenchInputValue { Key = "environmentKind", Value = "dotNetWatch" },
+                    new CanvasWorkbenchInputValue { Key = "projectPath", Value = @"C:\repos\api\Updated\Api.csproj" },
+                    new CanvasWorkbenchInputValue { Key = "launchProfileName", Value = "staging" },
+                    new CanvasWorkbenchInputValue { Key = "runtimeProtocol", Value = "http" },
+                    new CanvasWorkbenchInputValue { Key = "localhostUrl", Value = "http://localhost:5099" }
+                ]))));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("API runtime updated", cut.Markup);
+            Assert.Contains("API runtime updated was updated.", cut.Markup);
+        });
+
+        var surface = await workbenchService.GetStructureAsync(projectId);
+        var updatedNode = Assert.Single(surface.Nodes, node => node.Id == runtimeNode.Id);
+        Assert.Equal("API runtime updated", updatedNode.Title);
+        Assert.Equal("Release host", updatedNode.Subtitle);
+        Assert.Equal("Edited runtime description.", updatedNode.Notes);
+
+        var metadata = ProjectObjectMetadataSerializer.Parse(updatedNode.MetadataJson);
+        Assert.NotNull(metadata.Environment);
+        Assert.Equal(ProjectEnvironmentKind.DotNetWatch, metadata.Environment!.EnvironmentKind);
+        Assert.Equal(@"C:\repos\api\Updated\Api.csproj", metadata.Environment.ProjectPath);
+        Assert.Equal("staging", metadata.Environment.LaunchProfileName);
+        Assert.Equal(ProjectRuntimeProtocol.Http, metadata.Environment.RuntimeProtocol);
+        Assert.Equal("http://localhost:5099", metadata.Environment.LocalhostUrl);
     }
 
     [Fact]

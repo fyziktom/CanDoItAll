@@ -112,6 +112,21 @@ internal static partial class ProjectStructureCanvasCatalog
     public static bool TryResolveCreateDefinition(string actionId, out ProjectStructureCreateLeafDefinition definition)
         => CreateLeafByActionId.TryGetValue(actionId, out definition!);
 
+    public static bool TryResolveCreateDefinition(ProjectObjectType objectType, string? objectSubtype, out ProjectStructureCreateLeafDefinition definition)
+    {
+        var normalizedSubtype = objectSubtype?.Trim() ?? string.Empty;
+        definition = CreateLeafDefinitions.FirstOrDefault(item =>
+            item.ObjectType == objectType &&
+            string.Equals(item.ObjectSubtype, normalizedSubtype, StringComparison.OrdinalIgnoreCase))
+            ?? CreateLeafDefinitions.FirstOrDefault(item =>
+                item.ObjectType == objectType &&
+                string.IsNullOrWhiteSpace(item.ObjectSubtype))!;
+        return definition is not null;
+    }
+
+    public static CanvasWorkbenchAction BuildComposerAction(ProjectStructureCreateLeafDefinition definition)
+        => BuildCreateLeafAction(definition);
+
     public static string ResolveNodeLabel(ProjectStructureNode node) => node.ObjectType switch
     {
         ProjectObjectType.ProjectRoot => "Project",

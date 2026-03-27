@@ -198,6 +198,14 @@ public sealed record ProjectObjectCreateRequest(
     ProjectObjectMediaPayload? Media = null,
     string? MetadataJson = null);
 
+public sealed record ProjectObjectEditRequest(
+    string Title,
+    string Subtitle,
+    string Notes,
+    DateTimeOffset? StartUtc,
+    DateTimeOffset? EndUtc,
+    string MetadataJson);
+
 public sealed record ProjectObjectSeedRequest(
     ProjectObjectType ObjectType,
     string Title,
@@ -563,6 +571,34 @@ public sealed class ProjectWorkbenchService(
         node.Title = string.IsNullOrWhiteSpace(title) ? node.Title : title.Trim();
         node.Subtitle = subtitle?.Trim() ?? string.Empty;
         node.Notes = notes?.Trim() ?? string.Empty;
+        node.UpdatedAtUtc = clock.GetUtcNow();
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return MapStructureNode(node);
+    }
+
+    public async Task<ProjectStructureNode?> UpdateObjectAsync(
+        Guid projectId,
+        string nodeKey,
+        ProjectObjectEditRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var node = await dbContext.Set<ProjectObjectRecord>()
+            .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
+        if (node is null)
+        {
+            return null;
+        }
+
+        node.Title = string.IsNullOrWhiteSpace(request.Title) ? node.Title : request.Title.Trim();
+        node.Subtitle = request.Subtitle?.Trim() ?? string.Empty;
+        node.Notes = request.Notes?.Trim() ?? string.Empty;
+        node.StartUtc = request.StartUtc;
+        node.EndUtc = request.EndUtc;
+        node.MetadataJson = ResolveMetadataJson(node.ObjectType, node.ObjectSubtype, request.MetadataJson, null);
         node.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
         return MapStructureNode(node);

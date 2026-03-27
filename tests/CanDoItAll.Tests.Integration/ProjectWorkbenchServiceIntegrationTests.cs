@@ -177,6 +177,93 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task UpdateObjectAsync_persists_typed_metadata_and_schedule_for_custom_nodes()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var saveResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Workbench Typed Edit",
+            Description = "Exercise typed edit persistence.",
+            Objective = "Persist metadata and schedule changes for editable nodes.",
+            CurrentPhase = "Execution"
+        });
+
+        Assert.True(saveResult.IsSuccess);
+
+        var initialMetadata = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            Meeting = new ProjectMeetingMetadata
+            {
+                Address = "Old office",
+                MeetingUrl = "https://old.example.com",
+                RepeatCadence = ProjectRepeatCadence.Weekly
+            }
+        });
+
+        var created = await workbench.CreateObjectAsync(
+            saveResult.Value,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Meeting,
+                "Client workshop",
+                "Discovery",
+                "Original workshop note.",
+                $"project:{saveResult.Value}",
+                320,
+                240,
+                new DateTimeOffset(2026, 4, 1, 9, 0, 0, TimeSpan.Zero),
+                new DateTimeOffset(2026, 4, 1, 10, 0, 0, TimeSpan.Zero),
+                "onsite",
+                null,
+                initialMetadata));
+
+        var updatedMetadata = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            Meeting = new ProjectMeetingMetadata
+            {
+                Address = "New office",
+                MeetingUrl = "https://meet.example.com/workshop",
+                RepeatCadence = ProjectRepeatCadence.Monthly
+            }
+        });
+
+        var updated = await workbench.UpdateObjectAsync(
+            saveResult.Value,
+            created.Id,
+            new ProjectObjectEditRequest(
+                "Client workshop updated",
+                "Refined agenda",
+                "Updated workshop note.",
+                new DateTimeOffset(2026, 4, 2, 13, 30, 0, TimeSpan.Zero),
+                new DateTimeOffset(2026, 4, 2, 15, 0, 0, TimeSpan.Zero),
+                updatedMetadata));
+
+        Assert.NotNull(updated);
+        Assert.Equal("Client workshop updated", updated!.Title);
+        Assert.Equal("Refined agenda", updated.Subtitle);
+        Assert.Equal("Updated workshop note.", updated.Notes);
+        Assert.Equal(new DateTimeOffset(2026, 4, 2, 13, 30, 0, TimeSpan.Zero), updated.StartUtc);
+        Assert.Equal(new DateTimeOffset(2026, 4, 2, 15, 0, 0, TimeSpan.Zero), updated.EndUtc);
+
+        var surface = await workbench.GetStructureAsync(saveResult.Value);
+        var meeting = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+        Assert.Equal("Client workshop updated", meeting.Title);
+        Assert.Equal("Refined agenda", meeting.Subtitle);
+        Assert.Equal("Updated workshop note.", meeting.Notes);
+        Assert.Equal(new DateTimeOffset(2026, 4, 2, 13, 30, 0, TimeSpan.Zero), meeting.StartUtc);
+        Assert.Equal(new DateTimeOffset(2026, 4, 2, 15, 0, 0, TimeSpan.Zero), meeting.EndUtc);
+
+        var parsedMetadata = ProjectObjectMetadataSerializer.Parse(meeting.MetadataJson);
+        Assert.NotNull(parsedMetadata.Meeting);
+        Assert.Equal("New office", parsedMetadata.Meeting!.Address);
+        Assert.Equal("https://meet.example.com/workshop", parsedMetadata.Meeting.MeetingUrl);
+        Assert.Equal(ProjectRepeatCadence.Monthly, parsedMetadata.Meeting.RepeatCadence);
+    }
+
+    [Fact]
     public async Task CreateObjectAsync_links_prompt_flow_nodes_to_blank_prompt_sessions()
     {
         await using var application = await TestApplication.CreateAsync();

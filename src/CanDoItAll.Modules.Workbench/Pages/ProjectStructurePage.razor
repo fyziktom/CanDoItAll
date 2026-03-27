@@ -363,7 +363,7 @@ else
                 else if (selectedNode is not null)
                 {
                     <div class="space-y-4">
-                        <div class="cw-panel-card">
+                        <div class="cw-panel-card project-structure-selected-card">
                             <p class="cw-panel-kicker">@ProjectStructureCanvasCatalog.ResolveNodeLabel(selectedNode)</p>
                             <h3 class="cw-panel-title">@selectedNode.Title</h3>
                             <p class="cw-panel-copy">@SelectedNodeLeadText</p>
@@ -392,51 +392,21 @@ else
                                 </div>
                             }
 
-                            <div class="cw-summary-grid">
-                                <div class="cw-summary-tile">
-                                    <span>Artifact</span>
-                                    <strong>@selectedNode.ArtifactKind</strong>
-                                </div>
-                                <div class="cw-summary-tile">
-                                    <span>Kind</span>
-                                    <strong>@selectedNode.VisualProfile.AccentBadge</strong>
-                                </div>
-                                <div class="cw-summary-tile">
-                                    <span>Location</span>
-                                    <strong>@($"{Math.Round(selectedNode.X)}, {Math.Round(selectedNode.Y)}")</strong>
-                                </div>
-                                <div class="cw-summary-tile">
+                            <div class="project-structure-quick-signals" data-testid="project-structure-quick-signals">
+                                <div class="project-structure-quick-signal">
                                     <span>Progress</span>
                                     <strong>@ResolveProgressLabel(selectedNode)</strong>
                                 </div>
-                                <div class="cw-summary-tile">
+                                <div class="project-structure-quick-signal">
                                     <span>Priority</span>
                                     <strong>@ResolvePriorityLabel(selectedNode)</strong>
                                 </div>
-                                <div class="cw-summary-tile">
+                                <div class="project-structure-quick-signal">
                                     <span>Marker</span>
                                     <strong>@ResolveMarkerLabel(selectedNode)</strong>
                                 </div>
                             </div>
                         </div>
-
-                        @if (SelectedNodeFacts.Count > 0)
-                        {
-                            <div class="cw-panel-card project-structure-facts-card"
-                                 data-testid="project-structure-node-facts">
-                                <p class="cw-panel-kicker">Typed details</p>
-                                <h3 class="cw-panel-title">Structured metadata</h3>
-                                <div class="project-structure-facts-list">
-                                    @foreach (var fact in SelectedNodeFacts)
-                                    {
-                                        <div class="project-structure-fact-row">
-                                            <span>@fact.Label</span>
-                                            <strong>@fact.Value</strong>
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        }
 
                         @if (HasManagedAttachment(selectedNode))
                         {
@@ -537,45 +507,20 @@ else
                         }
 
                         <div class="cw-panel-card">
-                            @{
-                                var runtimeLaunch = RuntimeLauncher.Resolve(selectedNode);
-                            }
                             <p class="cw-panel-kicker">Node actions</p>
-                            <div class="cw-button-row">
-                                @if (RuntimeLauncher.IsAvailable && runtimeLaunch.IsSuccess)
+                            <div class="project-structure-node-action-grid"
+                                 data-testid="project-structure-node-actions">
+                                @foreach (var action in ResolveInspectorActions(selectedNode))
                                 {
                                     <button type="button"
-                                            class="cw-button"
-                                            data-tone="accent"
-                                            @onclick="@(() => LaunchRuntimeAsync(selectedNode, false))">
-                                        Open PowerShell
+                                            class="cw-button project-structure-node-action"
+                                            data-tone="@action.Tone"
+                                            @onclick="@(() => ExecuteInspectorActionAsync(selectedNode, action.ActionId))">
+                                        <span class="project-structure-node-action__icon" aria-hidden="true">
+                                            <Icon Name="@action.Icon" />
+                                        </span>
+                                        <span>@action.Label</span>
                                     </button>
-                                    <button type="button"
-                                            class="cw-button"
-                                            data-tone="warn"
-                                            @onclick="@(() => LaunchRuntimeAsync(selectedNode, true))">
-                                        Open PowerShell (Admin)
-                                    </button>
-                                }
-                                @foreach (var command in ResolveInspectorCommands(selectedNode))
-                                {
-                                    <button type="button" class="cw-button" data-tone="primary" @onclick="@(() => ExecuteCommandAsync(command))">@ResolveCommandLabel(command)</button>
-                                }
-                                <button type="button" class="cw-button" data-tone="sky" @onclick="@(() => OpenSummaryAsync())">Summary</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="EnableLinkMode">Connect selected</button>
-                                <button type="button" class="cw-button" data-tone="primary" @onclick="@(() => BeginReconnectAsync())">Reconnect</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => DisconnectNodeAsync())">Disconnect</button>
-                                <button type="button" class="cw-button" data-tone="danger" @onclick="@(() => DeleteNodeAsync())">Delete</button>
-                                <button type="button" class="cw-button" data-tone="accent" @onclick="ExportMindmapImageAsync">Export image</button>
-                                @if (CanCreateTranscript(selectedNode))
-                                {
-                                    <button type="button" class="cw-button" data-tone="mint" @onclick="@(() => CreateTranscriptFromRecordingAsync(selectedNode))">Create transcript</button>
-                                }
-                                @if (HasTranscriptActions(selectedNode))
-                                {
-                                    <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => OpenTranscriptActionAsync(ProjectLlmActionKind.Summarize))">Summarize</button>
-                                    <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => OpenTranscriptActionAsync(ProjectLlmActionKind.FindMyTasks))">Find my tasks</button>
-                                    <button type="button" class="cw-button" data-tone="sky" @onclick="@(() => OpenTranscriptActionAsync(ProjectLlmActionKind.FindOthersDeliveries))">Find others delivery to me</button>
                                 }
                             </div>
                         </div>
@@ -604,6 +549,52 @@ else
                                 </button>
                             </div>
                         </div>
+
+                        @if (CanShowAdvancedDetails(selectedNode))
+                        {
+                            <details class="cw-panel-card project-structure-advanced-details"
+                                     data-testid="project-structure-advanced-details">
+                                <summary class="project-structure-advanced-details__summary">
+                                    <span class="project-structure-advanced-details__summary-copy">
+                                        <strong>Advanced details</strong>
+                                        <small>Artifact, kind, location, and structured metadata</small>
+                                    </span>
+                                    <span class="project-structure-advanced-details__summary-icon" aria-hidden="true">
+                                        <Icon Name="expand_more" />
+                                    </span>
+                                </summary>
+                                <div class="project-structure-advanced-details__body">
+                                    <div class="cw-summary-grid project-structure-advanced-summary-grid">
+                                        <div class="cw-summary-tile">
+                                            <span>Artifact</span>
+                                            <strong>@selectedNode.ArtifactKind</strong>
+                                        </div>
+                                        <div class="cw-summary-tile">
+                                            <span>Kind</span>
+                                            <strong>@selectedNode.VisualProfile.AccentBadge</strong>
+                                        </div>
+                                        <div class="cw-summary-tile">
+                                            <span>Location</span>
+                                            <strong>@($"{Math.Round(selectedNode.X)}, {Math.Round(selectedNode.Y)}")</strong>
+                                        </div>
+                                    </div>
+
+                                    @if (SelectedNodeFacts.Count > 0)
+                                    {
+                                        <div class="project-structure-facts-list"
+                                             data-testid="project-structure-node-facts">
+                                            @foreach (var fact in SelectedNodeFacts)
+                                            {
+                                                <div class="project-structure-fact-row">
+                                                    <span>@fact.Label</span>
+                                                    <strong>@fact.Value</strong>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </details>
+                        }
                     </div>
                 }
                             </CanvasFloatingWindow>
@@ -1211,6 +1202,11 @@ else
 
     private async Task HandleCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
     {
+        if (await TryApplyNodeEditAsync(request))
+        {
+            return;
+        }
+
         if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition(request.ActionId, out var definition))
         {
             await CreateObjectAsync(definition, request);
