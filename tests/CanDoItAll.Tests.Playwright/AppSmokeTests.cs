@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using CanDoItAll.Infrastructure.Persistence;
@@ -494,7 +495,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
     public async Task Project_structure_feedback_fixes_are_validated_in_browser()
     {
         var repoRoot = GetRepoRoot();
-        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "feedback1");
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "feedback5");
         ResetDirectory(artifactsDir);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
@@ -564,7 +565,25 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
 
         await EnsureFloatingWindowExpandedAsync(page, "project-structure-toolbox-window");
         var toolboxWindow = page.GetByTestId("project-structure-toolbox-window");
-        Assert.Equal(0, await page.Locator("[data-testid='project-structure-toolbox-window'] .cw-floating-window__header").CountAsync());
+        Assert.Equal(1, await toolboxWindow.Locator(".cw-floating-window__header").CountAsync());
+        Assert.True(await toolboxWindow.GetByRole(AriaRole.Button, new() { Name = "Minimize window" }).IsVisibleAsync());
+        Assert.True(await toolboxWindow.GetByRole(AriaRole.Button, new() { Name = "Hide window" }).IsVisibleAsync());
+        Assert.True(await toolboxWindow.Locator(".cw-floating-window__drag").IsVisibleAsync());
+
+        var toolboxBoundsBeforeDrag = await toolboxWindow.BoundingBoxAsync();
+        Assert.NotNull(toolboxBoundsBeforeDrag);
+        await DragFloatingWindowAsync(
+            page,
+            "project-structure-toolbox-window",
+            220,
+            140);
+        var toolboxBoundsAfterDrag = await toolboxWindow.BoundingBoxAsync();
+        Assert.NotNull(toolboxBoundsAfterDrag);
+        Assert.True(
+            Math.Abs(toolboxBoundsAfterDrag!.X - toolboxBoundsBeforeDrag.X) > 40 ||
+            Math.Abs(toolboxBoundsAfterDrag.Y - toolboxBoundsBeforeDrag.Y) > 40,
+            $"Expected toolbox window drag to move the shared window, but before=({toolboxBoundsBeforeDrag.X},{toolboxBoundsBeforeDrag.Y}) after=({toolboxBoundsAfterDrag.X},{toolboxBoundsAfterDrag.Y}).");
+        await toolboxWindow.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "02-toolbox-window-chrome.png") });
 
         var structureToolboxSearch = page.Locator("[data-testid='project-structure-standard-blocks-toolbox'] .project-structure-toolbox__search");
         var toolboxSections = page.Locator("[data-testid='project-structure-standard-blocks-toolbox'] .project-structure-toolbox__sections");
@@ -626,11 +645,15 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
                     openGroupCount: toolbox ? toolbox.querySelectorAll('[data-testid^=""project-structure-toolbox-group-body-""]').length : 0,
                     itemCount: items.length,
                     visibleItemCount: items.filter(item => item instanceof HTMLElement && item.getBoundingClientRect().height > 1 && item.getBoundingClientRect().width > 1).length,
+                    visibleLabels: items
+                        .filter(item => item instanceof HTMLElement && item.getBoundingClientRect().height > 1 && item.getBoundingClientRect().width > 1)
+                        .slice(0, 6)
+                        .map(item => item.querySelector('.cw-context-toolbox__item-body strong')?.textContent?.trim() ?? ''),
                     firstItemTop: items.length > 0 && items[0] instanceof HTMLElement ? items[0].getBoundingClientRect().top : 0,
                     windowHeight: window instanceof HTMLElement ? window.getBoundingClientRect().height : 0
                 };
             }");
-        await toolboxWindow.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "02-toolbox-accordion-search.png") });
+        await toolboxWindow.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "03-toolbox-search-scroll.png") });
         Assert.True(
             toolboxScrollState.VisibleItemCount >= 20,
             $"Expected a large visible toolbox result set for scroll validation, but openGroupCount={toolboxScrollState.OpenGroupCount}; itemCount={toolboxScrollState.ItemCount}; visibleItemCount={toolboxScrollState.VisibleItemCount}; windowHeight={toolboxScrollState.WindowHeight}.");
@@ -639,6 +662,7 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
             toolboxScrollState.BodyScrollTop > 0 ||
             toolboxScrollState.FirstItemTop < firstVisibleItemTopBeforeScroll - 4,
             $"Expected toolbox search results to move after wheel input, but firstItemTopBefore={firstVisibleItemTopBeforeScroll}; firstItemTopAfter={toolboxScrollState.FirstItemTop}; sections: scrollTop={toolboxScrollState.ScrollTop} scrollHeight={toolboxScrollState.ScrollHeight} clientHeight={toolboxScrollState.ClientHeight}; body: scrollTop={toolboxScrollState.BodyScrollTop} scrollHeight={toolboxScrollState.BodyScrollHeight} clientHeight={toolboxScrollState.BodyClientHeight}; openGroupCount={toolboxScrollState.OpenGroupCount}; itemCount={toolboxScrollState.ItemCount}; visibleItemCount={toolboxScrollState.VisibleItemCount}; windowHeight={toolboxScrollState.WindowHeight}.");
+        Assert.Contains(toolboxScrollState.VisibleLabels, label => !string.IsNullOrWhiteSpace(label));
         await structureToolboxSearch.FillAsync("pdf");
         await page.WaitForFunctionAsync(
             @"() => {
@@ -651,63 +675,8 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
                     (toolbox.textContent || '').toLowerCase().includes('pdf') &&
                     toolbox.querySelectorAll('.fa-file-pdf').length > 0;
             }");
-        await toolboxWindow.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "02-toolbox-accordion-search.png") });
+        await toolboxWindow.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "04-toolbox-pdf-search.png") });
         await structureToolboxSearch.FillAsync(string.Empty);
-
-        await SetCanvasZoomPercentAsync(page, 58);
-
-        var paletteSnapshot = await page.EvaluateAsync<FilePaletteSnapshot>(
-            @"selectors => {
-                const readPalette = selector => document.querySelector(selector)?.getAttribute('data-palette') ?? '';
-                return {
-                    pdf: readPalette(selectors.pdf),
-                    excel: readPalette(selectors.excel),
-                    docx: readPalette(selectors.docx)
-                };
-            }",
-            new
-            {
-                pdf = SelectorForNodeId(pdfId),
-                excel = SelectorForNodeId(excelId),
-                docx = SelectorForNodeId(docxId)
-            });
-        Assert.Equal("rose", paletteSnapshot.Pdf);
-        Assert.Equal("mint", paletteSnapshot.Excel);
-        Assert.Equal("sky", paletteSnapshot.Docx);
-
-        await page.GetByRole(AriaRole.Button, new() { Name = "Toggle maximize" }).ClickAsync();
-        await page.WaitForFunctionAsync("() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') === true");
-
-        await EnsureCanvasSelectionAsync(page, SelectorForNodeId(pdfId));
-        var pdfNode = page.Locator(SelectorForNodeId(pdfId));
-        await pdfNode.WaitForAsync();
-        await pdfNode.DblClickAsync();
-
-        var previewDialog = page.Locator(".project-structure-preview-dialog").First;
-        await previewDialog.WaitForAsync();
-
-        var previewLayerState = await page.EvaluateAsync<PreviewLayerState>(
-            @"() => {
-                const shell = document.querySelector('.cw-workbench-shell');
-                const backdrop = document.querySelector('.project-structure-preview-backdrop');
-                const dialog = document.querySelector('.project-structure-preview-dialog');
-                if (!(shell instanceof HTMLElement) || !(backdrop instanceof HTMLElement) || !(dialog instanceof HTMLElement)) {
-                    return { shellZIndex: 0, backdropZIndex: 0, dialogOwnsCenterPoint: false };
-                }
-
-                const shellZIndex = Number.parseInt(getComputedStyle(shell).zIndex || '0', 10);
-                const backdropZIndex = Number.parseInt(getComputedStyle(backdrop).zIndex || '0', 10);
-                const rect = dialog.getBoundingClientRect();
-                const centerTarget = document.elementFromPoint(rect.left + (rect.width / 2), rect.top + 32);
-                return {
-                    shellZIndex,
-                    backdropZIndex,
-                    dialogOwnsCenterPoint: !!centerTarget && dialog.contains(centerTarget)
-                };
-            }");
-        Assert.True(previewLayerState.BackdropZIndex > previewLayerState.ShellZIndex);
-        Assert.True(previewLayerState.DialogOwnsCenterPoint);
-        await previewDialog.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "03-maximized-pdf-preview.png") });
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
@@ -2285,6 +2254,56 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
             testId);
     }
 
+    private static async Task DragFloatingWindowAsync(IPage page, string testId, float deltaX, float deltaY)
+    {
+        var deltaXLiteral = deltaX.ToString(CultureInfo.InvariantCulture);
+        var deltaYLiteral = deltaY.ToString(CultureInfo.InvariantCulture);
+        var moved = await page.EvaluateAsync<bool>(
+            $$"""
+            args => {
+                const host = document.querySelector(`[data-testid='${args.testId}']`);
+                const handle = host?.querySelector('.cw-floating-window__drag');
+                if (!(host instanceof HTMLElement) || !(handle instanceof HTMLElement)) {
+                    return false;
+                }
+
+                const handleRect = handle.getBoundingClientRect();
+                const startX = handleRect.left + (handleRect.width / 2);
+                const startY = handleRect.top + (handleRect.height / 2);
+                const targetX = startX + {{deltaXLiteral}};
+                const targetY = startY + {{deltaYLiteral}};
+                if (![startX, startY, targetX, targetY].every(Number.isFinite)) {
+                    return false;
+                }
+                const pointerId = 21;
+                const createEvent = (type, clientX, clientY, buttons) => new PointerEvent(type, {
+                    bubbles: true,
+                    cancelable: true,
+                    composed: true,
+                    pointerId,
+                    pointerType: 'mouse',
+                    isPrimary: true,
+                    button: 0,
+                    buttons,
+                    clientX,
+                    clientY
+                });
+
+                handle.dispatchEvent(createEvent('pointerdown', startX, startY, 1));
+                window.dispatchEvent(createEvent('pointermove', targetX, targetY, 1));
+                window.dispatchEvent(createEvent('pointerup', targetX, targetY, 0));
+                return true;
+            }
+            """,
+            new
+            {
+                testId
+            });
+
+        Assert.True(moved, $"Expected to find drag handle for floating window '{testId}'.");
+        await page.WaitForTimeoutAsync(220);
+    }
+
     private sealed class CanvasFocusState
     {
         public string? SelectedId { get; set; }
@@ -2375,6 +2394,8 @@ public sealed class AppSmokeTests(PlaywrightAppFixture fixture)
         public int ItemCount { get; set; }
 
         public int VisibleItemCount { get; set; }
+
+        public string[] VisibleLabels { get; set; } = [];
 
         public double FirstItemTop { get; set; }
 

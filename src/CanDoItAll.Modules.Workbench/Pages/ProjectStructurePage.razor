@@ -84,30 +84,23 @@ else
                                                   AriaLabel="Project structure standard blocks toolbox"
                                                   Kicker="Standard blocks"
                                                   Title="Project structure toolbox"
-                                                  Summary="Search the shared block catalog, stay inside the canvas, and create against the currently selected source without falling back to the old accordion stack."
-                                                  ShowHeader="false"
+                                                  Summary="Search the shared block catalog, drag the window where you need it, and create against the currently selected source."
                                                   BodyClass="project-structure-toolbox-window__body"
                                                   DefaultPlacement="top-left"
                                                   DefaultWidth="430"
-                                                  DefaultHeight="460"
+                                                  DefaultHeight="500"
                                                   MinWidth="320"
                                                   MinHeight="240"
                                                   MaxWidth="520"
-                                                  MaxHeight="460"
+                                                  MaxHeight="520"
                                                   State="@ToolboxWindowState"
                                                   StateChanged="HandleToolboxWindowStateChangedAsync">
                                 <section class="cw-context-toolbox project-structure-toolbox"
                                          data-testid="project-structure-standard-blocks-toolbox">
-                                    <div class="cw-context-toolbox__header">
-                                        <div class="cw-context-toolbox__header-copy">
-                                            <p class="cw-context-toolbox__eyebrow">Tree explorer</p>
-                                            <h3 class="cw-context-toolbox__title">Standard blocks</h3>
-                                            <p class="cw-context-toolbox__copy">The floating toolbox is now the canonical create surface. Placement still follows the selected node, but the long create list no longer competes with the inspector.</p>
-                                        </div>
-                                        <div class="project-structure-toolbox__header-meta">
-                                            <span class="cw-context-toolbox__count">@($"{ToolboxCreateGroups.Sum(group => group.Actions.Count)} items")</span>
-                                            <span class="cw-node__chip">@ToolboxSourceLabel</span>
-                                        </div>
+                                    <div class="project-structure-toolbox__meta"
+                                         data-testid="project-structure-toolbox-meta">
+                                        <span class="cw-context-toolbox__count">@($"{ToolboxCreateGroups.Sum(group => group.Actions.Count)} items")</span>
+                                        <span class="cw-node__chip">@ToolboxSourceLabel</span>
                                     </div>
 
                                     <input class="cw-context-toolbox__search project-structure-toolbox__search"

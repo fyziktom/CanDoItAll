@@ -52,8 +52,8 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("project-structure-validation-window", cut.Markup);
             Assert.Contains("project-structure-toolbox-window", cut.Markup);
             Assert.Contains("project-structure-standard-blocks-toolbox", cut.Markup);
-            Assert.DoesNotContain("Project structure toolbox", cut.Markup, StringComparison.Ordinal);
-            Assert.DoesNotContain("Search the shared block catalog", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("Project structure toolbox", cut.Markup);
+            Assert.Contains("Search the shared block catalog, drag the window where you need it", cut.Markup);
             Assert.DoesNotContain("cw-inspector-column", cut.Markup, StringComparison.Ordinal);
         });
     }
@@ -128,6 +128,14 @@ public sealed class ProjectStructurePageTests
             Assert.DoesNotContain("project-structure-toolbox-group-body-capture", cut.Markup, StringComparison.Ordinal);
         });
 
+        cut.Find("[data-testid='project-structure-toolbox-group-assets']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-toolbox-group-body-assets", cut.Markup);
+            Assert.DoesNotContain("project-structure-toolbox-group-body-work", cut.Markup, StringComparison.Ordinal);
+        });
+
         cut.Find("input.project-structure-toolbox__search").Input("pdf");
 
         cut.WaitForAssertion(() =>
@@ -135,6 +143,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("project-structure-toolbox-group-body-assets", cut.Markup);
             Assert.Contains("project-structure-toolbox-add-file-pdf", cut.Markup);
             Assert.Contains("fa-file-pdf", cut.Markup);
+            Assert.Contains("project-structure-toolbox-meta", cut.Markup);
             Assert.DoesNotContain("Unknown icon token", cut.Markup, StringComparison.Ordinal);
         });
     }
