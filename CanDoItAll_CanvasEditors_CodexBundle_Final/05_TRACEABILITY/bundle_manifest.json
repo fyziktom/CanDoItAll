@@ -1,0 +1,464 @@
+{
+  "bundle_name": "CanDoItAll_CanvasEditors_CodexBundle_Final",
+  "generated_on": "2026-03-25",
+  "source_inputs": [
+    "00_INPUTS/CanDoItAll-notes-original.docx",
+    "00_INPUTS/solution-explorer-reference.png",
+    "00_INPUTS/extracted-notes.md"
+  ],
+  "item_count": 25,
+  "note_count": 153,
+  "items": [
+    {
+      "item_id": "I01",
+      "folder": "07_ITEMS/01_foundation-rich-node-schema-and-metadata",
+      "title": "Foundation: rich node schema, metadata, and compatibility",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N001",
+        "N038",
+        "N039"
+      ],
+      "dependencies": []
+    },
+    {
+      "item_id": "I02",
+      "folder": "07_ITEMS/02_common-blocks-and-project-structure-catalog",
+      "title": "Common starter blocks and project structure catalog refresh",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N002",
+        "N003",
+        "N004",
+        "N005",
+        "N006",
+        "N007",
+        "N008"
+      ],
+      "dependencies": [
+        "I01"
+      ]
+    },
+    {
+      "item_id": "I03",
+      "folder": "07_ITEMS/03_meetings-online-and-onsite",
+      "title": "Meeting nodes for online and onsite work",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N009",
+        "N010",
+        "N011",
+        "N012",
+        "N013",
+        "N014",
+        "N015",
+        "N016",
+        "N017",
+        "N018",
+        "N019",
+        "N020",
+        "N021",
+        "N022",
+        "N023",
+        "N024",
+        "N025",
+        "N026"
+      ],
+      "dependencies": [
+        "I01",
+        "I02"
+      ]
+    },
+    {
+      "item_id": "I04",
+      "folder": "07_ITEMS/04_recordings-transcripts-and-llm-actions",
+      "title": "Recording, transcript, and LLM-backed actions",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N027",
+        "N028",
+        "N029",
+        "N030",
+        "N031",
+        "N032",
+        "N033",
+        "N034",
+        "N035",
+        "N036",
+        "N037"
+      ],
+      "dependencies": [
+        "I01",
+        "I03"
+      ]
+    },
+    {
+      "item_id": "I05",
+      "folder": "07_ITEMS/05_participants-and-crm-lite",
+      "title": "Participants and CRM-lite registry",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N040",
+        "N041",
+        "N042",
+        "N043",
+        "N044",
+        "N045",
+        "N046",
+        "N047"
+      ],
+      "dependencies": [
+        "I01"
+      ]
+    },
+    {
+      "item_id": "I06",
+      "folder": "07_ITEMS/06_task-issue-and-assignment-model",
+      "title": "Task, issue, and assignment model",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N048",
+        "N049",
+        "N050",
+        "N051",
+        "N052",
+        "N053",
+        "N054"
+      ],
+      "dependencies": [
+        "I01",
+        "I05"
+      ]
+    },
+    {
+      "item_id": "I07",
+      "folder": "07_ITEMS/07_attachments-feedback-payment-send",
+      "title": "Attachments, feedback, payment, and send flows",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N055",
+        "N056",
+        "N057",
+        "N058",
+        "N059",
+        "N060",
+        "N061",
+        "N062",
+        "N063"
+      ],
+      "dependencies": [
+        "I01",
+        "I06"
+      ]
+    },
+    {
+      "item_id": "I08",
+      "folder": "07_ITEMS/08_typed-file-nodes-and-mermaid-viewer",
+      "title": "Typed file nodes and Mermaid viewer",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N064",
+        "N065",
+        "N066",
+        "N067",
+        "N068"
+      ],
+      "dependencies": [
+        "I01"
+      ]
+    },
+    {
+      "item_id": "I09",
+      "folder": "07_ITEMS/09_repository-and-resource-integration",
+      "title": "Repository nodes and resource integration",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N069",
+        "N070",
+        "N071",
+        "N072",
+        "N073",
+        "N074"
+      ],
+      "dependencies": [
+        "I01",
+        "I02"
+      ]
+    },
+    {
+      "item_id": "I10",
+      "folder": "07_ITEMS/10_scripts-and-terminal-execution",
+      "title": "Script nodes and terminal execution surface",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N075",
+        "N076",
+        "N077",
+        "N078"
+      ],
+      "dependencies": [
+        "I01",
+        "I09"
+      ]
+    },
+    {
+      "item_id": "I11",
+      "folder": "07_ITEMS/11_python-environment-nodes",
+      "title": "Python environment nodes",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N079",
+        "N080",
+        "N081",
+        "N082"
+      ],
+      "dependencies": [
+        "I01",
+        "I10"
+      ]
+    },
+    {
+      "item_id": "I12",
+      "folder": "07_ITEMS/12_dotnet-runtime-and-localhost-nodes",
+      "title": ".NET runtime, launch profile, and localhost nodes",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N083",
+        "N084",
+        "N085",
+        "N086",
+        "N087",
+        "N088",
+        "N089",
+        "N090",
+        "N091",
+        "N092",
+        "N093",
+        "N094",
+        "N095"
+      ],
+      "dependencies": [
+        "I01",
+        "I10"
+      ]
+    },
+    {
+      "item_id": "I13",
+      "folder": "07_ITEMS/13_migrations-and-tailwind-watch",
+      "title": "EF migrations and Tailwind watch nodes",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N096",
+        "N097",
+        "N098",
+        "N099"
+      ],
+      "dependencies": [
+        "I10",
+        "I12"
+      ]
+    },
+    {
+      "item_id": "I14",
+      "folder": "07_ITEMS/14_remote-server-core-model",
+      "title": "Remote server core model",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N100",
+        "N101",
+        "N102",
+        "N103",
+        "N104",
+        "N105",
+        "N106",
+        "N107",
+        "N108",
+        "N109",
+        "N110"
+      ],
+      "dependencies": [
+        "I01",
+        "I10"
+      ]
+    },
+    {
+      "item_id": "I15",
+      "folder": "07_ITEMS/15_domains-dns-docker-database-keys-ai-links",
+      "title": "Domains, DNS, Docker, database, keys, and AI links",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N111",
+        "N112",
+        "N113",
+        "N114",
+        "N115",
+        "N116",
+        "N117",
+        "N118",
+        "N119",
+        "N120",
+        "N121",
+        "N122",
+        "N123",
+        "N124",
+        "N125"
+      ],
+      "dependencies": [
+        "I01",
+        "I14",
+        "I09"
+      ]
+    },
+    {
+      "item_id": "I16",
+      "folder": "07_ITEMS/16_progress-priority-marker-ux",
+      "title": "Progress, priority, and marker UX normalization",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N126",
+        "N127",
+        "N128"
+      ],
+      "dependencies": [
+        "I01"
+      ]
+    },
+    {
+      "item_id": "I17",
+      "folder": "07_ITEMS/17_relationship-editing-delete-and-border-behavior",
+      "title": "Relationship editing, delete behavior, and borders",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N129",
+        "N130",
+        "N131",
+        "N132"
+      ],
+      "dependencies": [
+        "I01"
+      ]
+    },
+    {
+      "item_id": "I18",
+      "folder": "07_ITEMS/18_arrow-links-side-aware-placement-and-export-image",
+      "title": "Arrow links, side-aware placement, and mindmap image export",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N133",
+        "N134",
+        "N135"
+      ],
+      "dependencies": [
+        "I17"
+      ]
+    },
+    {
+      "item_id": "I19",
+      "folder": "07_ITEMS/19_progress-summary-modal-and-exports",
+      "title": "Progress summary modal, tree checklist, and exports",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N136",
+        "N137",
+        "N138",
+        "N139",
+        "N140",
+        "N141"
+      ],
+      "dependencies": [
+        "I06",
+        "I16",
+        "I18"
+      ]
+    },
+    {
+      "item_id": "I20",
+      "folder": "07_ITEMS/20_shared-floating-tool-window-host",
+      "title": "Shared floating tool window host for canvas editors",
+      "origin": "conversation",
+      "covered_note_ids": [],
+      "dependencies": []
+    },
+    {
+      "item_id": "I21",
+      "folder": "07_ITEMS/21_prompt-factory-components-toolbox-redesign",
+      "title": "Prompt Factory components toolbox redesign",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N142",
+        "N143",
+        "N144",
+        "N145",
+        "N147",
+        "N148",
+        "N149",
+        "N150"
+      ],
+      "dependencies": [
+        "I20"
+      ]
+    },
+    {
+      "item_id": "I22",
+      "folder": "07_ITEMS/22_prompt-factory-component-preview-eye-popover",
+      "title": "Prompt Factory eye-preview popover",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N146"
+      ],
+      "dependencies": [
+        "I21"
+      ]
+    },
+    {
+      "item_id": "I23",
+      "folder": "07_ITEMS/23_project-structure-standard-blocks-toolbox",
+      "title": "Project Structure standard blocks toolbox",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N151"
+      ],
+      "dependencies": [
+        "I02",
+        "I20"
+      ]
+    },
+    {
+      "item_id": "I24",
+      "folder": "07_ITEMS/24_prompt-factory-44-node-bugfix",
+      "title": "Prompt Factory intermittent 44-node insertion bugfix",
+      "origin": "docx",
+      "covered_note_ids": [
+        "N152",
+        "N153"
+      ],
+      "dependencies": [
+        "I21"
+      ]
+    },
+    {
+      "item_id": "I25",
+      "folder": "07_ITEMS/25_screenshot-driven-validation-suite",
+      "title": "Screenshot-driven validation suite and evidence protocol",
+      "origin": "conversation",
+      "covered_note_ids": [],
+      "dependencies": [
+        "I03",
+        "I07",
+        "I08",
+        "I12",
+        "I14",
+        "I15",
+        "I16",
+        "I17",
+        "I18",
+        "I19",
+        "I20",
+        "I21",
+        "I22",
+        "I23",
+        "I24"
+      ]
+    }
+  ]
+}

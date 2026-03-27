@@ -1,0 +1,159 @@
+# Extracted notes from `CanDoItAll-notes.docx`
+
+Source file: `CanDoItAll-notes-original.docx`
+
+Each non-empty paragraph from the original DOCX is preserved below as a traceable note ID.
+
+- **N001** — Project structure
+- **N002** — Common Bloks
+- **N003** — Deployment
+- **N004** — Repos
+- **N005** — Dockers
+- **N006** — Task Flow
+- **N007** — Backlog
+- **N008** — Server
+- **N009** — Meetings
+- **N010** — Meetings
+- **N011** — Meeting block
+- **N012** — Online
+- **N013** — Channel (enum MSTeams, Google Meet, Zoom, WhatsApp, Telegram)
+- **N014** — Date
+- **N015** — Repeating (enum per day, per week, per 2 weeks, per month)
+- **N016** — RightClick Menu Options
+- **N017** — Add blocks
+- **N018** — Add Tasks
+- **N019** — Add progress
+- **N020** — Add priority
+- **N021** — Add Recording
+- **N022** — Onsite
+- **N023** — Address
+- **N024** — Click to google maps
+- **N025** — Date
+- **N026** — Repeating and right click same as online
+- **N027** — Recording
+- **N028** — Usually under some meeting block
+- **N029** — Right click Menu options
+- **N030** — Create transcript
+- **N031** — Transcript
+- **N032** — Usually under some recording node, but can be separately (for example someone will send me transcript to email
+- **N033** — Right click menu options
+- **N034** — Summarize
+- **N035** — Find my tasks
+- **N036** — Find others delivery to me
+- **N037** — All those actions with confirmation because it must send request to LLM (selector OpenAI API vs Local Ollama)
+- **N038** — Requrements/Prerequisites
+- **N039** — Generic node
+- **N040** — Prarticipants
+- **N041** — HR
+- **N042** — From CRM (need to add at least basic crm module)
+- **N043** — Team block (for example as start of organization chart)
+- **N044** — Team Section (for example HW department, etc.)
+- **N045** — Freelancer
+- **N046** — Partner
+- **N047** — AI Agent
+- **N048** — Tasks
+- **N049** — Task
+- **N050** — What, when, who (for already added HRs offered selector)
+- **N051** — Issue
+- **N052** — Possible link to repo
+- **N053** — Or pure description
+- **N054** — Attachments
+- **N055** — Video
+- **N056** — Screenshot (take last captured screenshot, or from clipboard)
+- **N057** — Log
+- **N058** — notes
+- **N059** — Revision
+- **N060** — Feedback
+- **N061** — Payment
+- **N062** — Send
+- **N063** — With selector for File, Offer, Email, Message (plus channel), invoice, money, etc.
+- **N064** — Files
+- **N065** — Own menu item for pdf, excel, docx, txt, json, md
+- **N066** — Each of those files nodes must have proper color (pdf red, excel green, docx blue, txt, json and similar probably gray with icon/text of type, etc)
+- **N067** — Mermaid (plus viewer)
+- **N068** — Auto identification of graph type and info about it on node.
+- **N069** — Repository
+- **N070** — Remote
+- **N071** — GitHub connection
+- **N072** — Selection of specific repositoriy
+- **N073** — Local
+- **N074** — OpenFolder dialog
+- **N075** — Scripts
+- **N076** — Add PS script
+- **N077** — Console script
+- **N078** — All with button to “Open terminal” (automatically in work folder)
+- **N079** — Environments
+- **N080** — Python Environment
+- **N081** — Provider (python, conda)
+- **N082** — Name, etc.
+- **N083** — Dotnet related
+- **N084** — Project default launch profile
+- **N085** — Project selector
+- **N086** — Then auto parse of launchprofile to get default addresses
+- **N087** — localhost run in node details – click to open in new tab
+- **N088** — Dotnetwatch
+- **N089** — Command to run specific project in dotnetwatch
+- **N090** — Ideal would be project selector
+- **N091** — Specify http vs https
+- **N092** — Run Release
+- **N093** — Specify http vs https
+- **N094** — Ideal would be project selector
+- **N095** — Address of release localhost run in node details – click to open in new tab
+- **N096** — Apply Migration EF (add, update, etc)
+- **N097** — Select or input of command I call from ps for some migrations
+- **N098** — Tailwind watch run (for projects that use tailwind)
+- **N099** — Command how to run in ps tailwind for that specific project
+- **N100** — Remote Server (common block)
+- **N101** — Parameters
+- **N102** — CPU, RAM, HDD/SSD cap, etc.
+- **N103** — Price and business related info
+- **N104** — Address
+- **N105** — Provider
+- **N106** — Link to provider website
+- **N107** — Link to login
+- **N108** — SSH connection (we need terminal component)
+- **N109** — Connection to secret for login
+- **N110** — Account name
+- **N111** — Connected Domains
+- **N112** — Domain name
+- **N113** — Owner
+- **N114** — DNS Records
+- **N115** — Docker type (compose vs swarm)
+- **N116** — Proxy provider
+- **N117** — Nginx, traefik, etc.
+- **N118** — Database
+- **N119** — Type, connection
+- **N120** — Deployment folder
+- **N121** — Keys
+- **N122** — AI
+- **N123** — ChatGPT conversation link
+- **N124** — Codex thread link
+- **N125** — Local LLM
+- **N126** — Common
+- **N127** — Left click on Progress icon in node must show only selector of priority
+- **N128** — Markers and progress main circle in right click menu must have larger diameter
+- **N129** — Unconnect node and connect it to some different node
+- **N130** — Delete (simple note without confirmation, more complex with confirmation)
+- **N131** — Drag and drop node to some border with other nodes
+- **N132** — Name for borders
+- **N133** — Connection between nodes with additional arrow
+- **N134** — Export mindmap as image
+- **N135** — Node should be placed on the side where it should connect. For example if I move some node to left side of the canvas, it connects to parent node from right side, then I add new node that is connected under that node, it connects it from left side, but place it on right side of the node. It must place it to side where it is connected.
+- **N136** — Controls
+- **N137** — Progress summary
+- **N138** — For nodes that have some nodes under it automated display of summary checklist of state items under it
+- **N139** — Click to button in props panel or right-click menu item => open modal with summary status, checklist of all statuses of items under it (as tree view), possibility to change status in that list (each item has on its line button with dropdown selector of progress)
+- **N140** — Posibility to export as xlsx
+- **N141** — Export as mermaid gantt graph
+- **N142** — Prompt factory
+- **N143** — Components
+- **N144** — Better search of components
+- **N145** — It must work as toolbar in visual studio\
+- **N146** — Mouseover on icon of eye on component line show inside canvas popup floating window on available side (if right available, then prefer it) with text of component.
+- **N147** — Toolbar with components must be available as classic floating window toolbar inside of canvas, that I can show/hide, pin, move, etc.
+- **N148** — Inside accordeons with sections of prompts components
+- **N149** — Search bar on top
+- **N150** — Vartical Scrollbar inside if too much component/sections are in it. Toolbar window must fit always into visible canvas
+- **N151** — NOTE: Similar toolbar also for standard blocks in project structure
+- **N152** — Bugs:
+- **N153** — Adding of any component wants to add 44 nodes (happens just sometimes, like 4/5 situations).
