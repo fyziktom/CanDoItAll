@@ -36,7 +36,7 @@ Current integration points:
 
 - service registration via `services.AddCanDoItAllComponents()`
 - namespace imports via `@using CanDoItAll.Components`
-- CSS loading via `_content/CanDoItAll.Components/css/output.css`
+- CSS loading via `_content/CanDoItAll.Components.BaseLib/css/output.css`
 
 ## Internal design patterns
 

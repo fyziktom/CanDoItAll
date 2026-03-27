@@ -15,8 +15,8 @@ npm run build
 Watch mode:
 
 ```powershell
-npx tailwindcss -i ./input.css -o ../src/CanDoItAll.Components/wwwroot/css/output.css --watch
+npx tailwindcss -i ./input.css -o ../src/CanDoItAll.Components.BaseLib/wwwroot/css/output.css --watch
 ```
 
 This shared workspace compiles the component-library stylesheet to
-`src/CanDoItAll.Components/wwwroot/css/output.css`.
+`src/CanDoItAll.Components.BaseLib/wwwroot/css/output.css`.

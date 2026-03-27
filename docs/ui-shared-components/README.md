@@ -32,7 +32,7 @@ The current library is a compatibility layer with familiar component names and e
 1. Reference `CanDoItAll.Components`.
 2. Import `@using CanDoItAll.Components`.
 3. Register services with `services.AddCanDoItAllComponents()`.
-4. Load `_content/CanDoItAll.Components/css/output.css`.
+4. Load `_content/CanDoItAll.Components.BaseLib/css/output.css`.
 5. Do not assume advanced features unless they are documented here.
 
 ## Fast rules for Codex
