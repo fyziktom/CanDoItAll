@@ -589,6 +589,72 @@ else
                 }
                             </CanvasFloatingWindow>
                         }
+                        @if (previewNode is not null)
+                        {
+                            <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseAttachmentPreview">
+                                <div class="project-structure-preview-dialog"
+                                     role="dialog"
+                                     aria-modal="true"
+                                     aria-label="@($"{ResolveAttachmentDisplayName(previewNode)} preview")"
+                                     @onclick:stopPropagation="true">
+                                    <div class="project-structure-preview-dialog__header">
+                                        <div class="project-structure-preview-dialog__copy">
+                                            <p class="cw-panel-kicker">Canvas preview</p>
+                                            <h3 class="cw-panel-title">@ResolveAttachmentDisplayName(previewNode)</h3>
+                                            <p class="cw-panel-copy">@ResolveAttachmentLeadCopy(previewNode)</p>
+                                        </div>
+
+                                        <div class="project-structure-preview-dialog__actions">
+                                            @if (CanShowLocalOpen(previewNode))
+                                            {
+                                                <button type="button"
+                                                        class="cw-button"
+                                                        data-tone="primary"
+                                                        @onclick="@(() => OpenAttachmentLocallyAsync(previewNode))">
+                                                    Open locally
+                                                </button>
+                                            }
+                                            <a class="cw-button"
+                                               data-tone="ghost"
+                                               href="@previewNode.Route"
+                                               target="_blank"
+                                               rel="noopener noreferrer">
+                                                Open in new tab
+                                            </a>
+                                            <button type="button" class="cw-button" data-tone="primary" @onclick="CloseAttachmentPreview">Close</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="project-structure-preview-dialog__body">
+                                        @switch (ResolveAttachmentPreviewKind(previewNode))
+                                        {
+                                            case AttachmentPreviewKind.Image:
+                                                <img class="project-structure-preview-dialog__media"
+                                                     src="@previewNode.Route"
+                                                     alt="@previewNode.Title" />
+                                                break;
+                                            case AttachmentPreviewKind.Video:
+                                                <video class="project-structure-preview-dialog__media"
+                                                       controls
+                                                       preload="metadata"
+                                                       src="@previewNode.Route"></video>
+                                                break;
+                                            case AttachmentPreviewKind.Audio:
+                                                <audio class="project-structure-audio-preview project-structure-preview-dialog__audio"
+                                                       controls
+                                                       preload="metadata"
+                                                       src="@previewNode.Route"></audio>
+                                                break;
+                                            case AttachmentPreviewKind.Document:
+                                                <iframe class="project-structure-preview-dialog__frame"
+                                                        src="@ResolveAttachmentPreviewSource(previewNode)"
+                                                        title="@($"{ResolveAttachmentDisplayName(previewNode)} dialog preview")"></iframe>
+                                                break;
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </OverlayContent>
                 </CanvasWorkbench>
             </Canvas>
@@ -677,73 +743,6 @@ else
                     </div>
                 </div>
             </CanvasBoundaryCard>
-        </div>
-    </div>
-}
-
-@if (previewNode is not null)
-{
-    <div class="project-structure-preview-backdrop" @onclick="CloseAttachmentPreview">
-        <div class="project-structure-preview-dialog"
-             role="dialog"
-             aria-modal="true"
-             aria-label="@($"{ResolveAttachmentDisplayName(previewNode)} preview")"
-             @onclick:stopPropagation="true">
-            <div class="project-structure-preview-dialog__header">
-                <div class="project-structure-preview-dialog__copy">
-                    <p class="cw-panel-kicker">Canvas preview</p>
-                    <h3 class="cw-panel-title">@ResolveAttachmentDisplayName(previewNode)</h3>
-                    <p class="cw-panel-copy">@ResolveAttachmentLeadCopy(previewNode)</p>
-                </div>
-
-                <div class="project-structure-preview-dialog__actions">
-                    @if (CanShowLocalOpen(previewNode))
-                    {
-                        <button type="button"
-                                class="cw-button"
-                                data-tone="primary"
-                                @onclick="@(() => OpenAttachmentLocallyAsync(previewNode))">
-                            Open locally
-                        </button>
-                    }
-                    <a class="cw-button"
-                       data-tone="ghost"
-                       href="@previewNode.Route"
-                       target="_blank"
-                       rel="noopener noreferrer">
-                        Open in new tab
-                    </a>
-                    <button type="button" class="cw-button" data-tone="primary" @onclick="CloseAttachmentPreview">Close</button>
-                </div>
-            </div>
-
-            <div class="project-structure-preview-dialog__body">
-                @switch (ResolveAttachmentPreviewKind(previewNode))
-                {
-                    case AttachmentPreviewKind.Image:
-                        <img class="project-structure-preview-dialog__media"
-                             src="@previewNode.Route"
-                             alt="@previewNode.Title" />
-                        break;
-                    case AttachmentPreviewKind.Video:
-                        <video class="project-structure-preview-dialog__media"
-                               controls
-                               preload="metadata"
-                               src="@previewNode.Route"></video>
-                        break;
-                    case AttachmentPreviewKind.Audio:
-                        <audio class="project-structure-audio-preview project-structure-preview-dialog__audio"
-                               controls
-                               preload="metadata"
-                               src="@previewNode.Route"></audio>
-                        break;
-                    case AttachmentPreviewKind.Document:
-                        <iframe class="project-structure-preview-dialog__frame"
-                                src="@ResolveAttachmentPreviewSource(previewNode)"
-                                title="@($"{ResolveAttachmentDisplayName(previewNode)} dialog preview")"></iframe>
-                        break;
-                }
-            </div>
         </div>
     </div>
 }

@@ -543,6 +543,7 @@ public sealed class ProjectStructurePageTests
         {
             Assert.Contains("project-structure-preview-dialog", cut.Markup);
             Assert.Contains("dialog preview", cut.Markup);
+            Assert.Single(cut.FindAll(".cw-stage-surface .project-structure-preview-backdrop--canvas"));
         });
 
         Assert.Equal(uriBeforeOpen, navigation.Uri);

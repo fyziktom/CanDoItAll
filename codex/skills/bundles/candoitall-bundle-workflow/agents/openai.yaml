@@ -1,0 +1,4 @@
+interface:
+  display_name: "CanDoItAll Bundle Workflow"
+  short_description: "Prepare, validate, and execute CanDoItAll bundles"
+  default_prompt: "Prepare the bundle if needed, then execute it phase by phase until complete."

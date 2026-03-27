@@ -395,7 +395,17 @@ function Sync-RepoSkills {
 
     New-Item -ItemType Directory -Force -Path $SkillTargetRoot | Out-Null
     $syncedSkillNames = New-Object System.Collections.Generic.List[string]
-    foreach ($directory in Get-ChildItem -LiteralPath $SkillSourceRoot -Directory) {
+    $skillDirectories = @(Get-ChildItem -LiteralPath $SkillSourceRoot -Directory -Recurse |
+        Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "SKILL.md") } |
+        Sort-Object FullName)
+    $seenSkillNames = @{}
+
+    foreach ($directory in $skillDirectories) {
+        if ($seenSkillNames.ContainsKey($directory.Name)) {
+            throw "Duplicate repo-managed skill folder name '$($directory.Name)' found in '$($directory.FullName)' and '$($seenSkillNames[$directory.Name])'."
+        }
+
+        $seenSkillNames[$directory.Name] = $directory.FullName
         $targetPath = Join-Path $SkillTargetRoot $directory.Name
         Remove-DirectoryRobust -Path $targetPath
         Copy-Item -LiteralPath $directory.FullName -Destination $targetPath -Recurse -Force

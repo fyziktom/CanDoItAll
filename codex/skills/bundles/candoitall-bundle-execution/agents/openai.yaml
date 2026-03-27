@@ -1,0 +1,4 @@
+interface:
+  display_name: "CanDoItAll Bundle Execution"
+  short_description: "Execute bundle phases with proof, tests, and QA updates"
+  default_prompt: "Execute the selected CanDoItAll bundle or subbundle with proof and validation."
