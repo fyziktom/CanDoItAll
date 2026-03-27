@@ -119,6 +119,7 @@ public sealed class ProjectStructureGraphAdapter
         var isInlineTextNode = node.ObjectType == ProjectObjectType.Note && string.IsNullOrWhiteSpace(node.Subtitle);
         var progress = ResolveProgress(node);
         var (mediaKind, mediaPreviewUrl) = ResolveMediaPresentation(node);
+        var leadPresentation = ProjectStructureNodeDescriptor.BuildLeadPresentation(node);
 
         return new CanvasWorkbenchNode
         {
@@ -129,7 +130,8 @@ public sealed class ProjectStructureGraphAdapter
             Icon = node.VisualProfile.Icon,
             Title = node.Title,
             Subtitle = node.Subtitle,
-            LeadText = BuildLeadText(node),
+            LeadText = leadPresentation.LeadText,
+            CompactPath = MapCompactPath(leadPresentation.CompactPath),
             Status = node.Status,
             BranchLabel = node.ObjectType is ProjectObjectType.Phase or ProjectObjectType.PromptSession ? "Branch" : string.Empty,
             AccentColor = node.VisualProfile.AccentColor,
@@ -190,37 +192,44 @@ public sealed class ProjectStructureGraphAdapter
 
     private static string ResolvePalette(ProjectStructureNode node) => node.ObjectType switch
     {
-        ProjectObjectType.Repository or ProjectObjectType.File => "sky",
+        ProjectObjectType.Meeting => "sky",
+        ProjectObjectType.Recording or ProjectObjectType.Transcript => "accent",
+        ProjectObjectType.Participant => "primary",
+        ProjectObjectType.WorkItem => "warn",
+        ProjectObjectType.Repository or ProjectObjectType.Script or ProjectObjectType.Environment => "sky",
+        ProjectObjectType.File => ResolveFilePalette(node.ObjectSubtype),
         ProjectObjectType.ImageAsset or ProjectObjectType.Decision => "rose",
         ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector => "violet",
+        ProjectObjectType.Infrastructure => "danger",
         ProjectObjectType.Milestone or ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => "amber",
         ProjectObjectType.ValidationRun or ProjectObjectType.Note or ProjectObjectType.ProjectBlock => "mint",
         ProjectObjectType.SecretReference => "rose",
         _ => "neutral"
     };
 
-    private static string BuildLeadText(ProjectStructureNode node)
+    private static string ResolveFilePalette(string objectSubtype) => objectSubtype switch
     {
-        if (node.ObjectType == ProjectObjectType.Note)
-        {
-            return string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes;
-        }
+        "pdf" or "screenshot" => "rose",
+        "excel" or "audio" => "mint",
+        "docx" or "markdown" => "sky",
+        "mermaid" or "archive" => "violet",
+        "text" or "json" or "log" => "amber",
+        _ => "sky"
+    };
 
-        if (node.ObjectType is ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset &&
-            !string.IsNullOrWhiteSpace(node.MediaOriginalFileName))
-        {
-            return node.MediaOriginalFileName;
-        }
+    private static string BuildLeadText(ProjectStructureNode node)
+        => ProjectStructureNodeDescriptor.BuildLeadText(node);
 
-        if (!string.IsNullOrWhiteSpace(node.Notes))
-        {
-            return node.Notes;
-        }
-
-        return string.IsNullOrWhiteSpace(node.Subtitle)
-            ? $"Status: {node.Status}"
-            : node.Subtitle;
-    }
+    private static CanvasWorkbenchCompactPath? MapCompactPath(ProjectStructureCompactPathPresentation? compactPath)
+        => compactPath is null
+            ? null
+            : new CanvasWorkbenchCompactPath
+            {
+                Label = compactPath.Label,
+                DisplayText = compactPath.DisplayText,
+                FullPath = compactPath.FullPath,
+                PromotedText = compactPath.PromotedText
+            };
 
     private static (string Kind, string PreviewUrl) ResolveMediaPresentation(ProjectStructureNode node)
     {

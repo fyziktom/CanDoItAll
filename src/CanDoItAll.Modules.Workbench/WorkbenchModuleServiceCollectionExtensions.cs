@@ -10,6 +10,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<WorkbenchStateService>();
         services.AddScoped<ProjectWorkbenchService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
+        services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();
         services.AddScoped<IProjectWorkbenchSeedService>(serviceProvider => serviceProvider.GetRequiredService<ProjectWorkbenchService>());
         return services;
     }

@@ -21,7 +21,11 @@ internal sealed record ProjectStructureCreateLeafDefinition(
     string NotesPlaceholder,
     bool RequiresFile = false,
     string AcceptedFileTypes = "",
-    string FilePrompt = "Drop a file here or choose one.");
+    string FilePrompt = "Drop a file here or choose one.",
+    bool ShowDefaultTextFields = true,
+    string SubmitLabel = "Create",
+    IReadOnlyList<CanvasWorkbenchInputField>? InputFields = null,
+    IReadOnlyList<CanvasWorkbenchInputValue>? DefaultInputValues = null);
 
 internal sealed record ProjectStructureInspectorCreateGroup(
     string Key,
@@ -30,7 +34,7 @@ internal sealed record ProjectStructureInspectorCreateGroup(
     bool IsOpen,
     IReadOnlyList<CanvasWorkbenchAction> Actions);
 
-internal static class ProjectStructureCanvasCatalog
+internal static partial class ProjectStructureCanvasCatalog
 {
     private sealed record CreateGroupDefinition(
         string Key,
@@ -45,66 +49,106 @@ internal static class ProjectStructureCanvasCatalog
             ["capture"] = new("capture", "Capture", "Fast notes and decisions that keep the mindmap moving.", "neutral", "note"),
             ["planning"] = new("planning", "Planning", "Phases and milestones that shape delivery.", "primary", "plan"),
             ["blocks"] = new("blocks", "Blocks", "Typed project blocks for common planning and management areas.", "accent", "block"),
+            ["meetings"] = new("meetings", "Meetings", "Meetings, recordings, and transcript flows stay explicit on the canvas.", "sky", "meeting"),
+            ["people"] = new("people", "People", "Participants and lightweight org-chart nodes stay reusable.", "mint", "people"),
+            ["work"] = new("work", "Work", "Tasks, issues, follow-ups, and operational delivery nodes.", "warn", "task"),
             ["prompts"] = new("prompts", "Prompts", "Prompt flows, sessions, and executable steps.", "accent", "prompt"),
+            ["runtime"] = new("runtime", "Runtime", "Repositories, scripts, environments, and local execution context.", "mint", "runtime"),
             ["assets"] = new("assets", "Assets", "Repositories, files, uploads, links, and system touchpoints.", "sky", "asset"),
+            ["infrastructure"] = new("infrastructure", "Infrastructure", "Servers, domains, deployment details, keys, and AI references.", "danger", "infra"),
             ["assurance"] = new("assurance", "Assurance", "Validation, test planning, and supporting evidence.", "warn", "assure")
         };
 
-    private static readonly IReadOnlyList<ProjectStructureCreateLeafDefinition> CreateLeafDefinitions =
-    [
-        new("add-note", ProjectObjectType.Note, string.Empty, "capture", "Note", "Capture a lightweight note and keep the mindmap moving.", "note", "neutral", "New note", "Headline", "Name the note", "Context", "Optional context tag", "Text", "Write the note"),
-        new("add-decision", ProjectObjectType.Decision, string.Empty, "capture", "Decision", "Record a decision and its first rationale while you are still in the canvas.", "choice", "accent", "New decision", "Decision", "Name the decision", "Status", "Approved, draft, blocked...", "Rationale", "Why this decision exists"),
-        new("add-phase", ProjectObjectType.Phase, string.Empty, "planning", "Phase", "Spin out a new phase branch from any point in the graph.", "phase", "primary", "New phase", "Phase", "Discovery", "Goal", "What this phase should achieve", "Focus", "Scope for this phase"),
-        new("add-milestone", ProjectObjectType.Milestone, string.Empty, "planning", "Milestone", "Add a milestone node and capture the delivery target immediately.", "date", "warn", "New milestone", "Milestone", "Name the milestone", "Target", "Date or target window", "Outcome", "Describe the milestone outcome"),
-        new("add-block-feature", ProjectObjectType.ProjectBlock, "feature", "blocks", "Feature block", "Group feature work, acceptance scope, and supporting details.", "feature", "accent", "Feature block", "Block name", "Feature stream", "Owner", "Area or owner", "Description", "What this feature block covers"),
-        new("add-block-architecture", ProjectObjectType.ProjectBlock, "architecture", "blocks", "Architecture block", "Capture architecture, technical strategy, and system design concerns.", "arch", "accent", "Architecture block", "Block name", "Architecture block", "Area", "Platform, service, or layer", "Description", "Architecture focus and constraints"),
-        new("add-block-implementation", ProjectObjectType.ProjectBlock, "implementation", "blocks", "Implementation block", "Track implementation work, execution lanes, and delivery scope.", "build", "accent", "Implementation block", "Block name", "Implementation block", "Owner", "Team or stream", "Description", "Implementation scope and outputs"),
-        new("add-block-revision", ProjectObjectType.ProjectBlock, "revision", "blocks", "Revision block", "Track revisions, iteration loops, and refinement passes.", "rev", "warn", "Revision block", "Block name", "Revision block", "Cycle", "Revision number or cadence", "Description", "What this revision is changing"),
-        new("add-block-testing", ProjectObjectType.ProjectBlock, "testing", "blocks", "Testing block", "Group test strategy, scenarios, and quality execution work.", "test", "warn", "Testing block", "Block name", "Testing block", "Phase", "Regression, exploratory, performance...", "Description", "What this testing block covers"),
-        new("add-block-prompting", ProjectObjectType.ProjectBlock, "prompting", "blocks", "Prompting block", "Capture prompt-design work, experiments, and prompt-system scope.", "prompt", "accent", "Prompting block", "Block name", "Prompting block", "Intent", "Prompt objective", "Description", "How this prompting block is used"),
-        new("add-block-research", ProjectObjectType.ProjectBlock, "research", "blocks", "Research block", "Track research tasks, comparisons, and discovery findings.", "research", "sky", "Research block", "Block name", "Research block", "Question", "What must be answered", "Description", "Research scope and expected output"),
-        new("add-block-financial", ProjectObjectType.ProjectBlock, "financial", "blocks", "Financial block", "Track budget, commercial scope, and financial planning.", "money", "mint", "Financial block", "Block name", "Financial block", "Budget / owner", "Budget lane or owner", "Description", "Financial scope or constraints"),
-        new("add-block-marketing", ProjectObjectType.ProjectBlock, "marketing", "blocks", "Marketing block", "Track positioning, launch support, and go-to-market work.", "market", "danger", "Marketing block", "Block name", "Marketing block", "Channel", "Audience or channel", "Description", "Marketing focus and deliverables"),
-        new("add-block-operations", ProjectObjectType.ProjectBlock, "operations", "blocks", "Operations block", "Track operations, maintenance, and internal support work.", "ops", "primary", "Operations block", "Block name", "Operations block", "Owner", "Ops owner or team", "Description", "Operational scope and expectations"),
-        new("add-block-delivery", ProjectObjectType.ProjectBlock, "delivery", "blocks", "Delivery block", "Track release readiness, rollout, and delivery coordination.", "ship", "warn", "Delivery block", "Block name", "Delivery block", "Release", "Target release or stream", "Description", "Delivery dependencies and outcome"),
-        new("add-block-risk", ProjectObjectType.ProjectBlock, "risk", "blocks", "Risk block", "Track known risks, mitigations, and contingency work.", "risk", "danger", "Risk block", "Block name", "Risk block", "Severity", "High, medium, low...", "Description", "Risk details and mitigation"),
-        new("add-block-compliance", ProjectObjectType.ProjectBlock, "compliance", "blocks", "Compliance block", "Track compliance, policy, audit, and governance requirements.", "audit", "danger", "Compliance block", "Block name", "Compliance block", "Framework", "ISO, SOC, policy...", "Description", "Compliance scope and evidence"),
-        new("add-block-support", ProjectObjectType.ProjectBlock, "support", "blocks", "Support block", "Track enablement, support readiness, and handover work.", "support", "sky", "Support block", "Block name", "Support block", "Owner", "Support owner or queue", "Description", "Support coverage and handover notes"),
-        new("add-prompt-flow", ProjectObjectType.PromptFlow, string.Empty, "prompts", "Flow", "Map a reusable prompt flow from the active node.", "flow", "accent", "Prompt flow", "Flow name", "Review flow", "Goal", "What the flow should produce", "Prompt strategy", "Describe the flow shape"),
-        new("add-prompt-session", ProjectObjectType.PromptSession, string.Empty, "prompts", "Session", "Create a prompt session node and capture the first run context.", "session", "accent", "Prompt session", "Session name", "Prompt session", "Phase", "Discovery / review / test", "Intent", "What this session should do"),
-        new("add-prompt-step", ProjectObjectType.PromptStep, string.Empty, "prompts", "Step", "Create a prompt step node from anywhere in the structure graph.", "step", "accent", "Prompt step", "Step title", "Gather context", "Branch label", "Optional branch or lane", "Prompt", "What this step should ask or do"),
-        new("add-repository", ProjectObjectType.Repository, string.Empty, "assets", "Repo", "Add a repository or code artifact next to the current source.", "repo", "mint", "New repository", "Repo name", "frontend-app", "Owner / path", "team/repository", "Purpose", "What this repo is for"),
-        new("add-file", ProjectObjectType.File, string.Empty, "assets", "File", "Upload or register a file node without leaving the canvas.", "file", "mint", "Uploaded file", "File title", "Architecture notes", "Folder / usage", "docs/architecture", "Purpose", "What lives in this file", true, "*/*", "Drop a file here or choose one."),
-        new("add-image-asset", ProjectObjectType.ImageAsset, string.Empty, "assets", "Image", "Upload an image and keep it attached to the current part of the graph.", "image", "danger", "Uploaded image", "Image title", "Flow diagram", "Usage", "Where this image is used", "Description", "What this image explains", true, "image/*", "Drop an image here or choose one."),
-        new("add-video-asset", ProjectObjectType.VideoAsset, string.Empty, "assets", "Video", "Upload a video and connect it to the selected node immediately.", "video", "accent", "Uploaded video", "Video title", "Demo recording", "Usage", "Where this video is used", "Description", "What this video demonstrates", true, "video/*", "Drop a video here or choose one."),
-        new("add-link", ProjectObjectType.Link, string.Empty, "assets", "Link", "Create a link node and capture the address immediately.", "link", "sky", "New link", "Label", "API reference", "Address", "https://...", "Usage", "How this link is used"),
-        new("add-connector", ProjectObjectType.Connector, string.Empty, "assets", "Connector", "Describe the integration or handoff point represented by this node.", "plug", "accent", "New connector", "Connector", "CI pipeline", "System", "Source or target system", "Handshake", "What the connector does"),
-        new("add-secret-reference", ProjectObjectType.SecretReference, string.Empty, "assets", "Secret", "Track a secret reference without exposing the secret value itself.", "shield", "danger", "Secret reference", "Secret name", "API_KEY reference", "Vault / key", "Vault path or identifier", "Usage", "Where this secret is needed"),
-        new("add-validation-run", ProjectObjectType.ValidationRun, string.Empty, "assurance", "Validation", "Capture a validation run and its acceptance criteria immediately.", "qa", "mint", "Validation run", "Validation", "Contract check", "Type", "Review, lint, runtime...", "Criteria", "What success means"),
-        new("add-test-plan", ProjectObjectType.TestPlan, string.Empty, "assurance", "Test plan", "Create a test plan node and note the coverage target.", "test", "warn", "Test plan", "Plan name", "Regression sweep", "Phase", "Execution", "Coverage goal", "What this plan must cover"),
-        new("add-test-evidence", ProjectObjectType.TestEvidence, string.Empty, "assurance", "Evidence", "Log the evidence item or result that supports a test plan.", "evidence", "warn", "Test evidence", "Evidence", "Screenshot bundle", "Source", "Run, file, or system", "Result", "What this evidence proves")
-    ];
+    private static readonly Lazy<IReadOnlyList<ProjectStructureCreateLeafDefinition>> LazyCreateLeafDefinitions = new(() =>
+    {
+        List<ProjectStructureCreateLeafDefinition> definitions =
+        [
+            new("add-note", ProjectObjectType.Note, string.Empty, "capture", "Note", "Capture a lightweight note and keep the mindmap moving.", "note", "neutral", "New note", "Headline", "Name the note", "Context", "Optional context tag", "Text", "Write the note"),
+            new("add-decision", ProjectObjectType.Decision, string.Empty, "capture", "Decision", "Record a decision and its first rationale while you are still in the canvas.", "choice", "accent", "New decision", "Decision", "Name the decision", "Status", "Approved, draft, blocked...", "Rationale", "Why this decision exists"),
+            new("add-phase", ProjectObjectType.Phase, string.Empty, "planning", "Phase", "Spin out a new phase branch from any point in the graph.", "phase", "primary", "New phase", "Phase", "Discovery", "Goal", "What this phase should achieve", "Focus", "Scope for this phase"),
+            new("add-milestone", ProjectObjectType.Milestone, string.Empty, "planning", "Milestone", "Add a milestone node and capture the delivery target immediately.", "date", "warn", "New milestone", "Milestone", "Name the milestone", "Target", "Date or target window", "Outcome", "Describe the milestone outcome"),
+            new("add-block-feature", ProjectObjectType.ProjectBlock, "feature", "blocks", "Feature block", "Group feature work, acceptance scope, and supporting details.", "feature", "accent", "Feature block", "Block name", "Feature stream", "Owner", "Area or owner", "Description", "What this feature block covers"),
+            new("add-block-architecture", ProjectObjectType.ProjectBlock, "architecture", "blocks", "Architecture block", "Capture architecture, technical strategy, and system design concerns.", "arch", "accent", "Architecture block", "Block name", "Architecture block", "Area", "Platform, service, or layer", "Description", "Architecture focus and constraints"),
+            new("add-block-implementation", ProjectObjectType.ProjectBlock, "implementation", "blocks", "Implementation block", "Track implementation work, execution lanes, and delivery scope.", "build", "accent", "Implementation block", "Block name", "Implementation block", "Owner", "Team or stream", "Description", "Implementation scope and outputs"),
+            new("add-block-revision", ProjectObjectType.ProjectBlock, "revision", "blocks", "Revision block", "Track revisions, iteration loops, and refinement passes.", "rev", "warn", "Revision block", "Block name", "Revision block", "Cycle", "Revision number or cadence", "Description", "What this revision is changing"),
+            new("add-block-testing", ProjectObjectType.ProjectBlock, "testing", "blocks", "Testing block", "Group test strategy, scenarios, and quality execution work.", "test", "warn", "Testing block", "Block name", "Testing block", "Phase", "Regression, exploratory, performance...", "Description", "What this testing block covers"),
+            new("add-block-prompting", ProjectObjectType.ProjectBlock, "prompting", "blocks", "Prompting block", "Capture prompt-design work, experiments, and prompt-system scope.", "prompt", "accent", "Prompting block", "Block name", "Prompting block", "Intent", "Prompt objective", "Description", "How this prompting block is used"),
+            new("add-block-research", ProjectObjectType.ProjectBlock, "research", "blocks", "Research block", "Track research tasks, comparisons, and discovery findings.", "research", "sky", "Research block", "Block name", "Research block", "Question", "What must be answered", "Description", "Research scope and expected output"),
+            new("add-block-financial", ProjectObjectType.ProjectBlock, "financial", "blocks", "Financial block", "Track budget, commercial scope, and financial planning.", "money", "mint", "Financial block", "Block name", "Financial block", "Budget / owner", "Budget lane or owner", "Description", "Financial scope or constraints"),
+            new("add-block-marketing", ProjectObjectType.ProjectBlock, "marketing", "blocks", "Marketing block", "Track positioning, launch support, and go-to-market work.", "market", "danger", "Marketing block", "Block name", "Marketing block", "Channel", "Audience or channel", "Description", "Marketing focus and deliverables"),
+            new("add-block-operations", ProjectObjectType.ProjectBlock, "operations", "blocks", "Operations block", "Track operations, maintenance, and internal support work.", "ops", "primary", "Operations block", "Block name", "Operations block", "Owner", "Ops owner or team", "Description", "Operational scope and expectations"),
+            new("add-block-delivery", ProjectObjectType.ProjectBlock, "delivery", "blocks", "Delivery block", "Track release readiness, rollout, and delivery coordination.", "ship", "warn", "Delivery block", "Block name", "Delivery block", "Release", "Target release or stream", "Description", "Delivery dependencies and outcome"),
+            new("add-block-risk", ProjectObjectType.ProjectBlock, "risk", "blocks", "Risk block", "Track known risks, mitigations, and contingency work.", "risk", "danger", "Risk block", "Block name", "Risk block", "Severity", "High, medium, low...", "Description", "Risk details and mitigation"),
+            new("add-block-compliance", ProjectObjectType.ProjectBlock, "compliance", "blocks", "Compliance block", "Track compliance, policy, audit, and governance requirements.", "audit", "danger", "Compliance block", "Block name", "Compliance block", "Framework", "ISO, SOC, policy...", "Description", "Compliance scope and evidence"),
+            new("add-block-support", ProjectObjectType.ProjectBlock, "support", "blocks", "Support block", "Track enablement, support readiness, and handover work.", "support", "sky", "Support block", "Block name", "Support block", "Owner", "Support owner or queue", "Description", "Support coverage and handover notes"),
+            new("add-prompt-flow", ProjectObjectType.PromptFlow, string.Empty, "prompts", "Flow", "Map a reusable prompt flow from the active node.", "flow", "accent", "Prompt flow", "Flow name", "Review flow", "Goal", "What the flow should produce", "Prompt strategy", "Describe the flow shape"),
+            new("add-prompt-session", ProjectObjectType.PromptSession, string.Empty, "prompts", "Session", "Create a prompt session node and capture the first run context.", "session", "accent", "Prompt session", "Session name", "Prompt session", "Phase", "Discovery / review / test", "Intent", "What this session should do"),
+            new("add-prompt-step", ProjectObjectType.PromptStep, string.Empty, "prompts", "Step", "Create a prompt step node from anywhere in the structure graph.", "step", "accent", "Prompt step", "Step title", "Gather context", "Branch label", "Optional branch or lane", "Prompt", "What this step should ask or do"),
+            new("add-repository", ProjectObjectType.Repository, string.Empty, "assets", "Repo", "Add a repository or code artifact next to the current source.", "repo", "mint", "New repository", "Repo name", "frontend-app", "Owner / path", "team/repository", "Purpose", "What this repo is for"),
+            new("add-file", ProjectObjectType.File, string.Empty, "assets", "File", "Upload or register a file node without leaving the canvas.", "file", "mint", "Uploaded file", "File title", "Architecture notes", "Folder / usage", "docs/architecture", "Purpose", "What lives in this file", true, "*/*", "Drop a file here or choose one."),
+            new("add-image-asset", ProjectObjectType.ImageAsset, string.Empty, "assets", "Image", "Upload an image and keep it attached to the current part of the graph.", "image", "danger", "Uploaded image", "Image title", "Flow diagram", "Usage", "Where this image is used", "Description", "What this image explains", true, "image/*", "Drop an image here or choose one."),
+            new("add-video-asset", ProjectObjectType.VideoAsset, string.Empty, "assets", "Video", "Upload a video and connect it to the selected node immediately.", "video", "accent", "Uploaded video", "Video title", "Demo recording", "Usage", "Where this video is used", "Description", "What this video demonstrates", true, "video/*", "Drop a video here or choose one."),
+            new("add-link", ProjectObjectType.Link, string.Empty, "assets", "Link", "Create a link node and capture the address immediately.", "link", "sky", "New link", "Label", "API reference", "Address", "https://...", "Usage", "How this link is used"),
+            new("add-connector", ProjectObjectType.Connector, string.Empty, "assets", "Connector", "Describe the integration or handoff point represented by this node.", "plug", "accent", "New connector", "Connector", "CI pipeline", "System", "Source or target system", "Handshake", "What the connector does"),
+            new("add-secret-reference", ProjectObjectType.SecretReference, string.Empty, "assets", "Secret", "Track a secret reference without exposing the secret value itself.", "shield", "danger", "Secret reference", "Secret name", "API_KEY reference", "Vault / key", "Vault path or identifier", "Usage", "Where this secret is needed"),
+            new("add-validation-run", ProjectObjectType.ValidationRun, string.Empty, "assurance", "Validation", "Capture a validation run and its acceptance criteria immediately.", "qa", "mint", "Validation run", "Validation", "Contract check", "Type", "Review, lint, runtime...", "Criteria", "What success means"),
+            new("add-test-plan", ProjectObjectType.TestPlan, string.Empty, "assurance", "Test plan", "Create a test plan node and note the coverage target.", "test", "warn", "Test plan", "Plan name", "Regression sweep", "Phase", "Execution", "Coverage goal", "What this plan must cover"),
+            new("add-test-evidence", ProjectObjectType.TestEvidence, string.Empty, "assurance", "Evidence", "Log the evidence item or result that supports a test plan.", "evidence", "warn", "Test evidence", "Evidence", "Screenshot bundle", "Source", "Run, file, or system", "Result", "What this evidence proves")
+        ];
 
-    private static readonly IReadOnlyDictionary<string, ProjectStructureCreateLeafDefinition> CreateLeafByActionId =
-        CreateLeafDefinitions.ToDictionary(item => item.ActionId, StringComparer.OrdinalIgnoreCase);
+        definitions.AddRange(RichCreateLeafDefinitions ?? []);
+        return definitions;
+    });
+
+    private static readonly Lazy<IReadOnlyDictionary<string, ProjectStructureCreateLeafDefinition>> LazyCreateLeafByActionId =
+        new(() => CreateLeafDefinitions.ToDictionary(item => item.ActionId, StringComparer.OrdinalIgnoreCase));
+
+    private static IReadOnlyList<ProjectStructureCreateLeafDefinition> CreateLeafDefinitions
+        => LazyCreateLeafDefinitions.Value;
+
+    private static IReadOnlyDictionary<string, ProjectStructureCreateLeafDefinition> CreateLeafByActionId
+        => LazyCreateLeafByActionId.Value;
 
     public static bool TryResolveCreateDefinition(string actionId, out ProjectStructureCreateLeafDefinition definition)
         => CreateLeafByActionId.TryGetValue(actionId, out definition!);
+
+    public static bool TryResolveCreateDefinition(ProjectObjectType objectType, string? objectSubtype, out ProjectStructureCreateLeafDefinition definition)
+    {
+        var normalizedSubtype = objectSubtype?.Trim() ?? string.Empty;
+        definition = CreateLeafDefinitions.FirstOrDefault(item =>
+            item.ObjectType == objectType &&
+            string.Equals(item.ObjectSubtype, normalizedSubtype, StringComparison.OrdinalIgnoreCase))
+            ?? CreateLeafDefinitions.FirstOrDefault(item =>
+                item.ObjectType == objectType &&
+                string.IsNullOrWhiteSpace(item.ObjectSubtype))!;
+        return definition is not null;
+    }
+
+    public static CanvasWorkbenchAction BuildComposerAction(ProjectStructureCreateLeafDefinition definition)
+        => BuildCreateLeafAction(definition);
 
     public static string ResolveNodeLabel(ProjectStructureNode node) => node.ObjectType switch
     {
         ProjectObjectType.ProjectRoot => "Project",
         ProjectObjectType.Phase => "Phase",
         ProjectObjectType.ProjectBlock => ResolveProjectBlockLabel(node.ObjectSubtype),
+        ProjectObjectType.Meeting => ResolveMeetingLabel(node.ObjectSubtype),
+        ProjectObjectType.Recording => "Recording",
+        ProjectObjectType.Transcript => "Transcript",
+        ProjectObjectType.Participant => ResolveParticipantLabel(node.ObjectSubtype),
+        ProjectObjectType.WorkItem => ResolveWorkItemLabel(node.ObjectSubtype),
         ProjectObjectType.PromptFlow => "Prompt flow",
         ProjectObjectType.PromptSession => "Prompt session",
         ProjectObjectType.PromptStep => "Prompt step",
-        ProjectObjectType.Repository => "Repository",
-        ProjectObjectType.File => "File",
+        ProjectObjectType.Repository => ResolveRepositoryLabel(node.ObjectSubtype),
+        ProjectObjectType.File => ResolveFileLabel(node.ObjectSubtype),
         ProjectObjectType.ImageAsset => "Image",
         ProjectObjectType.VideoAsset => "Video",
         ProjectObjectType.Link => "Link",
         ProjectObjectType.Connector => "Connector",
+        ProjectObjectType.Script => ResolveScriptLabel(node.ObjectSubtype),
+        ProjectObjectType.Environment => ResolveEnvironmentLabel(node.ObjectSubtype),
+        ProjectObjectType.Infrastructure => ResolveInfrastructureLabel(node.ObjectSubtype),
         ProjectObjectType.ValidationRun => "Validation",
         ProjectObjectType.TestPlan => "Test plan",
         ProjectObjectType.TestEvidence => "Test evidence",
@@ -130,6 +174,12 @@ internal static class ProjectStructureCanvasCatalog
         "risk" => "Risk block",
         "compliance" => "Compliance block",
         "support" => "Support block",
+        "deployment" => "Deployment block",
+        "repos" => "Repos block",
+        "dockers" => "Dockers block",
+        "task-flow" => "Task flow block",
+        "backlog" => "Backlog block",
+        "server" => "Server block",
         _ => "Project block"
     };
 
@@ -159,25 +209,41 @@ internal static class ProjectStructureCanvasCatalog
     private static IReadOnlyList<string> BuildTopLevelMenuEntries(ProjectObjectType? sourceType) => sourceType switch
     {
         ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep =>
-        ["add-note", "group:prompts", "add-decision", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
+        ["add-note", "group:prompts", "group:work", "add-decision", "group:runtime", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
         ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector or ProjectObjectType.SecretReference =>
-        ["add-note", "group:assets", "add-decision", "group:blocks", "group:assurance", "group:prompts", "add-milestone", "add-phase"],
+        ["add-note", "group:runtime", "group:assets", "group:infrastructure", "add-decision", "group:work", "group:assurance", "group:prompts", "add-milestone", "add-phase"],
         ProjectObjectType.ValidationRun or ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence =>
-        ["add-note", "group:assurance", "add-decision", "group:assets", "group:blocks", "group:prompts", "add-milestone", "add-phase"],
+        ["add-note", "group:assurance", "group:work", "add-decision", "group:assets", "group:blocks", "group:prompts", "add-milestone", "add-phase"],
+        ProjectObjectType.Meeting or ProjectObjectType.Recording or ProjectObjectType.Transcript =>
+        ["add-note", "group:meetings", "group:people", "group:work", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
+        ProjectObjectType.Participant =>
+        ["add-note", "group:people", "group:meetings", "group:work", "group:assets", "group:blocks", "add-milestone", "add-phase"],
+        ProjectObjectType.WorkItem =>
+        ["add-note", "group:work", "group:people", "group:runtime", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
+        ProjectObjectType.Script or ProjectObjectType.Environment or ProjectObjectType.Infrastructure =>
+        ["add-note", "group:runtime", "group:infrastructure", "group:work", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
         _ =>
-        ["add-note", "add-decision", "add-milestone", "add-phase", "group:blocks", "group:prompts", "group:assets", "group:assurance"]
+        ["add-note", "add-decision", "add-milestone", "add-phase", "group:blocks", "group:meetings", "group:people", "group:work", "group:prompts", "group:runtime", "group:assets", "group:infrastructure", "group:assurance"]
     };
 
     private static IReadOnlyList<string> ResolveInspectorGroupOrder(ProjectObjectType? sourceType) => sourceType switch
     {
         ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep =>
-        ["capture", "prompts", "assets", "assurance", "planning", "blocks"],
+        ["capture", "prompts", "work", "runtime", "assets", "assurance", "planning", "blocks"],
         ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector or ProjectObjectType.SecretReference =>
-        ["capture", "assets", "planning", "blocks", "prompts", "assurance"],
+        ["capture", "runtime", "assets", "infrastructure", "planning", "blocks", "prompts", "assurance"],
         ProjectObjectType.ValidationRun or ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence =>
-        ["capture", "assurance", "planning", "assets", "prompts", "blocks"],
+        ["capture", "assurance", "work", "planning", "assets", "prompts", "blocks"],
+        ProjectObjectType.Meeting or ProjectObjectType.Recording or ProjectObjectType.Transcript =>
+        ["capture", "meetings", "people", "work", "assets", "assurance", "planning", "blocks"],
+        ProjectObjectType.Participant =>
+        ["capture", "people", "meetings", "work", "planning", "blocks", "assets"],
+        ProjectObjectType.WorkItem =>
+        ["capture", "work", "people", "runtime", "assets", "assurance", "planning", "blocks"],
+        ProjectObjectType.Script or ProjectObjectType.Environment or ProjectObjectType.Infrastructure =>
+        ["capture", "runtime", "infrastructure", "work", "assets", "assurance", "planning", "blocks"],
         _ =>
-        ["capture", "planning", "blocks", "prompts", "assets", "assurance"]
+        ["capture", "planning", "blocks", "meetings", "people", "work", "prompts", "runtime", "assets", "infrastructure", "assurance"]
     };
 
     private static IReadOnlyList<ProjectStructureCreateLeafDefinition> ResolveGroupLeafDefinitions(string groupKey, ProjectObjectType? sourceType)
@@ -185,8 +251,13 @@ internal static class ProjectStructureCanvasCatalog
         {
             "capture" => CreateLeafDefinitions.Where(item => item.GroupKey == "capture").ToList(),
             "planning" => CreateLeafDefinitions.Where(item => item.GroupKey == "planning").ToList(),
+            "meetings" => ResolveMeetingLeafDefinitions(),
+            "people" => ResolveParticipantLeafDefinitions(),
+            "work" => ResolveWorkLeafDefinitions(),
             "prompts" => ResolvePromptLeafDefinitions(sourceType),
+            "runtime" => ResolveRuntimeLeafDefinitions(),
             "assets" => ResolveAssetLeafDefinitions(sourceType),
+            "infrastructure" => ResolveInfrastructureLeafDefinitions(),
             "assurance" => CreateLeafDefinitions.Where(item => item.GroupKey == "assurance").ToList(),
             _ => ResolveBlockLeafDefinitions()
         };
@@ -205,8 +276,8 @@ internal static class ProjectStructureCanvasCatalog
     {
         var assetLeaves = CreateLeafDefinitions.Where(item => item.GroupKey == "assets").ToDictionary(item => item.ActionId, StringComparer.OrdinalIgnoreCase);
         var actionIds = sourceType is ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector or ProjectObjectType.SecretReference
-            ? new[] { "add-file", "add-link", "add-image-asset", "add-video-asset", "add-connector", "add-repository", "add-secret-reference" }
-            : new[] { "add-repository", "add-file", "add-image-asset", "add-video-asset", "add-link", "add-connector", "add-secret-reference" };
+            ? new[] { "add-file", "add-file-pdf", "add-file-excel", "add-file-docx", "add-file-markdown", "add-file-mermaid", "add-file-screenshot", "add-file-log", "add-file-audio", "add-link", "add-image-asset", "add-video-asset", "add-connector", "add-secret-reference" }
+            : new[] { "add-file-pdf", "add-file-excel", "add-file-docx", "add-file-text", "add-file-json", "add-file-markdown", "add-file-mermaid", "add-file-screenshot", "add-file-log", "add-file-archive", "add-file-audio", "add-repository", "add-file", "add-image-asset", "add-video-asset", "add-link", "add-connector", "add-secret-reference" };
 
         return actionIds.Select(actionId => assetLeaves[actionId]).ToList();
     }
@@ -227,6 +298,12 @@ internal static class ProjectStructureCanvasCatalog
                 "add-block-operations",
                 "add-block-financial",
                 "add-block-marketing",
+                "add-block-deployment",
+                "add-block-repos",
+                "add-block-dockers",
+                "add-block-task-flow",
+                "add-block-backlog",
+                "add-block-server",
                 "add-block-risk",
                 "add-block-compliance",
                 "add-block-support"
@@ -274,10 +351,14 @@ internal static class ProjectStructureCanvasCatalog
             SubtitlePlaceholder = definition.SubtitlePlaceholder,
             NotesLabel = definition.NotesLabel,
             NotesPlaceholder = definition.NotesPlaceholder,
+            ShowDefaultTextFields = definition.ShowDefaultTextFields,
+            SubmitLabel = definition.SubmitLabel,
             RequiresFile = definition.RequiresFile,
             AcceptedFileTypes = definition.AcceptedFileTypes,
             FilePrompt = definition.FilePrompt,
-            SupportsDragDrop = definition.RequiresFile
+            SupportsDragDrop = definition.RequiresFile,
+            InputFields = definition.InputFields?.ToList() ?? [],
+            DefaultInputValues = definition.DefaultInputValues?.ToList() ?? []
         };
 
     private static string ResolveCreateMenuLabel(ProjectStructureCreateLeafDefinition definition)
@@ -293,6 +374,10 @@ internal static class ProjectStructureCanvasCatalog
             "add-video-asset" => "Video",
             "add-link" => "Link",
             "add-file" => "File",
+            "add-meeting-online" => "Online",
+            "add-meeting-onsite" => "Onsite",
+            "add-recording" => "Recording",
+            "add-transcript" => "Transcript",
             "add-validation-run" => "Validation",
             _ => TrimMenuLabel(definition.Label)
         };

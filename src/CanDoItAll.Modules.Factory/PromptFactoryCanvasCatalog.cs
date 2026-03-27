@@ -275,7 +275,7 @@ internal static class PromptFactoryCanvasCatalog
         var actions = new List<CanvasWorkbenchAction>();
         if (block.TemplateTokens.Count > 0)
         {
-            var configure = BuildComponentLeafAction(block);
+            var configure = BuildComponentCreateAction(block);
             configure.Label = "Configure";
             configure.MenuLabel = "Configure";
             configure.Description = $"Update the specification for {block.Name}.";
@@ -316,6 +316,9 @@ internal static class PromptFactoryCanvasCatalog
             }
         ];
 
+    public static CanvasWorkbenchAction BuildComponentCreateAction(PromptBlockSummary block)
+        => BuildComponentLeafAction(block);
+
 private static CanvasWorkbenchAction BuildComponentsAction(PromptLibraryCatalogSummary catalog)
     => new()
     {
@@ -324,25 +327,8 @@ private static CanvasWorkbenchAction BuildComponentsAction(PromptLibraryCatalogS
         MenuLabel = "Components",
         Description = "Add prompt components from the shared library.",
         Icon = "prompt",
-        Tone = "accent",
-        SubmenuLayout = "toolbox-panel",
-        Children = ComponentSections
-                .Select(section => new CanvasWorkbenchAction
-                {
-                    ActionId = $"catalog-components:{section.Key}",
-                    Label = section.Label,
-                    MenuLabel = section.Label,
-                    Description = section.Description,
-                    Icon = section.Icon,
-                    Tone = section.Tone,
-                    Children = section.ItemKeys
-                        .Select(groupKey => catalog.Groups.FirstOrDefault(group => string.Equals(group.Key, groupKey, StringComparison.OrdinalIgnoreCase)))
-                        .Where(group => group is not null)
-                        .Select(group => BuildComponentGroupAction(group!))
-                        .ToList()
-                })
-                .ToList()
-        };
+        Tone = "accent"
+    };
 
     private static CanvasWorkbenchAction BuildComponentGroupAction(PromptLibraryGroupSummary group)
         => new()

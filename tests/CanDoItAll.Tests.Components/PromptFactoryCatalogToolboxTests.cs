@@ -1,3 +1,4 @@
+using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Factory.CanvasAdapters;
 
@@ -19,6 +20,35 @@ public sealed class PromptFactoryCatalogToolboxTests
         Assert.Contains(actions, action => action.ActionId == "apply-recommendations");
         Assert.Contains(actions, action => action.ActionId == "build-flow");
         Assert.Contains(actions, action => action.ActionId == "save-session");
+        Assert.Contains(actions, action => action.ActionId == "catalog-components" && string.IsNullOrWhiteSpace(action.SubmenuLayout));
+    }
+
+    [Fact]
+    public void Create_action_deduplicator_ignores_rapid_identical_requests()
+    {
+        var deduplicator = new PromptFactoryCreateActionDeduplicator(TimeSpan.FromMilliseconds(450));
+        var request = new CanvasWorkbenchCreateActionRequest(
+            "component:add:mission-scope",
+            "session-root",
+            0,
+            0,
+            null,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            "child",
+            "create",
+            string.Empty,
+            null,
+            []);
+
+        var firstResult = deduplicator.ShouldProcess(request, DateTimeOffset.Parse("2026-03-26T10:00:00Z"));
+        var duplicateResult = deduplicator.ShouldProcess(request, DateTimeOffset.Parse("2026-03-26T10:00:00.200Z"));
+        var laterResult = deduplicator.ShouldProcess(request, DateTimeOffset.Parse("2026-03-26T10:00:01Z"));
+
+        Assert.True(firstResult);
+        Assert.False(duplicateResult);
+        Assert.True(laterResult);
     }
 }
 

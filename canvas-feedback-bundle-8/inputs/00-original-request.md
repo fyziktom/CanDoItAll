@@ -1,0 +1,4 @@
+# Original Request
+
+Use whole [$candoitall-bundle-workflow](C:\\Users\\lucys\\.codex\\skills\\candoitall-bundle-workflow\\SKILL.md) to solve my feedback in attached feedback8 file.
+Assure that actual used [$candoitall-bundle-workflow](C:\\Users\\lucys\\.codex\\skills\\candoitall-bundle-workflow\\SKILL.md) uses in subskills playwright mcp and real validation of the app and changes during work. We did feedback bundle7 and during work it did not run the application. Usually i see opened browser and how agent click through to get proper screenshots. If this is not as hard rules during preparation and implementation flows you must improve skills first and then install them and use it for solving this feedback8. Capture analytics about how agent uses playwright mcp and screenshots as subbundle and when you finish you must analyze those analytics captures and improve skills so the agent will do true validations during the workflow.

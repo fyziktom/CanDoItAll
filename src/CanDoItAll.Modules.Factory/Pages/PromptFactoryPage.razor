@@ -79,6 +79,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
             </HeaderActions>
             <Canvas>
                 <CanvasWorkbench Surface="canvasSurface"
+                                 @ref="workbenchRef"
                                  SelectionChanged="HandleCanvasSelectionChangedAsync"
                                  NodesMoved="HandleCanvasNodesMovedAsync"
                                  ContextActionRequested="HandleCanvasContextActionAsync"
@@ -106,6 +107,13 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                     @onclick="RedoAsync">
                                 <span class="cw-toolbar-symbol" aria-hidden="true">â†·</span>
                                 <span class="sr-only">Redo</span>
+                            </button>
+                            <button type="button"
+                                    class="cw-toolbar-action pf-toolbar-toggle @(ComponentsToolboxWindowState.IsVisible ? "is-active" : string.Empty)"
+                                    data-testid="prompt-factory-components-toolbox-toggle"
+                                    title="Show or hide the components toolbox"
+                                    @onclick='@(() => ToggleCanvasWindowAsync(ComponentsToolboxWindowKey))'>
+                                Components
                             </button>
                         </div>
                     </ToolbarLeftContent>
@@ -151,6 +159,129 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                     }
                                 </div>
                             </section>
+                        }
+
+                        @if (ComponentsToolboxWindowState.IsVisible)
+                        {
+                            <CanvasFloatingWindow WindowId="@ComponentsToolboxWindowKey"
+                                                  TestId="prompt-factory-components-toolbox-window"
+                                                  AriaLabel="Prompt Factory components toolbox"
+                                                  Kicker="Components toolbox"
+                                                  Title="Prompt components"
+                                                  Summary="Search the shared library, preview component text, and add one block at a time without the old cascading submenu."
+                                                  DefaultPlacement="top-left"
+                                                  DefaultWidth="452"
+                                                  DefaultHeight="620"
+                                                  MinWidth="340"
+                                                  MinHeight="260"
+                                                  MaxWidth="560"
+                                                  State="@ComponentsToolboxWindowState"
+                                                  StateChanged="HandleComponentsToolboxWindowStateChangedAsync">
+                                <section class="cw-context-toolbox pf-components-toolbox"
+                                         data-testid="prompt-factory-components-toolbox">
+                                    <div class="cw-context-toolbox__header">
+                                        <div class="cw-context-toolbox__header-copy">
+                                            <p class="cw-context-toolbox__eyebrow">Visual Studio style</p>
+                                            <h3 class="cw-context-toolbox__title">Shared library explorer</h3>
+                                            <p class="cw-context-toolbox__copy">Search stays pinned. Sections and groups stay dense. The preview lane follows the Eye trigger instead of opening the old cascading submenu.</p>
+                                        </div>
+                                        <span class="cw-context-toolbox__count">@($"{ComponentToolboxSections.Sum(section => section.Groups.Sum(group => group.Blocks.Count))} items")</span>
+                                    </div>
+
+                                    <input class="cw-context-toolbox__search pf-toolbar__search"
+                                           type="search"
+                                           placeholder="Search components, groups, tags, or stack profiles"
+                                           @bind="componentToolboxSearchText"
+                                           @bind:event="oninput" />
+
+                                    <div class="cw-context-toolbox__body pf-components-toolbox__body">
+                                        <div class="cw-context-toolbox__sections">
+                                            @if (ComponentToolboxSections.Count == 0)
+                                            {
+                                                <div class="cw-context-toolbox__empty">
+                                                    <strong>No components match the current search.</strong>
+                                                    <span>Clear the search to restore the full library.</span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var sectionItem in ComponentToolboxSections)
+                                                {
+                                                    <details class="cw-context-toolbox__section" open>
+                                                        <summary class="cw-context-toolbox__section-summary">
+                                                            <span class="cw-context-toolbox__section-copy">
+                                                                <strong>@sectionItem.Label</strong>
+                                                                <small>@sectionItem.Description</small>
+                                                            </span>
+                                                            <span class="cw-context-toolbox__section-badge tone-accent">@($"{sectionItem.Groups.Sum(group => group.Blocks.Count)}")</span>
+                                                        </summary>
+                                                        <div class="cw-context-toolbox__section-body">
+                                                            @foreach (var group in sectionItem.Groups)
+                                                            {
+                                                                <details class="cw-context-toolbox__group" open>
+                                                                    <summary class="cw-context-toolbox__group-summary">
+                                                                        <strong>@group.Label</strong>
+                                                                        <small>@group.Summary</small>
+                                                                    </summary>
+                                                                    <div class="cw-context-toolbox__item-list">
+                                                                        @foreach (var block in group.Blocks)
+                                                                        {
+                                                                            <div class="pf-components-toolbox__item-row">
+                                                                                <button type="button"
+                                                                                        class="cw-context-toolbox__item"
+                                                                                        data-testid="@($"prompt-factory-component-{block.Key}")"
+                                                                                        @onclick="@(() => AddComponentFromToolboxAsync(block))">
+                                                                                    <span class="cw-context-toolbox__item-icon">
+                                                                                        <span class="cw-context-menu__glyph">@ResolveToolboxBlockIcon(block)</span>
+                                                                                    </span>
+                                                                                    <span class="cw-context-toolbox__item-body">
+                                                                                        <strong>@block.Name</strong>
+                                                                                        <small>@block.Summary</small>
+                                                                                    </span>
+                                                                                </button>
+                                                                                <button type="button"
+                                                                                        class="pf-components-toolbox__preview-toggle"
+                                                                                        title="Preview component text"
+                                                                                        aria-label="@($"Preview {block.Name}")"
+                                                                                        @onmouseenter="@(args => ShowComponentPreviewAsync(block, args))"
+                                                                                        @onmouseleave="HideComponentPreviewAsync"
+                                                                                        @onfocus="@(args => ShowComponentPreviewAsync(block, args))"
+                                                                                        @onblur="HideComponentPreviewAsync">
+                                                                                    Eye
+                                                                                </button>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                </details>
+                                                            }
+                                                        </div>
+                                                    </details>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+
+                                    @if (HasComponentPreview && PreviewedComponentBlock is not null && componentPreviewPopover is not null)
+                                    {
+                                        <div class="cw-context-toolbox__preview pf-components-toolbox__popover"
+                                             data-testid="prompt-factory-component-preview-popover"
+                                             data-placement="@componentPreviewPopover.Placement"
+                                             style="@ComponentPreviewPopoverStyle"
+                                             @onmouseenter="@(args => HoldComponentPreviewAsync())"
+                                             @onmouseleave="HideComponentPreviewAsync">
+                                            <p class="cw-context-toolbox__preview-kicker">Eye preview</p>
+                                            <h3 class="cw-context-toolbox__preview-title">@PreviewedComponentBlock.Name</h3>
+                                            <p class="cw-context-toolbox__preview-copy">@PreviewedComponentSummary</p>
+                                            <div class="cw-context-toolbox__preview-meta">
+                                                <span class="cw-context-toolbox__preview-pill">@ResolveLibraryGroupLabel(PreviewedComponentBlock.GroupKey)</span>
+                                                <span class="cw-context-toolbox__preview-pill">@PreviewedComponentBlock.BlockKind</span>
+                                                <span class="cw-context-toolbox__preview-pill">@(PreviewedComponentBlock.TemplateTokens.Count > 0 ? "Parameterized" : "Static")</span>
+                                            </div>
+                                            <pre class="pf-components-toolbox__preview-content">@PreviewedComponentContent</pre>
+                                        </div>
+                                    }
+                                </section>
+                            </CanvasFloatingWindow>
                         }
 
                         <section @ref="floatingInspectorPanel"

@@ -177,6 +177,93 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task UpdateObjectAsync_persists_typed_metadata_and_schedule_for_custom_nodes()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var saveResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Workbench Typed Edit",
+            Description = "Exercise typed edit persistence.",
+            Objective = "Persist metadata and schedule changes for editable nodes.",
+            CurrentPhase = "Execution"
+        });
+
+        Assert.True(saveResult.IsSuccess);
+
+        var initialMetadata = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            Meeting = new ProjectMeetingMetadata
+            {
+                Address = "Old office",
+                MeetingUrl = "https://old.example.com",
+                RepeatCadence = ProjectRepeatCadence.Weekly
+            }
+        });
+
+        var created = await workbench.CreateObjectAsync(
+            saveResult.Value,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Meeting,
+                "Client workshop",
+                "Discovery",
+                "Original workshop note.",
+                $"project:{saveResult.Value}",
+                320,
+                240,
+                new DateTimeOffset(2026, 4, 1, 9, 0, 0, TimeSpan.Zero),
+                new DateTimeOffset(2026, 4, 1, 10, 0, 0, TimeSpan.Zero),
+                "onsite",
+                null,
+                initialMetadata));
+
+        var updatedMetadata = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            Meeting = new ProjectMeetingMetadata
+            {
+                Address = "New office",
+                MeetingUrl = "https://meet.example.com/workshop",
+                RepeatCadence = ProjectRepeatCadence.Monthly
+            }
+        });
+
+        var updated = await workbench.UpdateObjectAsync(
+            saveResult.Value,
+            created.Id,
+            new ProjectObjectEditRequest(
+                "Client workshop updated",
+                "Refined agenda",
+                "Updated workshop note.",
+                new DateTimeOffset(2026, 4, 2, 13, 30, 0, TimeSpan.Zero),
+                new DateTimeOffset(2026, 4, 2, 15, 0, 0, TimeSpan.Zero),
+                updatedMetadata));
+
+        Assert.NotNull(updated);
+        Assert.Equal("Client workshop updated", updated!.Title);
+        Assert.Equal("Refined agenda", updated.Subtitle);
+        Assert.Equal("Updated workshop note.", updated.Notes);
+        Assert.Equal(new DateTimeOffset(2026, 4, 2, 13, 30, 0, TimeSpan.Zero), updated.StartUtc);
+        Assert.Equal(new DateTimeOffset(2026, 4, 2, 15, 0, 0, TimeSpan.Zero), updated.EndUtc);
+
+        var surface = await workbench.GetStructureAsync(saveResult.Value);
+        var meeting = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+        Assert.Equal("Client workshop updated", meeting.Title);
+        Assert.Equal("Refined agenda", meeting.Subtitle);
+        Assert.Equal("Updated workshop note.", meeting.Notes);
+        Assert.Equal(new DateTimeOffset(2026, 4, 2, 13, 30, 0, TimeSpan.Zero), meeting.StartUtc);
+        Assert.Equal(new DateTimeOffset(2026, 4, 2, 15, 0, 0, TimeSpan.Zero), meeting.EndUtc);
+
+        var parsedMetadata = ProjectObjectMetadataSerializer.Parse(meeting.MetadataJson);
+        Assert.NotNull(parsedMetadata.Meeting);
+        Assert.Equal("New office", parsedMetadata.Meeting!.Address);
+        Assert.Equal("https://meet.example.com/workshop", parsedMetadata.Meeting.MeetingUrl);
+        Assert.Equal(ProjectRepeatCadence.Monthly, parsedMetadata.Meeting.RepeatCadence);
+    }
+
+    [Fact]
     public async Task CreateObjectAsync_links_prompt_flow_nodes_to_blank_prompt_sessions()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -323,5 +410,179 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.Equal("release-checklist.pdf", fileNode.MediaOriginalFileName);
         Assert.Equal("application/pdf", fileNode.MediaContentType);
         Assert.Contains("Uploaded", fileNode.Badges);
+    }
+
+    [Fact]
+    public async Task ReparentObjectAsync_moves_nodes_and_DeleteObjectAsync_removes_descendants_and_links()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var saveResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Workbench Graph Surgery",
+            Description = "Exercise reparenting and deletion from the workbench service.",
+            Objective = "Keep parent-child structure and links consistent after graph edits.",
+            CurrentPhase = "Execution"
+        });
+
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var firstParent = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "First parent",
+                string.Empty,
+                "Original parent branch.",
+                $"project:{projectId}",
+                420,
+                220));
+
+        var secondParent = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Second parent",
+                string.Empty,
+                "Target parent branch.",
+                $"project:{projectId}",
+                760,
+                220));
+
+        var child = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Child node",
+                string.Empty,
+                "Move and delete this subtree.",
+                firstParent.Id,
+                560,
+                340));
+
+        var grandchild = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Grandchild task",
+                string.Empty,
+                "Nested descendant that should be deleted together with the child.",
+                child.Id,
+                760,
+                420,
+                null,
+                null,
+                "task"));
+
+        await workbench.LinkObjectsAsync(projectId, secondParent.Id, child.Id, ProjectObjectLinkKind.DependsOn);
+
+        var reparented = await workbench.ReparentObjectAsync(projectId, child.Id, secondParent.Id);
+
+        Assert.NotNull(reparented);
+        Assert.Equal(secondParent.Id, reparented!.ParentId);
+
+        var surfaceAfterReparent = await workbench.GetStructureAsync(projectId);
+        var movedChild = Assert.Single(surfaceAfterReparent.Nodes, node => node.Id == child.Id);
+        Assert.Equal(secondParent.Id, movedChild.ParentId);
+
+        var deletedCount = await workbench.DeleteObjectAsync(projectId, child.Id);
+
+        Assert.Equal(2, deletedCount);
+
+        var surfaceAfterDelete = await workbench.GetStructureAsync(projectId);
+        Assert.DoesNotContain(surfaceAfterDelete.Nodes, node => node.Id == child.Id);
+        Assert.DoesNotContain(surfaceAfterDelete.Nodes, node => node.Id == grandchild.Id);
+        Assert.DoesNotContain(surfaceAfterDelete.Links, link =>
+            string.Equals(link.SourceId, child.Id, StringComparison.Ordinal) ||
+            string.Equals(link.TargetId, child.Id, StringComparison.Ordinal) ||
+            string.Equals(link.SourceId, grandchild.Id, StringComparison.Ordinal) ||
+            string.Equals(link.TargetId, grandchild.Id, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task UpdateObjectMetadataAsync_persists_transcript_provider_state_and_review_status()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var saveResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Transcript Metadata Update",
+            Description = "Exercise typed metadata updates for transcript nodes.",
+            Objective = "Persist transcript provider results without stringly-typed hacks.",
+            CurrentPhase = "Review"
+        });
+
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var initialMetadata = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            Transcript = new ProjectTranscriptMetadata
+            {
+                TranscriptText = "Initial transcript body."
+            }
+        });
+
+        var transcript = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Transcript,
+                "Client transcript",
+                "Initial capture",
+                "Initial transcript body.",
+                $"project:{projectId}",
+                520,
+                260,
+                null,
+                null,
+                null,
+                null,
+                initialMetadata));
+
+        var providerId = Guid.NewGuid();
+        var updatedMetadata = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            Transcript = new ProjectTranscriptMetadata
+            {
+                TranscriptText = "Alice owes the rollout checklist.",
+                SummaryText = "Alice owns the checklist before Friday.",
+                MyTasksText = "- Review the rollout checklist",
+                OthersDeliveriesText = "- Alice: rollout checklist",
+                LastProviderProfileId = providerId,
+                LastProviderName = "Local llama",
+                LastActionKind = ProjectLlmActionKind.FindMyTasks
+            }
+        });
+
+        var updated = await workbench.UpdateObjectMetadataAsync(
+            projectId,
+            transcript.Id,
+            updatedMetadata,
+            notes: "Alice owes the rollout checklist.",
+            status: "Review");
+
+        Assert.NotNull(updated);
+        Assert.Equal("Review", updated!.Status);
+        Assert.Equal("Alice owes the rollout checklist.", updated.Notes);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var persistedTranscript = Assert.Single(surface.Nodes, node => node.Id == transcript.Id);
+        Assert.Equal("Review", persistedTranscript.Status);
+        Assert.Equal("Alice owes the rollout checklist.", persistedTranscript.Notes);
+
+        var parsedMetadata = ProjectObjectMetadataSerializer.Parse(persistedTranscript.MetadataJson);
+        Assert.NotNull(parsedMetadata.Transcript);
+        Assert.Equal(providerId, parsedMetadata.Transcript!.LastProviderProfileId);
+        Assert.Equal("Local llama", parsedMetadata.Transcript.LastProviderName);
+        Assert.Equal(ProjectLlmActionKind.FindMyTasks, parsedMetadata.Transcript.LastActionKind);
+        Assert.Equal("- Review the rollout checklist", parsedMetadata.Transcript.MyTasksText);
+        Assert.Equal("- Alice: rollout checklist", parsedMetadata.Transcript.OthersDeliveriesText);
     }
 }

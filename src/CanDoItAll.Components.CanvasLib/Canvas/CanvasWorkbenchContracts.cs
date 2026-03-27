@@ -35,6 +35,8 @@ public sealed class CanvasWorkbenchNode
 
     public string LeadText { get; set; } = string.Empty;
 
+    public CanvasWorkbenchCompactPath? CompactPath { get; set; }
+
     public string Status { get; set; } = string.Empty;
 
     public string BranchLabel { get; set; } = string.Empty;
@@ -94,6 +96,17 @@ public sealed class CanvasWorkbenchNode
     public List<CanvasWorkbenchAnnotation> Annotations { get; set; } = [];
 
     public List<CanvasWorkbenchAction> ContextActions { get; set; } = [];
+}
+
+public sealed class CanvasWorkbenchCompactPath
+{
+    public string Label { get; set; } = string.Empty;
+
+    public string DisplayText { get; set; } = string.Empty;
+
+    public string FullPath { get; set; } = string.Empty;
+
+    public string PromotedText { get; set; } = string.Empty;
 }
 
 public sealed class CanvasWorkbenchLink
@@ -405,6 +418,8 @@ public sealed class CanvasWorkbenchInputField
     public string InputMode { get; set; } = "text";
 
     public bool IsRequired { get; set; }
+
+    public List<CanvasWorkbenchInputOption> Options { get; set; } = [];
 }
 
 public sealed class CanvasWorkbenchInputValue
@@ -412,6 +427,13 @@ public sealed class CanvasWorkbenchInputValue
     public string Key { get; set; } = string.Empty;
 
     public string Value { get; set; } = string.Empty;
+}
+
+public sealed class CanvasWorkbenchInputOption
+{
+    public string Value { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
 }
 
 public sealed class CanvasWorkbenchUploadedFile

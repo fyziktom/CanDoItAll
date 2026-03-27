@@ -32,8 +32,14 @@ public sealed class ProjectStructurePlacementPolicy
         var existingChildren = nodes.Count(node => string.Equals(node.ParentId, anchorNode.Id, StringComparison.Ordinal));
         var column = existingChildren % 3;
         var row = existingChildren / 3;
+        var anchorParent = string.IsNullOrWhiteSpace(anchorNode.ParentId)
+            ? null
+            : nodes.FirstOrDefault(node => string.Equals(node.Id, anchorNode.ParentId, StringComparison.Ordinal));
+        var horizontalDirection = anchorParent is not null && anchorNode.X < anchorParent.X
+            ? -1
+            : 1;
         return (
-            anchorNode.X + 240 + (column * 46),
+            anchorNode.X + (horizontalDirection * (240 + (column * 46))),
             anchorNode.Y - 70 + (row * 118));
     }
 

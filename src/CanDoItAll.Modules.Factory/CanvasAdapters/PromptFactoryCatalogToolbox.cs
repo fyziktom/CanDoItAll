@@ -13,6 +13,9 @@ public static class PromptFactoryCatalogToolbox
     public static IReadOnlyList<CanvasWorkbenchAction> BuildComponentNodeActions(PromptBlockSummary block)
         => PromptFactoryCanvasCatalog.BuildComponentNodeActions(block);
 
+    public static CanvasWorkbenchAction BuildComponentCreateAction(PromptBlockSummary block)
+        => PromptFactoryCanvasCatalog.BuildComponentCreateAction(block);
+
     public static IReadOnlyList<CanvasWorkbenchAction> BuildFlowNodeActions(PromptLibraryCatalogSummary catalog)
         => PromptFactoryCanvasCatalog.BuildFlowNodeActions(catalog);
 

@@ -6,6 +6,7 @@
         @foreach (var tag in Value)
         {
             <button class="zy-tag-textedit__chip zy-tag-textedit__chip--@GetChipColorIndex(tag)"
+                    style="@GetChipStyle(tag)"
                     type="button"
                     @onclick="@(() => RemoveTagAsync(tag))"
                     disabled="@Disabled">
@@ -33,6 +34,7 @@
             @foreach (var suggestion in MatchingSuggestions)
             {
                 <button class="zy-tag-textedit__suggestion zy-tag-textedit__suggestion--@GetChipColorIndex(suggestion)"
+                        style="@GetChipStyle(suggestion)"
                         type="button"
                         @onclick="@(() => AddSuggestedTagAsync(suggestion))"
                         disabled="@Disabled">
@@ -87,6 +89,19 @@
 
     private string pendingValue = string.Empty;
     private bool isFocused;
+    private static readonly ChipPaletteEntry[] ChipPalette =
+    [
+        new("#e0f2fe", "#7dd3fc", "#0c4a6e"),
+        new("#fce7f3", "#f9a8d4", "#831843"),
+        new("#d1fae5", "#6ee7b7", "#064e3b"),
+        new("#fef3c7", "#fcd34d", "#78350f"),
+        new("#ede9fe", "#c4b5fd", "#4c1d95"),
+        new("#ffedd5", "#fdba74", "#7c2d12"),
+        new("#e0e7ff", "#a5b4fc", "#312e81"),
+        new("#ccfbf1", "#5eead4", "#134e4a"),
+        new("#fce4ec", "#f48fb1", "#880e4f"),
+        new("#e8f5e9", "#81c784", "#1b5e20")
+    ];
 
     private static int GetChipColorIndex(string tag)
     {
@@ -97,6 +112,12 @@
         }
 
         return Math.Abs(hash) % 10;
+    }
+
+    private static string GetChipStyle(string tag)
+    {
+        var palette = ChipPalette[GetChipColorIndex(tag)];
+        return $"background:{palette.BackgroundColor};border-color:{palette.BorderColor};color:{palette.ForegroundColor};";
     }
 
     private IReadOnlyList<string> MatchingSuggestions => Suggestions
@@ -234,4 +255,9 @@
             await ValueChanged.InvokeAsync(next);
         }
     }
+
+    private sealed record ChipPaletteEntry(
+        string BackgroundColor,
+        string BorderColor,
+        string ForegroundColor);
 }

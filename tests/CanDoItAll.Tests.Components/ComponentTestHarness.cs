@@ -37,7 +37,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
 
     public TestContext Context { get; }
 
-    public static async Task<ComponentTestHarness> CreateAsync()
+    public static async Task<ComponentTestHarness> CreateAsync(Action<IServiceCollection>? configureServices = null)
     {
         var rootPath = Path.Combine(Path.GetTempPath(), "candoitall-component-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(rootPath);
@@ -79,6 +79,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
         context.Services.AddTestLabModule();
         context.Services.AddActivityModule();
         context.Services.AddAutomationModule();
+        configureServices?.Invoke(context.Services);
 
         var dbContextFactory = context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();

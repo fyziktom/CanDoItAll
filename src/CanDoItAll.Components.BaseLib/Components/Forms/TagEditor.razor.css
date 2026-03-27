@@ -1,0 +1,14 @@
+.zy-tag-textedit__chip,
+.zy-tag-textedit__suggestion {
+    gap: 0.2rem;
+    padding: 0.08rem 0.4rem;
+    font-size: 0.64rem;
+    line-height: 1;
+    min-height: 1.15rem !important;
+}
+
+.zy-tag-textedit__chip-x {
+    width: 0.72rem;
+    height: 0.72rem;
+    font-size: 0.62rem;
+}

@@ -6,6 +6,17 @@ CanDoItAll is a modular .NET 10 Blazor Web App for managing project delivery wor
 
 - .NET 10 SDK
 - Windows PowerShell for the Playwright browser install script
+- `git` if you want to install the portable Codex skill pack including public sibling skills from `dotnet/skills`
+
+## Codex Skills
+
+This repo contains a portable Codex skill pack under [codex/README.md](C:/repositories/CanDoItAll/codex/README.md).
+
+Install or refresh the CanDoItAll custom skills plus the required public sibling skills with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1
+```
 
 ## Run the Web App
 

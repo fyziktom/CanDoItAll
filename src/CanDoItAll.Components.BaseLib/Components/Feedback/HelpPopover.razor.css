@@ -34,11 +34,21 @@
     line-height: 1;
 }
 
+.pf-help-popover__toggle--compact {
+    width: 1.18rem;
+    height: 1.18rem;
+    box-shadow: none;
+}
+
+.pf-help-popover__toggle--compact span {
+    font-size: 0.66rem;
+}
+
 .pf-help-popover__panel {
     position: absolute;
     top: calc(100% + 0.45rem);
     right: 0;
-    z-index: 20;
+    z-index: 80;
     display: grid;
     gap: 0.45rem;
     width: min(18rem, 78vw);
@@ -48,6 +58,13 @@
     background: rgba(15, 23, 42, 0.96);
     color: rgba(248, 250, 252, 0.94);
     box-shadow: 0 24px 42px rgba(15, 23, 42, 0.24);
+}
+
+.pf-help-popover__panel--above-end {
+    top: auto;
+    right: 0;
+    bottom: calc(100% + 0.45rem);
+    left: auto;
 }
 
 .pf-help-popover__panel strong {

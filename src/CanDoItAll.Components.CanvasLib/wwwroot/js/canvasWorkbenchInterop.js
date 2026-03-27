@@ -1,5 +1,6 @@
 (function () {
     const root = window.CanDoItAll = window.CanDoItAll || {};
+    const contextSubmenuHoverDelayMs = 500;
     const MIN_ZOOM = 0.15;
     const MAX_ZOOM = 1.75;
     function getTextMeasureService() {
@@ -110,7 +111,15 @@
             label: field?.label || field?.key || "Value",
             placeholder: field?.placeholder || "",
             inputMode: field?.inputMode || "text",
-            isRequired: !!field?.isRequired
+            isRequired: !!field?.isRequired,
+            options: Array.isArray(field?.options)
+                ? field.options
+                    .filter(option => option && (option.value || option.label))
+                    .map(option => ({
+                        value: option.value || "",
+                        label: option.label || option.value || ""
+                    }))
+                : []
         };
     }
 
@@ -174,6 +183,20 @@
             description: annotation?.description || "",
             icon: annotation?.icon || "",
             actionId: annotation?.actionId || ""
+        };
+    }
+
+    function normalizeCompactPath(path) {
+        const fullPath = typeof path?.fullPath === "string" ? path.fullPath.trim() : "";
+        if (!fullPath) {
+            return null;
+        }
+
+        return {
+            label: path?.label || "Path",
+            displayText: path?.displayText || fullPath,
+            fullPath,
+            promotedText: path?.promotedText || ""
         };
     }
 
@@ -307,6 +330,7 @@
                 mediaPreviewAlt: node?.mediaPreviewAlt || node?.title || "",
                 mediaContentType: node?.mediaContentType || "",
                 mediaFileName: node?.mediaFileName || "",
+                compactPath: normalizeCompactPath(node?.compactPath),
                 progressMode: node?.progressMode || "na",
                 progressPercent: normalizeProgressPercent(node?.progressPercent),
                 markerIcon: node?.markerIcon || "",
@@ -1060,6 +1084,7 @@
 
     function renderLinks(state, visibleNodes) {
         state.links.innerHTML = "";
+        ensureLinkMarkers(state);
         ensureLayoutPositions(state, visibleNodes);
         const visible = new Set(visibleNodes.map(node => node.id));
 
@@ -1094,8 +1119,52 @@
             path.setAttribute("stroke-linecap", "round");
             path.setAttribute("stroke-linejoin", "round");
             path.setAttribute("class", link.isUserAuthored ? "cw-link-path is-flow" : "cw-link-path");
+            if (shouldRenderArrow(link)) {
+                path.setAttribute("marker-end", link.isUserAuthored ? "url(#cw-link-arrow-user)" : "url(#cw-link-arrow-system)");
+            }
+
             state.links.appendChild(path);
         }
+    }
+
+    function ensureLinkMarkers(state) {
+        if (!state.links || state.links.querySelector("defs")) {
+            return;
+        }
+
+        const defs = createSvgElement(state.document, "defs");
+        defs.appendChild(createLinkMarker(state.document, "cw-link-arrow-user", "rgba(14, 165, 233, 0.86)"));
+        defs.appendChild(createLinkMarker(state.document, "cw-link-arrow-system", "rgba(100, 116, 139, 0.56)"));
+        state.links.appendChild(defs);
+    }
+
+    function createLinkMarker(document, markerId, fill) {
+        const marker = createSvgElement(document, "marker");
+        marker.setAttribute("id", markerId);
+        marker.setAttribute("markerWidth", "12");
+        marker.setAttribute("markerHeight", "12");
+        marker.setAttribute("refX", "10");
+        marker.setAttribute("refY", "6");
+        marker.setAttribute("orient", "auto");
+        marker.setAttribute("markerUnits", "strokeWidth");
+
+        const path = createSvgElement(document, "path");
+        path.setAttribute("d", "M 0 0 L 12 6 L 0 12 z");
+        path.setAttribute("fill", fill);
+        marker.appendChild(path);
+        return marker;
+    }
+
+    function shouldRenderArrow(link) {
+        if (!link) {
+            return false;
+        }
+
+        const kind = (link.kind || "").toLowerCase();
+        return !!link.isUserAuthored ||
+            kind === "dependson" ||
+            kind === "derivedfrom" ||
+            kind === "uses";
     }
 
     function getExpandedFrameNodeIds(state, frame) {
@@ -1232,13 +1301,54 @@
         return { mode: "na", angle: 360, centerText: "-", title: "Not applicable" };
     }
 
-    function createProgressBadge(document, progressMode, progressPercent, extraClassName) {
+    function createProgressBadge(document, progressMode, progressPercent, extraClassName, centerTextOverride, titleOverride) {
         const display = resolveProgressDisplay(progressMode, progressPercent);
         const marker = createElement(document, "span", `cw-node__progress is-${display.mode}${extraClassName ? ` ${extraClassName}` : ""}`);
         marker.style.setProperty("--cw-progress-angle", `${display.angle}deg`);
-        marker.title = display.title;
-        marker.appendChild(createElement(document, "span", "cw-node__progress-center", display.centerText));
+        const centerText = typeof centerTextOverride === "string"
+            ? centerTextOverride
+            : display.centerText;
+        marker.title = titleOverride || display.title;
+        if (centerText.length === 0) {
+            marker.classList.add("is-empty-center");
+        }
+        else if (centerText.length > 2) {
+            marker.classList.add("has-long-text");
+        }
+        marker.appendChild(createElement(document, "span", "cw-node__progress-center", centerText));
         return marker;
+    }
+
+    function resolveProgressPresetBadgeOptions(iconKey) {
+        const token = iconKey.substring("progress-".length);
+        const numericPercent = Number(token);
+        if (token === "na") {
+            return {
+                progressMode: "na",
+                progressPercent: 0,
+                centerText: "N/A",
+                title: "Not applicable"
+            };
+        }
+
+        if (token === "started") {
+            return {
+                progressMode: "started",
+                progressPercent: 0,
+                centerText: "",
+                title: "Started"
+            };
+        }
+
+        const progressPercent = Number.isFinite(numericPercent)
+            ? clamp(Math.round(numericPercent), 0, 100)
+            : 0;
+        return {
+            progressMode: progressPercent >= 100 ? "complete" : "progress",
+            progressPercent,
+            centerText: `${progressPercent}%`,
+            title: `${progressPercent}% complete`
+        };
     }
 
     function resolveMarkerGlyph(markerIcon) {
@@ -1364,6 +1474,67 @@
         return media;
     }
 
+    async function copyCompactPath(state, button, compactPath) {
+        if (!compactPath?.fullPath) {
+            return;
+        }
+
+        const didCopy = await writeClipboardText(compactPath.fullPath);
+        if (!didCopy) {
+            showStatusNotice(state, "Clipboard access is unavailable for this path", "warn");
+            return;
+        }
+
+        if (button.__cwCopyResetHandle) {
+            window.clearTimeout(button.__cwCopyResetHandle);
+        }
+
+        button.dataset.copied = "true";
+        const icon = button.querySelector(".cw-node__path-action");
+        if (icon) {
+            icon.textContent = resolveActionGlyph("qa");
+        }
+
+        showStatusNotice(state, `${compactPath.label || "Path"} copied`, "success");
+        button.__cwCopyResetHandle = window.setTimeout(() => {
+            button.dataset.copied = "false";
+            if (icon) {
+                icon.textContent = resolveActionGlyph("copy");
+            }
+
+            button.__cwCopyResetHandle = 0;
+        }, 2000);
+    }
+
+    function createCompactPathButton(state, node) {
+        const compactPath = node?.compactPath;
+        if (!compactPath?.fullPath) {
+            return null;
+        }
+
+        const button = applyFullTextTooltip(
+            createElement(state.document, "button", "cw-node__path-button"),
+            compactPath.fullPath);
+        button.type = "button";
+        button.dataset.copied = "false";
+        button.setAttribute("aria-label", `${compactPath.label || "Path"}: ${compactPath.fullPath}`);
+        button.addEventListener("pointerdown", event => event.stopPropagation());
+        button.addEventListener("pointerup", event => event.stopPropagation());
+        button.addEventListener("dblclick", event => event.stopPropagation());
+        button.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            void copyCompactPath(state, button, compactPath);
+        });
+
+        const text = createElement(state.document, "span", "cw-node__path-text", compactPath.displayText || compactPath.fullPath);
+        const action = createElement(state.document, "span", "cw-node__path-action", resolveActionGlyph("copy"));
+        action.setAttribute("aria-hidden", "true");
+        button.appendChild(text);
+        button.appendChild(action);
+        return button;
+    }
+
     function renderStandardNode(state, node, nodeElement) {
         const surface = createElement(state.document, "div", "cw-node__surface");
         const header = createElement(state.document, "div", "cw-node__header");
@@ -1402,10 +1573,23 @@
                 node.subtitle));
         }
 
+        if (node.compactPath?.promotedText &&
+            node.compactPath.promotedText !== node.title &&
+            node.compactPath.promotedText !== node.subtitle) {
+            surface.appendChild(applyFullTextTooltip(
+                createElement(state.document, "p", "cw-node__path-file", node.compactPath.promotedText),
+                node.compactPath.promotedText));
+        }
+
         if (node.leadText) {
             surface.appendChild(applyFullTextTooltip(
                 createElement(state.document, "p", "cw-node__lead", node.leadText),
                 node.leadText));
+        }
+
+        const compactPathButton = createCompactPathButton(state, node);
+        if (compactPathButton) {
+            surface.appendChild(compactPathButton);
         }
 
         renderNodeAnnotations(state, node, surface);
@@ -2081,13 +2265,15 @@
 
     async function writeClipboardText(payload) {
         if (!navigator?.clipboard?.writeText || !payload) {
-            return;
+            return false;
         }
 
         try {
             await navigator.clipboard.writeText(payload);
+            return true;
         }
         catch {
+            return false;
         }
     }
 
@@ -2413,6 +2599,7 @@
     }
 
     function clearContextMenu(state) {
+        cancelPendingContextSubmenu(state);
         state.contextMenu.innerHTML = "";
         state.contextMenu.style.display = "none";
         state.contextMenuState = null;
@@ -2565,6 +2752,11 @@
         return normalizeMenuActionScale(state?.ui?.menuActionScale);
     }
 
+    function isCompactHiveLayout(layout) {
+        const normalizedLayout = (layout || "").toLowerCase();
+        return normalizedLayout === "compact-hive" || normalizedLayout === "compact-ring";
+    }
+
     function resolveMenuActionVariant(action) {
         const actionId = (action?.actionId || "").toLowerCase();
         if (actionId.startsWith("progress:")) {
@@ -2588,9 +2780,11 @@
         const scale = getMenuScale(state);
         switch (resolveMenuActionVariant(action)) {
             case "progress-preset":
+                return { halfWidth: round(39 * scale), halfHeight: round(34 * scale) };
             case "marker-preset":
-                return { halfWidth: round(34 * scale), halfHeight: round(29 * scale) };
+                return { halfWidth: round(41 * scale), halfHeight: round(35 * scale) };
             case "priority-preset":
+                return { halfWidth: round(31 * scale), halfHeight: round(27 * scale) };
             case "compact":
                 return { halfWidth: round(29 * scale), halfHeight: round(25 * scale) };
             default:
@@ -2658,6 +2852,8 @@
         switch ((icon || "").toLowerCase()) {
             case "open":
                 return "\u2197";
+            case "copy":
+                return "\u2398";
             case "link":
             case "plug":
                 return "\u21C4";
@@ -2742,10 +2938,14 @@
         const iconContainer = createElement(state.document, "span", "cw-context-menu__icon");
 
         if (iconKey.startsWith("progress-")) {
-            const token = iconKey.substring("progress-".length);
-            const progressMode = token === "na" ? "na" : token === "started" ? "started" : (Number(token) >= 100 ? "complete" : "progress");
-            const progressPercent = Number.isFinite(Number(token)) ? Number(token) : 0;
-            iconContainer.appendChild(createProgressBadge(state.document, progressMode, progressPercent, "cw-node__progress--menu"));
+            const preset = resolveProgressPresetBadgeOptions(iconKey);
+            iconContainer.appendChild(createProgressBadge(
+                state.document,
+                preset.progressMode,
+                preset.progressPercent,
+                "cw-node__progress--menu",
+                preset.centerText,
+                preset.title));
             return iconContainer;
         }
 
@@ -2808,31 +3008,82 @@
         return offsets;
     }
 
-    function getCompactRingOffsets(count, radius, startAngle) {
+    function buildCompactHiveCoordinates(count) {
         if (count <= 0) {
             return [];
         }
 
-        const offsets = [];
-        const resolvedRadius = typeof radius === "number" ? radius : 72;
-        const resolvedStartAngle = typeof startAngle === "number" ? startAngle : -90;
-        for (let index = 0; index < count; index++) {
-            const angle = ((resolvedStartAngle + ((360 / count) * index)) * Math.PI) / 180;
-            offsets.push({
-                x: Math.cos(angle) * resolvedRadius,
-                y: Math.sin(angle) * resolvedRadius
-            });
+        const directions = [
+            { q: 1, r: 0 },
+            { q: 1, r: -1 },
+            { q: 0, r: -1 },
+            { q: -1, r: 0 },
+            { q: -1, r: 1 },
+            { q: 0, r: 1 }
+        ];
+        const coordinates = [];
+        for (let ring = 1; coordinates.length < count; ring++) {
+            let q = -ring;
+            let r = ring;
+            for (let directionIndex = 0; directionIndex < directions.length && coordinates.length < count; directionIndex++) {
+                const direction = directions[directionIndex];
+                for (let step = 0; step < ring && coordinates.length < count; step++) {
+                    coordinates.push({ q, r });
+                    q += direction.q;
+                    r += direction.r;
+                }
+            }
         }
 
-        return offsets;
+        return coordinates;
     }
 
-    function resolveContextMenuOffsets(actions, baseRadius, ringStep, layout) {
-        if ((layout || "").toLowerCase() === "compact-ring") {
-            return getCompactRingOffsets(actions.length, typeof baseRadius === "number" ? baseRadius : 72, -90);
+    function getCompactHiveOffsets(state, actions) {
+        if (!actions?.length) {
+            return [];
+        }
+
+        let maxHalfWidth = 34;
+        let maxHalfHeight = 29;
+        actions.forEach(action => {
+            const metrics = getActionMetrics(state, action);
+            maxHalfWidth = Math.max(maxHalfWidth, metrics.halfWidth);
+            maxHalfHeight = Math.max(maxHalfHeight, metrics.halfHeight);
+        });
+
+        const size = Math.max(maxHalfWidth + 7, round(((maxHalfHeight + 6) / Math.sqrt(3)) * 2));
+        const horizontalStep = size * 2.1;
+        const verticalStep = Math.max(maxHalfHeight * 2 + 24, size * 2.32);
+        return buildCompactHiveCoordinates(actions.length).map(coordinate => ({
+            x: round(coordinate.q * horizontalStep),
+            y: round((coordinate.r + (coordinate.q / 2)) * verticalStep)
+        }));
+    }
+
+    function resolveContextMenuOffsets(state, actions, baseRadius, ringStep, layout) {
+        if (isCompactHiveLayout(layout)) {
+            return getCompactHiveOffsets(state, actions);
         }
 
         return getRadialOffsets(actions.length, baseRadius, ringStep);
+    }
+
+    function resolveContextMenuSafeTop(state) {
+        const hostRect = state.host.getBoundingClientRect();
+        const workbenchFrame = state.host.closest(".cw-workbench-frame");
+        const toolbars = workbenchFrame
+            ? Array.from(workbenchFrame.querySelectorAll(".cw-toolbar"))
+                .filter(toolbar => toolbar instanceof HTMLElement)
+            : [];
+        if (!toolbars.length) {
+            return 0;
+        }
+
+        const safeBottom = toolbars.reduce((maxBottom, toolbar) => {
+            const toolbarRect = toolbar.getBoundingClientRect();
+            return Math.max(maxBottom, toolbarRect.bottom);
+        }, 0);
+        return Math.max(0, Math.round(safeBottom - hostRect.top + 12));
     }
 
     function getContextMenuLayerBounds(state, originOffset, offsets, radius, actions) {
@@ -2878,7 +3129,7 @@
         const hostRect = state.host.getBoundingClientRect();
         const visibleMinX = -rootCenter.x;
         const visibleMaxX = hostRect.width - rootCenter.x;
-        const visibleMinY = -rootCenter.y;
+        const visibleMinY = resolveContextMenuSafeTop(state) - rootCenter.y;
         const visibleMaxY = hostRect.height - rootCenter.y;
         let shiftX = 0;
         let shiftY = 0;
@@ -2909,8 +3160,9 @@
         const hostRect = state.host.getBoundingClientRect();
         const radius = getContextMenuOrbitRadius(state, offsets || [], actions || []);
         const bounds = getContextMenuLayerBounds(state, { x: 0, y: 0 }, offsets || [], radius, actions || []);
+        const safeTop = resolveContextMenuSafeTop(state);
         const x = round(clamp(center.x, -bounds.minX, Math.max(-bounds.minX, hostRect.width - bounds.maxX)));
-        const y = round(clamp(center.y, -bounds.minY, Math.max(-bounds.minY, hostRect.height - bounds.maxY)));
+        const y = round(clamp(center.y, safeTop - bounds.minY, Math.max(safeTop - bounds.minY, hostRect.height - bounds.maxY)));
         state.contextMenu.style.left = `${x}px`;
         state.contextMenu.style.top = `${y}px`;
         return { x, y };
@@ -2964,6 +3216,8 @@
             return;
         }
 
+        cancelPendingContextSubmenu(state, pending => (pending.ownerDepth + 1) >= depth);
+
         for (let index = layers.length - 1; index >= depth; index--) {
             layers[index].element.remove();
         }
@@ -2983,10 +3237,11 @@
             const layer = layers[depth];
             const entry = layer?.actionEntries?.get(hoveredAction.dataset.actionId || "");
             if (entry?.action?.children?.length) {
-                openContextSubmenu(state, layer, entry.options, entry.action, entry.offset);
+                scheduleContextSubmenuOpen(state, layer, entry.options, entry.action, entry.offset, hoveredAction);
                 return;
             }
 
+            cancelPendingContextSubmenu(state);
             closeContextMenuLayersFrom(state, depth + 1);
             return;
         }
@@ -3007,17 +3262,101 @@
             }
         }
 
+        cancelPendingContextSubmenu(state, pending => pending.ownerDepth > deepestContainingLayer);
         closeContextMenuLayersFrom(state, deepestContainingLayer + 1);
     }
 
     function resolveSubmenuOrigin(parentLayer, offset, layout) {
         const length = Math.hypot(offset.x, offset.y) || 1;
-        const outwardDistance = (layout || "").toLowerCase() === "compact-ring"
-            ? Math.max(92, round(parentLayer.radius * 0.26))
+        const outwardDistance = isCompactHiveLayout(layout)
+            ? Math.max(112, round(parentLayer.radius * 0.34))
             : Math.max(108, round(parentLayer.radius * 0.34));
         return {
             x: round(parentLayer.originOffset.x + offset.x + ((offset.x / length) * outwardDistance)),
             y: round(parentLayer.originOffset.y + offset.y + ((offset.y / length) * outwardDistance))
+        };
+    }
+
+    function ensureSubmenuLoadingIndicator(state, button) {
+        let indicator = button.querySelector(".cw-context-menu__loading-indicator");
+        if (indicator) {
+            return indicator;
+        }
+
+        indicator = createElement(state.document, "span", "cw-context-menu__loading-indicator");
+        indicator.appendChild(createElement(state.document, "span", "cw-context-menu__loading-ring"));
+        button.appendChild(indicator);
+        return indicator;
+    }
+
+    function clearSubmenuLoadingIndicator(button) {
+        if (!(button instanceof HTMLElement)) {
+            return;
+        }
+
+        button.classList.remove("is-submenu-loading");
+        button.querySelector(".cw-context-menu__loading-indicator")?.remove();
+    }
+
+    function cancelPendingContextSubmenu(state, predicate) {
+        const pending = state.contextMenuState?.pendingSubmenu;
+        if (!pending) {
+            return;
+        }
+
+        if (typeof predicate === "function" && !predicate(pending)) {
+            return;
+        }
+
+        window.clearTimeout(pending.timerId);
+        clearSubmenuLoadingIndicator(pending.button);
+        state.contextMenuState.pendingSubmenu = null;
+    }
+
+    function scheduleContextSubmenuOpen(state, parentLayer, options, action, offset, button) {
+        if (!action?.children?.length || !state.contextMenuState) {
+            cancelPendingContextSubmenu(state);
+            return;
+        }
+
+        const nextDepth = parentLayer.depth + 1;
+        const existingLayer = state.contextMenuState.layers?.[nextDepth];
+        if (existingLayer &&
+            existingLayer.ownerActionId === action.actionId &&
+            existingLayer.ownerDepth === parentLayer.depth) {
+            cancelPendingContextSubmenu(state);
+            return;
+        }
+
+        const pending = state.contextMenuState.pendingSubmenu;
+        if (pending &&
+            pending.ownerActionId === action.actionId &&
+            pending.ownerDepth === parentLayer.depth) {
+            return;
+        }
+
+        cancelPendingContextSubmenu(state);
+        if (!(button instanceof HTMLElement)) {
+            return;
+        }
+
+        ensureSubmenuLoadingIndicator(state, button);
+        button.classList.add("is-submenu-loading");
+
+        const timerId = window.setTimeout(() => {
+            if (!state.contextMenuState?.pendingSubmenu || state.contextMenuState.pendingSubmenu.timerId !== timerId) {
+                return;
+            }
+
+            cancelPendingContextSubmenu(state);
+            openContextSubmenu(state, parentLayer, options, action, offset);
+        }, contextSubmenuHoverDelayMs);
+
+        state.contextMenuState.pendingSubmenu = {
+            timerId,
+            ownerActionId: action.actionId || "",
+            ownerDepth: parentLayer.depth,
+            button
         };
     }
 
@@ -3127,6 +3466,63 @@
         };
     }
 
+    function shiftContextMenuLayerOrigin(layerState, deltaX, deltaY) {
+        if (!layerState || (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5)) {
+            return;
+        }
+
+        layerState.originOffset = {
+            x: round(layerState.originOffset.x + deltaX),
+            y: round(layerState.originOffset.y + deltaY)
+        };
+
+        if (layerState.mode === "panel") {
+            layerState.panel.style.left = `${layerState.originOffset.x}px`;
+            layerState.panel.style.top = `${layerState.originOffset.y}px`;
+            const panelSize = getToolboxPanelSize();
+            layerState.bounds = getToolboxPanelBounds(layerState.originOffset, panelSize);
+            return;
+        }
+
+        layerState.backdrop.style.setProperty("--cw-orbit-x", `${layerState.originOffset.x}px`);
+        layerState.backdrop.style.setProperty("--cw-orbit-y", `${layerState.originOffset.y}px`);
+        layerState.orbit.style.setProperty("--cw-orbit-x", `${layerState.originOffset.x}px`);
+        layerState.orbit.style.setProperty("--cw-orbit-y", `${layerState.originOffset.y}px`);
+    }
+
+    function nudgeContextMenuLayerIntoVisibleHost(state, layerState) {
+        if (!layerState?.element?.isConnected) {
+            return;
+        }
+
+        const hostRect = state.host.getBoundingClientRect();
+        const safeTop = hostRect.top + resolveContextMenuSafeTop(state);
+        const sideMargin = 12;
+        const targetRect = layerState.mode === "panel"
+            ? layerState.panel.getBoundingClientRect()
+            : layerState.orbit.getBoundingClientRect();
+        let shiftX = 0;
+        let shiftY = 0;
+
+        if (targetRect.left < (hostRect.left + sideMargin)) {
+            shiftX += (hostRect.left + sideMargin) - targetRect.left;
+        }
+
+        if (targetRect.right > (hostRect.right - sideMargin)) {
+            shiftX -= targetRect.right - (hostRect.right - sideMargin);
+        }
+
+        if (targetRect.top < safeTop) {
+            shiftY += safeTop - targetRect.top;
+        }
+
+        if (targetRect.bottom > (hostRect.bottom - sideMargin)) {
+            shiftY -= targetRect.bottom - (hostRect.bottom - sideMargin);
+        }
+
+        shiftContextMenuLayerOrigin(layerState, shiftX, shiftY);
+    }
+
     function resolveQuickCreateSourceNode(state) {
         const selectedId = state.ui.selectedNodeIds[0];
         if (selectedId && state.lookups.byId.has(selectedId)) {
@@ -3140,11 +3536,31 @@
     }
 
     function submitCreateRequest(state, payload, options) {
+        const createSignature = JSON.stringify({
+            actionId: payload?.actionId || "",
+            sourceNodeId: payload?.sourceNodeId || null,
+            parentNodeId: payload?.parentNodeId || null,
+            placementKind: payload?.placementKind || "child",
+            objectSubtype: payload?.objectSubtype || "",
+            title: payload?.title || "",
+            subtitle: payload?.subtitle || "",
+            notes: payload?.notes || "",
+            uploadedFileName: payload?.uploadedFile?.fileName || "",
+            inputValues: Array.isArray(payload?.inputValues) ? payload.inputValues : []
+        });
+        const requestedAt = Date.now();
+        if (state.lastCreateSignature === createSignature &&
+            requestedAt - (state.lastCreateRequestedAt || 0) < 450) {
+            return;
+        }
+
+        state.lastCreateSignature = createSignature;
+        state.lastCreateRequestedAt = requestedAt;
         state.pendingCreate = {
             actionId: payload?.actionId || "",
             sourceNodeId: payload?.sourceNodeId || null,
             placementKind: payload?.placementKind || "child",
-            requestedAt: Date.now(),
+            requestedAt,
             focusHost: options?.focusHost !== false
         };
         state.dotNetRef.invokeMethodAsync("OnCreateAction", JSON.stringify(payload));
@@ -3274,6 +3690,41 @@
         return { composer, card };
     }
 
+    function createComposerWizard(document, steps) {
+        if (!Array.isArray(steps) || steps.length === 0) {
+            return null;
+        }
+
+        const wizard = createElement(document, "ol", "cw-canvas-composer__wizard");
+        for (const step of steps) {
+            const item = createElement(document, "li", "cw-canvas-composer__wizard-item");
+            item.appendChild(createElement(document, "span", "cw-canvas-composer__wizard-step", `Step ${step.number}`));
+            item.appendChild(createElement(document, "strong", "cw-canvas-composer__wizard-label", step.title));
+            wizard.appendChild(item);
+        }
+
+        return wizard;
+    }
+
+    function createComposerSection(document, stepNumber, title, description) {
+        const section = createElement(document, "section", "cw-canvas-composer__section");
+        const header = createElement(document, "div", "cw-canvas-composer__section-header");
+        header.appendChild(createElement(document, "span", "cw-canvas-composer__section-step", String(stepNumber).padStart(2, "0")));
+
+        const copy = createElement(document, "div", "cw-canvas-composer__section-copy");
+        copy.appendChild(createElement(document, "strong", null, title));
+        if (description) {
+            copy.appendChild(createElement(document, "small", null, description));
+        }
+
+        header.appendChild(copy);
+
+        const body = createElement(document, "div", "cw-canvas-composer__section-body");
+        section.appendChild(header);
+        section.appendChild(body);
+        return { section, body };
+    }
+
     function updateComposerFileState(composer) {
         if (!composer) {
             return;
@@ -3297,13 +3748,33 @@
         closeComposer(state, { focusHost: false });
 
         const shell = decorateComposerShell(state, `Create ${action.label || "item"}`, action.label || "Create", "dialog");
-        const fields = createElement(state.document, "div", "cw-canvas-composer__fields");
+        const dialogBody = createElement(state.document, "div", "cw-canvas-composer__dialog-body");
+        const overview = createElement(state.document, "div", "cw-canvas-composer__overview");
+        const scroll = createElement(state.document, "div", "cw-canvas-composer__scroll");
+        const sectionSteps = [];
+        const appendSection = (title, description) => {
+            const stepNumber = sectionSteps.length + 1;
+            sectionSteps.push({ number: stepNumber, title });
+            const section = createComposerSection(state.document, stepNumber, title, description);
+            scroll.appendChild(section.section);
+            return section.body;
+        };
         const showDefaultTextFields = action.showDefaultTextFields !== false;
         let titleInput = null;
         let subtitleInput = null;
         let notesInput = null;
+        let defaultFields = null;
+        let notesFields = null;
+
+        if (action.description) {
+            overview.appendChild(createElement(state.document, "p", "cw-canvas-composer__intro", action.description));
+        }
 
         if (showDefaultTextFields) {
+            const detailsSection = appendSection("Details", "Name the item and keep the create request readable on the canvas.");
+            defaultFields = createElement(state.document, "div", "cw-canvas-composer__fields");
+            detailsSection.appendChild(defaultFields);
+
             const titleField = createElement(state.document, "label", "cw-canvas-composer__field");
             titleField.appendChild(createElement(state.document, "span", null, action.titleLabel || "Title"));
             titleInput = createElement(state.document, "input", "cw-canvas-composer__input");
@@ -3311,7 +3782,7 @@
             titleInput.value = request?.title || "";
             titleInput.placeholder = action.titlePlaceholder || "";
             titleField.appendChild(titleInput);
-            fields.appendChild(titleField);
+            defaultFields.appendChild(titleField);
 
             const subtitleField = createElement(state.document, "label", "cw-canvas-composer__field");
             subtitleField.appendChild(createElement(state.document, "span", null, action.subtitleLabel || "Subtitle"));
@@ -3320,7 +3791,7 @@
             subtitleInput.value = request?.subtitle || "";
             subtitleInput.placeholder = action.subtitlePlaceholder || "";
             subtitleField.appendChild(subtitleInput);
-            fields.appendChild(subtitleField);
+            defaultFields.appendChild(subtitleField);
 
             const notesField = createElement(state.document, "label", "cw-canvas-composer__field");
             notesField.appendChild(createElement(state.document, "span", null, action.notesLabel || "Notes"));
@@ -3328,7 +3799,15 @@
             notesInput.value = request?.notes || "";
             notesInput.placeholder = action.notesPlaceholder || "";
             notesField.appendChild(notesInput);
-            fields.appendChild(notesField);
+
+            const notesSection = appendSection(
+                "Notes",
+                action.requiresFile
+                    ? "Capture the supporting context after the required file is attached."
+                    : "Capture the supporting context and next-step guidance for the new item.");
+            notesFields = createElement(state.document, "div", "cw-canvas-composer__fields");
+            notesFields.appendChild(notesField);
+            notesSection.appendChild(notesFields);
         }
 
         const inputValueLookup = new Map();
@@ -3344,6 +3823,13 @@
         }
 
         const inputFieldEntries = [];
+        let inputFields = null;
+        if ((action.inputFields || []).length > 0) {
+            const inputsSection = appendSection("Inputs", "Complete the typed fields required before the item can be created.");
+            inputFields = createElement(state.document, "div", "cw-canvas-composer__fields");
+            inputsSection.appendChild(inputFields);
+        }
+
         for (const field of action.inputFields || []) {
             const fieldWrapper = createElement(state.document, "label", "cw-canvas-composer__field");
             fieldWrapper.appendChild(createElement(
@@ -3354,23 +3840,45 @@
 
             const inputMode = (field.inputMode || "text").toLowerCase();
             const isMultiline = inputMode === "textarea" || inputMode === "multiline";
+            const isSelect = inputMode === "select";
             const input = createElement(
                 state.document,
-                isMultiline ? "textarea" : "input",
+                isSelect ? "select" : (isMultiline ? "textarea" : "input"),
                 isMultiline ? "cw-canvas-composer__textarea" : "cw-canvas-composer__input");
-            if (!isMultiline) {
-                input.type = inputMode === "url" ? "url" : "text";
+            if (isSelect) {
+                const placeholderValue = field.placeholder || "Select an option";
+                const placeholderOption = createElement(state.document, "option", null, placeholderValue);
+                placeholderOption.value = "";
+                input.appendChild(placeholderOption);
+                for (const option of field.options || []) {
+                    const optionElement = createElement(state.document, "option", null, option.label || option.value || "");
+                    optionElement.value = option.value || "";
+                    input.appendChild(optionElement);
+                }
+            }
+            else if (!isMultiline) {
+                input.type = inputMode === "url" ? "url" :
+                    inputMode === "date" ? "date" :
+                        inputMode === "datetime-local" ? "datetime-local" :
+                            inputMode === "number" ? "number" :
+                                inputMode === "email" ? "email" :
+                                    inputMode === "tel" ? "tel" :
+                                        "text";
             }
 
             input.value = inputValueLookup.get(field.key) || "";
-            input.placeholder = field.placeholder || "";
+            if (!isSelect) {
+                input.placeholder = field.placeholder || "";
+            }
             fieldWrapper.appendChild(input);
-            fields.appendChild(fieldWrapper);
-            input.addEventListener("input", () => {
+            inputFields.appendChild(fieldWrapper);
+            const notifyInputChanged = () => {
                 if (state.composer) {
                     updateComposerFileState(state.composer);
                 }
-            });
+            };
+            input.addEventListener("input", notifyInputChanged);
+            input.addEventListener("change", notifyInputChanged);
             inputFieldEntries.push({
                 key: field.key,
                 input,
@@ -3382,6 +3890,11 @@
         let fileSummary = null;
         let fileInput = null;
         if (action.requiresFile) {
+            const uploadSection = appendSection(
+                "Attachment",
+                action.supportsDragDrop
+                    ? "Drop the required file here or choose it from disk."
+                    : "Choose the required file from disk before you create the item.");
             const uploadField = createElement(state.document, "div", "cw-canvas-composer__upload");
             const uploadTitle = createElement(state.document, "span", "cw-canvas-composer__upload-title", action.filePrompt || "Drop a file here or choose one.");
             uploadField.appendChild(uploadTitle);
@@ -3406,7 +3919,7 @@
             dropZone.appendChild(dropCopy);
             dropZone.appendChild(fileSummary);
             uploadField.appendChild(dropZone);
-            fields.appendChild(uploadField);
+            uploadSection.appendChild(uploadField);
 
             const assignUpload = async file => {
                 uploadedFile = await readFileAsUpload(file);
@@ -3483,6 +3996,11 @@
             }
         }
 
+        const wizard = createComposerWizard(state.document, sectionSteps);
+        if (wizard) {
+            overview.appendChild(wizard);
+        }
+
         const actions = createElement(state.document, "div", "cw-canvas-composer__actions");
         const cancel = createElement(state.document, "button", "cw-button");
         cancel.type = "button";
@@ -3497,10 +4015,11 @@
         create.addEventListener("click", () => commitComposer(state));
         actions.appendChild(create);
 
-        shell.card.appendChild(fields);
-        if (action.description) {
-            shell.card.appendChild(createElement(state.document, "p", "cw-canvas-composer__copy", action.description));
+        if (overview.childElementCount > 0) {
+            dialogBody.appendChild(overview);
         }
+        dialogBody.appendChild(scroll);
+        shell.card.appendChild(dialogBody);
         shell.card.appendChild(actions);
 
         state.composer = {
@@ -3655,6 +4174,7 @@
     }
 
     function openContextSubmenu(state, parentLayer, options, action, offset) {
+        cancelPendingContextSubmenu(state);
         const nextDepth = parentLayer.depth + 1;
         const existingLayer = state.contextMenuState?.layers?.[nextDepth];
         if (existingLayer &&
@@ -3694,13 +4214,14 @@
 
             state.contextMenu.appendChild(submenuLayer.element);
             state.contextMenuState.layers.push(submenuLayer);
+            nudgeContextMenuLayerIntoVisibleHost(state, submenuLayer);
             return;
         }
 
         const menuScale = getMenuScale(state);
-        const submenuBaseRadius = (submenuLayout === "compact-ring" ? 74 : 80) * menuScale;
-        const submenuRingStep = (submenuLayout === "compact-ring" ? 0 : 64) * menuScale;
-        const submenuOffsets = resolveContextMenuOffsets(action.children || [], submenuBaseRadius, submenuRingStep, submenuLayout);
+        const submenuBaseRadius = (isCompactHiveLayout(submenuLayout) ? 74 : 80) * menuScale;
+        const submenuRingStep = (isCompactHiveLayout(submenuLayout) ? 0 : 64) * menuScale;
+        const submenuOffsets = resolveContextMenuOffsets(state, action.children || [], submenuBaseRadius, submenuRingStep, submenuLayout);
         const submenuRadius = getContextMenuOrbitRadius(state, submenuOffsets, action.children || []);
         const submenuOrigin = clampLayerOriginToHost(
             state,
@@ -3732,6 +4253,7 @@
 
         state.contextMenu.appendChild(submenuLayer.element);
         state.contextMenuState.layers.push(submenuLayer);
+        nudgeContextMenuLayerIntoVisibleHost(state, submenuLayer);
     }
 
     function openContextSubmenuByActionId(state, actionId) {
@@ -3746,7 +4268,7 @@
     }
 
     function renderContextMenuLayer(state, layerState, options) {
-        const offsets = options.offsets || resolveContextMenuOffsets(options.actions, options.baseRadius, options.ringStep, options.submenuLayout);
+        const offsets = options.offsets || resolveContextMenuOffsets(state, options.actions, options.baseRadius, options.ringStep, options.submenuLayout);
         layerState.actionEntries = new Map();
         layerState.radius = getContextMenuOrbitRadius(state, offsets, options.actions);
         layerState.orbit.style.setProperty("--cw-orbit-size", `${round(layerState.radius * 2)}px`);
@@ -3781,17 +4303,20 @@
             button.addEventListener("pointerdown", event => event.stopPropagation());
             button.addEventListener("pointermove", event => {
                 event.stopPropagation();
-                if (action.children?.length) {
-                    openContextSubmenu(state, layerState, options, action, offset);
-                }
             });
             button.addEventListener("pointerenter", () => {
                 if (!action.children?.length) {
+                    cancelPendingContextSubmenu(state);
                     closeContextMenuLayersFrom(state, (options.depth || 0) + 1);
                     return;
                 }
 
-                openContextSubmenu(state, layerState, options, action, offset);
+                scheduleContextSubmenuOpen(state, layerState, options, action, offset, button);
+            });
+            button.addEventListener("pointerleave", () => {
+                cancelPendingContextSubmenu(
+                    state,
+                    pending => pending.ownerActionId === (action.actionId || "") && pending.ownerDepth === layerState.depth);
             });
             button.addEventListener("click", event => {
                 event.stopPropagation();
@@ -4028,7 +4553,7 @@
         const hostPoint = getHostPoint(state, options.clientX, options.clientY);
         state.contextMenu.style.display = "block";
         const menuScale = getMenuScale(state);
-        const rootOffsets = resolveContextMenuOffsets(actions, 84 * menuScale, 62 * menuScale, "");
+        const rootOffsets = resolveContextMenuOffsets(state, actions, 84 * menuScale, 62 * menuScale, "");
         const rootCenter = positionContextMenu(state, hostPoint, rootOffsets, actions);
         state.contextMenuState = {
             node: options.node || null,
@@ -4037,7 +4562,8 @@
             clientY: options.clientY,
             placementKind: options.placementKind || (options.node ? "child" : "canvas"),
             rootCenter,
-            layers: []
+            layers: [],
+            pendingSubmenu: null
         };
 
         const rootLayer = createContextMenuLayer(state, {
@@ -5031,6 +5557,8 @@
             containingBlockOverride: null,
             resizeObserver: null,
             lastPointerTarget: null,
+            lastCreateSignature: "",
+            lastCreateRequestedAt: 0,
             recentDoubleActivationAt: 0,
             wheelZoom: null,
             measuredNodeSizes: new Map(),
@@ -5108,6 +5636,131 @@
 
             state.pendingCreate = null;
         }
+    }
+
+    async function exportImageData(host) {
+        const state = host?.__canvasWorkbenchState;
+        if (!state) {
+            return null;
+        }
+
+        const bounds = host.getBoundingClientRect();
+        const width = Math.max(1, Math.ceil(bounds.width));
+        const height = Math.max(1, Math.ceil(bounds.height));
+        const clonedHost = cloneWorkbenchForExport(host, width, height);
+        if (!clonedHost) {
+            return null;
+        }
+
+        const serializer = new XMLSerializer();
+        const svgMarkup = [
+            `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+            `<foreignObject width="100%" height="100%">`,
+            serializer.serializeToString(clonedHost),
+            `</foreignObject>`,
+            `</svg>`
+        ].join("");
+
+        const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgMarkup)}`;
+        const image = await loadImage(svgDataUrl, 12000);
+        const canvas = state.document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        if (!context) {
+            return null;
+        }
+
+        context.fillStyle = "rgba(248, 250, 252, 1)";
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+        return canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
+    }
+
+    function cloneWorkbenchForExport(host, width, height) {
+        const clone = host.cloneNode(true);
+        const sourceElements = [host, ...host.querySelectorAll("*")];
+        const cloneElements = [clone, ...clone.querySelectorAll("*")];
+        if (sourceElements.length !== cloneElements.length) {
+            return null;
+        }
+
+        for (let index = 0; index < sourceElements.length; index += 1) {
+            copyComputedStyles(sourceElements[index], cloneElements[index]);
+        }
+
+        clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+        clone.style.margin = "0";
+        clone.style.width = `${width}px`;
+        clone.style.height = `${height}px`;
+        clone.style.overflow = "hidden";
+
+        for (const selector of [
+            ".cw-context-menu",
+            ".cw-workbench__popover",
+            ".cw-status-notice",
+            ".cw-minimap",
+            ".cw-diagnostics",
+            ".cw-marquee",
+            ".cw-workbench__guide-layer",
+            ".cw-workbench__debug-layer",
+            ".cw-workbench__anchor-layer",
+            ".cw-workbench__transform-layer"
+        ]) {
+            clone.querySelectorAll(selector).forEach(element => element.remove());
+        }
+
+        return clone;
+    }
+
+    function copyComputedStyles(source, target) {
+        if (!source || !target) {
+            return;
+        }
+
+        const computedStyle = window.getComputedStyle(source);
+        const cssText = Array.from(computedStyle)
+            .map(name => `${name}:${computedStyle.getPropertyValue(name)};`)
+            .join("");
+        target.setAttribute("style", cssText);
+    }
+
+    function loadImage(sourceUrl, timeoutMs = 10000) {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            let completed = false;
+            const timeoutHandle = window.setTimeout(() => {
+                if (completed) {
+                    return;
+                }
+
+                completed = true;
+                image.onload = null;
+                image.onerror = null;
+                reject(new Error(`Timed out loading exported image after ${timeoutMs}ms.`));
+            }, timeoutMs);
+
+            image.onload = () => {
+                if (completed) {
+                    return;
+                }
+
+                completed = true;
+                window.clearTimeout(timeoutHandle);
+                resolve(image);
+            };
+            image.onerror = () => {
+                if (completed) {
+                    return;
+                }
+
+                completed = true;
+                window.clearTimeout(timeoutHandle);
+                reject(new Error("Failed to load the exported workbench image."));
+            };
+            image.decoding = "sync";
+            image.src = sourceUrl;
+        });
     }
 
     root.canvasWorkbench = {
@@ -5212,6 +5865,12 @@
             const state = host.__canvasWorkbenchState;
             return state ? serializeState(state) : JSON.stringify({});
         },
+        getViewportSnapshot() {
+            return {
+                width: window.innerWidth || 0,
+                height: window.innerHeight || 0
+            };
+        },
         selectNodes(host, nodeIds, primaryNodeId) {
             const state = host.__canvasWorkbenchState;
             if (!state) {
@@ -5237,6 +5896,9 @@
 
             resize(state);
             render(state);
+        },
+        exportImageData(host) {
+            return exportImageData(host);
         },
         dispose(host) {
             if (!host) {
