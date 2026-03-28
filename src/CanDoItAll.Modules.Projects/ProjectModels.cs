@@ -90,6 +90,17 @@ public sealed class ProjectOptionSelection
     public string Notes { get; set; } = string.Empty;
 }
 
+public sealed class ProjectHierarchyLink
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ParentProjectId { get; set; }
+
+    public Guid ChildProjectId { get; set; }
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+}
+
 internal sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
 {
     public void Configure(EntityTypeBuilder<Project> builder)
@@ -128,13 +139,37 @@ internal sealed class ProjectOptionSelectionConfiguration : IEntityTypeConfigura
     }
 }
 
+internal sealed class ProjectHierarchyLinkConfiguration : IEntityTypeConfiguration<ProjectHierarchyLink>
+{
+    public void Configure(EntityTypeBuilder<ProjectHierarchyLink> builder)
+    {
+        builder.ToTable("Projects_ProjectHierarchyLinks");
+        builder.HasKey(link => link.Id);
+        builder.HasIndex(link => new { link.ParentProjectId, link.ChildProjectId }).IsUnique();
+        builder.HasIndex(link => link.ParentProjectId);
+        builder.HasIndex(link => link.ChildProjectId);
+    }
+}
+
 public sealed record ProjectSummary(
     Guid Id,
     string Name,
     ProjectStatus Status,
     string CurrentPhase,
     int PhaseCount,
+    int ParentCount,
+    int ChildCount,
     DateTimeOffset UpdatedAtUtc);
+
+public sealed record ProjectHierarchyLinkSummary(
+    Guid ParentProjectId,
+    Guid ChildProjectId,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record ProjectHierarchySnapshot(
+    Guid ProjectId,
+    IReadOnlyList<ProjectSummary> ParentProjects,
+    IReadOnlyList<ProjectSummary> ChildProjects);
 
 public sealed class ProjectPhaseEditorModel
 {
@@ -189,6 +224,11 @@ public sealed class ProjectsService(
     IActivityStream activityStream,
     ISearchIndexService searchIndexService)
 {
+    private sealed record ProjectHierarchyMetrics(
+        IReadOnlyDictionary<Guid, int> ParentCounts,
+        IReadOnlyDictionary<Guid, int> ChildCounts,
+        IReadOnlyList<ProjectHierarchyLinkSummary> Links);
+
     private static readonly ProjectOptionCategory[] DefaultCategories =
     [
         ProjectOptionCategory.Language,
@@ -205,22 +245,233 @@ public sealed class ProjectsService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
         var projects = await dbContext.Set<Project>().ToListAsync(cancellationToken);
-
-        var phases = await dbContext.Set<ProjectPhase>()
-            .GroupBy(phase => phase.ProjectId)
-            .Select(group => new { group.Key, Count = group.Count() })
-            .ToDictionaryAsync(item => item.Key, item => item.Count, cancellationToken);
+        var hierarchyMetrics = await LoadHierarchyMetricsAsync(dbContext, cancellationToken);
+        var phaseCounts = await LoadPhaseCountsAsync(dbContext, cancellationToken);
 
         return projects
             .OrderByDescending(project => project.UpdatedAtUtc)
-            .Select(project => new ProjectSummary(
-                project.Id,
-                project.Name,
-                project.Status,
-                project.CurrentPhase,
-                phases.GetValueOrDefault(project.Id),
-                project.UpdatedAtUtc))
+            .Select(project => MapProjectSummary(project, phaseCounts, hierarchyMetrics))
             .ToList();
+    }
+
+    public async Task<IReadOnlyList<ProjectHierarchyLinkSummary>> ListHierarchyLinksAsync(CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var hierarchyMetrics = await LoadHierarchyMetricsAsync(dbContext, cancellationToken);
+        return hierarchyMetrics.Links;
+    }
+
+    public async Task<ProjectHierarchySnapshot> GetHierarchyAsync(Guid projectId, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var projects = await dbContext.Set<Project>().ToListAsync(cancellationToken);
+        if (projects.All(project => project.Id != projectId))
+        {
+            return new ProjectHierarchySnapshot(projectId, [], []);
+        }
+
+        var hierarchyMetrics = await LoadHierarchyMetricsAsync(dbContext, cancellationToken);
+        var phaseCounts = await LoadPhaseCountsAsync(dbContext, cancellationToken);
+        var summaryMap = projects.ToDictionary(
+            project => project.Id,
+            project => MapProjectSummary(project, phaseCounts, hierarchyMetrics));
+
+        var parents = hierarchyMetrics.Links
+            .Where(link => link.ChildProjectId == projectId)
+            .Select(link => summaryMap.GetValueOrDefault(link.ParentProjectId))
+            .OfType<ProjectSummary>()
+            .OrderByDescending(project => project.UpdatedAtUtc)
+            .ToList();
+        var children = hierarchyMetrics.Links
+            .Where(link => link.ParentProjectId == projectId)
+            .Select(link => summaryMap.GetValueOrDefault(link.ChildProjectId))
+            .OfType<ProjectSummary>()
+            .OrderByDescending(project => project.UpdatedAtUtc)
+            .ToList();
+
+        return new ProjectHierarchySnapshot(projectId, parents, children);
+    }
+
+    public async Task<Result> AddSubprojectAsync(
+        Guid parentProjectId,
+        Guid childProjectId,
+        CancellationToken cancellationToken = default)
+    {
+        if (parentProjectId == childProjectId)
+        {
+            return Result.Failure(Error.Validation("A project cannot be attached as its own subproject."));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var projects = await dbContext.Set<Project>()
+            .Where(project => project.Id == parentProjectId || project.Id == childProjectId)
+            .ToDictionaryAsync(project => project.Id, cancellationToken);
+        if (!projects.TryGetValue(parentProjectId, out var parentProject))
+        {
+            return Result.Failure(Error.Validation("The selected parent project could not be found."));
+        }
+
+        if (!projects.TryGetValue(childProjectId, out var childProject))
+        {
+            return Result.Failure(Error.Validation("The selected subproject could not be found."));
+        }
+
+        var existingLink = await dbContext.Set<ProjectHierarchyLink>()
+            .FirstOrDefaultAsync(
+                link => link.ParentProjectId == parentProjectId && link.ChildProjectId == childProjectId,
+                cancellationToken);
+        if (existingLink is not null)
+        {
+            return Result.Success();
+        }
+
+        var cycleError = await ValidateHierarchyConnectionAsync(dbContext, parentProjectId, childProjectId, cancellationToken);
+        if (cycleError is not null)
+        {
+            return Result.Failure(cycleError);
+        }
+
+        await dbContext.Set<ProjectHierarchyLink>().AddAsync(
+            new ProjectHierarchyLink
+            {
+                ParentProjectId = parentProjectId,
+                ChildProjectId = childProjectId,
+                CreatedAtUtc = clock.GetUtcNow()
+            },
+            cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await activityStream.RecordAsync(
+            new ActivityWriteRequest(
+                "projects",
+                "attach-subproject",
+                "Attached subproject",
+                $"{childProject.Name} is now under {parentProject.Name}.",
+                ProjectId: childProjectId,
+                ArtifactKind: "project",
+                ArtifactId: childProjectId,
+                Route: $"/projects?projectId={childProjectId}"),
+            cancellationToken);
+        return Result.Success();
+    }
+
+    public async Task<Result> RemoveSubprojectAsync(
+        Guid parentProjectId,
+        Guid childProjectId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var link = await dbContext.Set<ProjectHierarchyLink>()
+            .FirstOrDefaultAsync(
+                item => item.ParentProjectId == parentProjectId && item.ChildProjectId == childProjectId,
+                cancellationToken);
+        if (link is null)
+        {
+            return Result.Failure(Error.Validation("The selected project relationship does not exist."));
+        }
+
+        var projects = await dbContext.Set<Project>()
+            .Where(project => project.Id == parentProjectId || project.Id == childProjectId)
+            .ToDictionaryAsync(project => project.Id, cancellationToken);
+        if (!projects.TryGetValue(parentProjectId, out var parentProject) ||
+            !projects.TryGetValue(childProjectId, out var childProject))
+        {
+            return Result.Failure(Error.Validation("The selected project relationship is no longer valid."));
+        }
+
+        dbContext.Remove(link);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await activityStream.RecordAsync(
+            new ActivityWriteRequest(
+                "projects",
+                "detach-subproject",
+                "Detached subproject",
+                $"{childProject.Name} was detached from {parentProject.Name}.",
+                ProjectId: childProjectId,
+                ArtifactKind: "project",
+                ArtifactId: childProjectId,
+                Route: $"/projects?projectId={childProjectId}"),
+            cancellationToken);
+        return Result.Success();
+    }
+
+    public async Task<Result> ReconnectSubprojectAsync(
+        Guid childProjectId,
+        Guid currentParentProjectId,
+        Guid newParentProjectId,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentParentProjectId == newParentProjectId)
+        {
+            return Result.Failure(Error.Validation("Choose a different project before reconnecting the subproject."));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var currentLink = await dbContext.Set<ProjectHierarchyLink>()
+            .FirstOrDefaultAsync(
+                link => link.ParentProjectId == currentParentProjectId && link.ChildProjectId == childProjectId,
+                cancellationToken);
+        if (currentLink is null)
+        {
+            return Result.Failure(Error.Validation("The selected source parent is not connected to this subproject."));
+        }
+
+        var projects = await dbContext.Set<Project>()
+            .Where(project =>
+                project.Id == childProjectId ||
+                project.Id == currentParentProjectId ||
+                project.Id == newParentProjectId)
+            .ToDictionaryAsync(project => project.Id, cancellationToken);
+        if (!projects.TryGetValue(childProjectId, out var childProject))
+        {
+            return Result.Failure(Error.Validation("The selected subproject could not be found."));
+        }
+
+        if (!projects.TryGetValue(currentParentProjectId, out var currentParentProject))
+        {
+            return Result.Failure(Error.Validation("The selected source parent project could not be found."));
+        }
+
+        if (!projects.TryGetValue(newParentProjectId, out var newParentProject))
+        {
+            return Result.Failure(Error.Validation("The selected target parent project could not be found."));
+        }
+
+        var targetLink = await dbContext.Set<ProjectHierarchyLink>()
+            .FirstOrDefaultAsync(
+                link => link.ParentProjectId == newParentProjectId && link.ChildProjectId == childProjectId,
+                cancellationToken);
+        if (targetLink is null)
+        {
+            var cycleError = await ValidateHierarchyConnectionAsync(dbContext, newParentProjectId, childProjectId, cancellationToken);
+            if (cycleError is not null)
+            {
+                return Result.Failure(cycleError);
+            }
+
+            await dbContext.Set<ProjectHierarchyLink>().AddAsync(
+                new ProjectHierarchyLink
+                {
+                    ParentProjectId = newParentProjectId,
+                    ChildProjectId = childProjectId,
+                    CreatedAtUtc = clock.GetUtcNow()
+                },
+                cancellationToken);
+        }
+
+        dbContext.Remove(currentLink);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await activityStream.RecordAsync(
+            new ActivityWriteRequest(
+                "projects",
+                "reconnect-subproject",
+                "Reconnected subproject",
+                $"{childProject.Name} moved from {currentParentProject.Name} to {newParentProject.Name}.",
+                ProjectId: childProjectId,
+                ArtifactKind: "project",
+                ArtifactId: childProjectId,
+                Route: $"/projects?projectId={childProjectId}"),
+            cancellationToken);
+        return Result.Success();
     }
 
     public async Task<ProjectEditorModel> GetAsync(Guid? id, CancellationToken cancellationToken = default)
@@ -403,8 +654,12 @@ public sealed class ProjectsService(
 
         var phases = await dbContext.Set<ProjectPhase>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
         var options = await dbContext.Set<ProjectOptionSelection>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
+        var hierarchyLinks = await dbContext.Set<ProjectHierarchyLink>()
+            .Where(item => item.ParentProjectId == id || item.ChildProjectId == id)
+            .ToListAsync(cancellationToken);
         dbContext.RemoveRange(phases);
         dbContext.RemoveRange(options);
+        dbContext.RemoveRange(hierarchyLinks);
         dbContext.Remove(project);
         await dbContext.SaveChangesAsync(cancellationToken);
         await searchIndexService.DeleteAsync("project", id.ToString(), cancellationToken);
@@ -444,6 +699,100 @@ public sealed class ProjectsService(
                 Category = category
             });
         }
+    }
+
+    private static ProjectSummary MapProjectSummary(
+        Project project,
+        IReadOnlyDictionary<Guid, int> phaseCounts,
+        ProjectHierarchyMetrics hierarchyMetrics)
+        => new(
+            project.Id,
+            project.Name,
+            project.Status,
+            project.CurrentPhase,
+            phaseCounts.GetValueOrDefault(project.Id),
+            hierarchyMetrics.ParentCounts.GetValueOrDefault(project.Id),
+            hierarchyMetrics.ChildCounts.GetValueOrDefault(project.Id),
+            project.UpdatedAtUtc);
+
+    private static async Task<IReadOnlyDictionary<Guid, int>> LoadPhaseCountsAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+        => await dbContext.Set<ProjectPhase>()
+            .GroupBy(phase => phase.ProjectId)
+            .Select(group => new { group.Key, Count = group.Count() })
+            .ToDictionaryAsync(item => item.Key, item => item.Count, cancellationToken);
+
+    private static async Task<ProjectHierarchyMetrics> LoadHierarchyMetricsAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var links = await dbContext.Set<ProjectHierarchyLink>()
+            .OrderBy(link => link.ParentProjectId)
+            .ThenBy(link => link.ChildProjectId)
+            .ToListAsync(cancellationToken);
+
+        var parentCounts = links
+            .GroupBy(link => link.ChildProjectId)
+            .ToDictionary(group => group.Key, group => group.Count());
+        var childCounts = links
+            .GroupBy(link => link.ParentProjectId)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        return new ProjectHierarchyMetrics(
+            parentCounts,
+            childCounts,
+            links.Select(link => new ProjectHierarchyLinkSummary(link.ParentProjectId, link.ChildProjectId, link.CreatedAtUtc)).ToList());
+    }
+
+    private static async Task<Error?> ValidateHierarchyConnectionAsync(
+        AppDbContext dbContext,
+        Guid parentProjectId,
+        Guid childProjectId,
+        CancellationToken cancellationToken)
+    {
+        if (parentProjectId == childProjectId)
+        {
+            return Error.Validation("A project cannot be attached as its own subproject.");
+        }
+
+        var links = await dbContext.Set<ProjectHierarchyLink>()
+            .Select(link => new { link.ParentProjectId, link.ChildProjectId })
+            .ToListAsync(cancellationToken);
+        var childrenByParent = links
+            .GroupBy(link => link.ParentProjectId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(link => link.ChildProjectId).ToList());
+        var visited = new HashSet<Guid>();
+        var queue = new Queue<Guid>();
+        queue.Enqueue(childProjectId);
+
+        while (queue.Count > 0)
+        {
+            var currentProjectId = queue.Dequeue();
+            if (!visited.Add(currentProjectId))
+            {
+                continue;
+            }
+
+            if (currentProjectId == parentProjectId)
+            {
+                return Error.Validation("Connecting these projects would create a cycle in the project hierarchy.");
+            }
+
+            if (!childrenByParent.TryGetValue(currentProjectId, out var descendantIds))
+            {
+                continue;
+            }
+
+            foreach (var descendantId in descendantIds)
+            {
+                queue.Enqueue(descendantId);
+            }
+        }
+
+        return null;
     }
 
     private static string BuildSlug(string input)

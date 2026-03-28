@@ -84,6 +84,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
         var dbContextFactory = context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         await dbContext.Database.EnsureCreatedAsync();
+        await ProjectsSchemaInitializer.EnsureAsync(dbContext);
 
         return new ComponentTestHarness(rootPath, context);
     }

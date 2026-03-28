@@ -7,6 +7,11 @@ public sealed class ProjectStructureActionCatalogAdapter
 {
     public IReadOnlyList<CanvasWorkbenchAction> BuildNodeContextActions(ProjectStructureNode node)
     {
+        if (node.ProjectRole != ProjectStructureProjectRole.None)
+        {
+            return BuildProjectContextActions(node);
+        }
+
         var actions = new List<CanvasWorkbenchAction>
         {
             new() { ActionId = "open", Label = "Open", MenuLabel = "Open", Description = "Open the linked artifact or routed workspace.", Icon = "open", Tone = "accent" },
@@ -181,6 +186,72 @@ public sealed class ProjectStructureActionCatalogAdapter
         }
 
         return int.TryParse(actionId["priority:".Length..], out priority);
+    }
+
+    private static IReadOnlyList<CanvasWorkbenchAction> BuildProjectContextActions(ProjectStructureNode node)
+    {
+        var actions = new List<CanvasWorkbenchAction>
+        {
+            new()
+            {
+                ActionId = "open",
+                Label = "Open",
+                MenuLabel = "Open",
+                Description = "Open the selected project route in the current tab.",
+                Icon = "open",
+                Tone = "accent"
+            },
+            new()
+            {
+                ActionId = "summary",
+                Label = "Summary",
+                MenuLabel = "Summary",
+                Description = "Review the project summary and exported hierarchy details.",
+                Icon = "summary",
+                Tone = "sky"
+            }
+        };
+
+        if (node.ProjectRole is ProjectStructureProjectRole.Subproject or ProjectStructureProjectRole.ParentProject or ProjectStructureProjectRole.AdditionalParentProject)
+        {
+            actions.Insert(1, new CanvasWorkbenchAction
+            {
+                ActionId = "project:open-structure",
+                Label = "Structure tab",
+                MenuLabel = "Structure",
+                Description = "Open the related project structure in a new browser tab.",
+                Icon = "open",
+                Tone = "primary"
+            });
+        }
+
+        if (node.ProjectRole is ProjectStructureProjectRole.ActiveProject or ProjectStructureProjectRole.Subproject)
+        {
+            actions.Add(new CanvasWorkbenchAction
+            {
+                ActionId = "project:add-subproject",
+                Label = "Add subproject",
+                MenuLabel = "Add subproject",
+                Description = "Attach another project beneath this project and refresh the hierarchy canvas.",
+                Icon = "fork",
+                Tone = "accent"
+            });
+        }
+
+        if (node.ProjectRole == ProjectStructureProjectRole.Subproject)
+        {
+            actions.Add(new CanvasWorkbenchAction
+            {
+                ActionId = "project:reconnect-subproject",
+                Label = "Reconnect parent",
+                MenuLabel = "Reconnect",
+                Description = "Move this project under another parent project without leaving the canvas.",
+                Icon = "relink",
+                Tone = "primary"
+            });
+        }
+
+        return actions;
     }
 
     private static CanvasWorkbenchAction BuildProgressAction()

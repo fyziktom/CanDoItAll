@@ -10,9 +10,11 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 *@
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Workbench.CanvasAdapters
 @using CanDoItAll.Modules.Workspace
 @using CanDoItAll.SharedKernel
+@inject ProjectsService ProjectsService
 @inject ProjectWorkbenchService ProjectWorkbenchService
 @inject IProjectStructureLocalFileOpener LocalFileOpener
 @inject IProjectStructureRuntimeLauncher RuntimeLauncher
@@ -88,7 +90,7 @@ else
                                                   BodyClass="project-structure-toolbox-window__body"
                                                   DefaultPlacement="top-left"
                                                   DefaultWidth="@ToolboxWindowDefaultWidth"
-                                                  DefaultHeight="500"
+                                                  DefaultHeight="420"
                                                   MinWidth="320"
                                                   MinHeight="240"
                                                   MaxWidth="520"
@@ -247,8 +249,8 @@ else
                                                   Title="@SelectionWindowTitle"
                                                   Summary="@SelectionWindowSummary"
                                                   DefaultPlacement="top-right"
-                                                  DefaultWidth="420"
-                                                  DefaultHeight="640"
+                                                  DefaultWidth="360"
+                                                  DefaultHeight="360"
                                                   MinWidth="320"
                                                   MinHeight="240"
                                                   MaxWidth="520"
@@ -608,6 +610,82 @@ else
                     </div>
                 }
                             </CanvasFloatingWindow>
+                        }
+                        @if (projectHierarchyDialog is not null)
+                        {
+                            <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseProjectHierarchyDialog">
+                                <div class="project-structure-preview-dialog project-structure-summary-dialog"
+                                     role="dialog"
+                                     aria-modal="true"
+                                     aria-label="@projectHierarchyDialog.Title"
+                                     data-testid="project-structure-hierarchy-dialog"
+                                     @onclick:stopPropagation="true">
+                                    <div class="project-structure-preview-dialog__header">
+                                        <div class="project-structure-preview-dialog__copy">
+                                            <p class="cw-panel-kicker">Project hierarchy</p>
+                                            <h3 class="cw-panel-title">@projectHierarchyDialog.Title</h3>
+                                            <p class="cw-panel-copy">@projectHierarchyDialog.Copy</p>
+                                        </div>
+                                        <div class="project-structure-preview-dialog__actions">
+                                            <button type="button"
+                                                    class="cw-button"
+                                                    data-tone="ghost"
+                                                    @onclick="CloseProjectHierarchyDialog">
+                                                Close
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="project-structure-preview-dialog__body">
+                                        @if (!string.IsNullOrWhiteSpace(projectHierarchyDialog.CurrentParentProjectTitle))
+                                        {
+                                            <div class="cw-panel-card">
+                                                <p class="cw-panel-kicker">Current parent</p>
+                                                <p class="cw-panel-copy">@projectHierarchyDialog.CurrentParentProjectTitle</p>
+                                            </div>
+                                        }
+                                        <div class="cw-panel-card">
+                                            <label class="cw-panel-copy" for="project-structure-hierarchy-project-select">
+                                                Project
+                                            </label>
+                                            <select id="project-structure-hierarchy-project-select"
+                                                    class="cw-context-toolbox__search"
+                                                    data-testid="project-structure-hierarchy-project-select"
+                                                    value="@(projectHierarchyDialog.SelectedProjectId?.ToString() ?? string.Empty)"
+                                                    @onchange="HandleProjectHierarchySelectionChanged">
+                                                <option value="">Select a project</option>
+                                                @foreach (var projectOption in projectHierarchyDialog.AvailableProjects)
+                                                {
+                                                    <option value="@projectOption.Id">
+                                                        @projectOption.Name
+                                                    </option>
+                                                }
+                                            </select>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(projectHierarchyDialog.Error))
+                                        {
+                                            <div class="project-structure-inline-feedback" data-tone="warn">
+                                                @projectHierarchyDialog.Error
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="project-structure-preview-dialog__actions">
+                                        <button type="button"
+                                                class="cw-button"
+                                                data-tone="ghost"
+                                                @onclick="CloseProjectHierarchyDialog">
+                                            Cancel
+                                        </button>
+                                        <button type="button"
+                                                class="cw-button"
+                                                data-tone="accent"
+                                                data-testid="project-structure-hierarchy-submit"
+                                                disabled="@(projectHierarchyDialog.AvailableProjects.Count == 0)"
+                                                @onclick="ExecuteProjectHierarchyCommandAsync">
+                                            @projectHierarchyDialog.SubmitLabel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         }
                         @if (quickActionDialog is not null)
                         {
@@ -1129,6 +1207,10 @@ else
         var uiState = !string.IsNullOrWhiteSpace(currentViewStateJson)
             ? CanvasWorkbenchUiState.Parse(currentViewStateJson)
             : CanvasWorkbenchUiState.Parse(reloadedSurface.ViewStateJson);
+        if (string.IsNullOrWhiteSpace(currentViewStateJson))
+        {
+            uiState.ShowMinimap = false;
+        }
 
         if (previewNode is not null)
         {
@@ -1259,7 +1341,17 @@ else
     }
 
     private Task HandleNodeOpenedAsync(string nodeId)
-        => ExecuteCommandAsync(ProjectStructureCommandKind.Open, nodeId, allowQuickActionDialog: true);
+    {
+        var node = ResolveNode(nodeId);
+        if (node?.ProjectRole is ProjectStructureProjectRole.Subproject or
+            ProjectStructureProjectRole.ParentProject or
+            ProjectStructureProjectRole.AdditionalParentProject)
+        {
+            return OpenProjectStructureInNewTabAsync(node);
+        }
+
+        return ExecuteCommandAsync(ProjectStructureCommandKind.Open, nodeId, allowQuickActionDialog: true);
+    }
 
     private async Task HandleContextActionAsync(CanvasWorkbenchContextActionRequest request)
         => await HandleCanvasActionAsync(request.ActionId, request.NodeId, request.X, request.Y);
@@ -1339,6 +1431,24 @@ else
         {
             case "summary":
                 await OpenSummaryAsync(nodeId);
+                break;
+            case "project:open-structure":
+                if (ResolveNode(nodeId) is { } projectNodeForOpen)
+                {
+                    await OpenProjectStructureInNewTabAsync(projectNodeForOpen);
+                }
+                break;
+            case "project:add-subproject":
+                if (ResolveNode(nodeId) is { } projectNodeForAdd)
+                {
+                    await OpenAddSubprojectDialogAsync(projectNodeForAdd);
+                }
+                break;
+            case "project:reconnect-subproject":
+                if (ResolveNode(nodeId) is { } projectNodeForReconnect)
+                {
+                    await OpenReconnectSubprojectDialogAsync(projectNodeForReconnect);
+                }
                 break;
             case "connect":
                 linkModeSourceId = nodeId;
@@ -1684,16 +1794,34 @@ else
 
     private CanvasWorkbenchWindowState ResolveHealthWindowState()
     {
-        var state = ResolveWindowState(HealthWindowKey);
+        var uiState = ResolveEditableUiState();
+        if (!uiState.WindowStates.TryGetValue(HealthWindowKey, out var state))
+        {
+            return CanvasWorkbenchWindowState.Normalize(new CanvasWorkbenchWindowState
+            {
+                IsVisible = false,
+                Left = HealthWindowDefaultLeft
+            });
+        }
+
         if (state.HasCustomGeometry)
         {
-            return state;
+            return CanvasWorkbenchWindowState.Normalize(state);
         }
 
         var offsetState = state.Clone();
         offsetState.Left = HealthWindowDefaultLeft;
         return CanvasWorkbenchWindowState.Normalize(offsetState);
     }
+
+    private CanvasWorkbenchWindowState ResolveWindowStateForToggle(string key)
+        => key switch
+        {
+            SelectionWindowKey => ResolveWindowState(key),
+            HealthWindowKey => ResolveHealthWindowState(),
+            ToolboxWindowKey => ResolveToolboxWindowState(),
+            _ => ResolveWindowState(key)
+        };
 
     private Task HandleSelectionWindowStateChangedAsync(CanvasWorkbenchWindowState state)
         => PersistWindowStateAsync(SelectionWindowKey, state);
@@ -1703,7 +1831,7 @@ else
 
     private async Task ToggleWindowAsync(string key)
     {
-        var state = ResolveWindowState(key);
+        var state = ResolveWindowStateForToggle(key);
         if (!state.IsVisible)
         {
             state.IsVisible = true;

@@ -8,15 +8,15 @@
 
 - List the targeted commands and their outcomes.
 
-## Subbundle Gate Results
-
-| Subbundle | Gate | Inputs covered | Dependencies checked | Proof review | Result |
-| --- | --- | --- | --- | --- | --- |
-| `01-example` | `Post-implementation gate` | `N001, N002` | `No dependent subbundle may start until the accordion proof is stable` | `Playwright route checks plus screenshot review questions answered` | `Pending` |
-
 ## Browser Artifacts
 
 - List screenshot, fullscreen, or host-capture artifact paths when UI or desktop proof is involved.
+
+## Subbundle Gate Results
+
+| Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `01-example` | `Pending` | `Pending` | `Pending` | `Pending` | Record the current gate status for the subbundle. |
 
 ## Browser Validation Analytics
 
@@ -28,6 +28,7 @@
 
 - Summarize whether the browser-validation evidence was strong enough.
 - Record any gap such as missing screenshots, missing assertions, or blocked Playwright interaction.
+- Summarize whether the subbundle gate decisions were strong enough for downstream work.
 
 ## Raw Note Closure
 

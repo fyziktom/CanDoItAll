@@ -14,7 +14,7 @@
 
 ## Prerequisites
 
-- List earlier subbundles, fixtures, or environment proof required before this phase can start.
+- List earlier subbundles, fixtures, proof, or bundle state required before implementation starts.
 - Use `- none` only when this subbundle is truly independent.
 
 ## Exact Source References
@@ -27,13 +27,11 @@
 
 ## Dependency Impact
 
-- List the later subbundles, surfaces, or regression areas that depend on this phase.
+- Describe the later subbundles, surfaces, or regression areas that depend on this phase, and why weak proof here would invalidate them.
 
 ## Validation Depth
 
-- Standard
-- Critical foundation
-- State the extra validation expected before dependent subbundles may continue.
+- State the exact validation depth or closure type for this phase, for example `Critical foundation`, `Critical UI foundation`, `UI, component-test, and browser-proof`, `End-to-end regression and closure`, or `Process-critical closure`.
 
 ## Implementation Steps
 
@@ -67,7 +65,7 @@
 
 ## Progression Gate
 
-- State the exact proof that must pass before the next dependent subbundle can start.
+- State the exact proof or condition that must be true before downstream subbundles may continue.
 
 ## Suggested Agent Prompt
 

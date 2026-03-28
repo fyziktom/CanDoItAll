@@ -14,17 +14,6 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $repoSkillRoot = Join-Path $repoRoot "codex\skills"
 $targetSkillRoot = Join-Path $CodexHome "skills"
-
-$customSkillNames = @(
-    "candoitall-bundle-workflow",
-    "candoitall-bundle-preparation",
-    "candoitall-bundle-execution",
-    "candoitall-bundle-validator",
-    "candoitall-subbundle-validator",
-    "candoitall-watch-playwright-loop",
-    "candoitall-dotnetwatch-setup"
-)
-
 $publicSkillSources = @(
     [pscustomobject]@{
         Name           = "openai/skills"
@@ -85,6 +74,27 @@ function Find-SkillDirectory {
     return $matches[0].FullName
 }
 
+function Get-RepoManagedSkillDirectories {
+    param(
+        [string]$Root
+    )
+
+    $directories = @(Get-ChildItem -Path $Root -Directory -Recurse |
+        Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") } |
+        Sort-Object FullName)
+    $seenNames = @{}
+
+    foreach ($directory in $directories) {
+        if ($seenNames.ContainsKey($directory.Name)) {
+            throw "Found multiple repo-managed skills named '$($directory.Name)': $($seenNames[$directory.Name]); $($directory.FullName)"
+        }
+
+        $seenNames[$directory.Name] = $directory.FullName
+    }
+
+    return $directories
+}
+
 function Install-SkillDirectory {
     param(
         [string]$SourceDirectory,
@@ -143,9 +153,8 @@ Ensure-Directory -Path $targetSkillRoot
 
 if (-not $SkipCustomSkills) {
     Write-Step "Installing custom CanDoItAll skills from repo"
-    foreach ($skillName in $customSkillNames) {
-        $sourceDirectory = Find-SkillDirectory -Root $repoSkillRoot -SkillName $skillName
-        Install-SkillDirectory -SourceDirectory $sourceDirectory -SkillName $skillName -Origin "repo"
+    foreach ($directory in Get-RepoManagedSkillDirectories -Root $repoSkillRoot) {
+        Install-SkillDirectory -SourceDirectory $directory.FullName -SkillName $directory.Name -Origin "repo"
     }
 }
 

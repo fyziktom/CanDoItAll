@@ -35,7 +35,41 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         Assert.Contains(actions, action => action.ActionId == "priority");
     }
 
-    private static ProjectStructureNode CreateNode(string id, ProjectObjectType objectType, string title, double x, double y)
+    [Fact]
+    public void Project_nodes_use_project_specific_actions_instead_of_generic_graph_mutations()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode(
+            "project-child:11111111-1111-1111-1111-111111111111",
+            ProjectObjectType.ProjectRoot,
+            "Project child",
+            0,
+            0,
+            projectRole: ProjectStructureProjectRole.Subproject,
+            relatedProjectId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            parentProjectCount: 2);
+
+        var actions = adapter.BuildNodeContextActions(node);
+
+        Assert.Contains(actions, action => action.ActionId == "open");
+        Assert.Contains(actions, action => action.ActionId == "project:open-structure");
+        Assert.Contains(actions, action => action.ActionId == "project:add-subproject");
+        Assert.Contains(actions, action => action.ActionId == "project:reconnect-subproject");
+        Assert.DoesNotContain(actions, action => action.ActionId == "reconnect");
+        Assert.DoesNotContain(actions, action => action.ActionId == "disconnect");
+        Assert.DoesNotContain(actions, action => action.ActionId == "delete");
+        Assert.DoesNotContain(actions, action => action.ActionId.StartsWith("add-", StringComparison.Ordinal));
+    }
+
+    private static ProjectStructureNode CreateNode(
+        string id,
+        ProjectObjectType objectType,
+        string title,
+        double x,
+        double y,
+        ProjectStructureProjectRole projectRole = ProjectStructureProjectRole.None,
+        Guid? relatedProjectId = null,
+        int parentProjectCount = 0)
         => new(
             id,
             null,
@@ -60,7 +94,10 @@ public sealed class ProjectStructureActionCatalogAdapterTests
             string.Empty,
             string.Empty,
             string.Empty,
-            0);
+            0,
+            ProjectRole: projectRole,
+            RelatedProjectId: relatedProjectId,
+            ParentProjectCount: parentProjectCount);
 }
 
 

@@ -146,6 +146,8 @@ public sealed class ProjectStructureGraphAdapter
             Priority = node.Priority,
             IsRequired = node.ObjectType is ProjectObjectType.ProjectRoot or ProjectObjectType.Phase or ProjectObjectType.PromptSession,
             IsCollapsible = hasChildren,
+            IsReadOnly = node.ProjectRole == ProjectStructureProjectRole.AdditionalParentProject,
+            IsPreviewOnly = node.ProjectRole == ProjectStructureProjectRole.AdditionalParentProject,
             IsInlineTextNode = isInlineTextNode,
             InlineText = inlineText,
             InlineTextPlaceholder = "Write note",
@@ -190,22 +192,29 @@ public sealed class ProjectStructureGraphAdapter
         _ => "item"
     };
 
-    private static string ResolvePalette(ProjectStructureNode node) => node.ObjectType switch
-    {
-        ProjectObjectType.Meeting => "sky",
-        ProjectObjectType.Recording or ProjectObjectType.Transcript => "accent",
-        ProjectObjectType.Participant => "primary",
-        ProjectObjectType.WorkItem => "warn",
-        ProjectObjectType.Repository or ProjectObjectType.Script or ProjectObjectType.Environment => "sky",
-        ProjectObjectType.File => ResolveFilePalette(node.ObjectSubtype),
-        ProjectObjectType.ImageAsset or ProjectObjectType.Decision => "rose",
-        ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector => "violet",
-        ProjectObjectType.Infrastructure => "danger",
-        ProjectObjectType.Milestone or ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => "amber",
-        ProjectObjectType.ValidationRun or ProjectObjectType.Note or ProjectObjectType.ProjectBlock => "mint",
-        ProjectObjectType.SecretReference => "rose",
-        _ => "neutral"
-    };
+    private static string ResolvePalette(ProjectStructureNode node)
+        => node.ProjectRole switch
+        {
+            ProjectStructureProjectRole.Subproject => "sky",
+            ProjectStructureProjectRole.ParentProject => "neutral",
+            ProjectStructureProjectRole.AdditionalParentProject => "neutral",
+            _ => node.ObjectType switch
+            {
+                ProjectObjectType.Meeting => "sky",
+                ProjectObjectType.Recording or ProjectObjectType.Transcript => "accent",
+                ProjectObjectType.Participant => "primary",
+                ProjectObjectType.WorkItem => "warn",
+                ProjectObjectType.Repository or ProjectObjectType.Script or ProjectObjectType.Environment => "sky",
+                ProjectObjectType.File => ResolveFilePalette(node.ObjectSubtype),
+                ProjectObjectType.ImageAsset or ProjectObjectType.Decision => "rose",
+                ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector => "violet",
+                ProjectObjectType.Infrastructure => "danger",
+                ProjectObjectType.Milestone or ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => "amber",
+                ProjectObjectType.ValidationRun or ProjectObjectType.Note or ProjectObjectType.ProjectBlock => "mint",
+                ProjectObjectType.SecretReference => "rose",
+                _ => "neutral"
+            }
+        };
 
     private static string ResolveFilePalette(string objectSubtype) => objectSubtype switch
     {

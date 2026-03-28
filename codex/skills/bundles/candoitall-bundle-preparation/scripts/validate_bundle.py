@@ -39,6 +39,28 @@ REQUIRED_FILES = [
     "reviews/01-execution-report.md",
 ]
 
+ROOT_SUMMARY_LABEL_GROUPS = [
+    ("Bundle preparation status:", "Bundle readiness gate:"),
+    ("Execution status:",),
+    ("Subbundle gate review:",),
+    ("Final closure gate:",),
+    ("Browser validation analytics:",),
+]
+
+PHASE_PLAN_HEADING_GROUPS = [
+    ("## Execution Order", "## Phase Sequence"),
+    ("## Subbundle Dependency Map",),
+    ("## Critical Subbundles",),
+    ("## Phase Gates",),
+]
+
+ASSUMPTIONS_AND_RISKS_HEADING_GROUPS = [
+    ("## Working Assumptions", "## Assumptions"),
+    ("## Critical Path Risks",),
+    ("## Validation Risks",),
+    ("## Reopen Triggers",),
+]
+
 SUBBUNDLE_HEADING_GROUPS = [
     ("## Status",),
     ("## Objective",),
@@ -57,26 +79,24 @@ SUBBUNDLE_HEADING_GROUPS = [
     ("## Suggested Agent Prompt",),
 ]
 
-FEEDBACK_EXECUTION_REPORT_HEADINGS = [
+SUBBUNDLE_REQUIRED_BULLET_GROUPS = [
+    ("## Covered Inputs", "## Covered Notes"),
+    ("## Prerequisites",),
+    ("## Deliverables", "## Scope"),
+    ("## Dependency Impact",),
+    ("## Validation Depth",),
+    ("## Acceptance Checklist",),
+    ("## Proof Required",),
+    ("## Browser Validation Logging",),
+    ("## Progression Gate",),
+]
+
+EXECUTION_REPORT_HEADINGS = [
     "## Status",
     "## Subbundle Gate Results",
     "## Browser Validation Analytics",
     "## Analytics Review",
     "## Raw Note Closure",
-]
-
-PHASE_PLAN_HEADINGS = [
-    "## Phase Sequence",
-    "## Subbundle Dependency Map",
-    "## Critical Subbundles",
-    "## Phase Gates",
-]
-
-ASSUMPTIONS_AND_RISKS_HEADINGS = [
-    "## Assumptions",
-    "## Critical Path Risks",
-    "## Validation Risks",
-    "## Reopen Triggers",
 ]
 
 FINAL_ALLOWED_SUBBUNDLE_STATUSES = {
@@ -85,10 +105,32 @@ FINAL_ALLOWED_SUBBUNDLE_STATUSES = {
 }
 
 PENDING_VALUES = {
+    "Draft",
+    "In progress",
     "Not started",
     "Pending",
     "Pending implementation",
+    "Ready",
 }
+
+ROOT_PREPARED_FORBIDDEN_LINES = (
+    "Bundle preparation status: `Draft`",
+    "Bundle readiness gate: `Not run`",
+)
+
+ROOT_COMPLETED_FORBIDDEN_LINES = (
+    "Bundle preparation status: `Draft`",
+    "Bundle readiness gate: `Not run`",
+    "Execution status: `Not started`",
+    "Subbundle gate review: `Not started`",
+    "Final closure gate: `Not started`",
+    "Final closure gate: `Not run`",
+    "Browser validation analytics: `Not started`",
+)
+
+SUBBUNDLE_GATE_RESULTS_HEADER = "| Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |"
+BROWSER_ANALYTICS_HEADER = "| Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |"
+RAW_NOTE_CLOSURE_HEADER = "| Raw note | Status | Proof |"
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -113,19 +155,23 @@ def collect_missing_paths(bundle_path: Path, profile: str) -> list[str]:
     return missing
 
 
-def validate_subbundle_readme(path: Path) -> list[str]:
-    content = path.read_text(encoding="utf-8")
+def find_present_heading(content: str, heading_group: tuple[str, ...]) -> str | None:
+    for heading in heading_group:
+        if heading in content:
+            return heading
+
+    return None
+
+
+def validate_heading_groups(path: Path, content: str, heading_groups: list[tuple[str, ...]]) -> list[str]:
     issues: list[str] = []
 
-    for heading_group in SUBBUNDLE_HEADING_GROUPS:
-        if not any(heading in content for heading in heading_group):
-            issues.append(f"{path}: missing one of {', '.join(heading_group)}")
+    for heading_group in heading_groups:
+        if find_present_heading(content, heading_group) is not None:
+            continue
 
-    issues.extend(validate_exact_source_references(path, content))
-    issues.extend(validate_required_bullets(path, content, "## Prerequisites"))
-    issues.extend(validate_required_bullets(path, content, "## Dependency Impact"))
-    issues.extend(validate_required_bullets(path, content, "## Progression Gate"))
-    issues.extend(validate_validation_depth(path, content))
+        issues.append(f"{path}: missing one of {', '.join(heading_group)}")
+
     return issues
 
 
@@ -170,31 +216,19 @@ def extract_bullet_values(section_content: str) -> list[str]:
     return values
 
 
-def validate_required_bullets(path: Path, content: str, heading: str) -> list[str]:
+def validate_required_bullets_for_group(path: Path, content: str, heading_group: tuple[str, ...]) -> list[str]:
+    heading = find_present_heading(content, heading_group)
+    if heading is None:
+        return []
+
     section_content = extract_markdown_section(content, heading)
     if section_content is None:
         return []
 
-    values = extract_bullet_values(section_content)
-    if values:
+    if extract_bullet_values(section_content):
         return []
 
     return [f"{path}: {heading} must include at least one markdown bullet"]
-
-
-def validate_validation_depth(path: Path, content: str) -> list[str]:
-    section_content = extract_markdown_section(content, "## Validation Depth")
-    if section_content is None:
-        return []
-
-    values = extract_bullet_values(section_content)
-    if not values:
-        return [f"{path}: ## Validation Depth must include at least one markdown bullet"]
-
-    if any(value.startswith(("Standard", "Critical")) for value in values):
-        return []
-
-    return [f"{path}: ## Validation Depth must start with 'Standard' or 'Critical'"]
 
 
 def validate_exact_source_references(path: Path, content: str) -> list[str]:
@@ -219,103 +253,78 @@ def validate_exact_source_references(path: Path, content: str) -> list[str]:
     return issues
 
 
-def validate_feedback_execution_report(path: Path) -> list[str]:
+def contains_pending_marker(value: str | None) -> bool:
+    if value is None:
+        return False
+
+    normalized = normalize_markdown_value(value)
+    return normalized in PENDING_VALUES
+
+
+def validate_root_readme(path: Path, stage: str) -> list[str]:
     content = path.read_text(encoding="utf-8")
     issues: list[str] = []
 
-    for heading in FEEDBACK_EXECUTION_REPORT_HEADINGS:
+    if "## Validation Summary" not in content:
+        issues.append(f"{path}: missing required heading ## Validation Summary")
+        return issues
+
+    validation_summary = extract_markdown_section(content, "## Validation Summary")
+    if validation_summary is None:
+        return issues
+
+    for label_group in ROOT_SUMMARY_LABEL_GROUPS:
+        if any(label in validation_summary for label in label_group):
+            continue
+
+        issues.append(f"{path}: ## Validation Summary must include one of {', '.join(label_group)}")
+
+    forbidden_lines = ROOT_PREPARED_FORBIDDEN_LINES if stage == "prepared" else ROOT_COMPLETED_FORBIDDEN_LINES
+    for forbidden_line in forbidden_lines:
+        if forbidden_line in content:
+            issues.append(f"{path}: {stage}-stage validation does not allow '{forbidden_line}'")
+
+    return issues
+
+
+def validate_subbundle_readme(path: Path, stage: str) -> list[str]:
+    content = path.read_text(encoding="utf-8")
+    issues = validate_heading_groups(path, content, SUBBUNDLE_HEADING_GROUPS)
+
+    issues.extend(validate_exact_source_references(path, content))
+
+    for heading_group in SUBBUNDLE_REQUIRED_BULLET_GROUPS:
+        issues.extend(validate_required_bullets_for_group(path, content, heading_group))
+
+    if stage == "completed":
+        status = extract_first_status_value(content)
+        if status in {"Ready", "In progress"}:
+            issues.append(f"{path}: completed-stage validation does not allow subbundle status `{status}`")
+
+    return issues
+
+
+def validate_execution_report(path: Path) -> list[str]:
+    content = path.read_text(encoding="utf-8")
+    issues: list[str] = []
+
+    for heading in EXECUTION_REPORT_HEADINGS:
         if heading not in content:
             issues.append(f"{path}: missing required heading {heading}")
 
     gate_section = extract_markdown_section(content, "## Subbundle Gate Results")
-    if gate_section is None:
-        return issues
+    if gate_section is not None and SUBBUNDLE_GATE_RESULTS_HEADER not in gate_section:
+        issues.append(f"{path}: ## Subbundle Gate Results must include the '{SUBBUNDLE_GATE_RESULTS_HEADER}' table header")
 
-    if "| Subbundle | Gate | Inputs covered | Dependencies checked | Proof review | Result |" not in gate_section:
-        issues.append(
-            f"{path}: ## Subbundle Gate Results must include the '| Subbundle | Gate | Inputs covered | Dependencies checked | Proof review | Result |' table header"
-        )
+    browser_section = extract_markdown_section(content, "## Browser Validation Analytics")
+    if browser_section is not None and BROWSER_ANALYTICS_HEADER not in browser_section:
+        issues.append(f"{path}: ## Browser Validation Analytics must include the '{BROWSER_ANALYTICS_HEADER}' table header")
 
     raw_note_section = extract_markdown_section(content, "## Raw Note Closure")
-    if raw_note_section is None:
-        return issues
-
-    if "| Raw note | Status | Proof |" not in raw_note_section:
-        issues.append(f"{path}: ## Raw Note Closure must include the '| Raw note | Status | Proof |' table header")
-
-    browser_analytics_section = extract_markdown_section(content, "## Browser Validation Analytics")
-    if browser_analytics_section is None:
-        return issues
-
-    if "| Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |" not in browser_analytics_section:
-        issues.append(
-            f"{path}: ## Browser Validation Analytics must include the '| Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |' table header"
-        )
+    if raw_note_section is not None and RAW_NOTE_CLOSURE_HEADER not in raw_note_section:
+        issues.append(f"{path}: ## Raw Note Closure must include the '{RAW_NOTE_CLOSURE_HEADER}' table header")
 
     return issues
-
-
-def validate_required_headings(path: Path, headings: list[str]) -> list[str]:
-    content = path.read_text(encoding="utf-8")
-    issues: list[str] = []
-
-    for heading in headings:
-        if heading not in content:
-            issues.append(f"{path}: missing required heading {heading}")
-
-    return issues
-
-
-def validate_phase_plan(path: Path) -> list[str]:
-    issues = validate_required_headings(path, PHASE_PLAN_HEADINGS)
-    content = path.read_text(encoding="utf-8")
-
-    dependency_map = extract_markdown_section(content, "## Subbundle Dependency Map")
-    if dependency_map is not None and "```mermaid" not in dependency_map:
-        issues.append(f"{path}: ## Subbundle Dependency Map must include a mermaid diagram")
-
-    critical_subbundles = extract_markdown_section(content, "## Critical Subbundles")
-    if critical_subbundles is not None and not extract_bullet_values(critical_subbundles):
-        issues.append(f"{path}: ## Critical Subbundles must include at least one markdown bullet")
-
-    phase_gates = extract_markdown_section(content, "## Phase Gates")
-    if phase_gates is not None and not extract_bullet_values(phase_gates):
-        issues.append(f"{path}: ## Phase Gates must include at least one markdown bullet")
-
-    return issues
-
-
-def validate_assumptions_and_risks(path: Path) -> list[str]:
-    issues = validate_required_headings(path, ASSUMPTIONS_AND_RISKS_HEADINGS)
-    content = path.read_text(encoding="utf-8")
-
-    for heading in ASSUMPTIONS_AND_RISKS_HEADINGS:
-        section_content = extract_markdown_section(content, heading)
-        if section_content is None:
-            continue
-
-        if extract_bullet_values(section_content):
-            continue
-
-        issues.append(f"{path}: {heading} must include at least one markdown bullet")
-
-    return issues
-
-
-def extract_first_status_value(content: str) -> str | None:
-    status_section = extract_markdown_section(content, "## Status")
-    if status_section is None:
-        return None
-
-    values = extract_bullet_values(status_section)
-    if not values:
-        return None
-
-    first_value = values[0]
-    if ":" in first_value:
-        _, first_value = first_value.split(":", 1)
-
-    return normalize_markdown_value(first_value)
 
 
 def extract_table_rows(section_content: str) -> list[list[str]]:
@@ -346,9 +355,77 @@ def data_table_rows(section_content: str) -> list[list[str]]:
     return rows[1:]
 
 
+def has_bullets_or_data_rows(section_content: str) -> bool:
+    if extract_bullet_values(section_content):
+        return True
+
+    return bool(data_table_rows(section_content))
+
+
+def validate_phase_plan(path: Path) -> list[str]:
+    content = path.read_text(encoding="utf-8")
+    issues = validate_heading_groups(path, content, PHASE_PLAN_HEADING_GROUPS)
+
+    dependency_map = extract_markdown_section(content, "## Subbundle Dependency Map")
+    if dependency_map is not None and "```mermaid" not in dependency_map:
+        issues.append(f"{path}: ## Subbundle Dependency Map must include a mermaid diagram")
+
+    for heading in ("## Critical Subbundles", "## Phase Gates"):
+        section_content = extract_markdown_section(content, heading)
+        if section_content is None:
+            continue
+
+        if has_bullets_or_data_rows(section_content):
+            continue
+
+        issues.append(f"{path}: {heading} must include at least one markdown bullet or populated markdown table")
+
+    return issues
+
+
+def validate_assumptions_and_risks(path: Path) -> list[str]:
+    content = path.read_text(encoding="utf-8")
+    issues = validate_heading_groups(path, content, ASSUMPTIONS_AND_RISKS_HEADING_GROUPS)
+
+    for heading_group in ASSUMPTIONS_AND_RISKS_HEADING_GROUPS:
+        heading = find_present_heading(content, heading_group)
+        if heading is None:
+            continue
+
+        section_content = extract_markdown_section(content, heading)
+        if section_content is None:
+            continue
+
+        if extract_bullet_values(section_content):
+            continue
+
+        issues.append(f"{path}: {heading} must include at least one markdown bullet")
+
+    return issues
+
+
+def extract_first_status_value(content: str) -> str | None:
+    status_section = extract_markdown_section(content, "## Status")
+    if status_section is None:
+        return None
+
+    values = extract_bullet_values(status_section)
+    if not values:
+        return None
+
+    first_value = values[0]
+    if ":" in first_value:
+        _, first_value = first_value.split(":", 1)
+
+    return normalize_markdown_value(first_value)
+
+
 def validate_completed_root_readme(path: Path) -> list[str]:
     content = path.read_text(encoding="utf-8")
     issues: list[str] = []
+
+    if "- Bundle preparation status: `Draft`" in content:
+        issues.append(f"{path}: final closure cannot leave bundle preparation status as `Draft`")
 
     if "- Bundle readiness gate: `Not run`" in content:
         issues.append(f"{path}: final closure cannot leave bundle readiness gate as `Not run`")
@@ -359,8 +436,14 @@ def validate_completed_root_readme(path: Path) -> list[str]:
     if "- Subbundle gate review: `Not started`" in content:
         issues.append(f"{path}: final closure cannot leave subbundle gate review as `Not started`")
 
+    if "- Final closure gate: `Not started`" in content:
+        issues.append(f"{path}: final closure cannot leave final closure gate as `Not started`")
+
     if "- Final closure gate: `Not run`" in content:
         issues.append(f"{path}: final closure cannot leave final closure gate as `Not run`")
+
+    if "- Browser validation analytics: `Not started`" in content:
+        issues.append(f"{path}: final closure cannot leave browser validation analytics as `Not started`")
 
     return issues
 
@@ -392,7 +475,7 @@ def validate_completed_execution_report(path: Path) -> list[str]:
     issues: list[str] = []
 
     report_status = extract_first_status_value(content)
-    if report_status in PENDING_VALUES:
+    if contains_pending_marker(report_status):
         issues.append(f"{path}: final closure cannot leave execution report status as `{report_status}`")
 
     gate_section = extract_markdown_section(content, "## Subbundle Gate Results")
@@ -406,8 +489,10 @@ def validate_completed_execution_report(path: Path) -> list[str]:
                     issues.append(f"{path}: subbundle gate result row is incomplete: {' | '.join(row)}")
                     continue
 
-                if normalize_markdown_value(row[5]) in PENDING_VALUES:
-                    issues.append(f"{path}: subbundle gate result cannot remain pending: {' | '.join(row)}")
+                for index in (1, 2, 3, 4):
+                    if contains_pending_marker(row[index]):
+                        issues.append(f"{path}: subbundle gate result cannot remain pending: {' | '.join(row)}")
+                        break
 
     browser_section = extract_markdown_section(content, "## Browser Validation Analytics")
     if browser_section is not None:
@@ -420,7 +505,7 @@ def validate_completed_execution_report(path: Path) -> list[str]:
                     issues.append(f"{path}: browser validation row is incomplete: {' | '.join(row)}")
                     continue
 
-                if normalize_markdown_value(row[5]) in PENDING_VALUES:
+                if contains_pending_marker(row[5]):
                     issues.append(f"{path}: browser validation result cannot remain pending: {' | '.join(row)}")
 
     raw_note_section = extract_markdown_section(content, "## Raw Note Closure")
@@ -434,7 +519,7 @@ def validate_completed_execution_report(path: Path) -> list[str]:
                     issues.append(f"{path}: raw note closure row is incomplete: {' | '.join(row)}")
                     continue
 
-                if normalize_markdown_value(row[1]) in PENDING_VALUES:
+                if contains_pending_marker(row[1]) or contains_pending_marker(row[2]):
                     issues.append(f"{path}: raw note cannot remain pending at final closure: {' | '.join(row)}")
 
     return issues
@@ -449,9 +534,12 @@ def main() -> int:
         print(f"Bundle path does not exist: {bundle_path}")
         return 1
 
-    missing_paths = collect_missing_paths(bundle_path, arguments.profile)
-    for missing_path in missing_paths:
+    for missing_path in collect_missing_paths(bundle_path, arguments.profile):
         issues.append(f"Missing required path: {missing_path}")
+
+    root_readme_path = bundle_path / "README.md"
+    if root_readme_path.is_file():
+        issues.extend(validate_root_readme(root_readme_path, arguments.stage))
 
     phase_plan_path = bundle_path / "plan" / "01-phase-plan.md"
     if phase_plan_path.is_file():
@@ -466,25 +554,23 @@ def main() -> int:
         issues.append("No subbundle directories found under subbundles/")
     else:
         for subbundle_directory in subbundle_directories:
-            readme_path = subbundle_directory / "README.md"
-            if not readme_path.is_file():
+            subbundle_readme_path = subbundle_directory / "README.md"
+            if not subbundle_readme_path.is_file():
                 issues.append(f"Missing README.md in {subbundle_directory}")
                 continue
-            issues.extend(validate_subbundle_readme(readme_path))
 
-    if arguments.profile == "feedback":
-        execution_report_path = bundle_path / "reviews" / "01-execution-report.md"
-        if execution_report_path.is_file():
-            issues.extend(validate_feedback_execution_report(execution_report_path))
+            issues.extend(validate_subbundle_readme(subbundle_readme_path, arguments.stage))
+
+    execution_report_path = bundle_path / "reviews" / "01-execution-report.md"
+    if execution_report_path.is_file():
+        issues.extend(validate_execution_report(execution_report_path))
 
     if arguments.stage == "completed":
-        readme_path = bundle_path / "README.md"
-        if readme_path.is_file():
-            issues.extend(validate_completed_root_readme(readme_path))
+        if root_readme_path.is_file():
+            issues.extend(validate_completed_root_readme(root_readme_path))
 
         issues.extend(validate_completed_subbundles(subbundle_directories))
 
-        execution_report_path = bundle_path / "reviews" / "01-execution-report.md"
         if execution_report_path.is_file():
             issues.extend(validate_completed_execution_report(execution_report_path))
 
@@ -492,9 +578,10 @@ def main() -> int:
         print("Bundle validation failed:")
         for issue in issues:
             print(f"- {issue}")
+
         return 1
 
-    print(f"Bundle is valid: {bundle_path}")
+    print(f"Bundle is valid for stage '{arguments.stage}': {bundle_path}")
     return 0
 
 

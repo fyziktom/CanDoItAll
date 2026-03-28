@@ -17,6 +17,11 @@ public partial class ProjectStructurePage
 
     private IReadOnlyList<ProjectStructureInspectorAction> ResolveInspectorActions(ProjectStructureNode node)
     {
+        if (node.ProjectRole != ProjectStructureProjectRole.None)
+        {
+            return ResolveProjectInspectorActions(node);
+        }
+
         var actions = new List<ProjectStructureInspectorAction>();
         if (CanEditNode(node))
         {
@@ -50,6 +55,34 @@ public partial class ProjectStructurePage
         }
 
         actions.Add(new ProjectStructureInspectorAction("delete", "Delete", "delete", "danger"));
+        return actions;
+    }
+
+    private static IReadOnlyList<ProjectStructureInspectorAction> ResolveProjectInspectorActions(ProjectStructureNode node)
+    {
+        var actions = new List<ProjectStructureInspectorAction>
+        {
+            new("command:open", "Open", "open", "primary"),
+            new("summary", "Summary", "summary", "sky")
+        };
+
+        if (node.ProjectRole is ProjectStructureProjectRole.Subproject or
+            ProjectStructureProjectRole.ParentProject or
+            ProjectStructureProjectRole.AdditionalParentProject)
+        {
+            actions.Insert(1, new ProjectStructureInspectorAction("project:open-structure", "Open structure tab", "open", "accent"));
+        }
+
+        if (node.ProjectRole is ProjectStructureProjectRole.ActiveProject or ProjectStructureProjectRole.Subproject)
+        {
+            actions.Add(new ProjectStructureInspectorAction("project:add-subproject", "Add subproject", "fork", "accent"));
+        }
+
+        if (node.ProjectRole == ProjectStructureProjectRole.Subproject)
+        {
+            actions.Add(new ProjectStructureInspectorAction("project:reconnect-subproject", "Reconnect parent", "relink", "primary"));
+        }
+
         return actions;
     }
 
@@ -101,6 +134,15 @@ public partial class ProjectStructurePage
                 break;
             case "summary":
                 await OpenSummaryAsync(node.Id);
+                break;
+            case "project:open-structure":
+                await OpenProjectStructureInNewTabAsync(node);
+                break;
+            case "project:add-subproject":
+                await OpenAddSubprojectDialogAsync(node);
+                break;
+            case "project:reconnect-subproject":
+                await OpenReconnectSubprojectDialogAsync(node);
                 break;
             case "connect":
                 EnableLinkMode();
