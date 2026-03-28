@@ -36,7 +36,7 @@ public sealed class ProjectStructureActionCatalogAdapterTests
     }
 
     [Fact]
-    public void Project_nodes_use_project_specific_actions_instead_of_generic_graph_mutations()
+    public void Project_nodes_keep_project_actions_and_expose_create_tools()
     {
         var adapter = new ProjectStructureActionCatalogAdapter();
         var node = CreateNode(
@@ -55,10 +55,31 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         Assert.Contains(actions, action => action.ActionId == "project:open-structure");
         Assert.Contains(actions, action => action.ActionId == "project:add-subproject");
         Assert.Contains(actions, action => action.ActionId == "project:reconnect-subproject");
+        Assert.Contains(actions, action => action.ActionId == "add-note");
+        Assert.Contains(actions, action => action.ActionId == "group-blocks");
         Assert.DoesNotContain(actions, action => action.ActionId == "reconnect");
         Assert.DoesNotContain(actions, action => action.ActionId == "disconnect");
         Assert.DoesNotContain(actions, action => action.ActionId == "delete");
+    }
+
+    [Fact]
+    public void Additional_parent_project_nodes_remain_read_only()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode(
+            "project-related-parent:11111111-1111-1111-1111-111111111111",
+            ProjectObjectType.ProjectRoot,
+            "Shared parent",
+            0,
+            0,
+            projectRole: ProjectStructureProjectRole.AdditionalParentProject,
+            relatedProjectId: Guid.Parse("11111111-1111-1111-1111-111111111111"));
+
+        var actions = adapter.BuildNodeContextActions(node);
+
+        Assert.Contains(actions, action => action.ActionId == "open");
         Assert.DoesNotContain(actions, action => action.ActionId.StartsWith("add-", StringComparison.Ordinal));
+        Assert.DoesNotContain(actions, action => action.ActionId.StartsWith("group-", StringComparison.Ordinal));
     }
 
     private static ProjectStructureNode CreateNode(

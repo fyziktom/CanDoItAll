@@ -1,0 +1,43 @@
+[
+  {
+    "sheet": "(untitled sheet)",
+    "rootTitle": "CanDoItAll",
+    "nodeCount": 1,
+    "maxDepth": 0,
+    "topLevel": []
+  },
+  {
+    "sheet": "(untitled sheet)",
+    "rootTitle": "Features",
+    "nodeCount": 161,
+    "maxDepth": 7,
+    "topLevel": [
+      "management of projects",
+      "CRM",
+      "Gallery",
+      "email connection",
+      "git tool",
+      "screenshot tool",
+      "mindmaps",
+      "gantt graphs",
+      "deployment tools",
+      "knowledge db",
+      "AI",
+      "Social networks",
+      "phase 2"
+    ]
+  },
+  {
+    "sheet": "(untitled sheet)",
+    "rootTitle": "Implementation",
+    "nodeCount": 34,
+    "maxDepth": 4,
+    "topLevel": [
+      "Files",
+      "Main Stack",
+      "Main Topic 5",
+      "prompt strict rules",
+      "shared"
+    ]
+  }
+]

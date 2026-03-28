@@ -413,6 +413,79 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task CreateObjectAsync_and_ReparentObjectAsync_attach_detached_nodes_to_the_project_root()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var saveResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Workbench Root Parenting",
+            Description = "Keep root-level nodes connected to the project root.",
+            Objective = "Prevent detached nodes from floating without hierarchy links.",
+            CurrentPhase = "Execution"
+        });
+
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+        var projectRootNodeKey = BuildProjectRootNodeKey(projectId);
+
+        var created = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Top-level note",
+                string.Empty,
+                "Created without an explicit parent.",
+                null,
+                420,
+                260));
+
+        Assert.Equal(projectRootNodeKey, created.ParentId);
+
+        var surfaceAfterCreate = await workbench.GetStructureAsync(projectId);
+        var createdNode = Assert.Single(surfaceAfterCreate.Nodes, node => node.Id == created.Id);
+        Assert.Equal(projectRootNodeKey, createdNode.ParentId);
+        Assert.Contains(surfaceAfterCreate.Links, link =>
+            string.Equals(link.SourceId, projectRootNodeKey, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, created.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.Contains);
+
+        var child = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Nested task",
+                string.Empty,
+                "Disconnect should return this node to the project root.",
+                created.Id,
+                640,
+                360,
+                null,
+                null,
+                "task"));
+
+        var reparented = await workbench.ReparentObjectAsync(projectId, child.Id, null);
+
+        Assert.NotNull(reparented);
+        Assert.Equal(projectRootNodeKey, reparented!.ParentId);
+
+        var surfaceAfterReparent = await workbench.GetStructureAsync(projectId);
+        var movedChild = Assert.Single(surfaceAfterReparent.Nodes, node => node.Id == child.Id);
+        Assert.Equal(projectRootNodeKey, movedChild.ParentId);
+        Assert.Contains(surfaceAfterReparent.Links, link =>
+            string.Equals(link.SourceId, projectRootNodeKey, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, child.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.Contains);
+        Assert.DoesNotContain(surfaceAfterReparent.Links, link =>
+            string.Equals(link.SourceId, created.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, child.Id, StringComparison.Ordinal) &&
+            (link.Kind == ProjectObjectLinkKind.BelongsTo || link.Kind == ProjectObjectLinkKind.Contains));
+    }
+
+    [Fact]
     public async Task ReparentObjectAsync_moves_nodes_and_DeleteObjectAsync_removes_descendants_and_links()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -693,4 +766,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.True(result.IsSuccess);
         return result.Value;
     }
+
+    private static string BuildProjectRootNodeKey(Guid projectId)
+        => $"project:{projectId}";
 }

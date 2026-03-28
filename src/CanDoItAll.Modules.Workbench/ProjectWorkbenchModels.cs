@@ -5,6 +5,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Validation;
+using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -244,6 +245,11 @@ public sealed record ProjectNodeMoveRequest(
     double X,
     double Y);
 
+public sealed record ProjectStructureSubtreeRecompositionResult(
+    string RootNodeId,
+    int DescendantCount,
+    int RepositionedNodeCount);
+
 internal sealed record SavedMediaDescriptor(
     string RelativePath,
     string Route,
@@ -345,6 +351,7 @@ public sealed class ProjectWorkbenchService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var existingCount = await dbContext.Set<ProjectObjectRecord>().CountAsync(item => item.ProjectId == projectId && !item.IsSystemManaged, cancellationToken);
+        var normalizedParentNodeKey = NormalizeEditableParentNodeKey(projectId, request.ParentNodeKey);
         var position = request.X.HasValue && request.Y.HasValue
             ? (request.X.Value, request.Y.Value)
             : GetDefaultPosition(request.ObjectType, existingCount + 1);
@@ -371,7 +378,7 @@ public sealed class ProjectWorkbenchService(
             ProgressMode = "progress",
             ProgressPercent = 0,
             MetadataJson = metadataJson,
-            ParentNodeKey = request.ParentNodeKey,
+            ParentNodeKey = normalizedParentNodeKey,
             PositionX = position.Item1,
             PositionY = position.Item2,
             StartUtc = request.StartUtc,
@@ -381,10 +388,14 @@ public sealed class ProjectWorkbenchService(
         };
 
         await dbContext.Set<ProjectObjectRecord>().AddAsync(record, cancellationToken);
-        if (!string.IsNullOrWhiteSpace(request.ParentNodeKey))
-        {
-            await UpsertLinkAsync(dbContext, projectId, request.ParentNodeKey, record.NodeKey, ProjectObjectLinkKind.BelongsTo, isSystemManaged: false, cancellationToken);
-        }
+        await UpsertLinkAsync(
+            dbContext,
+            projectId,
+            normalizedParentNodeKey,
+            record.NodeKey,
+            ResolveHierarchyLinkKind(projectId, normalizedParentNodeKey),
+            isSystemManaged: false,
+            cancellationToken);
 
         if (request.ObjectType == ProjectObjectType.PromptFlow)
         {
@@ -406,6 +417,7 @@ public sealed class ProjectWorkbenchService(
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var existingCount = await dbContext.Set<ProjectObjectRecord>().CountAsync(item => item.ProjectId == projectId && !item.IsSystemManaged, cancellationToken);
         var index = 0;
+        var projectRootNodeKey = BuildProjectRootNodeKey(projectId);
 
         foreach (var seed in seeds.Where(seed => !string.IsNullOrWhiteSpace(seed.Title)))
         {
@@ -427,6 +439,7 @@ public sealed class ProjectWorkbenchService(
                 ProgressMode = "progress",
                 ProgressPercent = 0,
                 MetadataJson = ResolveMetadataJson(seed.ObjectType, seed.ObjectSubtype, seed.MetadataJson, null),
+                ParentNodeKey = projectRootNodeKey,
                 PositionX = position.Item1,
                 PositionY = position.Item2,
                 StartUtc = seed.StartUtc,
@@ -435,7 +448,7 @@ public sealed class ProjectWorkbenchService(
                 UpdatedAtUtc = clock.GetUtcNow()
             }, cancellationToken);
 
-            await UpsertLinkAsync(dbContext, projectId, $"project:{projectId}", nodeKey, ProjectObjectLinkKind.Contains, isSystemManaged: false, cancellationToken);
+            await UpsertLinkAsync(dbContext, projectId, projectRootNodeKey, nodeKey, ProjectObjectLinkKind.Contains, isSystemManaged: false, cancellationToken);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -470,9 +483,7 @@ public sealed class ProjectWorkbenchService(
             return null;
         }
 
-        var normalizedParentNodeKey = string.IsNullOrWhiteSpace(parentNodeKey)
-            ? null
-            : parentNodeKey.Trim();
+        var normalizedParentNodeKey = NormalizeEditableParentNodeKey(projectId, parentNodeKey);
         if (string.Equals(node.ParentNodeKey, normalizedParentNodeKey, StringComparison.Ordinal))
         {
             return MapStructureNode(node);
@@ -492,10 +503,14 @@ public sealed class ProjectWorkbenchService(
         node.ParentNodeKey = normalizedParentNodeKey;
         node.UpdatedAtUtc = clock.GetUtcNow();
 
-        if (!string.IsNullOrWhiteSpace(normalizedParentNodeKey))
-        {
-            await UpsertLinkAsync(dbContext, projectId, normalizedParentNodeKey, node.NodeKey, ProjectObjectLinkKind.BelongsTo, isSystemManaged: false, cancellationToken);
-        }
+        await UpsertLinkAsync(
+            dbContext,
+            projectId,
+            normalizedParentNodeKey,
+            node.NodeKey,
+            ResolveHierarchyLinkKind(projectId, normalizedParentNodeKey),
+            isSystemManaged: false,
+            cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return MapStructureNode(node);
@@ -574,6 +589,68 @@ public sealed class ProjectWorkbenchService(
         node.PositionY = y;
         node.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<ProjectStructureSubtreeRecompositionResult?> RecomposeSubtreeAsync(
+        Guid projectId,
+        string rootNodeKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(rootNodeKey))
+        {
+            return null;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await SyncGraphAsync(dbContext, projectId, cancellationToken);
+
+        var records = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == projectId)
+            .ToListAsync(cancellationToken);
+        var links = await dbContext.Set<ProjectObjectLinkRecord>()
+            .Where(item => item.ProjectId == projectId)
+            .ToListAsync(cancellationToken);
+        var plan = ProjectStructureSubtreeRecompositionEngine.Recompose(MapStructureNodes(records, links), rootNodeKey);
+        if (plan is null)
+        {
+            return null;
+        }
+
+        if (plan.DescendantCount == 0)
+        {
+            return new ProjectStructureSubtreeRecompositionResult(rootNodeKey, 0, 0);
+        }
+
+        var targetPositions = plan.Positions.ToDictionary(position => position.NodeId, StringComparer.Ordinal);
+        var updatedAtUtc = clock.GetUtcNow();
+        var repositionedNodeCount = 0;
+
+        foreach (var record in records)
+        {
+            if (!targetPositions.TryGetValue(record.NodeKey, out var targetPosition))
+            {
+                continue;
+            }
+
+            if (Math.Abs(record.PositionX - targetPosition.X) < 0.5d &&
+                Math.Abs(record.PositionY - targetPosition.Y) < 0.5d)
+            {
+                continue;
+            }
+
+            record.PositionX = targetPosition.X;
+            record.PositionY = targetPosition.Y;
+            record.UpdatedAtUtc = updatedAtUtc;
+            repositionedNodeCount++;
+        }
+
+        if (repositionedNodeCount > 0)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return new ProjectStructureSubtreeRecompositionResult(rootNodeKey, plan.DescendantCount, repositionedNodeCount);
     }
 
     public async Task<ProjectStructureNode?> UpdateObjectAsync(
@@ -1289,6 +1366,16 @@ public sealed class ProjectWorkbenchService(
 
     private static string BuildProjectRootNodeKey(Guid projectId)
         => $"{ProjectRootNodePrefix}{projectId}";
+
+    private static string NormalizeEditableParentNodeKey(Guid projectId, string? parentNodeKey)
+        => string.IsNullOrWhiteSpace(parentNodeKey)
+            ? BuildProjectRootNodeKey(projectId)
+            : parentNodeKey.Trim();
+
+    private static ProjectObjectLinkKind ResolveHierarchyLinkKind(Guid projectId, string parentNodeKey)
+        => string.Equals(parentNodeKey, BuildProjectRootNodeKey(projectId), StringComparison.Ordinal)
+            ? ProjectObjectLinkKind.Contains
+            : ProjectObjectLinkKind.BelongsTo;
 
     private static string BuildProjectChildNodeKey(Guid projectId)
         => $"{ProjectChildNodePrefix}{projectId}";
