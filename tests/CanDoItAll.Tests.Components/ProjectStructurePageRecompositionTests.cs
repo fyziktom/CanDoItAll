@@ -10,8 +10,10 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructurePageRecompositionTests
 {
+    private const double FullTurn = Math.PI * 2d;
+
     [Fact]
-    public async Task Recompose_toolbar_action_redistributes_the_selected_branch_across_the_available_space()
+    public async Task Recompose_toolbar_action_places_the_selected_branch_children_in_clockface_slots()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -28,7 +30,7 @@ public sealed class ProjectStructurePageRecompositionTests
                 BuildProjectRootNodeKey(projectId),
                 760,
                 360));
-        var descendants = await CreateRightWeightedBranchAsync(workbenchService, projectId, branchRoot.Id);
+        var childIds = await CreateRightWeightedBranchAsync(workbenchService, projectId, branchRoot.Id);
         await SaveSelectedNodeStateAsync(workbenchService, projectId, branchRoot.Id);
 
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
@@ -53,15 +55,12 @@ public sealed class ProjectStructurePageRecompositionTests
         Assert.Equal(branchRoot.X, reloadedRoot.X);
         Assert.Equal(branchRoot.Y, reloadedRoot.Y);
 
-        var movedDescendants = surface.Nodes
-            .Where(node => descendants.Contains(node.Id, StringComparer.Ordinal))
-            .ToList();
-        Assert.Equal(4, movedDescendants.Count);
-        Assert.Contains(movedDescendants, node => node.X < reloadedRoot.X);
-        Assert.Contains(movedDescendants, node => node.X > reloadedRoot.X);
-        Assert.Contains(movedDescendants, node => node.Y < reloadedRoot.Y);
-        Assert.Contains(movedDescendants, node => node.Y > reloadedRoot.Y);
-        AssertNoOverlaps([reloadedRoot, .. movedDescendants]);
+        var nodesById = surface.Nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
+        AssertClockfaceSlot(reloadedRoot, nodesById[childIds[0]], 0, 4);
+        AssertClockfaceSlot(reloadedRoot, nodesById[childIds[1]], 1, 4);
+        AssertClockfaceSlot(reloadedRoot, nodesById[childIds[2]], 2, 4);
+        AssertClockfaceSlot(reloadedRoot, nodesById[childIds[3]], 3, 4);
+        AssertNoOverlaps([reloadedRoot, .. childIds.Select(id => nodesById[id])]);
     }
 
     private static async Task<IReadOnlyList<string>> CreateRightWeightedBranchAsync(
@@ -113,6 +112,20 @@ public sealed class ProjectStructurePageRecompositionTests
         return [first.Id, second.Id, third.Id, fourth.Id];
     }
 
+    private static void AssertClockfaceSlot(
+        ProjectStructureNode root,
+        ProjectStructureNode node,
+        int slotIndex,
+        int slotCount)
+    {
+        var expectedAngle = (FullTurn / slotCount) * slotIndex;
+        var actualAngle = ResolveClockfaceAngle(root, node);
+        var delta = CircularDistance(actualAngle, expectedAngle);
+        Assert.True(
+            delta <= 0.42d,
+            $"{node.Title} should be near clockface slot {slotIndex}, but was at {actualAngle:F2} radians.");
+    }
+
     private static void AssertNoOverlaps(IReadOnlyList<ProjectStructureNode> nodes)
     {
         for (var i = 0; i < nodes.Count; i++)
@@ -150,6 +163,30 @@ public sealed class ProjectStructurePageRecompositionTests
             node.Y - (height / 2d),
             node.X + (width / 2d),
             node.Y + (height / 2d));
+    }
+
+    private static double ResolveClockfaceAngle(ProjectStructureNode origin, ProjectStructureNode node)
+        => NormalizeAngle(Math.Atan2(node.Y - origin.Y, node.X - origin.X) + (Math.PI / 2d));
+
+    private static double CircularDistance(double left, double right)
+    {
+        var delta = Math.Abs(left - right);
+        return Math.Min(delta, FullTurn - delta);
+    }
+
+    private static double NormalizeAngle(double angle)
+    {
+        while (angle < 0d)
+        {
+            angle += FullTurn;
+        }
+
+        while (angle >= FullTurn)
+        {
+            angle -= FullTurn;
+        }
+
+        return angle;
     }
 
     private static Task SaveSelectedNodeStateAsync(ProjectWorkbenchService workbenchService, Guid projectId, params string[] selectedNodeIds)

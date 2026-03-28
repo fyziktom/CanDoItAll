@@ -8,11 +8,12 @@ This bundle is a coordination and execution package for `project-structure-node-
 
 ## Mission
 
-- Add a manual toolbar-triggered subtree recomposition command to the project structure canvas so the currently selected node stays anchored, all descendants below it are repositioned into a denser radial composition that uses the available space around that node instead of growing in one direction, existing connections remain untouched, positions persist across reloads, and the final layout is collision-free against both recomposed nodes and untouched canvas nodes.
+- Add a manual toolbar-triggered subtree recomposition command to the project structure canvas so the currently selected node stays anchored, first-layer descendants are placed into balanced clockwise clock-face slots, deeper descendants stay inside their parent branch sector or “bubble”, existing connections remain untouched, positions persist across reloads, group spacing stays readable instead of over-packed, and the final layout is collision-free against both recomposed nodes and untouched canvas nodes.
 
 ## Bundle Layout
 
 - `inputs/` raw request, screenshot note, and normalized task framing
+- `inputs/03-follow-up-feedback.md` reopens the bundle with clock-face layering and branch-bubble separation requirements
 - `analysis/` current implementation audit, algorithm comparison, assumptions, and risks
 - `requirements/` normalized, testable requirements and scope boundaries
 - `architecture/` target design, algorithm choice, persistence boundary, and rejected alternatives
@@ -43,4 +44,4 @@ This bundle is a coordination and execution package for `project-structure-node-
 - Execution status: `Completed`
 - Subbundle gate review: `Completed`
 - Final closure gate: `Completed`
-- Browser validation analytics: `Completed`
+- Browser validation analytics: `Completed with follow-up proof`

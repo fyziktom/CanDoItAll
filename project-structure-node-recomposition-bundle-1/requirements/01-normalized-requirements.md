@@ -12,6 +12,11 @@
 | `R08` | The recomposition algorithm must be deterministic for the same graph, selection root, and canvas state. | Manual tooling should not feel random. |
 | `R09` | Bundle preparation must analyze established layout approaches and document the chosen architecture with explicit tradeoffs. | Required by the user. |
 | `R10` | Final proof must include targeted tests plus real browser validation on the project structure page. | UI-only reasoning is insufficient. |
+| `R11` | When recomposing from a root, first-layer descendants must be placed in clockwise clock-face order across balanced hour-like slots instead of collapsing into one side. | The user explicitly asked for layer-aware first-ring positioning. |
+| `R12` | Deeper descendants must inherit the directional sector of their first-layer branch so each branch reads as a distinct grouped wedge or bubble. | Prevents children from spilling across neighboring branches. |
+| `R13` | Readability is more important than squeezing every node onto one screen. Branch groups need deliberate spacing even when that means a larger overall footprint. | Very large mindmaps will still require zoom or panning. |
+| `R14` | Branch-group bubbles must not collide with one another. Children from one first-layer branch must not cross into another branch bubble. | The user described this as invisible bubbles that cannot overlap. |
+| `R15` | Follow-up browser proof must use the large `project-structure-mcp-validation-1 workbench` project where the first pass still showed left-sided clustering and nodes that were too close together. | Required validation target from the user feedback. |
 
 ## Scope Boundaries
 
