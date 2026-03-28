@@ -109,6 +109,13 @@ public sealed class ProjectStructureTools(IProjectStructureCoordinator coordinat
         return ExecuteAsync("project_structure_knowledge_query", () => coordinator.QueryKnowledgeAsync(request ?? new ProjectManagementGuidanceQueryRequest(), cancellationToken));
     }
 
+    [McpServerTool(Name = "project_structure_analytics_query", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Queries project-structure operation analytics so validation and post-implementation review can inspect what agents actually did.")]
+    public Task<McpToolEnvelope<ProjectStructureAnalyticsResponse>> ProjectStructureAnalyticsQueryAsync(ProjectStructureAnalyticsQueryRequest? request = null, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("project_structure_analytics_query", () => coordinator.QueryAnalyticsAsync(request ?? new ProjectStructureAnalyticsQueryRequest(), cancellationToken));
+    }
+
     [McpServerTool(Name = "project_structure_project_lease_acquire", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
     [Description("Acquires or renews a project-scoped central lease so concurrent agents do not mutate the same project at the same time.")]
     public Task<McpToolEnvelope<ProjectStructureLeaseSnapshot>> ProjectStructureProjectLeaseAcquireAsync(Guid projectId, string reason, int durationMinutes = 15, CancellationToken cancellationToken = default)

@@ -217,6 +217,26 @@ function Publish-ReleaseArtifact {
     ) -WorkingDirectory $RepoRoot
 }
 
+function New-VersionedInstallPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$InstallBasePath
+    )
+
+    New-Item -ItemType Directory -Force -Path $InstallBasePath | Out-Null
+
+    $versionStamp = [DateTimeOffset]::UtcNow.ToString("yyyyMMdd-HHmmss")
+    $candidate = Join-Path $InstallBasePath $versionStamp
+    $suffix = 0
+
+    while (Test-Path -LiteralPath $candidate) {
+        $suffix++
+        $candidate = Join-Path $InstallBasePath "$versionStamp-$suffix"
+    }
+
+    return $candidate
+}
+
 function Get-PreferredEntrypoint {
     param(
         [Parameter(Mandatory = $true)]
@@ -271,7 +291,9 @@ function Update-VsCodeMcpConfig {
         [Parameter(Mandatory = $true)]
         [string]$Path,
         [Parameter(Mandatory = $true)]
-        [string]$WorkspaceFolderToken
+        [string]$WorkspaceFolderToken,
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectStructureCommandPath
     )
 
     $json = @"
@@ -306,7 +328,7 @@ function Update-VsCodeMcpConfig {
     },
     "candoitall_projectstructure": {
       "type": "stdio",
-      "command": "$WorkspaceFolderToken\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\current\\CanDoItAll.Mcp.ProjectStructure.exe",
+      "command": "$WorkspaceFolderToken\\$ProjectStructureCommandPath",
       "args": [
         "--settings",
         "$WorkspaceFolderToken\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
@@ -512,7 +534,7 @@ $trayProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "tools\CanDoItAll.M
 $repoSkillRoot = Resolve-AbsolutePath (Join-Path $RepoRoot "codex\skills")
 $userSkillRoot = Resolve-AbsolutePath (Join-Path $env:USERPROFILE ".codex\skills")
 $installRoot = Resolve-AbsolutePath (Join-Path $RepoRoot ".artifacts\mcp-installs")
-$projectStructureInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.ProjectStructure\current")
+$projectStructureInstallRoot = New-VersionedInstallPath -InstallBasePath (Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.ProjectStructure"))
 $sshOpsInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.SshOps\current")
 $managerInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Manager\current")
 $trayInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.DotNetWatch.Tray\current")
@@ -578,6 +600,7 @@ Publish-ReleaseArtifact -ProjectPath $trayProjectPath -OutputPath $trayInstallRo
 
 $shadowManifest = Get-Content -LiteralPath $shadowManifestPath -Raw | ConvertFrom-Json
 $projectStructureEntrypoint = Get-PreferredEntrypoint -DirectoryPath $projectStructureInstallRoot -AssemblyName "CanDoItAll.Mcp.ProjectStructure"
+$projectStructureWorkspaceEntrypoint = [System.IO.Path]::GetRelativePath($RepoRoot, $projectStructureEntrypoint).Replace("/", "\")
 $sshOpsEntrypoint = Get-PreferredEntrypoint -DirectoryPath $sshOpsInstallRoot -AssemblyName "CanDoItAll.Mcp.SshOps"
 $managerEntrypoint = Get-PreferredEntrypoint -DirectoryPath $managerInstallRoot -AssemblyName "CanDoItAll.Manager"
 $trayEntrypoint = Get-PreferredEntrypoint -DirectoryPath $trayInstallRoot -AssemblyName "CanDoItAll.Mcp.DotNetWatch.Tray"
@@ -662,7 +685,7 @@ Write-Status "Wrote install manifest to $manifestPath"
 
 if (-not $SkipVsCodeConfig.IsPresent) {
     Write-Status "Updating VS Code MCP config"
-    Update-VsCodeMcpConfig -Path $vscodeMcpPath -WorkspaceFolderToken '${workspaceFolder}'
+    Update-VsCodeMcpConfig -Path $vscodeMcpPath -WorkspaceFolderToken '${workspaceFolder}' -ProjectStructureCommandPath $projectStructureWorkspaceEntrypoint
 }
 
 if (-not $SkipUserConfig.IsPresent) {

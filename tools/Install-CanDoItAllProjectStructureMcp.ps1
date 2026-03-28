@@ -82,6 +82,24 @@ function Get-PreferredEntrypoint {
     throw "Could not locate an entrypoint for '$AssemblyName' under '$DirectoryPath'."
 }
 
+function New-VersionedInstallPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$InstallBasePath
+    )
+
+    $versionStamp = [DateTimeOffset]::UtcNow.ToString("yyyyMMdd-HHmmss")
+    $candidate = Join-Path $InstallBasePath $versionStamp
+    $suffix = 0
+
+    while (Test-Path -LiteralPath $candidate) {
+        $suffix++
+        $candidate = Join-Path $InstallBasePath "$versionStamp-$suffix"
+    }
+
+    return $candidate
+}
+
 function Set-TomlSection {
     param(
         [Parameter(Mandatory = $true)]
@@ -158,7 +176,9 @@ function Update-VsCodeConfig {
         [Parameter(Mandatory = $true)]
         [string]$Path,
         [Parameter(Mandatory = $true)]
-        [string]$WorkspaceFolderToken
+        [string]$WorkspaceFolderToken,
+        [Parameter(Mandatory = $true)]
+        [string]$CommandRelativePath
     )
 
     $config = if (Test-Path -LiteralPath $Path) {
@@ -174,7 +194,7 @@ function Update-VsCodeConfig {
 
     $config["servers"]["candoitall_projectstructure"] = @{
         type = "stdio"
-        command = "$WorkspaceFolderToken\.artifacts\mcp-installs\CanDoItAll.Mcp.ProjectStructure\current\CanDoItAll.Mcp.ProjectStructure.exe"
+        command = "$WorkspaceFolderToken\$CommandRelativePath"
         args = @(
             "--settings",
             "$WorkspaceFolderToken\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
@@ -222,7 +242,8 @@ if ([string]::IsNullOrWhiteSpace($UserConfigPath)) {
 $RepoRoot = Resolve-AbsolutePath $RepoRoot
 $UserConfigPath = Resolve-AbsolutePath $UserConfigPath
 $projectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.ProjectStructure\CanDoItAll.Mcp.ProjectStructure.csproj")
-$installRoot = Resolve-AbsolutePath (Join-Path $RepoRoot ".artifacts\mcp-installs\CanDoItAll.Mcp.ProjectStructure\current")
+$installBaseRoot = Resolve-AbsolutePath (Join-Path $RepoRoot ".artifacts\mcp-installs\CanDoItAll.Mcp.ProjectStructure")
+$installRoot = New-VersionedInstallPath -InstallBasePath $installBaseRoot
 $vscodeConfigPath = Resolve-AbsolutePath (Join-Path $RepoRoot ".vscode\mcp.json")
 
 if ([string]::IsNullOrWhiteSpace($SettingsPath)) {
@@ -232,7 +253,7 @@ if ([string]::IsNullOrWhiteSpace($SettingsPath)) {
 $SettingsPath = Resolve-AbsolutePath $SettingsPath
 $normalizedBaseUrl = $ServerBaseUrl.Trim().TrimEnd('/')
 
-New-Item -ItemType Directory -Force -Path (Split-Path -Parent $installRoot) | Out-Null
+New-Item -ItemType Directory -Force -Path $installBaseRoot | Out-Null
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $SettingsPath) | Out-Null
 Write-Status "Publishing CanDoItAll.Mcp.ProjectStructure to $installRoot"
 Invoke-CheckedCommand -FilePath "dotnet" -Arguments @(
@@ -261,9 +282,10 @@ Set-Content -LiteralPath $SettingsPath -Value $settings
 Write-Status "Wrote settings to $SettingsPath"
 
 $entrypoint = Get-PreferredEntrypoint -DirectoryPath $installRoot -AssemblyName "CanDoItAll.Mcp.ProjectStructure"
+$workspaceRelativeEntrypoint = [System.IO.Path]::GetRelativePath($RepoRoot, $entrypoint).Replace("/", "\")
 
 if (-not $SkipVsCodeConfig.IsPresent) {
-    Update-VsCodeConfig -Path $vscodeConfigPath -WorkspaceFolderToken '${workspaceFolder}'
+    Update-VsCodeConfig -Path $vscodeConfigPath -WorkspaceFolderToken '${workspaceFolder}' -CommandRelativePath $workspaceRelativeEntrypoint
     Write-Status "Updated VS Code MCP config at $vscodeConfigPath"
 }
 

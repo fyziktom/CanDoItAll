@@ -35,6 +35,8 @@ public interface IProjectStructureCoordinator
 
     Task<ProjectManagementGuidanceResponse> QueryKnowledgeAsync(ProjectManagementGuidanceQueryRequest request, CancellationToken cancellationToken = default);
 
+    Task<ProjectStructureAnalyticsResponse> QueryAnalyticsAsync(ProjectStructureAnalyticsQueryRequest request, CancellationToken cancellationToken = default);
+
     Task<ProjectStructureLeaseSnapshot> AcquireLeaseAsync(ProjectStructureScopeInput scope, string reason, int durationMinutes, CancellationToken cancellationToken = default);
 
     Task<ProjectStructureLeaseSnapshot?> GetCurrentLeaseAsync(ProjectStructureScopeInput scope, CancellationToken cancellationToken = default);
@@ -166,6 +168,14 @@ public sealed class ProjectStructureCoordinator(
             cancellationToken: cancellationToken);
     }
 
+    public Task<ProjectStructureAnalyticsResponse> QueryAnalyticsAsync(ProjectStructureAnalyticsQueryRequest request, CancellationToken cancellationToken = default)
+    {
+        return httpClient.PostAsync<ProjectStructureAnalyticsQueryRequest, ProjectStructureAnalyticsResponse>(
+            "/api/project-structure-mcp/analytics/query",
+            request,
+            cancellationToken: cancellationToken);
+    }
+
     public Task<ProjectStructureLeaseSnapshot> AcquireLeaseAsync(ProjectStructureScopeInput scope, string reason, int durationMinutes, CancellationToken cancellationToken = default)
     {
         var resolvedScope = ResolveScope(scope);
@@ -179,13 +189,13 @@ public sealed class ProjectStructureCoordinator(
     {
         var resolvedScope = ResolveScope(scope);
         var path = $"/api/project-structure-mcp/leases/current?scopeKind={resolvedScope.ScopeKind}&scopeKey={Uri.EscapeDataString(resolvedScope.ScopeKey)}";
-        return httpClient.GetAsync<ProjectStructureLeaseSnapshot?>(path, cancellationToken: cancellationToken);
+        return httpClient.GetOptionalAsync<ProjectStructureLeaseSnapshot>(path, cancellationToken: cancellationToken);
     }
 
     public Task<ProjectStructureLeaseSnapshot?> ReleaseLeaseAsync(ProjectStructureScopeInput scope, string leaseToken, CancellationToken cancellationToken = default)
     {
         var resolvedScope = ResolveScope(scope);
-        return httpClient.PostAsync<ProjectStructureLeaseReleaseRequest, ProjectStructureLeaseSnapshot?>(
+        return httpClient.PostOptionalAsync<ProjectStructureLeaseReleaseRequest, ProjectStructureLeaseSnapshot>(
             "/api/project-structure-mcp/leases/release",
             new ProjectStructureLeaseReleaseRequest(resolvedScope.ScopeKind, resolvedScope.ScopeKey, leaseToken),
             cancellationToken: cancellationToken);

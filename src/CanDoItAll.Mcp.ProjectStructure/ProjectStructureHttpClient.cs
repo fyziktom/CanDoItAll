@@ -30,7 +30,14 @@ public sealed class ProjectStructureHttpClient
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         ApplyHeaders(request, estimatedMinutes);
-        return await SendAsync<TResponse>(request, cancellationToken);
+        return (await SendAsync<TResponse>(request, allowEmptyBody: false, cancellationToken))!;
+    }
+
+    public async Task<TResponse?> GetOptionalAsync<TResponse>(string path, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        ApplyHeaders(request, estimatedMinutes);
+        return await SendAsync<TResponse>(request, allowEmptyBody: true, cancellationToken);
     }
 
     public async Task<TResponse> PostAsync<TRequest, TResponse>(string path, TRequest payload, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
@@ -40,7 +47,17 @@ public sealed class ProjectStructureHttpClient
             Content = JsonContent.Create(payload, options: SerializerOptions)
         };
         ApplyHeaders(request, estimatedMinutes);
-        return await SendAsync<TResponse>(request, cancellationToken);
+        return (await SendAsync<TResponse>(request, allowEmptyBody: false, cancellationToken))!;
+    }
+
+    public async Task<TResponse?> PostOptionalAsync<TRequest, TResponse>(string path, TRequest payload, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = JsonContent.Create(payload, options: SerializerOptions)
+        };
+        ApplyHeaders(request, estimatedMinutes);
+        return await SendAsync<TResponse>(request, allowEmptyBody: true, cancellationToken);
     }
 
     public async Task<TResponse> PutAsync<TRequest, TResponse>(string path, TRequest payload, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
@@ -50,16 +67,26 @@ public sealed class ProjectStructureHttpClient
             Content = JsonContent.Create(payload, options: SerializerOptions)
         };
         ApplyHeaders(request, estimatedMinutes);
-        return await SendAsync<TResponse>(request, cancellationToken);
+        return (await SendAsync<TResponse>(request, allowEmptyBody: false, cancellationToken))!;
     }
 
-    private async Task<TResponse> SendAsync<TResponse>(HttpRequestMessage request, CancellationToken cancellationToken)
+    private async Task<TResponse?> SendAsync<TResponse>(HttpRequestMessage request, bool allowEmptyBody, CancellationToken cancellationToken)
     {
         using var response = await httpClient.SendAsync(request, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             ThrowToolError(response.StatusCode, body);
+        }
+
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            if (allowEmptyBody)
+            {
+                return default;
+            }
+
+            throw new ToolInvocationException("RemoteApiEmpty", $"The remote project-structure API returned an empty payload for '{request.RequestUri}'.");
         }
 
         if (typeof(TResponse) == typeof(string))

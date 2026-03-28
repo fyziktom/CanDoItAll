@@ -47,6 +47,44 @@ public sealed class ProjectStructureToolsTests
         Assert.Equal("container-1", result.Data!.ContainerNodeId);
     }
 
+    [Fact]
+    public async Task ProjectStructureAnalyticsQueryAsync_returns_successful_structured_content()
+    {
+        var tools = new ProjectStructureTools(new StubCoordinator
+        {
+            OnQueryAnalytics = (_, _) => Task.FromResult(new ProjectStructureAnalyticsResponse(
+                [
+                    new ProjectStructureAnalyticsEntry(
+                        Guid.NewGuid(),
+                        "structure.read",
+                        Guid.NewGuid(),
+                        null,
+                        null,
+                        null,
+                        "agent-1",
+                        "Agent One",
+                        "machine",
+                        @"C:\repositories\CanDoItAll",
+                        "main",
+                        true,
+                        12,
+                        0,
+                        null,
+                        null,
+                        "{}",
+                        "{}",
+                        "[]",
+                        DateTimeOffset.UtcNow)
+                ]))
+        }, NullLogger<ProjectStructureTools>.Instance);
+
+        var result = await tools.ProjectStructureAnalyticsQueryAsync(new ProjectStructureAnalyticsQueryRequest(OperationName: "structure.read", Take: 5));
+
+        Assert.True(result.Ok);
+        Assert.Single(result.Data!.Entries);
+        Assert.Equal("structure.read", result.Data.Entries[0].OperationName);
+    }
+
     private sealed class StubCoordinator : IProjectStructureCoordinator
     {
         public Func<CancellationToken, Task<IReadOnlyList<ProjectSummary>>>? OnListProjects { get; init; }
@@ -76,6 +114,8 @@ public sealed class ProjectStructureToolsTests
         public Func<ProjectStructureImportRequest, int?, CancellationToken, Task<ProjectStructureImportResult>>? OnImport { get; init; }
 
         public Func<ProjectManagementGuidanceQueryRequest, CancellationToken, Task<ProjectManagementGuidanceResponse>>? OnQueryKnowledge { get; init; }
+
+        public Func<ProjectStructureAnalyticsQueryRequest, CancellationToken, Task<ProjectStructureAnalyticsResponse>>? OnQueryAnalytics { get; init; }
 
         public Func<ProjectStructureScopeInput, string, int, CancellationToken, Task<ProjectStructureLeaseSnapshot>>? OnAcquireLease { get; init; }
 
@@ -154,6 +194,12 @@ public sealed class ProjectStructureToolsTests
         public Task<ProjectManagementGuidanceResponse> QueryKnowledgeAsync(ProjectManagementGuidanceQueryRequest request, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
+        }
+
+        public Task<ProjectStructureAnalyticsResponse> QueryAnalyticsAsync(ProjectStructureAnalyticsQueryRequest request, CancellationToken cancellationToken = default)
+        {
+            return OnQueryAnalytics?.Invoke(request, cancellationToken)
+                ?? Task.FromResult(new ProjectStructureAnalyticsResponse([]));
         }
 
         public Task<ProjectStructureLeaseSnapshot> AcquireLeaseAsync(ProjectStructureScopeInput scope, string reason, int durationMinutes, CancellationToken cancellationToken = default)

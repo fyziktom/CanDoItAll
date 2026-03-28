@@ -201,6 +201,12 @@ public sealed class ProjectStructureLeaseService(
             return await callback(cancellationToken);
         }
 
+        var activeLease = await GetActiveLeaseAsync(ProjectStructureLeaseScopeKind.Project, scopeKey, cancellationToken);
+        if (activeLease is not null && IsSameOwner(activeLease, agent))
+        {
+            return await callback(cancellationToken);
+        }
+
         var acquiredLease = await AcquireAsync(
             new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, scopeKey, reason, 5),
             agent,
@@ -266,6 +272,12 @@ public sealed class ProjectStructureLeaseService(
     }
 
     private static bool IsSameOwner(ProjectStructureLeaseRecord lease, ProjectStructureAgentContext agent)
+    {
+        return string.Equals(lease.AgentId, NormalizeAgentValue(agent.AgentId, "anonymous-agent"), StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(lease.MachineName, NormalizeAgentValue(agent.MachineName, "unknown-machine"), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSameOwner(ProjectStructureLeaseSnapshot lease, ProjectStructureAgentContext agent)
     {
         return string.Equals(lease.AgentId, NormalizeAgentValue(agent.AgentId, "anonymous-agent"), StringComparison.OrdinalIgnoreCase) &&
                string.Equals(lease.MachineName, NormalizeAgentValue(agent.MachineName, "unknown-machine"), StringComparison.OrdinalIgnoreCase);

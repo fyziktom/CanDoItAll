@@ -51,6 +51,36 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
+    public async Task LeaseService_RunWithProjectMutationLeaseAsync_preserves_existing_owned_lease()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+
+        var projectId = Guid.NewGuid();
+        var initialLease = await leaseService.AcquireAsync(
+            new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, projectId.ToString(), "Long-lived validation lease", 30),
+            DefaultAgent);
+
+        var result = await leaseService.RunWithProjectMutationLeaseAsync(
+            projectId,
+            null,
+            DefaultAgent,
+            "Temporary mutation without explicit token",
+            _ => Task.FromResult("ok"));
+
+        var preservedLease = await leaseService.ValidateOwnedLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            projectId.ToString(),
+            initialLease.LeaseToken,
+            DefaultAgent);
+
+        Assert.Equal("ok", result);
+        Assert.NotNull(preservedLease);
+        Assert.Equal(initialLease.LeaseToken, preservedLease!.LeaseToken);
+    }
+
+    [Fact]
     public async Task ChecklistService_GetChecklistAsync_propagates_child_priority_and_stops_at_paused_parent()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -278,6 +308,41 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains(surface.Nodes, node => node.Title == "Validation");
     }
 
+    [Fact]
+    public async Task AgentService_ImportAsync_accepts_xmind_xml_packages_across_all_sheets()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+
+        var projectId = await CreateProjectAsync(projects, "XMind xml import");
+        var xmindPayload = CreateMediaPayload(
+            "outline.xmind",
+            "application/octet-stream",
+            BuildXmindXmlPackage());
+
+        var result = await agentService.ImportAsync(
+            new ProjectStructureImportRequest(
+                projectId,
+                null,
+                ProjectStructureImportSourceKind.XmindMap,
+                "Imported XMind XML",
+                null,
+                xmindPayload),
+            DefaultAgent);
+
+        Assert.NotEmpty(result.CreatedNodeIds);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        Assert.Contains(surface.Nodes, node => node.Title == "Imported XMind XML");
+        Assert.Contains(surface.Nodes, node => node.Title == "Features");
+        Assert.Contains(surface.Nodes, node => node.Title == "Management of projects");
+        Assert.Contains(surface.Nodes, node => node.Title == "Implementation");
+        Assert.Contains(surface.Nodes, node => node.Title == "Shared");
+    }
+
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {
         var result = await projectsService.SaveAsync(new ProjectEditorModel
@@ -362,6 +427,48 @@ public sealed class ProjectStructureAgentIntegrationTests
             writer.WriteEndObject();
             writer.WriteEndArray();
             writer.Flush();
+        }
+
+        return stream.ToArray();
+    }
+
+    private static byte[] BuildXmindXmlPackage()
+    {
+        using var stream = new MemoryStream();
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = archive.CreateEntry("content.xml");
+            using var entryStream = entry.Open();
+            using var writer = new StreamWriter(entryStream, Encoding.UTF8, leaveOpen: false);
+            writer.Write(
+                """
+                <xmap-content xmlns="urn:xmind:xmap:xmlns:content:2.0">
+                  <sheet>
+                    <topic>
+                      <title>Features</title>
+                      <children>
+                        <topics>
+                          <topic>
+                            <title>Management of projects</title>
+                          </topic>
+                        </topics>
+                      </children>
+                    </topic>
+                  </sheet>
+                  <sheet>
+                    <topic>
+                      <title>Implementation</title>
+                      <children>
+                        <topics>
+                          <topic>
+                            <title>Shared</title>
+                          </topic>
+                        </topics>
+                      </children>
+                    </topic>
+                  </sheet>
+                </xmap-content>
+                """);
         }
 
         return stream.ToArray();

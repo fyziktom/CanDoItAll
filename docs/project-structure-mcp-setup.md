@@ -22,10 +22,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Install-CanDoItAllPr
 
 The script does all of the following:
 
-- publishes `CanDoItAll.Mcp.ProjectStructure` into `.artifacts\mcp-installs\CanDoItAll.Mcp.ProjectStructure\current`
+- publishes `CanDoItAll.Mcp.ProjectStructure` into a versioned folder under `.artifacts\mcp-installs\CanDoItAll.Mcp.ProjectStructure\`
 - writes `CanDoItAll.Mcp.ProjectStructure.settings.local.json`
-- updates `.vscode\mcp.json`
-- updates `%USERPROFILE%\.codex\config.toml`
+- repoints `.vscode\mcp.json` to the newly published entrypoint
+- repoints `%USERPROFILE%\.codex\config.toml` to the newly published entrypoint
 
 ## Manual settings file
 
@@ -35,6 +35,7 @@ If you need to write the settings file manually, start from [CanDoItAll.Mcp.Proj
 
 - Run `.\tools\Install-CanDoItAllProjectStructureMcp.ps1` again after a token rotation or base-URL change.
 - Run `.\tools\Reinstall-CanDoItAllMcps.ps1` when you want the full repo MCP suite refreshed in one pass.
+- Reinstall no longer needs to overwrite the currently running MCP binary, so a fresh publish can be prepared even while an older session is still connected.
 - The settings UI remains the source of truth for the current token and setup command.
 
 ## Safety rules

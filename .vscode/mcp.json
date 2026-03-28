@@ -1,15 +1,21 @@
 {
   "servers": {
+    "playwright": {
+      "type": "stdio",
+      "args": "@playwright/mcp@latest",
+      "command": "npx"
+    },
     "candoitall_projectstructure": {
+      "type": "stdio",
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\20260328-162159\\CanDoItAll.Mcp.ProjectStructure.exe",
       "args": [
         "--settings",
         "${workspaceFolder}\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
       ],
-      "cwd": "${workspaceFolder}",
-      "type": "stdio",
-      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\current\\CanDoItAll.Mcp.ProjectStructure.exe"
+      "cwd": "${workspaceFolder}"
     },
     "candoitall_dotnetwatch": {
+      "type": "stdio",
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",
@@ -23,28 +29,22 @@
         "-SettingsPath",
         "${workspaceFolder}\\CanDoItAll.Mcp.DotNetWatch.settings.json"
       ],
-      "cwd": "${workspaceFolder}",
+      "command": "powershell",
+      "cwd": "${workspaceFolder}"
+    },
+    "tailwindcss": {
       "type": "stdio",
-      "command": "powershell"
+      "args": "tailwindcss-mcp@latest",
+      "command": "npx"
     },
     "candoitall_sshops": {
+      "type": "stdio",
       "args": [
         "--settings",
         "${workspaceFolder}\\CanDoItAll.Mcp.SshOps.settings.json"
       ],
-      "cwd": "${workspaceFolder}",
-      "type": "stdio",
-      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.SshOps\\current\\CanDoItAll.Mcp.SshOps.exe"
-    },
-    "tailwindcss": {
-      "args": "tailwindcss-mcp@latest",
-      "type": "stdio",
-      "command": "npx"
-    },
-    "playwright": {
-      "args": "@playwright/mcp@latest",
-      "type": "stdio",
-      "command": "npx"
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.SshOps\\current\\CanDoItAll.Mcp.SshOps.exe",
+      "cwd": "${workspaceFolder}"
     }
   }
 }

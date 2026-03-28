@@ -134,6 +134,60 @@ public sealed class ProjectStructureCoordinatorTests
         Assert.Equal("Approval is required.", exception.Message);
     }
 
+    [Fact]
+    public async Task GetCurrentLeaseAsync_returns_null_when_api_returns_no_content()
+    {
+        var handler = new DelegateHttpMessageHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent)));
+
+        var coordinator = CreateCoordinator(handler);
+        var result = await coordinator.GetCurrentLeaseAsync(new ProjectStructureScopeInput(
+            ProjectStructureLeaseScopeKind.Project,
+            ProjectId: Guid.NewGuid()));
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task QueryAnalyticsAsync_posts_to_analytics_route_and_returns_entries()
+    {
+        string? capturedPath = null;
+        var handler = new DelegateHttpMessageHandler(request =>
+        {
+            capturedPath = request.RequestUri?.ToString();
+            return Task.FromResult(JsonResponse(new ProjectStructureAnalyticsResponse(
+                [
+                    new ProjectStructureAnalyticsEntry(
+                        Guid.NewGuid(),
+                        "structure.read",
+                        Guid.NewGuid(),
+                        null,
+                        null,
+                        null,
+                        "agent-1",
+                        "Agent One",
+                        "machine",
+                        @"C:\repositories\CanDoItAll",
+                        "tests/project-structure",
+                        true,
+                        18,
+                        0,
+                        null,
+                        null,
+                        "{}",
+                        "{}",
+                        "[]",
+                        DateTimeOffset.UtcNow)
+                ])));
+        });
+
+        var coordinator = CreateCoordinator(handler);
+        var result = await coordinator.QueryAnalyticsAsync(new ProjectStructureAnalyticsQueryRequest(OperationName: "structure.read", Take: 5));
+
+        Assert.Equal("/api/project-structure-mcp/analytics/query", new Uri(capturedPath!, UriKind.Absolute).AbsolutePath);
+        Assert.Single(result.Entries);
+        Assert.Equal("structure.read", result.Entries[0].OperationName);
+    }
+
     private static ProjectStructureCoordinator CreateCoordinator(HttpMessageHandler handler)
     {
         var httpClient = new HttpClient(handler);

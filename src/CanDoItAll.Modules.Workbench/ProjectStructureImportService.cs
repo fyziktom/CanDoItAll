@@ -230,13 +230,20 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
             using var xmlStream = xmlEntry.Open();
             var document = XDocument.Load(xmlStream);
             XNamespace xmindNamespace = "urn:xmind:xmap:xmlns:content:2.0";
-            var topic = document.Descendants(xmindNamespace + "topic").FirstOrDefault();
-            if (topic is null)
+            var rootTopics = document.Root?
+                .Elements(xmindNamespace + "sheet")
+                .Select(sheet => sheet.Element(xmindNamespace + "topic"))
+                .Where(static topic => topic is not null)
+                .Cast<XElement>()
+                .ToList();
+            if (rootTopics is null || rootTopics.Count == 0)
             {
                 throw new ProjectStructureAgentException(400, "EmptyXmindSource", "The XMind source did not contain any topics.");
             }
 
-            return new ProjectStructureImportPlan([ParseXmindXmlTopic(topic, xmindNamespace)], []);
+            return new ProjectStructureImportPlan(
+                rootTopics.Select(topic => ParseXmindXmlTopic(topic, xmindNamespace)).ToList(),
+                []);
         }
 
         warnings.Add("Unsupported XMind package layout. Only content.json and content.xml are currently understood.");
