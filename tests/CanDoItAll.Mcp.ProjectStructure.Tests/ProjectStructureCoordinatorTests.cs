@@ -111,6 +111,62 @@ public sealed class ProjectStructureCoordinatorTests
     }
 
     [Fact]
+    public async Task ReparentNodeAsync_posts_to_reparent_route_and_returns_node_summary()
+    {
+        var projectId = Guid.NewGuid();
+        string? capturedPath = null;
+        string? capturedBody = null;
+        var handler = new DelegateHttpMessageHandler(async request =>
+        {
+            capturedPath = request.RequestUri?.ToString();
+            capturedBody = await request.Content!.ReadAsStringAsync();
+            return JsonResponse(new ProjectStructureNodeSummary(
+                "node-1",
+                "parent-1",
+                ProjectObjectType.ProjectBlock,
+                "feature",
+                "Child node",
+                "Execution",
+                "Draft",
+                "Reparented through the coordinator.",
+                "/projects/test",
+                "project-structure-node",
+                null,
+                null,
+                null,
+                null,
+                [],
+                "percent",
+                0,
+                "dot",
+                "info",
+                "Open",
+                0,
+                0,
+                null,
+                null,
+                null,
+                ProjectStructureProjectRole.None,
+                null,
+                0,
+                640,
+                360));
+        });
+
+        var coordinator = CreateCoordinator(handler);
+        var result = await coordinator.ReparentNodeAsync(
+            projectId,
+            new ProjectStructureNodeReparentInput("node-1", "parent-1"),
+            estimatedMinutes: 15);
+
+        using var document = JsonDocument.Parse(capturedBody!);
+        Assert.Equal("/api/project-structure-mcp/projects/" + projectId + "/nodes/reparent", new Uri(capturedPath!, UriKind.Absolute).AbsolutePath);
+        Assert.Equal("node-1", document.RootElement.GetProperty("nodeId").GetString());
+        Assert.Equal("parent-1", document.RootElement.GetProperty("parentNodeKey").GetString());
+        Assert.Equal("parent-1", result.ParentId);
+    }
+
+    [Fact]
     public async Task CreateProjectAsync_maps_remote_error_envelope_to_tool_invocation_exception()
     {
         var handler = new DelegateHttpMessageHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.Forbidden)

@@ -74,6 +74,13 @@ public sealed class ProjectStructureTools(IProjectStructureCoordinator coordinat
         return ExecuteAsync("project_structure_node_update", () => coordinator.UpdateNodeAsync(projectId, nodeId, request, estimatedMinutes, cancellationToken));
     }
 
+    [McpServerTool(Name = "project_structure_node_reparent", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Reconnects an existing project-structure node under a new logical parent node or back to the project root.")]
+    public Task<McpToolEnvelope<ProjectStructureNodeSummary>> ProjectStructureNodeReparentAsync(Guid projectId, ProjectStructureNodeReparentInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("project_structure_node_reparent", () => coordinator.ReparentNodeAsync(projectId, request, estimatedMinutes, cancellationToken));
+    }
+
     [McpServerTool(Name = "project_structure_approval_request", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
     [Description("Records an approval-request node in the project structure so blocked work is written back into the graph instead of staying in chat.")]
     public Task<McpToolEnvelope<ProjectStructureNodeSummary>> ProjectStructureApprovalRequestAsync(Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken = default)

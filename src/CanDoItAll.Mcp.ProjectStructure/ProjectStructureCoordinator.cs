@@ -25,6 +25,8 @@ public interface IProjectStructureCoordinator
 
     Task<ProjectStructureNodeSummary> UpdateNodeAsync(Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes, CancellationToken cancellationToken = default);
 
+    Task<ProjectStructureNodeSummary> ReparentNodeAsync(Guid projectId, ProjectStructureNodeReparentInput request, int? estimatedMinutes, CancellationToken cancellationToken = default);
+
     Task<ProjectStructureNodeSummary> CreateApprovalRequestAsync(Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken = default);
 
     Task<ProjectStructureAssetDescriptor> GetAssetAsync(Guid projectId, string nodeId, CancellationToken cancellationToken = default);
@@ -122,6 +124,15 @@ public sealed class ProjectStructureCoordinator(
     {
         return httpClient.PutAsync<ProjectStructureNodeEditInput, ProjectStructureNodeSummary>(
             $"/api/project-structure-mcp/projects/{projectId}/nodes/{Uri.EscapeDataString(nodeId)}",
+            request,
+            estimatedMinutes,
+            cancellationToken);
+    }
+
+    public Task<ProjectStructureNodeSummary> ReparentNodeAsync(Guid projectId, ProjectStructureNodeReparentInput request, int? estimatedMinutes, CancellationToken cancellationToken = default)
+    {
+        return httpClient.PostAsync<ProjectStructureNodeReparentInput, ProjectStructureNodeSummary>(
+            $"/api/project-structure-mcp/projects/{projectId}/nodes/reparent",
             request,
             estimatedMinutes,
             cancellationToken);

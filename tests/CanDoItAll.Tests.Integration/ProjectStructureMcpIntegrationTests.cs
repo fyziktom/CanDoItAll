@@ -129,6 +129,70 @@ public sealed class ProjectStructureMcpIntegrationTests
         Assert.Equal("estimate_required", result.Status);
     }
 
+    [Fact]
+    public async Task ProjectStructureMcp_reparents_existing_nodes_through_the_real_tool_path()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+        var tools = CreateTools(host, "Project Structure Reparent Agent");
+
+        var project = await AssertOkAsync(tools.ProjectStructureProjectCreateAsync(new ProjectStructureProjectSaveRequest(
+            "MCP reparent project",
+            "Validate node reparenting through the real tool path.",
+            "Create nodes, reparent one of them, and confirm the resulting hierarchy link.",
+            "Execution",
+            ProjectStatus.Active)));
+
+        var lease = await AssertOkAsync(tools.ProjectStructureProjectLeaseAcquireAsync(project.Id, "Reparent validation nodes"));
+
+        var parentNode = await AssertOkAsync(tools.ProjectStructureNodeCreateAsync(
+            project.Id,
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.ProjectBlock,
+                "Hierarchy parent",
+                "Execution",
+                "Parent node for reparent validation.",
+                $"project:{project.Id}",
+                420,
+                220,
+                null,
+                null,
+                "feature",
+                null,
+                null,
+                lease.LeaseToken)));
+
+        var childNode = await AssertOkAsync(tools.ProjectStructureNodeCreateAsync(
+            project.Id,
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.ProjectBlock,
+                "Hierarchy child",
+                "Execution",
+                "Child node that will be reparented.",
+                $"project:{project.Id}",
+                720,
+                220,
+                null,
+                null,
+                "feature",
+                null,
+                null,
+                lease.LeaseToken)));
+
+        var reparentedNode = await AssertOkAsync(tools.ProjectStructureNodeReparentAsync(
+            project.Id,
+            new ProjectStructureNodeReparentInput(childNode.Id, parentNode.Id, lease.LeaseToken)));
+
+        var readback = await AssertOkAsync(tools.ProjectStructureReadAsync(
+            project.Id,
+            new ProjectStructureReadRequest(
+                IncludeLinks: true,
+                IncludeLayout: true)));
+
+        Assert.Equal(parentNode.Id, reparentedNode.ParentId);
+        Assert.Contains(readback.Links, link => link.SourceId == parentNode.Id && link.TargetId == childNode.Id);
+        Assert.DoesNotContain(readback.Links, link => link.SourceId == $"project:{project.Id}" && link.TargetId == childNode.Id);
+    }
+
     private static async Task<ProjectStructureNodeSummary> CreateAssetAsync(
         ProjectStructureTools tools,
         Guid projectId,

@@ -1,6 +1,7 @@
 using CanDoItAll.Mcp.Core.Contracts;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Mcp.ProjectStructure.Tests;
@@ -85,6 +86,53 @@ public sealed class ProjectStructureToolsTests
         Assert.Equal("structure.read", result.Data.Entries[0].OperationName);
     }
 
+    [Fact]
+    public async Task ProjectStructureNodeReparentAsync_returns_successful_structured_content()
+    {
+        var projectId = Guid.NewGuid();
+        var tools = new ProjectStructureTools(new StubCoordinator
+        {
+            OnReparentNode = (_, request, _, _) => Task.FromResult(new ProjectStructureNodeSummary(
+                request.NodeId,
+                request.ParentNodeKey,
+                ProjectObjectType.ProjectBlock,
+                "feature",
+                "Child node",
+                "Execution",
+                "Draft",
+                "Reparented through the MCP surface.",
+                "/projects/test",
+                "project-structure-node",
+                null,
+                null,
+                null,
+                null,
+                [],
+                "percent",
+                0,
+                "dot",
+                "info",
+                "Open",
+                0,
+                0,
+                null,
+                null,
+                null,
+                ProjectStructureProjectRole.None,
+                null,
+                0,
+                640,
+                360))
+        }, NullLogger<ProjectStructureTools>.Instance);
+
+        var result = await tools.ProjectStructureNodeReparentAsync(
+            projectId,
+            new ProjectStructureNodeReparentInput("node-1", "parent-1"));
+
+        Assert.True(result.Ok);
+        Assert.Equal("parent-1", result.Data!.ParentId);
+    }
+
     private sealed class StubCoordinator : IProjectStructureCoordinator
     {
         public Func<CancellationToken, Task<IReadOnlyList<ProjectSummary>>>? OnListProjects { get; init; }
@@ -104,6 +152,8 @@ public sealed class ProjectStructureToolsTests
         public Func<Guid, ProjectStructureNodeCreateInput, int?, CancellationToken, Task<ProjectStructureNodeSummary>>? OnCreateNode { get; init; }
 
         public Func<Guid, string, ProjectStructureNodeEditInput, int?, CancellationToken, Task<ProjectStructureNodeSummary>>? OnUpdateNode { get; init; }
+
+        public Func<Guid, ProjectStructureNodeReparentInput, int?, CancellationToken, Task<ProjectStructureNodeSummary>>? OnReparentNode { get; init; }
 
         public Func<Guid, ProjectStructureApprovalRequestCreateInput, CancellationToken, Task<ProjectStructureNodeSummary>>? OnCreateApprovalRequest { get; init; }
 
@@ -168,6 +218,42 @@ public sealed class ProjectStructureToolsTests
         public Task<ProjectStructureNodeSummary> UpdateNodeAsync(Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
+        }
+
+        public Task<ProjectStructureNodeSummary> ReparentNodeAsync(Guid projectId, ProjectStructureNodeReparentInput request, int? estimatedMinutes, CancellationToken cancellationToken = default)
+        {
+            return OnReparentNode?.Invoke(projectId, request, estimatedMinutes, cancellationToken)
+                ?? Task.FromResult(new ProjectStructureNodeSummary(
+                    request.NodeId,
+                    request.ParentNodeKey,
+                    ProjectObjectType.ProjectBlock,
+                    string.Empty,
+                    "Reparented node",
+                    string.Empty,
+                    "Draft",
+                    null,
+                    "/projects/test",
+                    "project-structure-node",
+                    null,
+                    null,
+                    null,
+                    null,
+                    [],
+                    "percent",
+                    0,
+                    "dot",
+                    "info",
+                    "Open",
+                    0,
+                    0,
+                    null,
+                    null,
+                    null,
+                    ProjectStructureProjectRole.None,
+                    null,
+                    0,
+                    null,
+                    null));
         }
 
         public Task<ProjectStructureNodeSummary> CreateApprovalRequestAsync(Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken = default)
