@@ -1464,6 +1464,14 @@
             nodeElement.style.left = `${position.x}px`;
             nodeElement.style.top = `${position.y}px`;
             nodeElement.style.setProperty("--cw-node-accent", node.accentColor || "#7c3aed");
+            if (node.isReadOnly) {
+                nodeElement.classList.add("is-readonly");
+                nodeElement.dataset.readOnly = "true";
+            }
+            if (node.isPreviewOnly) {
+                nodeElement.classList.add("is-preview-only");
+                nodeElement.dataset.previewOnly = "true";
+            }
             if (state.selectedIds.has(node.id)) {
                 nodeElement.classList.add("is-selected");
             }

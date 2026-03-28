@@ -1,5 +1,7 @@
 using Bunit;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -38,6 +40,83 @@ public sealed class ProjectsPageTests
             Assert.NotEmpty(cut.FindAll("[data-testid='project-card']"));
             Assert.Contains("Open dashboard tab", cut.Markup);
         });
+    }
+
+    [Fact]
+    public async Task Filters_direct_subprojects_of_the_selected_project()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parentProjectId = await CreateProjectAsync(projectsService, "Alpha parent");
+        var childProjectId = await CreateProjectAsync(projectsService, "Beta child");
+        var unrelatedProjectId = await CreateProjectAsync(projectsService, "Gamma unrelated");
+
+        Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
+        Assert.NotEqual(Guid.Empty, unrelatedProjectId);
+
+        var cut = harness.Context.RenderComponent<ProjectsPage>();
+
+        cut.Find("[data-testid='hierarchy-filter-project']").Change(parentProjectId.ToString());
+        cut.Find("[data-testid='hierarchy-filter-mode']").Change("children");
+
+        cut.WaitForAssertion(() =>
+        {
+            var cards = cut.FindAll("[data-testid='project-card']");
+
+            Assert.Single(cards);
+            Assert.Contains("Beta child", cards[0].TextContent);
+        });
+    }
+
+    [Fact]
+    public async Task Subprojects_modal_supports_recursive_drill_down()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var parentProjectId = await CreateProjectAsync(projectsService, "Root project");
+        var childProjectId = await CreateProjectAsync(projectsService, "Nested child");
+        var grandchildProjectId = await CreateProjectAsync(projectsService, "Nested grandchild");
+
+        Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
+        Assert.True((await projectsService.AddSubprojectAsync(childProjectId, grandchildProjectId)).IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProjectsPage>();
+
+        var parentCard = cut.FindAll("[data-testid='project-card']")
+            .Single(card => card.TextContent.Contains("Root project", StringComparison.Ordinal));
+        parentCard.QuerySelector("[data-testid='project-card-subprojects-button']")!.Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var modal = cut.Find("[data-testid='projects-hierarchy-modal']");
+
+            Assert.Contains("Nested child", modal.TextContent);
+        });
+
+        var childCard = cut.FindAll("[data-testid='hierarchy-subproject-card']")
+            .Single(card => card.TextContent.Contains("Nested child", StringComparison.Ordinal));
+        childCard.QuerySelector("[data-testid='hierarchy-card-subprojects-button']")!.Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var modal = cut.Find("[data-testid='projects-hierarchy-modal']");
+
+            Assert.Contains("Nested grandchild", modal.TextContent);
+        });
+    }
+
+    private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
+    {
+        var result = await projectsService.SaveAsync(new ProjectEditorModel
+        {
+            Name = name,
+            Description = $"{name} description",
+            Objective = $"{name} objective",
+            CurrentPhase = "Discovery"
+        });
+
+        Assert.True(result.IsSuccess);
+        return result.Value;
     }
 }
 

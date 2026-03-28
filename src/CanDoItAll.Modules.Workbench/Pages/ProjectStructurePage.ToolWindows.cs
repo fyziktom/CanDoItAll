@@ -42,7 +42,7 @@ public partial class ProjectStructurePage
 
         return CanvasWorkbenchWindowState.Normalize(new CanvasWorkbenchWindowState
         {
-            IsVisible = true
+            IsVisible = false
         });
     }
 

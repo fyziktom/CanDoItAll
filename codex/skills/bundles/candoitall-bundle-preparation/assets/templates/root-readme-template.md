@@ -32,4 +32,6 @@ This bundle is a coordination and execution package for `{{BUNDLE_NAME}}`.
 
 - Bundle preparation status: `Draft`
 - Execution status: `Not started`
+- Subbundle gate review: `Not started`
+- Final closure gate: `Not started`
 - Browser validation analytics: `Not started`

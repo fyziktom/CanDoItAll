@@ -118,6 +118,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
     await using var dbContext = await dbContextFactory.CreateDbContextAsync();
     await dbContext.Database.EnsureCreatedAsync();
+    await ProjectsSchemaInitializer.EnsureAsync(dbContext);
     await PromptFactorySchemaInitializer.EnsureAsync(dbContext);
     await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext);
 

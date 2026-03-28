@@ -12,6 +12,10 @@
 
 - List the requirements, notes, or findings that this subbundle owns.
 
+## Prerequisites
+
+- List the required earlier subbundles, proof, or bundle state that must exist before implementation starts.
+
 ## Exact Source References
 
 - Add absolute paths to the relevant files.
@@ -19,6 +23,14 @@
 ## Deliverables
 
 - List the concrete implementation results.
+
+## Dependency Impact
+
+- Describe which later phases depend on this subbundle and why weak proof here would invalidate them.
+
+## Validation Depth
+
+- State whether this is a normal closure, UI-heavy closure, or critical foundation closure.
 
 ## Implementation Steps
 
@@ -48,6 +60,10 @@
 - Record the Playwright MCP actions or assertions that must happen before the subbundle can close.
 - Record the screenshot file names or evidence paths that should appear in the execution report.
 - Use `N/A` only when this subbundle does not affect browser-visible or host-visible proof.
+
+## Progression Gate
+
+- State the exact condition that must be true before downstream subbundles may continue.
 
 ## Suggested Agent Prompt
 

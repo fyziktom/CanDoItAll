@@ -127,6 +127,15 @@ internal sealed class ProjectWorkbenchViewStateRecordConfiguration : IEntityType
     }
 }
 
+public enum ProjectStructureProjectRole
+{
+    None,
+    ActiveProject,
+    Subproject,
+    ParentProject,
+    AdditionalParentProject
+}
+
 public sealed record ProjectStructureNode(
     string Id,
     string? ParentId,
@@ -154,7 +163,10 @@ public sealed record ProjectStructureNode(
     int Priority,
     DateTimeOffset? StartUtc = null,
     DateTimeOffset? EndUtc = null,
-    string MetadataJson = "{}");
+    string MetadataJson = "{}",
+    ProjectStructureProjectRole ProjectRole = ProjectStructureProjectRole.None,
+    Guid? RelatedProjectId = null,
+    int ParentProjectCount = 0);
 
 public sealed record ProjectStructureLink(string SourceId, string TargetId, ProjectObjectLinkKind Kind, bool IsUserAuthored);
 
@@ -256,6 +268,18 @@ public sealed class ProjectWorkbenchService(
     IFileStore fileStore,
     PromptFactoryService promptFactoryService) : IProjectWorkbenchSeedService
 {
+    private const string ProjectRootNodePrefix = "project:";
+    private const string ProjectChildNodePrefix = "project-child:";
+    private const string ProjectRelatedParentNodePrefix = "project-related-parent:";
+
+    private enum ProjectHierarchyNodeKind
+    {
+        None,
+        ActiveProject,
+        Subproject,
+        RelatedParent
+    }
+
     public async Task<ProjectStructureSurface> GetStructureAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -274,11 +298,12 @@ public sealed class ProjectWorkbenchService(
             .ThenBy(item => item.TargetNodeKey)
             .ToListAsync(cancellationToken);
         var viewState = await LoadViewStateAsync(dbContext, projectId, "structure", cancellationToken);
+        var mappedNodes = MapStructureNodes(nodes, links);
 
         return new ProjectStructureSurface(
             project.Id,
             project.Name,
-            nodes.Select(MapStructureNode).ToList(),
+            mappedNodes,
             links.Select(link => new ProjectStructureLink(link.SourceNodeKey, link.TargetNodeKey, link.LinkKind, !link.IsSystemManaged)).ToList(),
             viewState);
     }
@@ -1022,13 +1047,16 @@ public sealed class ProjectWorkbenchService(
             .ToListAsync(cancellationToken))
             .OrderByDescending(item => item.UpdatedAtUtc)
             .ToList();
+        var allProjects = await dbContext.Set<Project>().ToListAsync(cancellationToken);
+        var allHierarchyLinks = await dbContext.Set<ProjectHierarchyLink>().ToListAsync(cancellationToken);
+        var hierarchyProjection = BuildProjectHierarchyProjection(project, allProjects, allHierarchyLinks, clock.GetUtcNow());
 
         var expectedNodes = new List<ProjectObjectRecord>
         {
             new()
             {
                 ProjectId = projectId,
-                NodeKey = $"project:{project.Id}",
+                NodeKey = BuildProjectRootNodeKey(project.Id),
                 ObjectType = ProjectObjectType.ProjectRoot,
                 Title = project.Name,
                 Subtitle = project.Objective,
@@ -1045,6 +1073,9 @@ public sealed class ProjectWorkbenchService(
             }
         };
 
+        expectedNodes.AddRange(hierarchyProjection.ParentNodes);
+        expectedNodes.AddRange(hierarchyProjection.DescendantNodes);
+
         expectedNodes.AddRange(phases.Select((phase, index) => new ProjectObjectRecord
         {
             ProjectId = projectId,
@@ -1057,7 +1088,7 @@ public sealed class ProjectWorkbenchService(
             Route = $"/projects?projectId={projectId}",
             ExternalArtifactKind = "phase",
             ExternalArtifactId = phase.Id,
-            ParentNodeKey = $"project:{project.Id}",
+            ParentNodeKey = BuildProjectRootNodeKey(project.Id),
             PositionX = 420,
             PositionY = 120 + (index * 180),
             StartUtc = phase.StartDateUtc.HasValue ? new DateTimeOffset(DateTime.SpecifyKind(phase.StartDateUtc.Value, DateTimeKind.Utc)) : null,
@@ -1079,7 +1110,7 @@ public sealed class ProjectWorkbenchService(
             Route = $"/resources?resourceId={resource.Id}",
             ExternalArtifactKind = "resource",
             ExternalArtifactId = resource.Id,
-            ParentNodeKey = $"project:{project.Id}",
+            ParentNodeKey = BuildProjectRootNodeKey(project.Id),
             PositionX = 760,
             PositionY = 100 + (index * 120),
             IsSystemManaged = true,
@@ -1101,7 +1132,7 @@ public sealed class ProjectWorkbenchService(
             ExternalArtifactId = run.Id,
             ParentNodeKey = phases.FirstOrDefault(phase => string.Equals(phase.Name, run.Phase, StringComparison.OrdinalIgnoreCase)) is { } phase
                 ? $"phase:{phase.Id}"
-                : $"project:{project.Id}",
+                : BuildProjectRootNodeKey(project.Id),
             PositionX = 1080,
             PositionY = 100 + (index * 160),
             IsSystemManaged = true,
@@ -1141,7 +1172,7 @@ public sealed class ProjectWorkbenchService(
             Route = $"/validation?runId={validation.Id}",
             ExternalArtifactKind = "validation-run",
             ExternalArtifactId = validation.Id,
-            ParentNodeKey = $"project:{project.Id}",
+            ParentNodeKey = BuildProjectRootNodeKey(project.Id),
             PositionX = 780,
             PositionY = 580 + (index * 120),
             StartUtc = validation.UpdatedAtUtc,
@@ -1163,7 +1194,7 @@ public sealed class ProjectWorkbenchService(
             Route = $"/test-lab?planId={testPlan.Id}",
             ExternalArtifactKind = "test-plan",
             ExternalArtifactId = testPlan.Id,
-            ParentNodeKey = $"project:{project.Id}",
+            ParentNodeKey = BuildProjectRootNodeKey(project.Id),
             PositionX = 1100,
             PositionY = 620 + (index * 140),
             StartUtc = testPlan.UpdatedAtUtc,
@@ -1174,16 +1205,17 @@ public sealed class ProjectWorkbenchService(
         }));
 
         var expectedLinks = new List<(string Source, string Target, ProjectObjectLinkKind Kind)>();
-        expectedLinks.AddRange(phases.Select(phase => ($"project:{project.Id}", $"phase:{phase.Id}", ProjectObjectLinkKind.Contains)));
-        expectedLinks.AddRange(resources.Select(resource => ($"project:{project.Id}", $"resource:{resource.Id}", ProjectObjectLinkKind.Uses)));
-        expectedLinks.AddRange(validations.Select(validation => ($"project:{project.Id}", $"validation:{validation.Id}", ProjectObjectLinkKind.Validates)));
-        expectedLinks.AddRange(testPlans.Select(testPlan => ($"project:{project.Id}", $"test-plan:{testPlan.Id}", ProjectObjectLinkKind.Tests)));
+        expectedLinks.AddRange(hierarchyProjection.Links);
+        expectedLinks.AddRange(phases.Select(phase => (BuildProjectRootNodeKey(project.Id), $"phase:{phase.Id}", ProjectObjectLinkKind.Contains)));
+        expectedLinks.AddRange(resources.Select(resource => (BuildProjectRootNodeKey(project.Id), $"resource:{resource.Id}", ProjectObjectLinkKind.Uses)));
+        expectedLinks.AddRange(validations.Select(validation => (BuildProjectRootNodeKey(project.Id), $"validation:{validation.Id}", ProjectObjectLinkKind.Validates)));
+        expectedLinks.AddRange(testPlans.Select(testPlan => (BuildProjectRootNodeKey(project.Id), $"test-plan:{testPlan.Id}", ProjectObjectLinkKind.Tests)));
 
         foreach (var run in runs)
         {
             var phaseNodeKey = phases.FirstOrDefault(phase => string.Equals(phase.Name, run.Phase, StringComparison.OrdinalIgnoreCase)) is { } phase
                 ? $"phase:{phase.Id}"
-                : $"project:{project.Id}";
+                : BuildProjectRootNodeKey(project.Id);
             expectedLinks.Add((phaseNodeKey, $"prompt-run:{run.Id}", ProjectObjectLinkKind.BelongsTo));
         }
 
@@ -1254,6 +1286,307 @@ public sealed class ProjectWorkbenchService(
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    private static string BuildProjectRootNodeKey(Guid projectId)
+        => $"{ProjectRootNodePrefix}{projectId}";
+
+    private static string BuildProjectChildNodeKey(Guid projectId)
+        => $"{ProjectChildNodePrefix}{projectId}";
+
+    private static string BuildRelatedParentNodeKey(Guid projectId)
+        => $"{ProjectRelatedParentNodePrefix}{projectId}";
+
+    private static string ResolveRelatedProjectSubtitle(Project project, string fallbackLabel)
+        => string.IsNullOrWhiteSpace(project.CurrentPhase)
+            ? fallbackLabel
+            : project.CurrentPhase.Trim();
+
+    private static string ResolveRelatedProjectNotes(Project project, string fallbackLabel)
+    {
+        if (!string.IsNullOrWhiteSpace(project.Description))
+        {
+            return project.Description;
+        }
+
+        if (!string.IsNullOrWhiteSpace(project.Objective))
+        {
+            return project.Objective;
+        }
+
+        return fallbackLabel;
+    }
+
+    private static ProjectHierarchyProjection BuildProjectHierarchyProjection(
+        Project project,
+        IReadOnlyList<Project> allProjects,
+        IReadOnlyList<ProjectHierarchyLink> allHierarchyLinks,
+        DateTimeOffset updatedAtUtc)
+    {
+        var projectMap = allProjects.ToDictionary(item => item.Id);
+        var childProjectIdsByParent = allHierarchyLinks
+            .GroupBy(link => link.ParentProjectId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(link => link.ChildProjectId)
+                    .Distinct()
+                    .ToList());
+        var parentProjectIdsByChild = allHierarchyLinks
+            .GroupBy(link => link.ChildProjectId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(link => link.ParentProjectId)
+                    .Distinct()
+                    .ToList());
+        var descendantProjectIds = CollectDescendantProjectIds(project.Id, childProjectIdsByParent);
+        var primaryParentByProjectId = new Dictionary<Guid, Guid>();
+        var depthByProjectId = new Dictionary<Guid, int>();
+        var orderedDescendantProjectIds = new List<Guid>();
+        var visitedDescendantProjectIds = new HashSet<Guid>();
+
+        WalkDescendantProjects(project.Id, 1);
+
+        var descendantPositions = new Dictionary<Guid, (double X, double Y)>();
+        for (var index = 0; index < orderedDescendantProjectIds.Count; index++)
+        {
+            var descendantProjectId = orderedDescendantProjectIds[index];
+            var depth = depthByProjectId[descendantProjectId];
+            descendantPositions[descendantProjectId] = (
+                X: 760 + ((depth - 1) * 320),
+                Y: 520 + (index * 180));
+        }
+
+        var directParentProjectIds = parentProjectIdsByChild.TryGetValue(project.Id, out var directParents)
+            ? directParents
+                .Where(projectMap.ContainsKey)
+                .OrderBy(parentProjectId => ResolveProjectSortKey(projectMap[parentProjectId]), StringComparer.OrdinalIgnoreCase)
+                .ThenBy(parentProjectId => parentProjectId)
+                .ToList()
+            : [];
+        var extraParentLinks = orderedDescendantProjectIds
+            .SelectMany(childProjectId =>
+            {
+                if (!parentProjectIdsByChild.TryGetValue(childProjectId, out var parentProjectIds))
+                {
+                    return Enumerable.Empty<(Guid ParentProjectId, Guid ChildProjectId)>();
+                }
+
+                return parentProjectIds
+                    .Where(parentProjectId =>
+                        parentProjectId != primaryParentByProjectId[childProjectId] &&
+                        (parentProjectId == project.Id || projectMap.ContainsKey(parentProjectId)))
+                    .Select(parentProjectId => (
+                        ParentProjectId: parentProjectId,
+                        ChildProjectId: childProjectId));
+            })
+            .Distinct()
+            .ToList();
+        var visibleDescendantProjectIds = orderedDescendantProjectIds.ToHashSet();
+        var visibleRelatedParentProjectIds = directParentProjectIds
+            .Concat(extraParentLinks
+                .Select(link => link.ParentProjectId)
+                .Where(parentProjectId =>
+                    parentProjectId != project.Id &&
+                    !visibleDescendantProjectIds.Contains(parentProjectId)))
+            .Distinct()
+            .Where(projectMap.ContainsKey)
+            .ToHashSet();
+
+        var parentNodes = directParentProjectIds
+            .Select((parentProjectId, index) => CreateRelatedParentNode(
+                project.Id,
+                projectMap[parentProjectId],
+                "Parent project",
+                120,
+                40 + (index * 160),
+                updatedAtUtc))
+            .ToList();
+        parentNodes.AddRange(visibleRelatedParentProjectIds
+            .Where(parentProjectId => !directParentProjectIds.Contains(parentProjectId))
+            .OrderBy(parentProjectId => ResolveProjectSortKey(projectMap[parentProjectId]), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(parentProjectId => parentProjectId)
+            .Select(parentProjectId =>
+            {
+                var childPositions = extraParentLinks
+                    .Where(link => link.ParentProjectId == parentProjectId)
+                    .Select(link => descendantPositions.GetValueOrDefault(link.ChildProjectId))
+                    .ToList();
+                var x = childPositions.Count == 0
+                    ? 1120d
+                    : Math.Max(260d, childPositions.Min(position => position.X) - 220d);
+                var y = childPositions.Count == 0
+                    ? 460d
+                    : Math.Round(childPositions.Average(position => position.Y), 0, MidpointRounding.AwayFromZero);
+                return CreateRelatedParentNode(
+                    project.Id,
+                    projectMap[parentProjectId],
+                    "Shared parent",
+                    x,
+                    y,
+                    updatedAtUtc);
+            }));
+
+        var descendantNodes = orderedDescendantProjectIds
+            .Select(descendantProjectId =>
+            {
+                var descendantProject = projectMap[descendantProjectId];
+                var position = descendantPositions[descendantProjectId];
+                var parentProjectId = primaryParentByProjectId[descendantProjectId];
+                return new ProjectObjectRecord
+                {
+                    ProjectId = project.Id,
+                    NodeKey = BuildProjectChildNodeKey(descendantProject.Id),
+                    ObjectType = ProjectObjectType.ProjectRoot,
+                    Title = descendantProject.Name,
+                    Subtitle = ResolveRelatedProjectSubtitle(descendantProject, "Subproject"),
+                    Status = descendantProject.Status.ToString(),
+                    Notes = ResolveRelatedProjectNotes(descendantProject, "Subproject"),
+                    Route = $"/projects/{descendantProject.Id}/structure",
+                    ExternalArtifactKind = "project",
+                    ExternalArtifactId = descendantProject.Id,
+                    ParentNodeKey = parentProjectId == project.Id
+                        ? BuildProjectRootNodeKey(project.Id)
+                        : BuildProjectChildNodeKey(parentProjectId),
+                    PositionX = position.X,
+                    PositionY = position.Y,
+                    IsSystemManaged = true,
+                    CreatedAtUtc = descendantProject.CreatedAtUtc,
+                    UpdatedAtUtc = updatedAtUtc
+                };
+            })
+            .ToList();
+
+        var projectLinks = new List<(string Source, string Target, ProjectObjectLinkKind Kind)>();
+        projectLinks.AddRange(directParentProjectIds.Select(parentProjectId => (
+            BuildRelatedParentNodeKey(parentProjectId),
+            BuildProjectRootNodeKey(project.Id),
+            ProjectObjectLinkKind.BelongsTo)));
+        projectLinks.AddRange(orderedDescendantProjectIds.Select(descendantProjectId =>
+        {
+            var parentProjectId = primaryParentByProjectId[descendantProjectId];
+            var sourceNodeKey = parentProjectId == project.Id
+                ? BuildProjectRootNodeKey(project.Id)
+                : BuildProjectChildNodeKey(parentProjectId);
+            return (sourceNodeKey, BuildProjectChildNodeKey(descendantProjectId), ProjectObjectLinkKind.Contains);
+        }));
+        projectLinks.AddRange(extraParentLinks.Select(link =>
+        {
+            var sourceNodeKey = ResolveProjectHierarchyLinkSourceNodeKey(
+                link.ParentProjectId,
+                project.Id,
+                visibleDescendantProjectIds);
+            return (sourceNodeKey, BuildProjectChildNodeKey(link.ChildProjectId), ProjectObjectLinkKind.BelongsTo);
+        }));
+
+        return new ProjectHierarchyProjection(
+            parentNodes,
+            descendantNodes,
+            projectLinks
+                .Distinct()
+                .ToList());
+
+        void WalkDescendantProjects(Guid parentProjectId, int depth)
+        {
+            if (!childProjectIdsByParent.TryGetValue(parentProjectId, out var childProjectIds))
+            {
+                return;
+            }
+
+            foreach (var childProjectId in childProjectIds
+                .Where(descendantProjectIds.Contains)
+                .Where(projectMap.ContainsKey)
+                .OrderBy(childProjectId => ResolveProjectSortKey(projectMap[childProjectId]), StringComparer.OrdinalIgnoreCase)
+                .ThenBy(childProjectId => childProjectId))
+            {
+                if (!visitedDescendantProjectIds.Add(childProjectId))
+                {
+                    continue;
+                }
+
+                primaryParentByProjectId[childProjectId] = parentProjectId;
+                depthByProjectId[childProjectId] = depth;
+                orderedDescendantProjectIds.Add(childProjectId);
+                WalkDescendantProjects(childProjectId, depth + 1);
+            }
+        }
+    }
+
+    private static HashSet<Guid> CollectDescendantProjectIds(
+        Guid projectId,
+        IReadOnlyDictionary<Guid, List<Guid>> childProjectIdsByParent)
+    {
+        var descendants = new HashSet<Guid>();
+        var queue = new Queue<Guid>();
+        queue.Enqueue(projectId);
+
+        while (queue.Count > 0)
+        {
+            var currentProjectId = queue.Dequeue();
+            if (!childProjectIdsByParent.TryGetValue(currentProjectId, out var childProjectIds))
+            {
+                continue;
+            }
+
+            foreach (var childProjectId in childProjectIds)
+            {
+                if (!descendants.Add(childProjectId))
+                {
+                    continue;
+                }
+
+                queue.Enqueue(childProjectId);
+            }
+        }
+
+        return descendants;
+    }
+
+    private static ProjectObjectRecord CreateRelatedParentNode(
+        Guid projectId,
+        Project parentProject,
+        string fallbackLabel,
+        double x,
+        double y,
+        DateTimeOffset updatedAtUtc)
+        => new()
+        {
+            ProjectId = projectId,
+            NodeKey = BuildRelatedParentNodeKey(parentProject.Id),
+            ObjectType = ProjectObjectType.ProjectRoot,
+            Title = parentProject.Name,
+            Subtitle = ResolveRelatedProjectSubtitle(parentProject, fallbackLabel),
+            Status = parentProject.Status.ToString(),
+            Notes = ResolveRelatedProjectNotes(parentProject, fallbackLabel),
+            Route = $"/projects/{parentProject.Id}/structure",
+            ExternalArtifactKind = "project",
+            ExternalArtifactId = parentProject.Id,
+            PositionX = x,
+            PositionY = y,
+            IsSystemManaged = true,
+            CreatedAtUtc = parentProject.CreatedAtUtc,
+            UpdatedAtUtc = updatedAtUtc
+        };
+
+    private static string ResolveProjectHierarchyLinkSourceNodeKey(
+        Guid parentProjectId,
+        Guid rootProjectId,
+        IReadOnlySet<Guid> visibleDescendantProjectIds)
+        => parentProjectId == rootProjectId
+            ? BuildProjectRootNodeKey(rootProjectId)
+            : visibleDescendantProjectIds.Contains(parentProjectId)
+                ? BuildProjectChildNodeKey(parentProjectId)
+                : BuildRelatedParentNodeKey(parentProjectId);
+
+    private static string ResolveProjectSortKey(Project project)
+        => string.IsNullOrWhiteSpace(project.Name)
+            ? project.Id.ToString("N")
+            : project.Name.Trim();
+
+    private sealed record ProjectHierarchyProjection(
+        IReadOnlyList<ProjectObjectRecord> ParentNodes,
+        IReadOnlyList<ProjectObjectRecord> DescendantNodes,
+        IReadOnlyList<(string Source, string Target, ProjectObjectLinkKind Kind)> Links);
 
     private static async Task UpsertLinkAsync(
         AppDbContext dbContext,
@@ -1349,9 +1682,96 @@ public sealed class ProjectWorkbenchService(
         return ProjectObjectMetadataSerializer.Serialize(metadata);
     }
 
-    private static ProjectStructureNode MapStructureNode(ProjectObjectRecord record)
+    private static IReadOnlyList<ProjectStructureNode> MapStructureNodes(
+        IReadOnlyList<ProjectObjectRecord> records,
+        IReadOnlyList<ProjectObjectLinkRecord> links)
     {
-        var profile = ResolveVisualProfile(record.ObjectType, record.ObjectSubtype, record.Status);
+        var projectNodeKeys = records
+            .Where(record => TryResolveProjectHierarchyNode(record.NodeKey, out _, out _))
+            .Select(record => record.NodeKey)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return records
+            .Select(record =>
+            {
+                var projectRole = ProjectStructureProjectRole.None;
+                Guid? relatedProjectId = null;
+                var parentProjectCount = 0;
+
+                if (TryResolveProjectHierarchyNode(record.NodeKey, out var nodeKind, out var projectId))
+                {
+                    relatedProjectId = projectId;
+                    projectRole = nodeKind switch
+                    {
+                        ProjectHierarchyNodeKind.ActiveProject => ProjectStructureProjectRole.ActiveProject,
+                        ProjectHierarchyNodeKind.Subproject => ProjectStructureProjectRole.Subproject,
+                        ProjectHierarchyNodeKind.RelatedParent when links.Any(link =>
+                            string.Equals(link.SourceNodeKey, record.NodeKey, StringComparison.Ordinal) &&
+                            TryResolveProjectHierarchyNode(link.TargetNodeKey, out var targetKind, out _) &&
+                            targetKind == ProjectHierarchyNodeKind.ActiveProject)
+                            => ProjectStructureProjectRole.ParentProject,
+                        ProjectHierarchyNodeKind.RelatedParent => ProjectStructureProjectRole.AdditionalParentProject,
+                        _ => ProjectStructureProjectRole.None
+                    };
+
+                    if (projectRole == ProjectStructureProjectRole.Subproject)
+                    {
+                        parentProjectCount = links.Count(link =>
+                            string.Equals(link.TargetNodeKey, record.NodeKey, StringComparison.Ordinal) &&
+                            projectNodeKeys.Contains(link.SourceNodeKey));
+                    }
+                }
+
+                return MapStructureNode(record, projectRole, relatedProjectId, parentProjectCount);
+            })
+            .ToList();
+    }
+
+    private static bool TryResolveProjectHierarchyNode(
+        string nodeKey,
+        out ProjectHierarchyNodeKind nodeKind,
+        out Guid relatedProjectId)
+    {
+        nodeKind = ProjectHierarchyNodeKind.None;
+        relatedProjectId = Guid.Empty;
+
+        if (nodeKey.StartsWith(ProjectRootNodePrefix, StringComparison.OrdinalIgnoreCase) &&
+            Guid.TryParse(nodeKey[ProjectRootNodePrefix.Length..], out relatedProjectId))
+        {
+            nodeKind = ProjectHierarchyNodeKind.ActiveProject;
+            return true;
+        }
+
+        if (nodeKey.StartsWith(ProjectChildNodePrefix, StringComparison.OrdinalIgnoreCase) &&
+            Guid.TryParse(nodeKey[ProjectChildNodePrefix.Length..], out relatedProjectId))
+        {
+            nodeKind = ProjectHierarchyNodeKind.Subproject;
+            return true;
+        }
+
+        if (nodeKey.StartsWith(ProjectRelatedParentNodePrefix, StringComparison.OrdinalIgnoreCase) &&
+            Guid.TryParse(nodeKey[ProjectRelatedParentNodePrefix.Length..], out relatedProjectId))
+        {
+            nodeKind = ProjectHierarchyNodeKind.RelatedParent;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static ProjectStructureNode MapStructureNode(
+        ProjectObjectRecord record,
+        ProjectStructureProjectRole projectRole = ProjectStructureProjectRole.None,
+        Guid? relatedProjectId = null,
+        int parentProjectCount = 0)
+    {
+        var profile = projectRole switch
+        {
+            ProjectStructureProjectRole.Subproject => new ProjectObjectVisualProfile("hex", "#1d4ed8", "PR", "Project"),
+            ProjectStructureProjectRole.ParentProject => new ProjectObjectVisualProfile("hex", "#334155", "PR", "Parent"),
+            ProjectStructureProjectRole.AdditionalParentProject => new ProjectObjectVisualProfile("hex", "#94a3b8", "PR", "Parent"),
+            _ => ResolveVisualProfile(record.ObjectType, record.ObjectSubtype, record.Status)
+        };
         var badges = new List<string>();
         if (record.IsSystemManaged)
         {
@@ -1371,6 +1791,24 @@ public sealed class ProjectWorkbenchService(
         if (!string.IsNullOrWhiteSpace(record.MediaOriginalFileName))
         {
             badges.Add("Uploaded");
+        }
+
+        switch (projectRole)
+        {
+            case ProjectStructureProjectRole.Subproject:
+                badges.Add("Subproject");
+                if (parentProjectCount > 1)
+                {
+                    badges.Add($"{parentProjectCount} parents");
+                }
+
+                break;
+            case ProjectStructureProjectRole.ParentProject:
+                badges.Add("Parent");
+                break;
+            case ProjectStructureProjectRole.AdditionalParentProject:
+                badges.Add("Shared parent");
+                break;
         }
 
         return new ProjectStructureNode(
@@ -1400,7 +1838,10 @@ public sealed class ProjectWorkbenchService(
             record.Priority,
             record.StartUtc,
             record.EndUtc,
-            string.IsNullOrWhiteSpace(record.MetadataJson) ? "{}" : record.MetadataJson);
+            string.IsNullOrWhiteSpace(record.MetadataJson) ? "{}" : record.MetadataJson,
+            projectRole,
+            relatedProjectId,
+            parentProjectCount);
     }
 
     private static string ResolveSubtypeBadge(ProjectObjectType objectType, string objectSubtype) => objectType switch

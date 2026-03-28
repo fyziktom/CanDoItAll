@@ -12,6 +12,12 @@
 
 - List screenshot, fullscreen, or host-capture artifact paths when UI or desktop proof is involved.
 
+## Subbundle Gate Results
+
+| Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `01-example` | `Pending` | `Pending` | `Pending` | `Pending` | Record the current gate status for the subbundle. |
+
 ## Browser Validation Analytics
 
 | Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |
@@ -22,6 +28,7 @@
 
 - Summarize whether the browser-validation evidence was strong enough.
 - Record any gap such as missing screenshots, missing assertions, or blocked Playwright interaction.
+- Summarize whether the subbundle gate decisions were strong enough for downstream work.
 
 ## Raw Note Closure
 

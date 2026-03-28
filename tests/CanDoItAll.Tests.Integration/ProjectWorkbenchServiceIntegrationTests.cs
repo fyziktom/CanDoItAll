@@ -585,4 +585,112 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.Equal("- Review the rollout checklist", parsedMetadata.Transcript.MyTasksText);
         Assert.Equal("- Alice: rollout checklist", parsedMetadata.Transcript.OthersDeliveriesText);
     }
+
+    [Fact]
+    public async Task GetStructureAsync_projects_hierarchy_adds_parent_subproject_and_shared_parent_nodes()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var currentProjectId = await CreateProjectAsync(projects, "Current project");
+        var directParentProjectId = await CreateProjectAsync(projects, "Direct parent");
+        var subprojectId = await CreateProjectAsync(projects, "Direct child");
+        var sharedParentProjectId = await CreateProjectAsync(projects, "Shared parent");
+
+        Assert.True((await projects.AddSubprojectAsync(directParentProjectId, currentProjectId)).IsSuccess);
+        Assert.True((await projects.AddSubprojectAsync(currentProjectId, subprojectId)).IsSuccess);
+        Assert.True((await projects.AddSubprojectAsync(sharedParentProjectId, subprojectId)).IsSuccess);
+
+        var surface = await workbench.GetStructureAsync(currentProjectId);
+
+        var projectRoot = Assert.Single(surface.Nodes, node => node.ProjectRole == ProjectStructureProjectRole.ActiveProject);
+        var parentNode = Assert.Single(surface.Nodes, node =>
+            node.ProjectRole == ProjectStructureProjectRole.ParentProject &&
+            node.RelatedProjectId == directParentProjectId);
+        var subprojectNode = Assert.Single(surface.Nodes, node =>
+            node.ProjectRole == ProjectStructureProjectRole.Subproject &&
+            node.RelatedProjectId == subprojectId);
+        var sharedParentNode = Assert.Single(surface.Nodes, node =>
+            node.ProjectRole == ProjectStructureProjectRole.AdditionalParentProject &&
+            node.RelatedProjectId == sharedParentProjectId);
+
+        Assert.Equal(2, subprojectNode.ParentProjectCount);
+        Assert.Contains("2 parents", subprojectNode.Badges);
+        Assert.EndsWith($"/projects/{subprojectId}/structure", subprojectNode.Route, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(surface.Links, link =>
+            string.Equals(link.SourceId, parentNode.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, projectRoot.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.BelongsTo);
+        Assert.Contains(surface.Links, link =>
+            string.Equals(link.SourceId, projectRoot.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, subprojectNode.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.Contains);
+        Assert.Contains(surface.Links, link =>
+            string.Equals(link.SourceId, sharedParentNode.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, subprojectNode.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.BelongsTo);
+    }
+
+    [Fact]
+    public async Task GetStructureAsync_projects_hierarchy_keeps_recursive_descendants_and_uses_visible_project_nodes_for_extra_parents()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var currentProjectId = await CreateProjectAsync(projects, "Current project");
+        var alphaChildProjectId = await CreateProjectAsync(projects, "Alpha child");
+        var betaBranchProjectId = await CreateProjectAsync(projects, "Beta branch");
+        var sharedGrandchildProjectId = await CreateProjectAsync(projects, "Shared grandchild");
+
+        Assert.True((await projects.AddSubprojectAsync(currentProjectId, alphaChildProjectId)).IsSuccess);
+        Assert.True((await projects.AddSubprojectAsync(currentProjectId, betaBranchProjectId)).IsSuccess);
+        Assert.True((await projects.AddSubprojectAsync(alphaChildProjectId, sharedGrandchildProjectId)).IsSuccess);
+        Assert.True((await projects.AddSubprojectAsync(betaBranchProjectId, sharedGrandchildProjectId)).IsSuccess);
+
+        var surface = await workbench.GetStructureAsync(currentProjectId);
+
+        var alphaChildNode = Assert.Single(surface.Nodes, node =>
+            node.ProjectRole == ProjectStructureProjectRole.Subproject &&
+            node.RelatedProjectId == alphaChildProjectId);
+        var betaBranchNode = Assert.Single(surface.Nodes, node =>
+            node.ProjectRole == ProjectStructureProjectRole.Subproject &&
+            node.RelatedProjectId == betaBranchProjectId);
+        var sharedGrandchildNode = Assert.Single(surface.Nodes, node =>
+            node.ProjectRole == ProjectStructureProjectRole.Subproject &&
+            node.RelatedProjectId == sharedGrandchildProjectId);
+
+        Assert.Equal(alphaChildNode.Id, sharedGrandchildNode.ParentId);
+        Assert.Equal(2, sharedGrandchildNode.ParentProjectCount);
+        Assert.Contains("2 parents", sharedGrandchildNode.Badges);
+        Assert.DoesNotContain(surface.Nodes, node =>
+            node.ProjectRole == ProjectStructureProjectRole.AdditionalParentProject &&
+            node.RelatedProjectId == betaBranchProjectId);
+        Assert.Contains(surface.Links, link =>
+            string.Equals(link.SourceId, alphaChildNode.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, sharedGrandchildNode.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.Contains);
+        Assert.Contains(surface.Links, link =>
+            string.Equals(link.SourceId, betaBranchNode.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, sharedGrandchildNode.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.BelongsTo);
+    }
+
+    private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
+    {
+        var result = await projectsService.SaveAsync(new ProjectEditorModel
+        {
+            Name = name,
+            Description = $"{name} description",
+            Objective = $"{name} objective",
+            CurrentPhase = "Execution"
+        });
+
+        Assert.True(result.IsSuccess);
+        return result.Value;
+    }
 }

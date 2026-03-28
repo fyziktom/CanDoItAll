@@ -72,6 +72,18 @@ public partial class ProjectStructurePage
 
     private ProjectStructureQuickActionButton ResolvePrimaryQuickAction(ProjectStructureNode node)
     {
+        if (node.ProjectRole is ProjectStructureProjectRole.Subproject or
+            ProjectStructureProjectRole.ParentProject or
+            ProjectStructureProjectRole.AdditionalParentProject)
+        {
+            return BuildInspectorQuickAction(
+                "Open Structure in New Tab",
+                "Keep the current canvas open and launch the related project structure in another browser tab.",
+                "open",
+                "primary",
+                "project:open-structure");
+        }
+
         var runtimeLaunch = RuntimeLauncher.Resolve(node);
         if (RuntimeLauncher.IsAvailable && runtimeLaunch.IsSuccess)
         {
