@@ -9,6 +9,11 @@ public static class WorkbenchModuleServiceCollectionExtensions
     {
         services.AddScoped<WorkbenchStateService>();
         services.AddScoped<ProjectWorkbenchService>();
+        services.AddScoped<ProjectStructureLeaseService>();
+        services.AddScoped<ProjectStructureAnalyticsService>();
+        services.AddScoped<ProjectStructureChecklistService>();
+        services.AddScoped<ProjectStructureImportService>();
+        services.AddScoped<ProjectStructureAgentService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();
         services.AddScoped<IProjectWorkbenchSeedService>(serviceProvider => serviceProvider.GetRequiredService<ProjectWorkbenchService>());

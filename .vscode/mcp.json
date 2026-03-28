@@ -27,6 +27,15 @@
       ],
       "cwd": "${workspaceFolder}"
     },
+    "candoitall_projectstructure": {
+      "type": "stdio",
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\current\\CanDoItAll.Mcp.ProjectStructure.exe",
+      "args": [
+        "--settings",
+        "${workspaceFolder}\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
     "playwright": {
       "type": "stdio",
       "command": "npx",

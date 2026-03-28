@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
@@ -20,13 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\CanDoItAll.Web\CanDoItAll.Web.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Mcp.ProjectStructure\CanDoItAll.Mcp.ProjectStructure.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
-    <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
   </ItemGroup>
 
 </Project>

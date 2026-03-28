@@ -19,6 +19,7 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Components;
 using CanDoItAll.Web.Composition;
 using CanDoItAll.Web.Infrastructure;
+using CanDoItAll.Web;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -105,6 +106,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.MapProjectStructureAgentApi();
 app.MapRazorComponents<App>()
     .AddAdditionalAssemblies(ModuleAssemblies.All)
     .AddInteractiveServerRenderMode();
@@ -118,9 +120,11 @@ await using (var scope = app.Services.CreateAsyncScope())
     var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
     await using var dbContext = await dbContextFactory.CreateDbContextAsync();
     await dbContext.Database.EnsureCreatedAsync();
+    await WorkspaceSchemaInitializer.EnsureAsync(dbContext);
     await ProjectsSchemaInitializer.EnsureAsync(dbContext);
     await PromptFactorySchemaInitializer.EnsureAsync(dbContext);
     await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext);
+    await ProjectStructureAgentSchemaInitializer.EnsureAsync(dbContext);
 
     readiness.MarkReady(app.Environment.EnvironmentName, urls: app.Urls.Count > 0 ? app.Urls : ["https://localhost"]);
 }

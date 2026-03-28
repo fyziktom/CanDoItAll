@@ -1,6 +1,7 @@
 @page "/settings"
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Security
+@using CanDoItAll.Modules.Workspace.Pages.Components
 @inject WorkspaceService WorkspaceService
 @inject SecretService SecretService
 
@@ -178,7 +179,7 @@
                 </DetailContent>
             </ListDetailShell>
         }
-        else
+        else if (string.Equals(settingsTab, "providers", StringComparison.Ordinal))
         {
             <ListDetailShell ListPaneWidth="25rem">
                 <ListHeader>
@@ -314,6 +315,10 @@
                 </DetailContent>
             </ListDetailShell>
         }
+        else
+        {
+            <ProjectStructureAgentSettingsPanel />
+        }
     </ChildContent>
 </PageScaffold>
 
@@ -334,7 +339,8 @@
     [
         new("workspace", "Workspace"),
         new("secrets", "Secrets", secrets.Count.ToString()),
-        new("providers", "Providers", providers.Count.ToString())
+        new("providers", "Providers", providers.Count.ToString()),
+        new("project-structure", "Project Structure MCP")
     ];
 
     private IReadOnlyList<SecretListItem> FilteredSecrets => secrets
