@@ -15,6 +15,10 @@
 - `N006` the result must be collision-free
 - `N007` preparation must analyze known approaches and choose an architecture
 - `N008` bundle execution needs a trustworthy foundation before UI proof starts
+- `N010` first-layer nodes need clockwise hour-style placement
+- `N011` deeper layers need to follow their branch hour
+- `N012` readability and branch distance now outrank maximum packing
+- `N013` branch bubbles must not collide
 
 ## Prerequisites
 
@@ -36,6 +40,8 @@
 - A C# recomposition engine or helper dedicated to selected-subtree layout
 - A single service entry point that persists all recomposed node coordinates in one operation
 - Collision detection that checks moved nodes against one another and against untouched nodes
+- Branch-bubble or sector separation that prevents descendants of one first-layer branch from crossing another branch
+- Layer-aware first-ring ordering with clockwise hour-slot placement
 - Automated coverage for deterministic layout, persistence, and unchanged relationships
 
 ## Dependency Impact
@@ -52,10 +58,12 @@
 
 1. Add a workbench-level recomposition engine that accepts the current structure surface and a selected root node id.
 2. Reuse current visual shape data to compute per-node bounds for spacing and collision math.
-3. Build deterministic descendant ordering and radial placement that keeps the selected root anchored.
-4. Add an outward collision-resolution pass that treats untouched nodes as fixed obstacles.
-5. Add a `ProjectWorkbenchService` seam that loads, recomposes, and persists the subtree in one save operation.
-6. Add targeted automated tests for scope, unchanged relationships, persistence, and collision-free placement.
+3. Build deterministic descendant ordering and layer-aware ring placement that keeps the selected root anchored.
+4. Place first-layer descendants into balanced clockwise hour-like slots.
+5. Constrain deeper descendants to their first-layer branch sector or bubble.
+6. Add branch-bubble separation plus an outward collision-resolution pass that treats untouched nodes as fixed obstacles.
+7. Add a `ProjectWorkbenchService` seam that loads, recomposes, and persists the subtree in one save operation.
+8. Add targeted automated tests for scope, unchanged relationships, persistence, first-ring ordering, and collision-free branch separation.
 
 ## Scope Exceptions
 
@@ -75,11 +83,13 @@
 - Only descendants of the selected root receive new coordinates.
 - Parent-child and non-tree links are unchanged after recomposition.
 - Recomputed positions persist after a fresh `GetStructureAsync` reload.
+- First-layer descendants occupy balanced clockwise ring positions instead of collapsing onto one side.
+- Branch-sector or branch-bubble checks prove that descendants of one first-layer branch do not spill into another branch.
 - Automated collision checks pass for representative wide and deep subtrees.
 
 ## Proof Required
 
-- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests"`
+- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProjectWorkbenchSubtreeRecompositionIntegrationTests" --nologo`
 - Add targeted assertions that the recomposed subtree persists and keeps links unchanged.
 - Add targeted assertions that collision checks reject or resolve overlapping placements.
 

@@ -14,6 +14,9 @@
 - `N006` prove there are no canvas collisions
 - `N008` finish the full bundle workflow through closure
 - `N009` close the screenshot complaint with actual browser evidence
+- `N012` close the readability complaint about over-packed groups
+- `N013` prove branch bubbles do not cross
+- `N014` use the named large validation project for browser closure
 
 ## Prerequisites
 
@@ -35,6 +38,7 @@
 - Browser analytics rows and screenshot artifacts recorded in the execution report
 - Raw-note closure updated to `Solved`, `Partially solved`, or `Not solved`
 - Final bundle status synchronized with actual shipped proof
+- Follow-up proof that the left-heavy clustering visible in `project-structure-mcp-validation-1 workbench` is corrected
 
 ## Dependency Impact
 
@@ -72,17 +76,18 @@
 
 ## Proof Required
 
-- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~ProjectStructurePageTests"`
-- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests"`
+- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~ProjectStructurePageRecompositionTests" --nologo`
+- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProjectWorkbenchSubtreeRecompositionIntegrationTests" --nologo`
 - Browser screenshots at:
   - `output/project-structure-node-recomposition-bundle-1/recompose-desktop.png`
   - `output/project-structure-node-recomposition-bundle-1/recompose-narrow.png`
 - Recorded overlap check results from the browser session
+- Recorded branch-separation review from the browser session on `project-structure-mcp-validation-1 workbench`
 - Updated raw-note closure table in `reviews/01-execution-report.md`
 
 ## Browser Validation Logging
 
-- Route: `/projects/<projectId>/structure`
+- Route: `/projects/<projectId>/structure` for `project-structure-mcp-validation-1 workbench`
 - Viewports:
   - `1600x1000`
   - `1280x820`
@@ -99,6 +104,7 @@
   - can the user see more of the subtree without extra panning?
   - is the composition clearly less one-directional than before?
   - are any nodes colliding, clipped, or awkwardly spaced?
+  - do branch groups remain visually separated as distinct bubbles or wedges?
 
 ## Progression Gate
 

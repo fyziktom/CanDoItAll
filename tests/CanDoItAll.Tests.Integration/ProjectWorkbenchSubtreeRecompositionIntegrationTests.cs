@@ -7,8 +7,12 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProjectWorkbenchSubtreeRecompositionIntegrationTests
 {
+    private const double FullTurn = Math.PI * 2d;
+    private const double TopClockAngle = 0d;
+    private const double BranchBubblePadding = 24d;
+
     [Fact]
-    public async Task RecomposeSubtreeAsync_preserves_links_and_keeps_the_recomposed_branch_collision_free()
+    public async Task RecomposeSubtreeAsync_places_first_layer_in_clockface_slots_and_keeps_branch_groups_separated()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -34,78 +38,13 @@ public sealed class ProjectWorkbenchSubtreeRecompositionIntegrationTests
                 string.Empty,
                 "Sibling node that must stay fixed.",
                 BuildProjectRootNodeKey(projectId),
-                540,
+                520,
                 360));
-        var capture = await workbench.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.Note,
-                "Capture",
-                string.Empty,
-                "First branch segment.",
-                branchRoot.Id,
-                1120,
-                220));
-        var review = await workbench.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.Note,
-                "Review",
-                string.Empty,
-                "Second branch segment.",
-                branchRoot.Id,
-                1180,
-                340));
-        var delivery = await workbench.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.Note,
-                "Delivery",
-                string.Empty,
-                "Third branch segment.",
-                branchRoot.Id,
-                1220,
-                460));
-        var captureTask = await workbench.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.WorkItem,
-                "Capture task",
-                string.Empty,
-                "Nested task.",
-                capture.Id,
-                1440,
-                220,
-                null,
-                null,
-                "task"));
-        var reviewTask = await workbench.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.WorkItem,
-                "Review task",
-                string.Empty,
-                "Nested task.",
-                review.Id,
-                1480,
-                340,
-                null,
-                null,
-                "task"));
-        var deliveryTask = await workbench.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.WorkItem,
-                "Delivery task",
-                string.Empty,
-                "Nested task.",
-                delivery.Id,
-                1520,
-                460,
-                null,
-                null,
-                "task"));
-        await workbench.LinkObjectsAsync(projectId, obstacle.Id, reviewTask.Id, ProjectObjectLinkKind.DependsOn);
+        var discovery = await CreateBranchAsync(workbench, projectId, branchRoot.Id, "Discovery", 1120, 180);
+        var build = await CreateBranchAsync(workbench, projectId, branchRoot.Id, "Build", 1160, 260);
+        var validate = await CreateBranchAsync(workbench, projectId, branchRoot.Id, "Validate", 1200, 340);
+        var release = await CreateBranchAsync(workbench, projectId, branchRoot.Id, "Release", 1240, 420);
+        await workbench.LinkObjectsAsync(projectId, obstacle.Id, validate.LeafIds[1], ProjectObjectLinkKind.DependsOn);
 
         var surfaceBefore = await workbench.GetStructureAsync(projectId);
         var linkSetBefore = surfaceBefore.Links
@@ -116,7 +55,7 @@ public sealed class ProjectWorkbenchSubtreeRecompositionIntegrationTests
         var result = await workbench.RecomposeSubtreeAsync(projectId, branchRoot.Id);
 
         Assert.NotNull(result);
-        Assert.Equal(6, result!.DescendantCount);
+        Assert.Equal(12, result!.DescendantCount);
         Assert.True(result.RepositionedNodeCount > 0);
 
         var surfaceAfter = await workbench.GetStructureAsync(projectId);
@@ -133,18 +72,136 @@ public sealed class ProjectWorkbenchSubtreeRecompositionIntegrationTests
         Assert.Equal(obstacle.X, reloadedObstacle.X);
         Assert.Equal(obstacle.Y, reloadedObstacle.Y);
 
-        var descendantIds = new HashSet<string>(
-            [capture.Id, review.Id, delivery.Id, captureTask.Id, reviewTask.Id, deliveryTask.Id],
-            StringComparer.Ordinal);
-        var descendants = surfaceAfter.Nodes
-            .Where(node => descendantIds.Contains(node.Id))
-            .ToList();
+        var nodesById = surfaceAfter.Nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
+        AssertClockfaceSlot(reloadedRoot, nodesById[discovery.RootId], 0, 4);
+        AssertClockfaceSlot(reloadedRoot, nodesById[build.RootId], 1, 4);
+        AssertClockfaceSlot(reloadedRoot, nodesById[validate.RootId], 2, 4);
+        AssertClockfaceSlot(reloadedRoot, nodesById[release.RootId], 3, 4);
 
-        Assert.Contains(descendants, node => node.X < reloadedRoot.X);
-        Assert.Contains(descendants, node => node.X > reloadedRoot.X);
-        Assert.Contains(descendants, node => node.Y < reloadedRoot.Y);
-        Assert.Contains(descendants, node => node.Y > reloadedRoot.Y);
-        AssertNoOverlaps([reloadedRoot, reloadedObstacle, .. descendants]);
+        var branches = new[]
+        {
+            discovery,
+            build,
+            validate,
+            release
+        };
+
+        AssertBranchDescendantsStayClosestToTheirOwnBranch(reloadedRoot, nodesById, branches);
+        AssertBranchBubblesDoNotOverlap(nodesById, branches);
+        AssertNoOverlaps(
+            [
+                reloadedRoot,
+                reloadedObstacle,
+                .. branches.SelectMany(branch => branch.AllNodeIds).Select(nodeId => nodesById[nodeId])
+            ]);
+    }
+
+    private static async Task<BranchFixture> CreateBranchAsync(
+        ProjectWorkbenchService workbench,
+        Guid projectId,
+        string parentId,
+        string title,
+        double x,
+        double y)
+    {
+        var branch = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                title,
+                string.Empty,
+                $"{title} branch.",
+                parentId,
+                x,
+                y));
+        var task = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                $"{title} task",
+                string.Empty,
+                "Branch task.",
+                branch.Id,
+                x + 220,
+                y - 20,
+                null,
+                null,
+                "task"));
+        var check = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                $"{title} check",
+                string.Empty,
+                "Branch check.",
+                branch.Id,
+                x + 260,
+                y + 40,
+                null,
+                null,
+                "task"));
+
+        return new BranchFixture(branch.Id, [branch.Id, task.Id, check.Id], [task.Id, check.Id]);
+    }
+
+    private static void AssertClockfaceSlot(
+        ProjectStructureNode root,
+        ProjectStructureNode node,
+        int slotIndex,
+        int slotCount)
+    {
+        var expectedAngle = TopClockAngle + ((FullTurn / slotCount) * slotIndex);
+        var actualAngle = ResolveClockfaceAngle(root, node);
+        Assert.True(
+            CircularDistance(actualAngle, expectedAngle) <= 0.42d,
+            $"{node.Title} should be near slot {slotIndex}, but was at {actualAngle:F2} radians.");
+    }
+
+    private static void AssertBranchDescendantsStayClosestToTheirOwnBranch(
+        ProjectStructureNode root,
+        IReadOnlyDictionary<string, ProjectStructureNode> nodesById,
+        IReadOnlyList<BranchFixture> branches)
+    {
+        var branchCenterAngles = branches.ToDictionary(
+            branch => branch.RootId,
+            branch => ResolveClockfaceAngle(root, nodesById[branch.RootId]),
+            StringComparer.Ordinal);
+
+        foreach (var branch in branches)
+        {
+            foreach (var leafId in branch.LeafIds)
+            {
+                var node = nodesById[leafId];
+                var nodeAngle = ResolveClockfaceAngle(root, node);
+                var ownDelta = CircularDistance(nodeAngle, branchCenterAngles[branch.RootId]);
+                var nearestSiblingDelta = branches
+                    .Where(candidate => !string.Equals(candidate.RootId, branch.RootId, StringComparison.Ordinal))
+                    .Select(candidate => CircularDistance(nodeAngle, branchCenterAngles[candidate.RootId]))
+                    .Min();
+
+                Assert.True(
+                    ownDelta + 0.05d < nearestSiblingDelta,
+                    $"{node.Title} drifted closer to a sibling branch than its own branch.");
+            }
+        }
+    }
+
+    private static void AssertBranchBubblesDoNotOverlap(
+        IReadOnlyDictionary<string, ProjectStructureNode> nodesById,
+        IReadOnlyList<BranchFixture> branches)
+    {
+        for (var i = 0; i < branches.Count; i++)
+        {
+            var leftBounds = InflateBounds(ResolveBounds(branches[i].AllNodeIds.Select(nodeId => nodesById[nodeId])), BranchBubblePadding);
+
+            for (var j = i + 1; j < branches.Count; j++)
+            {
+                var rightBounds = InflateBounds(ResolveBounds(branches[j].AllNodeIds.Select(nodeId => nodesById[nodeId])), BranchBubblePadding);
+                Assert.False(
+                    BoundsOverlap(leftBounds, rightBounds),
+                    $"Branch bubble {branches[i].RootId} overlaps branch bubble {branches[j].RootId}.");
+            }
+        }
     }
 
     private static void AssertNoOverlaps(IReadOnlyList<ProjectStructureNode> nodes)
@@ -154,20 +211,19 @@ public sealed class ProjectWorkbenchSubtreeRecompositionIntegrationTests
             for (var j = i + 1; j < nodes.Count; j++)
             {
                 Assert.False(
-                    Overlaps(nodes[i], nodes[j]),
+                    BoundsOverlap(ResolveBounds(nodes[i]), ResolveBounds(nodes[j])),
                     $"{nodes[i].Title} overlaps {nodes[j].Title} after subtree recomposition.");
             }
         }
     }
 
-    private static bool Overlaps(ProjectStructureNode left, ProjectStructureNode right)
+    private static double ResolveClockfaceAngle(ProjectStructureNode origin, ProjectStructureNode node)
+        => NormalizeAngle(Math.Atan2(node.Y - origin.Y, node.X - origin.X) + (Math.PI / 2d));
+
+    private static double CircularDistance(double left, double right)
     {
-        var leftBounds = ResolveBounds(left);
-        var rightBounds = ResolveBounds(right);
-        return leftBounds.Left < rightBounds.Right &&
-               leftBounds.Right > rightBounds.Left &&
-               leftBounds.Top < rightBounds.Bottom &&
-               leftBounds.Bottom > rightBounds.Top;
+        var delta = Math.Abs(left - right);
+        return Math.Min(delta, FullTurn - delta);
     }
 
     private static (double Left, double Top, double Right, double Bottom) ResolveBounds(ProjectStructureNode node)
@@ -186,6 +242,48 @@ public sealed class ProjectWorkbenchSubtreeRecompositionIntegrationTests
             node.Y + (height / 2d));
     }
 
+    private static (double Left, double Top, double Right, double Bottom) ResolveBounds(IEnumerable<ProjectStructureNode> nodes)
+    {
+        var bounds = nodes.Select(ResolveBounds).ToList();
+        return (
+            bounds.Min(item => item.Left),
+            bounds.Min(item => item.Top),
+            bounds.Max(item => item.Right),
+            bounds.Max(item => item.Bottom));
+    }
+
+    private static (double Left, double Top, double Right, double Bottom) InflateBounds(
+        (double Left, double Top, double Right, double Bottom) bounds,
+        double padding)
+        => (
+            bounds.Left - padding,
+            bounds.Top - padding,
+            bounds.Right + padding,
+            bounds.Bottom + padding);
+
+    private static bool BoundsOverlap(
+        (double Left, double Top, double Right, double Bottom) left,
+        (double Left, double Top, double Right, double Bottom) right)
+        => left.Left < right.Right &&
+           left.Right > right.Left &&
+           left.Top < right.Bottom &&
+           left.Bottom > right.Top;
+
+    private static double NormalizeAngle(double angle)
+    {
+        while (angle < 0d)
+        {
+            angle += FullTurn;
+        }
+
+        while (angle >= FullTurn)
+        {
+            angle -= FullTurn;
+        }
+
+        return angle;
+    }
+
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {
         var result = await projectsService.SaveAsync(new ProjectEditorModel
@@ -202,4 +300,6 @@ public sealed class ProjectWorkbenchSubtreeRecompositionIntegrationTests
 
     private static string BuildProjectRootNodeKey(Guid projectId)
         => $"project:{projectId}";
+
+    private sealed record BranchFixture(string RootId, IReadOnlyList<string> AllNodeIds, IReadOnlyList<string> LeafIds);
 }

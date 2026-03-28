@@ -8,12 +8,17 @@ internal sealed record ProjectStructureSubtreeRecompositionPlan(
 internal static class ProjectStructureSubtreeRecompositionEngine
 {
     private const double FullTurn = Math.PI * 2d;
-    private const double LevelGap = 68d;
-    private const double ParentChildGap = 52d;
+    private const double TopAngle = -Math.PI / 2d;
+    private const double LevelGap = 92d;
+    private const double ParentChildGap = 60d;
     private const double RadialPushStep = 28d;
-    private const int RotationCandidates = 24;
-    private const double SizePaddingX = 40d;
-    private const double SizePaddingY = 28d;
+    private const int MaxPlacementAttempts = 512;
+    private const double SizePaddingX = 56d;
+    private const double SizePaddingY = 40d;
+    private const double BranchBubblePadding = 44d;
+    private const double FirstLayerSeparationGap = 72d;
+    private const double SectorUsageRatio = 0.76d;
+    private const double SingleBranchSectorSpan = Math.PI * 1.5d;
     private const double PositionEpsilon = 0.5d;
 
     public static ProjectStructureSubtreeRecompositionPlan? Recompose(
@@ -47,59 +52,288 @@ internal static class ProjectStructureSubtreeRecompositionEngine
         }
 
         var orderedChildrenCache = new Dictionary<string, IReadOnlyList<ProjectStructureNode>>(StringComparer.Ordinal);
-        var spanByNodeId = new Dictionary<string, int>(StringComparer.Ordinal);
         var rootChildren = GetOrderedChildren(root, directChildrenByParent, orderedChildrenCache);
+        if (rootChildren.Count == 0)
+        {
+            return new ProjectStructureSubtreeRecompositionPlan(rootNodeId, descendantIds.Count, []);
+        }
+
+        var sizeByNodeId = new Dictionary<string, NodeSize>(StringComparer.Ordinal)
+        {
+            [root.Id] = ResolveNodeSize(root)
+        };
+        foreach (var descendantId in descendantIds)
+        {
+            sizeByNodeId[descendantId] = ResolveNodeSize(nodeById[descendantId]);
+        }
+
+        var spanByNodeId = new Dictionary<string, int>(StringComparer.Ordinal);
+        var depthByNodeId = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var child in rootChildren)
         {
             MeasureLeafSpan(child, directChildrenByParent, orderedChildrenCache, spanByNodeId);
+            AssignDepths(child, 1, directChildrenByParent, orderedChildrenCache, depthByNodeId);
         }
 
-        var totalLeafCount = rootChildren.Sum(child => spanByNodeId[child.Id]);
-        if (totalLeafCount == 0)
-        {
-            return new ProjectStructureSubtreeRecompositionPlan(rootNodeId, descendantIds.Count, []);
-        }
-
-        var depthByNodeId = new Dictionary<string, int>(StringComparer.Ordinal);
-        var sizeByNodeId = descendantIds.ToDictionary(
-            nodeId => nodeId,
-            nodeId => ResolveNodeSize(nodeById[nodeId]),
+        var branchNodeIdsByRootChildId = rootChildren.ToDictionary(
+            child => child.Id,
+            child => CollectBranchNodeIds(child.Id, directChildrenByParent),
             StringComparer.Ordinal);
-        var fixedRects = nodes
-            .Where(node => !descendantIds.Contains(node.Id))
-            .Select(node => BuildRect(node.X, node.Y, ResolveNodeSize(node)))
-            .ToList();
-        var rootSize = ResolveNodeSize(root);
-        var firstLeaf = ResolveFirstLeaf(rootChildren, directChildrenByParent, orderedChildrenCache);
-        var angleStep = FullTurn / totalLeafCount;
-        var baseRotation = NormalizeAngle(ResolvePolarAngle(root, firstLeaf) - (angleStep / 2d));
-        LayoutCandidate? bestCandidate = null;
+        var angleByNodeId = new Dictionary<string, double>(StringComparer.Ordinal);
+        var clockStep = FullTurn / rootChildren.Count;
+        var sectorSpan = ResolveSectorSpan(rootChildren.Count, clockStep);
 
-        for (var candidateIndex = 0; candidateIndex < RotationCandidates; candidateIndex++)
+        for (var index = 0; index < rootChildren.Count; index++)
         {
-            var rotation = NormalizeAngle(baseRotation + ((FullTurn / RotationCandidates) * candidateIndex));
-            depthByNodeId.Clear();
-            var angleByNodeId = new Dictionary<string, double>(StringComparer.Ordinal);
-            AssignAngles(root, 0, 1, rotation, directChildrenByParent, orderedChildrenCache, spanByNodeId, depthByNodeId, angleByNodeId, totalLeafCount);
-
-            var candidate = PlaceNodes(root, descendantIds, nodeById, sizeByNodeId, fixedRects, rootSize, depthByNodeId, angleByNodeId);
-            if (bestCandidate is null || candidate.Score < bestCandidate.Score - PositionEpsilon)
-            {
-                bestCandidate = candidate;
-            }
+            var child = rootChildren[index];
+            var centerAngle = TopAngle + (clockStep * index);
+            angleByNodeId[child.Id] = centerAngle;
+            AssignAnglesWithinSector(
+                child,
+                centerAngle - (sectorSpan / 2d),
+                centerAngle + (sectorSpan / 2d),
+                directChildrenByParent,
+                orderedChildrenCache,
+                spanByNodeId,
+                angleByNodeId);
         }
 
-        if (bestCandidate is null)
+        var baseRadiusByDepth = ResolveBaseRadiusByDepth(
+            root,
+            rootChildren,
+            descendantIds,
+            sizeByNodeId,
+            depthByNodeId,
+            clockStep);
+        var occupiedBubbleRects = nodes
+            .Where(node => !descendantIds.Contains(node.Id))
+            .Select(node => InflateRect(BuildRect(node.X, node.Y, sizeByNodeId.GetValueOrDefault(node.Id, ResolveNodeSize(node))), BranchBubblePadding))
+            .ToList();
+        var branchPlacements = new List<BranchPlacement>();
+        var orderedBranchSlots = rootChildren
+            .Select((child, index) => new BranchSlot(child, index, angleByNodeId[child.Id], branchNodeIdsByRootChildId[child.Id].Count))
+            .OrderByDescending(slot => slot.Weight)
+            .ThenBy(slot => slot.OrderIndex)
+            .ToList();
+
+        foreach (var slot in orderedBranchSlots)
         {
-            return new ProjectStructureSubtreeRecompositionPlan(rootNodeId, descendantIds.Count, []);
+            var branchPlacement = PlaceBranch(
+                root,
+                slot,
+                branchNodeIdsByRootChildId[slot.RootChild.Id],
+                nodeById,
+                sizeByNodeId,
+                depthByNodeId,
+                angleByNodeId,
+                baseRadiusByDepth,
+                occupiedBubbleRects);
+            branchPlacements.Add(branchPlacement);
+            occupiedBubbleRects.Add(branchPlacement.BubbleRect);
         }
 
         return new ProjectStructureSubtreeRecompositionPlan(
             rootNodeId,
             descendantIds.Count,
-            bestCandidate.Positions
+            branchPlacements
+                .SelectMany(placement => placement.Positions)
+                .OrderBy(position => position.NodeId, StringComparer.Ordinal)
                 .Select(position => new ProjectNodeMoveRequest(position.NodeId, position.X, position.Y))
                 .ToList());
+    }
+
+    private static Dictionary<int, double> ResolveBaseRadiusByDepth(
+        ProjectStructureNode root,
+        IReadOnlyList<ProjectStructureNode> rootChildren,
+        IReadOnlyCollection<string> descendantIds,
+        IReadOnlyDictionary<string, NodeSize> sizeByNodeId,
+        IReadOnlyDictionary<string, int> depthByNodeId,
+        double firstLayerClockStep)
+    {
+        var maxRadiusByDepth = descendantIds
+            .GroupBy(nodeId => depthByNodeId[nodeId])
+            .ToDictionary(
+                group => group.Key,
+                group => group.Max(nodeId => sizeByNodeId[nodeId].Radius));
+        var rootSize = sizeByNodeId[root.Id];
+        var firstLayerMaxRadius = rootChildren.Max(child => sizeByNodeId[child.Id].Radius);
+        var firstLayerRadius = rootSize.Radius + firstLayerMaxRadius + LevelGap;
+        if (rootChildren.Count > 1)
+        {
+            var halfStepSin = Math.Sin(firstLayerClockStep / 2d);
+            if (halfStepSin > PositionEpsilon)
+            {
+                var minimumChord = (firstLayerMaxRadius * 2d) + FirstLayerSeparationGap;
+                firstLayerRadius = Math.Max(firstLayerRadius, minimumChord / (2d * halfStepSin));
+            }
+        }
+
+        var baseRadiusByDepth = new Dictionary<int, double>
+        {
+            [1] = firstLayerRadius
+        };
+        var maxDepth = maxRadiusByDepth.Keys.Max();
+
+        for (var depth = 2; depth <= maxDepth; depth++)
+        {
+            baseRadiusByDepth[depth] =
+                baseRadiusByDepth[depth - 1] +
+                maxRadiusByDepth[depth - 1] +
+                maxRadiusByDepth[depth] +
+                LevelGap;
+        }
+
+        return baseRadiusByDepth;
+    }
+
+    private static BranchPlacement PlaceBranch(
+        ProjectStructureNode root,
+        BranchSlot slot,
+        IReadOnlyList<string> branchNodeIds,
+        IReadOnlyDictionary<string, ProjectStructureNode> nodeById,
+        IReadOnlyDictionary<string, NodeSize> sizeByNodeId,
+        IReadOnlyDictionary<string, int> depthByNodeId,
+        IReadOnlyDictionary<string, double> angleByNodeId,
+        IReadOnlyDictionary<int, double> baseRadiusByDepth,
+        IReadOnlyList<LayoutRect> occupiedBubbleRects)
+    {
+        BranchPlacement? fallbackPlacement = null;
+
+        for (var attempt = 0; attempt < MaxPlacementAttempts; attempt++)
+        {
+            var shift = attempt * RadialPushStep;
+            var positions = PlaceBranchNodes(
+                root,
+                branchNodeIds,
+                nodeById,
+                sizeByNodeId,
+                depthByNodeId,
+                angleByNodeId,
+                baseRadiusByDepth,
+                shift);
+            var bubbleRect = InflateRect(ResolveBounds(positions.Select(position => position.Rect)), BranchBubblePadding);
+            fallbackPlacement = new BranchPlacement(slot.RootChild.Id, slot.CenterAngle, shift, bubbleRect, positions);
+
+            if (!occupiedBubbleRects.Any(occupied => Intersects(bubbleRect, occupied)))
+            {
+                return fallbackPlacement;
+            }
+        }
+
+        return fallbackPlacement!;
+    }
+
+    private static IReadOnlyList<PlannedPosition> PlaceBranchNodes(
+        ProjectStructureNode root,
+        IReadOnlyList<string> branchNodeIds,
+        IReadOnlyDictionary<string, ProjectStructureNode> nodeById,
+        IReadOnlyDictionary<string, NodeSize> sizeByNodeId,
+        IReadOnlyDictionary<string, int> depthByNodeId,
+        IReadOnlyDictionary<string, double> angleByNodeId,
+        IReadOnlyDictionary<int, double> baseRadiusByDepth,
+        double branchShift)
+    {
+        var placements = new Dictionary<string, PlannedPosition>(StringComparer.Ordinal);
+        var orderedNodes = branchNodeIds
+            .Select(nodeId => nodeById[nodeId])
+            .OrderBy(node => depthByNodeId[node.Id])
+            .ThenBy(node => angleByNodeId[node.Id])
+            .ThenBy(node => node.Id, StringComparer.Ordinal)
+            .ToList();
+
+        foreach (var node in orderedNodes)
+        {
+            var depth = depthByNodeId[node.Id];
+            var nodeSize = sizeByNodeId[node.Id];
+            var desiredRadius = baseRadiusByDepth[depth] + branchShift;
+            if (!string.IsNullOrWhiteSpace(node.ParentId) && placements.TryGetValue(node.ParentId, out var parentPlacement))
+            {
+                var parentSize = sizeByNodeId[node.ParentId];
+                desiredRadius = Math.Max(
+                    desiredRadius,
+                    parentPlacement.DistanceFromRoot + parentSize.Radius + nodeSize.Radius + ParentChildGap);
+            }
+
+            placements[node.Id] = FindAvailablePlacement(
+                root,
+                node.Id,
+                angleByNodeId[node.Id],
+                desiredRadius,
+                nodeSize,
+                placements.Values);
+        }
+
+        return placements.Values
+            .OrderBy(position => position.DistanceFromRoot)
+            .ThenBy(position => position.Angle)
+            .ThenBy(position => position.NodeId, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static PlannedPosition FindAvailablePlacement(
+        ProjectStructureNode root,
+        string nodeId,
+        double angle,
+        double desiredRadius,
+        NodeSize nodeSize,
+        IEnumerable<PlannedPosition> placedNodes)
+    {
+        var occupiedRects = placedNodes.Select(node => node.Rect).ToList();
+        var radius = desiredRadius;
+
+        for (var attempt = 0; attempt < MaxPlacementAttempts; attempt++)
+        {
+            var x = root.X + (Math.Cos(angle) * radius);
+            var y = root.Y + (Math.Sin(angle) * radius);
+            var rect = BuildRect(x, y, nodeSize);
+            if (!occupiedRects.Any(occupied => Intersects(rect, occupied)))
+            {
+                return new PlannedPosition(nodeId, x, y, angle, radius, rect);
+            }
+
+            radius += RadialPushStep;
+        }
+
+        var fallbackX = root.X + (Math.Cos(angle) * radius);
+        var fallbackY = root.Y + (Math.Sin(angle) * radius);
+        return new PlannedPosition(nodeId, fallbackX, fallbackY, angle, radius, BuildRect(fallbackX, fallbackY, nodeSize));
+    }
+
+    private static void AssignAnglesWithinSector(
+        ProjectStructureNode parent,
+        double sectorStartAngle,
+        double sectorEndAngle,
+        IReadOnlyDictionary<string, List<ProjectStructureNode>> childrenByParent,
+        IDictionary<string, IReadOnlyList<ProjectStructureNode>> orderedChildrenCache,
+        IReadOnlyDictionary<string, int> spanByNodeId,
+        IDictionary<string, double> angleByNodeId)
+    {
+        var children = GetOrderedChildren(parent, childrenByParent, orderedChildrenCache);
+        if (children.Count == 0)
+        {
+            return;
+        }
+
+        var intervalWidth = sectorEndAngle - sectorStartAngle;
+        var totalLeafSpan = children.Sum(child => spanByNodeId[child.Id]);
+        var cursor = sectorStartAngle;
+
+        foreach (var child in children)
+        {
+            var childWidth = intervalWidth * (spanByNodeId[child.Id] / (double)totalLeafSpan);
+            var childStart = cursor;
+            var childEnd = childStart + childWidth;
+            angleByNodeId[child.Id] = (childStart + childEnd) / 2d;
+            AssignAnglesWithinSector(
+                child,
+                childStart,
+                childEnd,
+                childrenByParent,
+                orderedChildrenCache,
+                spanByNodeId,
+                angleByNodeId);
+            cursor = childEnd;
+        }
     }
 
     private static HashSet<string> CollectDescendantIds(
@@ -130,6 +364,48 @@ internal static class ProjectStructureSubtreeRecompositionEngine
         }
 
         return descendantIds;
+    }
+
+    private static List<string> CollectBranchNodeIds(
+        string branchRootNodeId,
+        IReadOnlyDictionary<string, List<ProjectStructureNode>> childrenByParent)
+    {
+        var branchNodeIds = new List<string>();
+        var queue = new Queue<string>();
+        queue.Enqueue(branchRootNodeId);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            branchNodeIds.Add(current);
+
+            if (!childrenByParent.TryGetValue(current, out var children))
+            {
+                continue;
+            }
+
+            foreach (var child in children)
+            {
+                queue.Enqueue(child.Id);
+            }
+        }
+
+        return branchNodeIds;
+    }
+
+    private static void AssignDepths(
+        ProjectStructureNode node,
+        int depth,
+        IReadOnlyDictionary<string, List<ProjectStructureNode>> childrenByParent,
+        IDictionary<string, IReadOnlyList<ProjectStructureNode>> orderedChildrenCache,
+        IDictionary<string, int> depthByNodeId)
+    {
+        depthByNodeId[node.Id] = depth;
+
+        foreach (var child in GetOrderedChildren(node, childrenByParent, orderedChildrenCache))
+        {
+            AssignDepths(child, depth + 1, childrenByParent, orderedChildrenCache, depthByNodeId);
+        }
     }
 
     private static int MeasureLeafSpan(
@@ -177,7 +453,7 @@ internal static class ProjectStructureSubtreeRecompositionEngine
         }
 
         var orderedChildren = children
-            .OrderBy(child => NormalizeAngle(ResolvePolarAngle(parent, child)))
+            .OrderBy(child => ResolveClockfaceAngle(parent, child))
             .ThenBy(child => ResolveDistanceSquared(parent, child))
             .ThenBy(child => child.Title, StringComparer.OrdinalIgnoreCase)
             .ThenBy(child => child.Id, StringComparer.Ordinal)
@@ -186,162 +462,14 @@ internal static class ProjectStructureSubtreeRecompositionEngine
         return orderedChildren;
     }
 
-    private static ProjectStructureNode ResolveFirstLeaf(
-        IReadOnlyList<ProjectStructureNode> rootChildren,
-        IReadOnlyDictionary<string, List<ProjectStructureNode>> childrenByParent,
-        IDictionary<string, IReadOnlyList<ProjectStructureNode>> orderedChildrenCache)
+    private static double ResolveSectorSpan(int firstLayerCount, double clockStep)
     {
-        var current = rootChildren[0];
-        while (true)
+        if (firstLayerCount <= 1)
         {
-            var children = GetOrderedChildren(current, childrenByParent, orderedChildrenCache);
-            if (children.Count == 0)
-            {
-                return current;
-            }
-
-            current = children[0];
-        }
-    }
-
-    private static void AssignAngles(
-        ProjectStructureNode parent,
-        int startIndex,
-        int depth,
-        double rotation,
-        IReadOnlyDictionary<string, List<ProjectStructureNode>> childrenByParent,
-        IDictionary<string, IReadOnlyList<ProjectStructureNode>> orderedChildrenCache,
-        IReadOnlyDictionary<string, int> spanByNodeId,
-        IDictionary<string, int> depthByNodeId,
-        IDictionary<string, double> angleByNodeId,
-        int totalLeafCount)
-    {
-        var children = GetOrderedChildren(parent, childrenByParent, orderedChildrenCache);
-        var currentIndex = startIndex;
-
-        foreach (var child in children)
-        {
-            var span = spanByNodeId[child.Id];
-            depthByNodeId[child.Id] = depth;
-            angleByNodeId[child.Id] = NormalizeAngle(rotation + (((currentIndex + (span / 2d)) / totalLeafCount) * FullTurn));
-            AssignAngles(child, currentIndex, depth + 1, rotation, childrenByParent, orderedChildrenCache, spanByNodeId, depthByNodeId, angleByNodeId, totalLeafCount);
-            currentIndex += span;
-        }
-    }
-
-    private static LayoutCandidate PlaceNodes(
-        ProjectStructureNode root,
-        IReadOnlyCollection<string> descendantIds,
-        IReadOnlyDictionary<string, ProjectStructureNode> nodeById,
-        IReadOnlyDictionary<string, NodeSize> sizeByNodeId,
-        IReadOnlyList<LayoutRect> fixedRects,
-        NodeSize rootSize,
-        IReadOnlyDictionary<string, int> depthByNodeId,
-        IReadOnlyDictionary<string, double> angleByNodeId)
-    {
-        var maxRadiusByDepth = descendantIds
-            .GroupBy(nodeId => depthByNodeId[nodeId])
-            .ToDictionary(
-                group => group.Key,
-                group => group.Max(nodeId => sizeByNodeId[nodeId].Radius));
-        var baseRadiusByDepth = new Dictionary<int, double>();
-        var maxDepth = maxRadiusByDepth.Keys.Max();
-
-        for (var depth = 1; depth <= maxDepth; depth++)
-        {
-            if (depth == 1)
-            {
-                baseRadiusByDepth[depth] = rootSize.Radius + maxRadiusByDepth[depth] + LevelGap;
-                continue;
-            }
-
-            baseRadiusByDepth[depth] = baseRadiusByDepth[depth - 1] + maxRadiusByDepth[depth - 1] + maxRadiusByDepth[depth] + LevelGap;
+            return SingleBranchSectorSpan;
         }
 
-        var placements = new Dictionary<string, PlannedPosition>(StringComparer.Ordinal);
-        var orderedNodes = descendantIds
-            .Select(nodeId => nodeById[nodeId])
-            .OrderBy(node => depthByNodeId[node.Id])
-            .ThenBy(node => angleByNodeId[node.Id])
-            .ThenBy(node => ResolveDistanceSquared(root, node))
-            .ThenBy(node => node.Id, StringComparer.Ordinal)
-            .ToList();
-
-        var totalExtraShift = 0d;
-        foreach (var node in orderedNodes)
-        {
-            var nodeSize = sizeByNodeId[node.Id];
-            var parentSize = string.Equals(node.ParentId, root.Id, StringComparison.Ordinal)
-                ? rootSize
-                : !string.IsNullOrWhiteSpace(node.ParentId) && sizeByNodeId.TryGetValue(node.ParentId, out var resolvedParentSize)
-                    ? resolvedParentSize
-                    : rootSize;
-            var parentRadiusFromRoot = !string.IsNullOrWhiteSpace(node.ParentId) && placements.TryGetValue(node.ParentId, out var parentPlacement)
-                ? parentPlacement.DistanceFromRoot
-                : 0d;
-            var desiredRadius = Math.Max(
-                baseRadiusByDepth[depthByNodeId[node.Id]],
-                parentRadiusFromRoot + parentSize.Radius + nodeSize.Radius + ParentChildGap);
-            var placement = FindAvailablePlacement(root, node.Id, angleByNodeId[node.Id], desiredRadius, nodeSize, fixedRects, placements.Values);
-            totalExtraShift += placement.DistanceFromRoot - desiredRadius;
-            placements[node.Id] = placement;
-        }
-
-        var bounds = ResolveBounds(placements.Values);
-        var maxDistanceFromRoot = placements.Count == 0
-            ? 0d
-            : placements.Values.Max(position => position.DistanceFromRoot);
-        var spanWidth = bounds.Right - bounds.Left;
-        var spanHeight = bounds.Bottom - bounds.Top;
-        var score = (totalExtraShift * 8d) + maxDistanceFromRoot + Math.Abs(spanWidth - spanHeight);
-
-        return new LayoutCandidate(score, placements.Values.OrderBy(position => position.NodeId, StringComparer.Ordinal).ToList());
-    }
-
-    private static PlannedPosition FindAvailablePlacement(
-        ProjectStructureNode root,
-        string nodeId,
-        double angle,
-        double desiredRadius,
-        NodeSize nodeSize,
-        IReadOnlyList<LayoutRect> fixedRects,
-        IEnumerable<PlannedPosition> placedNodes)
-    {
-        var occupiedRects = fixedRects.ToList();
-        occupiedRects.AddRange(placedNodes.Select(node => node.Rect));
-
-        var radius = desiredRadius;
-        for (var attempt = 0; attempt < 512; attempt++)
-        {
-            var x = root.X + (Math.Cos(angle) * radius);
-            var y = root.Y + (Math.Sin(angle) * radius);
-            var rect = BuildRect(x, y, nodeSize);
-            if (!occupiedRects.Any(occupied => Intersects(rect, occupied)))
-            {
-                return new PlannedPosition(nodeId, x, y, radius, rect);
-            }
-
-            radius += RadialPushStep;
-        }
-
-        var fallbackX = root.X + (Math.Cos(angle) * radius);
-        var fallbackY = root.Y + (Math.Sin(angle) * radius);
-        return new PlannedPosition(nodeId, fallbackX, fallbackY, radius, BuildRect(fallbackX, fallbackY, nodeSize));
-    }
-
-    private static Bounds ResolveBounds(IEnumerable<PlannedPosition> placements)
-    {
-        var list = placements.ToList();
-        if (list.Count == 0)
-        {
-            return new Bounds(0d, 0d, 0d, 0d);
-        }
-
-        return new Bounds(
-            list.Min(position => position.Rect.Left),
-            list.Min(position => position.Rect.Top),
-            list.Max(position => position.Rect.Right),
-            list.Max(position => position.Rect.Bottom));
+        return clockStep * SectorUsageRatio;
     }
 
     private static NodeSize ResolveNodeSize(ProjectStructureNode node)
@@ -351,6 +479,28 @@ internal static class ProjectStructureSubtreeRecompositionEngine
             "pill" => new NodeSize(196d + SizePaddingX, 64d + SizePaddingY),
             _ => new NodeSize(204d + SizePaddingX, 80d + SizePaddingY)
         };
+
+    private static LayoutRect ResolveBounds(IEnumerable<LayoutRect> rects)
+    {
+        var list = rects.ToList();
+        if (list.Count == 0)
+        {
+            return new LayoutRect(0d, 0d, 0d, 0d);
+        }
+
+        return new LayoutRect(
+            list.Min(rect => rect.Left),
+            list.Min(rect => rect.Top),
+            list.Max(rect => rect.Right),
+            list.Max(rect => rect.Bottom));
+    }
+
+    private static LayoutRect InflateRect(LayoutRect rect, double padding)
+        => new(
+            rect.Left - padding,
+            rect.Top - padding,
+            rect.Right + padding,
+            rect.Bottom + padding);
 
     private static LayoutRect BuildRect(double x, double y, NodeSize nodeSize)
         => new(
@@ -364,6 +514,9 @@ internal static class ProjectStructureSubtreeRecompositionEngine
            left.Right > right.Left + PositionEpsilon &&
            left.Top < right.Bottom - PositionEpsilon &&
            left.Bottom > right.Top + PositionEpsilon;
+
+    private static double ResolveClockfaceAngle(ProjectStructureNode origin, ProjectStructureNode node)
+        => NormalizeAngle(ResolvePolarAngle(origin, node) - TopAngle);
 
     private static double ResolvePolarAngle(ProjectStructureNode origin, ProjectStructureNode node)
         => Math.Atan2(node.Y - origin.Y, node.X - origin.X);
@@ -390,12 +543,24 @@ internal static class ProjectStructureSubtreeRecompositionEngine
         return angle;
     }
 
-    private sealed record LayoutCandidate(double Score, IReadOnlyList<PlannedPosition> Positions);
+    private sealed record BranchSlot(
+        ProjectStructureNode RootChild,
+        int OrderIndex,
+        double CenterAngle,
+        int Weight);
+
+    private sealed record BranchPlacement(
+        string RootChildId,
+        double CenterAngle,
+        double Shift,
+        LayoutRect BubbleRect,
+        IReadOnlyList<PlannedPosition> Positions);
 
     private sealed record PlannedPosition(
         string NodeId,
         double X,
         double Y,
+        double Angle,
         double DistanceFromRoot,
         LayoutRect Rect);
 
@@ -405,6 +570,4 @@ internal static class ProjectStructureSubtreeRecompositionEngine
     }
 
     private readonly record struct LayoutRect(double Left, double Top, double Right, double Bottom);
-
-    private readonly record struct Bounds(double Left, double Top, double Right, double Bottom);
 }

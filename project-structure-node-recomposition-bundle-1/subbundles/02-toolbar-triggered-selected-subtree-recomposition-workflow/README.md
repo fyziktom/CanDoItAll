@@ -16,6 +16,8 @@
 - `N005` layout should use the space around the selected root more efficiently
 - `N006` no collisions can remain visible on the canvas
 - `N009` the screenshot complaint about one-direction growth and unused root space
+- `N012` readability and branch distance matter more than over-packing
+- `N014` browser proof must use the large `project-structure-mcp-validation-1 workbench` project
 
 ## Prerequisites
 
@@ -37,6 +39,7 @@
 - Page-level workflow logic that calls the service, reloads the surface, and shows success or warning feedback
 - Disabled-state or guard behavior when the current selection cannot drive meaningful recomposition
 - Component and browser proof that the recomposed canvas uses space better and stays collision-free
+- Browser proof that the selected validation project no longer clusters branches on just the left side of the root
 
 ## Dependency Impact
 
@@ -76,18 +79,19 @@
 - The user receives explicit feedback after the command runs.
 - Browser-visible layout after recomposition uses the space around the selected node more effectively than before.
 - No visible node collisions remain after the command finishes.
+- First-layer groups read as separate branch wedges or bubbles instead of interleaving too tightly.
 
 ## Proof Required
 
-- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~ProjectStructurePageTests"`
-- Real browser run on `/projects/<projectId>/structure`
+- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~ProjectStructurePageRecompositionTests" --nologo`
+- Real browser run on `/projects/<projectId>/structure`, specifically the large `project-structure-mcp-validation-1 workbench` project
 - Large-screen screenshot that shows the subtree before or after recomposition using space around the selected root
 - DOM or canvas evaluation that confirms node rectangles do not overlap after recomposition
 - Narrower-width follow-up screenshot because the change affects layout density
 
 ## Browser Validation Logging
 
-- Route: `/projects/<projectId>/structure`
+- Route: `/projects/<projectId>/structure` for `project-structure-mcp-validation-1 workbench`
 - Viewports:
   - `1600x1000` large-screen first pass
   - `1280x820` narrower follow-up
@@ -104,6 +108,7 @@
   - is the unused space around the selected root reduced?
   - are any nodes overlapping or clipped?
   - does the subtree remain readable without extra panning?
+  - do first-layer branches read as separated clockwise groups instead of one left-heavy stack?
 
 ## Progression Gate
 
