@@ -345,6 +345,7 @@ public sealed class ProjectWorkbenchService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var existingCount = await dbContext.Set<ProjectObjectRecord>().CountAsync(item => item.ProjectId == projectId && !item.IsSystemManaged, cancellationToken);
+        var normalizedParentNodeKey = NormalizeEditableParentNodeKey(projectId, request.ParentNodeKey);
         var position = request.X.HasValue && request.Y.HasValue
             ? (request.X.Value, request.Y.Value)
             : GetDefaultPosition(request.ObjectType, existingCount + 1);
@@ -371,7 +372,7 @@ public sealed class ProjectWorkbenchService(
             ProgressMode = "progress",
             ProgressPercent = 0,
             MetadataJson = metadataJson,
-            ParentNodeKey = request.ParentNodeKey,
+            ParentNodeKey = normalizedParentNodeKey,
             PositionX = position.Item1,
             PositionY = position.Item2,
             StartUtc = request.StartUtc,
@@ -381,10 +382,14 @@ public sealed class ProjectWorkbenchService(
         };
 
         await dbContext.Set<ProjectObjectRecord>().AddAsync(record, cancellationToken);
-        if (!string.IsNullOrWhiteSpace(request.ParentNodeKey))
-        {
-            await UpsertLinkAsync(dbContext, projectId, request.ParentNodeKey, record.NodeKey, ProjectObjectLinkKind.BelongsTo, isSystemManaged: false, cancellationToken);
-        }
+        await UpsertLinkAsync(
+            dbContext,
+            projectId,
+            normalizedParentNodeKey,
+            record.NodeKey,
+            ResolveHierarchyLinkKind(projectId, normalizedParentNodeKey),
+            isSystemManaged: false,
+            cancellationToken);
 
         if (request.ObjectType == ProjectObjectType.PromptFlow)
         {
@@ -406,6 +411,7 @@ public sealed class ProjectWorkbenchService(
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var existingCount = await dbContext.Set<ProjectObjectRecord>().CountAsync(item => item.ProjectId == projectId && !item.IsSystemManaged, cancellationToken);
         var index = 0;
+        var projectRootNodeKey = BuildProjectRootNodeKey(projectId);
 
         foreach (var seed in seeds.Where(seed => !string.IsNullOrWhiteSpace(seed.Title)))
         {
@@ -427,6 +433,7 @@ public sealed class ProjectWorkbenchService(
                 ProgressMode = "progress",
                 ProgressPercent = 0,
                 MetadataJson = ResolveMetadataJson(seed.ObjectType, seed.ObjectSubtype, seed.MetadataJson, null),
+                ParentNodeKey = projectRootNodeKey,
                 PositionX = position.Item1,
                 PositionY = position.Item2,
                 StartUtc = seed.StartUtc,
@@ -435,7 +442,7 @@ public sealed class ProjectWorkbenchService(
                 UpdatedAtUtc = clock.GetUtcNow()
             }, cancellationToken);
 
-            await UpsertLinkAsync(dbContext, projectId, $"project:{projectId}", nodeKey, ProjectObjectLinkKind.Contains, isSystemManaged: false, cancellationToken);
+            await UpsertLinkAsync(dbContext, projectId, projectRootNodeKey, nodeKey, ProjectObjectLinkKind.Contains, isSystemManaged: false, cancellationToken);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -470,9 +477,7 @@ public sealed class ProjectWorkbenchService(
             return null;
         }
 
-        var normalizedParentNodeKey = string.IsNullOrWhiteSpace(parentNodeKey)
-            ? null
-            : parentNodeKey.Trim();
+        var normalizedParentNodeKey = NormalizeEditableParentNodeKey(projectId, parentNodeKey);
         if (string.Equals(node.ParentNodeKey, normalizedParentNodeKey, StringComparison.Ordinal))
         {
             return MapStructureNode(node);
@@ -492,10 +497,14 @@ public sealed class ProjectWorkbenchService(
         node.ParentNodeKey = normalizedParentNodeKey;
         node.UpdatedAtUtc = clock.GetUtcNow();
 
-        if (!string.IsNullOrWhiteSpace(normalizedParentNodeKey))
-        {
-            await UpsertLinkAsync(dbContext, projectId, normalizedParentNodeKey, node.NodeKey, ProjectObjectLinkKind.BelongsTo, isSystemManaged: false, cancellationToken);
-        }
+        await UpsertLinkAsync(
+            dbContext,
+            projectId,
+            normalizedParentNodeKey,
+            node.NodeKey,
+            ResolveHierarchyLinkKind(projectId, normalizedParentNodeKey),
+            isSystemManaged: false,
+            cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return MapStructureNode(node);
@@ -1289,6 +1298,16 @@ public sealed class ProjectWorkbenchService(
 
     private static string BuildProjectRootNodeKey(Guid projectId)
         => $"{ProjectRootNodePrefix}{projectId}";
+
+    private static string NormalizeEditableParentNodeKey(Guid projectId, string? parentNodeKey)
+        => string.IsNullOrWhiteSpace(parentNodeKey)
+            ? BuildProjectRootNodeKey(projectId)
+            : parentNodeKey.Trim();
+
+    private static ProjectObjectLinkKind ResolveHierarchyLinkKind(Guid projectId, string parentNodeKey)
+        => string.Equals(parentNodeKey, BuildProjectRootNodeKey(projectId), StringComparison.Ordinal)
+            ? ProjectObjectLinkKind.Contains
+            : ProjectObjectLinkKind.BelongsTo;
 
     private static string BuildProjectChildNodeKey(Guid projectId)
         => $"{ProjectChildNodePrefix}{projectId}";

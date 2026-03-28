@@ -18,7 +18,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             new() { ActionId = "summary", Label = "Summary", MenuLabel = "Summary", Description = "Open the hierarchical progress summary and export tools.", Icon = "summary", Tone = "sky" },
             new() { ActionId = "connect", Label = "Connect", MenuLabel = "Connect", Description = "Use the selected node as the source for a dependency link.", Icon = "link", Tone = "neutral" },
             new() { ActionId = "reconnect", Label = "Reconnect", MenuLabel = "Reconnect", Description = "Pick a new parent node for this branch explicitly.", Icon = "relink", Tone = "primary" },
-            new() { ActionId = "disconnect", Label = "Disconnect", MenuLabel = "Disconnect", Description = "Detach this node from its current parent without deleting it.", Icon = "unlink", Tone = "ghost" },
+            new() { ActionId = "disconnect", Label = "Disconnect", MenuLabel = "Disconnect", Description = "Move this node back to the project root without deleting it.", Icon = "unlink", Tone = "ghost" },
             BuildProgressAction(),
             BuildMarkerAction(),
             BuildPriorityAction(),
@@ -249,6 +249,11 @@ public sealed class ProjectStructureActionCatalogAdapter
                 Icon = "relink",
                 Tone = "primary"
             });
+        }
+
+        if (node.ProjectRole != ProjectStructureProjectRole.AdditionalParentProject)
+        {
+            actions.AddRange(ProjectStructureCanvasCatalog.BuildMenuCreateActions(node.ObjectType));
         }
 
         return actions;

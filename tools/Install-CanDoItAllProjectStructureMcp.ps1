@@ -25,6 +25,21 @@ function Resolve-AbsolutePath {
     return [System.IO.Path]::GetFullPath($PathValue)
 }
 
+function Get-RelativePathPortable {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$BasePath,
+        [Parameter(Mandatory = $true)]
+        [string]$TargetPath
+    )
+
+    $normalizedBasePath = Resolve-AbsolutePath $BasePath
+    $normalizedTargetPath = Resolve-AbsolutePath $TargetPath
+    $baseUri = [System.Uri]($normalizedBasePath.TrimEnd('\') + '\')
+    $targetUri = [System.Uri]$normalizedTargetPath
+    return [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($targetUri).ToString()).Replace('/', '\')
+}
+
 function Write-Status {
     param(
         [Parameter(Mandatory = $true)]
@@ -282,7 +297,7 @@ Set-Content -LiteralPath $SettingsPath -Value $settings
 Write-Status "Wrote settings to $SettingsPath"
 
 $entrypoint = Get-PreferredEntrypoint -DirectoryPath $installRoot -AssemblyName "CanDoItAll.Mcp.ProjectStructure"
-$workspaceRelativeEntrypoint = [System.IO.Path]::GetRelativePath($RepoRoot, $entrypoint).Replace("/", "\")
+$workspaceRelativeEntrypoint = Get-RelativePathPortable -BasePath $RepoRoot -TargetPath $entrypoint
 
 if (-not $SkipVsCodeConfig.IsPresent) {
     Update-VsCodeConfig -Path $vscodeConfigPath -WorkspaceFolderToken '${workspaceFolder}' -CommandRelativePath $workspaceRelativeEntrypoint

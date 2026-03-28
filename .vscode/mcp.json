@@ -1,21 +1,8 @@
 {
   "servers": {
-    "playwright": {
-      "type": "stdio",
-      "args": "@playwright/mcp@latest",
-      "command": "npx"
-    },
-    "candoitall_projectstructure": {
-      "type": "stdio",
-      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\20260328-162159\\CanDoItAll.Mcp.ProjectStructure.exe",
-      "args": [
-        "--settings",
-        "${workspaceFolder}\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
-      ],
-      "cwd": "${workspaceFolder}"
-    },
     "candoitall_dotnetwatch": {
       "type": "stdio",
+      "command": "powershell",
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",
@@ -29,22 +16,39 @@
         "-SettingsPath",
         "${workspaceFolder}\\CanDoItAll.Mcp.DotNetWatch.settings.json"
       ],
-      "command": "powershell",
       "cwd": "${workspaceFolder}"
-    },
-    "tailwindcss": {
-      "type": "stdio",
-      "args": "tailwindcss-mcp@latest",
-      "command": "npx"
     },
     "candoitall_sshops": {
       "type": "stdio",
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.SshOps\\current\\CanDoItAll.Mcp.SshOps.exe",
       "args": [
         "--settings",
         "${workspaceFolder}\\CanDoItAll.Mcp.SshOps.settings.json"
       ],
-      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.SshOps\\current\\CanDoItAll.Mcp.SshOps.exe",
       "cwd": "${workspaceFolder}"
+    },
+    "candoitall_projectstructure": {
+      "type": "stdio",
+      "command": "${workspaceFolder}\\.artifacts\mcp-installs\CanDoItAll.Mcp.ProjectStructure\20260328-170429\CanDoItAll.Mcp.ProjectStructure.exe",
+      "args": [
+        "--settings",
+        "${workspaceFolder}\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
+    },
+    "tailwindcss": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "tailwindcss-mcp@latest"
+      ]
     }
   }
 }

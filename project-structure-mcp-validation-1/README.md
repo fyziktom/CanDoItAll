@@ -40,7 +40,7 @@ This bundle validates the live CanDoItAll project-structure MCP against a real X
 ## Validation Summary
 
 - Bundle readiness gate: `Passed`
-- Execution status: `Completed with repaired defects`
+- Execution status: `Completed with repaired defects and resetup hardening`
 - Subbundle gate review: `Passed`
 - Final closure gate: `Passed`
 - Browser validation analytics: `Captured`
@@ -50,5 +50,5 @@ This bundle validates the live CanDoItAll project-structure MCP against a real X
 - The supplied XMind package was analyzed, re-zipped into a valid `.xmind` archive, and imported into the live validation workspace under `CanDoItAll Main`.
 - Larger source domains were transferred into richer subprojects under `CanDoItAll Main`, including `CanDoItAll Features`, `CanDoItAll Implementation`, and focused feature subprojects for management of projects, mindmaps, knowledge DB, AI, and phase 2.
 - Live MCP validation covered project listing, hierarchy reads, structure reads, project creation, subproject linking, node creation, approval requests, asset revision creation, checklist queries, repo-branch leases, project leases, import, and final browser-visible readback.
-- Validation found and repaired multiple defects: multi-sheet XMind XML import only reading the first sheet, empty successful lease responses breaking MCP deserialization, missing analytics MCP surface, lease invalidation when explicit and auto leases mixed, and reinstall failure when the published MCP binary was already running.
+- Validation found and repaired multiple defects: multi-sheet XMind XML import only reading the first sheet, empty successful lease responses breaking MCP deserialization, missing analytics MCP surface, lease invalidation when explicit and auto leases mixed, project-root context menus omitting most create actions, blank-parent mutations producing visually detached nodes, `powershell.exe` reinstall portability failure from `Path.GetRelativePath`, and resetup tearing down already-open project-structure MCP sessions unnecessarily.
 - Final proof is recorded in `reviews/01-execution-report.md` and `reviews/artifacts/`, including refreshed structure-read, analytics, and browser screenshot artifacts from the completed validation state.

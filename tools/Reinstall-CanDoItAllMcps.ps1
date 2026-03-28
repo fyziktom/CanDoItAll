@@ -22,6 +22,21 @@ function Resolve-AbsolutePath {
     return [System.IO.Path]::GetFullPath($PathValue)
 }
 
+function Get-RelativePathPortable {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$BasePath,
+        [Parameter(Mandatory = $true)]
+        [string]$TargetPath
+    )
+
+    $normalizedBasePath = Resolve-AbsolutePath $BasePath
+    $normalizedTargetPath = Resolve-AbsolutePath $TargetPath
+    $baseUri = [System.Uri]($normalizedBasePath.TrimEnd('\') + '\')
+    $targetUri = [System.Uri]$normalizedTargetPath
+    return [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($targetUri).ToString()).Replace('/', '\')
+}
+
 function Write-Status {
     param(
         [Parameter(Mandatory = $true)]
@@ -544,9 +559,7 @@ $vscodeMcpPath = Resolve-AbsolutePath (Join-Path $RepoRoot ".vscode\mcp.json")
 $startupShortcutPath = Resolve-AbsolutePath (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Startup\CanDoItAll DotNetWatch Tray.lnk")
 $desktopShortcutPath = Resolve-AbsolutePath (Join-Path ([Environment]::GetFolderPath("DesktopDirectory")) "CanDoItAll DotNetWatch Tray.lnk")
 $globalBackendCatalogDirectory = Resolve-AbsolutePath (Join-Path $env:LOCALAPPDATA "CanDoItAll.Mcp.DotNetWatch\backend-catalog")
-$installProcessNeedles = @(
-    "CanDoItAll.Mcp.ProjectStructure.exe",
-    "CanDoItAll.Mcp.ProjectStructure.dll",
+$installOwnedCompanionProcessNeedles = @(
     "CanDoItAll.Mcp.SshOps.exe",
     "CanDoItAll.Mcp.SshOps.dll",
     "CanDoItAll.Manager.exe",
@@ -558,15 +571,16 @@ $installProcessNeedles = @(
 New-Item -ItemType Directory -Force -Path $installRoot | Out-Null
 
 Write-Status "Stopping install-owned companion processes before publish"
-Stop-MatchingProcesses -Needles $installProcessNeedles
+Stop-MatchingProcesses -Needles $installOwnedCompanionProcessNeedles
+Write-Status "Leaving existing ProjectStructure MCP sessions running because the install uses versioned output folders."
 
 if (-not $SkipProcessReset.IsPresent) {
-    Write-Status "Stopping currently running MCP, manager, and tray processes"
+    Write-Status "Stopping currently running DotNetWatch, manager, and tray processes"
     Stop-MatchingProcesses -Needles @(
         "CanDoItAll.Mcp.DotNetWatch.dll",
         "Start-CanDoItAllDotNetWatchMcp.ps1",
         ".artifacts\mcp-server-shadow",
-        $installProcessNeedles
+        $installOwnedCompanionProcessNeedles
     )
 
     Cleanup-WorkspaceBackendCatalog -CatalogDirectory $globalBackendCatalogDirectory -WorkspaceRoot $RepoRoot -SettingsPath $dotNetWatchSettingsPath
@@ -600,7 +614,7 @@ Publish-ReleaseArtifact -ProjectPath $trayProjectPath -OutputPath $trayInstallRo
 
 $shadowManifest = Get-Content -LiteralPath $shadowManifestPath -Raw | ConvertFrom-Json
 $projectStructureEntrypoint = Get-PreferredEntrypoint -DirectoryPath $projectStructureInstallRoot -AssemblyName "CanDoItAll.Mcp.ProjectStructure"
-$projectStructureWorkspaceEntrypoint = [System.IO.Path]::GetRelativePath($RepoRoot, $projectStructureEntrypoint).Replace("/", "\")
+$projectStructureWorkspaceEntrypoint = Get-RelativePathPortable -BasePath $RepoRoot -TargetPath $projectStructureEntrypoint
 $sshOpsEntrypoint = Get-PreferredEntrypoint -DirectoryPath $sshOpsInstallRoot -AssemblyName "CanDoItAll.Mcp.SshOps"
 $managerEntrypoint = Get-PreferredEntrypoint -DirectoryPath $managerInstallRoot -AssemblyName "CanDoItAll.Manager"
 $trayEntrypoint = Get-PreferredEntrypoint -DirectoryPath $trayInstallRoot -AssemblyName "CanDoItAll.Mcp.DotNetWatch.Tray"

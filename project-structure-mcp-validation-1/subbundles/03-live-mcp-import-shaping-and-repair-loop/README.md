@@ -3,6 +3,7 @@
 ## Status
 
 - `Completed`
+- Closure note: reopened during validation to repair project-root hierarchy links and the missing project-node create menu
 
 ## Objective
 
@@ -27,12 +28,15 @@
 - `C:\repositories\CanDoItAll\project-structure-mcp-validation-1\analysis\04-xmind-outline.md`
 - `C:\repositories\CanDoItAll\project-structure-mcp-validation-1\architecture\01-target-solution.md`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectStructureImportService.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectWorkbenchModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\CanvasAdapters\ProjectStructureActionCatalogAdapter.cs`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\ProjectObjectContracts.cs`
 
 ## Deliverables
 
 - Successful XMind import run against the live MCP using the real source package
 - Richer project and node structure shaped under `CanDoItAll Main`
+- Repaired project-root node creation menu and hierarchy-link defaults for blank-parent mutations
 - Captured repair details if any MCP tool or behavior fails during the process
 
 ## Dependency Impact
@@ -78,6 +82,7 @@
 - Import request and response against the live MCP
 - Filtered structure reads showing the created nodes and subprojects
 - Browser screenshots of the validation workspace and one shaped descendant structure route
+- Browser screenshots proving project-root context-menu create actions and repaired hierarchy connectors
 - If repaired, focused test or run proof for the defect fix plus repeated live validation
 
 ## Browser Validation Logging

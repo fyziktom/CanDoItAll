@@ -3,6 +3,7 @@
 ## Status
 
 - `Completed`
+- Closure note: reopened during validation to harden the install and resetup scripts for `powershell.exe` compatibility and live-session preservation
 
 ## Objective
 
@@ -23,6 +24,8 @@
 - `C:\repositories\CanDoItAll\project-structure-mcp-validation-1\inputs\00-original-request.md`
 - `C:\repositories\CanDoItAll\project-structure-mcp-validation-1\traceability\01-requirement-traceability.md`
 - `C:\repositories\CanDoItAll\project-structure-mcp-validation-1\reviews\01-execution-report.md`
+- `C:\repositories\CanDoItAll\tools\Install-CanDoItAllProjectStructureMcp.ps1`
+- `C:\repositories\CanDoItAll\tools\Reinstall-CanDoItAllMcps.ps1`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Web\ProjectStructureAgentApi.cs`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectStructureAnalyticsService.cs`
 
@@ -31,6 +34,7 @@
 - Checklist and analytics evidence for the executed validation
 - Final raw-note closure table
 - Explicit defect capture for every unresolved issue
+- Cross-machine install and resetup proof for the project-structure MCP scripts
 - Final bundle validator pass or an honest blocked state
 
 ## Dependency Impact
@@ -74,6 +78,7 @@
 - Analytics query output or explicit missing-surface defect proof
 - Updated execution report with final subbundle rows, browser analytics rows, and raw-note closure rows
 - Successful `validate_bundle.py --stage completed` output
+- Script-level proof that `powershell.exe` install and resetup succeed and that resetup no longer kills existing project-structure MCP sessions
 
 ## Browser Validation Logging
 
