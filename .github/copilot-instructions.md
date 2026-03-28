@@ -82,6 +82,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\CanDoItAll.Mcp.DotNetW
 ### Repo-managed Codex assets
 
 - Repo-managed Codex skill packs live under `codex/skills/`.
+- `candoitall-bundle-workflow`, `candoitall-bundle-preparation`, and `candoitall-bundle-execution` define the bundle lifecycle.
+- `candoitall-bundle-validator` and `candoitall-subbundle-validator` are the required gates for bundle readiness, subbundle progression, and final closure.
 - `candoitall-dotnetwatch-setup` is the machine resetup and repo-onboarding skill for the shared backend.
 - `candoitall-watch-playwright-loop` is the fast UI iteration skill for the managed watch plus Playwright loop.
 - The supported machine resetup path is `tools\Reinstall-CanDoItAllMcps.ps1`.

@@ -11,7 +11,8 @@ Use this checklist when UI iteration speed matters more than broad exploratory w
 5. Wait on that cursor.
 6. Refresh the same page only if the edit type requires it.
 7. Validate the same page.
-8. Move on only after the browser confirms the change.
+8. Record the screenshot-review answers and any gate decision while the proof is visible.
+9. Move on only after the browser confirms the change.
 
 ## Edit classification
 
@@ -46,7 +47,8 @@ Use this checklist when UI iteration speed matters more than broad exploratory w
 
 1. exact DOM or computed-style assertion
 2. optional screenshot after the assertion passes
-3. broader responsive pass only after the local proof is stable
+3. screenshot review answers recorded while the image is fresh
+4. broader responsive pass only after the local proof is stable
 
 ## Stop conditions
 

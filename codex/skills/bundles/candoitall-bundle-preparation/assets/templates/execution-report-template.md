@@ -8,6 +8,12 @@
 
 - List the targeted commands and their outcomes.
 
+## Subbundle Gate Results
+
+| Subbundle | Gate | Inputs covered | Dependencies checked | Proof review | Result |
+| --- | --- | --- | --- | --- | --- |
+| `01-example` | `Post-implementation gate` | `N001, N002` | `No dependent subbundle may start until the accordion proof is stable` | `Playwright route checks plus screenshot review questions answered` | `Pending` |
+
 ## Browser Artifacts
 
 - List screenshot, fullscreen, or host-capture artifact paths when UI or desktop proof is involved.

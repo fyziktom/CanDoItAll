@@ -26,10 +26,13 @@ Use bundle execution when:
 
 - the bundle has concrete subbundles
 - proof rules are defined
+- prerequisites and progression gates are defined
+- the dependency map and critical path are explicit
 - the bundle still matches the repo state
 
 Return to preparation when:
 
 - the bundle has missing or vague subbundles
+- the bundle has no usable dependency map or critical foundation plan
 - the repo changed enough that source references are stale
 - execution exposes missing requirements or false assumptions

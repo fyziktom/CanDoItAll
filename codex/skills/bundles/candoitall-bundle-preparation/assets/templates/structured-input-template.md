@@ -12,6 +12,14 @@
 
 - Reference the files, docs, screenshots, or prompts that define the task.
 
+## Input Coverage Signals
+
+- List each raw note or artifact that cannot be safely collapsed, merged, or deferred.
+
+## Dependency And Sequencing Signals
+
+- Note which requested outcomes obviously unlock or block later work.
+
 ## Validation Expectations
 
 - Describe the proof required before implementation is complete.

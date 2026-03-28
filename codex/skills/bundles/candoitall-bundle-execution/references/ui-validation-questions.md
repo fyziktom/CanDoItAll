@@ -45,4 +45,9 @@ When the screen is visually led, also ask:
 
 ## Action Rule
 
-If any answer is not acceptable, tune the layout, interaction, or composition and rerun the validation loop. Do not close the subbundle because “the test passed” while the screenshot still looks wrong.
+If any answer is not acceptable, tune the layout, interaction, or composition and rerun the validation loop. Do not close the subbundle because `the test passed` while the screenshot still looks wrong.
+
+When the current subbundle is a critical foundation for later work:
+
+- record the answers in the execution report while the screenshot is in front of you
+- run one dependent-flow smoke or downstream surface check before allowing the next subbundle to begin

@@ -28,8 +28,14 @@ This bundle is a coordination and execution package for `{{BUNDLE_NAME}}`.
 2. `subbundles/02-...`
 3. Continue until the final validation subbundle is complete.
 
+## Dependency And Validation Map
+
+- Keep the mermaid dependency map, critical-subbundle notes, and phase gates current in `plan/01-phase-plan.md`.
+
 ## Validation Summary
 
-- Bundle preparation status: `Draft`
+- Bundle readiness gate: `Not run`
 - Execution status: `Not started`
+- Subbundle gate review: `Not started`
+- Final closure gate: `Not run`
 - Browser validation analytics: `Not started`

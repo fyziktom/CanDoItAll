@@ -32,6 +32,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Reinstall-CanDoItAllMc
    - tray startup shortcut exists
    - tray desktop shortcut exists
    - repo instructions describe the shared-backend pattern
+   - if the immediate next task is UI-heavy, the setup can support one real headed watch plus Playwright smoke pass without inventing another MCP
 4. For another repo, remove repo-specific dotnetwatch MCP wiring and replace it with shared-backend instructions.
 5. If the next task is UI iteration, switch to `candoitall-watch-playwright-loop`.
 

@@ -13,6 +13,7 @@ Use one managed app session and one persistent Playwright page. The loop is only
 - use Playwright as the browser truth, not the watch log
 - prevent overlapping edits, repeated waits, and stale-page confusion
 - tune the layout from a large-screen view first, then narrow it down responsively
+- record the screenshot review and gate decision while the proof is fresh
 
 ## Required loop
 
@@ -29,8 +30,9 @@ Use one managed app session and one persistent Playwright page. The loop is only
 7. Make one nearby edit.
 8. Wait from the pre-edit cursor with the correct `candoitall_app_wait` condition.
 9. Re-check the same Playwright page.
-10. Record the validation result in the bundle analytics or linked evidence file.
-11. Only continue if browser truth matches the intended change.
+10. Record the visual review answers and validation result in the bundle analytics or linked evidence file.
+11. If the current change is a critical foundation, prove one dependent interaction or downstream surface before continuing.
+12. Only continue if browser truth matches the intended change.
 
 ## Session contract
 
@@ -53,8 +55,9 @@ Use one managed app session and one persistent Playwright page. The loop is only
 3. Call `candoitall_app_wait` with the matching condition and the recorded cursor.
 4. Refresh the same Playwright page only after the wait succeeds when the edit type requires refresh.
 5. Prove the exact intended change with DOM, computed-style, and visual checks.
-6. Log the route, viewport, Playwright MCP actions, assertions, and screenshot paths used for that proof.
-7. Move to the next edit only after the proof passes.
+6. Log the route, viewport, Playwright MCP actions, assertions, screenshot paths, and screenshot-review answers used for that proof.
+7. If the edit unlocks later work, validate one dependent interaction before closing the proof.
+8. Move to the next edit only after the proof passes.
 
 ## Performance rules
 
@@ -90,11 +93,13 @@ Use the smallest proof that matches the edit.
 - Use screenshots as evidence after the DOM proof, not as the only proof.
 - On the first layout pass, capture a large-screen screenshot after the browser is maximized and answer the visual questions from the bundle execution reference.
 - Record at least one analytics entry per validation pass with route, viewport, Playwright MCP actions, assertions, screenshot path, and pass or fail outcome.
+- Do not stop at capturing the screenshot. Read it, answer the visual questions, and record the decision while the proof is visible.
 - When validating overlays such as tooltips, help affordances, menus, or floating popovers, prove the open state with both geometry and visual evidence:
   - open the overlay in Playwright
   - check bounding boxes or computed style when needed
   - verify the content is not clipped by the viewport or its parent container
   - verify the overlay is not hidden behind adjacent floating windows or chrome
+- When the current edit is a critical foundation for later subbundles, validate one downstream interaction or dependent surface before proceeding.
 - If any answer about readability, overlap, spacing, alignment, or space usage is not acceptable, fix that before proceeding.
 - Prefer one exact assertion over a broad page snapshot. Proof should name the element, text, class, or style that changed.
 - For responsive checks, resize or reuse the same page context instead of reopening the route in a fresh browser session.

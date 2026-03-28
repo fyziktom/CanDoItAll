@@ -7,8 +7,12 @@ Preparation must hand off:
 - saved raw inputs
 - normalized requirements
 - explicit plan
+- dependency map
+- critical foundation list
 - numbered subbundles
 - proof rules
+- progression gates
+- readiness-validator result
 - self-review
 
 Execution must preserve and update:
@@ -16,8 +20,10 @@ Execution must preserve and update:
 - subbundle intent
 - traceability
 - proof artifacts
+- gate results
 - execution status
 - residual risks
+- reopened-phase decisions
 
 ## Compatibility Rule
 

@@ -24,12 +24,16 @@ Every subbundle README must contain:
 
 - objective
 - covered inputs or notes
+- prerequisites
 - exact source references
 - scope or deliverables
+- dependency impact
+- validation depth
 - implementation steps
 - do-not-do constraints
 - acceptance checklist
 - proof required
+- progression gate
 - suggested agent prompt
 
 ## Proof Guidance
@@ -42,3 +46,9 @@ Prefer proof that another agent can independently verify:
 - screenshot artifact paths
 - specific DOM or style checks
 - explicit file diffs or generated artifacts
+
+When a subbundle unlocks later phases:
+
+- state which later phases depend on it
+- require the exact proof that allows downstream work to continue
+- mark it as a critical foundation when weak proof would invalidate later verification

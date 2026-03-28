@@ -19,6 +19,8 @@ $customSkillNames = @(
     "candoitall-bundle-workflow",
     "candoitall-bundle-preparation",
     "candoitall-bundle-execution",
+    "candoitall-bundle-validator",
+    "candoitall-subbundle-validator",
     "candoitall-watch-playwright-loop",
     "candoitall-dotnetwatch-setup"
 )

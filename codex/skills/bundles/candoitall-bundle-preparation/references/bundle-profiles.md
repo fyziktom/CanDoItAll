@@ -16,6 +16,7 @@ Recommended emphasis:
 - save the raw notes exactly
 - normalize each finding into a concrete requirement
 - group related findings into small subbundles
+- capture prerequisite and dependency signals between those subbundles
 - define browser and test proof
 - keep architecture light but explicit
 
@@ -40,6 +41,7 @@ Recommended emphasis:
 - structure the raw prompt into constraints and risks
 - inventory the affected code, assets, or dependencies
 - phase the work across subbundles with strict boundaries
+- model the dependency chain and critical foundations explicitly
 - create templates or request workflows when future agents will repeat the pattern
 
 Typical extra sections:

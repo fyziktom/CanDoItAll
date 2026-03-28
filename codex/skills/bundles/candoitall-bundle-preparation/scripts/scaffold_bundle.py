@@ -23,6 +23,60 @@ PROFILE_DIRECTORIES = {
     "initiative": ["inventories", "templates"],
 }
 
+ASSUMPTIONS_AND_RISKS_TEMPLATE = """# Assumptions And Risks
+
+## Assumptions
+
+- Record the assumptions made during bundle preparation.
+
+## Critical Path Risks
+
+- Identify the subbundles that unlock later work and the regressions that would force rework if they are wrong.
+
+## Validation Risks
+
+- Record where proof may be weak, blocked, environment-dependent, or expensive to reproduce.
+
+## Reopen Triggers
+
+- List the conditions that must reopen an earlier subbundle instead of letting later work continue.
+"""
+
+PHASE_PLAN_TEMPLATE = """# Phase Plan
+
+## Phase Sequence
+
+1. Describe the intended execution order.
+2. Call out the validator checkpoints between phases.
+3. End with the final closure audit.
+
+## Subbundle Dependency Map
+
+```mermaid
+gantt
+title Replace with the real subbundle dependency and validation map
+dateFormat  YYYY-MM-DD
+section Foundations
+Foundation subbundle :done, foundation, 2026-01-01, 1d
+section Follow-on work
+Dependent subbundle :after foundation, dependent, 1d
+```
+
+- Replace the placeholder map with the real subbundle order, prerequisites, and validation checkpoints.
+
+## Critical Subbundles
+
+- Identify the foundation subbundles whose correctness unlocks later phases.
+- State the deeper validation required before dependent subbundles may continue.
+
+## Phase Gates
+
+- Gate after preparation: run the bundle validator and repair failures.
+- Gate before each subbundle: confirm prerequisites are complete and still valid.
+- Gate after each subbundle: capture proof, review screenshots, and decide whether downstream work may continue.
+- Gate before closure: rerun validators, close raw notes, and reopen anything with weak proof.
+"""
+
 
 def to_title_case(bundle_name: str) -> str:
     words = re.split(r"[-_]+", bundle_name.strip())
@@ -102,10 +156,10 @@ def main() -> int:
     )
 
     ensure_file(bundle_root / "analysis" / "01-current-state.md", "# Current State\n\nDocument the relevant repo state and affected files.\n")
-    ensure_file(bundle_root / "analysis" / "02-assumptions-and-risks.md", "# Assumptions And Risks\n\nList the assumptions, risks, and unresolved concerns that still need to be managed.\n")
+    ensure_file(bundle_root / "analysis" / "02-assumptions-and-risks.md", ASSUMPTIONS_AND_RISKS_TEMPLATE)
     ensure_file(bundle_root / "requirements" / "01-normalized-requirements.md", "# Normalized Requirements\n\nConvert the raw inputs into concrete, testable requirements.\n")
     ensure_file(bundle_root / "architecture" / "01-target-solution.md", "# Target Solution\n\nDescribe the intended end state and important boundaries.\n")
-    ensure_file(bundle_root / "plan" / "01-phase-plan.md", "# Phase Plan\n\nDescribe the planned execution order and dependencies.\n")
+    ensure_file(bundle_root / "plan" / "01-phase-plan.md", PHASE_PLAN_TEMPLATE)
     ensure_file(
         bundle_root / "traceability" / "01-requirement-traceability.md",
         load_template(template_directory, "traceability-template.md", replacements),
