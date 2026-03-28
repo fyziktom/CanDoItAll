@@ -1,0 +1,444 @@
+[
+  {
+    "id": "P0-01",
+    "phase": "P0",
+    "title": "Overlay input isolation and wheel ownership",
+    "goal": "Make floating windows, toolbox content, dialogs, popovers, and support overlays fully own their pointer, wheel, focus, and context-menu interactions.",
+    "depends_on": [],
+    "files": [
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js",
+      "src/CanDoItAll.Components.CanvasLib/Components/CanvasWorkbench.razor",
+      "src/CanDoItAll.Components.CanvasLib/Components/CanvasFloatingWindow.razor",
+      "tests/CanDoItAll.Tests.Components/CanvasWorkbenchTests.cs",
+      "tests/CanDoItAll.Tests.Playwright/AppSmokeTests.cs"
+    ],
+    "must_preserve": [
+      "Toolbox toggle and search",
+      "Toolbox accordion expand/collapse",
+      "Context menu on actual nodes and canvas background",
+      "Help/settings overlays",
+      "Floating window drag and hide/minimize",
+      "Selection, pan, and zoom when interacting with the scene itself"
+    ],
+    "implementation": [
+      "Expand overlay target detection to include floating windows, toolbar-safe overlays, dialogs, preview modals, and any overlay root carrying a dedicated data attribute.",
+      "Add wheel ownership guards so overlay scroll regions scroll themselves and only the scene host zooms the canvas.",
+      "Ensure overlay pointerdown/doubleclick/contextmenu paths do not leak to the scene host.",
+      "Use tests and browser automation to prove toolbox group expansion and internal scroll are reliable."
+    ],
+    "acceptance": [
+      "Wheel inside toolbox no longer changes scene zoom.",
+      "Clicking a toolbox accordion header never starts canvas selection or pan.",
+      "Right-click inside toolbox/floating-window content never opens the scene context menu.",
+      "Existing node/canvas context menu behavior still works on the scene."
+    ]
+  },
+  {
+    "id": "P0-02",
+    "phase": "P0",
+    "title": "Commit-only floating-window persistence",
+    "goal": "Keep floating-window drag/resize local in JS and persist geometry only on commit or idle.",
+    "depends_on": [
+      "P0-01"
+    ],
+    "files": [
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvas-floating-window.js",
+      "src/CanDoItAll.Components.CanvasLib/Components/CanvasFloatingWindow.razor",
+      "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "src/CanDoItAll.Modules.Factory/Pages/PromptFactoryPage.razor",
+      "tests/CanDoItAll.Tests.Components/CanvasFloatingWindowTests.cs",
+      "tests/CanDoItAll.Tests.Playwright/AppSmokeTests.cs",
+      "tests/CanDoItAll.Tests.Playwright/PromptLibraryVerificationTests.cs"
+    ],
+    "must_preserve": [
+      "Visible/hidden/minimized/normalized states",
+      "Drag-to-reposition and resize",
+      "PromptFactory floating windows",
+      "Health/toolbox/selection windows remembering final placement"
+    ],
+    "implementation": [
+      "Differentiate live geometry updates from committed geometry updates in the JS bridge.",
+      "Publish only final geometry after pointerup, minimize, restore, normalize, or hide.",
+      "Avoid `PersistCanvasUiStateAsync` on every geometry pulse.",
+      "Optionally keep a lightweight local geometry sync for the Blazor markup without server persistence until commit."
+    ],
+    "acceptance": [
+      "Zero `SaveViewStateAsync` calls while actively dragging or resizing a floating window.",
+      "Exactly one persisted state update after drag/resize commit.",
+      "PromptFactory floating toolbox still drags and restores correctly."
+    ]
+  },
+  {
+    "id": "P0-03",
+    "phase": "P0",
+    "title": "Commit-only canvas state persistence and UI-state ownership cleanup",
+    "goal": "Keep pan/zoom/live viewport state in JS during interaction and persist only the final idle/commit snapshot.",
+    "depends_on": [
+      "P0-01"
+    ],
+    "files": [
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js",
+      "src/CanDoItAll.Components.CanvasLib/Components/CanvasWorkbench.razor",
+      "src/CanDoItAll.Components.CanvasLib/Canvas/CanvasWorkbenchContracts.cs",
+      "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "tests/CanDoItAll.Tests.Components/CanvasWorkbenchTests.cs"
+    ],
+    "must_preserve": [
+      "Restored view state on page reopen",
+      "Selection synchronization for the selection window",
+      "Minimap and diagnostics toggles",
+      "Keyboard shortcuts and toolbar zoom controls"
+    ],
+    "implementation": [
+      "Split high-frequency live state from persisted snapshot state.",
+      "Ensure `OnStateChanged` does not trigger DB writes during active pan/zoom/drag.",
+      "For ProjectStructure, define domain node X/Y as the persisted source of truth and treat UI `ManualPositions` as transient/local-only for drag in progress.",
+      "Keep selected IDs mirrored only as often as the overlay UI actually needs them."
+    ],
+    "acceptance": [
+      "No `SaveViewStateAsync` during active pan/zoom.",
+      "No `RefreshCanvasSurface()` triggered by pure viewport movement.",
+      "ProjectStructure drag no longer persists both domain X/Y and long-lived UI manual positions."
+    ]
+  },
+  {
+    "id": "P0-04",
+    "phase": "P0",
+    "title": "Batch node-move persistence",
+    "goal": "Persist multi-node drag as a single mutation and a single save transaction.",
+    "depends_on": [
+      "P0-03"
+    ],
+    "files": [
+      "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs",
+      "tests/CanDoItAll.Tests.Components/ProjectStructurePageTests.cs"
+    ],
+    "must_preserve": [
+      "Single-node drag",
+      "Multi-node drag",
+      "Selection retention after drop",
+      "Border adoption behavior after drop"
+    ],
+    "implementation": [
+      "Introduce a batched move service method that accepts all moved positions in one request.",
+      "Perform one `SaveChangesAsync` call for the move batch.",
+      "Return enough information for the page to patch local state or reload only once if required.",
+      "Make border adoption run after the move commit without turning the move path back into N operations."
+    ],
+    "acceptance": [
+      "Multi-node drag produces one service call and one DB save transaction.",
+      "Drag commit keeps selected nodes selected.",
+      "Moved-node border adoption still behaves correctly."
+    ]
+  },
+  {
+    "id": "P0-05",
+    "phase": "P0",
+    "title": "Avoid full surface reloads after simple mutations",
+    "goal": "Stop calling the heavyweight structure reload path for every non-structural change.",
+    "depends_on": [
+      "P0-04"
+    ],
+    "files": [
+      "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs",
+      "src/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
+      "tests/CanDoItAll.Tests.Components/ProjectStructurePageTests.cs"
+    ],
+    "must_preserve": [
+      "Status/progress/marker/priority updates",
+      "Note editing",
+      "Quick action feedback",
+      "Summary status editing",
+      "Delete/create/link flows"
+    ],
+    "implementation": [
+      "Introduce a distinction between view-only updates, node-property updates, and structural graph updates.",
+      "Patch local surface state for simple node-property changes instead of calling `ReloadSurfaceAsync()`.",
+      "Reserve `GetStructureAsync()+SyncGraphAsync()` for true structural invalidation, hierarchy changes, or cases that genuinely require system-managed node recomputation.",
+      "Optionally add service methods that return updated node DTOs for local patching."
+    ],
+    "acceptance": [
+      "Status/progress/marker/priority changes no longer force full structure reloads.",
+      "Inline note edit no longer needs a full reload when only the note node changed.",
+      "Create/delete/link flows still end in consistent graph state."
+    ]
+  },
+  {
+    "id": "P0-06",
+    "phase": "P0",
+    "title": "Runtime surface cleanup and support/demo separation",
+    "goal": "Slim the runtime page and clearly separate production authoring UI from support/demo cards.",
+    "depends_on": [],
+    "files": [
+      "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor.css",
+      "tests/CanDoItAll.Tests.Components/ProjectStructurePageTests.cs"
+    ],
+    "must_preserve": [
+      "Outline access if product still wants it",
+      "Graph health visibility if product still wants it",
+      "All dialogs and floating windows"
+    ],
+    "implementation": [
+      "Move CanvasBoundaryCard demo sections behind a debug/sandbox flag or remove them from runtime.",
+      "Decide whether Outline and Graph Health belong in runtime, in a collapsible support area, or in diagnostics-only mode.",
+      "Keep runtime markup focused on authoring, overlays, and essential support surfaces."
+    ],
+    "acceptance": [
+      "ProjectStructure runtime page no longer renders always-on demo cards.",
+      "User-facing runtime behavior is clearer and lighter.",
+      "Any moved support functionality remains reachable where intended."
+    ]
+  },
+  {
+    "id": "P0-07",
+    "phase": "P0",
+    "title": "Instrumentation and browser gates foundation",
+    "goal": "Add the measurement and screenshot infrastructure required for safe refactoring.",
+    "depends_on": [],
+    "files": [
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js",
+      "tests/CanDoItAll.Tests.Playwright/AppSmokeTests.cs",
+      "tests/CanDoItAll.Tests.Playwright/PromptLibraryVerificationTests.cs"
+    ],
+    "must_preserve": [
+      "Existing Playwright artifact capture",
+      "Existing diagnostics UI",
+      "Existing browser smoke coverage"
+    ],
+    "implementation": [
+      "Add or expand debug counters on `host.__canvasWorkbenchState` for render count, full rebuild count, patched count, and state publish count.",
+      "Add browser assertions and screenshots for toolbox behavior, window drag, single-select, multi-select, and key modal flows.",
+      "Create a large deterministic graph fixture for browser and local performance validation."
+    ],
+    "acceptance": [
+      "Codex can prove improvements with counters and screenshots rather than only with anecdotes.",
+      "A failing browser gate is considered a failed task."
+    ]
+  },
+  {
+    "id": "P1-01",
+    "phase": "P1",
+    "title": "Retained DOM/SVG renderer for nodes, links, and frames",
+    "goal": "Keep the current renderer model but make it retained and patch-based rather than rebuild-based.",
+    "depends_on": [
+      "P0-03",
+      "P0-07"
+    ],
+    "files": [
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js"
+    ],
+    "must_preserve": [
+      "Node visuals, chips, badges, inline media, annotations",
+      "Links and arrowheads",
+      "Group frames and frame drag",
+      "Selection/hover/diagnostics visuals"
+    ],
+    "implementation": [
+      "Introduce keyed maps for node/link/frame elements and patch only what changed.",
+      "Keep hot-path pan transform-only wherever possible.",
+      "Separate overlay-only rebuilds from scene object patching.",
+      "Preserve exported image capture by rendering from the retained DOM/SVG scene."
+    ],
+    "acceptance": [
+      "Normal drag/pan no longer clears and rebuilds node and link layers.",
+      "Retained element maps stay consistent after create/delete/link/collapse operations."
+    ]
+  },
+  {
+    "id": "P1-02",
+    "phase": "P1",
+    "title": "Viewport culling and filtered scene projection",
+    "goal": "Render only what matters for the current viewport and interaction context.",
+    "depends_on": [
+      "P1-01"
+    ],
+    "files": [
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js",
+      "src/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs"
+    ],
+    "must_preserve": [
+      "Focus node / ensure visible behavior",
+      "Minimap accuracy",
+      "Selection of off-screen nodes",
+      "Links for visible and near-visible nodes"
+    ],
+    "implementation": [
+      "Compute viewport bounds and only mount/update visible nodes plus a small overscan margin.",
+      "Filter links and frames based on visible endpoint membership or viewport intersection.",
+      "Keep selection and keyboard behavior correct even when not every node is mounted."
+    ],
+    "acceptance": [
+      "Rendered visible node count is materially smaller than total node count on large graphs.",
+      "Selection/focus still works when selected nodes move into or out of view."
+    ]
+  },
+  {
+    "id": "P1-03",
+    "phase": "P1",
+    "title": "Dirty-region drag loop owned by JS",
+    "goal": "Keep drag, pan, guides, and affected links entirely in JS with minimal patch scope.",
+    "depends_on": [
+      "P1-01"
+    ],
+    "files": [
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js"
+    ],
+    "must_preserve": [
+      "Snap guides",
+      "Multi-node drag",
+      "Frame drag",
+      "Selection marquee"
+    ],
+    "implementation": [
+      "Track dirty node IDs, dirty link IDs, and dirty guide overlays during drag.",
+      "Patch only the changed scene objects during active interaction.",
+      "Defer expensive recalculation until drop/commit where possible."
+    ],
+    "acceptance": [
+      "Active drag updates only moved nodes, affected links, and active guides.",
+      "Guide rendering stays correct while render cost drops materially."
+    ]
+  },
+  {
+    "id": "P1-04",
+    "phase": "P1",
+    "title": "Selection-panel decomposition and lazy expensive support surfaces",
+    "goal": "Reduce the Razor render tree and compute heavy overlay sections only when needed.",
+    "depends_on": [
+      "P0-06"
+    ],
+    "files": [
+      "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.SelectionPanel.cs",
+      "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Workflows.cs",
+      "tests/CanDoItAll.Tests.Components/ProjectStructurePageTests.cs"
+    ],
+    "must_preserve": [
+      "Selection window single-select and multi-select behavior",
+      "All modal dialogs and advanced details",
+      "Runtime launch, transcript, preview, and mermaid actions"
+    ],
+    "implementation": [
+      "Extract single-select and multi-select panels into focused components or render fragments with stable parameters.",
+      "Lazy-render expensive detail sections and support panels only when visible.",
+      "Keep the selection window as HTML/Blazor, but minimize page-level recomputation."
+    ],
+    "acceptance": [
+      "Selection UI remains feature-complete.",
+      "Unrelated viewport changes do not force large overlay recomputation."
+    ]
+  },
+  {
+    "id": "P2-01",
+    "phase": "P2",
+    "title": "Scene patch protocol and plain-JS modularization",
+    "goal": "Make the JS layer maintainable without TypeScript or a new bundler requirement.",
+    "depends_on": [
+      "P1-01",
+      "P1-02",
+      "P1-03"
+    ],
+    "files": [
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js",
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/*.js"
+    ],
+    "must_preserve": [
+      "Public `window.CanDoItAll.canvasWorkbench` API",
+      "Current JS entry points used by tests and Blazor"
+    ],
+    "implementation": [
+      "Keep plain JavaScript only.",
+      "Refactor the giant interop file into clearly owned internal modules or adjacent JS files with a stable public API.",
+      "Separate state store, overlay guards, renderer, viewport math, scene patching, diagnostics, and command API.",
+      "Do not introduce TypeScript or a heavy build chain."
+    ],
+    "acceptance": [
+      "Public API stays stable or is migrated with tests in the same task.",
+      "Hot-path JS is easier to reason about and code ownership is explicit."
+    ]
+  },
+  {
+    "id": "P2-02",
+    "phase": "P2",
+    "title": "Dedicated screenshot and performance regression suite",
+    "goal": "Turn the validated runtime states into a maintainable browser regression suite.",
+    "depends_on": [
+      "P0-07"
+    ],
+    "files": [
+      "tests/CanDoItAll.Tests.Playwright/AppSmokeTests.cs",
+      "tests/CanDoItAll.Tests.Playwright/*.cs"
+    ],
+    "must_preserve": [
+      "Existing smoke tests",
+      "Artifact capture used by the team today"
+    ],
+    "implementation": [
+      "Split ProjectStructure browser coverage into targeted regression tests instead of one oversized smoke file where appropriate.",
+      "Capture deterministic screenshots and debug counters for key flows.",
+      "Add a large-graph fixture path and performance-oriented assertions."
+    ],
+    "acceptance": [
+      "Browser regressions are easier to localize.",
+      "Codex can rerun a precise subset of Playwright tests after each subbundle."
+    ]
+  },
+  {
+    "id": "P3-01",
+    "phase": "P3",
+    "title": "Optional true-canvas renderer spike",
+    "goal": "Benchmark an actual canvas renderer only after the current architecture is stabilized and measured.",
+    "depends_on": [
+      "P1-01",
+      "P1-02",
+      "P1-03",
+      "P2-01",
+      "P2-02"
+    ],
+    "files": [
+      "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js",
+      "src/CanDoItAll.Components.CanvasLib/**",
+      "tests/CanDoItAll.Tests.Playwright/**"
+    ],
+    "must_preserve": [
+      "All user-facing features proven earlier",
+      "Image export",
+      "Accessibility overlay strategy"
+    ],
+    "implementation": [
+      "Build an isolated benchmark scene and a narrow prototype for nodes, links, and hit testing.",
+      "Compare retained DOM/SVG vs true canvas on the same graph tiers.",
+      "Document trade-offs: accessibility, text measurement, export path, and overlay integration."
+    ],
+    "acceptance": [
+      "A go/no-go decision is backed by measured evidence, not intuition."
+    ]
+  },
+  {
+    "id": "P3-02",
+    "phase": "P3",
+    "title": "Optional shared-library consolidation",
+    "goal": "Retire or intentionally isolate the duplicated canvas component trees after the main fixes are complete.",
+    "depends_on": [
+      "P2-01"
+    ],
+    "files": [
+      "src/CanDoItAll.ComponentKit/**",
+      "src/CanDoItAll.Components.CanvasLib/**"
+    ],
+    "must_preserve": [
+      "All runtime consumers using CanvasLib",
+      "Any still-needed ComponentKit consumers"
+    ],
+    "implementation": [
+      "Inventory actual consumers, remove dead duplication, and keep one canonical canvas stack.",
+      "Do not attempt this early in the program."
+    ],
+    "acceptance": [
+      "There is one clearly canonical shared canvas implementation path or an explicitly documented reason for temporary duality."
+    ]
+  }
+]

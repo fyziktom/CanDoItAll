@@ -1,0 +1,146 @@
+task_id,feature_id,feature_name
+P0-01,F01,"Toolbar toggles for Blocks, Health, and Inspector/Selection surfaces"
+P0-01,F02,Toolbox floating window open/minimize/hide/drag/restore
+P0-01,F03,Toolbox search filters standard block actions
+P0-01,F04,Toolbox accordion group expand/collapse
+P0-01,F06,"Health floating window with counts, spotlight, and validate-selected action"
+P0-01,F07,Selection window empty state
+P0-01,F08,"Multi-select common actions, batch status/progress/marker/priority, focus-first, clear-selection"
+P0-01,F09,"Single-select detail view with badges, quick signals, node actions, and advanced details"
+P0-01,F12,Attachment preview modal for PDF/video/audio/document
+P0-01,F13,Quick action dialog on double-click/open with node-specific actions
+P0-01,F22,Transcript provider confirmation dialog and transcript actions
+P0-01,F23,Mermaid viewer modal with diagram type detection
+P0-01,F33,PromptFactory still works after shared CanvasWorkbench/CanvasFloatingWindow changes
+P0-01,F34,Sandbox canvas page still works after shared canvas changes
+P0-02,F01,"Toolbar toggles for Blocks, Health, and Inspector/Selection surfaces"
+P0-02,F02,Toolbox floating window open/minimize/hide/drag/restore
+P0-02,F06,"Health floating window with counts, spotlight, and validate-selected action"
+P0-02,F30,"Persisted selection, zoom/pan view state, and window state restoration"
+P0-02,F33,PromptFactory still works after shared CanvasWorkbench/CanvasFloatingWindow changes
+P0-03,F01,"Toolbar toggles for Blocks, Health, and Inspector/Selection surfaces"
+P0-03,F06,"Health floating window with counts, spotlight, and validate-selected action"
+P0-03,F07,Selection window empty state
+P0-03,F08,"Multi-select common actions, batch status/progress/marker/priority, focus-first, clear-selection"
+P0-03,F09,"Single-select detail view with badges, quick signals, node actions, and advanced details"
+P0-03,F30,"Persisted selection, zoom/pan view state, and window state restoration"
+P0-03,F33,PromptFactory still works after shared CanvasWorkbench/CanvasFloatingWindow changes
+P0-03,F34,Sandbox canvas page still works after shared canvas changes
+P0-04,F08,"Multi-select common actions, batch status/progress/marker/priority, focus-first, clear-selection"
+P0-04,F10,"Link mode, reconnect, and disconnect workflows"
+P0-04,F28,Create selection border and clear selection borders
+P0-04,F29,Adopt moved nodes into borders after drag
+P0-04,F30,"Persisted selection, zoom/pan view state, and window state restoration"
+P0-05,F05,Quick create and grouped create actions from toolbox/context menu/selection flows
+P0-05,F08,"Multi-select common actions, batch status/progress/marker/priority, focus-first, clear-selection"
+P0-05,F10,"Link mode, reconnect, and disconnect workflows"
+P0-05,F16,Add subproject dialog from selected root project
+P0-05,F17,Reconnect parent dialog from selected subproject
+P0-05,F18,Summary modal with inline status edits
+P0-05,F19,Export summary workbook (XLSX/CSV-backed behavior)
+P0-05,F20,Export Gantt from summary
+P0-05,F21,Export image from selected hierarchy / mindmap capture
+P0-05,F24,Delete confirmation flow
+P0-05,F28,Create selection border and clear selection borders
+P0-05,F29,Adopt moved nodes into borders after drag
+P0-05,F30,"Persisted selection, zoom/pan view state, and window state restoration"
+P0-05,F31,Inline note creation and editing from the canvas
+P0-06,F01,"Toolbar toggles for Blocks, Health, and Inspector/Selection surfaces"
+P0-06,F06,"Health floating window with counts, spotlight, and validate-selected action"
+P0-06,F26,Outline list selection sync below the canvas
+P0-06,F27,Graph health support card below the canvas
+P0-07,F01,"Toolbar toggles for Blocks, Health, and Inspector/Selection surfaces"
+P0-07,F02,Toolbox floating window open/minimize/hide/drag/restore
+P0-07,F03,Toolbox search filters standard block actions
+P0-07,F04,Toolbox accordion group expand/collapse
+P0-07,F06,"Health floating window with counts, spotlight, and validate-selected action"
+P0-07,F08,"Multi-select common actions, batch status/progress/marker/priority, focus-first, clear-selection"
+P0-07,F09,"Single-select detail view with badges, quick signals, node actions, and advanced details"
+P0-07,F12,Attachment preview modal for PDF/video/audio/document
+P0-07,F18,Summary modal with inline status edits
+P0-07,F21,Export image from selected hierarchy / mindmap capture
+P0-07,F22,Transcript provider confirmation dialog and transcript actions
+P0-07,F23,Mermaid viewer modal with diagram type detection
+P0-07,F25,Runtime launch actions (PowerShell/admin) and launch feedback
+P0-07,F33,PromptFactory still works after shared CanvasWorkbench/CanvasFloatingWindow changes
+P1-01,F05,Quick create and grouped create actions from toolbox/context menu/selection flows
+P1-01,F10,"Link mode, reconnect, and disconnect workflows"
+P1-01,F11,Inline managed attachment preview in selection panel
+P1-01,F12,Attachment preview modal for PDF/video/audio/document
+P1-01,F21,Export image from selected hierarchy / mindmap capture
+P1-01,F28,Create selection border and clear selection borders
+P1-01,F31,Inline note creation and editing from the canvas
+P1-01,F32,Compact path and subtype-specific mapping for repository/file nodes
+P1-01,F33,PromptFactory still works after shared CanvasWorkbench/CanvasFloatingWindow changes
+P1-01,F34,Sandbox canvas page still works after shared canvas changes
+P1-02,F05,Quick create and grouped create actions from toolbox/context menu/selection flows
+P1-02,F10,"Link mode, reconnect, and disconnect workflows"
+P1-02,F21,Export image from selected hierarchy / mindmap capture
+P1-02,F28,Create selection border and clear selection borders
+P1-02,F31,Inline note creation and editing from the canvas
+P1-02,F33,PromptFactory still works after shared CanvasWorkbench/CanvasFloatingWindow changes
+P1-02,F34,Sandbox canvas page still works after shared canvas changes
+P1-03,F08,"Multi-select common actions, batch status/progress/marker/priority, focus-first, clear-selection"
+P1-03,F10,"Link mode, reconnect, and disconnect workflows"
+P1-03,F28,Create selection border and clear selection borders
+P1-03,F29,Adopt moved nodes into borders after drag
+P1-03,F31,Inline note creation and editing from the canvas
+P1-04,F06,"Health floating window with counts, spotlight, and validate-selected action"
+P1-04,F07,Selection window empty state
+P1-04,F08,"Multi-select common actions, batch status/progress/marker/priority, focus-first, clear-selection"
+P1-04,F09,"Single-select detail view with badges, quick signals, node actions, and advanced details"
+P1-04,F11,Inline managed attachment preview in selection panel
+P1-04,F12,Attachment preview modal for PDF/video/audio/document
+P1-04,F13,Quick action dialog on double-click/open with node-specific actions
+P1-04,F14,Prompt flow nodes expose wizard navigation in inspector and quick action modal
+P1-04,F15,Project/subproject/shared-parent nodes open related structure in a new tab
+P1-04,F16,Add subproject dialog from selected root project
+P1-04,F17,Reconnect parent dialog from selected subproject
+P1-04,F18,Summary modal with inline status edits
+P1-04,F19,Export summary workbook (XLSX/CSV-backed behavior)
+P1-04,F20,Export Gantt from summary
+P1-04,F22,Transcript provider confirmation dialog and transcript actions
+P1-04,F23,Mermaid viewer modal with diagram type detection
+P1-04,F24,Delete confirmation flow
+P1-04,F25,Runtime launch actions (PowerShell/admin) and launch feedback
+P1-04,F26,Outline list selection sync below the canvas
+P1-04,F27,Graph health support card below the canvas
+P1-04,F31,Inline note creation and editing from the canvas
+P1-04,F32,Compact path and subtype-specific mapping for repository/file nodes
+P2-01,F01,"Toolbar toggles for Blocks, Health, and Inspector/Selection surfaces"
+P2-01,F02,Toolbox floating window open/minimize/hide/drag/restore
+P2-01,F03,Toolbox search filters standard block actions
+P2-01,F04,Toolbox accordion group expand/collapse
+P2-01,F05,Quick create and grouped create actions from toolbox/context menu/selection flows
+P2-01,F10,"Link mode, reconnect, and disconnect workflows"
+P2-01,F21,Export image from selected hierarchy / mindmap capture
+P2-01,F30,"Persisted selection, zoom/pan view state, and window state restoration"
+P2-01,F33,PromptFactory still works after shared CanvasWorkbench/CanvasFloatingWindow changes
+P2-01,F34,Sandbox canvas page still works after shared canvas changes
+P2-02,F01,"Toolbar toggles for Blocks, Health, and Inspector/Selection surfaces"
+P2-02,F02,Toolbox floating window open/minimize/hide/drag/restore
+P2-02,F03,Toolbox search filters standard block actions
+P2-02,F04,Toolbox accordion group expand/collapse
+P2-02,F06,"Health floating window with counts, spotlight, and validate-selected action"
+P2-02,F08,"Multi-select common actions, batch status/progress/marker/priority, focus-first, clear-selection"
+P2-02,F09,"Single-select detail view with badges, quick signals, node actions, and advanced details"
+P2-02,F12,Attachment preview modal for PDF/video/audio/document
+P2-02,F13,Quick action dialog on double-click/open with node-specific actions
+P2-02,F18,Summary modal with inline status edits
+P2-02,F21,Export image from selected hierarchy / mindmap capture
+P2-02,F22,Transcript provider confirmation dialog and transcript actions
+P2-02,F23,Mermaid viewer modal with diagram type detection
+P2-02,F25,Runtime launch actions (PowerShell/admin) and launch feedback
+P2-02,F33,PromptFactory still works after shared CanvasWorkbench/CanvasFloatingWindow changes
+P3-01,F05,Quick create and grouped create actions from toolbox/context menu/selection flows
+P3-01,F10,"Link mode, reconnect, and disconnect workflows"
+P3-01,F11,Inline managed attachment preview in selection panel
+P3-01,F12,Attachment preview modal for PDF/video/audio/document
+P3-01,F21,Export image from selected hierarchy / mindmap capture
+P3-01,F28,Create selection border and clear selection borders
+P3-01,F31,Inline note creation and editing from the canvas
+P3-01,F32,Compact path and subtype-specific mapping for repository/file nodes
+P3-01,F33,PromptFactory still works after shared CanvasWorkbench/CanvasFloatingWindow changes
+P3-01,F34,Sandbox canvas page still works after shared canvas changes
+P3-02,F33,PromptFactory still works after shared CanvasWorkbench/CanvasFloatingWindow changes
+P3-02,F34,Sandbox canvas page still works after shared canvas changes

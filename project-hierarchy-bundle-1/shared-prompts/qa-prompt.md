@@ -1,3 +1,0 @@
-# QA Prompt
-
-Validate the selected subbundle against its acceptance checklist and proof contract, not against optimistic intent. Run the required tests and build commands. When the subbundle is UI-visible, use a real headed Playwright MCP session, start with a large desktop viewport, capture the required screenshots, and answer the explicit visual questions about readability, overlap, clipping, spacing, alignment, and hierarchy clarity. Update the execution report while the proof is fresh: browser analytics row, subbundle gate row, command outcomes, screenshot paths, and raw-note closure state. If proof is weak, fail the gate and reopen the subbundle instead of downgrading the expectation.

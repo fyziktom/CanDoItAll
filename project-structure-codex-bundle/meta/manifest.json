@@ -1,0 +1,39 @@
+{
+  "bundle_name": "ProjectStructure Execution-Grade Codex Bundle",
+  "bundle_version": "v2",
+  "language": "English",
+  "created_for": "ProjectStructurePage performance and architecture refactor",
+  "repo_root": "CanDoItAll",
+  "audit_mode": "static source audit",
+  "runtime_assumption": "InteractiveServer",
+  "dotnet_cli_available_in_audit_environment": false,
+  "counts": {
+    "runtime_files": 24,
+    "tests": 56,
+    "features": 34,
+    "hotspots": 12,
+    "tasks": 15,
+    "methods_indexed": 296
+  },
+  "primary_docs": [
+    "00_EXECUTIVE_SUMMARY.md",
+    "01_RUNTIME_ARCHITECTURE_AUDIT.md",
+    "02_FEATURE_PRESERVATION_MAP.md",
+    "03_TARGET_ARCHITECTURE_AND_OWNERSHIP.md",
+    "04_PHASED_EXECUTION_PLAN.md",
+    "05_PERFORMANCE_HOTSPOTS.md",
+    "06_PERFORMANCE_BUDGETS_AND_ACCEPTANCE.md",
+    "07_VALIDATION_GATES_AND_SCREENSHOT_SCENARIOS.md",
+    "08_CODEX_RETRY_PROTOCOL.md",
+    "09_LINE_REFERENCE_INDEX.md",
+    "10_HTML_VS_JS_RENDERER_BOUNDARY.md",
+    "11_DUPLICATION_AND_SHARED_SURFACE_RISK.md",
+    "12_LIMITATIONS_AND_ASSUMPTIONS.md"
+  ],
+  "codex_files": [
+    "codex/MASTER_PROMPT.md",
+    "codex/TASK_SEQUENCE.md",
+    "codex/VALIDATION_PROMPT.md",
+    "codex/RETRY_PROTOCOL.md"
+  ]
+}
