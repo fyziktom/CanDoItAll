@@ -1,0 +1,14 @@
+# Requirement Traceability
+
+| Requirement | Raw note ids | Bundle artifacts | Owning subbundle | Planned proof |
+| --- | --- | --- | --- | --- |
+| `R01` | `N001` | `architecture/01-target-solution.md`, `subbundles/02-toolbar-triggered-selected-subtree-recomposition-workflow/README.md` | `02` | Component test plus Playwright toolbar interaction |
+| `R02` | `N002` | `requirements/01-normalized-requirements.md`, `subbundles/02-toolbar-triggered-selected-subtree-recomposition-workflow/README.md` | `02` | Component proof that the feature is invoked only by the command path |
+| `R03` | `N003` | `architecture/01-target-solution.md`, `subbundles/01-subtree-radial-layout-engine-and-persistence-foundation/README.md` | `01` | Service or unit test around selected-root descendant scope |
+| `R04` | `N004` | `requirements/01-normalized-requirements.md`, `subbundles/01-subtree-radial-layout-engine-and-persistence-foundation/README.md`, `subbundles/02-toolbar-triggered-selected-subtree-recomposition-workflow/README.md` | `01`, `02` | Integration proof that links and parents are unchanged after recomposition |
+| `R05` | `N005`, `N009` | `analysis/01-current-state.md`, `architecture/01-target-solution.md`, `subbundles/02-toolbar-triggered-selected-subtree-recomposition-workflow/README.md` | `02` | Browser screenshots and overlap or space-use review |
+| `R06` | `N006` | `architecture/01-target-solution.md`, `subbundles/01-subtree-radial-layout-engine-and-persistence-foundation/README.md`, `subbundles/03-tests-browser-proof-and-closure-audit/README.md` | `01`, `03` | Automated collision assertions plus browser validation |
+| `R07` | `N001`, `N003` | `architecture/01-target-solution.md`, `subbundles/01-subtree-radial-layout-engine-and-persistence-foundation/README.md` | `01` | Integration test proving persisted coordinates survive reload |
+| `R08` | `N002`, `N005` | `analysis/02-assumptions-and-risks.md`, `subbundles/01-subtree-radial-layout-engine-and-persistence-foundation/README.md` | `01` | Repeated recomposition on same graph returns stable coordinates |
+| `R09` | `N007` | `analysis/01-current-state.md`, `architecture/01-target-solution.md` | `01` | Bundle review of algorithm comparison and architecture recommendation |
+| `R10` | `N008` | `reviews/01-execution-report.md`, `subbundles/03-tests-browser-proof-and-closure-audit/README.md` | `03` | Clean test run plus Playwright analytics and screenshots |

@@ -76,6 +76,14 @@ else
                                     @onclick="@(() => ToggleWindowAsync(ToolboxWindowKey))">
                                 Blocks
                             </button>
+                            <button type="button"
+                                    class="cw-toolbar-action"
+                                    data-testid="project-structure-recompose-toolbar-button"
+                                    title="Redistribute descendants under the selected node without changing relationships."
+                                    disabled="@(!CanRecomposeSelectedBranch)"
+                                    @onclick="RecomposeSelectedBranchAsync">
+                                @(isSubtreeRecompositionInProgress ? "Recomposing" : "Recompose")
+                            </button>
                         </div>
                     </ToolbarLeftContent>
                     <OverlayContent>
