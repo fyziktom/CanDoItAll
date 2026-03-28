@@ -114,6 +114,45 @@ function Set-TomlSection {
     Set-Content -LiteralPath $Path -Value $text
 }
 
+function ConvertTo-Hashtable {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$InputObject
+    )
+
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        $dictionary = @{}
+        foreach ($key in $InputObject.Keys) {
+            $dictionary[$key] = ConvertTo-Hashtable -InputObject $InputObject[$key]
+        }
+
+        return $dictionary
+    }
+
+    if ($InputObject -is [System.Collections.IEnumerable] -and -not ($InputObject -is [string])) {
+        $items = @()
+        foreach ($item in $InputObject) {
+            $items += ,(ConvertTo-Hashtable -InputObject $item)
+        }
+
+        return $items
+    }
+
+    if ($InputObject -is [psobject]) {
+        $properties = $InputObject.PSObject.Properties
+        if ($properties.Count -gt 0) {
+            $dictionary = @{}
+            foreach ($property in $properties) {
+                $dictionary[$property.Name] = ConvertTo-Hashtable -InputObject $property.Value
+            }
+
+            return $dictionary
+        }
+    }
+
+    return $InputObject
+}
+
 function Update-VsCodeConfig {
     param(
         [Parameter(Mandatory = $true)]
@@ -123,7 +162,7 @@ function Update-VsCodeConfig {
     )
 
     $config = if (Test-Path -LiteralPath $Path) {
-        Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -AsHashtable
+        ConvertTo-Hashtable -InputObject (Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json)
     }
     else {
         @{}

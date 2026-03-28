@@ -68,27 +68,41 @@ public sealed class McpServerOptionsValidator : IValidateOptions<McpServerOption
     }
 }
 
-public sealed class RuntimeConfiguration(IOptions<McpServerOptions> options, ServerInstanceIdentity serverInstanceIdentity)
+public sealed class RuntimeConfiguration
 {
-    public string SessionId { get; } = CorrelationIdFactory.Create("project-structure");
+    public RuntimeConfiguration(IOptions<McpServerOptions> options, ServerInstanceIdentity serverInstanceIdentity)
+    {
+        var server = options.Value.Server;
+        SessionId = CorrelationIdFactory.Create("project-structure");
+        BaseAddress = new Uri(server.BaseUrl.Trim().TrimEnd('/') + "/", UriKind.Absolute);
+        AgentToken = server.AgentToken.Trim();
+        AgentName = string.IsNullOrWhiteSpace(server.AgentName)
+            ? "CanDoItAll Project Structure Agent"
+            : server.AgentName.Trim();
+        AgentId = serverInstanceIdentity.Id;
+        MachineName = Environment.MachineName;
+        RepositoryRoot = Path.GetFullPath(string.IsNullOrWhiteSpace(server.RepositoryRoot) ? "." : server.RepositoryRoot);
+        BranchName = ResolveBranchName(server.BranchName, RepositoryRoot);
+        Timeout = TimeSpan.FromSeconds(server.TimeoutSeconds);
+    }
 
-    public Uri BaseAddress => new(options.Value.Server.BaseUrl.Trim().TrimEnd('/') + "/", UriKind.Absolute);
+    public string SessionId { get; }
 
-    public string AgentToken => options.Value.Server.AgentToken.Trim();
+    public Uri BaseAddress { get; }
 
-    public string AgentName => string.IsNullOrWhiteSpace(options.Value.Server.AgentName)
-        ? "CanDoItAll Project Structure Agent"
-        : options.Value.Server.AgentName.Trim();
+    public string AgentToken { get; }
 
-    public string AgentId => serverInstanceIdentity.Id;
+    public string AgentName { get; }
 
-    public string MachineName => Environment.MachineName;
+    public string AgentId { get; }
 
-    public string RepositoryRoot => Path.GetFullPath(string.IsNullOrWhiteSpace(options.Value.Server.RepositoryRoot) ? "." : options.Value.Server.RepositoryRoot);
+    public string MachineName { get; }
 
-    public string BranchName => ResolveBranchName(options.Value.Server.BranchName, RepositoryRoot);
+    public string RepositoryRoot { get; }
 
-    public TimeSpan Timeout => TimeSpan.FromSeconds(options.Value.Server.TimeoutSeconds);
+    public string BranchName { get; }
+
+    public TimeSpan Timeout { get; }
 
     private static string ResolveBranchName(string? configuredBranch, string repositoryRoot)
     {
@@ -99,13 +113,18 @@ public sealed class RuntimeConfiguration(IOptions<McpServerOptions> options, Ser
 
         try
         {
-            var startInfo = new ProcessStartInfo("git", $"-C \"{repositoryRoot}\" rev-parse --abbrev-ref HEAD")
+            var startInfo = new ProcessStartInfo("git")
             {
+                WorkingDirectory = repositoryRoot,
+                RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            startInfo.ArgumentList.Add("rev-parse");
+            startInfo.ArgumentList.Add("--abbrev-ref");
+            startInfo.ArgumentList.Add("HEAD");
 
             using var process = Process.Start(startInfo);
             if (process is null)
@@ -113,13 +132,37 @@ public sealed class RuntimeConfiguration(IOptions<McpServerOptions> options, Ser
                 return string.Empty;
             }
 
-            var branchName = process.StandardOutput.ReadToEnd().Trim();
-            process.WaitForExit(5000);
-            return process.ExitCode == 0 ? branchName : string.Empty;
+            process.StandardInput.Close();
+
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+
+            if (!process.WaitForExit(5000))
+            {
+                TryKill(process);
+                return string.Empty;
+            }
+
+            Task.WaitAll([stdoutTask, stderrTask], 1000);
+            return process.ExitCode == 0 ? stdoutTask.Result.Trim() : string.Empty;
         }
         catch
         {
             return string.Empty;
+        }
+    }
+
+    private static void TryKill(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch
+        {
         }
     }
 }

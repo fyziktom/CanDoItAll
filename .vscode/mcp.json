@@ -1,8 +1,15 @@
 {
   "servers": {
-    "candoitall_dotnetwatch": {
+    "candoitall_projectstructure": {
+      "args": [
+        "--settings",
+        "${workspaceFolder}\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
+      ],
+      "cwd": "${workspaceFolder}",
       "type": "stdio",
-      "command": "powershell",
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\current\\CanDoItAll.Mcp.ProjectStructure.exe"
+    },
+    "candoitall_dotnetwatch": {
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",
@@ -16,39 +23,28 @@
         "-SettingsPath",
         "${workspaceFolder}\\CanDoItAll.Mcp.DotNetWatch.settings.json"
       ],
-      "cwd": "${workspaceFolder}"
+      "cwd": "${workspaceFolder}",
+      "type": "stdio",
+      "command": "powershell"
     },
     "candoitall_sshops": {
-      "type": "stdio",
-      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.SshOps\\current\\CanDoItAll.Mcp.SshOps.exe",
       "args": [
         "--settings",
         "${workspaceFolder}\\CanDoItAll.Mcp.SshOps.settings.json"
       ],
-      "cwd": "${workspaceFolder}"
-    },
-    "candoitall_projectstructure": {
+      "cwd": "${workspaceFolder}",
       "type": "stdio",
-      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\current\\CanDoItAll.Mcp.ProjectStructure.exe",
-      "args": [
-        "--settings",
-        "${workspaceFolder}\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
-      ],
-      "cwd": "${workspaceFolder}"
-    },
-    "playwright": {
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "@playwright/mcp@latest"
-      ]
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.SshOps\\current\\CanDoItAll.Mcp.SshOps.exe"
     },
     "tailwindcss": {
+      "args": "tailwindcss-mcp@latest",
       "type": "stdio",
-      "command": "npx",
-      "args": [
-        "tailwindcss-mcp@latest"
-      ]
+      "command": "npx"
+    },
+    "playwright": {
+      "args": "@playwright/mcp@latest",
+      "type": "stdio",
+      "command": "npx"
     }
   }
 }
