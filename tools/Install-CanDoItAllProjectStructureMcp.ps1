@@ -196,11 +196,15 @@ function Update-VsCodeConfig {
         [string]$CommandRelativePath
     )
 
-    $config = if (Test-Path -LiteralPath $Path) {
-        ConvertTo-Hashtable -InputObject (Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json)
-    }
-    else {
-        @{}
+    $config = @{}
+    if (Test-Path -LiteralPath $Path) {
+        try {
+            $config = ConvertTo-Hashtable -InputObject (Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json)
+        }
+        catch {
+            Write-Warning "VS Code MCP config at '$Path' is not valid JSON. Rebuilding it."
+            $config = @{}
+        }
     }
 
     if (-not $config.ContainsKey("servers")) {
