@@ -4,6 +4,17 @@ This bundle is an English-only, execution-grade package for the next `ProjectStr
 
 It was produced after reviewing the repo **after the previous bundle had already been applied**. The goal of this bundle is not only to improve performance, but also to make the shared canvas codebase significantly more maintainable and easier to evolve.
 
+## Validation Summary
+
+- Bundle preparation status: `Prepared legacy bundle`
+- Bundle readiness gate: `Manual execution audit completed`
+- Execution status: `Reopened after validation`
+- Subbundle gate review: `Foundation fixes, browser regressions, shared-consumer checks, and benchmark smoke are green; true-canvas migration tasks remain open`
+- Final closure gate: `Not eligible`
+- Browser validation analytics: `Recorded in reviews/01-execution-report.md`
+
+This bundle predates the newer normalized `plan/` and `subbundles/` schema. The execution report added in `reviews/01-execution-report.md` is the authoritative status record for the current pass.
+
 ## Current conclusion
 
 The applied work improved a few important things:

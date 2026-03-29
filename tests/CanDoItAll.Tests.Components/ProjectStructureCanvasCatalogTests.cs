@@ -13,11 +13,20 @@ public sealed class ProjectStructureCanvasCatalogTests
 
         Assert.NotNull(catalogType);
 
-        var tryResolveMethod = catalogType!.GetMethod(
-            "TryResolveCreateDefinition",
-            BindingFlags.Public | BindingFlags.Static);
+        var tryResolveMethod = catalogType!
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Single(method =>
+            {
+                if (!string.Equals(method.Name, "TryResolveCreateDefinition", StringComparison.Ordinal))
+                {
+                    return false;
+                }
 
-        Assert.NotNull(tryResolveMethod);
+                var parameters = method.GetParameters();
+                return parameters.Length == 2 &&
+                    parameters[0].ParameterType == typeof(string) &&
+                    parameters[1].IsOut;
+            });
 
         var arguments = new object?[] { "add-file-markdown", null };
         var resolved = (bool)tryResolveMethod!.Invoke(null, arguments)!;

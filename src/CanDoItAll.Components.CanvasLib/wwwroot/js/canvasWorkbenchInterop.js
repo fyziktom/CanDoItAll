@@ -1911,6 +1911,10 @@
         nodeElement.style.top = `${position.y}px`;
         nodeElement.style.setProperty("--cw-node-accent", node.accentColor || "#7c3aed");
 
+        if (node.isInlineTextNode) {
+            nodeElement.classList.add("is-inline-text");
+        }
+
         if (node.isReadOnly) {
             nodeElement.classList.add("is-readonly");
             nodeElement.dataset.readOnly = "true";
@@ -3070,8 +3074,14 @@
             render(state);
         }
 
-        if (options?.publish !== false) {
+        const shouldPublishSelection = options?.publish !== false && options?.publishSelection !== false;
+        const shouldPublishState = options?.publish !== false && options?.publishState !== false;
+
+        if (shouldPublishSelection) {
             publishSelection(state);
+        }
+
+        if (shouldPublishState) {
             publishState(state);
         }
 
@@ -5568,7 +5578,7 @@
             return;
         }
 
-        selectSingleNode(state, nodeId, { publish: false });
+        selectSingleNode(state, nodeId, { publishState: false });
         const rect = state.host.getBoundingClientRect();
         const position = getNodePosition(state, node);
         const viewportController = getViewportControllerService();

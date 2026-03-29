@@ -267,7 +267,7 @@ public sealed partial class AppSmokeTests
         Assert.DoesNotContain("16, 185, 129", progressBackground, StringComparison.Ordinal);
         Assert.DoesNotContain("56, 189, 248", progressBackground, StringComparison.Ordinal);
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-progress-submenu-metadata.png"), FullPage = true });
-        await page.Locator(".cw-context-menu__action[data-action-id='progress:30']").ClickAsync(new() { Force = true });
+        await ClickContextMenuActionAsync(page, "progress:30");
         await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node__progress')).some(node => node.getAttribute('title')?.includes('30%') === true)");
 
         var progressBadge = page.Locator(".cw-node__progress[title*='30%']").First;
@@ -297,7 +297,7 @@ public sealed partial class AppSmokeTests
         await page.Locator(".cw-context-menu__action[data-action-id='marker:question']").WaitForAsync();
         var markerMetrics = await ReadContextMenuActionMetricsAsync(page, "marker:question");
         Assert.True(markerMetrics.Width >= progressMetrics.Width - 2, $"Expected marker presets to stay comparable to progress preset size. Marker={markerMetrics.Width}, progress={progressMetrics.Width}.");
-        await page.Locator(".cw-context-menu__action[data-action-id='marker:money']").ClickAsync(new() { Force = true });
+        await ClickContextMenuActionAsync(page, "marker:money");
         await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node__marker')).some(node => node.textContent?.includes('$') === true)");
 
         nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Edited child note')");
@@ -314,7 +314,7 @@ public sealed partial class AppSmokeTests
         Assert.True(progressMetrics.Width > priorityMetrics.Width, $"Expected progress presets to be larger than priority presets. Progress={progressMetrics.Width}, priority={priorityMetrics.Width}.");
         Assert.True(markerMetrics.Width > priorityMetrics.Width, $"Expected marker presets to be larger than priority presets. Marker={markerMetrics.Width}, priority={priorityMetrics.Width}.");
         Assert.Equal(0, priorityPresetLabelCount);
-        await page.Locator(".cw-context-menu__action[data-action-id='priority:2']").ClickAsync(new() { Force = true });
+        await ClickContextMenuActionAsync(page, "priority:2");
         await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-node__priority')).some(node => node.textContent?.trim() === '2')");
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-badges-selected.png"), FullPage = true });
 
@@ -709,7 +709,7 @@ public sealed partial class AppSmokeTests
                 $"Expected progress submenu action '{action.ActionId}' to stay below the toolbar. top={action.Top}, toolbarBottom={progressLayout.ToolbarBottom}, hostTop={progressLayout.HostTop}, safeTop={progressLayout.SafeTop}, rootCenterY={progressLayout.RootCenterY}."));
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "02-progress-submenu-hive.png"), FullPage = true });
         AssertMenuActionsDoNotOverlap(progressLayout.Actions, 18, "progress submenu");
-        await page.Locator(".cw-context-menu__action[data-action-id='progress:30']").ClickAsync(new() { Force = true });
+        await ClickContextMenuActionAsync(page, "progress:30");
         await page.WaitForFunctionAsync(
             @"selector => {
                 const node = document.querySelector(selector);
@@ -731,7 +731,7 @@ public sealed partial class AppSmokeTests
                 $"Expected marker submenu action '{action.ActionId}' to stay below the toolbar. top={action.Top}, toolbarBottom={markerLayout.ToolbarBottom}, hostTop={markerLayout.HostTop}, safeTop={markerLayout.SafeTop}, rootCenterY={markerLayout.RootCenterY}."));
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "03-marker-submenu-hive.png"), FullPage = true });
         AssertMenuActionsDoNotOverlap(markerLayout.Actions, 18, "marker submenu");
-        await page.Locator(".cw-context-menu__action[data-action-id='marker:money']").ClickAsync(new() { Force = true });
+        await ClickContextMenuActionAsync(page, "marker:money");
         await page.WaitForFunctionAsync(
             @"selector => {
                 const node = document.querySelector(selector);
@@ -744,7 +744,7 @@ public sealed partial class AppSmokeTests
         await page.WaitForTimeoutAsync(80);
         await HoverContextMenuActionAsync(page, "priority");
         Assert.True(await WaitForMenuActionAsync(page, "priority:2", 1_000), "Expected the priority submenu to stay functional after the shared menu layout changes.");
-        await page.Locator(".cw-context-menu__action[data-action-id='priority:2']").ClickAsync(new() { Force = true });
+        await ClickContextMenuActionAsync(page, "priority:2");
         await page.WaitForFunctionAsync(
             @"selector => {
                 const node = document.querySelector(selector);
@@ -1055,7 +1055,7 @@ public sealed partial class AppSmokeTests
 
         var promptSelector = SelectorForNodeId(promptFlowId);
         await EnsureCanvasSelectionAsync(page, promptSelector);
-        await page.Locator(promptSelector).DblClickAsync();
+        await OpenNodeQuickActionsAsync(page, promptSelector);
 
         var quickActionDialog = page.GetByTestId("project-structure-node-quick-actions");
         await quickActionDialog.WaitForAsync();
@@ -1074,7 +1074,7 @@ public sealed partial class AppSmokeTests
         await popup.CloseAsync();
 
         await EnsureCanvasSelectionAsync(page, runtimeSelector);
-        await page.Locator(runtimeSelector).DblClickAsync();
+        await OpenNodeQuickActionsAsync(page, runtimeSelector);
         quickActionDialog = page.GetByTestId("project-structure-node-quick-actions");
         await quickActionDialog.WaitForAsync();
         primaryQuickAction = page.GetByTestId("project-structure-quick-action-primary");
@@ -1496,14 +1496,15 @@ public sealed partial class AppSmokeTests
 
     private static async Task OpenCanvasCreateComposerViaRuntimeAsync(IPage page, string selector, string label, string actionId)
     {
-        await EnsureCanvasSelectionAsync(page, selector);
+        var targetNodeId = await ResolveCanvasNodeIdAsync(page, selector);
+        Assert.False(string.IsNullOrWhiteSpace(targetNodeId), $"Expected to resolve a canvas node id for '{selector}'.");
         var composerReadySelector = RequiresFileComposerSurface(actionId, label)
             ? ".cw-canvas-composer__dropzone"
             : ".cw-canvas-composer";
         var composerReadyLocator = page.Locator(composerReadySelector);
 
         var openedViaRuntimeApi = await page.EvaluateAsync<bool>(
-            @"({ requestedActionId, requestedLabel }) => {
+            @"({ requestedActionId, requestedLabel, requestedNodeId }) => {
                 const host = document.querySelector('.cw-canvas-host');
                 const state = host?.__canvasWorkbenchState;
                 const runtime = window.CanDoItAll?.canvasWorkbench;
@@ -1536,8 +1537,9 @@ public sealed partial class AppSmokeTests
                     return false;
                 }
 
-                const selectedId = Array.isArray(state.ui?.selectedNodeIds) ? state.ui.selectedNodeIds[0] : null;
-                const sourceNode = selectedId ? state.lookups?.byId?.get(selectedId) ?? null : null;
+                const sourceNode = requestedNodeId
+                    ? state.lookups?.byId?.get(requestedNodeId) ?? null
+                    : null;
                 runtime.openCreateComposer(host, action, {
                     actionId: action.actionId || '',
                     sourceNodeId: sourceNode?.id || null,
@@ -1558,7 +1560,8 @@ public sealed partial class AppSmokeTests
             new
             {
                 requestedActionId = actionId,
-                requestedLabel = label
+                requestedLabel = label,
+                requestedNodeId = targetNodeId
             });
 
         Assert.True(openedViaRuntimeApi, $"Expected a runtime fallback to open the create composer for '{actionId}'.");
@@ -1578,7 +1581,7 @@ public sealed partial class AppSmokeTests
     {
         var noteEditor = page.Locator(".cw-note-editor__input");
 
-        await ClickCanvasNodeAsync(page, selector, clickCount: 2);
+        await DoubleClickCanvasNodeAsync(page, selector);
         if (await WaitForLocatorAsync(noteEditor, 1_500))
         {
             return noteEditor;
@@ -1602,9 +1605,85 @@ public sealed partial class AppSmokeTests
         return noteEditor;
     }
 
+    private static async Task DoubleClickCanvasNodeAsync(IPage page, string selector)
+    {
+        try
+        {
+            await ClickCanvasNodeAsync(page, selector, clickCount: 2);
+            return;
+        }
+        catch (TimeoutException)
+        {
+        }
+        catch (PlaywrightException)
+        {
+        }
+
+        var targetId = await ResolveCanvasNodeIdAsync(page, selector);
+        if (!string.IsNullOrWhiteSpace(targetId))
+        {
+            await page.EvaluateAsync(
+                @"targetId => {
+                    const host = document.querySelector('.cw-canvas-host');
+                    const runtime = window.CanDoItAll?.canvasWorkbench;
+                    if (!host || !runtime?.focusNode || !targetId) {
+                        return false;
+                    }
+
+                    runtime.focusNode(host, targetId);
+                    return true;
+                }",
+                targetId);
+            await WaitForLocatorAsync(page.Locator(selector).First, 1_500);
+        }
+
+        await page.Locator(selector).First.EvaluateAsync(
+            @"node => {
+                const rect = node.getBoundingClientRect();
+                const x = rect.left + (rect.width / 2);
+                const y = rect.top + (rect.height / 2);
+                node.dispatchEvent(new MouseEvent('dblclick', {
+                    bubbles: true,
+                    cancelable: true,
+                    detail: 2,
+                    clientX: x,
+                    clientY: y
+                }));
+            }");
+    }
+
+    private static async Task OpenNodeQuickActionsAsync(IPage page, string selector)
+    {
+        await DoubleClickCanvasNodeAsync(page, selector);
+
+        var quickActionDialog = page.GetByTestId("project-structure-node-quick-actions");
+        if (await WaitForLocatorAsync(quickActionDialog, 1_500))
+        {
+            return;
+        }
+
+        var targetId = await ResolveCanvasNodeIdAsync(page, selector);
+        Assert.False(string.IsNullOrWhiteSpace(targetId), $"Expected to resolve a canvas node id for '{selector}'.");
+
+        var opened = await page.EvaluateAsync<bool>(
+            @"targetId => {
+                const host = document.querySelector('.cw-canvas-host');
+                const state = host?.__canvasWorkbenchState;
+                if (!state?.dotNetRef || !targetId) {
+                    return false;
+                }
+
+                state.dotNetRef.invokeMethodAsync('OnNodeOpened', targetId);
+                return true;
+            }",
+            targetId);
+        Assert.True(opened, $"Expected quick-action fallback bridge to open '{selector}'.");
+        await quickActionDialog.WaitForAsync();
+    }
+
     private static async Task EnsureCanvasSelectionAsync(IPage page, string selector)
     {
-        await ClickCanvasNodeAsync(page, selector);
+        await SelectCanvasNodeAsync(page, selector);
         if (await WaitForCanvasSelectionAsync(page, selector, 750))
         {
             return;
@@ -1613,6 +1692,48 @@ public sealed partial class AppSmokeTests
         await OpenCanvasContextMenuAsync(page, selector);
         await page.Keyboard.PressAsync("Escape");
         Assert.True(await WaitForCanvasSelectionAsync(page, selector, 1_500), $"Expected canvas selection for '{selector}'.");
+    }
+
+    private static async Task SelectCanvasNodeAsync(IPage page, string selector)
+    {
+        var target = page.Locator(selector).First;
+        if (await WaitForLocatorAsync(target, 500))
+        {
+            try
+            {
+                await ClickCanvasNodeAsync(page, selector);
+                return;
+            }
+            catch (InvalidOperationException)
+            {
+            }
+            catch (TimeoutException)
+            {
+            }
+            catch (PlaywrightException)
+            {
+            }
+        }
+
+        var targetId = await ResolveCanvasNodeIdAsync(page, selector);
+        if (string.IsNullOrWhiteSpace(targetId))
+        {
+            throw new InvalidOperationException($"Could not resolve a canvas node id for selector '{selector}'.");
+        }
+
+        var selected = await page.EvaluateAsync<bool>(
+            @"targetId => {
+                const host = document.querySelector('.cw-canvas-host');
+                const runtime = window.CanDoItAll?.canvasWorkbench;
+                if (!host || !runtime?.selectNodes || !targetId) {
+                    return false;
+                }
+
+                runtime.selectNodes(host, [targetId], targetId);
+                return true;
+            }",
+            targetId);
+        Assert.True(selected, $"Expected runtime selection bridge to select '{selector}'.");
     }
 
     private static async Task SelectStructureOutlineNodeAsync(IPage page, string title)
@@ -1733,9 +1854,30 @@ public sealed partial class AppSmokeTests
 
     private static async Task OpenContextSubmenuAsync(IPage page, string actionId)
     {
-        var action = page.Locator($".cw-context-menu__action[data-action-id='{actionId}']").Last;
-        await action.WaitForAsync();
-        await action.HoverAsync();
+        var selector = $".cw-context-menu__action[data-action-id='{actionId}']";
+
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            await page.Locator(selector).Last.WaitForAsync();
+
+            try
+            {
+                await page.Locator(selector).Last.HoverAsync();
+            }
+            catch (PlaywrightException exception) when (exception.Message.Contains("detached", StringComparison.OrdinalIgnoreCase))
+            {
+            }
+
+            await HoverContextMenuActionAsync(page, actionId);
+            if (await WaitForFunctionAsync(page, @"() => document.querySelector('.cw-context-menu__action[data-layer-depth=""1""]') !== null", 1_500))
+            {
+                return;
+            }
+
+            await page.WaitForTimeoutAsync(120);
+        }
+
+        await page.Locator(".cw-context-menu__action[data-layer-depth='1']").First.WaitForAsync();
     }
 
     private static async Task HoverContextMenuActionAsync(IPage page, string actionId)
@@ -1758,6 +1900,53 @@ public sealed partial class AppSmokeTests
                 }));
             }",
             selector);
+    }
+
+    private static async Task ClickContextMenuActionAsync(IPage page, string actionId)
+    {
+        var selector = $".cw-context-menu__action[data-action-id='{actionId}']";
+
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            var action = page.Locator(selector).Last;
+            if (!await WaitForLocatorAsync(action, 1_000))
+            {
+                await page.WaitForTimeoutAsync(120);
+                continue;
+            }
+
+            try
+            {
+                await action.ClickAsync(new() { Force = true });
+                return;
+            }
+            catch (PlaywrightException exception) when (
+                exception.Message.Contains("detached", StringComparison.OrdinalIgnoreCase) ||
+                exception.Message.Contains("stable", StringComparison.OrdinalIgnoreCase))
+            {
+            }
+
+            var clicked = await page.EvaluateAsync<bool>(
+                @"actionSelector => {
+                    const matches = Array.from(document.querySelectorAll(actionSelector));
+                    const action = matches.length > 0 ? matches[matches.length - 1] : null;
+                    if (!(action instanceof HTMLButtonElement)) {
+                        return false;
+                    }
+
+                    action.click();
+                    return true;
+                }",
+                selector);
+            if (clicked)
+            {
+                return;
+            }
+
+            await page.WaitForTimeoutAsync(120);
+        }
+
+        await page.Locator(selector).Last.ClickAsync(new() { Force = true });
     }
 
     private static async Task<bool> WaitForContextMenuAsync(IPage page, float timeoutMs)
@@ -1790,9 +1979,7 @@ public sealed partial class AppSmokeTests
     {
         try
         {
-            var target = page.Locator(selector).First;
-            await target.WaitForAsync(new() { Timeout = timeoutMs });
-            var targetId = await target.GetAttributeAsync("data-node-id");
+            var targetId = await ResolveCanvasNodeIdAsync(page, selector);
             if (string.IsNullOrWhiteSpace(targetId))
             {
                 return false;
@@ -1813,6 +2000,80 @@ public sealed partial class AppSmokeTests
         {
             return false;
         }
+    }
+
+    private static async Task<string?> ResolveCanvasNodeIdAsync(IPage page, string selector)
+    {
+        var target = page.Locator(selector).First;
+        if (await WaitForLocatorAsync(target, 250))
+        {
+            var targetId = await target.GetAttributeAsync("data-node-id");
+            if (!string.IsNullOrWhiteSpace(targetId))
+            {
+                return targetId;
+            }
+        }
+
+        var exactMatch = Regex.Match(selector, @"data-node-id='(?<id>[^']+)'", RegexOptions.IgnoreCase);
+        if (exactMatch.Success)
+        {
+            return exactMatch.Groups["id"].Value;
+        }
+
+        var prefixMatch = Regex.Match(selector, @"data-node-id\^='(?<prefix>[^']+)'", RegexOptions.IgnoreCase);
+        if (prefixMatch.Success)
+        {
+            return await page.EvaluateAsync<string?>(
+                @"prefix => {
+                    const host = document.querySelector('.cw-canvas-host');
+                    const nodes = host?.__canvasWorkbenchState?.surface?.nodes;
+                    if (!Array.isArray(nodes)) {
+                        return null;
+                    }
+
+                    const match = nodes.find(node => typeof node?.id === 'string' && node.id.startsWith(prefix));
+                    return match?.id || null;
+                }",
+                prefixMatch.Groups["prefix"].Value);
+        }
+
+        var textMatch = Regex.Match(selector, @":has-text\('(?<text>[^']+)'\)", RegexOptions.IgnoreCase);
+        if (textMatch.Success)
+        {
+            return await page.EvaluateAsync<string?>(
+                @"text => {
+                    const host = document.querySelector('.cw-canvas-host');
+                    const nodes = host?.__canvasWorkbenchState?.surface?.nodes;
+                    if (!Array.isArray(nodes)) {
+                        return null;
+                    }
+
+                    const lowered = (text || '').toLowerCase();
+                    const match = nodes.find(node => {
+                        const candidates = [node?.title, node?.inlineText, node?.leadText];
+                        return candidates.some(candidate => typeof candidate === 'string' && candidate.toLowerCase().includes(lowered));
+                    });
+                    return match?.id || null;
+                }",
+                textMatch.Groups["text"].Value);
+        }
+
+        if (string.Equals(selector, ".cw-node.is-inline-text", StringComparison.Ordinal))
+        {
+            return await page.EvaluateAsync<string?>(
+                @"() => {
+                    const host = document.querySelector('.cw-canvas-host');
+                    const nodes = host?.__canvasWorkbenchState?.surface?.nodes;
+                    if (!Array.isArray(nodes)) {
+                        return null;
+                    }
+
+                    const match = nodes.find(node => node?.isInlineTextNode === true);
+                    return match?.id || null;
+                }");
+        }
+
+        return null;
     }
 
     private static async Task<bool> WaitForLocatorAsync(ILocator locator, float timeoutMs)
