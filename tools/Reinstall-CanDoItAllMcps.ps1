@@ -311,6 +311,7 @@ function Update-VsCodeMcpConfig {
         [string]$ProjectStructureCommandPath
     )
 
+    $escapedProjectStructureCommandPath = $ProjectStructureCommandPath.Replace("\", "\\")
     $json = @"
 {
   "servers": {
@@ -343,7 +344,7 @@ function Update-VsCodeMcpConfig {
     },
     "candoitall_projectstructure": {
       "type": "stdio",
-      "command": "$WorkspaceFolderToken\\$ProjectStructureCommandPath",
+      "command": "$WorkspaceFolderToken\\$escapedProjectStructureCommandPath",
       "args": [
         "--settings",
         "$WorkspaceFolderToken\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
@@ -527,6 +528,28 @@ function Format-ShortcutArguments {
     }) -join ' '
 }
 
+function Ensure-ProjectStructureSettings {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$SettingsPath,
+        [Parameter(Mandatory = $true)]
+        [string]$ExampleSettingsPath
+    )
+
+    if (Test-Path -LiteralPath $SettingsPath) {
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $ExampleSettingsPath)) {
+        throw "ProjectStructure settings were not found at '$SettingsPath', and example settings were not found at '$ExampleSettingsPath'. Run tools\\Install-CanDoItAllProjectStructureMcp.ps1 with the generated -ServerBaseUrl and -AgentToken values from the CanDoItAll /settings page."
+    }
+
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $SettingsPath) | Out-Null
+    Copy-Item -LiteralPath $ExampleSettingsPath -Destination $SettingsPath -Force
+
+    Write-Warning "ProjectStructure settings were missing. Seeded '$SettingsPath' from the example file. Replace the placeholder BaseUrl and AgentToken by running tools\\Install-CanDoItAllProjectStructureMcp.ps1 with the generated command from CanDoItAll /settings."
+}
+
 if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
     $RepoRoot = Resolve-AbsolutePath (Join-Path $PSScriptRoot "..")
 }
@@ -542,6 +565,7 @@ $dotNetWatchWrapperPath = Resolve-AbsolutePath (Join-Path $RepoRoot "tools\CanDo
 $dotNetWatchSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.DotNetWatch.settings.json")
 $projectStructureProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.ProjectStructure\CanDoItAll.Mcp.ProjectStructure.csproj")
 $projectStructureSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.ProjectStructure.settings.local.json")
+$projectStructureExampleSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.ProjectStructure.settings.example.json")
 $sshOpsProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj")
 $sshOpsSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.SshOps.settings.json")
 $managerProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj")
@@ -611,6 +635,8 @@ Publish-ReleaseArtifact -ProjectPath $projectStructureProjectPath -OutputPath $p
 Publish-ReleaseArtifact -ProjectPath $sshOpsProjectPath -OutputPath $sshOpsInstallRoot
 Publish-ReleaseArtifact -ProjectPath $managerProjectPath -OutputPath $managerInstallRoot
 Publish-ReleaseArtifact -ProjectPath $trayProjectPath -OutputPath $trayInstallRoot
+
+Ensure-ProjectStructureSettings -SettingsPath $projectStructureSettingsPath -ExampleSettingsPath $projectStructureExampleSettingsPath
 
 $shadowManifest = Get-Content -LiteralPath $shadowManifestPath -Raw | ConvertFrom-Json
 $projectStructureEntrypoint = Get-PreferredEntrypoint -DirectoryPath $projectStructureInstallRoot -AssemblyName "CanDoItAll.Mcp.ProjectStructure"
