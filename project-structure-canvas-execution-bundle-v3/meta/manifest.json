@@ -1,0 +1,108 @@
+{
+  "bundle_name": "ProjectStructure Canvas Execution Bundle (v3)",
+  "bundle_root_name": "project-structure-canvas-execution-bundle-v3",
+  "generated_utc": "2026-03-29T15:25:56Z",
+  "source_repo_root": "/mnt/data/workrepo/CanDoItAll-canvas-drawing-refactor",
+  "source_repo_archive": "/mnt/data/CanDoItAll-canvas-drawing-refactor.zip",
+  "reference_image": "references/visual-studio-toolbox-reference.png",
+  "limitation": "Static source audit only; dotnet CLI was not available in this environment for build/test execution.",
+  "document_count": 38,
+  "task_count": 18,
+  "feature_count": 40,
+  "hotspot_count": 14,
+  "runtime_file_count": 15,
+  "artifacts": {
+    "docs": [
+      "00_EXECUTIVE_SUMMARY.md",
+      "01_IMPLEMENTATION_GAP_REVIEW.md",
+      "02_CURRENT_RUNTIME_AUDIT.md",
+      "03_FEATURE_PRESERVATION_MAP.md",
+      "04_TARGET_ARCHITECTURE_AND_RENDERING_BOUNDARIES.md",
+      "05_CANVASLIB_REORGANIZATION_PLAN.md",
+      "06_FILE_SPLIT_PLAN.md",
+      "07_TRUE_CANVAS_MIGRATION_PLAN.md",
+      "08_TOOLBOX_FUNCTIONAL_AND_UX_SPEC.md",
+      "09_PERFORMANCE_HOTSPOTS_AND_BUDGETS.md",
+      "10_VALIDATION_GATES_AND_RETRY_PROTOCOL.md",
+      "11_LINE_REFERENCE_INDEX.md",
+      "12_SHARED_CONSUMERS_AND_LEGACY_PLAN.md",
+      "13_ASSET_LOADING_AND_BUILD_PIPELINE_PLAN.md",
+      "14_LIMITATIONS_AND_ASSUMPTIONS.md",
+      "README.md"
+    ],
+    "codex_docs": [
+      "codex/MASTER_PROMPT.md",
+      "codex/RETRY_PROTOCOL.md",
+      "codex/TASK_SEQUENCE.md",
+      "codex/VALIDATION_PROMPT.md"
+    ],
+    "task_docs": [
+      "codex/tasks/T00_baseline_capture_missing_test_coverage_and_feature_lock.md",
+      "codex/tasks/T01_overlay_isolation_and_input_ownership_cleanup.md",
+      "codex/tasks/T02_write-behind_canvas_state_persistence_and_committed-state_ownership.md",
+      "codex/tasks/T03_delta_move_flow_and_removal_of_full_reload-after-move.md",
+      "codex/tasks/T04_toolbox_functional_repair_and_dedicated_component_extraction.md",
+      "codex/tasks/T05_visual_studio-like_toolbox_ux_and_compact_layout.md",
+      "codex/tasks/T06_canvaslib_directory_reorganization_skeleton.md",
+      "codex/tasks/T07_deterministic_asset_build_pipeline_and_centralized_asset_includes.md",
+      "codex/tasks/T08_split_long_js_css_razor_and_c#_files_into_maintainable_parts.md",
+      "codex/tasks/T09_preview-boundary_isolation_and_legacy_path_quarantine.md",
+      "codex/tasks/T10_real_canvas_stage_shell_with_stable_canvasworkbench_api.md",
+      "codex/tasks/T11_canvas_links_renderer_and_geometry-based_link_hit_model.md",
+      "codex/tasks/T12_canvas_minimap_diagnostics_and_group-frame_renderer.md",
+      "codex/tasks/T13_canvas_node_renderer_phase_a_with_hot-zones_and_html_overlay_escape_hatches.md",
+      "codex/tasks/T14_canvas_export_pipeline_and_accessibility_mirror_alignment.md",
+      "codex/tasks/T15_projectstructurepage_adoption_performance_pass_and_benchmark_evidence.md",
+      "codex/tasks/T16_promptfactory_compatibility_shared-consumer_rollout_and_preview_lane_safety.md",
+      "codex/tasks/T17_cleanup_legacy-path_reduction_final_documentation_and_full_regression_pack.md"
+    ],
+    "traceability_files": [
+      "traceability/README.md",
+      "traceability/component_inventory.csv",
+      "traceability/current_gaps.json",
+      "traceability/existing_test_inventory.csv",
+      "traceability/features.csv",
+      "traceability/hotspots.csv",
+      "traceability/js_function_inventory.csv",
+      "traceability/old_to_new_canvaslib_mapping.csv",
+      "traceability/runtime_files.csv",
+      "traceability/tasks_to_features.csv"
+    ],
+    "meta_files": [
+      "meta/file-budgets.json",
+      "meta/task-manifest.json"
+    ]
+  },
+  "phase_order": [
+    "P0",
+    "P1",
+    "P2",
+    "P3"
+  ],
+  "file_budgets": [
+    {
+      "file_type": "js source fragment",
+      "target_max_lines": 350,
+      "hard_cap_lines": 550,
+      "rule": "Split workbench JS into small plain-JS modules under wwwroot/js-src; generated bundle may exceed this."
+    },
+    {
+      "file_type": "css source fragment",
+      "target_max_lines": 250,
+      "hard_cap_lines": 400,
+      "rule": "Split styles by concern; generated bundle may exceed this."
+    },
+    {
+      "file_type": "razor component",
+      "target_max_lines": 250,
+      "hard_cap_lines": 400,
+      "rule": "Extract child components when a page or component crosses the cap."
+    },
+    {
+      "file_type": "csharp partial/class file",
+      "target_max_lines": 250,
+      "hard_cap_lines": 400,
+      "rule": "Prefer partials or helpers before files grow past the hard cap."
+    }
+  ]
+}

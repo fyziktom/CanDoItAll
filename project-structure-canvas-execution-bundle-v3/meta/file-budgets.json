@@ -1,0 +1,26 @@
+[
+  {
+    "file_type": "js source fragment",
+    "target_max_lines": 350,
+    "hard_cap_lines": 550,
+    "rule": "Split workbench JS into small plain-JS modules under wwwroot/js-src; generated bundle may exceed this."
+  },
+  {
+    "file_type": "css source fragment",
+    "target_max_lines": 250,
+    "hard_cap_lines": 400,
+    "rule": "Split styles by concern; generated bundle may exceed this."
+  },
+  {
+    "file_type": "razor component",
+    "target_max_lines": 250,
+    "hard_cap_lines": 400,
+    "rule": "Extract child components when a page or component crosses the cap."
+  },
+  {
+    "file_type": "csharp partial/class file",
+    "target_max_lines": 250,
+    "hard_cap_lines": 400,
+    "rule": "Prefer partials or helpers before files grow past the hard cap."
+  }
+]

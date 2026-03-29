@@ -1,0 +1,135 @@
+{
+  "bundle_version": "v3",
+  "summary": "The previous bundle improved batching and retained rendering, but the runtime workbench is still primarily DOM/SVG, the toolbox is not production-ready, and shared canvas code remains monolithic.",
+  "gaps": [
+    {
+      "id": "G01",
+      "title": "Runtime workbench is still DOM/SVG instead of real canvas",
+      "severity": "critical",
+      "evidence": [
+        "src/CanDoItAll.Components.CanvasLib/Components/CanvasWorkbench.razor:121-126",
+        "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js:6018-6121",
+        "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js:6254-6290"
+      ],
+      "why_it_matters": "Dense graphs still pay DOM/SVG composition costs and cannot reach true canvas scalability.",
+      "target_tasks": [
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15"
+      ]
+    },
+    {
+      "id": "G02",
+      "title": "Move flow still reloads the full surface after batch persistence",
+      "severity": "critical",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor:952-965",
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor:840-899"
+      ],
+      "why_it_matters": "Batch persistence gains are partially lost because ordinary drag commits still force expensive full rebuilds.",
+      "target_tasks": [
+        "T03",
+        "T15"
+      ]
+    },
+    {
+      "id": "G03",
+      "title": "View-state persistence remains too eager in ProjectStructure and PromptFactory",
+      "severity": "critical",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor:968-995",
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor:1316-1330",
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor:1426-1440",
+        "src/CanDoItAll.Modules.Factory/Pages/PromptFactoryPage.razor:2867-2898"
+      ],
+      "why_it_matters": "InteractiveServer latency, DB writes, and refresh churn stay on the hot path.",
+      "target_tasks": [
+        "T02",
+        "T16"
+      ]
+    },
+    {
+      "id": "G04",
+      "title": "Overlay input ownership is incomplete",
+      "severity": "high",
+      "evidence": [
+        "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js:3038-3041",
+        "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js:5880-5883",
+        "src/CanDoItAll.Components.CanvasLib/Components/CanvasFloatingWindow.razor:7-11"
+      ],
+      "why_it_matters": "Toolbox/floating-window interactions can leak into zoom, selection, or pan handlers.",
+      "target_tasks": [
+        "T00",
+        "T01",
+        "T04",
+        "T05"
+      ]
+    },
+    {
+      "id": "G05",
+      "title": "Toolbox accordion and layout are still not in the requested Visual Studio-like state",
+      "severity": "high",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor:108-181",
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor:160-170",
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ToolWindows.cs:83-91"
+      ],
+      "why_it_matters": "Primary authoring UX is broken or inconsistent with the requested behavior.",
+      "target_tasks": [
+        "T00",
+        "T04",
+        "T05"
+      ]
+    },
+    {
+      "id": "G06",
+      "title": "CanvasLib runtime, preview, and legacy concerns are still mixed together",
+      "severity": "high",
+      "evidence": [
+        "src/CanDoItAll.Components.CanvasLib/Components/**",
+        "src/CanDoItAll.ComponentKit/Canvas/README.md:1-12",
+        "src/CanDoItAll.Modules.Workbench/Components/ProjectStructureCanvas.razor",
+        "src/CanDoItAll.Modules.Workbench/wwwroot/js/workbenchInterop.js"
+      ],
+      "why_it_matters": "Developers cannot easily see which code is runtime-critical versus preview or legacy reference code.",
+      "target_tasks": [
+        "T06",
+        "T07",
+        "T08",
+        "T09",
+        "T17"
+      ]
+    },
+    {
+      "id": "G07",
+      "title": "Asset loading is duplicated across app shells",
+      "severity": "medium",
+      "evidence": [
+        "src/CanDoItAll.Web/Components/App.razor:25-70",
+        "src/CanDoItAll.Components.Sandbox/Components/App.razor:17-56"
+      ],
+      "why_it_matters": "Manual includes drift and make large refactors easier to break.",
+      "target_tasks": [
+        "T06",
+        "T07",
+        "T17"
+      ]
+    },
+    {
+      "id": "G08",
+      "title": "Export path still depends on DOM clone instead of renderer-owned composition",
+      "severity": "medium",
+      "evidence": [
+        "src/CanDoItAll.Components.CanvasLib/wwwroot/js/canvasWorkbenchInterop.js:6254-6341"
+      ],
+      "why_it_matters": "A true canvas runtime needs a true canvas export pipeline to avoid misleading or brittle captures.",
+      "target_tasks": [
+        "T14",
+        "T15"
+      ]
+    }
+  ]
+}
