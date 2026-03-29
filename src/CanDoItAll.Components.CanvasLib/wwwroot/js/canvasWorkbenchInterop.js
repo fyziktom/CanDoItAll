@@ -3,6 +3,14 @@
     const contextSubmenuHoverDelayMs = 500;
     const MIN_ZOOM = 0.15;
     const MAX_ZOOM = 1.75;
+    function getRequiredRootService(name) {
+        const service = root[name];
+        if (!service) {
+            throw new Error(`CanDoItAll.${name} must be loaded before canvasWorkbenchInterop.js.`);
+        }
+
+        return service;
+    }
     function getTextMeasureService() {
         return root.textMeasureService || null;
     }
@@ -12,70 +20,9 @@
     function getAnimationTimelineService() {
         return root.animationTimeline || null;
     }
-    const selectionModel = root.selectionModel || {
-        normalize(selectedNodeIds, primaryNodeId) {
-            const seen = new Set();
-            const ordered = [];
-
-            for (const value of Array.isArray(selectedNodeIds) ? selectedNodeIds : []) {
-                const normalized = typeof value === "string" ? value.trim() : "";
-                if (!normalized || seen.has(normalized)) {
-                    continue;
-                }
-
-                seen.add(normalized);
-                ordered.push(normalized);
-            }
-
-            const normalizedPrimary = typeof primaryNodeId === "string" ? primaryNodeId.trim() : "";
-            if (normalizedPrimary) {
-                const existingIndex = ordered.indexOf(normalizedPrimary);
-                if (existingIndex >= 0) {
-                    ordered.splice(existingIndex, 1);
-                }
-
-                ordered.unshift(normalizedPrimary);
-            }
-
-            return {
-                primaryNodeId: ordered[0] || null,
-                selectedNodeIds: ordered
-            };
-        },
-        replace(selectedNodeIds, primaryNodeId) {
-            return this.normalize(selectedNodeIds, primaryNodeId);
-        },
-        selectOne(nodeId) {
-            return this.normalize([nodeId], nodeId);
-        },
-        toggle(selectedNodeIds, nodeId, primaryNodeId) {
-            const normalizedNodeId = typeof nodeId === "string" ? nodeId.trim() : "";
-            const next = this.normalize(selectedNodeIds, primaryNodeId).selectedNodeIds;
-            if (!normalizedNodeId) {
-                return this.normalize(next, primaryNodeId);
-            }
-
-            const existingIndex = next.indexOf(normalizedNodeId);
-            if (existingIndex >= 0) {
-                next.splice(existingIndex, 1);
-                return this.normalize(next, primaryNodeId === normalizedNodeId ? null : primaryNodeId);
-            }
-
-            next.push(normalizedNodeId);
-            return this.normalize(next, primaryNodeId || normalizedNodeId);
-        },
-        clear() {
-            return {
-                primaryNodeId: null,
-                selectedNodeIds: []
-            };
-        },
-        removeMissing(selectedNodeIds, validNodeIds, primaryNodeId) {
-            const valid = new Set(Array.isArray(validNodeIds) ? validNodeIds.filter(Boolean) : []);
-            const filtered = (Array.isArray(selectedNodeIds) ? selectedNodeIds : []).filter(nodeId => valid.has(nodeId));
-            return this.normalize(filtered, valid.has(primaryNodeId) ? primaryNodeId : null);
-        }
-    };
+    const selectionModel = getRequiredRootService("selectionModel");
+    const workbenchInternals = createWorkbenchInternals();
+    root.canvasWorkbenchInternals = workbenchInternals;
 
     function clear(element) {
         while (element.firstChild) {
@@ -135,11 +82,127 @@
     }
 
     function debounce(callback, delayMs) {
-        let handle;
-        return (...args) => {
+        let handle = 0;
+        const debounced = (...args) => {
             window.clearTimeout(handle);
-            handle = window.setTimeout(() => callback(...args), delayMs);
+            handle = window.setTimeout(() => {
+                handle = 0;
+                callback(...args);
+            }, delayMs);
         };
+
+        debounced.cancel = () => {
+            window.clearTimeout(handle);
+            handle = 0;
+        };
+
+        return debounced;
+    }
+
+    function now() {
+        return typeof performance !== "undefined" && typeof performance.now === "function"
+            ? performance.now()
+            : Date.now();
+    }
+
+    function createWorkbenchMetrics() {
+        return {
+            renderCount: 0,
+            totalRenderDurationMs: 0,
+            lastRenderDurationMs: 0,
+            maxRenderDurationMs: 0,
+            frameLayerRebuildCount: 0,
+            linkLayerRebuildCount: 0,
+            nodeLayerRebuildCount: 0,
+            lastRenderedFrameCount: 0,
+            lastRenderedLinkCount: 0,
+            lastRenderedNodeCount: 0,
+            lastVisibleNodeCount: 0,
+            statePublishRequestCount: 0,
+            statePublishImmediateCount: 0,
+            statePublishCommitCount: 0,
+            viewportCommitScheduleCount: 0,
+            viewportCommitCount: 0,
+            lastStatePublishMode: "",
+            lastCommittedStateSize: 0,
+            dragPatchCount: 0,
+            totalDragPatchedNodeCount: 0,
+            totalDragPatchedLinkCount: 0,
+            totalDragPatchedFrameCount: 0,
+            lastDragPatchedNodeCount: 0,
+            lastDragPatchedLinkCount: 0,
+            lastDragPatchedFrameCount: 0
+        };
+    }
+
+    function formatMetricDuration(value) {
+        if (typeof value !== "number" || !Number.isFinite(value)) {
+            return "0 ms";
+        }
+
+        return `${round(value)} ms`;
+    }
+
+    function cloneWorkbenchMetrics(metrics) {
+        return {
+            renderCount: metrics?.renderCount || 0,
+            totalRenderDurationMs: round(metrics?.totalRenderDurationMs || 0),
+            lastRenderDurationMs: round(metrics?.lastRenderDurationMs || 0),
+            maxRenderDurationMs: round(metrics?.maxRenderDurationMs || 0),
+            frameLayerRebuildCount: metrics?.frameLayerRebuildCount || 0,
+            linkLayerRebuildCount: metrics?.linkLayerRebuildCount || 0,
+            nodeLayerRebuildCount: metrics?.nodeLayerRebuildCount || 0,
+            lastRenderedFrameCount: metrics?.lastRenderedFrameCount || 0,
+            lastRenderedLinkCount: metrics?.lastRenderedLinkCount || 0,
+            lastRenderedNodeCount: metrics?.lastRenderedNodeCount || 0,
+            lastVisibleNodeCount: metrics?.lastVisibleNodeCount || 0,
+            statePublishRequestCount: metrics?.statePublishRequestCount || 0,
+            statePublishImmediateCount: metrics?.statePublishImmediateCount || 0,
+            statePublishCommitCount: metrics?.statePublishCommitCount || 0,
+            viewportCommitScheduleCount: metrics?.viewportCommitScheduleCount || 0,
+            viewportCommitCount: metrics?.viewportCommitCount || 0,
+            lastStatePublishMode: metrics?.lastStatePublishMode || "",
+            lastCommittedStateSize: metrics?.lastCommittedStateSize || 0,
+            dragPatchCount: metrics?.dragPatchCount || 0,
+            totalDragPatchedNodeCount: metrics?.totalDragPatchedNodeCount || 0,
+            totalDragPatchedLinkCount: metrics?.totalDragPatchedLinkCount || 0,
+            totalDragPatchedFrameCount: metrics?.totalDragPatchedFrameCount || 0,
+            lastDragPatchedNodeCount: metrics?.lastDragPatchedNodeCount || 0,
+            lastDragPatchedLinkCount: metrics?.lastDragPatchedLinkCount || 0,
+            lastDragPatchedFrameCount: metrics?.lastDragPatchedFrameCount || 0
+        };
+    }
+
+    function incrementMetric(metrics, key) {
+        if (!metrics || typeof metrics[key] !== "number") {
+            return;
+        }
+
+        metrics[key] += 1;
+    }
+
+    function resetLastDragPatchMetrics(metrics) {
+        if (!metrics) {
+            return;
+        }
+
+        metrics.lastDragPatchedNodeCount = 0;
+        metrics.lastDragPatchedLinkCount = 0;
+        metrics.lastDragPatchedFrameCount = 0;
+    }
+
+    function recordDragPatchMetrics(metrics, nodeCount, linkCount, frameCount) {
+        if (!metrics) {
+            return;
+        }
+
+        metrics.dragPatchCount += 1;
+        metrics.totalDragPatchedNodeCount += nodeCount;
+        metrics.totalDragPatchedLinkCount += linkCount;
+        metrics.totalDragPatchedFrameCount += frameCount;
+        metrics.lastDragPatchedNodeCount = nodeCount;
+        metrics.lastDragPatchedLinkCount = linkCount;
+        metrics.lastDragPatchedFrameCount = frameCount;
     }
 
     function round(value) {
@@ -534,6 +597,75 @@
 
     function getVisibleNodes(state) {
         return state.surface.nodes.filter(node => isNodeVisible(state, node.id));
+    }
+
+    function getProjectionOverscanPx(state) {
+        const rect = state.host?.getBoundingClientRect?.() || { width: 0, height: 0 };
+        const baseOverscan = Math.max(180, Math.min(rect.width || 0, rect.height || 0) * 0.24);
+        return state?.interaction
+            ? Math.max(baseOverscan, 320)
+            : baseOverscan;
+    }
+
+    function collectProjectedContextNodeIds(state) {
+        const contextNodeIds = new Set(state.ui?.selectedNodeIds || []);
+        if (Array.isArray(state.interaction?.nodeIds)) {
+            for (const nodeId of state.interaction.nodeIds) {
+                contextNodeIds.add(nodeId);
+            }
+        }
+
+        if (state.hoveredNodeId) {
+            contextNodeIds.add(state.hoveredNodeId);
+        }
+
+        for (const nodeId of [...contextNodeIds]) {
+            let current = state.lookups.byId.get(nodeId) || null;
+            while (current?.parentId) {
+                contextNodeIds.add(current.parentId);
+                current = state.lookups.byId.get(current.parentId) || null;
+            }
+        }
+
+        return contextNodeIds;
+    }
+
+    function isNodeProjectedInViewport(state, node, visibleNodes, overscanPx) {
+        const rect = state.host?.getBoundingClientRect?.();
+        if (!rect) {
+            return true;
+        }
+
+        const position = worldToHostPoint(state, getNodePosition(state, node, visibleNodes));
+        const size = getNodeSize(state, node);
+        const halfWidth = (size.width * state.ui.zoom) / 2;
+        const halfHeight = (size.height * state.ui.zoom) / 2;
+        return position.x + halfWidth >= -overscanPx &&
+            position.x - halfWidth <= rect.width + overscanPx &&
+            position.y + halfHeight >= -overscanPx &&
+            position.y - halfHeight <= rect.height + overscanPx;
+    }
+
+    function getProjectedNodes(state, visibleNodes) {
+        if (!Array.isArray(visibleNodes) || visibleNodes.length === 0) {
+            return [];
+        }
+
+        ensureLayoutPositions(state, visibleNodes);
+        const overscanPx = getProjectionOverscanPx(state);
+        const contextNodeIds = collectProjectedContextNodeIds(state);
+        const projectedNodes = visibleNodes.filter(node =>
+            contextNodeIds.has(node.id) ||
+            isNodeProjectedInViewport(state, node, visibleNodes, overscanPx));
+        if (projectedNodes.length > 0) {
+            return projectedNodes;
+        }
+
+        const fallbackNodeId = state.ui?.selectedNodeIds?.[0] || visibleNodes[0]?.id || null;
+        const fallbackNode = fallbackNodeId
+            ? visibleNodes.find(node => node.id === fallbackNodeId) || visibleNodes[0]
+            : visibleNodes[0];
+        return fallbackNode ? [fallbackNode] : [];
     }
 
     function getBaseNodePosition(state, node) {
@@ -1072,7 +1204,7 @@
 
     function getLinkAnchorPoint(state, node, side) {
         const position = getNodePosition(state, node);
-            const size = getNodeSize(state, node);
+        const size = getNodeSize(state, node);
         const inset = Math.min(28, size.width * 0.11);
         return {
             x: side === "right"
@@ -1082,13 +1214,55 @@
         };
     }
 
-    function renderLinks(state, visibleNodes) {
-        state.links.innerHTML = "";
-        ensureLinkMarkers(state);
-        ensureLayoutPositions(state, visibleNodes);
-        const visible = new Set(visibleNodes.map(node => node.id));
+    function getLinkRetainedKey(link, index) {
+        if (link?.sourceId || link?.targetId || link?.kind) {
+            return `${link?.sourceId || ""}|${link?.targetId || ""}|${link?.kind || ""}|${link?.isUserAuthored ? "1" : "0"}`;
+        }
 
-        for (const link of state.surface.links) {
+        return `link:${index}`;
+    }
+
+    function getLinkPathData(state, source, target) {
+        const sourcePosition = getNodePosition(state, source);
+        const targetPosition = getNodePosition(state, target);
+        const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
+        const targetSide = sourceSide === "right" ? "left" : "right";
+        const sourceAnchor = getLinkAnchorPoint(state, source, sourceSide);
+        const targetAnchor = getLinkAnchorPoint(state, target, targetSide);
+        const controlOffset = Math.max(92, Math.abs(targetAnchor.x - sourceAnchor.x) * 0.38);
+        return [
+            `M ${sourceAnchor.x} ${sourceAnchor.y}`,
+            `C ${sourceAnchor.x + (sourceSide === "right" ? controlOffset : -controlOffset)} ${sourceAnchor.y}`,
+            `${targetAnchor.x + (targetSide === "right" ? controlOffset : -controlOffset)} ${targetAnchor.y}`,
+            `${targetAnchor.x} ${targetAnchor.y}`
+        ].join(" ");
+    }
+
+    function updateLinkElement(path, link, pathData) {
+        path.setAttribute("d", pathData);
+        path.setAttribute("fill", "none");
+        path.setAttribute("stroke", link.isUserAuthored ? "rgba(14, 165, 233, 0.78)" : "rgba(100, 116, 139, 0.4)");
+        path.setAttribute("stroke-width", link.isUserAuthored ? "3" : "2");
+        path.setAttribute("stroke-linecap", "round");
+        path.setAttribute("stroke-linejoin", "round");
+        path.setAttribute("class", link.isUserAuthored ? "cw-link-path is-flow" : "cw-link-path");
+        if (shouldRenderArrow(link)) {
+            path.setAttribute("marker-end", link.isUserAuthored ? "url(#cw-link-arrow-user)" : "url(#cw-link-arrow-system)");
+        }
+        else {
+            path.removeAttribute("marker-end");
+        }
+    }
+
+    function renderLinks(state, visibleNodes) {
+        const metrics = state.metrics;
+        ensureLinkMarkers(state);
+        const visible = new Set(visibleNodes.map(node => node.id));
+        const retainedLinks = state.retainedLinkElements;
+        const activeKeys = new Set();
+        let renderedLinkCount = 0;
+
+        for (const [index, link] of state.surface.links.entries()) {
             if (!visible.has(link.sourceId) || !visible.has(link.targetId)) {
                 continue;
             }
@@ -1099,31 +1273,33 @@
                 continue;
             }
 
-            const sourcePosition = getNodePosition(state, source, visibleNodes);
-            const targetPosition = getNodePosition(state, target, visibleNodes);
-            const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
-            const targetSide = sourceSide === "right" ? "left" : "right";
-            const sourceAnchor = getLinkAnchorPoint(state, source, sourceSide);
-            const targetAnchor = getLinkAnchorPoint(state, target, targetSide);
-            const controlOffset = Math.max(92, Math.abs(targetAnchor.x - sourceAnchor.x) * 0.38);
-            const path = createSvgElement(state.document, "path");
-            path.setAttribute("d", [
-                `M ${sourceAnchor.x} ${sourceAnchor.y}`,
-                `C ${sourceAnchor.x + (sourceSide === "right" ? controlOffset : -controlOffset)} ${sourceAnchor.y}`,
-                `${targetAnchor.x + (targetSide === "right" ? controlOffset : -controlOffset)} ${targetAnchor.y}`,
-                `${targetAnchor.x} ${targetAnchor.y}`
-            ].join(" "));
-            path.setAttribute("fill", "none");
-            path.setAttribute("stroke", link.isUserAuthored ? "rgba(14, 165, 233, 0.78)" : "rgba(100, 116, 139, 0.4)");
-            path.setAttribute("stroke-width", link.isUserAuthored ? "3" : "2");
-            path.setAttribute("stroke-linecap", "round");
-            path.setAttribute("stroke-linejoin", "round");
-            path.setAttribute("class", link.isUserAuthored ? "cw-link-path is-flow" : "cw-link-path");
-            if (shouldRenderArrow(link)) {
-                path.setAttribute("marker-end", link.isUserAuthored ? "url(#cw-link-arrow-user)" : "url(#cw-link-arrow-system)");
+            const pathData = getLinkPathData(state, source, target);
+            const retainedKey = getLinkRetainedKey(link, index);
+            let path = retainedLinks.get(retainedKey) || null;
+            if (!path) {
+                path = createSvgElement(state.document, "path");
+                retainedLinks.set(retainedKey, path);
+                incrementMetric(metrics, "linkLayerRebuildCount");
             }
 
+            activeKeys.add(retainedKey);
+            updateLinkElement(path, link, pathData);
             state.links.appendChild(path);
+            renderedLinkCount += 1;
+        }
+
+        for (const [key, path] of retainedLinks) {
+            if (activeKeys.has(key)) {
+                continue;
+            }
+
+            path.remove();
+            retainedLinks.delete(key);
+            incrementMetric(metrics, "linkLayerRebuildCount");
+        }
+
+        if (metrics) {
+            metrics.lastRenderedLinkCount = renderedLinkCount;
         }
     }
 
@@ -1187,17 +1363,92 @@
         return [...expanded];
     }
 
+    function getFrameRetainedKey(frame, index) {
+        return frame?.id || `frame:${index}`;
+    }
+
+    function createFrameElement(state, frameId) {
+        const frameElement = createElement(state.document, "div", "cw-group-frame");
+        frameElement.dataset.frameId = frameId;
+
+        const label = createElement(state.document, "div", "cw-group-frame__label");
+        label.dataset.frameId = frameId;
+
+        const labelText = createElement(state.document, "span", "", "");
+        const count = createElement(state.document, "span", "cw-group-frame__count", "0");
+        label.appendChild(labelText);
+        label.appendChild(count);
+        frameElement.appendChild(label);
+
+        for (const edge of ["top", "right", "bottom", "left"]) {
+            const handle = createElement(state.document, "div", `cw-group-frame__handle is-${edge}`);
+            handle.dataset.frameId = frameId;
+            handle.setAttribute("aria-hidden", "true");
+            frameElement.appendChild(handle);
+        }
+
+        return {
+            element: frameElement,
+            label,
+            labelText,
+            count
+        };
+    }
+
+    function updateFrameElement(entry, frame, frameId, memberNodes, bounds) {
+        entry.element.className = `cw-group-frame tone-${frame.tone || "accent"}`;
+        entry.element.dataset.frameId = frameId;
+        entry.element.style.left = `${round(bounds.minX)}px`;
+        entry.element.style.top = `${round(bounds.minY)}px`;
+        entry.element.style.width = `${round(bounds.width)}px`;
+        entry.element.style.height = `${round(bounds.height)}px`;
+        entry.label.dataset.frameId = frameId;
+        entry.labelText.textContent = frame.label || "Group border";
+        entry.count.textContent = `${memberNodes.length}`;
+    }
+
+    function getFrameBounds(state, memberNodes) {
+        if (!Array.isArray(memberNodes) || memberNodes.length === 0) {
+            return null;
+        }
+
+        let minX = Number.POSITIVE_INFINITY;
+        let maxX = Number.NEGATIVE_INFINITY;
+        let minY = Number.POSITIVE_INFINITY;
+        let maxY = Number.NEGATIVE_INFINITY;
+
+        for (const node of memberNodes) {
+            const position = getNodePosition(state, node);
+            const size = getNodeSize(state, node);
+            minX = Math.min(minX, position.x - (size.width / 2));
+            maxX = Math.max(maxX, position.x + (size.width / 2));
+            minY = Math.min(minY, position.y - (size.height / 2));
+            maxY = Math.max(maxY, position.y + (size.height / 2));
+        }
+
+        const paddingX = 38;
+        const paddingY = 42;
+        return {
+            minX: minX - paddingX,
+            minY: minY - paddingY,
+            width: (maxX - minX) + (paddingX * 2),
+            height: (maxY - minY) + (paddingY * 2)
+        };
+    }
+
     function renderGroupFrames(state, visibleNodes) {
         if (!state.frameLayer) {
             return;
         }
 
-        state.frameLayer.innerHTML = "";
+        const metrics = state.metrics;
+        const retainedFrames = state.retainedFrameElements;
+        const activeKeys = new Set();
         state.renderedFrames = new Map();
-        ensureLayoutPositions(state, visibleNodes);
         const visibleLookup = new Map(visibleNodes.map(node => [node.id, node]));
+        let renderedFrameCount = 0;
 
-        for (const frame of state.ui.groupFrames || []) {
+        for (const [index, frame] of (state.ui.groupFrames || []).entries()) {
             const memberNodes = getExpandedFrameNodeIds(state, frame)
                 .map(nodeId => visibleLookup.get(nodeId))
                 .filter(Boolean);
@@ -1205,46 +1456,41 @@
                 continue;
             }
 
-            let minX = Number.POSITIVE_INFINITY;
-            let maxX = Number.NEGATIVE_INFINITY;
-            let minY = Number.POSITIVE_INFINITY;
-            let maxY = Number.NEGATIVE_INFINITY;
-
-            for (const node of memberNodes) {
-                const position = getNodePosition(state, node, visibleNodes);
-                const size = getNodeSize(state, node);
-                minX = Math.min(minX, position.x - (size.width / 2));
-                maxX = Math.max(maxX, position.x + (size.width / 2));
-                minY = Math.min(minY, position.y - (size.height / 2));
-                maxY = Math.max(maxY, position.y + (size.height / 2));
+            const bounds = getFrameBounds(state, memberNodes);
+            if (!bounds) {
+                continue;
             }
 
-            const paddingX = 38;
-            const paddingY = 42;
-            const frameElement = createElement(state.document, "div", `cw-group-frame tone-${frame.tone || "accent"}`);
-            frameElement.dataset.frameId = frame.id || "";
-            frameElement.style.left = `${round(minX - paddingX)}px`;
-            frameElement.style.top = `${round(minY - paddingY)}px`;
-            frameElement.style.width = `${round((maxX - minX) + (paddingX * 2))}px`;
-            frameElement.style.height = `${round((maxY - minY) + (paddingY * 2))}px`;
-
-            const label = createElement(state.document, "div", "cw-group-frame__label", frame.label || "Group border");
-            label.dataset.frameId = frame.id || "";
-            label.appendChild(createElement(state.document, "span", "cw-group-frame__count", `${memberNodes.length}`));
-            frameElement.appendChild(label);
-
-            for (const edge of ["top", "right", "bottom", "left"]) {
-                const handle = createElement(state.document, "div", `cw-group-frame__handle is-${edge}`);
-                handle.dataset.frameId = frame.id || "";
-                handle.setAttribute("aria-hidden", "true");
-                frameElement.appendChild(handle);
+            const retainedKey = getFrameRetainedKey(frame, index);
+            let entry = retainedFrames.get(retainedKey) || null;
+            if (!entry) {
+                entry = createFrameElement(state, retainedKey);
+                retainedFrames.set(retainedKey, entry);
+                incrementMetric(metrics, "frameLayerRebuildCount");
             }
 
-            state.frameLayer.appendChild(frameElement);
-            state.renderedFrames.set(frame.id || "", {
+            activeKeys.add(retainedKey);
+            updateFrameElement(entry, frame, retainedKey, memberNodes, bounds);
+            state.frameLayer.appendChild(entry.element);
+            state.renderedFrames.set(retainedKey, {
                 frame,
                 nodeIds: memberNodes.map(node => node.id)
             });
+            renderedFrameCount += 1;
+        }
+
+        for (const [key, entry] of retainedFrames) {
+            if (activeKeys.has(key)) {
+                continue;
+            }
+
+            entry.element.remove();
+            retainedFrames.delete(key);
+            incrementMetric(metrics, "frameLayerRebuildCount");
+        }
+
+        if (metrics) {
+            metrics.lastRenderedFrameCount = renderedFrameCount;
         }
     }
 
@@ -1635,46 +1881,291 @@
         nodeElement.appendChild(surface);
     }
 
+    function createRetainedNodeElement(state, nodeId) {
+        const nodeElement = createElement(state.document, "div", "cw-node");
+        nodeElement.dataset.nodeId = nodeId;
+        nodeElement.addEventListener("pointerenter", () => updateConnectorAnchorHover(state, nodeId));
+        nodeElement.addEventListener("pointerleave", () => updateConnectorAnchorHover(state, null));
+        return nodeElement;
+    }
+
+    function getNodeRetainedContentKey(node, isCollapsed) {
+        if (!node) {
+            return `collapsed:${isCollapsed ? "1" : "0"}`;
+        }
+
+        return JSON.stringify({
+            ...node,
+            x: null,
+            y: null,
+            collapsed: !!isCollapsed
+        });
+    }
+
+    function updateNodeElementChrome(state, node, nodeElement, position) {
+        nodeElement.className = "cw-node";
+        nodeElement.dataset.nodeId = node.id;
+        nodeElement.dataset.family = node.family || "item";
+        nodeElement.dataset.palette = node.paletteKey || "neutral";
+        nodeElement.style.left = `${position.x}px`;
+        nodeElement.style.top = `${position.y}px`;
+        nodeElement.style.setProperty("--cw-node-accent", node.accentColor || "#7c3aed");
+
+        if (node.isReadOnly) {
+            nodeElement.classList.add("is-readonly");
+            nodeElement.dataset.readOnly = "true";
+        }
+        else {
+            delete nodeElement.dataset.readOnly;
+        }
+
+        if (node.isPreviewOnly) {
+            nodeElement.classList.add("is-preview-only");
+            nodeElement.dataset.previewOnly = "true";
+        }
+        else {
+            delete nodeElement.dataset.previewOnly;
+        }
+
+        if (state.selectedIds.has(node.id)) {
+            nodeElement.classList.add("is-selected");
+        }
+
+        if (state.collapsedIds.has(node.id)) {
+            nodeElement.classList.add("is-collapsed");
+        }
+    }
+
+    function renderNodeElementContent(state, node, nodeElement) {
+        clear(nodeElement);
+        if (node.isInlineTextNode) {
+            renderInlineTextNode(state, node, nodeElement);
+            return;
+        }
+
+        renderStandardNode(state, node, nodeElement);
+    }
+
     function renderNodes(state, visibleNodes) {
-        state.nodeLayer.innerHTML = "";
-        ensureLayoutPositions(state, visibleNodes);
+        const metrics = state.metrics;
+        const retainedNodes = state.retainedNodeElements;
+        const activeIds = new Set();
+        let renderedNodeCount = 0;
 
         for (const node of visibleNodes) {
-            const position = getNodePosition(state, node, visibleNodes);
-            const nodeElement = createElement(state.document, "div", "cw-node");
-            nodeElement.dataset.nodeId = node.id;
-            nodeElement.dataset.family = node.family || "item";
-            nodeElement.dataset.palette = node.paletteKey || "neutral";
-            nodeElement.style.left = `${position.x}px`;
-            nodeElement.style.top = `${position.y}px`;
-            nodeElement.style.setProperty("--cw-node-accent", node.accentColor || "#7c3aed");
-            if (node.isReadOnly) {
-                nodeElement.classList.add("is-readonly");
-                nodeElement.dataset.readOnly = "true";
-            }
-            if (node.isPreviewOnly) {
-                nodeElement.classList.add("is-preview-only");
-                nodeElement.dataset.previewOnly = "true";
-            }
-            if (state.selectedIds.has(node.id)) {
-                nodeElement.classList.add("is-selected");
+            const position = getNodePosition(state, node);
+            const isCollapsed = state.collapsedIds.has(node.id);
+            let entry = retainedNodes.get(node.id) || null;
+            let created = false;
+            const contentKey = getNodeRetainedContentKey(node, isCollapsed);
+            if (!entry) {
+                entry = {
+                    element: createRetainedNodeElement(state, node.id),
+                    contentKey: ""
+                };
+                retainedNodes.set(node.id, entry);
+                incrementMetric(metrics, "nodeLayerRebuildCount");
+                created = true;
             }
 
-            nodeElement.addEventListener("pointerenter", () => updateConnectorAnchorHover(state, node.id));
-            nodeElement.addEventListener("pointerleave", () => updateConnectorAnchorHover(state, null));
+            activeIds.add(node.id);
+            updateNodeElementChrome(state, node, entry.element, position);
+            if (created || entry.contentKey !== contentKey) {
+                if (!created) {
+                    incrementMetric(metrics, "nodeLayerRebuildCount");
+                }
 
-            if (state.collapsedIds.has(node.id)) {
-                nodeElement.classList.add("is-collapsed");
+                renderNodeElementContent(state, node, entry.element);
+                entry.contentKey = contentKey;
             }
 
-            if (node.isInlineTextNode) {
-                renderInlineTextNode(state, node, nodeElement);
-            }
-            else {
-                renderStandardNode(state, node, nodeElement);
+            state.nodeLayer.appendChild(entry.element);
+            renderedNodeCount += 1;
+        }
+
+        for (const [nodeId, entry] of retainedNodes) {
+            if (activeIds.has(nodeId)) {
+                continue;
             }
 
-            state.nodeLayer.appendChild(nodeElement);
+            entry.element.remove();
+            retainedNodes.delete(nodeId);
+            incrementMetric(metrics, "nodeLayerRebuildCount");
+        }
+
+        if (metrics) {
+            metrics.lastRenderedNodeCount = renderedNodeCount;
+        }
+    }
+
+    function buildActiveDragContext(state) {
+        const interaction = state?.interaction;
+        if (!interaction || (interaction.kind !== "drag" && interaction.kind !== "frame-drag")) {
+            return null;
+        }
+
+        const visibleNodes = getVisibleNodes(state);
+        const projectedNodes = getProjectedNodes(state, visibleNodes);
+        const overlayNodeIds = new Set(projectedNodes.map(node => node.id));
+        const movedNodeIds = new Set(interaction.nodeIds || []);
+        const dirtyDebugNodeIds = new Set(interaction.nodeIds || []);
+        for (const nodeId of movedNodeIds) {
+            overlayNodeIds.add(nodeId);
+        }
+
+        const overlayNodes = visibleNodes.filter(node => overlayNodeIds.has(node.id));
+        const movedNodes = (interaction.nodeIds || [])
+            .map(nodeId => state.lookups.byId.get(nodeId))
+            .filter(Boolean);
+        const dirtyLinks = [];
+        for (const [index, link] of state.surface.links.entries()) {
+            const retainedKey = getLinkRetainedKey(link, index);
+            if (!state.retainedLinkElements.has(retainedKey)) {
+                continue;
+            }
+
+            if (!movedNodeIds.has(link.sourceId) && !movedNodeIds.has(link.targetId)) {
+                continue;
+            }
+
+            dirtyLinks.push({ retainedKey, link });
+            dirtyDebugNodeIds.add(link.sourceId);
+            dirtyDebugNodeIds.add(link.targetId);
+        }
+
+        const dirtyFrames = [];
+        for (const [index, frame] of (state.ui.groupFrames || []).entries()) {
+            const retainedKey = getFrameRetainedKey(frame, index);
+            const renderedFrame = state.renderedFrames?.get(retainedKey);
+            if (!renderedFrame?.nodeIds?.length) {
+                continue;
+            }
+
+            if (!renderedFrame.nodeIds.some(nodeId => movedNodeIds.has(nodeId))) {
+                continue;
+            }
+
+            dirtyFrames.push({
+                retainedKey,
+                frame,
+                nodeIds: renderedFrame.nodeIds.slice()
+            });
+        }
+
+        return {
+            overlayNodes,
+            projectedNodeCount: projectedNodes.length,
+            movedNodes,
+            dirtyLinks,
+            dirtyFrames,
+            dirtyDebugNodes: [...dirtyDebugNodeIds]
+                .map(nodeId => state.lookups.byId.get(nodeId))
+                .filter(Boolean)
+        };
+    }
+
+    function updateDirtyDragNodes(state, dragContext) {
+        let patchedNodeCount = 0;
+        for (const node of dragContext?.movedNodes || []) {
+            const entry = state.retainedNodeElements.get(node.id);
+            if (!entry) {
+                continue;
+            }
+
+            updateNodeElementChrome(state, node, entry.element, getNodePosition(state, node));
+            state.nodeLayer.appendChild(entry.element);
+            patchedNodeCount += 1;
+        }
+
+        return patchedNodeCount;
+    }
+
+    function updateDirtyDragLinks(state, dragContext) {
+        const metrics = state.metrics;
+        let patchedLinkCount = 0;
+        for (const dirtyLink of dragContext?.dirtyLinks || []) {
+            const source = state.lookups.byId.get(dirtyLink.link.sourceId);
+            const target = state.lookups.byId.get(dirtyLink.link.targetId);
+            if (!source || !target) {
+                continue;
+            }
+
+            let path = state.retainedLinkElements.get(dirtyLink.retainedKey) || null;
+            if (!path) {
+                path = createSvgElement(state.document, "path");
+                state.retainedLinkElements.set(dirtyLink.retainedKey, path);
+                incrementMetric(metrics, "linkLayerRebuildCount");
+            }
+
+            updateLinkElement(path, dirtyLink.link, getLinkPathData(state, source, target));
+            state.links.appendChild(path);
+            patchedLinkCount += 1;
+        }
+
+        return patchedLinkCount;
+    }
+
+    function updateDirtyDragFrames(state, dragContext) {
+        const metrics = state.metrics;
+        let patchedFrameCount = 0;
+        for (const dirtyFrame of dragContext?.dirtyFrames || []) {
+            const memberNodes = dirtyFrame.nodeIds
+                .map(nodeId => state.lookups.byId.get(nodeId))
+                .filter(Boolean);
+            const bounds = getFrameBounds(state, memberNodes);
+            if (!bounds) {
+                continue;
+            }
+
+            let entry = state.retainedFrameElements.get(dirtyFrame.retainedKey) || null;
+            if (!entry) {
+                entry = createFrameElement(state, dirtyFrame.retainedKey);
+                state.retainedFrameElements.set(dirtyFrame.retainedKey, entry);
+                incrementMetric(metrics, "frameLayerRebuildCount");
+            }
+
+            updateFrameElement(entry, dirtyFrame.frame, dirtyFrame.retainedKey, memberNodes, bounds);
+            state.frameLayer.appendChild(entry.element);
+            state.renderedFrames.set(dirtyFrame.retainedKey, {
+                frame: dirtyFrame.frame,
+                nodeIds: memberNodes.map(node => node.id)
+            });
+            patchedFrameCount += 1;
+        }
+
+        return patchedFrameCount;
+    }
+
+    function renderActiveDrag(state) {
+        const dragContext = state?.interaction?.dragContext || buildActiveDragContext(state);
+        if (!dragContext) {
+            render(state);
+            return;
+        }
+
+        state.interaction.dragContext = dragContext;
+        const startedAt = now();
+        if (state.metrics) {
+            state.metrics.renderCount += 1;
+            state.metrics.lastVisibleNodeCount = dragContext.projectedNodeCount;
+            resetLastDragPatchMetrics(state.metrics);
+        }
+
+        const patchedFrameCount = updateDirtyDragFrames(state, dragContext);
+        const patchedLinkCount = updateDirtyDragLinks(state, dragContext);
+        renderSnapGuides(state);
+        const patchedNodeCount = updateDirtyDragNodes(state, dragContext);
+        renderConnectorAnchorOverlay(state, dragContext.overlayNodes);
+        renderTransformHandlesOverlay(state, dragContext.overlayNodes);
+        renderDebugDecorations(state, dragContext.dirtyDebugNodes);
+        renderDiagnosticsOverlay(state, dragContext.overlayNodes);
+
+        if (state.metrics) {
+            recordDragPatchMetrics(state.metrics, patchedNodeCount, patchedLinkCount, patchedFrameCount);
+            const elapsedMs = Math.max(0, now() - startedAt);
+            state.metrics.totalRenderDurationMs += elapsedMs;
+            state.metrics.lastRenderDurationMs = elapsedMs;
+            state.metrics.maxRenderDurationMs = Math.max(state.metrics.maxRenderDurationMs, elapsedMs);
         }
     }
 
@@ -1962,7 +2453,7 @@
         let isReadOnly = true;
 
         for (const node of selectedNodes) {
-            const position = getNodePosition(state, node, visibleNodes);
+            const position = getNodePosition(state, node);
             const size = getNodeSize(state, node);
             minX = Math.min(minX, position.x - (size.width / 2));
             minY = Math.min(minY, position.y - (size.height / 2));
@@ -2112,7 +2603,7 @@
 
         if (diagnostics.showNodeBounds) {
             for (const node of visibleNodes) {
-                const position = getNodePosition(state, node, visibleNodes);
+                const position = getNodePosition(state, node);
                 const size = getNodeSize(state, node);
                 const bounds = createElement(state.document, "div", "cw-debug-bounds");
                 bounds.style.left = `${round(position.x - (size.width / 2))}px`;
@@ -2136,8 +2627,8 @@
                     continue;
                 }
 
-                const sourcePosition = getNodePosition(state, source, visibleNodes);
-                const targetPosition = getNodePosition(state, target, visibleNodes);
+                const sourcePosition = getNodePosition(state, source);
+                const targetPosition = getNodePosition(state, target);
                 const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
                 const targetSide = sourceSide === "right" ? "left" : "right";
                 for (const point of [getLinkAnchorPoint(state, source, sourceSide), getLinkAnchorPoint(state, target, targetSide)]) {
@@ -2148,6 +2639,29 @@
                 }
             }
         }
+    }
+
+    function buildDiagnosticsSnapshot(state, bounds) {
+        return {
+            isVisible: !!(state?.surface?.chrome?.diagnostics?.isEnabled && state?.ui?.showDiagnostics),
+            visibleNodeCount: state?.metrics?.lastVisibleNodeCount || 0,
+            totalNodeCount: state?.surface?.nodes?.length || 0,
+            totalLinkCount: state?.surface?.links?.length || 0,
+            selectedCount: state?.selectedIds?.size || 0,
+            interaction: state?.interaction?.kind || "idle",
+            zoomPercent: Math.round((state?.ui?.zoom || 1) * 100),
+            panX: round(state?.ui?.panX || 0),
+            panY: round(state?.ui?.panY || 0),
+            bounds: bounds
+                ? {
+                    minX: round(bounds.minX),
+                    minY: round(bounds.minY),
+                    maxX: round(bounds.maxX),
+                    maxY: round(bounds.maxY)
+                }
+                : null,
+            metrics: cloneWorkbenchMetrics(state?.metrics)
+        };
     }
 
     function renderDiagnosticsOverlay(state, visibleNodes) {
@@ -2163,14 +2677,24 @@
         }
 
         const bounds = getSceneBounds(state);
+        const snapshot = buildDiagnosticsSnapshot(state, bounds);
         state.diagnosticsBody.innerHTML = "";
         const rows = [
-            ["Nodes", `${visibleNodes.length}/${state.surface.nodes.length}`],
-            ["Links", `${state.surface.links.length}`],
-            ["Selected", `${state.selectedIds.size}`],
-            ["Interaction", state.interaction?.kind || "idle"],
-            ["Zoom", `${Math.round((state.ui.zoom || 1) * 100)}%`],
-            ["Pan", `${round(state.ui.panX)}, ${round(state.ui.panY)}`]
+            ["Nodes", `${snapshot.visibleNodeCount}/${snapshot.totalNodeCount}`],
+            ["Links", `${snapshot.totalLinkCount}`],
+            ["Selected", `${snapshot.selectedCount}`],
+            ["Interaction", snapshot.interaction],
+            ["Zoom", `${snapshot.zoomPercent}%`],
+            ["Pan", `${snapshot.panX}, ${snapshot.panY}`],
+            ["Render count", `${snapshot.metrics.renderCount}`],
+            ["Node rebuilds", `${snapshot.metrics.nodeLayerRebuildCount}`],
+            ["Link rebuilds", `${snapshot.metrics.linkLayerRebuildCount}`],
+            ["Frame rebuilds", `${snapshot.metrics.frameLayerRebuildCount}`],
+            ["Drag patches", `${snapshot.metrics.dragPatchCount}`],
+            ["Last drag patch", `${snapshot.metrics.lastDragPatchedNodeCount}/${snapshot.metrics.lastDragPatchedLinkCount}/${snapshot.metrics.lastDragPatchedFrameCount}`],
+            ["State commits", `${snapshot.metrics.statePublishCommitCount}`],
+            ["Last publish", snapshot.metrics.lastStatePublishMode || "none"],
+            ["Last render", formatMetricDuration(snapshot.metrics.lastRenderDurationMs)]
         ];
 
         if (diagnostics.showViewportStats && bounds) {
@@ -2230,7 +2754,7 @@
         svg.appendChild(backdrop);
 
         for (const node of visibleNodes) {
-            const position = getNodePosition(state, node, visibleNodes);
+            const position = getNodePosition(state, node);
             const size = getNodeSize(state, node);
             const rect = createSvgElement(state.document, "rect", "cw-minimap__node");
             rect.setAttribute("x", `${round(offsetX + ((position.x - (size.width / 2) - bounds.minX) * scale))}`);
@@ -2566,8 +3090,54 @@
         state.dotNetRef.invokeMethodAsync("OnSelectionChanged", normalized.primaryNodeId, JSON.stringify(normalized.selectedNodeIds));
     }
 
+    function clearViewportStateCommit(state) {
+        window.clearTimeout(state.viewportStateTimer);
+        state.viewportStateTimer = 0;
+    }
+
+    function invokeStateChanged(state, stateJson, mode) {
+        if (state.metrics) {
+            state.metrics.statePublishCommitCount += 1;
+            state.metrics.lastStatePublishMode = mode || "unspecified";
+            state.metrics.lastCommittedStateSize = typeof stateJson === "string" ? stateJson.length : 0;
+        }
+
+        state.dotNetRef.invokeMethodAsync("OnStateChanged", stateJson)
+            .catch(() => { });
+    }
+
     function publishState(state) {
+        if (state.metrics) {
+            state.metrics.statePublishRequestCount += 1;
+        }
+
+        clearViewportStateCommit(state);
         state.publishStateDebounced(serializeState(state));
+    }
+
+    function publishStateNow(state, mode) {
+        if (state.metrics) {
+            state.metrics.statePublishImmediateCount += 1;
+        }
+
+        clearViewportStateCommit(state);
+        state.publishStateDebounced.cancel?.();
+        invokeStateChanged(state, serializeState(state), mode || "immediate");
+    }
+
+    function scheduleViewportStateCommit(state, delayMs) {
+        if (state.metrics) {
+            state.metrics.viewportCommitScheduleCount += 1;
+        }
+
+        clearViewportStateCommit(state);
+        state.viewportStateTimer = window.setTimeout(() => {
+            if (state.metrics) {
+                state.metrics.viewportCommitCount += 1;
+            }
+
+            publishStateNow(state, "viewport-idle");
+        }, delayMs ?? 280);
     }
 
     function publishNodesMoved(state, movedIds) {
@@ -2686,21 +3256,36 @@
     }
 
     function render(state) {
-        const visibleNodes = getVisibleNodes(state);
-        ensureLayoutPositions(state, visibleNodes);
-        applySceneTransform(state);
-        renderGroupFrames(state, visibleNodes);
-        renderLinks(state, visibleNodes);
-        renderSnapGuides(state);
-        renderNodes(state, visibleNodes);
-        renderConnectorAnchorOverlay(state, visibleNodes);
-        renderTransformHandlesOverlay(state, visibleNodes);
-        renderEmptyStateOverlay(state, visibleNodes);
-        renderDebugDecorations(state, visibleNodes);
-        renderDiagnosticsOverlay(state, visibleNodes);
-        renderMinimap(state, visibleNodes);
-        layoutComposer(state);
-        scheduleNodeMeasurement(state);
+        const startedAt = workbenchInternals.instrumentation.now();
+        const visibleNodes = workbenchInternals.sceneLayout.getVisibleNodes(state);
+        const projectedNodes = workbenchInternals.sceneLayout.getProjectedNodes(state, visibleNodes);
+        if (state.metrics) {
+            state.metrics.renderCount += 1;
+            state.metrics.lastVisibleNodeCount = projectedNodes.length;
+            workbenchInternals.instrumentation.resetLastDragPatchMetrics(state.metrics);
+        }
+
+        workbenchInternals.sceneLayout.ensureLayoutPositions(state, visibleNodes);
+        workbenchInternals.sceneLayout.applySceneTransform(state);
+        workbenchInternals.scenePatching.renderGroupFrames(state, projectedNodes);
+        workbenchInternals.scenePatching.renderLinks(state, projectedNodes);
+        workbenchInternals.overlayRenderer.renderSnapGuides(state);
+        workbenchInternals.scenePatching.renderNodes(state, projectedNodes);
+        workbenchInternals.overlayRenderer.renderConnectorAnchorOverlay(state, projectedNodes);
+        workbenchInternals.overlayRenderer.renderTransformHandlesOverlay(state, projectedNodes);
+        workbenchInternals.overlayRenderer.renderEmptyStateOverlay(state, visibleNodes);
+        workbenchInternals.overlayRenderer.renderDebugDecorations(state, projectedNodes);
+        workbenchInternals.overlayRenderer.renderDiagnosticsOverlay(state, projectedNodes);
+        workbenchInternals.overlayRenderer.renderMinimap(state, visibleNodes);
+        workbenchInternals.overlayRenderer.layoutComposer(state);
+        workbenchInternals.scenePatching.scheduleNodeMeasurement(state);
+
+        if (state.metrics) {
+            const elapsedMs = Math.max(0, workbenchInternals.instrumentation.now() - startedAt);
+            state.metrics.totalRenderDurationMs += elapsedMs;
+            state.metrics.lastRenderDurationMs = elapsedMs;
+            state.metrics.maxRenderDurationMs = Math.max(state.metrics.maxRenderDurationMs, elapsedMs);
+        }
     }
 
     function getContextActions(state, node) {
@@ -4690,10 +5275,12 @@
             moved: false,
             nodeIds: draggedNodes,
             startPositions,
-            frameId: options?.frameId || null
+            frameId: options?.frameId || null,
+            dragContext: null
         };
         clearSnapGuides(state);
         render(state);
+        state.interaction.dragContext = buildActiveDragContext(state);
     }
 
     function startDrag(state, event, nodeId) {
@@ -4771,14 +5358,14 @@
             };
         }
 
-        render(state);
+        workbenchInternals.scenePatching.renderActiveDrag(state);
     }
 
     function updatePan(state, event) {
         const deltaX = event.clientX - state.interaction.startClientX;
         const deltaY = event.clientY - state.interaction.startClientY;
         state.interaction.moved = state.interaction.moved || Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1;
-        setPan(state, state.interaction.panX + deltaX, state.interaction.panY + deltaY);
+        workbenchInternals.sceneLayout.setPan(state, state.interaction.panX + deltaX, state.interaction.panY + deltaY);
         render(state);
     }
 
@@ -4789,7 +5376,7 @@
 
         const interaction = state.interaction;
         state.interaction = null;
-        clearSnapGuides(state);
+        workbenchInternals.overlayRenderer.clearSnapGuides(state);
 
         switch (interaction.kind) {
             case "drag":
@@ -5065,10 +5652,17 @@
         const stepCount = Math.max(1, Math.floor(Math.abs(wheelZoom.accumulator) / threshold));
         wheelZoom.accumulator -= stepCount * threshold * direction;
         state.wheelZoom = wheelZoom;
-        setZoomPercent(state, (state.ui.zoom * 100) + (-direction * stepCount * 4), hostPoint);
+        setZoomPercent(
+            state,
+            (state.ui.zoom * 100) + (-direction * stepCount * 4),
+            hostPoint,
+            {
+                commitMode: "idle",
+                delayMs: 280
+            });
     }
 
-    function setZoomPercent(state, percent, anchorPoint) {
+    function setZoomPercent(state, percent, anchorPoint, options) {
         cancelViewportAnimation(state);
         const rect = state.host.getBoundingClientRect();
         const anchor = anchorPoint || { x: rect.width / 2, y: rect.height / 2 };
@@ -5103,6 +5697,12 @@
             target.panY,
             target.zoom);
         render(state);
+
+        if (options?.commitMode === "idle") {
+            scheduleViewportStateCommit(state, options?.delayMs);
+            return;
+        }
+
         publishState(state);
     }
 
@@ -5522,8 +6122,8 @@
     }
 
     function hydrateState(host, dotNetRef, surface) {
-        const normalizedSurface = normalizeSurface(surface);
-        const lookups = buildNodeLookup(normalizedSurface.nodes);
+        const normalizedSurface = workbenchInternals.stateStore.normalizeSurface(surface);
+        const lookups = workbenchInternals.stateStore.buildNodeLookup(normalizedSurface.nodes);
         const animationTimelineService = getAnimationTimelineService();
         const animationTimeline = animationTimelineService?.createController?.() || null;
 
@@ -5584,16 +6184,21 @@
             statusNoticeTimer: 0,
             localClipboard: "",
             minimapMetrics: null,
-            publishStateDebounced: debounce(stateJson => dotNetRef.invokeMethodAsync("OnStateChanged", stateJson), 140)
+            viewportStateTimer: 0,
+            retainedFrameElements: new Map(),
+            retainedLinkElements: new Map(),
+            retainedNodeElements: new Map(),
+            metrics: workbenchInternals.instrumentation.createWorkbenchMetrics(),
+            publishStateDebounced: debounce(stateJson => invokeStateChanged(state, stateJson, "debounced"), 140)
         };
 
         state.animationTimeline?.setReducedMotionAttribute?.(host);
-        reconcileSelection(state);
+        workbenchInternals.stateStore.reconcileSelection(state);
         return state;
     }
 
     function refresh(state, surface) {
-        cancelViewportAnimation(state);
+        workbenchInternals.sceneLayout.cancelViewportAnimation(state);
         const previousNodeIds = new Set((state.surface?.nodes || []).map(node => node.id));
         const previousSelectedId = state.ui?.selectedNodeIds?.[0] || null;
         const pendingCreate = state.pendingCreate;
@@ -5602,38 +6207,38 @@
             state.measureLayoutFrame = 0;
         }
 
-        state.surface = normalizeSurface(surface);
-        state.lookups = buildNodeLookup(state.surface.nodes);
+        state.surface = workbenchInternals.stateStore.normalizeSurface(surface);
+        state.lookups = workbenchInternals.stateStore.buildNodeLookup(state.surface.nodes);
         state.ui = state.surface.uiState;
-        reconcileSelection(state);
+        workbenchInternals.stateStore.reconcileSelection(state);
         state.collapsedIds = toCollapsedSet(state.ui.collapsedNodeIds);
         syncMenuScaleCss(state);
         invalidateMeasuredLayout(state);
-        clearContextMenu(state);
-        hidePopover(state);
+        workbenchInternals.overlayRenderer.clearContextMenu(state);
+        workbenchInternals.overlayRenderer.hidePopover(state);
         if (state.composer?.nodeId && !state.lookups.byId.has(state.composer.nodeId)) {
-            closeComposer(state, { focusHost: false });
+            workbenchInternals.overlayRenderer.closeComposer(state, { focusHost: false });
         }
 
         setMaximized(state, !!state.ui.isMaximized);
-        resize(state);
+        workbenchInternals.sceneLayout.resize(state);
         const selectedNodeId = state.ui.selectedNodeIds[0] || null;
         const selectedNode = selectedNodeId ? state.lookups.byId.get(selectedNodeId) : null;
         const shouldRevealSelection = !!selectedNodeId &&
             (!!pendingCreate || (!!selectedNodeId && selectedNodeId !== previousSelectedId));
         const shouldRestoreVisibleSelection = !!selectedNodeId &&
             !!selectedNode &&
-            !isNodeVisibleInViewport(state, selectedNode, 72);
+            !workbenchInternals.sceneLayout.isNodeVisibleInViewport(state, selectedNode, 72);
         if (shouldRevealSelection || shouldRestoreVisibleSelection) {
             const isNewNode = !previousNodeIds.has(selectedNodeId);
-            ensureNodeVisible(state, selectedNodeId, { forceCenter: isNewNode || shouldRestoreVisibleSelection });
+            workbenchInternals.sceneLayout.ensureNodeVisible(state, selectedNodeId, { forceCenter: isNewNode || shouldRestoreVisibleSelection });
         }
 
         render(state);
         if (selectedNodeId &&
             state.lookups.byId.has(selectedNodeId) &&
-            !isNodeVisibleInViewport(state, state.lookups.byId.get(selectedNodeId), 72)) {
-            ensureNodeVisible(state, selectedNodeId, { forceCenter: true });
+            !workbenchInternals.sceneLayout.isNodeVisibleInViewport(state, state.lookups.byId.get(selectedNodeId), 72)) {
+            workbenchInternals.sceneLayout.ensureNodeVisible(state, selectedNodeId, { forceCenter: true });
             render(state);
         }
 
@@ -5771,15 +6376,128 @@
         });
     }
 
+    function disposeWorkbenchState(state) {
+        if (!state) {
+            return;
+        }
+
+        if (state.resizeObserver) {
+            state.resizeObserver.disconnect();
+        }
+
+        if (state.measureLayoutFrame) {
+            window.cancelAnimationFrame(state.measureLayoutFrame);
+            state.measureLayoutFrame = 0;
+        }
+
+        if (state.statusNoticeTimer) {
+            window.clearTimeout(state.statusNoticeTimer);
+            state.statusNoticeTimer = 0;
+        }
+
+        workbenchInternals.stateStore.clearViewportStateCommit(state);
+        state.publishStateDebounced.cancel?.();
+
+        if (state.animationTimeline) {
+            state.animationTimeline.dispose();
+        }
+
+        if (state.handlers) {
+            state.host.removeEventListener("pointerdown", state.handlers.pointerDown);
+            window.removeEventListener("pointermove", state.handlers.pointerMove);
+            window.removeEventListener("pointerup", state.handlers.pointerUp);
+            window.removeEventListener("blur", state.handlers.blur);
+            state.host.removeEventListener("dblclick", state.handlers.doubleClick);
+            state.host.removeEventListener("wheel", state.handlers.wheel);
+            state.host.removeEventListener("contextmenu", state.handlers.contextMenu);
+            state.document.removeEventListener("keydown", state.handlers.keyDown);
+        }
+
+        workbenchInternals.runtime.setMaximized(state, false);
+        clear(state.host);
+        delete state.host.__canvasWorkbenchState;
+    }
+
+    function createWorkbenchInternals() {
+        return Object.freeze({
+            instrumentation: Object.freeze({
+                createWorkbenchMetrics,
+                cloneWorkbenchMetrics,
+                buildDiagnosticsSnapshot,
+                resetLastDragPatchMetrics,
+                recordDragPatchMetrics,
+                now
+            }),
+            stateStore: Object.freeze({
+                normalizeSurface,
+                buildNodeLookup,
+                toSelectionSet,
+                toCollapsedSet,
+                reconcileSelection,
+                serializeState,
+                applySelection,
+                clearViewportStateCommit
+            }),
+            sceneLayout: Object.freeze({
+                getVisibleNodes,
+                getProjectedNodes,
+                ensureLayoutPositions,
+                getSceneBounds,
+                cancelViewportAnimation,
+                applySceneTransform,
+                setPan,
+                resize,
+                fitView,
+                focusNode,
+                ensureNodeVisible,
+                isNodeVisibleInViewport,
+                setZoomPercent,
+                setMenuScalePercent,
+                worldToHostPoint,
+                getNodePosition
+            }),
+            scenePatching: Object.freeze({
+                renderGroupFrames,
+                renderLinks,
+                renderNodes,
+                renderActiveDrag,
+                scheduleNodeMeasurement
+            }),
+            overlayRenderer: Object.freeze({
+                clearContextMenu,
+                hidePopover,
+                closeComposer,
+                layoutComposer,
+                clearSnapGuides,
+                renderSnapGuides,
+                renderConnectorAnchorOverlay,
+                renderTransformHandlesOverlay,
+                renderEmptyStateOverlay,
+                renderDebugDecorations,
+                renderDiagnosticsOverlay,
+                renderMinimap
+            }),
+            runtime: Object.freeze({
+                hydrateState,
+                refresh,
+                buildWorkbench,
+                attachEvents,
+                setMaximized,
+                exportImageData,
+                disposeState: disposeWorkbenchState
+            })
+        });
+    }
+
     root.canvasWorkbench = {
         create(host, dotNetRef, surface) {
-            const state = hydrateState(host, dotNetRef, surface);
-            buildWorkbench(state);
-            attachEvents(state);
-            setMaximized(state, !!state.ui.isMaximized);
+            const state = workbenchInternals.runtime.hydrateState(host, dotNetRef, surface);
+            workbenchInternals.runtime.buildWorkbench(state);
+            workbenchInternals.runtime.attachEvents(state);
+            workbenchInternals.runtime.setMaximized(state, !!state.ui.isMaximized);
             if (typeof window.ResizeObserver === "function") {
                 state.resizeObserver = new window.ResizeObserver(() => {
-                    resize(state);
+                    workbenchInternals.sceneLayout.resize(state);
                     render(state);
                 });
                 state.resizeObserver.observe(host);
@@ -5794,7 +6512,7 @@
                 return;
             }
 
-            refresh(state, surface);
+            workbenchInternals.runtime.refresh(state, surface);
         },
         fitView(host) {
             const state = host.__canvasWorkbenchState;
@@ -5802,7 +6520,7 @@
                 return;
             }
 
-            fitView(state);
+            workbenchInternals.sceneLayout.fitView(state);
         },
         focusNode(host, nodeId) {
             const state = host.__canvasWorkbenchState;
@@ -5810,7 +6528,7 @@
                 return;
             }
 
-            focusNode(state, nodeId);
+            workbenchInternals.sceneLayout.focusNode(state, nodeId);
         },
         setZoomPercent(host, zoomPercent) {
             const state = host.__canvasWorkbenchState;
@@ -5818,7 +6536,7 @@
                 return;
             }
 
-            setZoomPercent(state, zoomPercent);
+            workbenchInternals.sceneLayout.setZoomPercent(state, zoomPercent);
         },
         setMenuScalePercent(host, menuScalePercent) {
             const state = host.__canvasWorkbenchState;
@@ -5826,7 +6544,7 @@
                 return;
             }
 
-            setMenuScalePercent(state, menuScalePercent);
+            workbenchInternals.sceneLayout.setMenuScalePercent(state, menuScalePercent);
         },
         openCreateComposer(host, action, request) {
             const state = host.__canvasWorkbenchState;
@@ -5871,7 +6589,13 @@
         },
         getState(host) {
             const state = host.__canvasWorkbenchState;
-            return state ? serializeState(state) : JSON.stringify({});
+            return state ? workbenchInternals.stateStore.serializeState(state) : JSON.stringify({});
+        },
+        getDiagnostics(host) {
+            const state = host.__canvasWorkbenchState;
+            return state
+                ? workbenchInternals.instrumentation.buildDiagnosticsSnapshot(state, workbenchInternals.sceneLayout.getSceneBounds(state))
+                : null;
         },
         getViewportSnapshot() {
             return {
@@ -5886,7 +6610,7 @@
             }
 
             const normalized = selectionModel.replace(nodeIds, primaryNodeId || (Array.isArray(nodeIds) ? nodeIds[0] : null));
-            applySelection(state, normalized.selectedNodeIds, normalized.primaryNodeId);
+            workbenchInternals.stateStore.applySelection(state, normalized.selectedNodeIds, normalized.primaryNodeId);
         },
         setMaximized(host, isMaximized) {
             const state = host.__canvasWorkbenchState;
@@ -5894,7 +6618,7 @@
                 return;
             }
 
-            setMaximized(state, isMaximized);
+            workbenchInternals.runtime.setMaximized(state, isMaximized);
         },
         resize(host) {
             const state = host.__canvasWorkbenchState;
@@ -5902,11 +6626,11 @@
                 return;
             }
 
-            resize(state);
+            workbenchInternals.sceneLayout.resize(state);
             render(state);
         },
         exportImageData(host) {
-            return exportImageData(host);
+            return workbenchInternals.runtime.exportImageData(host);
         },
         dispose(host) {
             if (!host) {
@@ -5918,38 +6642,7 @@
                 return;
             }
 
-            if (state.resizeObserver) {
-                state.resizeObserver.disconnect();
-            }
-
-            if (state.measureLayoutFrame) {
-                window.cancelAnimationFrame(state.measureLayoutFrame);
-                state.measureLayoutFrame = 0;
-            }
-
-            if (state.statusNoticeTimer) {
-                window.clearTimeout(state.statusNoticeTimer);
-                state.statusNoticeTimer = 0;
-            }
-
-            if (state.animationTimeline) {
-                state.animationTimeline.dispose();
-            }
-
-            if (state.handlers) {
-                host.removeEventListener("pointerdown", state.handlers.pointerDown);
-                window.removeEventListener("pointermove", state.handlers.pointerMove);
-                window.removeEventListener("pointerup", state.handlers.pointerUp);
-                window.removeEventListener("blur", state.handlers.blur);
-                host.removeEventListener("dblclick", state.handlers.doubleClick);
-                host.removeEventListener("wheel", state.handlers.wheel);
-                host.removeEventListener("contextmenu", state.handlers.contextMenu);
-                state.document.removeEventListener("keydown", state.handlers.keyDown);
-            }
-
-            setMaximized(state, false);
-            clear(host);
-            delete host.__canvasWorkbenchState;
+            workbenchInternals.runtime.disposeState(state);
         }
     };
 })();

@@ -1,72 +1,50 @@
-# ProjectStructure Execution-Grade Codex Bundle (v2)
+# ProjectStructure Execution-Grade Codex Bundle
 
-This bundle is an English-only, execution-grade refactoring and performance package for the `ProjectStructurePage` workbench in the `CanDoItAll` repository.
+This is the repaired execution bundle for the `ProjectStructurePage` refactor in `C:\repositories\CanDoItAll`.
 
-## Primary outcome
+The original folder was a strong audit pack, but not a validator-compatible execution bundle. This repaired layout keeps the original audit documents in place and adds the execution contract required by the bundle workflow.
 
-The bundle is designed to let Codex improve the current implementation **step by step without breaking functionality** while moving the hot path toward a more JS-owned renderer model.
+## Validation Summary
+- Bundle preparation status: `Prepared`
+- Bundle readiness gate: `Passed on 2026-03-28`
+- Execution status: `Completed on 2026-03-29`
+- Subbundle gate review: `P3-02 passed on 2026-03-29`
+- Final closure gate: `Passed on 2026-03-29`
+- Browser validation analytics: `P0-07`, `P1-01`, `P1-02`, `P1-03`, `P1-04`, `P2-01`, `P2-02`, `P3-01`, and `P3-02` recorded
 
-It assumes the target architecture is:
+## Outcome
+- Move the ProjectStructure workbench toward a JS-owned hot path without breaking mapped behavior.
+- Keep typed domain logic and persistence in C#.
+- Preserve HTML and Blazor for overlays, dialogs, previews, and workflow surfaces.
+- Execute the work in dependency order with tests, browser proof, screenshots, and performance evidence.
 
-- **JavaScript owns the hot path**: scene rendering, retained element maps, pointer ownership, drag loop, pan/zoom, viewport culling, and transient floating-window geometry.
-- **C# owns the domain**: typed models, graph/service logic, create/edit/delete commands, action catalogs, adapters, and persisted state that truly belongs on the server.
-- **HTML stays for overlays**: toolbox, selection window, dialogs, uploads, previews, and forms remain HTML/Blazor unless benchmarking later proves otherwise.
+## Bundle Layout
+- `inputs/`: raw request and source artifacts used to build the execution contract.
+- `analysis/`: current-state and risk framing derived from the audit and current repo.
+- `requirements/`: normalized requirements and closure expectations.
+- `architecture/`: target ownership split and architectural guardrails.
+- `plan/`: execution order, dependency map, critical foundations, and phase gates.
+- `traceability/`: requirement-to-subbundle and source-trace mapping.
+- `shared-prompts/`: reusable implementation and QA prompts.
+- `subbundles/`: one executable README per task in the architected sequence.
+- `reviews/`: self-review and execution reporting.
 
-## Most important conclusions from the audit
+## Original Audit Pack
+- `00_EXECUTIVE_SUMMARY.md`
+- `01_RUNTIME_ARCHITECTURE_AUDIT.md`
+- `02_FEATURE_PRESERVATION_MAP.md`
+- `03_TARGET_ARCHITECTURE_AND_OWNERSHIP.md`
+- `04_PHASED_EXECUTION_PLAN.md`
+- `05_PERFORMANCE_HOTSPOTS.md`
+- `06_PERFORMANCE_BUDGETS_AND_ACCEPTANCE.md`
+- `07_VALIDATION_GATES_AND_SCREENSHOT_SCENARIOS.md`
+- `08_CODEX_RETRY_PROTOCOL.md`
+- `09_LINE_REFERENCE_INDEX.md`
+- `10_HTML_VS_JS_RENDERER_BOUNDARY.md`
+- `11_DUPLICATION_AND_SHARED_SURFACE_RISK.md`
+- `12_LIMITATIONS_AND_ASSUMPTIONS.md`
 
-1. `ProjectStructurePage` is **not currently a true HTML5 canvas renderer** for the live scene. The runtime path is DOM + SVG; real `<canvas>` drawing is used in the export path only.
-2. The largest performance problems today are:
-   - full scene-layer rebuilds,
-   - too much InteractiveServer chatter,
-   - too many DB writes in active interaction loops,
-   - full surface reloads for simple mutations,
-   - incomplete overlay input isolation.
-3. The biggest product risk is **regression**, not lack of ideas. Therefore the bundle maps features, existing tests, screenshot gates, and retry rules explicitly.
-
-## What is in this bundle
-
-- `00_EXECUTIVE_SUMMARY.md` – fast executive summary.
-- `01_RUNTIME_ARCHITECTURE_AUDIT.md` – how the current runtime is actually built.
-- `02_FEATURE_PRESERVATION_MAP.md` – feature inventory that must survive the refactor.
-- `03_TARGET_ARCHITECTURE_AND_OWNERSHIP.md` – recommended JS/C#/HTML ownership split.
-- `04_PHASED_EXECUTION_PLAN.md` – ordered rollout with phases and success conditions.
-- `05_PERFORMANCE_HOTSPOTS.md` – prioritized performance findings with evidence.
-- `06_PERFORMANCE_BUDGETS_AND_ACCEPTANCE.md` – concrete done criteria.
-- `07_VALIDATION_GATES_AND_SCREENSHOT_SCENARIOS.md` – mandatory validation matrix.
-- `08_CODEX_RETRY_PROTOCOL.md` – fix-and-rerun rules for Codex.
-- `09_LINE_REFERENCE_INDEX.md` – file/line evidence index.
-- `10_HTML_VS_JS_RENDERER_BOUNDARY.md` – what should stay HTML vs JS-owned scene rendering.
-- `11_DUPLICATION_AND_SHARED_SURFACE_RISK.md` – CanvasLib vs ComponentKit and cross-surface impact.
-- `12_LIMITATIONS_AND_ASSUMPTIONS.md` – honesty section about this audit.
-
-Supporting machine-readable files are in:
-- `traceability/`
-- `meta/`
-- `codex/`
-
-## How to use the bundle
-
-1. Read `00_EXECUTIVE_SUMMARY.md`.
-2. Read `02_FEATURE_PRESERVATION_MAP.md` before editing anything.
-3. Give Codex `codex/MASTER_PROMPT.md`.
-4. Execute the tasks in `codex/TASK_SEQUENCE.md`, one at a time.
-5. Do not advance to the next task unless the current task passes its code, browser, screenshot, and performance gates.
-
-## Important limitations
-
-This was a **static source audit**. The environment available to me did **not** include the `dotnet` CLI, so I could not run the build, unit tests, Playwright suite, or a profiler here.  
-Because of that, the bundle is deliberately strong on:
-- source evidence,
-- preservation mapping,
-- execution sequencing,
-- validation protocol.
-
-It is not claiming a runtime-verified patch set.
-
-## Bundle metrics
-
-- Runtime and related files inventoried: 24
-- Existing tests inventoried: 56
-- Feature items mapped: 34
-- Performance hotspots documented: 12
-- Execution subbundles/tasks: 15
+## Execution Rule
+- Do not start a downstream subbundle until its prerequisites, browser proof, and progression gate are trustworthy.
+- Do not call a task complete without the targeted tests, Playwright proof, screenshots for visible changes, and relevant counters or persistence evidence.
+- If implementation reality contradicts the audit pack, repair this execution bundle before continuing.

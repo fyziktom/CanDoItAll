@@ -63,7 +63,9 @@ public partial class ProjectStructurePage
         var actions = new List<ProjectStructureInspectorAction>
         {
             new("command:open", "Open", "open", "primary"),
-            new("summary", "Summary", "summary", "sky")
+            new("summary", "Summary", "summary", "sky"),
+            new("connect", "Connect selected", "link", "ghost"),
+            new("export-image", "Export image", "image", "accent")
         };
 
         if (node.ProjectRole is ProjectStructureProjectRole.Subproject or
@@ -217,7 +219,7 @@ public partial class ProjectStructurePage
             return true;
         }
 
-        await ReloadSurfaceAsync(updated.Id);
+        await ApplySurfaceNodeUpdatesAsync([updated]);
         workflowFeedback = $"{updated.Title} was updated.";
         workflowFeedbackTone = "mint";
         return true;

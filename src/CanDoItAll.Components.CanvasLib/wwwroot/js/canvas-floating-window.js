@@ -147,20 +147,41 @@
         state.host.classList.remove("is-dragging");
     }
 
-    function notifyGeometry(state) {
-        if (!state.dotNetRef || !state.container || !state.host.isConnected) {
-            return;
+    function buildGeometryPayload(state) {
+        if (!state.container || !state.host.isConnected) {
+            return null;
         }
 
         const hostRect = state.host.getBoundingClientRect();
         const containerRect = state.container.getBoundingClientRect();
         const minimized = !!state.options.state?.isMinimized;
-        const payload = {
+        return {
             left: round(hostRect.left - containerRect.left),
             top: round(hostRect.top - containerRect.top),
             width: minimized ? state.options.state?.width ?? null : round(state.host.offsetWidth),
             height: minimized ? state.options.state?.height ?? null : round(state.host.offsetHeight)
         };
+    }
+
+    function rememberGeometry(state) {
+        const payload = buildGeometryPayload(state);
+        if (!payload) {
+            return;
+        }
+
+        state.lastPayload = payload;
+    }
+
+    function publishGeometry(state) {
+        if (!state.dotNetRef) {
+            rememberGeometry(state);
+            return;
+        }
+
+        const payload = buildGeometryPayload(state);
+        if (!payload) {
+            return;
+        }
 
         if (state.lastPayload &&
             state.lastPayload.left === payload.left &&
@@ -175,9 +196,9 @@
             .catch(() => { });
     }
 
-    function scheduleGeometryNotify(state) {
+    function scheduleGeometryCommit(state, delay) {
         window.clearTimeout(state.geometryTimer);
-        state.geometryTimer = window.setTimeout(() => notifyGeometry(state), 70);
+        state.geometryTimer = window.setTimeout(() => publishGeometry(state), delay ?? 180);
     }
 
     function clampDraggedWindow(state, nextLeft, nextTop) {
@@ -210,7 +231,6 @@
                 state,
                 state.startLeft + (event.clientX - state.startX),
                 state.startTop + (event.clientY - state.startY));
-            scheduleGeometryNotify(state);
         };
 
         state.pointerUp = event => {
@@ -219,7 +239,7 @@
             }
 
             releasePointerDrag(state);
-            scheduleGeometryNotify(state);
+            publishGeometry(state);
         };
 
         state.pointerDown = event => {
@@ -278,8 +298,15 @@
                 return;
             }
 
-            applyWindowGeometry(state);
-            scheduleGeometryNotify(state);
+            if (state.host.classList.contains("is-dragging")) {
+                return;
+            }
+
+            clampDraggedWindow(
+                state,
+                parseFloat(state.host.style.left || "0") || 0,
+                parseFloat(state.host.style.top || "0") || 0);
+            scheduleGeometryCommit(state);
         });
 
         if (state.resizeObserver) {
@@ -332,6 +359,7 @@
         state.options = normalized;
         syncWindowHandle(state);
         applyWindowGeometry(state);
+        rememberGeometry(state);
         bringToFront(host);
         windowHosts.set(host, state);
     }

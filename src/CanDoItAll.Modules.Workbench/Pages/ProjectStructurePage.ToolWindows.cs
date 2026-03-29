@@ -1,4 +1,5 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -111,5 +112,27 @@ public partial class ProjectStructurePage
         return action.Label.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                action.Description.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                action.MenuLabel.Contains(search, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void EnsureSelectionScopedToolboxWindowState(CanvasWorkbenchUiState uiState)
+    {
+        if (surface is null ||
+            uiState.WindowStates.ContainsKey(ToolboxWindowKey) ||
+            selectedNodeIds.Count != 1)
+        {
+            return;
+        }
+
+        var selectedNodeId = selectedNodeIds[0];
+        var sourceNode = surface.Nodes.FirstOrDefault(node => string.Equals(node.Id, selectedNodeId, StringComparison.Ordinal));
+        if (sourceNode is null || sourceNode.ObjectType == ProjectObjectType.ProjectRoot)
+        {
+            return;
+        }
+
+        uiState.WindowStates[ToolboxWindowKey] = CanvasWorkbenchWindowState.Normalize(new CanvasWorkbenchWindowState
+        {
+            IsVisible = true
+        });
     }
 }

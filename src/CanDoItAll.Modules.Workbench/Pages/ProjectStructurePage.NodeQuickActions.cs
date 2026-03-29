@@ -11,31 +11,6 @@ public partial class ProjectStructurePage
 
     private ProjectStructureQuickActionDialogState? quickActionDialog;
 
-    private sealed record ProjectStructureQuickActionDialogState(
-        string NodeId,
-        string Title,
-        string NodeLabel,
-        string Copy,
-        ProjectStructureQuickActionButton EditAction,
-        ProjectStructureQuickActionButton PrimaryAction);
-
-    private sealed record ProjectStructureQuickActionButton(
-        ProjectStructureQuickActionExecutionKind ExecutionKind,
-        string Label,
-        string Description,
-        string Icon,
-        string Tone,
-        string ActionId = "",
-        ProjectStructureCommandKind? CommandKind = null,
-        bool IsDisabled = false);
-
-    private enum ProjectStructureQuickActionExecutionKind
-    {
-        Edit,
-        InspectorAction,
-        CommandInNewTab
-    }
-
     private void OpenQuickActionDialog(ProjectStructureNode node)
         => quickActionDialog = BuildQuickActionDialog(node);
 

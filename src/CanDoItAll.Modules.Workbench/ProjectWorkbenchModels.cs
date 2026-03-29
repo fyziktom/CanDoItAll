@@ -576,19 +576,78 @@ public sealed class ProjectWorkbenchService(
 
     public async Task MoveObjectAsync(Guid projectId, string nodeKey, double x, double y, CancellationToken cancellationToken = default)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        var node = await dbContext.Set<ProjectObjectRecord>()
-            .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey, cancellationToken);
-        if (node is null)
+        await MoveObjectsAsync(
+            projectId,
+            [new ProjectNodeMoveRequest(nodeKey, x, y)],
+            cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<string>> MoveObjectsAsync(
+        Guid projectId,
+        IReadOnlyCollection<ProjectNodeMoveRequest> positions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(positions);
+
+        if (positions.Count == 0)
         {
-            return;
+            return [];
         }
 
-        node.PositionX = x;
-        node.PositionY = y;
-        node.UpdatedAtUtc = clock.GetUtcNow();
-        await dbContext.SaveChangesAsync(cancellationToken);
+        var requestedPositions = positions
+            .Where(position => !string.IsNullOrWhiteSpace(position.NodeId))
+            .GroupBy(position => position.NodeId, StringComparer.Ordinal)
+            .Select(group => group.Last())
+            .ToList();
+        if (requestedPositions.Count == 0)
+        {
+            return [];
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var nodeKeys = requestedPositions
+            .Select(position => position.NodeId)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var nodes = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == projectId && nodeKeys.Contains(item.NodeKey))
+            .ToListAsync(cancellationToken);
+        if (nodes.Count == 0)
+        {
+            return [];
+        }
+
+        var nodesByKey = nodes.ToDictionary(item => item.NodeKey, StringComparer.Ordinal);
+        var updatedNodeIds = new List<string>(requestedPositions.Count);
+        var updatedAtUtc = clock.GetUtcNow();
+
+        foreach (var position in requestedPositions)
+        {
+            if (!nodesByKey.TryGetValue(position.NodeId, out var node))
+            {
+                continue;
+            }
+
+            if (Math.Abs(node.PositionX - position.X) < 0.5d &&
+                Math.Abs(node.PositionY - position.Y) < 0.5d)
+            {
+                continue;
+            }
+
+            node.PositionX = position.X;
+            node.PositionY = position.Y;
+            node.UpdatedAtUtc = updatedAtUtc;
+            updatedNodeIds.Add(node.NodeKey);
+        }
+
+        if (updatedNodeIds.Count > 0)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return updatedNodeIds;
     }
 
     public async Task<ProjectStructureSubtreeRecompositionResult?> RecomposeSubtreeAsync(
@@ -742,7 +801,7 @@ public sealed class ProjectWorkbenchService(
         return MapStructureNode(node);
     }
 
-    public async Task<int> UpdateObjectStatusesAsync(
+    public async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectStatusesDetailedAsync(
         Guid projectId,
         IReadOnlyCollection<string> nodeKeys,
         string status,
@@ -750,7 +809,7 @@ public sealed class ProjectWorkbenchService(
     {
         if (nodeKeys.Count == 0 || string.IsNullOrWhiteSpace(status))
         {
-            return 0;
+            return [];
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -758,7 +817,7 @@ public sealed class ProjectWorkbenchService(
         var normalizedKeys = nodeKeys.Where(key => !string.IsNullOrWhiteSpace(key)).Distinct(StringComparer.Ordinal).ToList();
         if (normalizedKeys.Count == 0)
         {
-            return 0;
+            return [];
         }
 
         var nodes = await dbContext.Set<ProjectObjectRecord>()
@@ -766,21 +825,30 @@ public sealed class ProjectWorkbenchService(
                 !item.IsSystemManaged &&
                 normalizedKeys.Contains(item.NodeKey))
             .ToListAsync(cancellationToken);
+        var normalizedStatus = status.Trim();
+        var updatedAtUtc = clock.GetUtcNow();
 
         foreach (var node in nodes)
         {
-            node.Status = status.Trim();
-            var progress = ResolveStatusBackedProgress(status);
+            node.Status = normalizedStatus;
+            var progress = ResolveStatusBackedProgress(normalizedStatus);
             node.ProgressMode = progress.Mode;
             node.ProgressPercent = progress.Percent;
-            node.UpdatedAtUtc = clock.GetUtcNow();
+            node.UpdatedAtUtc = updatedAtUtc;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        return nodes.Count;
+        return nodes.Select(node => MapStructureNode(node)).ToList();
     }
 
-    public async Task<int> UpdateObjectProgressAsync(
+    public async Task<int> UpdateObjectStatusesAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string status,
+        CancellationToken cancellationToken = default)
+        => (await UpdateObjectStatusesDetailedAsync(projectId, nodeKeys, status, cancellationToken)).Count;
+
+    public async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectProgressDetailedAsync(
         Guid projectId,
         IReadOnlyCollection<string> nodeKeys,
         string progressMode,
@@ -789,7 +857,7 @@ public sealed class ProjectWorkbenchService(
     {
         if (nodeKeys.Count == 0)
         {
-            return 0;
+            return [];
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -797,7 +865,7 @@ public sealed class ProjectWorkbenchService(
         var normalizedKeys = nodeKeys.Where(key => !string.IsNullOrWhiteSpace(key)).Distinct(StringComparer.Ordinal).ToList();
         if (normalizedKeys.Count == 0)
         {
-            return 0;
+            return [];
         }
 
         var nodes = await dbContext.Set<ProjectObjectRecord>()
@@ -806,18 +874,27 @@ public sealed class ProjectWorkbenchService(
 
         var normalizedMode = NormalizeProgressMode(progressMode);
         var normalizedPercent = Math.Clamp(progressPercent, 0, 100);
+        var updatedAtUtc = clock.GetUtcNow();
         foreach (var node in nodes)
         {
             node.ProgressMode = normalizedMode;
             node.ProgressPercent = normalizedPercent;
-            node.UpdatedAtUtc = clock.GetUtcNow();
+            node.UpdatedAtUtc = updatedAtUtc;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        return nodes.Count;
+        return nodes.Select(node => MapStructureNode(node)).ToList();
     }
 
-    public async Task<int> UpdateObjectMarkerAsync(
+    public async Task<int> UpdateObjectProgressAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string progressMode,
+        int progressPercent,
+        CancellationToken cancellationToken = default)
+        => (await UpdateObjectProgressDetailedAsync(projectId, nodeKeys, progressMode, progressPercent, cancellationToken)).Count;
+
+    public async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectMarkerDetailedAsync(
         Guid projectId,
         IReadOnlyCollection<string> nodeKeys,
         string markerIcon,
@@ -827,7 +904,7 @@ public sealed class ProjectWorkbenchService(
     {
         if (nodeKeys.Count == 0)
         {
-            return 0;
+            return [];
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -835,26 +912,39 @@ public sealed class ProjectWorkbenchService(
         var normalizedKeys = nodeKeys.Where(key => !string.IsNullOrWhiteSpace(key)).Distinct(StringComparer.Ordinal).ToList();
         if (normalizedKeys.Count == 0)
         {
-            return 0;
+            return [];
         }
 
         var nodes = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == projectId && normalizedKeys.Contains(item.NodeKey))
             .ToListAsync(cancellationToken);
+        var normalizedIcon = markerIcon?.Trim() ?? string.Empty;
+        var normalizedTone = markerTone?.Trim() ?? string.Empty;
+        var normalizedLabel = markerLabel?.Trim() ?? string.Empty;
+        var updatedAtUtc = clock.GetUtcNow();
 
         foreach (var node in nodes)
         {
-            node.MarkerIcon = markerIcon?.Trim() ?? string.Empty;
-            node.MarkerTone = markerTone?.Trim() ?? string.Empty;
-            node.MarkerLabel = markerLabel?.Trim() ?? string.Empty;
-            node.UpdatedAtUtc = clock.GetUtcNow();
+            node.MarkerIcon = normalizedIcon;
+            node.MarkerTone = normalizedTone;
+            node.MarkerLabel = normalizedLabel;
+            node.UpdatedAtUtc = updatedAtUtc;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        return nodes.Count;
+        return nodes.Select(node => MapStructureNode(node)).ToList();
     }
 
-    public async Task<int> UpdateObjectPriorityAsync(
+    public async Task<int> UpdateObjectMarkerAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string markerIcon,
+        string markerTone,
+        string markerLabel,
+        CancellationToken cancellationToken = default)
+        => (await UpdateObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken)).Count;
+
+    public async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectPriorityDetailedAsync(
         Guid projectId,
         IReadOnlyCollection<string> nodeKeys,
         int priority,
@@ -862,7 +952,7 @@ public sealed class ProjectWorkbenchService(
     {
         if (nodeKeys.Count == 0)
         {
-            return 0;
+            return [];
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -870,7 +960,7 @@ public sealed class ProjectWorkbenchService(
         var normalizedKeys = nodeKeys.Where(key => !string.IsNullOrWhiteSpace(key)).Distinct(StringComparer.Ordinal).ToList();
         if (normalizedKeys.Count == 0)
         {
-            return 0;
+            return [];
         }
 
         var nodes = await dbContext.Set<ProjectObjectRecord>()
@@ -878,15 +968,23 @@ public sealed class ProjectWorkbenchService(
             .ToListAsync(cancellationToken);
 
         var normalizedPriority = Math.Clamp(priority, 0, 6);
+        var updatedAtUtc = clock.GetUtcNow();
         foreach (var node in nodes)
         {
             node.Priority = normalizedPriority;
-            node.UpdatedAtUtc = clock.GetUtcNow();
+            node.UpdatedAtUtc = updatedAtUtc;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        return nodes.Count;
+        return nodes.Select(node => MapStructureNode(node)).ToList();
     }
+
+    public async Task<int> UpdateObjectPriorityAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        int priority,
+        CancellationToken cancellationToken = default)
+        => (await UpdateObjectPriorityDetailedAsync(projectId, nodeKeys, priority, cancellationToken)).Count;
 
     public async Task SaveViewStateAsync(Guid projectId, string surfaceKind, string stateJson, CancellationToken cancellationToken = default)
     {

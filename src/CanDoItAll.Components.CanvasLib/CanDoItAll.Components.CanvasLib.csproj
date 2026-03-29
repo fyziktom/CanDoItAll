@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>CanDoItAll.Components.CanvasLib</AssemblyName>
     <RootNamespace>CanDoItAll.Components.CanvasLib</RootNamespace>
+    <Description>Canonical shared canvas runtime for active CanDoItAll workbench surfaces.</Description>
   </PropertyGroup>
 
   <ItemGroup>

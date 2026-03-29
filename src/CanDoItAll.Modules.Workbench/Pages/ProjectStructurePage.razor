@@ -264,548 +264,213 @@ else
                                                   MaxWidth="520"
                                                   State="@SelectionWindowState"
                                                   StateChanged="HandleSelectionWindowStateChangedAsync">
-                @if (selectedNodes.Count == 0)
-                {
-                    <div class="cw-empty-state">
-                        <p class="cw-panel-kicker">Canvas selection</p>
-                        <h3>Select a project object</h3>
-                        <p>Pick a node to edit its status, attachments, and next-step actions without leaving the canvas.</p>
-                        <div class="cw-chip-row">
-                            <span class="cw-node__chip">Click</span>
-                            <span class="cw-node__chip">Ctrl + Shift + click</span>
-                            <span class="cw-node__chip">Alt + drag</span>
-                            <span class="cw-node__chip">Right-click</span>
-                        </div>
-                    </div>
-                }
-                else if (selectedNodes.Count > 1)
-                {
-                    <div class="space-y-4">
-                        <div class="cw-panel-card">
-                            <p class="cw-panel-kicker">Multi-select</p>
-                            <h3 class="cw-panel-title">@($"{selectedNodes.Count} nodes selected")</h3>
-                            <p class="cw-panel-copy">Batch movement stays on the canvas. Shared status, progress, marker, priority, and grouping controls stay here.</p>
-                            <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearSelectionAsync">Clear selection</button>
-                                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => SelectNodeAsync(selectedNodes[0].Id))">Focus first</button>
-                            </div>
-                        </div>
-
-                        <div class="cw-panel-card project-structure-batch-card">
-                            @if (CanApplySelectionStatus)
-                            {
-                                <div class="project-structure-action-band">
-                                    <span>Status</span>
-                                    <div class="cw-button-row">
-                                        <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplySelectionStatusAsync("In progress"))'>In progress</button>
-                                        <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplySelectionStatusAsync("Done"))'>Done</button>
-                                        <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplySelectionStatusAsync("N/A"))'>N/A</button>
-                                    </div>
-                                </div>
-                            }
-
-                            <div class="project-structure-action-band">
-                                <span>Progress</span>
-                                <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyProgressAsync(selectedNodeIds, "progress", 0))'>0%</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyProgressAsync(selectedNodeIds, "progress", 25))'>25%</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyProgressAsync(selectedNodeIds, "progress", 50))'>50%</button>
-                                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplyProgressAsync(selectedNodeIds, "progress", 100))'>100%</button>
-                                </div>
-                            </div>
-
-                            <div class="project-structure-action-band">
-                                <span>Marker</span>
-                                <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="accent" @onclick='@(() => ApplyMarkerAsync(selectedNodeIds, "question", "sky", "Question"))'>Question</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyMarkerAsync(selectedNodeIds, "idea", "accent", "Idea"))'>Idea</button>
-                                    <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplyMarkerAsync(selectedNodeIds, "risk", "danger", "Risk"))'>Risk</button>
-                                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplyMarkerAsync(selectedNodeIds, string.Empty, string.Empty, string.Empty))'>Clear</button>
-                                </div>
-                            </div>
-
-                            <div class="project-structure-action-band">
-                                <span>Priority</span>
-                                <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplyPriorityAsync(selectedNodeIds, 1))'>P1</button>
-                                    <button type="button" class="cw-button" data-tone="accent" @onclick='@(() => ApplyPriorityAsync(selectedNodeIds, 2))'>P2</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyPriorityAsync(selectedNodeIds, 3))'>P3</button>
-                                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplyPriorityAsync(selectedNodeIds, 0))'>Clear</button>
-                                </div>
-                            </div>
-
-                            <div class="project-structure-action-band">
-                                <span>Grouping</span>
-                                <div class="space-y-3">
-                                    <input class="cw-context-toolbox__search"
-                                           type="text"
-                                           placeholder="Name this border"
-                                           @bind="selectionBorderName" />
-                                    <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="sky" @onclick="CreateSelectionBorderAsync">Border</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearSelectionBordersAsync">Clear border</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="cw-panel-card">
-                            <p class="cw-panel-kicker">Selected nodes</p>
-                            <div class="cw-list">
-                                @foreach (var node in selectedNodes)
-                                {
-                                    <button type="button" class="cw-list-item" @onclick="@(() => SelectNodeAsync(node.Id))">
-                                        <strong>@node.Title</strong>
-                                        <span>@($"{ProjectStructureCanvasCatalog.ResolveNodeLabel(node)} - {node.Status}")</span>
-                                    </button>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                }
-                else if (selectedNode is not null)
-                {
-                    <div class="space-y-4">
-                        <div class="cw-panel-card project-structure-selected-card">
-                            <p class="cw-panel-kicker">@ProjectStructureCanvasCatalog.ResolveNodeLabel(selectedNode)</p>
-                            <h3 class="cw-panel-title">@selectedNode.Title</h3>
-                            <p class="cw-panel-copy">@SelectedNodeLeadText</p>
-
-                            <div class="cw-chip-row project-structure-selection-chip-row">
-                                
-                                <span class="cw-node__chip project-structure-selection-chip project-structure-selection-chip--status"
-                                      data-testid="project-structure-selection-status"
-                                      data-badge-style="Status">
-                                    @selectedNode.Status
-                                </span>
-                                @foreach (var badge in SelectedNodeBadgePresentations)
-                                {
-                                    <span class="cw-node__chip project-structure-selection-chip"
-                                          data-testid="@badge.TestId"
-                                          data-badge-style="@badge.Style">
-                                        @badge.Text
-                                    </span>
-                                }
-                            </div>
-
-                            @if (!string.IsNullOrWhiteSpace(linkModeSourceId))
-                            {
-                                <div class="cw-panel-card">
-                                    <p class="cw-panel-kicker">Connect mode</p>
-                                    <p class="cw-panel-copy">Select another node on the canvas or in the outline to create a dependency link from the active source.</p>
-                                </div>
-                            }
-
-                            @if (!string.IsNullOrWhiteSpace(reconnectNodeId))
-                            {
-                                <div class="cw-panel-card">
-                                    <p class="cw-panel-kicker">Reconnect mode</p>
-                                    <p class="cw-panel-copy">Select the new parent node for this branch. The hierarchy will be updated explicitly instead of creating a hidden duplicate link.</p>
-                                </div>
-                            }
-
-                            <div class="project-structure-quick-signals" data-testid="project-structure-quick-signals">
-                                <div class="project-structure-quick-signal">
-                                    <span>Progress</span>
-                                    <strong>@ResolveProgressLabel(selectedNode)</strong>
-                                </div>
-                                <div class="project-structure-quick-signal">
-                                    <span>Priority</span>
-                                    <strong>@ResolvePriorityLabel(selectedNode)</strong>
-                                </div>
-                                <div class="project-structure-quick-signal">
-                                    <span>Marker</span>
-                                    <strong>@ResolveMarkerLabel(selectedNode)</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        @if (HasManagedAttachment(selectedNode))
-                        {
-                            <div class="cw-panel-card">
-                                <p class="cw-panel-kicker">Attachment preview</p>
-                                <h3 class="cw-panel-title">@ResolveAttachmentDisplayName(selectedNode)</h3>
-                                <p class="cw-panel-copy">@ResolveAttachmentLeadCopy(selectedNode)</p>
-
-                                @switch (ResolveAttachmentPreviewKind(selectedNode))
-                                {
-                                    case AttachmentPreviewKind.Image:
-                                        <img class="cw-media-preview" src="@selectedNode.Route" alt="@selectedNode.Title" />
-                                        break;
-                                    case AttachmentPreviewKind.Video:
-                                        <video class="cw-media-preview" controls preload="metadata" src="@selectedNode.Route"></video>
-                                        break;
-                                    case AttachmentPreviewKind.Audio:
-                                        <audio class="project-structure-audio-preview" controls preload="metadata" src="@selectedNode.Route"></audio>
-                                        break;
-                                    case AttachmentPreviewKind.Document:
-                                        <iframe class="project-structure-document-preview"
-                                                src="@ResolveAttachmentPreviewSource(selectedNode)"
-                                                title="@($"{ResolveAttachmentDisplayName(selectedNode)} preview")"></iframe>
-                                        break;
-                                    default:
-                                        <div class="project-structure-preview-empty">
-                                            <strong>Inline preview is not available for this file type.</strong>
-                                            <span>Open the attachment in a new tab when you need the raw browser viewer.</span>
-                                        </div>
-                                        break;
-                                }
-
-                                <div class="cw-chip-row">
-                                    @if (!string.IsNullOrWhiteSpace(selectedNode.MediaOriginalFileName))
-                                    {
-                                        <span class="cw-node__chip">@selectedNode.MediaOriginalFileName</span>
-                                    }
-
-                                    @if (!string.IsNullOrWhiteSpace(ResolveAttachmentContentType(selectedNode)))
-                                    {
-                                        <span class="cw-node__chip">@ResolveAttachmentContentType(selectedNode)</span>
-                                    }
-                                </div>
-
-                                <div class="cw-button-row">
-                                    @if (CanShowLocalOpen(selectedNode))
-                                    {
-                                        <button type="button"
-                                                class="cw-button"
-                                                data-tone="primary"
-                                                @onclick="@(() => OpenAttachmentLocallyAsync(selectedNode))">
-                                            Open locally
-                                        </button>
-                                    }
-                                    @if (CanRenderAttachmentPreview(selectedNode))
-                                    {
-                                        <button type="button"
-                                                class="cw-button"
-                                                data-tone="accent"
-                                                @onclick="@(() => OpenAttachmentPreview(selectedNode))">
-                                            Expand preview
-                                        </button>
-                                    }
-
-                                    <a class="cw-button"
-                                       data-tone="ghost"
-                                       href="@selectedNode.Route"
-                                       target="_blank"
-                                       rel="noopener noreferrer">
-                                        Open in new tab
-                                    </a>
-                                </div>
-
-                                @if (IsLocalOpenFeedbackVisible(selectedNode))
-                                {
-                                    <div class="project-structure-inline-feedback" data-tone="@localOpenFeedbackTone">
-                                        @localOpenFeedback
-                                    </div>
-                                }
-                            </div>
-                        }
-
-                        @if (HasMermaidViewer(selectedNode))
-                        {
-                            <div class="cw-panel-card">
-                                <p class="cw-panel-kicker">Mermaid viewer</p>
-                                <h3 class="cw-panel-title">Diagram-aware source preview</h3>
-                                <p class="cw-panel-copy">Mermaid nodes stay typed on the canvas and can be opened with the detected diagram type still visible.</p>
-                                <div class="cw-button-row">
-                                    <button type="button"
-                                            class="cw-button"
-                                            data-tone="accent"
-                                            @onclick="@(() => OpenMermaidViewer(selectedNode))">
-                                        View Mermaid
-                                    </button>
-                                </div>
-                            </div>
-                        }
-
-                        <div class="cw-panel-card">
-                            <p class="cw-panel-kicker">Node actions</p>
-                            <div class="project-structure-node-action-grid"
-                                 data-testid="project-structure-node-actions">
-                                @foreach (var action in ResolveInspectorActions(selectedNode))
-                                {
-                                    <button type="button"
-                                            class="cw-button project-structure-node-action"
-                                            data-tone="@action.Tone"
-                                            @onclick="@(() => ExecuteInspectorActionAsync(selectedNode, action.ActionId))">
-                                        <span class="project-structure-node-action__icon" aria-hidden="true">
-                                            <Icon Name="@action.Icon" />
-                                        </span>
-                                        <span>@action.Label</span>
-                                    </button>
-                                }
-                            </div>
-                        </div>
-
-                        @if (!string.IsNullOrWhiteSpace(workflowFeedback))
-                        {
-                            <div class="project-structure-inline-feedback" data-tone="@workflowFeedbackTone">
-                                @workflowFeedback
-                            </div>
-                        }
-
-                        <div class="cw-panel-card">
-                            <p class="cw-panel-kicker">Create next to source</p>
-                            <h3 class="cw-panel-title">Use the floating toolbox</h3>
-                            <p class="cw-panel-copy">The toolbox owns the long-form block catalog now. It keeps grouping, search, and scrolling inside the canvas while placement still resolves from <strong>@selectedNode.Title</strong>.</p>
-                            <div class="cw-chip-row">
-                                <span class="cw-node__chip">Source: @selectedNode.Title</span>
-                                <span class="cw-node__chip">Mode: child placement</span>
-                            </div>
-                            <div class="cw-button-row">
-                                <button type="button"
-                                        class="cw-button"
-                                        data-tone="accent"
-                                        @onclick="OpenToolboxAsync">
-                                    Open standard blocks
-                                </button>
-                            </div>
-                        </div>
-
-                        @if (CanShowAdvancedDetails(selectedNode))
-                        {
-                            <details class="cw-panel-card project-structure-advanced-details"
-                                     data-testid="project-structure-advanced-details">
-                                <summary class="project-structure-advanced-details__summary">
-                                    <span class="project-structure-advanced-details__summary-copy">
-                                        <span class="project-structure-advanced-details__summary-heading">
-                                            <strong>Advanced details</strong>
-                                            <span class="project-structure-advanced-details__help"
-                                                  @onclick:stopPropagation="true"
-                                                  @onclick:preventDefault="true">
-                                                <HelpPopover RootClass="pf-help-popover project-structure-help-popover"
-                                                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
-                                                             PanelClass="pf-help-popover__panel pf-help-popover__panel--above-end"
-                                                             AriaLabel="Show advanced details help"
-                                                             Title="Show advanced details help"
-                                                             Heading="Advanced details"
-                                                             Body="@AdvancedDetailsHelpBody"
-                                                             Tip="@AdvancedDetailsHelpTip" />
-                                            </span>
-                                        </span>
-                                    </span>
-                                    <span class="project-structure-advanced-details__summary-icon" aria-hidden="true">
-                                        <Icon Name="expand_more" />
-                                    </span>
-                                </summary>
-                                <div class="project-structure-advanced-details__body">
-                                    <div class="cw-summary-grid project-structure-advanced-summary-grid">
-                                        <div class="cw-summary-tile">
-                                            <span>Artifact</span>
-                                            <strong>@selectedNode.ArtifactKind</strong>
-                                        </div>
-                                        <div class="cw-summary-tile">
-                                            <span>Location</span>
-                                            <strong>@($"{Math.Round(selectedNode.X)}, {Math.Round(selectedNode.Y)}")</strong>
-                                        </div>
-                                    </div>
-
-                                    @if (SelectedNodeFacts.Count > 0)
-                                    {
-                                        <div class="project-structure-facts-list"
-                                             data-testid="project-structure-node-facts">
-                                            @foreach (var fact in SelectedNodeFacts)
-                                            {
-                                                <div class="project-structure-fact-row">
-                                                    <span>@fact.Label</span>
-                                                    <strong>@fact.Value</strong>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                            </details>
-                        }
-                    </div>
-                }
+                                <ProjectStructureSelectionPanel State="@SelectionPanelState"
+                                                               ClearSelectionAsync="ClearSelectionAsync"
+                                                               SelectNodeAsync="SelectNodeAsync"
+                                                               ApplySelectionStatusAsync="ApplySelectionStatusAsync"
+                                                               ApplySelectionProgressAsync="ApplySelectionProgressAsync"
+                                                               ApplySelectionMarkerAsync="ApplySelectionMarkerAsync"
+                                                               ApplySelectionPriorityAsync="ApplySelectionPriorityAsync"
+                                                               SelectionBorderNameChangedAsync="UpdateSelectionBorderNameAsync"
+                                                               CreateSelectionBorderAsync="CreateSelectionBorderAsync"
+                                                               ClearSelectionBordersAsync="ClearSelectionBordersAsync"
+                                                               ExecuteInspectorActionAsync="ExecuteSelectedInspectorActionAsync"
+                                                               OpenToolboxAsync="OpenToolboxAsync"
+                                                               OpenAttachmentLocallyAsync="OpenSelectedAttachmentLocallyAsync"
+                                                               OpenAttachmentPreviewAsync="OpenSelectedAttachmentPreviewAsync"
+                                                               OpenMermaidViewerAsync="OpenSelectedMermaidViewerAsync"
+                                                               AdvancedDetailsHelpBody="@AdvancedDetailsHelpBody"
+                                                               AdvancedDetailsHelpTip="@AdvancedDetailsHelpTip" />
                             </CanvasFloatingWindow>
                         }
-                        @if (projectHierarchyDialog is not null)
-                        {
-                            <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseProjectHierarchyDialog">
-                                <div class="project-structure-preview-dialog project-structure-summary-dialog"
-                                     role="dialog"
-                                     aria-modal="true"
-                                     aria-label="@projectHierarchyDialog.Title"
-                                     data-testid="project-structure-hierarchy-dialog"
-                                     @onclick:stopPropagation="true">
-                                    <div class="project-structure-preview-dialog__header">
-                                        <div class="project-structure-preview-dialog__copy">
-                                            <p class="cw-panel-kicker">Project hierarchy</p>
-                                            <h3 class="cw-panel-title">@projectHierarchyDialog.Title</h3>
-                                            <p class="cw-panel-copy">@projectHierarchyDialog.Copy</p>
+                        <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
+                            @if (projectHierarchyDialog is not null)
+                            {
+                                <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseProjectHierarchyDialog">
+                                    <div class="project-structure-preview-dialog project-structure-summary-dialog"
+                                         role="dialog"
+                                         aria-modal="true"
+                                         aria-label="@projectHierarchyDialog.Title"
+                                         data-testid="project-structure-hierarchy-dialog"
+                                         @onclick:stopPropagation="true">
+                                        <div class="project-structure-preview-dialog__header">
+                                            <div class="project-structure-preview-dialog__copy">
+                                                <p class="cw-panel-kicker">Project hierarchy</p>
+                                                <h3 class="cw-panel-title">@projectHierarchyDialog.Title</h3>
+                                                <p class="cw-panel-copy">@projectHierarchyDialog.Copy</p>
+                                            </div>
+                                            <div class="project-structure-preview-dialog__actions">
+                                                <button type="button"
+                                                        class="cw-button"
+                                                        data-tone="ghost"
+                                                        @onclick="CloseProjectHierarchyDialog">
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="project-structure-preview-dialog__body">
+                                            @if (!string.IsNullOrWhiteSpace(projectHierarchyDialog.CurrentParentProjectTitle))
+                                            {
+                                                <div class="cw-panel-card">
+                                                    <p class="cw-panel-kicker">Current parent</p>
+                                                    <p class="cw-panel-copy">@projectHierarchyDialog.CurrentParentProjectTitle</p>
+                                                </div>
+                                            }
+                                            <div class="cw-panel-card">
+                                                <label class="cw-panel-copy" for="project-structure-hierarchy-project-select">
+                                                    Project
+                                                </label>
+                                                <select id="project-structure-hierarchy-project-select"
+                                                        class="cw-context-toolbox__search"
+                                                        data-testid="project-structure-hierarchy-project-select"
+                                                        value="@(projectHierarchyDialog.SelectedProjectId?.ToString() ?? string.Empty)"
+                                                        @onchange="HandleProjectHierarchySelectionChanged">
+                                                    <option value="">Select a project</option>
+                                                    @foreach (var projectOption in projectHierarchyDialog.AvailableProjects)
+                                                    {
+                                                        <option value="@projectOption.Id">
+                                                            @projectOption.Name
+                                                        </option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(projectHierarchyDialog.Error))
+                                            {
+                                                <div class="project-structure-inline-feedback" data-tone="warn">
+                                                    @projectHierarchyDialog.Error
+                                                </div>
+                                            }
                                         </div>
                                         <div class="project-structure-preview-dialog__actions">
                                             <button type="button"
                                                     class="cw-button"
                                                     data-tone="ghost"
                                                     @onclick="CloseProjectHierarchyDialog">
-                                                Close
+                                                Cancel
+                                            </button>
+                                            <button type="button"
+                                                    class="cw-button"
+                                                    data-tone="accent"
+                                                    data-testid="project-structure-hierarchy-submit"
+                                                    disabled="@(projectHierarchyDialog.AvailableProjects.Count == 0)"
+                                                    @onclick="ExecuteProjectHierarchyCommandAsync">
+                                                @projectHierarchyDialog.SubmitLabel
                                             </button>
                                         </div>
                                     </div>
-                                    <div class="project-structure-preview-dialog__body">
-                                        @if (!string.IsNullOrWhiteSpace(projectHierarchyDialog.CurrentParentProjectTitle))
-                                        {
-                                            <div class="cw-panel-card">
-                                                <p class="cw-panel-kicker">Current parent</p>
-                                                <p class="cw-panel-copy">@projectHierarchyDialog.CurrentParentProjectTitle</p>
+                                </div>
+                            }
+                            @if (quickActionDialog is not null)
+                            {
+                                <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseQuickActionDialog">
+                                    <div class="project-structure-preview-dialog project-structure-quick-action-dialog"
+                                         role="dialog"
+                                         aria-modal="true"
+                                         aria-label="@($"{quickActionDialog.Title} quick actions")"
+                                         data-testid="project-structure-node-quick-actions"
+                                         @onclick:stopPropagation="true">
+                                        <div class="project-structure-preview-dialog__header">
+                                            <div class="project-structure-preview-dialog__copy">
+                                                <p class="cw-panel-kicker">Node quick actions</p>
+                                                <h3 class="cw-panel-title">@quickActionDialog.Title</h3>
+                                                <p class="cw-panel-copy">@quickActionDialog.Copy</p>
                                             </div>
-                                        }
-                                        <div class="cw-panel-card">
-                                            <label class="cw-panel-copy" for="project-structure-hierarchy-project-select">
-                                                Project
-                                            </label>
-                                            <select id="project-structure-hierarchy-project-select"
-                                                    class="cw-context-toolbox__search"
-                                                    data-testid="project-structure-hierarchy-project-select"
-                                                    value="@(projectHierarchyDialog.SelectedProjectId?.ToString() ?? string.Empty)"
-                                                    @onchange="HandleProjectHierarchySelectionChanged">
-                                                <option value="">Select a project</option>
-                                                @foreach (var projectOption in projectHierarchyDialog.AvailableProjects)
+
+                                            <div class="project-structure-preview-dialog__actions">
+                                                <span class="cw-node__chip">@quickActionDialog.NodeLabel</span>
+                                                <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseQuickActionDialog">Close</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="project-structure-preview-dialog__body project-structure-quick-action-dialog__body">
+                                            <div class="project-structure-quick-action-grid">
+                                                @foreach (var action in new[] { quickActionDialog.EditAction, quickActionDialog.PrimaryAction })
                                                 {
-                                                    <option value="@projectOption.Id">
-                                                        @projectOption.Name
-                                                    </option>
+                                                    <button type="button"
+                                                            class="cw-button project-structure-quick-action-card"
+                                                            data-tone="@action.Tone"
+                                                            data-testid="@(action.ExecutionKind == ProjectStructureQuickActionExecutionKind.Edit ? "project-structure-quick-action-edit" : "project-structure-quick-action-primary")"
+                                                            disabled="@action.IsDisabled"
+                                                            @onclick="@(() => ExecuteQuickActionAsync(action))">
+                                                        <span class="project-structure-quick-action-card__icon" aria-hidden="true">
+                                                            <Icon Name="@action.Icon" />
+                                                        </span>
+                                                        <strong>@action.Label</strong>
+                                                        <small>@action.Description</small>
+                                                    </button>
                                                 }
-                                            </select>
-                                        </div>
-                                        @if (!string.IsNullOrWhiteSpace(projectHierarchyDialog.Error))
-                                        {
-                                            <div class="project-structure-inline-feedback" data-tone="warn">
-                                                @projectHierarchyDialog.Error
                                             </div>
-                                        }
-                                    </div>
-                                    <div class="project-structure-preview-dialog__actions">
-                                        <button type="button"
-                                                class="cw-button"
-                                                data-tone="ghost"
-                                                @onclick="CloseProjectHierarchyDialog">
-                                            Cancel
-                                        </button>
-                                        <button type="button"
-                                                class="cw-button"
-                                                data-tone="accent"
-                                                data-testid="project-structure-hierarchy-submit"
-                                                disabled="@(projectHierarchyDialog.AvailableProjects.Count == 0)"
-                                                @onclick="ExecuteProjectHierarchyCommandAsync">
-                                            @projectHierarchyDialog.SubmitLabel
-                                        </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        }
-                        @if (quickActionDialog is not null)
-                        {
-                            <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseQuickActionDialog">
-                                <div class="project-structure-preview-dialog project-structure-quick-action-dialog"
-                                     role="dialog"
-                                     aria-modal="true"
-                                     aria-label="@($"{quickActionDialog.Title} quick actions")"
-                                     data-testid="project-structure-node-quick-actions"
-                                     @onclick:stopPropagation="true">
-                                    <div class="project-structure-preview-dialog__header">
-                                        <div class="project-structure-preview-dialog__copy">
-                                            <p class="cw-panel-kicker">Node quick actions</p>
-                                            <h3 class="cw-panel-title">@quickActionDialog.Title</h3>
-                                            <p class="cw-panel-copy">@quickActionDialog.Copy</p>
+                            }
+                            @if (previewNode is not null)
+                            {
+                                <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseAttachmentPreview">
+                                    <div class="project-structure-preview-dialog"
+                                         role="dialog"
+                                         aria-modal="true"
+                                         aria-label="@($"{ResolveAttachmentDisplayName(previewNode)} preview")"
+                                         @onclick:stopPropagation="true">
+                                        <div class="project-structure-preview-dialog__header">
+                                            <div class="project-structure-preview-dialog__copy">
+                                                <p class="cw-panel-kicker">Canvas preview</p>
+                                                <h3 class="cw-panel-title">@ResolveAttachmentDisplayName(previewNode)</h3>
+                                                <p class="cw-panel-copy">@ResolveAttachmentLeadCopy(previewNode)</p>
+                                            </div>
+
+                                            <div class="project-structure-preview-dialog__actions">
+                                                @if (CanShowLocalOpen(previewNode))
+                                                {
+                                                    <button type="button"
+                                                            class="cw-button"
+                                                            data-tone="primary"
+                                                            @onclick="@(() => OpenAttachmentLocallyAsync(previewNode))">
+                                                        Open locally
+                                                    </button>
+                                                }
+                                                <a class="cw-button"
+                                                   data-tone="ghost"
+                                                   href="@previewNode.Route"
+                                                   target="_blank"
+                                                   rel="noopener noreferrer">
+                                                    Open in new tab
+                                                </a>
+                                                <button type="button" class="cw-button" data-tone="primary" @onclick="CloseAttachmentPreview">Close</button>
+                                            </div>
                                         </div>
 
-                                        <div class="project-structure-preview-dialog__actions">
-                                            <span class="cw-node__chip">@quickActionDialog.NodeLabel</span>
-                                            <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseQuickActionDialog">Close</button>
-                                        </div>
-                                    </div>
-
-                                    <div class="project-structure-preview-dialog__body project-structure-quick-action-dialog__body">
-                                        <div class="project-structure-quick-action-grid">
-                                            @foreach (var action in new[] { quickActionDialog.EditAction, quickActionDialog.PrimaryAction })
+                                        <div class="project-structure-preview-dialog__body">
+                                            @switch (ResolveAttachmentPreviewKind(previewNode))
                                             {
-                                                <button type="button"
-                                                        class="cw-button project-structure-quick-action-card"
-                                                        data-tone="@action.Tone"
-                                                        data-testid="@(action.ExecutionKind == ProjectStructureQuickActionExecutionKind.Edit ? "project-structure-quick-action-edit" : "project-structure-quick-action-primary")"
-                                                        disabled="@action.IsDisabled"
-                                                        @onclick="@(() => ExecuteQuickActionAsync(action))">
-                                                    <span class="project-structure-quick-action-card__icon" aria-hidden="true">
-                                                        <Icon Name="@action.Icon" />
-                                                    </span>
-                                                    <strong>@action.Label</strong>
-                                                    <small>@action.Description</small>
-                                                </button>
+                                                case AttachmentPreviewKind.Image:
+                                                    <img class="project-structure-preview-dialog__media"
+                                                         src="@previewNode.Route"
+                                                         alt="@previewNode.Title" />
+                                                    break;
+                                                case AttachmentPreviewKind.Video:
+                                                    <video class="project-structure-preview-dialog__media"
+                                                           controls
+                                                           preload="metadata"
+                                                           src="@previewNode.Route"></video>
+                                                    break;
+                                                case AttachmentPreviewKind.Audio:
+                                                    <audio class="project-structure-audio-preview project-structure-preview-dialog__audio"
+                                                           controls
+                                                           preload="metadata"
+                                                           src="@previewNode.Route"></audio>
+                                                    break;
+                                                case AttachmentPreviewKind.Document:
+                                                    <iframe class="project-structure-preview-dialog__frame"
+                                                            src="@ResolveAttachmentPreviewSource(previewNode)"
+                                                            title="@($"{ResolveAttachmentDisplayName(previewNode)} dialog preview")"></iframe>
+                                                    break;
                                             }
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        }
-                        @if (previewNode is not null)
-                        {
-                            <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseAttachmentPreview">
-                                <div class="project-structure-preview-dialog"
-                                     role="dialog"
-                                     aria-modal="true"
-                                     aria-label="@($"{ResolveAttachmentDisplayName(previewNode)} preview")"
-                                     @onclick:stopPropagation="true">
-                                    <div class="project-structure-preview-dialog__header">
-                                        <div class="project-structure-preview-dialog__copy">
-                                            <p class="cw-panel-kicker">Canvas preview</p>
-                                            <h3 class="cw-panel-title">@ResolveAttachmentDisplayName(previewNode)</h3>
-                                            <p class="cw-panel-copy">@ResolveAttachmentLeadCopy(previewNode)</p>
-                                        </div>
-
-                                        <div class="project-structure-preview-dialog__actions">
-                                            @if (CanShowLocalOpen(previewNode))
-                                            {
-                                                <button type="button"
-                                                        class="cw-button"
-                                                        data-tone="primary"
-                                                        @onclick="@(() => OpenAttachmentLocallyAsync(previewNode))">
-                                                    Open locally
-                                                </button>
-                                            }
-                                            <a class="cw-button"
-                                               data-tone="ghost"
-                                               href="@previewNode.Route"
-                                               target="_blank"
-                                               rel="noopener noreferrer">
-                                                Open in new tab
-                                            </a>
-                                            <button type="button" class="cw-button" data-tone="primary" @onclick="CloseAttachmentPreview">Close</button>
-                                        </div>
-                                    </div>
-
-                                    <div class="project-structure-preview-dialog__body">
-                                        @switch (ResolveAttachmentPreviewKind(previewNode))
-                                        {
-                                            case AttachmentPreviewKind.Image:
-                                                <img class="project-structure-preview-dialog__media"
-                                                     src="@previewNode.Route"
-                                                     alt="@previewNode.Title" />
-                                                break;
-                                            case AttachmentPreviewKind.Video:
-                                                <video class="project-structure-preview-dialog__media"
-                                                       controls
-                                                       preload="metadata"
-                                                       src="@previewNode.Route"></video>
-                                                break;
-                                            case AttachmentPreviewKind.Audio:
-                                                <audio class="project-structure-audio-preview project-structure-preview-dialog__audio"
-                                                       controls
-                                                       preload="metadata"
-                                                       src="@previewNode.Route"></audio>
-                                                break;
-                                            case AttachmentPreviewKind.Document:
-                                                <iframe class="project-structure-preview-dialog__frame"
-                                                        src="@ResolveAttachmentPreviewSource(previewNode)"
-                                                        title="@($"{ResolveAttachmentDisplayName(previewNode)} dialog preview")"></iframe>
-                                                break;
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        }
+                            }
+                        </ProjectStructureDeferredSurface>
                     </OverlayContent>
                 </CanvasWorkbench>
             </Canvas>
@@ -848,229 +513,184 @@ else
             </Supporting>
         </CanvasWorkbenchStage>
 
-        <div class="grid gap-5 xl:grid-cols-2">
-            <CanvasBoundaryCard TestHookId="project-structure-action-catalog-adapter"
-                                       Label="Project Structure action catalog adapter"
-                                       Title="Project Structure actions now flow through a dedicated domain catalog"
-                                       Summary="Quick create, node context, group actions, and inspector create groups no longer need to be rebuilt inline in the page."
-                                       StatePill="@(selectedNode is null ? "Canvas scope" : "Node scope")"
-                                       Metrics="@ActionCatalogMetrics">
-                <div class="grid gap-3 md:grid-cols-2">
-                    <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Quick create</p>
-                        <div class="mt-3 space-y-2">
-                            @foreach (var action in ActionCatalogPreviewQuickActions.Take(4))
-                            {
-                                <div class="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-800">@action.Label</div>
-                            }
-                        </div>
-                    </div>
-                    <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Context actions</p>
-                        <div class="mt-3 space-y-2">
-                            @foreach (var action in ActionCatalogPreviewContextActions.Take(4))
-                            {
-                                <div class="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-800">@action.Label</div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </CanvasBoundaryCard>
-
-            <CanvasBoundaryCard TestHookId="project-structure-placement-policy"
-                                       Label="Project Structure placement policy"
-                                       Title="Create placement now normalizes through a dedicated policy"
-                                       Summary="Sibling, child, and free-canvas placement resolve through one reusable rule set instead of living inline in create handlers."
-                                       StatePill="@PlacementPreviewMode"
-                                       Metrics="@PlacementPolicyMetrics">
-                <div class="grid gap-3 md:grid-cols-2">
-                    <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Resolved parent</p>
-                        <p class="mt-2 text-sm text-slate-950">@PlacementPreviewParentLabel</p>
-                    </div>
-                    <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Resolved coordinates</p>
-                        <p class="mt-2 text-sm text-slate-950">@PlacementPreviewCoordinates</p>
-                    </div>
-                </div>
-            </CanvasBoundaryCard>
-        </div>
     </div>
 }
 
-@if (summaryDialog is not null)
-{
-    <div class="project-structure-preview-backdrop" @onclick="CloseSummary">
-        <div class="project-structure-preview-dialog project-structure-summary-dialog"
-             role="dialog"
-             aria-modal="true"
-             aria-label="@($"{summaryDialog.RootTitle} progress summary")"
-             @onclick:stopPropagation="true">
-            <div class="project-structure-preview-dialog__header">
-                <div class="project-structure-preview-dialog__copy">
-                    <p class="cw-panel-kicker">Progress summary</p>
-                    <h3 class="cw-panel-title">@summaryDialog.RootTitle</h3>
-                    <p class="cw-panel-copy">Hierarchy, inline status editing, and exports are generated from the same summary source.</p>
+<ProjectStructureDeferredSurface RenderKey="@SupportDialogRenderKey">
+    @if (summaryDialog is not null)
+    {
+        <div class="project-structure-preview-backdrop" @onclick="CloseSummary">
+            <div class="project-structure-preview-dialog project-structure-summary-dialog"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-label="@($"{summaryDialog.RootTitle} progress summary")"
+                 @onclick:stopPropagation="true">
+                <div class="project-structure-preview-dialog__header">
+                    <div class="project-structure-preview-dialog__copy">
+                        <p class="cw-panel-kicker">Progress summary</p>
+                        <h3 class="cw-panel-title">@summaryDialog.RootTitle</h3>
+                        <p class="cw-panel-copy">Hierarchy, inline status editing, and exports are generated from the same summary source.</p>
+                    </div>
+                    <div class="project-structure-preview-dialog__actions">
+                        <button type="button" class="cw-button" data-tone="accent" @onclick="ExportSummaryWorkbookAsync">Export XLSX</button>
+                        <button type="button" class="cw-button" data-tone="primary" @onclick="ExportSummaryGanttAsync">Export Gantt</button>
+                        <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseSummary">Close</button>
+                    </div>
                 </div>
-                <div class="project-structure-preview-dialog__actions">
-                    <button type="button" class="cw-button" data-tone="accent" @onclick="ExportSummaryWorkbookAsync">Export XLSX</button>
-                    <button type="button" class="cw-button" data-tone="primary" @onclick="ExportSummaryGanttAsync">Export Gantt</button>
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseSummary">Close</button>
+
+                <div class="project-structure-preview-dialog__body">
+                    <div class="cw-summary-grid">
+                        <div class="cw-summary-tile">
+                            <span>Done</span>
+                            <strong>@summaryDialog.Summary.CompletedCount</strong>
+                        </div>
+                        <div class="cw-summary-tile">
+                            <span>Active</span>
+                            <strong>@summaryDialog.Summary.ActiveCount</strong>
+                        </div>
+                        <div class="cw-summary-tile">
+                            <span>Blocked</span>
+                            <strong>@summaryDialog.Summary.BlockedCount</strong>
+                        </div>
+                        <div class="cw-summary-tile">
+                            <span>Review</span>
+                            <strong>@summaryDialog.Summary.ReviewCount</strong>
+                        </div>
+                        <div class="cw-summary-tile">
+                            <span>Undated</span>
+                            <strong>@summaryDialog.Summary.UndatedCount</strong>
+                        </div>
+                    </div>
+
+                    <div class="project-structure-summary-table">
+                        @foreach (var row in summaryDialog.Summary.Rows)
+                        {
+                            <div class="project-structure-summary-row" style="@($"--summary-depth:{row.Depth};")">
+                                <div class="project-structure-summary-row__node">
+                                    <strong>@row.Title</strong>
+                                    <span>@row.KindLabel</span>
+                                </div>
+                                <div class="project-structure-summary-row__meta">
+                                    <span>@row.ProgressLabel</span>
+                                    <span>@(row.StartUtc?.ToLocalTime().ToString("g") ?? "Undated")</span>
+                                </div>
+                                <select class="cw-context-toolbox__search project-structure-summary-row__select"
+                                        value="@row.Status"
+                                        @onchange="@(args => ChangeSummaryStatusAsync(row.NodeId, args))">
+                                    @foreach (var statusOption in SummaryStatusOptions)
+                                    {
+                                        <option value="@statusOption">@statusOption</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
+        </div>
+    }
 
-            <div class="project-structure-preview-dialog__body">
-                <div class="cw-summary-grid">
-                    <div class="cw-summary-tile">
-                        <span>Done</span>
-                        <strong>@summaryDialog.Summary.CompletedCount</strong>
+    @if (pendingDeletePrompt is not null)
+    {
+        <div class="project-structure-preview-backdrop" @onclick="CancelDelete">
+            <div class="project-structure-preview-dialog project-structure-summary-dialog"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-label="@($"Delete {pendingDeletePrompt.Title}")"
+                 @onclick:stopPropagation="true">
+                <div class="project-structure-preview-dialog__header">
+                    <div class="project-structure-preview-dialog__copy">
+                        <p class="cw-panel-kicker">Delete node</p>
+                        <h3 class="cw-panel-title">@pendingDeletePrompt.Title</h3>
+                        <p class="cw-panel-copy">@pendingDeletePrompt.ImpactCopy</p>
                     </div>
-                    <div class="cw-summary-tile">
-                        <span>Active</span>
-                        <strong>@summaryDialog.Summary.ActiveCount</strong>
+                    <div class="project-structure-preview-dialog__actions">
+                        <button type="button" class="cw-button" data-tone="danger" @onclick="ConfirmDeleteAsync">Delete</button>
+                        <button type="button" class="cw-button" data-tone="ghost" @onclick="CancelDelete">Cancel</button>
                     </div>
-                    <div class="cw-summary-tile">
-                        <span>Blocked</span>
-                        <strong>@summaryDialog.Summary.BlockedCount</strong>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (pendingTranscriptAction is not null)
+    {
+        <div class="project-structure-preview-backdrop" @onclick="CancelTranscriptAction">
+            <div class="project-structure-preview-dialog project-structure-summary-dialog"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-label="@($"{ResolveTranscriptActionLabel(pendingTranscriptAction.ActionKind)} confirmation")"
+                 @onclick:stopPropagation="true">
+                <div class="project-structure-preview-dialog__header">
+                    <div class="project-structure-preview-dialog__copy">
+                        <p class="cw-panel-kicker">LLM confirmation</p>
+                        <h3 class="cw-panel-title">@ResolveTranscriptActionLabel(pendingTranscriptAction.ActionKind)</h3>
+                        <p class="cw-panel-copy">This action will send transcript content to an external or local provider. Confirmation and explicit provider selection are required.</p>
                     </div>
-                    <div class="cw-summary-tile">
-                        <span>Review</span>
-                        <strong>@summaryDialog.Summary.ReviewCount</strong>
-                    </div>
-                    <div class="cw-summary-tile">
-                        <span>Undated</span>
-                        <strong>@summaryDialog.Summary.UndatedCount</strong>
+                    <div class="project-structure-preview-dialog__actions">
+                        <button type="button" class="cw-button" data-tone="accent" @onclick="ExecuteTranscriptActionAsync">Send request</button>
+                        <button type="button" class="cw-button" data-tone="ghost" @onclick="CancelTranscriptAction">Cancel</button>
                     </div>
                 </div>
 
-                <div class="project-structure-summary-table">
-                    @foreach (var row in summaryDialog.Summary.Rows)
+                <div class="project-structure-preview-dialog__body">
+                    <label class="cw-field-shell">
+                        <span class="cw-panel-kicker">Provider profile</span>
+                        <select class="cw-context-toolbox__search"
+                                value="@pendingTranscriptAction.SelectedProviderId"
+                                @onchange="HandleTranscriptProviderChanged">
+                            <option value="">Select a provider</option>
+                            @foreach (var provider in pendingTranscriptAction.Providers)
+                            {
+                                <option value="@provider.Id">@($"{provider.Name} ({provider.ProviderKind})")</option>
+                            }
+                        </select>
+                    </label>
+
+                    @if (!string.IsNullOrWhiteSpace(pendingTranscriptAction.LastProviderName))
                     {
-                        <div class="project-structure-summary-row" style="@($"--summary-depth:{row.Depth};")">
-                            <div class="project-structure-summary-row__node">
-                                <strong>@row.Title</strong>
-                                <span>@row.KindLabel</span>
-                            </div>
-                            <div class="project-structure-summary-row__meta">
-                                <span>@row.ProgressLabel</span>
-                                <span>@(row.StartUtc?.ToLocalTime().ToString("g") ?? "Undated")</span>
-                            </div>
-                            <select class="cw-context-toolbox__search project-structure-summary-row__select"
-                                    value="@row.Status"
-                                    @onchange="@(args => ChangeSummaryStatusAsync(row.NodeId, args))">
-                                @foreach (var statusOption in SummaryStatusOptions)
-                                {
-                                    <option value="@statusOption">@statusOption</option>
-                                }
-                            </select>
+                        <div class="project-structure-inline-feedback" data-tone="accent">
+                            Last provider: @pendingTranscriptAction.LastProviderName
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(pendingTranscriptAction.Error))
+                    {
+                        <div class="project-structure-inline-feedback" data-tone="warn">
+                            @pendingTranscriptAction.Error
                         </div>
                     }
                 </div>
             </div>
         </div>
-    </div>
-}
+    }
 
-@if (pendingDeletePrompt is not null)
-{
-    <div class="project-structure-preview-backdrop" @onclick="CancelDelete">
-        <div class="project-structure-preview-dialog project-structure-summary-dialog"
-             role="dialog"
-             aria-modal="true"
-             aria-label="@($"Delete {pendingDeletePrompt.Title}")"
-             @onclick:stopPropagation="true">
-            <div class="project-structure-preview-dialog__header">
-                <div class="project-structure-preview-dialog__copy">
-                    <p class="cw-panel-kicker">Delete node</p>
-                    <h3 class="cw-panel-title">@pendingDeletePrompt.Title</h3>
-                    <p class="cw-panel-copy">@pendingDeletePrompt.ImpactCopy</p>
-                </div>
-                <div class="project-structure-preview-dialog__actions">
-                    <button type="button" class="cw-button" data-tone="danger" @onclick="ConfirmDeleteAsync">Delete</button>
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick="CancelDelete">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-@if (pendingTranscriptAction is not null)
-{
-    <div class="project-structure-preview-backdrop" @onclick="CancelTranscriptAction">
-        <div class="project-structure-preview-dialog project-structure-summary-dialog"
-             role="dialog"
-             aria-modal="true"
-             aria-label="@($"{ResolveTranscriptActionLabel(pendingTranscriptAction.ActionKind)} confirmation")"
-             @onclick:stopPropagation="true">
-            <div class="project-structure-preview-dialog__header">
-                <div class="project-structure-preview-dialog__copy">
-                    <p class="cw-panel-kicker">LLM confirmation</p>
-                    <h3 class="cw-panel-title">@ResolveTranscriptActionLabel(pendingTranscriptAction.ActionKind)</h3>
-                    <p class="cw-panel-copy">This action will send transcript content to an external or local provider. Confirmation and explicit provider selection are required.</p>
-                </div>
-                <div class="project-structure-preview-dialog__actions">
-                    <button type="button" class="cw-button" data-tone="accent" @onclick="ExecuteTranscriptActionAsync">Send request</button>
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick="CancelTranscriptAction">Cancel</button>
-                </div>
-            </div>
-
-            <div class="project-structure-preview-dialog__body">
-                <label class="cw-field-shell">
-                    <span class="cw-panel-kicker">Provider profile</span>
-                    <select class="cw-context-toolbox__search"
-                            value="@pendingTranscriptAction.SelectedProviderId"
-                            @onchange="HandleTranscriptProviderChanged">
-                        <option value="">Select a provider</option>
-                        @foreach (var provider in pendingTranscriptAction.Providers)
-                        {
-                            <option value="@provider.Id">@($"{provider.Name} ({provider.ProviderKind})")</option>
-                        }
-                    </select>
-                </label>
-
-                @if (!string.IsNullOrWhiteSpace(pendingTranscriptAction.LastProviderName))
-                {
-                    <div class="project-structure-inline-feedback" data-tone="accent">
-                        Last provider: @pendingTranscriptAction.LastProviderName
+    @if (mermaidPreviewNode is not null)
+    {
+        <div class="project-structure-preview-backdrop" @onclick="CloseMermaidViewer">
+            <div class="project-structure-preview-dialog project-structure-summary-dialog"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-label="@($"{mermaidPreviewNode.Title} Mermaid viewer")"
+                 @onclick:stopPropagation="true">
+                <div class="project-structure-preview-dialog__header">
+                    <div class="project-structure-preview-dialog__copy">
+                        <p class="cw-panel-kicker">Mermaid viewer</p>
+                        <h3 class="cw-panel-title">@mermaidPreviewNode.Title</h3>
+                        <p class="cw-panel-copy">Detected diagram type: @ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(mermaidPreviewNode.Notes)</p>
                     </div>
-                }
-
-                @if (!string.IsNullOrWhiteSpace(pendingTranscriptAction.Error))
-                {
-                    <div class="project-structure-inline-feedback" data-tone="warn">
-                        @pendingTranscriptAction.Error
+                    <div class="project-structure-preview-dialog__actions">
+                        <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseMermaidViewer">Close</button>
                     </div>
-                }
-            </div>
-        </div>
-    </div>
-}
-
-@if (mermaidPreviewNode is not null)
-{
-    <div class="project-structure-preview-backdrop" @onclick="CloseMermaidViewer">
-        <div class="project-structure-preview-dialog project-structure-summary-dialog"
-             role="dialog"
-             aria-modal="true"
-             aria-label="@($"{mermaidPreviewNode.Title} Mermaid viewer")"
-             @onclick:stopPropagation="true">
-            <div class="project-structure-preview-dialog__header">
-                <div class="project-structure-preview-dialog__copy">
-                    <p class="cw-panel-kicker">Mermaid viewer</p>
-                    <h3 class="cw-panel-title">@mermaidPreviewNode.Title</h3>
-                    <p class="cw-panel-copy">Detected diagram type: @ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(mermaidPreviewNode.Notes)</p>
                 </div>
-                <div class="project-structure-preview-dialog__actions">
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseMermaidViewer">Close</button>
+
+                <div class="project-structure-preview-dialog__body">
+                    <pre class="pf-components-toolbox__preview-content project-structure-mermaid-source">@mermaidPreviewNode.Notes</pre>
                 </div>
             </div>
-
-            <div class="project-structure-preview-dialog__body">
-                <pre class="pf-components-toolbox__preview-content project-structure-mermaid-source">@mermaidPreviewNode.Notes</pre>
-            </div>
         </div>
-    </div>
-}
+    }
+</ProjectStructureDeferredSurface>
 
 @code {
     private const string SelectionWindowKey = "project-structure.selection";
@@ -1143,54 +763,6 @@ else
             _ => "Batch-update shared fields, review the selection set, and keep grouping actions close to the canvas."
         };
     private bool CanApplySelectionStatus => selectedNodes.Count > 0 && selectedNodes.All(IsCanvasStatusMutable);
-    private ProjectStructureNode? ActionCatalogPreviewNode
-        => selectedNode ?? surface?.Nodes.FirstOrDefault(node => node.ObjectType != ProjectObjectType.ProjectRoot) ?? surface?.Nodes.FirstOrDefault();
-    private IReadOnlyList<CanvasWorkbenchAction> ActionCatalogPreviewQuickActions
-        => actionCatalog.BuildQuickCreateActions(ActionCatalogPreviewNode?.ObjectType);
-    private IReadOnlyList<CanvasWorkbenchAction> ActionCatalogPreviewContextActions
-        => ActionCatalogPreviewNode is null ? actionCatalog.BuildGroupContextActions() : actionCatalog.BuildNodeContextActions(ActionCatalogPreviewNode);
-    private CanvasWorkbenchCreateActionRequest PlacementPreviewRequest
-        => new(
-            "preview-create",
-            ActionCatalogPreviewNode?.Id,
-            ActionCatalogPreviewNode?.X ?? 120,
-            ActionCatalogPreviewNode?.Y ?? 120,
-            null,
-            "Preview node",
-            string.Empty,
-            string.Empty,
-            selectedNode is null ? "canvas" : "child",
-            "command",
-            string.Empty,
-            null);
-    private string PlacementPreviewMode => PlacementPreviewRequest.PlacementKind;
-    private string? PlacementPreviewParentId => ProjectStructurePlacementPolicy.ResolveParentNodeId(ActionCatalogPreviewNode, PlacementPreviewRequest);
-    private (double? X, double? Y) PlacementPreview
-        => placementPolicy.ResolveCreatePlacement(
-            surface?.Nodes ?? [],
-            ActionCatalogPreviewNode,
-            surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, PlacementPreviewParentId, StringComparison.Ordinal)),
-            PlacementPreviewRequest);
-    private string PlacementPreviewParentLabel => string.IsNullOrWhiteSpace(PlacementPreviewParentId) ? "Canvas root" : PlacementPreviewParentId;
-    private string PlacementPreviewCoordinates
-        => PlacementPreview.X.HasValue && PlacementPreview.Y.HasValue
-            ? $"{Math.Round(PlacementPreview.X.Value)}, {Math.Round(PlacementPreview.Y.Value)}"
-            : "Unresolved";
-    private IReadOnlyList<string> ActionCatalogMetrics =>
-    [
-        $"{ActionCatalogPreviewQuickActions.Count} quick create actions",
-        $"{ActionCatalogPreviewContextActions.Count} context actions",
-        $"{actionCatalog.BuildGroupContextActions().Count} group actions",
-        $"{BuildInspectorCreateGroups(ActionCatalogPreviewNode?.ObjectType).Count} inspector groups"
-    ];
-    private IReadOnlyList<string> PlacementPolicyMetrics =>
-    [
-        $"Parent: {PlacementPreviewParentLabel}",
-        $"Coords: {PlacementPreviewCoordinates}",
-        $"{surface?.Nodes.Count ?? 0} nodes in graph",
-        $"{PlacementPreviewMode} placement"
-    ];
-
     private Task RunSelectedValidationAsync()
         => selectedNode is null
             ? Task.CompletedTask
@@ -1213,9 +785,10 @@ else
     private async Task ReloadSurfaceAsync(string? preferredSelectionId = null)
     {
         var reloadedSurface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
-        var uiState = !string.IsNullOrWhiteSpace(currentViewStateJson)
-            ? CanvasWorkbenchUiState.Parse(currentViewStateJson)
-            : CanvasWorkbenchUiState.Parse(reloadedSurface.ViewStateJson);
+        var uiState = NormalizePersistedCanvasUiState(
+            !string.IsNullOrWhiteSpace(currentViewStateJson)
+                ? CanvasWorkbenchUiState.Parse(currentViewStateJson)
+                : CanvasWorkbenchUiState.Parse(reloadedSurface.ViewStateJson));
         if (string.IsNullOrWhiteSpace(currentViewStateJson))
         {
             uiState.ShowMinimap = false;
@@ -1264,6 +837,67 @@ else
         RefreshCanvasSurface();
     }
 
+    private async Task ApplySurfaceNodeUpdatesAsync(IReadOnlyCollection<ProjectStructureNode> updatedNodes)
+    {
+        if (surface is null || updatedNodes.Count == 0)
+        {
+            return;
+        }
+
+        var updatedById = updatedNodes
+            .Where(node => !string.IsNullOrWhiteSpace(node.Id))
+            .GroupBy(node => node.Id, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Last(), StringComparer.Ordinal);
+        if (updatedById.Count == 0)
+        {
+            return;
+        }
+
+        var patchedNodes = surface.Nodes
+            .Select(node => updatedById.TryGetValue(node.Id, out var updated) ? updated : node)
+            .ToList();
+        surface = surface with { Nodes = patchedNodes };
+
+        var availableNodeIds = patchedNodes
+            .Select(node => node.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        selectedNodeIds = selectedNodeIds
+            .Where(availableNodeIds.Contains)
+            .ToList();
+        pendingClientSelectionId = null;
+
+        if (previewNode is not null)
+        {
+            previewNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, previewNode.Id, StringComparison.Ordinal));
+        }
+
+        if (mermaidPreviewNode is not null)
+        {
+            mermaidPreviewNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, mermaidPreviewNode.Id, StringComparison.Ordinal));
+        }
+
+        if (quickActionDialog is not null)
+        {
+            var dialogNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, quickActionDialog.NodeId, StringComparison.Ordinal));
+            quickActionDialog = dialogNode is null ? null : BuildQuickActionDialog(dialogNode);
+        }
+
+        if (summaryDialog is not null)
+        {
+            var rootNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, summaryDialog.RootNodeId, StringComparison.Ordinal));
+            summaryDialog = rootNode is null
+                ? null
+                : summaryDialog with
+                {
+                    RootTitle = rootNode.Title,
+                    Summary = ProjectStructureSummaryBuilder.Build(surface, rootNode)
+                };
+        }
+
+        RefreshCanvasSurface();
+        await InvokeAsync(StateHasChanged);
+    }
+
     private void RefreshCanvasSurface()
     {
         if (surface is null)
@@ -1272,7 +906,7 @@ else
             return;
         }
 
-        var uiState = CanvasWorkbenchUiState.Parse(surface.ViewStateJson);
+        var uiState = NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(surface.ViewStateJson));
         uiState.SelectedNodeIds = [.. selectedNodeIds];
 
         canvasSurface = graphAdapter.BuildSurface(
@@ -1317,9 +951,14 @@ else
 
     private async Task HandleNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
     {
-        foreach (var position in args.Positions)
+        var updatedNodeIds = await ProjectWorkbenchService.MoveObjectsAsync(
+            ProjectId,
+            args.Positions
+                .Select(position => new ProjectNodeMoveRequest(position.NodeId, position.X, position.Y))
+                .ToList());
+        if (updatedNodeIds.Count == 0)
         {
-            await ProjectWorkbenchService.MoveObjectAsync(ProjectId, position.NodeId, position.X, position.Y);
+            return;
         }
 
         await ReloadSurfaceAsync();
@@ -1333,7 +972,7 @@ else
             return;
         }
 
-        var uiState = CanvasWorkbenchUiState.Parse(stateJson);
+        var uiState = NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(stateJson));
         if (!string.IsNullOrWhiteSpace(pendingClientSelectionId) &&
             surface.Nodes.Any(node => string.Equals(node.Id, pendingClientSelectionId, StringComparison.Ordinal)) &&
             !uiState.SelectedNodeIds.Contains(pendingClientSelectionId, StringComparer.Ordinal))
@@ -1341,9 +980,16 @@ else
             return;
         }
 
+        var normalizedStateJson = uiState.ToJson();
+        var persistedStateJson = NormalizePersistedCanvasStateJson(currentViewStateJson ?? surface.ViewStateJson);
+        if (string.Equals(persistedStateJson, normalizedStateJson, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         pendingClientSelectionId = null;
         selectedNodeIds = uiState.SelectedNodeIds.ToList();
-        currentViewStateJson = uiState.ToJson();
+        currentViewStateJson = normalizedStateJson;
         surface = surface with { ViewStateJson = currentViewStateJson };
         RefreshCanvasSurface();
         await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
@@ -1386,14 +1032,13 @@ else
             return;
         }
 
-        await ProjectWorkbenchService.UpdateObjectAsync(
+        var updatedNode = await ProjectWorkbenchService.UpdateObjectAsync(
             ProjectId,
             targetNode.Id,
             BuildSimpleNoteTitle(request.Notes),
             string.Empty,
             request.Notes);
-
-        await ReloadSurfaceAsync(targetNode.Id);
+        await ApplySurfaceNodeUpdatesAsync([updatedNode]);
     }
 
     private async Task HandleCanvasActionAsync(string actionId, string? nodeId, double x, double y)
@@ -1677,6 +1322,7 @@ else
 
         var uiState = CanvasWorkbenchUiState.Parse(surface.ViewStateJson);
         uiState.SelectedNodeIds = [.. selectedNodeIds];
+        EnsureSelectionScopedToolboxWindowState(uiState);
         graphAdapter.ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
         currentViewStateJson = uiState.ToJson();
         surface = surface with { ViewStateJson = currentViewStateJson };
@@ -1705,8 +1351,8 @@ else
             return;
         }
 
-        await ProjectWorkbenchService.UpdateObjectStatusesAsync(ProjectId, mutableNodeIds, status);
-        await ReloadSurfaceAsync();
+        var updatedNodes = await ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync(ProjectId, mutableNodeIds, status);
+        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
     }
 
     private async Task ApplyProgressAsync(IReadOnlyCollection<string> nodeIds, string progressMode, int progressPercent)
@@ -1716,8 +1362,8 @@ else
             return;
         }
 
-        await ProjectWorkbenchService.UpdateObjectProgressAsync(ProjectId, nodeIds, progressMode, progressPercent);
-        await ReloadSurfaceAsync();
+        var updatedNodes = await ProjectWorkbenchService.UpdateObjectProgressDetailedAsync(ProjectId, nodeIds, progressMode, progressPercent);
+        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
     }
 
     private async Task ApplyMarkerAsync(IReadOnlyCollection<string> nodeIds, string markerIcon, string markerTone, string markerLabel)
@@ -1727,8 +1373,8 @@ else
             return;
         }
 
-        await ProjectWorkbenchService.UpdateObjectMarkerAsync(ProjectId, nodeIds, markerIcon, markerTone, markerLabel);
-        await ReloadSurfaceAsync();
+        var updatedNodes = await ProjectWorkbenchService.UpdateObjectMarkerDetailedAsync(ProjectId, nodeIds, markerIcon, markerTone, markerLabel);
+        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
     }
 
     private async Task ApplyPriorityAsync(IReadOnlyCollection<string> nodeIds, int priority)
@@ -1738,8 +1384,8 @@ else
             return;
         }
 
-        await ProjectWorkbenchService.UpdateObjectPriorityAsync(ProjectId, nodeIds, priority);
-        await ReloadSurfaceAsync();
+        var updatedNodes = await ProjectWorkbenchService.UpdateObjectPriorityDetailedAsync(ProjectId, nodeIds, priority);
+        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
     }
 
     private async Task CreateSelectionBorderAsync()
@@ -1775,7 +1421,7 @@ else
     }
 
     private CanvasWorkbenchUiState ResolveEditableUiState()
-        => CanvasWorkbenchUiState.Parse(currentViewStateJson ?? surface?.ViewStateJson);
+        => NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(currentViewStateJson ?? surface?.ViewStateJson));
 
     private async Task PersistCanvasUiStateAsync(CanvasWorkbenchUiState uiState)
     {
@@ -1784,6 +1430,7 @@ else
             return;
         }
 
+        uiState = NormalizePersistedCanvasUiState(uiState);
         uiState.SelectedNodeIds = [.. selectedNodeIds];
         graphAdapter.ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
         currentViewStateJson = uiState.ToJson();
@@ -1792,6 +1439,15 @@ else
         await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
         await InvokeAsync(StateHasChanged);
     }
+
+    private static CanvasWorkbenchUiState NormalizePersistedCanvasUiState(CanvasWorkbenchUiState uiState)
+    {
+        uiState.ManualPositions = [];
+        return uiState;
+    }
+
+    private static string NormalizePersistedCanvasStateJson(string? stateJson)
+        => NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(stateJson)).ToJson();
 
     private CanvasWorkbenchWindowState ResolveWindowState(string key)
     {
@@ -2146,15 +1802,6 @@ else
 
     private void CloseAttachmentPreview()
         => previewNode = null;
-
-    private enum AttachmentPreviewKind
-    {
-        None,
-        Image,
-        Video,
-        Audio,
-        Document
-    }
 
 }
 

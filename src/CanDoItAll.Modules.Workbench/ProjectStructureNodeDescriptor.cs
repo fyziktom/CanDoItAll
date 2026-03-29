@@ -2,7 +2,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
 
-internal sealed record ProjectStructureNodeFact(string Label, string Value);
+public sealed record ProjectStructureNodeFact(string Label, string Value);
 
 internal sealed record ProjectStructureCompactPathPresentation(
     string Label,

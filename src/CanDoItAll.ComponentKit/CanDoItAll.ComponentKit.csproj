@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Description>Legacy component catalog; active shared canvas runtime lives in CanDoItAll.Components.CanvasLib.</Description>
   </PropertyGroup>
 
 

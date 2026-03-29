@@ -79,6 +79,45 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Selection_panel_component_skips_rerender_when_the_page_rerenders_without_selection_changes()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Selection Render Isolation");
+        var note = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Selection node",
+                "Render isolation",
+                "Keep the panel stable when only the page rerenders.",
+                $"project:{projectId}",
+                420,
+                260));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, note.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Selection node", cut.Markup);
+            Assert.Contains("project-structure-selection-window", cut.Markup);
+        });
+
+        var selectionPanel = cut.FindComponent<ProjectStructureSelectionPanel>();
+        var selectionPanelRenderCount = selectionPanel.RenderCount;
+
+        cut.Render();
+
+        selectionPanel = cut.FindComponent<ProjectStructureSelectionPanel>();
+        Assert.Equal(selectionPanelRenderCount, selectionPanel.RenderCount);
+    }
+
+    [Fact]
     public async Task Health_window_toggle_restores_the_default_offset_that_keeps_the_toolbox_clear()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -153,8 +192,8 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Project object index", cut.Markup);
             Assert.Contains("Graph health", cut.Markup);
             Assert.Contains("Architecture note", cut.Markup);
-            Assert.Single(cut.FindAll("[data-testid='project-structure-action-catalog-adapter']"));
-            Assert.Single(cut.FindAll("[data-testid='project-structure-placement-policy']"));
+            Assert.DoesNotContain("project-structure-action-catalog-adapter", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("project-structure-placement-policy", cut.Markup, StringComparison.Ordinal);
         });
 
         cut.FindAll("button")
@@ -167,7 +206,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Open standard blocks", cut.Markup);
             Assert.Contains("Architecture note", cut.Markup);
             Assert.Contains("Tracks the first implementation idea", cut.Markup);
-            Assert.DoesNotContain("project-structure-standard-blocks-toolbox", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("project-structure-standard-blocks-toolbox", cut.Markup);
         });
 
         cut.FindAll("button")
@@ -970,6 +1009,101 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Open locally", cut.Markup);
             Assert.Contains("Expand preview", cut.Markup);
         });
+    }
+
+    [Fact]
+    public async Task Canvas_state_changes_ignore_manual_position_only_updates()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projectsService, "Manual Position Ignore");
+        var rootNodeId = $"project:{projectId}";
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, rootNodeId);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var baselineSurface = await workbenchService.GetStructureAsync(projectId);
+        var baselineState = CanvasWorkbenchUiState.Parse(baselineSurface.ViewStateJson);
+
+        var transientState = new CanvasWorkbenchUiState
+        {
+            SelectedNodeIds = [rootNodeId],
+            ManualPositions = new Dictionary<string, CanvasWorkbenchPoint>(StringComparer.Ordinal)
+            {
+                [rootNodeId] = new CanvasWorkbenchPoint
+                {
+                    X = 960,
+                    Y = 640
+                }
+            }
+        };
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnStateChanged(transientState.ToJson()));
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        var persistedState = CanvasWorkbenchUiState.Parse(persistedSurface.ViewStateJson);
+
+        Assert.Empty(persistedState.ManualPositions);
+        Assert.Equal(baselineState.SelectedNodeIds, persistedState.SelectedNodeIds);
+        Assert.Equal(baselineState.Zoom, persistedState.Zoom, 3);
+        Assert.Equal(baselineState.PanX, persistedState.PanX, 3);
+        Assert.Equal(baselineState.PanY, persistedState.PanY, 3);
+        Assert.Equal(baselineState.ShowMinimap, persistedState.ShowMinimap);
+        Assert.Empty(cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState.ManualPositions);
+    }
+
+    [Fact]
+    public async Task Canvas_state_changes_persist_viewport_without_manual_positions()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projectsService, "Viewport Persistence");
+        var rootNodeId = $"project:{projectId}";
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, rootNodeId);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+
+        var stateChange = new CanvasWorkbenchUiState
+        {
+            SelectedNodeIds = [rootNodeId],
+            ManualPositions = new Dictionary<string, CanvasWorkbenchPoint>(StringComparer.Ordinal)
+            {
+                [rootNodeId] = new CanvasWorkbenchPoint
+                {
+                    X = 720,
+                    Y = 480
+                }
+            },
+            Zoom = 1.25,
+            PanX = 240,
+            PanY = 180,
+            ShowMinimap = false
+        };
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnStateChanged(stateChange.ToJson()));
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        var persistedState = CanvasWorkbenchUiState.Parse(persistedSurface.ViewStateJson);
+
+        Assert.Empty(persistedState.ManualPositions);
+        Assert.Equal(1.25, persistedState.Zoom, 3);
+        Assert.Equal(240, persistedState.PanX, 3);
+        Assert.Equal(180, persistedState.PanY, 3);
+        Assert.Equal([rootNodeId], persistedState.SelectedNodeIds);
+        Assert.False(persistedState.ShowMinimap);
+
+        var renderedState = cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState;
+        Assert.Empty(renderedState.ManualPositions);
+        Assert.Equal(1.25, renderedState.Zoom, 3);
+        Assert.Equal(240, renderedState.PanX, 3);
+        Assert.Equal(180, renderedState.PanY, 3);
     }
 
     [Fact]

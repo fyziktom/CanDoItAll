@@ -132,19 +132,8 @@ public partial class ProjectStructurePage
             return;
         }
 
-        await ProjectWorkbenchService.UpdateObjectStatusesAsync(ProjectId, [nodeId], status);
-        await ReloadSurfaceAsync(nodeId);
-        var rootNode = ResolveNode(summaryDialog.RootNodeId);
-        if (rootNode is null || surface is null)
-        {
-            summaryDialog = null;
-            return;
-        }
-
-        summaryDialog = summaryDialog with
-        {
-            Summary = ProjectStructureSummaryBuilder.Build(surface, rootNode)
-        };
+        var updatedNodes = await ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync(ProjectId, [nodeId], status);
+        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
     }
 
     private async Task ExportSummaryWorkbookAsync()
@@ -406,7 +395,7 @@ public partial class ProjectStructurePage
                 break;
         }
 
-        await ProjectWorkbenchService.UpdateObjectMetadataAsync(
+        var updatedTranscriptNode = await ProjectWorkbenchService.UpdateObjectMetadataAsync(
             ProjectId,
             transcriptNode.Id,
             ProjectObjectMetadataSerializer.Serialize(metadata),
@@ -415,7 +404,10 @@ public partial class ProjectStructurePage
         workflowFeedback = $"{ResolveTranscriptActionLabel(pendingTranscriptAction.ActionKind)} completed through {provider.Name}.";
         workflowFeedbackTone = result.Value.ContainsWarnings ? "warn" : "mint";
         pendingTranscriptAction = null;
-        await ReloadSurfaceAsync(transcriptNode.Id);
+        if (updatedTranscriptNode is not null)
+        {
+            await ApplySurfaceNodeUpdatesAsync([updatedTranscriptNode]);
+        }
     }
 
     private void HandleTranscriptProviderChanged(ChangeEventArgs args)
@@ -636,24 +628,4 @@ public partial class ProjectStructurePage
             .ToLowerInvariant();
     }
 
-    private sealed record ProjectStructureDeletePrompt(
-        string NodeId,
-        string Title,
-        int DescendantCount,
-        bool RequiresConfirmation,
-        string ImpactCopy);
-
-    private sealed record ProjectStructureSummaryDialogState(
-        string RootNodeId,
-        string RootTitle,
-        ProjectStructureSummary Summary);
-
-    private sealed record ProjectStructureTranscriptActionDialogState(
-        string NodeId,
-        string NodeTitle,
-        ProjectLlmActionKind ActionKind,
-        Guid? SelectedProviderId,
-        string LastProviderName,
-        IReadOnlyList<ProviderProfileSummary> Providers,
-        string Error);
 }

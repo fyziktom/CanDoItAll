@@ -209,7 +209,19 @@ public sealed class ProjectStructureActionCatalogAdapter
                 Description = "Review the project summary and exported hierarchy details.",
                 Icon = "summary",
                 Tone = "sky"
-            }
+            },
+            new()
+            {
+                ActionId = "connect",
+                Label = "Connect",
+                MenuLabel = "Connect",
+                Description = "Use the selected project as the source for a dependency link.",
+                Icon = "link",
+                Tone = "neutral"
+            },
+            BuildProgressAction(),
+            BuildMarkerAction(),
+            BuildPriorityAction()
         };
 
         if (node.ProjectRole is ProjectStructureProjectRole.Subproject or ProjectStructureProjectRole.ParentProject or ProjectStructureProjectRole.AdditionalParentProject)

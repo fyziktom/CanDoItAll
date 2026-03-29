@@ -2119,7 +2119,7 @@ body.cw-body-lock {
 
 .cw-context-menu {
     position: absolute;
-    z-index: 9;
+    z-index: 40;
     width: 0;
     height: 0;
     pointer-events: none;

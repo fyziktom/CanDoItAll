@@ -10,12 +10,6 @@ public partial class ProjectStructurePage
 
     private ProjectStructureProjectHierarchyDialogState? projectHierarchyDialog;
 
-    private enum ProjectStructureProjectHierarchyDialogMode
-    {
-        AddSubproject,
-        ReconnectSubproject
-    }
-
     private async Task OpenAddSubprojectDialogAsync(ProjectStructureNode node)
         => await OpenProjectHierarchyDialogAsync(node, ProjectStructureProjectHierarchyDialogMode.AddSubproject);
 
@@ -170,34 +164,4 @@ public partial class ProjectStructurePage
 
     private static string BuildProjectChildNodeKey(Guid projectId)
         => $"{ProjectChildNodePrefix}{projectId}";
-
-    private sealed record ProjectStructureProjectHierarchyDialogState(
-        ProjectStructureProjectHierarchyDialogMode Mode,
-        Guid SubjectProjectId,
-        string SubjectProjectTitle,
-        Guid? CurrentParentProjectId,
-        string CurrentParentProjectTitle,
-        IReadOnlyList<ProjectSummary> AvailableProjects,
-        Guid? SelectedProjectId,
-        string Error)
-    {
-        public string Title => Mode switch
-        {
-            ProjectStructureProjectHierarchyDialogMode.AddSubproject => $"Add subproject under {SubjectProjectTitle}",
-            _ => $"Reconnect {SubjectProjectTitle}"
-        };
-
-        public string Copy => Mode switch
-        {
-            ProjectStructureProjectHierarchyDialogMode.AddSubproject =>
-                "Choose an existing project to attach beneath the selected project node.",
-            _ => $"Choose the new parent project for {SubjectProjectTitle}."
-        };
-
-        public string SubmitLabel => Mode switch
-        {
-            ProjectStructureProjectHierarchyDialogMode.AddSubproject => "Add subproject",
-            _ => "Reconnect project"
-        };
-    }
 }
