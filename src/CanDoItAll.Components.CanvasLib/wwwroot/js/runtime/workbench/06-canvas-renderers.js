@@ -270,12 +270,22 @@
         }
     }
 
+    function renderConnectorAnchors(state, visibleNodes) {
+        const renderConnectorAnchorOverlayFn =
+            workbenchInternals.overlayRenderer?.renderConnectorAnchorOverlay ||
+            shared.renderConnectorAnchorOverlay ||
+            shared.legacyRenderConnectorAnchorOverlay;
+        if (typeof renderConnectorAnchorOverlayFn === "function") {
+            renderConnectorAnchorOverlayFn(state, visibleNodes);
+        }
+    }
+
     function syncSceneHoverState(state, event) {
         const hitTarget = getSceneHitAtEvent(state, event);
         const nextNodeId = hitTarget?.nodeId || null;
         if ((state.hoveredNodeId || null) !== nextNodeId) {
             state.hoveredNodeId = nextNodeId;
-            renderConnectorAnchorOverlay(state, getProjectedNodes(state, getVisibleNodes(state)));
+            renderConnectorAnchors(state, getProjectedNodes(state, getVisibleNodes(state)));
         }
 
         if (hitTarget?.type === "annotation" && hitTarget.annotation) {

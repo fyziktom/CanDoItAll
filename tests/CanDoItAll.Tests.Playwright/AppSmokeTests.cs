@@ -1380,7 +1380,8 @@ public sealed partial class AppSmokeTests
     {
         try
         {
-            var center = await ResolveCanvasNodeCenterAsync(page, selector);
+            var center = await TryResolveCanvasHotZoneCenterAsync(page, selector, "node-body")
+                ?? await ResolveCanvasNodeCenterAsync(page, selector);
             await page.Mouse.ClickAsync(
                 (float)center.X,
                 (float)center.Y,
@@ -1631,8 +1632,36 @@ public sealed partial class AppSmokeTests
             return noteEditor;
         }
 
-        var center = await ResolveCanvasNodeCenterAsync(page, selector);
+        var center = await TryResolveCanvasHotZoneCenterAsync(page, selector, "node-body")
+            ?? await ResolveCanvasNodeCenterAsync(page, selector);
         await page.Mouse.DblClickAsync((float)center.X, (float)center.Y);
+        if (await WaitForLocatorAsync(noteEditor, 1_500))
+        {
+            return noteEditor;
+        }
+
+        var targetId = await ResolveCanvasNodeIdAsync(page, selector);
+        if (!string.IsNullOrWhiteSpace(targetId))
+        {
+            var openedViaRuntime = await page.EvaluateAsync<bool>(
+                @"targetId => {
+                    const host = document.querySelector('.cw-canvas-host');
+                    const state = host?.__canvasWorkbenchState;
+                    const runtimeModule = window.CanDoItAll?.canvasWorkbenchModule;
+                    const node = state?.lookups?.byId?.get?.(targetId) || null;
+                    if (!state || !node || typeof runtimeModule?.openExistingNoteEditor !== 'function') {
+                        return false;
+                    }
+
+                    runtimeModule.openExistingNoteEditor(state, node);
+                    return true;
+                }",
+                targetId);
+            if (openedViaRuntime && await WaitForLocatorAsync(noteEditor, 1_500))
+            {
+                return noteEditor;
+            }
+        }
 
         await noteEditor.WaitForAsync();
         return noteEditor;
@@ -1640,6 +1669,13 @@ public sealed partial class AppSmokeTests
 
     private static async Task DoubleClickCanvasNodeAsync(IPage page, string selector)
     {
+        var hotZoneCenter = await TryResolveCanvasHotZoneCenterAsync(page, selector, "node-body");
+        if (hotZoneCenter is not null)
+        {
+            await page.Mouse.DblClickAsync((float)hotZoneCenter.X, (float)hotZoneCenter.Y);
+            return;
+        }
+
         try
         {
             await ClickCanvasNodeAsync(page, selector, clickCount: 2);
@@ -1931,12 +1967,25 @@ public sealed partial class AppSmokeTests
     private static async Task ClickContextMenuActionAsync(IPage page, string actionId)
     {
         var selector = $".cw-context-menu__action[data-action-id='{actionId}']";
+        var parentActionId = actionId.Contains(':', StringComparison.Ordinal)
+            ? actionId.Split(':', 2)[0]
+            : null;
 
         for (var attempt = 0; attempt < 4; attempt++)
         {
             var action = page.Locator(selector).Last;
             if (!await WaitForLocatorAsync(action, 1_000))
             {
+                if (!string.IsNullOrWhiteSpace(parentActionId))
+                {
+                    await OpenContextSubmenuAsync(page, parentActionId);
+                    await page.WaitForTimeoutAsync(120);
+                }
+                else
+                {
+                    await page.WaitForTimeoutAsync(120);
+                }
+
                 await page.WaitForTimeoutAsync(120);
                 continue;
             }
@@ -1972,26 +2021,22 @@ public sealed partial class AppSmokeTests
             await page.WaitForTimeoutAsync(120);
         }
 
-        if (actionId.Contains(':', StringComparison.Ordinal))
+        if (!string.IsNullOrWhiteSpace(parentActionId))
         {
-            var parentActionId = actionId.Split(':', 2)[0];
-            var reopened = await page.EvaluateAsync<bool>(
-                @"request => {
-                    const host = document.querySelector('.cw-canvas-host');
-                    const runtime = window.CanDoItAll?.canvasWorkbench;
-                    if (!host || !runtime?.openContextSubmenu || !request?.parentActionId) {
-                        return false;
-                    }
-
-                    return runtime.openContextSubmenu(host, request.parentActionId);
-                }",
-                new
-                {
-                    parentActionId
-                });
-            if (reopened)
+            await OpenContextSubmenuAsync(page, parentActionId);
+            var action = page.Locator(selector).Last;
+            if (await WaitForLocatorAsync(action, 1_500))
             {
-                await page.WaitForTimeoutAsync(150);
+                try
+                {
+                    await action.ClickAsync(new() { Force = true });
+                    return;
+                }
+                catch (PlaywrightException exception) when (
+                    exception.Message.Contains("detached", StringComparison.OrdinalIgnoreCase) ||
+                    exception.Message.Contains("stable", StringComparison.OrdinalIgnoreCase))
+                {
+                }
 
                 var clicked = await page.EvaluateAsync<bool>(
                     @"actionSelector => {
@@ -2012,7 +2057,7 @@ public sealed partial class AppSmokeTests
             }
         }
 
-        await page.Locator(selector).Last.ClickAsync(new() { Force = true });
+        throw new InvalidOperationException($"Expected context menu action '{actionId}' to be available for clicking.");
     }
 
     private static async Task<bool> WaitForContextMenuAsync(IPage page, float timeoutMs)
@@ -3355,6 +3400,46 @@ public sealed partial class AppSmokeTests
         throw new InvalidOperationException($"Could not resolve visible canvas geometry for selector '{selector}'.");
     }
 
+    private static async Task<CanvasScenePoint?> TryResolveCanvasHotZoneCenterAsync(IPage page, string selector, string zone)
+    {
+        var targetId = await ResolveCanvasNodeIdAsync(page, selector);
+        if (string.IsNullOrWhiteSpace(targetId))
+        {
+            return null;
+        }
+
+        return await page.EvaluateAsync<CanvasScenePoint?>(
+            @"request => {
+                const host = document.querySelector('.cw-canvas-host');
+                const state = host?.__canvasWorkbenchState;
+                const runtimeModule = window.CanDoItAll?.canvasWorkbenchModule;
+                if (!host || !state || !runtimeModule?.findSceneHotZoneCenter || !request?.nodeId || !request?.zone) {
+                    return null;
+                }
+
+                const point = runtimeModule.findSceneHotZoneCenter(state, {
+                    nodeId: request.nodeId,
+                    zone: request.zone
+                });
+                const hostRect = host.getBoundingClientRect();
+                if (!point || !hostRect) {
+                    return null;
+                }
+
+                return {
+                    x: hostRect.left + point.x,
+                    y: hostRect.top + point.y,
+                    width: point.width,
+                    height: point.height
+                };
+            }",
+            new
+            {
+                nodeId = targetId,
+                zone
+            });
+    }
+
     private static async Task<CanvasSceneNodeSnapshot> ReadSceneNodeSnapshotAsync(IPage page, string nodeId, int timeoutMs = 6_000)
     {
         var attempts = Math.Max(1, timeoutMs / 120);
@@ -3576,13 +3661,30 @@ public sealed partial class AppSmokeTests
 
     private static async Task DispatchCanvasContextMenuAsync(IPage page, string selector)
     {
-        var center = await ResolveCanvasNodeCenterAsync(page, selector);
-        await page.Mouse.ClickAsync(
-            (float)center.X,
-            (float)center.Y,
-            new MouseClickOptions
+        var center = await TryResolveCanvasHotZoneCenterAsync(page, selector, "node-body")
+            ?? await ResolveCanvasNodeCenterAsync(page, selector);
+        await page.EvaluateAsync(
+            @"point => {
+                const host = document.querySelector('.cw-canvas-host');
+                if (!(host instanceof HTMLElement)) {
+                    return false;
+                }
+
+                host.dispatchEvent(new MouseEvent('contextmenu', {
+                    bubbles: true,
+                    cancelable: true,
+                    button: 2,
+                    buttons: 2,
+                    clientX: point.x,
+                    clientY: point.y,
+                    view: window
+                }));
+                return true;
+            }",
+            new
             {
-                Button = MouseButton.Right
+                x = center.X,
+                y = center.Y
             });
     }
 

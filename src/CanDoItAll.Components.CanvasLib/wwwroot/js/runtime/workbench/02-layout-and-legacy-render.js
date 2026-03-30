@@ -27,6 +27,17 @@
         }
     }
 
+    function renderConnectorAnchors(state, visibleNodes) {
+        const renderConnectorAnchorOverlayFn =
+            workbenchInternals.overlayRenderer?.renderConnectorAnchorOverlay ||
+            lateRuntime.renderConnectorAnchorOverlay ||
+            shared.renderConnectorAnchorOverlay ||
+            shared.legacyRenderConnectorAnchorOverlay;
+        if (typeof renderConnectorAnchorOverlayFn === "function") {
+            renderConnectorAnchorOverlayFn(state, visibleNodes);
+        }
+    }
+
     function measureRenderedNodeSizes(state) {
         const measureFn = lateRuntime.measureRenderedNodeSizes;
         return typeof measureFn === "function"
@@ -893,7 +904,7 @@
         }
 
         state.hoveredNodeId = nextNodeId;
-        renderConnectorAnchorOverlay(state, getVisibleNodes(state));
+        renderConnectorAnchors(state, getVisibleNodes(state));
     }
 
     function getConnectorAnchorPoints(state, node, placementMode) {
