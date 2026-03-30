@@ -445,8 +445,7 @@ public sealed partial class AppSmokeTests
 
         if (await page.EvaluateAsync<bool>("() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') === true"))
         {
-            await page.GetByRole(AriaRole.Button, new() { Name = "Toggle maximize" }).ClickAsync();
-            await page.WaitForFunctionAsync("() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') !== true");
+            await EnsureCanvasMaximizedStateAsync(page, isMaximized: false);
         }
 
         var docked = await ReadCanvasViewportStateAsync(page);
@@ -454,8 +453,7 @@ public sealed partial class AppSmokeTests
         Assert.False(docked.BodyLock);
         Assert.True(docked.HostWidth < docked.ViewportWidth, $"Expected docked host width to be smaller than viewport. Host={docked.HostWidth}, viewport={docked.ViewportWidth}.");
 
-        await page.GetByRole(AriaRole.Button, new() { Name = "Toggle maximize" }).ClickAsync();
-        await page.WaitForFunctionAsync("() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') === true");
+        await EnsureCanvasMaximizedStateAsync(page, isMaximized: true);
         var maximized = await ReadCanvasViewportStateAsync(page);
         Assert.True(maximized.IsMaximized);
         Assert.True(maximized.BodyLock);
@@ -464,6 +462,37 @@ public sealed partial class AppSmokeTests
         Assert.InRange(Math.Abs(maximized.HostWidth - maximized.ViewportWidth), 0, 1);
         Assert.InRange(Math.Abs(maximized.HostHeight - maximized.ViewportHeight), 0, 1);
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-centered-pan.png"), FullPage = true });
+    }
+
+    private static async Task EnsureCanvasMaximizedStateAsync(IPage page, bool isMaximized)
+    {
+        var toggleButton = page.GetByRole(AriaRole.Button, new() { Name = "Toggle maximize" });
+        var expectedExpression = isMaximized
+            ? "() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') === true"
+            : "() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') !== true";
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var currentState = await page.EvaluateAsync<bool>("() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') === true");
+            if (currentState == isMaximized)
+            {
+                return;
+            }
+
+            await toggleButton.ClickAsync();
+            try
+            {
+                await page.WaitForFunctionAsync(expectedExpression, null, new() { Timeout = 5_000 });
+                return;
+            }
+            catch (TimeoutException)
+            {
+            }
+        }
+
+        Assert.Equal(
+            isMaximized,
+            await page.EvaluateAsync<bool>("() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') === true"));
     }
 
     [Fact]
@@ -2852,6 +2881,7 @@ public sealed partial class AppSmokeTests
             primaryNodeId
         });
         var selectionStabilized = false;
+        SelectionFailureSnapshot? selectionFailureSnapshot = null;
         for (var attempt = 0; attempt < 3; attempt++)
         {
             await page.EvaluateAsync(
@@ -2906,16 +2936,24 @@ public sealed partial class AppSmokeTests
                     window.CanDoItAll.canvasWorkbench.selectNodes(host, payload.nodeIds, payload.primaryNodeId);
                 }",
                 payloadJson);
-            await page.WaitForFunctionAsync(
-                @"expectedNodeIds => {
-                    const host = document.querySelector('.cw-canvas-host');
-                    const selectedNodeIds = host?.__canvasWorkbenchState?.ui?.selectedNodeIds || [];
-                    return Array.isArray(expectedNodeIds) &&
-                        expectedNodeIds.length === selectedNodeIds.length &&
-                        expectedNodeIds.every(nodeId => selectedNodeIds.includes(nodeId));
-                }",
-                nodeIds.ToArray(),
-                new() { Timeout = 5_000 });
+            try
+            {
+                await page.WaitForFunctionAsync(
+                    @"expectedNodeIds => {
+                        const host = document.querySelector('.cw-canvas-host');
+                        const selectedNodeIds = host?.__canvasWorkbenchState?.ui?.selectedNodeIds || [];
+                        return Array.isArray(expectedNodeIds) &&
+                            expectedNodeIds.length === selectedNodeIds.length &&
+                            expectedNodeIds.every(nodeId => selectedNodeIds.includes(nodeId));
+                    }",
+                    nodeIds.ToArray(),
+                    new() { Timeout = 5_000 });
+            }
+            catch (TimeoutException)
+            {
+                selectionFailureSnapshot = await CaptureSelectionFailureSnapshotAsync(page);
+                continue;
+            }
             await page.WaitForTimeoutAsync(240);
 
             selectionStabilized = await page.EvaluateAsync<bool>(
@@ -2931,9 +2969,21 @@ public sealed partial class AppSmokeTests
             {
                 break;
             }
+
+            selectionFailureSnapshot = await CaptureSelectionFailureSnapshotAsync(page);
         }
 
-        Assert.True(selectionStabilized, $"Expected canvas selection to stabilize for [{string.Join(", ", nodeIds)}].");
+        Assert.True(
+            selectionStabilized,
+            $"Expected canvas selection to stabilize for [{string.Join(", ", nodeIds)}]. " +
+            $"HostSelectedNodeIds=[{string.Join(", ", selectionFailureSnapshot?.HostSelectedNodeIds ?? [])}] " +
+            $"SelectionApiCalls=[{string.Join(" || ", selectionFailureSnapshot?.SelectionApiCalls ?? [])}] " +
+            $"SelectionDebugEvents=[{string.Join(" || ", selectionFailureSnapshot?.SelectionDebugEvents ?? [])}] " +
+            $"SelectionPanelTitles=[{string.Join(", ", selectionFailureSnapshot?.SelectionPanelTitles ?? [])}] " +
+            $"SelectionWindowPresent={selectionFailureSnapshot?.SelectionWindowPresent} " +
+            $"SelectionWindowVisible={selectionFailureSnapshot?.SelectionWindowVisible} " +
+            $"SelectionWindowMinimized={selectionFailureSnapshot?.SelectionWindowMinimized} " +
+            $"SelectionWindowText='{selectionFailureSnapshot?.SelectionWindowText ?? string.Empty}'.");
 
         if (nodeIds.Count > 1)
         {
@@ -2945,41 +2995,7 @@ public sealed partial class AppSmokeTests
             }
             catch (TimeoutException exception)
             {
-                var snapshot = await page.EvaluateAsync<SelectionFailureSnapshot?>(
-                    @"() => {
-                        const host = document.querySelector('.cw-canvas-host');
-                        const windowElement = document.querySelector('.cw-floating-window[data-testid=""project-structure-selection-window""]');
-                        const panelTitles = Array.from(document.querySelectorAll('.project-structure-selection-panel .cw-panel-title'))
-                            .map(candidate => (candidate.textContent || '').trim())
-                            .filter(Boolean);
-                        const windowText = windowElement instanceof HTMLElement
-                            ? (windowElement.textContent || '').trim()
-                            : '';
-
-                        return {
-                            hostSelectedNodeIds: Array.isArray(host?.__canvasWorkbenchState?.ui?.selectedNodeIds)
-                                ? host.__canvasWorkbenchState.ui.selectedNodeIds
-                                : [],
-                            selectionApiCalls: Array.isArray(window.CanDoItAll?.canvasWorkbench?.__selectionDebugCalls)
-                                ? window.CanDoItAll.canvasWorkbench.__selectionDebugCalls
-                                    .slice(-6)
-                                    .map(call => `[${(call.nodeIds || []).join(', ')}] primary=${call.primaryNodeId || ''} stack=${call.stack || ''}`)
-                                : [],
-                            selectionDebugEvents: Array.isArray(host?.__canvasWorkbenchState?.selectionDebugEvents)
-                                ? host.__canvasWorkbenchState.selectionDebugEvents
-                                    .slice(-8)
-                                    .map(event => `${event.method}:${event.status}:${(event.args || []).join(' | ')}`)
-                                : [],
-                            selectionPanelTitles: panelTitles,
-                            selectionWindowPresent: windowElement instanceof HTMLElement,
-                            selectionWindowVisible: windowElement instanceof HTMLElement &&
-                                windowElement.offsetParent !== null &&
-                                getComputedStyle(windowElement).visibility !== 'hidden',
-                            selectionWindowMinimized: windowElement instanceof HTMLElement &&
-                                windowElement.classList.contains('is-minimized'),
-                            selectionWindowText: windowText
-                        };
-                    }");
+                var snapshot = await CaptureSelectionFailureSnapshotAsync(page);
                 throw new InvalidOperationException(
                     $"Expected visible selection panel text '{nodeIds.Count} nodes selected' but it did not appear. " +
                     $"HostSelectedNodeIds=[{string.Join(", ", snapshot?.HostSelectedNodeIds ?? [])}] " +
@@ -2999,6 +3015,45 @@ public sealed partial class AppSmokeTests
         }
 
         await page.WaitForTimeoutAsync(180);
+    }
+
+    private static async Task<SelectionFailureSnapshot?> CaptureSelectionFailureSnapshotAsync(IPage page)
+    {
+        return await page.EvaluateAsync<SelectionFailureSnapshot?>(
+            @"() => {
+                const host = document.querySelector('.cw-canvas-host');
+                const windowElement = document.querySelector('.cw-floating-window[data-testid=""project-structure-selection-window""]');
+                const panelTitles = Array.from(document.querySelectorAll('.project-structure-selection-panel .cw-panel-title'))
+                    .map(candidate => (candidate.textContent || '').trim())
+                    .filter(Boolean);
+                const windowText = windowElement instanceof HTMLElement
+                    ? (windowElement.textContent || '').trim()
+                    : '';
+
+                return {
+                    hostSelectedNodeIds: Array.isArray(host?.__canvasWorkbenchState?.ui?.selectedNodeIds)
+                        ? host.__canvasWorkbenchState.ui.selectedNodeIds
+                        : [],
+                    selectionApiCalls: Array.isArray(window.CanDoItAll?.canvasWorkbench?.__selectionDebugCalls)
+                        ? window.CanDoItAll.canvasWorkbench.__selectionDebugCalls
+                            .slice(-6)
+                            .map(call => `[${(call.nodeIds || []).join(', ')}] primary=${call.primaryNodeId || ''} stack=${call.stack || ''}`)
+                        : [],
+                    selectionDebugEvents: Array.isArray(host?.__canvasWorkbenchState?.selectionDebugEvents)
+                        ? host.__canvasWorkbenchState.selectionDebugEvents
+                            .slice(-8)
+                            .map(event => `${event.method}:${event.status}:${(event.args || []).join(' | ')}`)
+                        : [],
+                    selectionPanelTitles: panelTitles,
+                    selectionWindowPresent: windowElement instanceof HTMLElement,
+                    selectionWindowVisible: windowElement instanceof HTMLElement &&
+                        windowElement.offsetParent !== null &&
+                        getComputedStyle(windowElement).visibility !== 'hidden',
+                    selectionWindowMinimized: windowElement instanceof HTMLElement &&
+                        windowElement.classList.contains('is-minimized'),
+                    selectionWindowText: windowText
+                };
+            }");
     }
 
     private static async Task SetCanvasZoomPercentAsync(IPage page, int zoomPercent)

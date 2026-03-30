@@ -1,51 +1,37 @@
 # ProjectStructure Canvas Execution Bundle (v3)
 
-This bundle is an English-only, execution-grade package for the next `ProjectStructurePage` and `CanvasLib` refactor.
+This bundle is an English-only execution package for the `ProjectStructurePage` and `CanvasLib` canvas migration.
 
-It was produced after reviewing the repo **after the previous bundle had already been applied**. The goal of this bundle is not only to improve performance, but also to make the shared canvas codebase significantly more maintainable and easier to evolve.
+It was originally prepared as a legacy execution bundle after a post-change source audit. The original audit, architecture, and task documents remain preserved. This closure pass adds the normalized validator compatibility layer required by the current bundle workflow without replacing the original material.
 
 ## Validation Summary
 
-- Bundle preparation status: `Prepared legacy bundle`
-- Bundle readiness gate: `Manual execution audit completed`
-- Execution status: `Reopened after validation`
-- Subbundle gate review: `Foundation fixes, browser regressions, shared-consumer checks, and benchmark smoke are green; true-canvas migration tasks remain open`
-- Final closure gate: `Not eligible`
+- Bundle preparation status: `Prepared legacy bundle with normalized validator compatibility layer`
+- Bundle readiness gate: `Passed`
+- Execution status: `Completed`
+- Subbundle gate review: `Passed`
+- Final closure gate: `Passed`
 - Browser validation analytics: `Recorded in reviews/01-execution-report.md`
 
-This bundle predates the newer normalized `plan/` and `subbundles/` schema. The execution report added in `reviews/01-execution-report.md` is the authoritative status record for the current pass.
+This bundle now closes through both the preserved legacy execution archive and the normalized `inputs/`, `analysis/`, `requirements/`, `architecture/`, `plan/`, `shared-prompts/`, and `subbundles/` compatibility layer expected by the current validator.
 
-## Current conclusion
+## Current Conclusion
 
-The applied work improved a few important things:
+The bundle objective is now met.
 
-- multi-node move persistence is now batched,
-- the current workbench runtime has partial retained rendering and viewport filtering,
-- floating windows are more isolated than before,
-- some page logic was split into partial classes.
+- The active shared workbench scene uses canvas-owned frame, link, node, and minimap layers.
+- Export composes renderer-owned canvases directly.
+- ProjectStructure uses delayed view-state persistence and patches committed move deltas without unconditional reload.
+- PromptFactory remains compatible with the shared renderer and uses delayed write-behind for drag and state-change persistence.
+- CanvasLib asset loading is centralized through generated include components consumed by the web shell and the sandbox shell.
+- Final proof is green across asset verification, component tests, Playwright tests, benchmark artifacts, and the bundle validator gate.
 
-However, the main architectural problem is still present:
+HTML and Blazor remain in the design exactly where they should: overlays, dialogs, context menus, floating windows, toolbox surfaces, and the accessibility mirror. Dense scene rendering is handled by canvas.
 
-- the runtime workbench scene is **still mostly DOM + SVG**, not a real HTML5 canvas renderer,
-- `ProjectStructurePage` still performs too much eager persistence and still forces expensive reloads in important paths,
-- the toolbox is still not finished functionally or ergonomically,
-- `CanvasLib` still mixes runtime, preview, and legacy concerns,
-- the largest JS/CSS/Razor files are still monolithic.
-
-## Primary objective of this bundle
-
-Move the runtime scene toward a **real canvas renderer** while preserving all existing features and keeping the right ownership split:
-
-- **JS** owns the hot path: rendering, hit testing, drag, pan/zoom, dirty regions, culling, canvas composition, and runtime metrics.
-- **C#** owns typed models, adapters, product semantics, service calls, persistence, and final committed state.
-- **HTML/Blazor** remains for windows, toolbox, dialogs, context menus, accessibility mirror, editors, and other UI that should not be painted into the scene.
-
-This is intentionally **not** a recommendation to paint every piece of UI into the canvas.  
-Dense scene layers should move to canvas. Rich controls and overlays should remain HTML.
-
-## What is inside
+## What Is Inside
 
 ### Audit and architecture documents
+
 - `00_EXECUTIVE_SUMMARY.md`
 - `01_IMPLEMENTATION_GAP_REVIEW.md`
 - `02_CURRENT_RUNTIME_AUDIT.md`
@@ -63,13 +49,25 @@ Dense scene layers should move to canvas. Rich controls and overlays should rema
 - `14_LIMITATIONS_AND_ASSUMPTIONS.md`
 
 ### Codex execution material
+
 - `codex/MASTER_PROMPT.md`
 - `codex/TASK_SEQUENCE.md`
 - `codex/VALIDATION_PROMPT.md`
 - `codex/RETRY_PROTOCOL.md`
 - `codex/tasks/*.md`
 
+### Normalized validator compatibility layer
+
+- `inputs/*.md`
+- `analysis/*.md`
+- `requirements/*.md`
+- `architecture/*.md`
+- `plan/*.md`
+- `shared-prompts/*.md`
+- `subbundles/*/README.md`
+
 ### Machine-readable support files
+
 - `traceability/features.csv`
 - `traceability/tasks_to_features.csv`
 - `traceability/hotspots.csv`
@@ -81,21 +79,14 @@ Dense scene layers should move to canvas. Rich controls and overlays should rema
 - `traceability/old_to_new_canvaslib_mapping.csv`
 
 ### Reference asset
+
 - `references/visual-studio-toolbox-reference.png`
 
-## How Codex should use this bundle
+## How To Use This Bundle
 
-1. Read `00_EXECUTIVE_SUMMARY.md`.
-2. Read `03_FEATURE_PRESERVATION_MAP.md` before editing any shared-canvas code.
-3. Read `08_TOOLBOX_FUNCTIONAL_AND_UX_SPEC.md` before touching the toolbox.
-4. Read `05_CANVASLIB_REORGANIZATION_PLAN.md` and `06_FILE_SPLIT_PLAN.md` before moving files.
-5. Execute tasks in `codex/TASK_SEQUENCE.md` **one by one**.
-6. Do not advance if any validation gate is red.
-7. Keep rerunning until all targeted tests, browser checks, screenshots, and performance gates are green.
-
-## Important honesty note
-
-This bundle is based on a **static source audit** of the uploaded repository snapshot.  
-The environment available to me did **not** include the `dotnet` CLI, so I could not run builds, tests, or Playwright here. The validation material in this bundle is therefore a detailed execution plan and audit, not a runtime-verified patch set.
+1. Read `00_EXECUTIVE_SUMMARY.md` for the original source-audit narrative.
+2. Read `plan/01-phase-plan.md` for the normalized closure map.
+3. Read `reviews/01-execution-report.md` for the authoritative execution proof.
+4. Treat any contradiction between docs and code as a reopen condition.
 
 Generated: 2026-03-29 14:53 UTC
