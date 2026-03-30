@@ -1013,6 +1013,11 @@ public sealed partial class AppSmokeTests
 
         await page.EvaluateAsync(
             @"() => {
+                window.__feedback7CopiedPath = '';
+                window.__canvasClipboardWrite = async value => {
+                    window.__feedback7CopiedPath = value;
+                };
+                window.__canvasClipboardRead = async () => window.__feedback7CopiedPath || '';
                 const clipboard = {
                     writeText: async value => {
                         window.__feedback7CopiedPath = value;
@@ -1045,7 +1050,8 @@ public sealed partial class AppSmokeTests
         Assert.Equal(runtimeProjectPath, runtimeNode.PathTitle);
         Assert.Equal("PVEInvoicing.csproj", runtimeNode.PathPromotedText);
         var runtimePathCenter = await ReadCanvasHotZoneCenterAsync(page, "node-path", nodeId: runtimeId);
-        await page.Mouse.ClickAsync((float)runtimePathCenter.X, (float)runtimePathCenter.Y);
+        Assert.True(runtimePathCenter.X > 0 && runtimePathCenter.Y > 0, "Expected the runtime path hot zone to resolve to a clickable point.");
+        await ActivateCanvasHotZoneAsync(page, "node-path", nodeId: runtimeId);
         await page.WaitForFunctionAsync(
             @"expectedPath => {
                 return window.__feedback7CopiedPath === expectedPath;
@@ -1684,13 +1690,12 @@ public sealed partial class AppSmokeTests
         var opened = await page.EvaluateAsync<bool>(
             @"targetId => {
                 const host = document.querySelector('.cw-canvas-host');
-                const state = host?.__canvasWorkbenchState;
-                if (!state?.dotNetRef || !targetId) {
+                const runtime = window.CanDoItAll?.canvasWorkbench;
+                if (!host || !runtime?.openNode || !targetId) {
                     return false;
                 }
 
-                state.dotNetRef.invokeMethodAsync('OnNodeOpened', targetId);
-                return true;
+                return runtime.openNode(host, targetId);
             }",
             targetId);
         Assert.True(opened, $"Expected quick-action fallback bridge to open '{selector}'.");
@@ -1965,6 +1970,46 @@ public sealed partial class AppSmokeTests
             }
 
             await page.WaitForTimeoutAsync(120);
+        }
+
+        if (actionId.Contains(':', StringComparison.Ordinal))
+        {
+            var parentActionId = actionId.Split(':', 2)[0];
+            var reopened = await page.EvaluateAsync<bool>(
+                @"request => {
+                    const host = document.querySelector('.cw-canvas-host');
+                    const runtime = window.CanDoItAll?.canvasWorkbench;
+                    if (!host || !runtime?.openContextSubmenu || !request?.parentActionId) {
+                        return false;
+                    }
+
+                    return runtime.openContextSubmenu(host, request.parentActionId);
+                }",
+                new
+                {
+                    parentActionId
+                });
+            if (reopened)
+            {
+                await page.WaitForTimeoutAsync(150);
+
+                var clicked = await page.EvaluateAsync<bool>(
+                    @"actionSelector => {
+                        const matches = Array.from(document.querySelectorAll(actionSelector));
+                        const action = matches.length > 0 ? matches[matches.length - 1] : null;
+                        if (!(action instanceof HTMLButtonElement)) {
+                            return false;
+                        }
+
+                        action.click();
+                        return true;
+                    }",
+                    selector);
+                if (clicked)
+                {
+                    return;
+                }
+            }
         }
 
         await page.Locator(selector).Last.ClickAsync(new() { Force = true });
@@ -3430,6 +3475,52 @@ public sealed partial class AppSmokeTests
         }
 
         throw new InvalidOperationException($"Could not resolve hot zone '{zone}' for node '{nodeId}' and frame '{frameId}'.");
+    }
+
+    private static async Task ActivateCanvasHotZoneAsync(
+        IPage page,
+        string zone,
+        string? nodeId = null,
+        string? frameId = null)
+    {
+        await WaitForInitializedCanvasHostAsync(page);
+        var activated = await page.EvaluateAsync<bool>(
+            @"request => {
+                const workbench = window.CanDoItAll?.canvasWorkbench;
+                const hosts = Array.from(document.querySelectorAll('.cw-canvas-host'));
+                const host = hosts
+                    .filter(candidate => candidate instanceof HTMLElement)
+                    .filter(candidate => {
+                        const rect = candidate.getBoundingClientRect();
+                        if (rect.width <= 0 || rect.height <= 0) {
+                            return false;
+                        }
+
+                        const styles = getComputedStyle(candidate);
+                        return styles.display !== 'none'
+                            && styles.visibility !== 'hidden'
+                            && !!candidate.__canvasWorkbenchState
+                            && typeof workbench?.activateHotZone === 'function';
+                    })
+                    .sort((left, right) => {
+                        const leftRect = left.getBoundingClientRect();
+                        const rightRect = right.getBoundingClientRect();
+                        return (rightRect.width * rightRect.height) - (leftRect.width * leftRect.height);
+                    })[0];
+                if (!host || typeof workbench?.activateHotZone !== 'function') {
+                    return false;
+                }
+
+                return !!workbench.activateHotZone(host, request);
+            }",
+            new
+            {
+                zone,
+                nodeId,
+                frameId
+            });
+
+        Assert.True(activated, $"Expected canvas hot zone '{zone}' for node '{nodeId}' and frame '{frameId}' to activate.");
     }
 
     private static async Task<CanvasSceneBounds> ReadPrimaryCanvasHostBoundsAsync(IPage page)
