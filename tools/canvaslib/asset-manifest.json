@@ -1,0 +1,174 @@
+{
+  "styles": [
+    {
+      "source": "css-src/workbench/canvas-workbench.css",
+      "output": "_content/CanDoItAll.Components.CanvasLib/canvas-workbench.css"
+    }
+  ],
+  "runtimeScripts": [
+    {
+      "source": "js-src/services/selection-model.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/selection-model.js"
+    },
+    {
+      "source": "js-src/services/text-measure-service.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/text-measure-service.js"
+    },
+    {
+      "source": "js-src/services/viewport-controller.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/viewport-controller.js"
+    },
+    {
+      "source": "js-src/services/animation-timeline.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/animation-timeline.js"
+    },
+    {
+      "source": "js-src/runtime/accessibility-mirror-layer.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/accessibility-mirror-layer.js"
+    },
+    {
+      "source": "js-src/runtime/canvas-floating-window.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/canvas-floating-window.js"
+    },
+    {
+      "source": "js-src/runtime/canvasWorkbenchInterop.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/canvasWorkbenchInterop.js"
+    }
+  ],
+  "previewScripts": [
+    {
+      "source": "js-src/preview/text-block-primitive.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/text-block-primitive.js"
+    },
+    {
+      "source": "js-src/preview/container-primitive.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/container-primitive.js"
+    },
+    {
+      "source": "js-src/preview/image-primitive.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/image-primitive.js"
+    },
+    {
+      "source": "js-src/preview/node-card-composer.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/node-card-composer.js"
+    },
+    {
+      "source": "js-src/preview/connector-path-primitive.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/connector-path-primitive.js"
+    },
+    {
+      "source": "js-src/preview/context-menu-host.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/context-menu-host.js"
+    },
+    {
+      "source": "js-src/preview/create-action-palette.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/create-action-palette.js"
+    },
+    {
+      "source": "js-src/preview/floating-inspector-host.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/floating-inspector-host.js"
+    },
+    {
+      "source": "js-src/preview/group-frame-overlay.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/group-frame-overlay.js"
+    },
+    {
+      "source": "js-src/preview/inline-editor-composer.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/inline-editor-composer.js"
+    },
+    {
+      "source": "js-src/preview/drag-drop-controller.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/drag-drop-controller.js"
+    },
+    {
+      "source": "js-src/preview/grid-backdrop.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/grid-backdrop.js"
+    },
+    {
+      "source": "js-src/preview/hit-test-service.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/hit-test-service.js"
+    },
+    {
+      "source": "js-src/preview/hover-focus-router.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/hover-focus-router.js"
+    },
+    {
+      "source": "js-src/preview/keyboard-shortcut-router.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/keyboard-shortcut-router.js"
+    },
+    {
+      "source": "js-src/preview/layout-engine.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/layout-engine.js"
+    },
+    {
+      "source": "js-src/preview/diagnostics-overlay.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/diagnostics-overlay.js"
+    },
+    {
+      "source": "js-src/preview/minimap-overview.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/minimap-overview.js"
+    },
+    {
+      "source": "js-src/preview/clipboard-bridge.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/clipboard-bridge.js"
+    },
+    {
+      "source": "js-src/preview/tooltip-popover-host.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/tooltip-popover-host.js"
+    },
+    {
+      "source": "js-src/preview/marquee-selection-overlay.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/marquee-selection-overlay.js"
+    },
+    {
+      "source": "js-src/preview/snap-guide-system.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/snap-guide-system.js"
+    },
+    {
+      "source": "js-src/preview/connector-anchor-overlay.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/connector-anchor-overlay.js"
+    },
+    {
+      "source": "js-src/preview/transform-handles-overlay.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/transform-handles-overlay.js"
+    }
+  ],
+  "calendarScripts": [
+    {
+      "source": "js-src/calendar/zy-canvas-primitives.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/zy-canvas-primitives.js"
+    },
+    {
+      "source": "js-src/calendar/zy-canvas-calendar.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/zy-canvas-calendar.js"
+    },
+    {
+      "source": "js-src/calendar/calendar-crud-bridge.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/calendar-crud-bridge.js"
+    },
+    {
+      "source": "js-src/calendar/calendar-event-editor-modal.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/calendar-event-editor-modal.js"
+    },
+    {
+      "source": "js-src/calendar/calendar-export-menu.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/calendar-export-menu.js"
+    },
+    {
+      "source": "js-src/calendar/calendar-mini-month-navigator.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/calendar-mini-month-navigator.js"
+    },
+    {
+      "source": "js-src/calendar/calendar-selection-panel.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/calendar-selection-panel.js"
+    },
+    {
+      "source": "js-src/calendar/calendar-time-grid-renderer.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/calendar-time-grid-renderer.js"
+    },
+    {
+      "source": "js-src/calendar/canvasCalendarInterop.js",
+      "output": "_content/CanDoItAll.Components.CanvasLib/js/canvasCalendarInterop.js"
+    }
+  ]
+}

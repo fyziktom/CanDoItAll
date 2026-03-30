@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
 using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright;
@@ -13,7 +15,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
     private string? _workspaceRoot;
     private string? _databaseConnectionString;
 
-    public string BaseUrl { get; } = Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_BASEURL") ?? "http://127.0.0.1:5188";
+    public string BaseUrl { get; } = ResolveBaseUrl();
 
     public IPlaywright Playwright { get; private set; } = default!;
 
@@ -187,5 +189,19 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
                 Thread.Sleep(150 * attempt);
             }
         }
+    }
+
+    private static string ResolveBaseUrl()
+    {
+        var configuredBaseUrl = Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_BASEURL");
+        if (!string.IsNullOrWhiteSpace(configuredBaseUrl))
+        {
+            return configuredBaseUrl;
+        }
+
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        return $"http://127.0.0.1:{port}";
     }
 }

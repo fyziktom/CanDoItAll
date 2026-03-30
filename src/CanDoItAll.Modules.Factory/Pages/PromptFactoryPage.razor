@@ -2103,6 +2103,8 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
     private readonly PromptFactoryUndoRedoAdapter undoRedoAdapter = new();
     private List<string> selectedCanvasNodeIds = [];
     private string activeInspectorTab = "context";
+    private const int CanvasUiStatePersistDelayMs = 420;
+    private CancellationTokenSource? pendingCanvasUiStatePersistCts;
     private string selectedPromptNodeTitle = string.Empty;
     private string selectedPromptNodeNotes = string.Empty;
     private PromptRunNodeState selectedPromptNodeState = PromptRunNodeState.Prepared;
@@ -2866,36 +2868,133 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private async Task HandleCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
     {
-        selectedCanvasNodeIds = args.SelectedNodeIds.Count > 0 ? args.SelectedNodeIds.ToList() : ["session-root"];
-        editor.SelectedNodeId = TryParsePromptCanvasNodeId(args.PrimaryNodeId, out var nodeId) ? nodeId : null;
-        SyncSelectedPromptNodeDraft();
-        await PersistCanvasUiStateAsync();
+        var uiState = sessionGraphAdapter.BuildUiState(
+            editor.CanvasUiStateJson,
+            args.SelectedNodeIds.Count > 0 ? args.SelectedNodeIds : ["session-root"],
+            activeInspectorTab);
+        ApplyCanvasUiStateLocally(uiState);
+        await InvokeAsync(StateHasChanged);
     }
 
-    private Task HandleCanvasNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
-        => PersistCanvasUiStateAsync();
+    private async Task HandleCanvasNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
+    {
+        var uiState = sessionGraphAdapter.BuildUiState(editor.CanvasUiStateJson, selectedCanvasNodeIds, activeInspectorTab);
+        foreach (var position in args.Positions)
+        {
+            uiState.ManualPositions[position.NodeId] = new CanvasWorkbenchPoint
+            {
+                X = position.X,
+                Y = position.Y
+            };
+        }
+
+        ApplyCanvasUiStateLocally(uiState);
+        ScheduleCanvasUiStatePersistence();
+        await InvokeAsync(StateHasChanged);
+    }
 
     private async Task HandleCanvasStateChangedAsync(string stateJson)
     {
         var uiState = CanvasWorkbenchUiState.Parse(stateJson);
-        selectedCanvasNodeIds = uiState.SelectedNodeIds.Count > 0 ? uiState.SelectedNodeIds.ToList() : ["session-root"];
-        activeInspectorTab = string.IsNullOrWhiteSpace(uiState.ActiveInspectorTab) ? activeInspectorTab : uiState.ActiveInspectorTab;
-        editor.CanvasUiStateJson = uiState.ToJson();
-        editor.SelectedNodeId = TryParsePromptCanvasNodeId(selectedCanvasNodeId, out var nodeId) ? nodeId : null;
-        SyncSelectedPromptNodeDraft();
-        await PersistCanvasUiStateAsync();
+        ApplyCanvasUiStateLocally(uiState);
+        ScheduleCanvasUiStatePersistence();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task PersistCanvasUiStateAsync()
     {
-        var uiState = sessionGraphAdapter.BuildUiState(editor.CanvasUiStateJson, selectedCanvasNodeIds, activeInspectorTab);
-        editor.CanvasUiStateJson = uiState.ToJson();
+        await PersistCanvasUiStateAsync(sessionGraphAdapter.BuildUiState(editor.CanvasUiStateJson, selectedCanvasNodeIds, activeInspectorTab));
+    }
+
+    private async Task PersistCanvasUiStateAsync(CanvasWorkbenchUiState uiState)
+    {
+        CancelPendingCanvasUiStatePersistence();
+        ApplyCanvasUiStateLocally(uiState);
         if (editor.SessionId.HasValue)
         {
             await PromptFactoryService.SaveCanvasUiStateAsync(editor.SessionId.Value, editor.CanvasUiStateJson, editor.SelectedNodeId);
         }
 
         RefreshCanvasSurface();
+    }
+
+    private void ApplyCanvasUiStateLocally(CanvasWorkbenchUiState uiState)
+    {
+        uiState.SelectedNodeIds = uiState.SelectedNodeIds.Count > 0 ? [.. uiState.SelectedNodeIds] : ["session-root"];
+        uiState.ActiveInspectorTab = string.IsNullOrWhiteSpace(uiState.ActiveInspectorTab)
+            ? (string.IsNullOrWhiteSpace(activeInspectorTab) ? "context" : activeInspectorTab)
+            : uiState.ActiveInspectorTab;
+        selectedCanvasNodeIds = uiState.SelectedNodeIds.ToList();
+        activeInspectorTab = uiState.ActiveInspectorTab;
+        editor.CanvasUiStateJson = uiState.ToJson();
+        if (canvasSurface is not null)
+        {
+            canvasSurface.UiState = uiState;
+        }
+
+        editor.SelectedNodeId = TryParsePromptCanvasNodeId(selectedCanvasNodeId, out var nodeId) ? nodeId : null;
+        SyncSelectedPromptNodeDraft();
+    }
+
+    private void ScheduleCanvasUiStatePersistence()
+    {
+        if (!editor.SessionId.HasValue || string.IsNullOrWhiteSpace(editor.CanvasUiStateJson))
+        {
+            CancelPendingCanvasUiStatePersistence();
+            return;
+        }
+
+        CancelPendingCanvasUiStatePersistence();
+        var persistCts = new CancellationTokenSource();
+        pendingCanvasUiStatePersistCts = persistCts;
+        _ = PersistCanvasUiStateWhenIdleAsync(
+            persistCts,
+            editor.SessionId.Value,
+            editor.CanvasUiStateJson,
+            editor.SelectedNodeId);
+    }
+
+    private async Task PersistCanvasUiStateWhenIdleAsync(
+        CancellationTokenSource persistCts,
+        Guid sessionId,
+        string stateJson,
+        Guid? selectedNodeId)
+    {
+        try
+        {
+            await Task.Delay(CanvasUiStatePersistDelayMs, persistCts.Token);
+            if (persistCts.IsCancellationRequested || string.IsNullOrWhiteSpace(stateJson))
+            {
+                return;
+            }
+
+            await PromptFactoryService.SaveCanvasUiStateAsync(sessionId, stateJson, selectedNodeId);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(pendingCanvasUiStatePersistCts, persistCts))
+            {
+                pendingCanvasUiStatePersistCts = null;
+            }
+
+            persistCts.Dispose();
+        }
+    }
+
+    private void CancelPendingCanvasUiStatePersistence()
+    {
+        var persistCts = pendingCanvasUiStatePersistCts;
+        pendingCanvasUiStatePersistCts = null;
+        if (persistCts is null)
+        {
+            return;
+        }
+
+        persistCts.Cancel();
+        persistCts.Dispose();
     }
 
     private async Task HandleCanvasContextActionAsync(CanvasWorkbenchContextActionRequest request)

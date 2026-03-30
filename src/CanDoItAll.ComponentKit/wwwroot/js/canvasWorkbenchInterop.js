@@ -2377,11 +2377,24 @@
         const normalized = selectionModel.normalize(state.ui.selectedNodeIds, state.ui.selectedNodeIds[0] || null);
         state.ui.selectedNodeIds = normalized.selectedNodeIds;
         state.selectedIds = toSelectionSet(normalized.selectedNodeIds);
-        state.dotNetRef.invokeMethodAsync("OnSelectionChanged", normalized.primaryNodeId, JSON.stringify(normalized.selectedNodeIds));
+        state.selectionDispatchId = (state.selectionDispatchId || 0) + 1;
+        state.dotNetRef.invokeMethodAsync(
+            "OnSelectionChanged",
+            normalized.primaryNodeId,
+            JSON.stringify(normalized.selectedNodeIds),
+            state.selectionDispatchId);
+    }
+
+    function createSerializedStateSnapshot(state) {
+        state.stateDispatchId = (state.stateDispatchId || 0) + 1;
+        return {
+            dispatchId: state.stateDispatchId,
+            stateJson: serializeState(state)
+        };
     }
 
     function publishState(state) {
-        state.publishStateDebounced(serializeState(state));
+        state.publishStateDebounced(createSerializedStateSnapshot(state));
     }
 
     function publishNodesMoved(state, movedIds) {
@@ -5005,7 +5018,7 @@
         resize(state);
     }
 
-    function hydrateState(host, dotNetRef, surface) {
+    function hydrateState(host, dotNetRef, surface, selectionDispatchSeed, stateDispatchSeed) {
         const normalizedSurface = normalizeSurface(surface);
         const lookups = buildNodeLookup(normalizedSurface.nodes);
         const animationTimelineService = getAnimationTimelineService();
@@ -5066,7 +5079,11 @@
             statusNoticeTimer: 0,
             localClipboard: "",
             minimapMetrics: null,
-            publishStateDebounced: debounce(stateJson => dotNetRef.invokeMethodAsync("OnStateChanged", stateJson), 140)
+            selectionDispatchId: Number.isFinite(selectionDispatchSeed) ? Number(selectionDispatchSeed) : 0,
+            stateDispatchId: Number.isFinite(stateDispatchSeed) ? Number(stateDispatchSeed) : 0,
+            publishStateDebounced: debounce(
+                snapshot => dotNetRef.invokeMethodAsync("OnStateChanged", snapshot?.stateJson || "{}", snapshot?.dispatchId || 0),
+                140)
         };
 
         state.animationTimeline?.setReducedMotionAttribute?.(host);
@@ -5129,8 +5146,8 @@
     }
 
     root.canvasWorkbench = {
-        create(host, dotNetRef, surface) {
-            const state = hydrateState(host, dotNetRef, surface);
+        create(host, dotNetRef, surface, selectionDispatchSeed, stateDispatchSeed) {
+            const state = hydrateState(host, dotNetRef, surface, selectionDispatchSeed, stateDispatchSeed);
             buildWorkbench(state);
             attachEvents(state);
             setMaximized(state, !!state.ui.isMaximized);

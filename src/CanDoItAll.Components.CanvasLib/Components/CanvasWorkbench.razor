@@ -298,6 +298,9 @@
     private string? pendingDataKey;
     private string? pendingUiStateKey;
     private string? clientUiStateKey;
+    private long lastSelectionDispatchId;
+    private long lastStateDispatchId;
+    private bool awaitingParentUiStateCommit;
 
     [Parameter, EditorRequired]
     public CanvasWorkbenchSurface Surface { get; set; } = default!;
@@ -342,7 +345,13 @@
 
         var dataChanged = !string.Equals(sceneHost.AppliedStateKey, pendingDataKey, StringComparison.Ordinal);
         var uiChangedOutsideClient = !string.Equals(clientUiStateKey, pendingUiStateKey, StringComparison.Ordinal);
-        sceneHost.QueueSync(pendingDataKey, dataChanged || uiChangedOutsideClient);
+        if (!uiChangedOutsideClient)
+        {
+            awaitingParentUiStateCommit = false;
+        }
+
+        var shouldSyncUiState = uiChangedOutsideClient && !awaitingParentUiStateCommit;
+        sceneHost.QueueSync(pendingDataKey, dataChanged || shouldSyncUiState);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -351,12 +360,20 @@
         var bridge = new JsInteropBridge(JsRuntime);
         if (sceneHost.ShouldCreate())
         {
-            await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.create", host, objectReference, Surface);
+            await bridge.InvokeVoidAsync(
+                "CanDoItAll.canvasWorkbench.create",
+                host,
+                objectReference,
+                Surface,
+                lastSelectionDispatchId,
+                lastStateDispatchId);
             await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
             if (ShouldAutoFitInitialView())
             {
                 await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.fitView", host);
             }
+
+            await SynchronizeSelectionAsync(bridge);
             MarkSurfaceApplied();
             return;
         }
@@ -368,12 +385,18 @@
 
         await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.update", host, Surface);
         await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
+        await SynchronizeSelectionAsync(bridge);
         MarkSurfaceApplied();
     }
 
     [JSInvokable]
-    public async Task OnSelectionChanged(string? primaryNodeId, string selectedNodeIdsJson)
+    public async Task OnSelectionChanged(string? primaryNodeId, string selectedNodeIdsJson, long dispatchId = 0)
     {
+        if (!TryAcceptDispatchId(dispatchId, ref lastSelectionDispatchId))
+        {
+            return;
+        }
+
         var selectedNodeIds = Deserialize<List<string>>(selectedNodeIdsJson) ?? [];
         await SelectionChanged.InvokeAsync(new CanvasWorkbenchSelectionChangedEventArgs(primaryNodeId, selectedNodeIds));
     }
@@ -412,11 +435,17 @@
         => NodeOpened.InvokeAsync(nodeId);
 
     [JSInvokable]
-    public async Task OnStateChanged(string stateJson)
+    public async Task OnStateChanged(string stateJson, long dispatchId = 0)
     {
+        if (!TryAcceptDispatchId(dispatchId, ref lastStateDispatchId))
+        {
+            return;
+        }
+
         var state = CanvasWorkbenchUiState.Parse(stateJson);
         state.IsMaximized = isMaximized;
         clientUiStateKey = state.ToJson();
+        awaitingParentUiStateCommit = true;
         zoomPercent = ClampZoomPercent(state.Zoom);
         menuScalePercent = ClampMenuScalePercent(state.MenuActionScale);
         await StateChanged.InvokeAsync(clientUiStateKey);
@@ -484,6 +513,13 @@
             ?? Surface.UiState.SelectedNodeIds.FirstOrDefault()
             ?? Surface.Nodes.FirstOrDefault()?.Id;
         if (!sceneHost.IsInitialized || string.IsNullOrWhiteSpace(targetNodeId))
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.focusNode", host, targetNodeId);
+        await Task.Delay(180);
+        if (!sceneHost.IsInitialized)
         {
             return;
         }
@@ -582,6 +618,22 @@
     private T? Deserialize<T>(string json)
         => SerializationPersistencePack.Deserialize<T>(json);
 
+    private static bool TryAcceptDispatchId(long dispatchId, ref long lastAcceptedDispatchId)
+    {
+        if (dispatchId <= 0)
+        {
+            return true;
+        }
+
+        if (dispatchId <= lastAcceptedDispatchId)
+        {
+            return false;
+        }
+
+        lastAcceptedDispatchId = dispatchId;
+        return true;
+    }
+
     private static int ClampZoomPercent(double zoom)
         => (int)Math.Round(Math.Clamp(zoom, MinZoomPercent / 100d, MaxZoomPercent / 100d) * 100);
 
@@ -653,6 +705,20 @@
     private void MarkSurfaceApplied()
         => sceneHost.MarkApplied();
 
+    private async Task SynchronizeSelectionAsync(JsInteropBridge bridge)
+    {
+        if (Surface.UiState.SelectedNodeIds.Count == 0)
+        {
+            return;
+        }
+
+        await bridge.InvokeVoidAsync(
+            "CanDoItAll.canvasWorkbench.selectNodes",
+            host,
+            Surface.UiState.SelectedNodeIds,
+            Surface.UiState.SelectedNodeIds[0]);
+    }
+
     private bool ShouldAutoFitInitialView()
     {
         if (Surface.Nodes.Count == 0)
@@ -687,6 +753,19 @@
         }
 
         await CreateActionInvoked.InvokeAsync(request);
+    }
+
+    public async Task SelectNodesAsync(IReadOnlyList<string> nodeIds, string? primaryNodeId = null)
+    {
+        if (!sceneHost.IsInitialized || nodeIds.Count == 0)
+        {
+            return;
+        }
+
+        var resolvedPrimaryNodeId = string.IsNullOrWhiteSpace(primaryNodeId)
+            ? nodeIds[0]
+            : primaryNodeId;
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.selectNodes", host, nodeIds, resolvedPrimaryNodeId);
     }
 
     public async Task<string?> CaptureImageAsync()

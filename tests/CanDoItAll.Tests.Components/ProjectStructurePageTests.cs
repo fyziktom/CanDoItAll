@@ -1089,10 +1089,25 @@ public sealed class ProjectStructurePageTests
 
         await cut.InvokeAsync(() => canvasWorkbench.Instance.OnStateChanged(stateChange.ToJson()));
 
-        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
-        var persistedState = CanvasWorkbenchUiState.Parse(persistedSurface.ViewStateJson);
+        CanvasWorkbenchUiState? persistedState = null;
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+            persistedState = CanvasWorkbenchUiState.Parse(persistedSurface.ViewStateJson);
+            if (Math.Abs(persistedState.Zoom - 1.25) < 0.001 &&
+                Math.Abs(persistedState.PanX - 240) < 0.001 &&
+                Math.Abs(persistedState.PanY - 180) < 0.001 &&
+                persistedState.SelectedNodeIds.SequenceEqual([rootNodeId], StringComparer.Ordinal) &&
+                !persistedState.ShowMinimap)
+            {
+                break;
+            }
 
-        Assert.Empty(persistedState.ManualPositions);
+            await Task.Delay(100);
+        }
+
+        Assert.NotNull(persistedState);
+        Assert.Empty(persistedState!.ManualPositions);
         Assert.Equal(1.25, persistedState.Zoom, 3);
         Assert.Equal(240, persistedState.PanX, 3);
         Assert.Equal(180, persistedState.PanY, 3);

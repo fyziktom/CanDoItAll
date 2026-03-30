@@ -278,9 +278,7 @@ public sealed partial class AppSmokeTests
         await page.GetByTestId("project-structure-selection-window").WaitForAsync();
         await page.Locator(".cw-floating-window[data-testid='project-structure-selection-window'] input[placeholder='Name this border']").FillAsync("Delivery swimlane");
         await page.GetByRole(AriaRole.Button, new() { Name = "Border", Exact = true }).ClickAsync();
-        await page.WaitForFunctionAsync(
-            @"() => Array.from(document.querySelectorAll('.cw-group-frame__label'))
-                .some(label => (label.textContent || '').includes('Delivery swimlane'))");
+        await WaitForSceneFrameLabelAsync(page, "Delivery swimlane");
         await CaptureCanvasSurfaceAsync(page, Path.Combine(i17Root, "03-interaction-result.png"));
 
         await EnsureCanvasSelectionAsync(page, SelectorForNodeId(featureId));
@@ -300,13 +298,9 @@ public sealed partial class AppSmokeTests
         await CaptureLocatorAsync(summaryDialog, Path.Combine(i19Root, "02-secondary-state.png"));
 
         await summaryDialog.GetByRole(AriaRole.Button, new() { Name = "Export XLSX", Exact = true }).ClickAsync();
-        await page.WaitForFunctionAsync(
-            @"() => Array.from(document.querySelectorAll('.cw-node .cw-node__title'))
-                .some(node => (node.textContent || '').includes('Canvas editor rollout progress workbook'))");
+        await WaitForSceneNodeTitleAsync(page, "Canvas editor rollout progress workbook");
         await summaryDialog.GetByRole(AriaRole.Button, new() { Name = "Export Gantt", Exact = true }).ClickAsync();
-        await page.WaitForFunctionAsync(
-            @"() => Array.from(document.querySelectorAll('.cw-node .cw-node__title'))
-                .some(node => (node.textContent || '').includes('Canvas editor rollout gantt'))");
+        await WaitForSceneNodeTitleAsync(page, "Canvas editor rollout gantt");
         await summaryDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
         await FocusCanvasRootAsync(page);
         await SetCanvasZoomPercentAsync(page, 52);

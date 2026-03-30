@@ -89,12 +89,9 @@ public sealed partial class PromptLibraryVerificationTests
         await InvokeCanvasCreateActionAsync(page, "component:add:role-senior-reviewer", []);
         await InvokeCanvasCreateActionAsync(page, "component:add:role-senior-reviewer", []);
         await WaitForNodeAsync(page, "selection:component:role-senior-reviewer");
-        Assert.Equal(
-            1,
-            await page.Locator(".cw-node[data-node-id='selection:component:role-senior-reviewer']").CountAsync());
+        Assert.True(await NodeExistsAsync(page, "selection:component:role-senior-reviewer"));
 
-        var selectedComponentCount = await page.EvaluateAsync<int>(
-            @"() => document.querySelectorAll('.cw-node[data-node-id^=""selection:component:""]').length");
+        var selectedComponentCount = await ReadNodeCountByPrefixAsync(page, "selection:component:");
         Assert.Equal(1, selectedComponentCount);
         await CaptureWorkspaceAsync(page, Path.Combine(i24Root, "02-secondary-state.png"));
 

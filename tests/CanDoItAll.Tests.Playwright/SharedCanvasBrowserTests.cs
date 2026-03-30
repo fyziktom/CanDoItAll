@@ -104,6 +104,11 @@ public sealed partial class AppSmokeTests
             "Retained renderer note",
             string.Empty,
             "Retained renderer note");
+        await CommitCanvasNodePositionsAsync(
+            page,
+            [
+                (noteId, 860, 340)
+            ]);
         var noteSelector = SelectorForNodeId(noteId);
         await EnsureCanvasSelectionAsync(page, noteSelector);
         await SetCanvasDiagnosticsVisibleAsync(page, isVisible: true);
@@ -225,7 +230,8 @@ public sealed partial class AppSmokeTests
         Assert.True(
             cullingDiagnostics.VisibleNodeCount <= cullingDiagnostics.TotalNodeCount - 6,
             $"Expected viewport culling to reduce rendered nodes materially. Visible={cullingDiagnostics.VisibleNodeCount}, total={cullingDiagnostics.TotalNodeCount}.");
-        var minimapNodeCount = await page.Locator(".cw-minimap__node").CountAsync();
+        var cullingScene = await ReadSceneSnapshotAsync(page);
+        var minimapNodeCount = cullingScene.Minimap?.NodeCount ?? 0;
         Assert.True(
             minimapNodeCount >= cullingDiagnostics.TotalNodeCount - 1,
             $"Expected minimap to retain the broader scene while the viewport is culled. Minimap={minimapNodeCount}, total={cullingDiagnostics.TotalNodeCount}.");
@@ -255,28 +261,21 @@ public sealed partial class AppSmokeTests
             }",
             offscreenNodeId);
         Assert.True(focused, $"Expected the shared canvas host to expose focusNode for '{offscreenNodeId}'.");
-        await page.WaitForFunctionAsync(
-            @"payload => {
-                const node = document.querySelector(`.cw-node[data-node-id=""${payload.nodeId}""]`);
-                if (!(node instanceof HTMLElement)) {
-                    return false;
-                }
-
-                const rect = node.getBoundingClientRect();
-                return rect.width > 0 &&
-                    rect.height > 0 &&
-                    rect.left >= 32 &&
-                    rect.top >= 32 &&
-                    rect.right <= payload.viewportWidth - 32 &&
-                    rect.bottom <= payload.viewportHeight - 32;
-            }",
-            new
+        await WaitForSceneSnapshotAsync(
+            page,
+            snapshot =>
             {
-                nodeId = offscreenNodeId,
-                viewportWidth = 1900,
-                viewportHeight = 1200
+                var node = snapshot.Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, offscreenNodeId, StringComparison.Ordinal));
+                return node is not null &&
+                    node.Width > 0 &&
+                    node.Height > 0 &&
+                    node.Left >= 32 &&
+                    node.Top >= 32 &&
+                    node.Right <= snapshot.ViewportWidth - 32 &&
+                    node.Bottom <= snapshot.ViewportHeight - 32;
             },
-            new() { Timeout = 60_000 });
+            "offscreen selection restored into viewport",
+            60_000);
 
         var afterSelection = await ReadCanvasDiagnosticsAsync(page);
         var offscreenAfter = (await ReadNodePositionsAsync(page, [offscreenNodeId])).Single();
@@ -361,8 +360,8 @@ public sealed partial class AppSmokeTests
             [
                 (leftGuideId, 820, 420),
                 (rightGuideId, 1160, 420),
-                (movedTaskId, 835, 820),
-                (movedEvidenceId, 1175, 890)
+                (movedTaskId, 820, 820),
+                (movedEvidenceId, 1160, 890)
             ]);
         await FocusCanvasRootAsync(page);
         await SetCanvasZoomPercentAsync(page, 74);
@@ -372,8 +371,7 @@ public sealed partial class AppSmokeTests
         await page.GetByTestId("project-structure-selection-window").WaitForAsync();
         await page.Locator(".cw-floating-window[data-testid='project-structure-selection-window'] input[placeholder='Name this border']").FillAsync("Guide batch");
         await page.GetByRole(AriaRole.Button, new() { Name = "Border", Exact = true }).ClickAsync();
-        var frameLabel = page.Locator(".cw-group-frame__label").Filter(new() { HasText = "Guide batch" }).First;
-        await frameLabel.WaitForAsync();
+        await WaitForSceneFrameLabelAsync(page, "Guide batch");
 
         await SelectCanvasNodesAsync(page, [movedTaskId, movedEvidenceId], movedTaskId);
         await page.WaitForSelectorAsync("text=2 nodes selected");
@@ -381,15 +379,14 @@ public sealed partial class AppSmokeTests
 
         var beforeDragMetrics = await ReadCanvasDiagnosticsAsync(page);
         var beforeDragPositions = await ReadNodePositionsAsync(page, [movedTaskId, movedEvidenceId]);
-        var beforeFrameLabelBounds = await frameLabel.BoundingBoxAsync();
-        Assert.NotNull(beforeFrameLabelBounds);
+        var beforeFrame = await ReadSceneFrameSnapshotByLabelAsync(page, "Guide batch");
         Assert.True(
             beforeDragMetrics.VisibleNodeCount >= 5,
             $"Expected the dirty drag proof to render a broader scene before dragging. Visible={beforeDragMetrics.VisibleNodeCount}.");
 
         await page.Keyboard.DownAsync("Control");
-        await DragCanvasNodeAsync(page, movedTaskId, 0, -280, releasePointer: false);
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('.cw-snap-guide').length > 0");
+        await DragCanvasNodeAsync(page, movedTaskId, -31, -280, releasePointer: false, controlModifier: true);
+        var snapGuideProbe = await WaitForCanvasSnapGuidesAsync(page, [leftGuideId, rightGuideId, movedTaskId, movedEvidenceId]);
 
         var duringDragMetrics = await ReadCanvasDiagnosticsAsync(page);
         var duringDragPositions = await ReadNodePositionsAsync(page, [movedTaskId, movedEvidenceId]);
@@ -399,7 +396,12 @@ public sealed partial class AppSmokeTests
         var dragPatchedLinkDelta = duringDragMetrics.Metrics.TotalDragPatchedLinkCount - beforeDragMetrics.Metrics.TotalDragPatchedLinkCount;
         var dragPatchedFrameDelta = duringDragMetrics.Metrics.TotalDragPatchedFrameCount - beforeDragMetrics.Metrics.TotalDragPatchedFrameCount;
         Assert.Equal("drag", duringDragMetrics.Interaction);
-        Assert.True(guideCount >= 1, "Expected snap guides to stay visible during the held multi-select drag.");
+        Assert.True(
+            guideCount >= 1,
+            $"Expected snap guides to stay visible during the held multi-select drag. {snapGuideProbe.ToDiagnosticString()}");
+        Assert.True(
+            snapGuideProbe.StateGuideCount >= 1,
+            $"Expected the held multi-select drag to keep snap targets in state. {snapGuideProbe.ToDiagnosticString()}");
         Assert.True(
             dragRenderDelta > 0,
             $"Expected the held drag to trigger dirty drag renders. Before={beforeDragMetrics.Metrics.RenderCount}, during={duringDragMetrics.Metrics.RenderCount}.");
@@ -432,20 +434,28 @@ public sealed partial class AppSmokeTests
             });
         await CapturePrimaryWorkbenchShellAsync(page, Path.Combine(artifactsDir, "bundle-p1-03-guide-drag.png"));
 
-        await page.Mouse.UpAsync();
+        await ReleaseCanvasInteractionAsync(page);
         await page.Keyboard.UpAsync("Control");
-        await page.WaitForTimeoutAsync(220);
+        await WaitForSceneSnapshotAsync(
+            page,
+            snapshot =>
+            {
+                var frame = snapshot.Frames.FirstOrDefault(candidate => string.Equals(candidate.Label, "Guide batch", StringComparison.Ordinal));
+                return frame is not null &&
+                    (Math.Abs(frame.LabelLeft - beforeFrame.LabelLeft) > 40 ||
+                    Math.Abs(frame.LabelTop - beforeFrame.LabelTop) > 80);
+            },
+            "group frame to settle after multi-select drag");
 
         var afterDragMetrics = await ReadCanvasDiagnosticsAsync(page);
-        var afterFrameLabelBounds = await frameLabel.BoundingBoxAsync();
+        var afterFrame = await ReadSceneFrameSnapshotByLabelAsync(page, "Guide batch");
         Assert.True(
             afterDragMetrics.Metrics.StatePublishCommitCount > beforeDragMetrics.Metrics.StatePublishCommitCount,
             $"Expected the dirty drag release to publish updated state. Before={beforeDragMetrics.Metrics.StatePublishCommitCount}, after={afterDragMetrics.Metrics.StatePublishCommitCount}.");
-        Assert.NotNull(afterFrameLabelBounds);
         Assert.True(
-            Math.Abs(afterFrameLabelBounds!.X - beforeFrameLabelBounds!.X) > 40 ||
-            Math.Abs(afterFrameLabelBounds.Y - beforeFrameLabelBounds.Y) > 80,
-            $"Expected the retained frame label to move with the multi-select drag. Before=({beforeFrameLabelBounds.X},{beforeFrameLabelBounds.Y}), after=({afterFrameLabelBounds.X},{afterFrameLabelBounds.Y}).");
+            Math.Abs(afterFrame.LabelLeft - beforeFrame.LabelLeft) > 40 ||
+            Math.Abs(afterFrame.LabelTop - beforeFrame.LabelTop) > 80,
+            $"Expected the retained frame label to move with the multi-select drag. Before=({beforeFrame.LabelLeft},{beforeFrame.LabelTop}), after=({afterFrame.LabelLeft},{afterFrame.LabelTop}).");
         await page.WaitForSelectorAsync("text=2 nodes selected");
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());

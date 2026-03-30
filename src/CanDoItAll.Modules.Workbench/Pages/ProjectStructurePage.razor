@@ -21,6 +21,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject WorkspaceService WorkspaceService
 @inject ProviderExecutionService ProviderExecutionService
 @inject NavigationManager Navigation
+@implements IDisposable
 
 <PageTitle>Project Structure</PageTitle>
 
@@ -712,12 +713,15 @@ else
     private List<string> selectedNodeIds = [];
     private string? linkModeSourceId;
     private string? currentViewStateJson;
+    private const int CanvasViewStatePersistDelayMs = 420;
+    private CancellationTokenSource? pendingCanvasViewStatePersistCts;
     private string? pendingClientSelectionId;
     private ProjectStructureNode? previewNode;
     private string? localOpenFeedback;
     private string? localOpenFeedbackNodeId;
     private string localOpenFeedbackTone = "neutral";
     private Guid loadedProjectId;
+    private string? pendingWorkbenchSelectionId;
 
     private IReadOnlyList<CanvasWorkbenchStat> stageStats =>
     [
@@ -784,6 +788,8 @@ else
 
     private async Task ReloadSurfaceAsync(string? preferredSelectionId = null)
     {
+        CancelPendingCanvasViewStatePersistence();
+        pendingWorkbenchSelectionId = null;
         var reloadedSurface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
         var uiState = NormalizePersistedCanvasUiState(
             !string.IsNullOrWhiteSpace(currentViewStateJson)
@@ -814,6 +820,7 @@ else
         {
             selectedNodeIds = [preferredSelectionId];
             pendingClientSelectionId = preferredSelectionId;
+            pendingWorkbenchSelectionId = preferredSelectionId;
         }
         else if (selectedNodeIds.Count == 0)
         {
@@ -927,6 +934,16 @@ else
 
     private async Task HandleSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
     {
+        if (!string.IsNullOrWhiteSpace(pendingClientSelectionId) &&
+            surface?.Nodes.Any(node => string.Equals(node.Id, pendingClientSelectionId, StringComparison.Ordinal)) == true &&
+            args.SelectedNodeIds.Count <= 1 &&
+            !args.SelectedNodeIds.Contains(pendingClientSelectionId, StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        pendingWorkbenchSelectionId = null;
+
         if (!string.IsNullOrWhiteSpace(reconnectNodeId) &&
             !string.IsNullOrWhiteSpace(args.PrimaryNodeId))
         {
@@ -961,8 +978,22 @@ else
             return;
         }
 
-        await ReloadSurfaceAsync();
-        await TryAdoptMovedNodesIntoBordersAsync(args);
+        var updatedNodeIdSet = updatedNodeIds.ToHashSet(StringComparer.Ordinal);
+        var committedPositions = args.Positions
+            .Where(position => updatedNodeIdSet.Contains(position.NodeId))
+            .ToList();
+        var requiresReload = surface is null ||
+            committedPositions.Count != updatedNodeIdSet.Count ||
+            committedPositions.Any(position => !surface.Nodes.Any(node => string.Equals(node.Id, position.NodeId, StringComparison.Ordinal)));
+        if (requiresReload)
+        {
+            await ReloadSurfaceAsync();
+            return;
+        }
+
+        TryPatchSurfaceNodePositions(committedPositions);
+        await TryAdoptMovedNodesIntoBordersAsync(new CanvasWorkbenchNodesMovedEventArgs(committedPositions));
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleCanvasStateChangedAsync(string stateJson)
@@ -975,10 +1006,13 @@ else
         var uiState = NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(stateJson));
         if (!string.IsNullOrWhiteSpace(pendingClientSelectionId) &&
             surface.Nodes.Any(node => string.Equals(node.Id, pendingClientSelectionId, StringComparison.Ordinal)) &&
+            uiState.SelectedNodeIds.Count <= 1 &&
             !uiState.SelectedNodeIds.Contains(pendingClientSelectionId, StringComparer.Ordinal))
         {
             return;
         }
+
+        pendingWorkbenchSelectionId = null;
 
         var normalizedStateJson = uiState.ToJson();
         var persistedStateJson = NormalizePersistedCanvasStateJson(currentViewStateJson ?? surface.ViewStateJson);
@@ -991,8 +1025,13 @@ else
         selectedNodeIds = uiState.SelectedNodeIds.ToList();
         currentViewStateJson = normalizedStateJson;
         surface = surface with { ViewStateJson = currentViewStateJson };
-        RefreshCanvasSurface();
-        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
+        if (canvasSurface is not null)
+        {
+            canvasSurface.UiState = uiState;
+        }
+
+        ScheduleCanvasViewStatePersistence();
+        await InvokeAsync(StateHasChanged);
     }
 
     private Task HandleNodeOpenedAsync(string nodeId)
@@ -1327,7 +1366,7 @@ else
         currentViewStateJson = uiState.ToJson();
         surface = surface with { ViewStateJson = currentViewStateJson };
         RefreshCanvasSurface();
-        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
+        await PersistCurrentViewStateAsync();
     }
 
     private void EnableLinkMode()
@@ -1436,8 +1475,127 @@ else
         currentViewStateJson = uiState.ToJson();
         surface = surface with { ViewStateJson = currentViewStateJson };
         RefreshCanvasSurface();
-        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
+        await PersistCurrentViewStateAsync();
         await InvokeAsync(StateHasChanged);
+    }
+
+    private bool TryPatchSurfaceNodePositions(IReadOnlyCollection<CanvasWorkbenchNodePositionChange> positions)
+    {
+        if (surface is null || positions.Count == 0)
+        {
+            return false;
+        }
+
+        var positionsByNodeId = positions
+            .Where(position => !string.IsNullOrWhiteSpace(position.NodeId))
+            .GroupBy(position => position.NodeId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Last(), StringComparer.Ordinal);
+        if (positionsByNodeId.Count == 0)
+        {
+            return false;
+        }
+
+        var changed = false;
+        var patchedNodes = surface.Nodes
+            .Select(node =>
+            {
+                if (!positionsByNodeId.TryGetValue(node.Id, out var position) ||
+                    (Math.Abs(node.X - position.X) < 0.001 && Math.Abs(node.Y - position.Y) < 0.001))
+                {
+                    return node;
+                }
+
+                changed = true;
+                return node with
+                {
+                    X = position.X,
+                    Y = position.Y
+                };
+            })
+            .ToList();
+        if (!changed)
+        {
+            return false;
+        }
+
+        surface = surface with { Nodes = patchedNodes };
+
+        if (previewNode is not null)
+        {
+            previewNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, previewNode.Id, StringComparison.Ordinal));
+        }
+
+        if (mermaidPreviewNode is not null)
+        {
+            mermaidPreviewNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, mermaidPreviewNode.Id, StringComparison.Ordinal));
+        }
+
+        RefreshCanvasSurface();
+        return true;
+    }
+
+    private void ScheduleCanvasViewStatePersistence()
+    {
+        if (surface is null || string.IsNullOrWhiteSpace(currentViewStateJson))
+        {
+            CancelPendingCanvasViewStatePersistence();
+            return;
+        }
+
+        CancelPendingCanvasViewStatePersistence();
+        var persistCts = new CancellationTokenSource();
+        pendingCanvasViewStatePersistCts = persistCts;
+        _ = PersistCanvasViewStateWhenIdleAsync(persistCts, currentViewStateJson);
+    }
+
+    private async Task PersistCanvasViewStateWhenIdleAsync(CancellationTokenSource persistCts, string? stateJson)
+    {
+        try
+        {
+            await Task.Delay(CanvasViewStatePersistDelayMs, persistCts.Token);
+            if (persistCts.IsCancellationRequested || string.IsNullOrWhiteSpace(stateJson))
+            {
+                return;
+            }
+
+            await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", stateJson);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(pendingCanvasViewStatePersistCts, persistCts))
+            {
+                pendingCanvasViewStatePersistCts = null;
+            }
+
+            persistCts.Dispose();
+        }
+    }
+
+    private void CancelPendingCanvasViewStatePersistence()
+    {
+        var persistCts = pendingCanvasViewStatePersistCts;
+        pendingCanvasViewStatePersistCts = null;
+        if (persistCts is null)
+        {
+            return;
+        }
+
+        persistCts.Cancel();
+        persistCts.Dispose();
+    }
+
+    private async Task PersistCurrentViewStateAsync()
+    {
+        CancelPendingCanvasViewStatePersistence();
+        if (string.IsNullOrWhiteSpace(currentViewStateJson))
+        {
+            return;
+        }
+
+        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
     }
 
     private static CanvasWorkbenchUiState NormalizePersistedCanvasUiState(CanvasWorkbenchUiState uiState)
@@ -1802,6 +1960,9 @@ else
 
     private void CloseAttachmentPreview()
         => previewNode = null;
+
+    public void Dispose()
+        => CancelPendingCanvasViewStatePersistence();
 
 }
 

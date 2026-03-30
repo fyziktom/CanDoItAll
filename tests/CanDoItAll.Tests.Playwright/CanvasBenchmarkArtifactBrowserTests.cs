@@ -37,7 +37,11 @@ public sealed partial class AppSmokeTests
         var runButton = page.GetByTestId("canvas-benchmark-run");
         await runButton.WaitForAsync();
         await page.GetByTestId("canvas-benchmark-retained-preview").WaitForAsync();
-        await CaptureLocatorAsync(page.Locator("main"), Path.Combine(i25Root, "01-primary-state.png"));
+        await page.ScreenshotAsync(new()
+        {
+            FullPage = true,
+            Path = Path.Combine(i25Root, "01-primary-state.png")
+        });
 
         await runButton.ClickAsync();
         await page.WaitForFunctionAsync(
@@ -75,21 +79,33 @@ public sealed partial class AppSmokeTests
 
     private sealed class SandboxRuntime : IAsyncDisposable
     {
-        private readonly ConcurrentQueue<string> logs = new();
+        private readonly ConcurrentQueue<string> logs;
         private readonly Process process;
         private readonly Task stdoutPump;
         private readonly Task stderrPump;
 
-        private SandboxRuntime(Process process, Task stdoutPump, Task stderrPump)
+        private SandboxRuntime(Process process, ConcurrentQueue<string> logs, Task stdoutPump, Task stderrPump)
         {
             this.process = process;
+            this.logs = logs;
             this.stdoutPump = stdoutPump;
             this.stderrPump = stderrPump;
         }
 
         public static async Task<SandboxRuntime> StartAsync(string repoRoot, string baseUrl)
         {
-            var processStartInfo = new ProcessStartInfo("dotnet", $"run --no-build --no-launch-profile --project src/CanDoItAll.Components.Sandbox --urls {baseUrl}")
+            await BuildSandboxAsync(repoRoot);
+
+            var sandboxDllPath = Path.Combine(
+                repoRoot,
+                "src",
+                "CanDoItAll.Components.Sandbox",
+                "bin",
+                "Debug",
+                "net10.0",
+                "CanDoItAll.Components.Sandbox.dll");
+
+            var processStartInfo = new ProcessStartInfo("dotnet")
             {
                 WorkingDirectory = repoRoot,
                 RedirectStandardOutput = true,
@@ -98,17 +114,50 @@ public sealed partial class AppSmokeTests
                 CreateNoWindow = true
             };
 
-            processStartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
-            processStartInfo.Environment["DOTNET_ENVIRONMENT"] = "Development";
+            processStartInfo.ArgumentList.Add(sandboxDllPath);
+            processStartInfo.ArgumentList.Add("--urls");
+            processStartInfo.ArgumentList.Add(baseUrl);
+            processStartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Production";
+            processStartInfo.Environment["DOTNET_ENVIRONMENT"] = "Production";
+            processStartInfo.Environment["DOTNET_MODIFIABLE_ASSEMBLIES"] = "0";
 
             var process = Process.Start(processStartInfo) ?? throw new InvalidOperationException("Failed to start CanDoItAll.Components.Sandbox for benchmark validation.");
+            var logs = new ConcurrentQueue<string>();
             var runtime = new SandboxRuntime(
                 process,
-                PumpAsync(process.StandardOutput),
-                PumpAsync(process.StandardError));
+                logs,
+                PumpAsync(process.StandardOutput, logs, "stdout"),
+                PumpAsync(process.StandardError, logs, "stderr"));
 
             await runtime.WaitForReadyAsync($"{baseUrl}/groups/canvas/benchmark");
             return runtime;
+        }
+
+        private static async Task BuildSandboxAsync(string repoRoot)
+        {
+            var processStartInfo = new ProcessStartInfo("dotnet")
+            {
+                WorkingDirectory = repoRoot,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            processStartInfo.ArgumentList.Add("build");
+            processStartInfo.ArgumentList.Add(Path.Combine("src", "CanDoItAll.Components.Sandbox", "CanDoItAll.Components.Sandbox.csproj"));
+            processStartInfo.ArgumentList.Add("--nologo");
+
+            using var process = Process.Start(processStartInfo) ?? throw new InvalidOperationException("Failed to build the sandbox app for benchmark validation.");
+            var stdout = await process.StandardOutput.ReadToEndAsync();
+            var stderr = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"The sandbox build failed before benchmark validation.{Environment.NewLine}{stdout}{Environment.NewLine}{stderr}");
+            }
         }
 
         public async ValueTask DisposeAsync()
@@ -123,10 +172,16 @@ public sealed partial class AppSmokeTests
             await stderrPump;
         }
 
-        private static async Task PumpAsync(StreamReader reader)
+        private static async Task PumpAsync(StreamReader reader, ConcurrentQueue<string> logs, string streamName)
         {
-            while (await reader.ReadLineAsync() is not null)
+            while (await reader.ReadLineAsync() is { } line)
             {
+                if (logs.Count >= 80)
+                {
+                    logs.TryDequeue(out _);
+                }
+
+                logs.Enqueue($"[{streamName}] {line}");
             }
         }
 

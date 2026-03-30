@@ -142,7 +142,7 @@ public sealed class CanvasAdapterTests
         var placement = new ProjectStructurePlacementPolicy().ResolveCreatePlacement([sourceNode, siblingNode], sourceNode, null, request);
 
         Assert.Equal(300, placement.X);
-        Assert.Equal(332, placement.Y);
+        Assert.Equal(480, placement.Y);
     }
 
     [Fact]

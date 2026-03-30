@@ -8,6 +8,8 @@
     "test": "tests"
   },
   "scripts": {
+    "canvaslib:build-assets": "node tools/canvaslib/build-assets.cjs",
+    "canvaslib:verify-assets": "node tools/canvaslib/verify-assets.cjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
