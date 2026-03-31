@@ -1,4 +1,4 @@
-@page "/validation"
+﻿@page "/validation"
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Modules.Projects
@@ -212,7 +212,7 @@
                                                Wrap="FlexWrap.Wrap">
                                                     <div>
                                                         <p class="text-sm font-semibold text-slate-950">@finding.Title</p>
-                                                        <p class="mt-1 cda-eyebrow cda-eyebrow--tight">@finding.RuleCode</p>
+                                                        <p class="cda-eyebrow cda-eyebrow--tight mt-1">@finding.RuleCode</p>
                                                     </div>
                                                     <StatusBadge Tone="@ResolveFindingTone(finding.Severity)" Text="@finding.Severity.ToString()" />
                                                 </Split>
