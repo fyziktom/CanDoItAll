@@ -1,0 +1,28 @@
+.project-structure-toolbox {
+    box-sizing: border-box;
+    min-height: 0;
+    min-width: 0;
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: 0.85rem;
+}
+
+.project-structure-toolbox__body {
+    min-height: 0;
+    min-width: 0;
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+}
+
+.project-structure-toolbox__sections {
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
+    padding-right: 0.35rem;
+    padding-bottom: 0.2rem;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
