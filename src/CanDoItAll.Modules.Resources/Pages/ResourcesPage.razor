@@ -98,8 +98,8 @@
                     <Split Gap="LayoutGap.Medium">
                         <Stack GapScale="LayoutGap.Tiny">
                             <p class="cda-eyebrow">Resource editor</p>
-                            <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
-                            <p class="text-sm leading-6 text-slate-600">Keep ownership, connector location, and validation state together in one predictable detail pane.</p>
+                            <h2 class="cda-title-xl">@EditorTitle</h2>
+                            <p class="cda-body-muted">Keep ownership, connector location, and validation state together in one predictable detail pane.</p>
                         </Stack>
                         <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Tone="@ResolveTone(editor.ValidationStatus)" Text="@editor.ValidationStatus.ToString()" />
@@ -111,10 +111,10 @@
                         </Cluster>
                     </Split>
 
-                    <div class="rounded-[1.35rem] border border-sky-200 bg-sky-50/70 px-4 py-3 text-sm leading-6 text-sky-900">
-                        <p class="font-semibold text-sky-950">@Descriptor.DisplayName</p>
+                    <Alert AlertStyle="AlertStyle.Info">
+                        <p class="font-semibold">@Descriptor.DisplayName</p>
                         <p class="mt-1">@Descriptor.Summary</p>
-                    </div>
+                    </Alert>
                 </Stack>
             </DetailHeader>
 
@@ -305,9 +305,9 @@
                                     break;
                             }
 
-                            <div class="rounded-[1.2rem] bg-white px-4 py-3">
+                            <div class="cda-panel-card--soft">
                                 <p class="cda-eyebrow cda-eyebrow--tight">Stored identifier preview</p>
-                                <p class="mt-2 break-all text-sm text-slate-700">@PreviewLocation</p>
+                                <p class="cda-text-block cda-text-block--body2 mt-2 break-all">@PreviewLocation</p>
                             </div>
                         </FormSection>
 

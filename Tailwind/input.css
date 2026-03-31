@@ -1,5 +1,6 @@
 @import "tailwindcss" source(none);
 @source "../src/CanDoItAll.Components.BaseLib";
+@import "./foundation/theme.css";
 @import "./foundation/radzen-layout.css";
 @import "./layout/stacks.css";
 @import "./layout/sheets.css";
@@ -8,7 +9,9 @@
 @import "./surfaces/admin.css";
 @import "./surfaces/overlays.css";
 @import "./typography/text.css";
+@import "./controls/badges.css";
 @import "./controls/buttons.css";
+@import "./feedback/alerts.css";
 @import "./forms/fields.css";
 @import "./forms/tag-editor.css";
 @import "./navigation/page-header.css";

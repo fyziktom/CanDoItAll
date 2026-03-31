@@ -32,15 +32,15 @@
         <Grid Section="true" Gap="LayoutGap.XXLarge" ColumnsXl="3">
             <div class="cda-panel-card p-6 shadow-sm">
                 <p class="cda-eyebrow">Imported components</p>
-                <h2 class="mt-2 text-lg font-semibold text-slate-950">Library groups</h2>
+                <h2 class="cda-title-lg mt-2">Library groups</h2>
                 <Stack GapScale="LayoutGap.Medium"
                        Class="mt-4">
                     @foreach (var group in libraryCatalog.Groups.OrderBy(item => item.Order))
                     {
                         <div class="cda-panel-card--soft px-4 py-3">
-                            <p class="text-sm font-semibold text-slate-950">@group.Name</p>
-                            <p class="mt-1 text-xs leading-5 text-slate-600">@group.Purpose</p>
-                            <p class="mt-2 text-xs font-semibold text-slate-500">@($"{group.ComponentCount} component(s)")</p>
+                            <p class="cda-copy-strong">@group.Name</p>
+                            <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@group.Purpose</p>
+                            <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{group.ComponentCount} component(s)")</p>
                         </div>
                     }
                 </Stack>
@@ -48,15 +48,15 @@
 
             <div class="cda-panel-card p-6 shadow-sm">
                 <p class="cda-eyebrow">Imported flows</p>
-                <h2 class="mt-2 text-lg font-semibold text-slate-950">Prompt flow templates</h2>
+                <h2 class="cda-title-lg mt-2">Prompt flow templates</h2>
                 <Stack GapScale="LayoutGap.Medium"
                        Class="mt-4">
                     @foreach (var flow in libraryCatalog.Flows.OrderBy(item => item.OrderIndex))
                     {
                         <div class="cda-panel-card--soft px-4 py-3">
-                            <p class="text-sm font-semibold text-slate-950">@flow.Name</p>
-                            <p class="mt-1 text-xs leading-5 text-slate-600">@flow.Summary</p>
-                            <p class="mt-2 text-xs font-semibold text-slate-500">@($"{flow.AgentSequence.Count} agent step(s) · {flow.BlockKeys.Count} block(s)")</p>
+                            <p class="cda-copy-strong">@flow.Name</p>
+                            <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@flow.Summary</p>
+                            <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{flow.AgentSequence.Count} agent step(s) · {flow.BlockKeys.Count} block(s)")</p>
                         </div>
                     }
                 </Stack>
@@ -64,15 +64,15 @@
 
             <div class="cda-panel-card p-6 shadow-sm">
                 <p class="cda-eyebrow">Imported blueprints</p>
-                <h2 class="mt-2 text-lg font-semibold text-slate-950">Prompt blueprints</h2>
+                <h2 class="cda-title-lg mt-2">Prompt blueprints</h2>
                 <Stack GapScale="LayoutGap.Medium"
                        Class="mt-4">
                     @foreach (var blueprint in libraryCatalog.Blueprints.OrderBy(item => item.OrderIndex))
                     {
                         <div class="cda-panel-card--soft px-4 py-3">
-                            <p class="text-sm font-semibold text-slate-950">@blueprint.Name</p>
-                            <p class="mt-1 text-xs leading-5 text-slate-600">@blueprint.Guidance</p>
-                            <p class="mt-2 text-xs font-semibold text-slate-500">@($"{blueprint.PromptType} · flow: {blueprint.RecommendedFlowKey}")</p>
+                            <p class="cda-copy-strong">@blueprint.Name</p>
+                            <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@blueprint.Guidance</p>
+                            <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{blueprint.PromptType} · flow: {blueprint.RecommendedFlowKey}")</p>
                         </div>
                     }
                 </Stack>
@@ -142,8 +142,8 @@
                     <Split Gap="LayoutGap.Medium">
                         <Stack GapScale="LayoutGap.Tiny">
                             <p class="cda-eyebrow">Prompt editor</p>
-                            <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
-                            <p class="text-sm leading-6 text-slate-600">Draft editing, immutable versions, and recent usage stay together in one detail pane.</p>
+                            <h2 class="cda-title-xl">@EditorTitle</h2>
+                            <p class="cda-body-muted">Draft editing, immutable versions, and recent usage stay together in one detail pane.</p>
                         </Stack>
                         <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Tone="@EditorStatusTone" Text="@EditorStatusLabel" />
@@ -219,10 +219,10 @@
                                                        AlignItems="AlignItems.Center"
                                                        JustifyContent="JustifyContent.SpaceBetween"
                                                        Wrap="FlexWrap.Wrap">
-                                                    <p class="text-sm font-semibold text-slate-950">Version @version.VersionNumber</p>
-                                                    <p class="text-xs text-slate-500">@version.CreatedAtUtc.LocalDateTime:g</p>
+                                                    <p class="cda-copy-strong">Version @version.VersionNumber</p>
+                                                    <p class="cda-text-block cda-text-block--caption">@version.CreatedAtUtc.LocalDateTime:g</p>
                                                 </Split>
-                                                <p class="mt-2 text-sm leading-6 text-slate-600">@version.CreationReason</p>
+                                                <p class="cda-body-muted mt-2">@version.CreationReason</p>
                                             </div>
                                         }
                                     </Stack>
@@ -247,11 +247,11 @@
                                                        AlignItems="AlignItems.Center"
                                                        JustifyContent="JustifyContent.SpaceBetween"
                                                        Wrap="FlexWrap.Wrap">
-                                                    <p class="text-sm font-semibold text-slate-950">@usage.ProviderName</p>
-                                                    <p class="text-xs text-slate-500">@usage.CreatedAtUtc.LocalDateTime:g</p>
+                                                    <p class="cda-copy-strong">@usage.ProviderName</p>
+                                                    <p class="cda-text-block cda-text-block--caption">@usage.CreatedAtUtc.LocalDateTime:g</p>
                                                 </Split>
-                                                <p class="mt-2 text-sm text-slate-600">@usage.RepositoryName / @usage.CommitSha</p>
-                                                <p class="mt-3 text-sm leading-6 text-slate-600">@usage.UsageNote</p>
+                                                <p class="cda-text-block cda-text-block--caption mt-2">@usage.RepositoryName / @usage.CommitSha</p>
+                                                <p class="cda-body-muted mt-3">@usage.UsageNote</p>
                                             </div>
                                         }
                                     </Stack>

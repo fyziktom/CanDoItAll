@@ -11,22 +11,16 @@
     --color-red-300: oklch(80.8% 0.114 19.571);
     --color-red-900: oklch(39.6% 0.141 25.723);
     --color-amber-50: oklch(98.7% 0.022 95.277);
-    --color-amber-100: oklch(96.2% 0.059 95.617);
     --color-amber-200: oklch(92.4% 0.12 95.746);
     --color-amber-300: oklch(87.9% 0.169 91.605);
     --color-amber-700: oklch(55.5% 0.163 48.998);
-    --color-amber-800: oklch(47.3% 0.137 46.201);
     --color-amber-900: oklch(41.4% 0.112 45.904);
     --color-emerald-50: oklch(97.9% 0.021 166.113);
-    --color-emerald-100: oklch(95% 0.052 163.051);
     --color-emerald-200: oklch(90.5% 0.093 164.15);
     --color-emerald-300: oklch(84.5% 0.143 164.978);
     --color-emerald-700: oklch(50.8% 0.118 165.612);
     --color-emerald-800: oklch(43.2% 0.095 166.913);
     --color-emerald-900: oklch(37.8% 0.077 168.94);
-    --color-cyan-50: oklch(98.4% 0.019 200.873);
-    --color-cyan-200: oklch(91.7% 0.08 205.041);
-    --color-cyan-700: oklch(52% 0.105 223.128);
     --color-sky-50: oklch(97.7% 0.013 236.62);
     --color-sky-100: oklch(95.1% 0.026 236.824);
     --color-sky-200: oklch(90.1% 0.058 230.902);
@@ -36,25 +30,11 @@
     --color-sky-700: oklch(50% 0.134 242.749);
     --color-sky-800: oklch(44.3% 0.11 240.79);
     --color-sky-900: oklch(39.1% 0.09 240.876);
-    --color-sky-950: oklch(29.3% 0.066 243.157);
     --color-indigo-500: oklch(58.5% 0.233 277.117);
     --color-indigo-600: oklch(51.1% 0.262 276.966);
-    --color-violet-50: oklch(96.9% 0.016 293.756);
-    --color-violet-200: oklch(89.4% 0.057 293.283);
     --color-violet-500: oklch(60.6% 0.25 292.717);
     --color-violet-600: oklch(54.1% 0.281 293.009);
     --color-violet-700: oklch(49.1% 0.27 292.581);
-    --color-fuchsia-50: oklch(97.7% 0.017 320.058);
-    --color-fuchsia-100: oklch(95.2% 0.037 318.852);
-    --color-fuchsia-200: oklch(90.3% 0.076 319.62);
-    --color-fuchsia-300: oklch(83.3% 0.145 321.434);
-    --color-fuchsia-700: oklch(51.8% 0.253 323.949);
-    --color-fuchsia-800: oklch(45.2% 0.211 324.591);
-    --color-fuchsia-900: oklch(40.1% 0.17 325.612);
-    --color-rose-50: oklch(96.9% 0.015 12.422);
-    --color-rose-100: oklch(94.1% 0.03 12.58);
-    --color-rose-200: oklch(89.2% 0.058 10.001);
-    --color-rose-300: oklch(81% 0.117 11.638);
     --color-rose-700: oklch(51.4% 0.222 16.935);
     --color-slate-50: oklch(98.4% 0.003 247.858);
     --color-slate-100: oklch(96.8% 0.007 247.896);
@@ -393,9 +373,6 @@
   .h-\[92vh\] {
     height: 92vh;
   }
-  .h-full {
-    height: 100%;
-  }
   .h-px {
     height: 1px;
   }
@@ -644,9 +621,6 @@
   .rounded-2xl {
     border-radius: var(--radius-2xl);
   }
-  .rounded-3xl {
-    border-radius: var(--radius-3xl);
-  }
   .rounded-\[1\.2rem\] {
     border-radius: 1.2rem;
   }
@@ -699,14 +673,8 @@
     --tw-border-style: dashed;
     border-style: dashed;
   }
-  .border-amber-200 {
-    border-color: var(--color-amber-200);
-  }
   .border-amber-300 {
     border-color: var(--color-amber-300);
-  }
-  .border-cyan-200 {
-    border-color: var(--color-cyan-200);
   }
   .border-emerald-200 {
     border-color: var(--color-emerald-200);
@@ -714,17 +682,8 @@
   .border-emerald-300 {
     border-color: var(--color-emerald-300);
   }
-  .border-fuchsia-200 {
-    border-color: var(--color-fuchsia-200);
-  }
-  .border-fuchsia-300 {
-    border-color: var(--color-fuchsia-300);
-  }
   .border-red-300 {
     border-color: var(--color-red-300);
-  }
-  .border-rose-200 {
-    border-color: var(--color-rose-200);
   }
   .border-sky-200 {
     border-color: var(--color-sky-200);
@@ -750,9 +709,6 @@
   .border-slate-900 {
     border-color: var(--color-slate-900);
   }
-  .border-violet-200 {
-    border-color: var(--color-violet-200);
-  }
   .border-violet-600 {
     border-color: var(--color-violet-600);
   }
@@ -765,15 +721,6 @@
   .bg-amber-50 {
     background-color: var(--color-amber-50);
   }
-  .bg-amber-50\/80 {
-    background-color: color-mix(in srgb, oklch(98.7% 0.022 95.277) 80%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-amber-50) 80%, transparent);
-    }
-  }
-  .bg-cyan-50 {
-    background-color: var(--color-cyan-50);
-  }
   .bg-emerald-50 {
     background-color: var(--color-emerald-50);
   }
@@ -783,23 +730,11 @@
       background-color: color-mix(in oklab, var(--color-emerald-50) 80%, transparent);
     }
   }
-  .bg-fuchsia-50 {
-    background-color: var(--color-fuchsia-50);
-  }
   .bg-indigo-500 {
     background-color: var(--color-indigo-500);
   }
   .bg-red-50 {
     background-color: var(--color-red-50);
-  }
-  .bg-rose-50 {
-    background-color: var(--color-rose-50);
-  }
-  .bg-rose-50\/80 {
-    background-color: color-mix(in srgb, oklch(96.9% 0.015 12.422) 80%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-rose-50) 80%, transparent);
-    }
   }
   .bg-sky-50 {
     background-color: var(--color-sky-50);
@@ -858,9 +793,6 @@
   .bg-transparent {
     background-color: transparent;
   }
-  .bg-violet-50 {
-    background-color: var(--color-violet-50);
-  }
   .bg-violet-500\/80 {
     background-color: color-mix(in srgb, oklch(60.6% 0.25 292.717) 80%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -911,9 +843,6 @@
   }
   .px-2 {
     padding-inline: calc(var(--spacing) * 2);
-  }
-  .px-2\.5 {
-    padding-inline: calc(var(--spacing) * 2.5);
   }
   .px-3 {
     padding-inline: calc(var(--spacing) * 3);
@@ -975,20 +904,9 @@
   .align-top {
     vertical-align: top;
   }
-  .font-mono {
-    font-family: var(--font-mono);
-  }
   .text-2xl {
     font-size: var(--text-2xl);
     line-height: var(--tw-leading, var(--text-2xl--line-height));
-  }
-  .text-3xl {
-    font-size: var(--text-3xl);
-    line-height: var(--tw-leading, var(--text-3xl--line-height));
-  }
-  .text-4xl {
-    font-size: var(--text-4xl);
-    line-height: var(--tw-leading, var(--text-4xl--line-height));
   }
   .text-base {
     font-size: var(--text-base);
@@ -1009,9 +927,6 @@
   .text-xs {
     font-size: var(--text-xs);
     line-height: var(--tw-leading, var(--text-xs--line-height));
-  }
-  .text-\[0\.7rem\] {
-    font-size: 0.7rem;
   }
   .text-\[0\.8rem\] {
     font-size: 0.8rem;
@@ -1042,10 +957,6 @@
     --tw-font-weight: var(--font-weight-medium);
     font-weight: var(--font-weight-medium);
   }
-  .font-normal {
-    --tw-font-weight: var(--font-weight-normal);
-    font-weight: var(--font-weight-normal);
-  }
   .font-semibold {
     --tw-font-weight: var(--font-weight-semibold);
     font-weight: var(--font-weight-semibold);
@@ -1069,14 +980,8 @@
   .text-amber-700 {
     color: var(--color-amber-700);
   }
-  .text-amber-800 {
-    color: var(--color-amber-800);
-  }
   .text-amber-900 {
     color: var(--color-amber-900);
-  }
-  .text-cyan-700 {
-    color: var(--color-cyan-700);
   }
   .text-emerald-700 {
     color: var(--color-emerald-700);
@@ -1086,12 +991,6 @@
   }
   .text-emerald-900 {
     color: var(--color-emerald-900);
-  }
-  .text-fuchsia-700 {
-    color: var(--color-fuchsia-700);
-  }
-  .text-fuchsia-900 {
-    color: var(--color-fuchsia-900);
   }
   .text-indigo-600 {
     color: var(--color-indigo-600);
@@ -1122,9 +1021,6 @@
   }
   .text-slate-800 {
     color: var(--color-slate-800);
-  }
-  .text-slate-900 {
-    color: var(--color-slate-900);
   }
   .text-slate-950 {
     color: var(--color-slate-950);
@@ -1166,12 +1062,6 @@
     --tw-shadow-color: oklch(95.1% 0.026 236.824);
     @supports (color: color-mix(in lab, red, red)) {
       --tw-shadow-color: color-mix(in oklab, var(--color-sky-100) var(--tw-shadow-alpha), transparent);
-    }
-  }
-  .shadow-slate-200\/50 {
-    --tw-shadow-color: color-mix(in srgb, oklch(92.9% 0.013 255.508) 50%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-slate-200) 50%, transparent) var(--tw-shadow-alpha), transparent);
     }
   }
   .shadow-slate-200\/60 {
@@ -1425,6 +1315,281 @@
     }
   }
 }
+@layer base {
+  :root, [data-cad-theme="light"] {
+    color-scheme: light;
+    --cad-radius-control: 0.875rem;
+    --cad-radius-surface: 1.5rem;
+    --cad-radius-panel: 1.75rem;
+    --cad-color-page-bg: #f8fafc;
+    --cad-color-surface: rgba(255, 255, 255, 0.96);
+    --cad-color-surface-soft: rgba(248, 250, 252, 0.88);
+    --cad-color-border: #cbd5e1;
+    --cad-color-border-soft: #e2e8f0;
+    --cad-color-text-strong: #020617;
+    --cad-color-text: #0f172a;
+    --cad-color-text-muted: #475569;
+    --cad-color-text-soft: #64748b;
+    --cad-color-inverse: #f8fafc;
+    --cad-shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.08);
+    --cad-shadow-strong: 0 20px 48px rgba(15, 23, 42, 0.14);
+    --cad-tone-primary-solid-bg: #0f172a;
+    --cad-tone-primary-solid-hover: #1e293b;
+    --cad-tone-primary-solid-border: #0f172a;
+    --cad-tone-primary-solid-fg: #ffffff;
+    --cad-tone-primary-soft-bg: rgba(255, 255, 255, 0.96);
+    --cad-tone-primary-soft-hover: #f8fafc;
+    --cad-tone-primary-soft-border: #cbd5e1;
+    --cad-tone-primary-soft-fg: #0f172a;
+    --cad-tone-secondary-soft-bg: #fae8ff;
+    --cad-tone-secondary-soft-hover: #f5d0fe;
+    --cad-tone-secondary-soft-border: #f0abfc;
+    --cad-tone-secondary-soft-fg: #86198f;
+    --cad-tone-success-soft-bg: #d1fae5;
+    --cad-tone-success-soft-hover: #a7f3d0;
+    --cad-tone-success-soft-border: #6ee7b7;
+    --cad-tone-success-soft-fg: #065f46;
+    --cad-tone-info-soft-bg: #e0f2fe;
+    --cad-tone-info-soft-hover: #bae6fd;
+    --cad-tone-info-soft-border: #7dd3fc;
+    --cad-tone-info-soft-fg: #075985;
+    --cad-tone-warning-soft-bg: #fef3c7;
+    --cad-tone-warning-soft-hover: #fde68a;
+    --cad-tone-warning-soft-border: #fcd34d;
+    --cad-tone-warning-soft-fg: #92400e;
+    --cad-tone-danger-soft-bg: #ffe4e6;
+    --cad-tone-danger-soft-hover: #fecdd3;
+    --cad-tone-danger-soft-border: #fda4af;
+    --cad-tone-danger-soft-fg: #9f1239;
+    --cad-tone-light-soft-bg: rgba(255, 255, 255, 0.96);
+    --cad-tone-light-soft-hover: #f8fafc;
+    --cad-tone-light-soft-border: #cbd5e1;
+    --cad-tone-light-soft-fg: #475569;
+    --cad-tone-base-soft-bg: rgba(255, 255, 255, 0.96);
+    --cad-tone-base-soft-hover: #f8fafc;
+    --cad-tone-base-soft-border: #cbd5e1;
+    --cad-tone-base-soft-fg: #475569;
+    --cad-tone-dark-soft-bg: #e2e8f0;
+    --cad-tone-dark-soft-hover: #cbd5e1;
+    --cad-tone-dark-soft-border: #94a3b8;
+    --cad-tone-dark-soft-fg: #0f172a;
+  }
+  [data-cad-theme="dark"] {
+    color-scheme: dark;
+    --cad-color-page-bg: #020617;
+    --cad-color-surface: rgba(15, 23, 42, 0.92);
+    --cad-color-surface-soft: rgba(30, 41, 59, 0.82);
+    --cad-color-border: rgba(148, 163, 184, 0.35);
+    --cad-color-border-soft: rgba(71, 85, 105, 0.45);
+    --cad-color-text-strong: #f8fafc;
+    --cad-color-text: #e2e8f0;
+    --cad-color-text-muted: #cbd5e1;
+    --cad-color-text-soft: #94a3b8;
+    --cad-color-inverse: #020617;
+    --cad-shadow-soft: 0 18px 40px rgba(2, 6, 23, 0.45);
+    --cad-shadow-strong: 0 24px 56px rgba(2, 6, 23, 0.58);
+    --cad-tone-primary-solid-bg: #cbd5e1;
+    --cad-tone-primary-solid-hover: #e2e8f0;
+    --cad-tone-primary-solid-border: #cbd5e1;
+    --cad-tone-primary-solid-fg: #0f172a;
+    --cad-tone-primary-soft-bg: rgba(30, 41, 59, 0.78);
+    --cad-tone-primary-soft-hover: rgba(51, 65, 85, 0.84);
+    --cad-tone-primary-soft-border: rgba(148, 163, 184, 0.35);
+    --cad-tone-primary-soft-fg: #e2e8f0;
+    --cad-tone-secondary-soft-bg: rgba(112, 26, 117, 0.32);
+    --cad-tone-secondary-soft-hover: rgba(134, 25, 143, 0.4);
+    --cad-tone-secondary-soft-border: rgba(232, 121, 249, 0.38);
+    --cad-tone-secondary-soft-fg: #f5d0fe;
+    --cad-tone-success-soft-bg: rgba(6, 95, 70, 0.34);
+    --cad-tone-success-soft-hover: rgba(6, 120, 85, 0.44);
+    --cad-tone-success-soft-border: rgba(52, 211, 153, 0.35);
+    --cad-tone-success-soft-fg: #a7f3d0;
+    --cad-tone-info-soft-bg: rgba(7, 89, 133, 0.32);
+    --cad-tone-info-soft-hover: rgba(3, 105, 161, 0.42);
+    --cad-tone-info-soft-border: rgba(56, 189, 248, 0.34);
+    --cad-tone-info-soft-fg: #bae6fd;
+    --cad-tone-warning-soft-bg: rgba(146, 64, 14, 0.34);
+    --cad-tone-warning-soft-hover: rgba(180, 83, 9, 0.42);
+    --cad-tone-warning-soft-border: rgba(251, 191, 36, 0.35);
+    --cad-tone-warning-soft-fg: #fde68a;
+    --cad-tone-danger-soft-bg: rgba(159, 18, 57, 0.34);
+    --cad-tone-danger-soft-hover: rgba(190, 24, 93, 0.42);
+    --cad-tone-danger-soft-border: rgba(251, 113, 133, 0.35);
+    --cad-tone-danger-soft-fg: #fecdd3;
+    --cad-tone-light-soft-bg: rgba(30, 41, 59, 0.74);
+    --cad-tone-light-soft-hover: rgba(51, 65, 85, 0.82);
+    --cad-tone-light-soft-border: rgba(148, 163, 184, 0.28);
+    --cad-tone-light-soft-fg: #e2e8f0;
+    --cad-tone-base-soft-bg: rgba(30, 41, 59, 0.74);
+    --cad-tone-base-soft-hover: rgba(51, 65, 85, 0.82);
+    --cad-tone-base-soft-border: rgba(148, 163, 184, 0.28);
+    --cad-tone-base-soft-fg: #e2e8f0;
+    --cad-tone-dark-soft-bg: rgba(226, 232, 240, 0.14);
+    --cad-tone-dark-soft-hover: rgba(226, 232, 240, 0.2);
+    --cad-tone-dark-soft-border: rgba(148, 163, 184, 0.32);
+    --cad-tone-dark-soft-fg: #f8fafc;
+  }
+  .cad-theme-host {
+    display: block;
+    min-height: 100%;
+    background: var(--cad-color-page-bg);
+    color: var(--cad-color-text);
+  }
+}
+@layer components {
+  .cad-theme-switcher {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: calc(var(--spacing) * 2);
+  }
+  .cad-theme-proof {
+    margin-top: calc(var(--spacing) * 5);
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 4);
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+    padding: calc(var(--spacing) * 4);
+    @media (width >= 48rem) {
+      padding: calc(var(--spacing) * 5);
+    }
+    border-radius: var(--cad-radius-panel);
+    border-color: var(--cad-color-border-soft);
+    background: linear-gradient(180deg, var(--cad-color-surface) 0%, var(--cad-color-surface-soft) 100%);
+    color: var(--cad-color-text);
+    box-shadow: var(--cad-shadow-soft);
+  }
+  .cad-theme-proof__header {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 3);
+    @media (width >= 48rem) {
+      flex-direction: row;
+    }
+    @media (width >= 48rem) {
+      align-items: flex-start;
+    }
+    @media (width >= 48rem) {
+      justify-content: space-between;
+    }
+  }
+  .cad-theme-proof__eyebrow {
+    font-size: 11px;
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    --tw-tracking: 0.22em;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--cad-color-text-soft);
+  }
+  .cad-theme-proof__title {
+    font-size: var(--text-lg);
+    line-height: var(--tw-leading, var(--text-lg--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    --tw-tracking: var(--tracking-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--cad-color-text-strong);
+  }
+  .cad-theme-proof__summary {
+    margin-top: calc(var(--spacing) * 2);
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    --tw-leading: calc(var(--spacing) * 6);
+    line-height: calc(var(--spacing) * 6);
+    color: var(--cad-color-text-muted);
+  }
+  .cad-theme-proof__pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: calc(infinity * 1px);
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+    padding-inline: calc(var(--spacing) * 3);
+    padding-block: calc(var(--spacing) * 1);
+    font-size: 11px;
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    --tw-tracking: 0.18em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border-color: var(--cad-color-border);
+    background: var(--cad-tone-primary-soft-bg);
+    color: var(--cad-tone-primary-soft-fg);
+  }
+  .cad-theme-proof__swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--spacing) * 3);
+  }
+  .cad-theme-proof__swatch {
+    display: inline-flex;
+    align-items: center;
+    border-radius: calc(infinity * 1px);
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+    padding-inline: calc(var(--spacing) * 3);
+    padding-block: calc(var(--spacing) * 1.5);
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+  }
+  .cad-theme-proof__swatch--primary {
+    border-color: var(--cad-tone-primary-solid-border);
+    background: var(--cad-tone-primary-solid-bg);
+    color: var(--cad-tone-primary-solid-fg);
+  }
+  .cad-theme-proof__swatch--secondary {
+    border-color: var(--cad-tone-secondary-soft-border);
+    background: var(--cad-tone-secondary-soft-bg);
+    color: var(--cad-tone-secondary-soft-fg);
+  }
+  .cad-theme-proof__swatch--danger {
+    border-color: var(--cad-tone-danger-soft-border);
+    background: var(--cad-tone-danger-soft-bg);
+    color: var(--cad-tone-danger-soft-fg);
+  }
+  .cad-theme-proof__swatch--surface {
+    border-color: var(--cad-color-border);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
+  }
+  .cad-theme-proof__metrics {
+    display: grid;
+    gap: calc(var(--spacing) * 3);
+    @media (width >= 48rem) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .cad-theme-proof__metric {
+    border-radius: var(--radius-2xl);
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+    padding: calc(var(--spacing) * 3);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+  }
+  .cad-theme-proof__metric-label {
+    font-size: 11px;
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    --tw-tracking: 0.18em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cad-color-text-soft);
+  }
+  .cad-theme-proof__metric-value {
+    margin-top: calc(var(--spacing) * 2);
+    display: block;
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    color: var(--cad-color-text-strong);
+  }
+}
 @layer components {
   .rz-layout {
     display: flex;
@@ -1472,11 +1637,11 @@
   }
 }
 @layer components {
-  .zy-sheet-section {
+  .cad-sheet-section, .zy-sheet-section {
     display: grid;
     gap: 1rem;
   }
-  .zy-sheet-toolbar {
+  .cad-sheet-toolbar, .zy-sheet-toolbar {
     display: grid;
     gap: 0.75rem;
     padding: 1rem;
@@ -1485,24 +1650,24 @@
     background: rgba(255, 255, 255, 0.96);
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
   }
-  .zy-sheet-toolbar-row {
+  .cad-sheet-toolbar-row, .zy-sheet-toolbar-row {
     display: grid;
     gap: 0.75rem;
     align-items: start;
   }
-  .zy-sheet-toolbar-fields {
+  .cad-sheet-toolbar-fields, .zy-sheet-toolbar-fields {
     display: grid;
     gap: 0.75rem;
     min-width: 0;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
   }
-  .zy-sheet-toolbar-actions {
+  .cad-sheet-toolbar-actions, .zy-sheet-toolbar-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
   }
-  .zy-sheet-field {
+  .cad-sheet-field, .zy-sheet-field {
     display: flex;
     width: 100%;
     min-width: 0;
@@ -1516,26 +1681,26 @@
     font-size: 0.875rem;
     line-height: 1.35;
   }
-  .zy-sheet-field--search, .zy-sheet-field--tag {
+  .cad-sheet-field--search, .zy-sheet-field--search, .cad-sheet-field--tag, .zy-sheet-field--tag {
     min-width: 0;
   }
-  .zy-sheet-field--submit-wrap {
+  .cad-sheet-field--submit-wrap, .zy-sheet-field--submit-wrap {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.45rem;
   }
-  .zy-sheet-grid {
+  .cad-sheet-grid, .zy-sheet-grid {
     display: grid;
     gap: 1rem;
     justify-content: start;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 24rem));
     align-items: stretch;
   }
-  .zy-sheet-grid--packages {
+  .cad-sheet-grid--packages, .zy-sheet-grid--packages {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 20.75rem), 26rem));
   }
-  .zy-sheet-card {
+  .cad-sheet-card, .zy-sheet-card {
     display: grid;
     width: 100%;
     min-width: 0;
@@ -1547,17 +1712,17 @@
     background: rgba(255, 255, 255, 0.98);
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
   }
-  .zy-sheet-card--package {
+  .cad-sheet-card--package, .zy-sheet-card--package {
     gap: 1rem;
     background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.98));
   }
 }
 @media (min-width: 1280px) {
-  .zy-sheet-toolbar-row {
+  .cad-sheet-toolbar-row, .zy-sheet-toolbar-row {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
   }
-  .zy-sheet-toolbar-actions {
+  .cad-sheet-toolbar-actions, .zy-sheet-toolbar-actions {
     justify-content: flex-end;
   }
 }
@@ -1644,13 +1809,13 @@
     font-weight: var(--font-weight-semibold);
     color: var(--color-slate-950);
   }
-  .zy-stat-card-row {
+  .cad-stat-card-row, .zy-stat-card-row {
     display: flex;
     flex-wrap: wrap;
     align-items: stretch;
     gap: 0.5rem;
   }
-  .zy-stat-card {
+  .cad-stat-card, .zy-stat-card {
     display: inline-flex;
     align-items: center;
     gap: 0.42rem;
@@ -1661,11 +1826,11 @@
     background: var(--stat-bg, rgba(255, 255, 255, 0.98));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
   }
-  .zy-stat-card__icon {
+  .cad-stat-card__icon, .zy-stat-card__icon {
     color: var(--stat-color, #7c3aed);
     line-height: 1;
   }
-  .zy-stat-card__label {
+  .cad-stat-card__label, .zy-stat-card__label {
     font-size: 0.49rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -1673,57 +1838,50 @@
     color: rgba(71, 85, 105, 0.82);
     white-space: nowrap;
   }
-  .zy-stat-card__value {
+  .cad-stat-card__value, .zy-stat-card__value {
     font-size: 0.9rem;
     line-height: 1;
     font-weight: 900;
     color: var(--stat-color, #0f172a);
     white-space: nowrap;
   }
-  .zy-stat-card--sm {
+  .cad-stat-card--sm, .zy-stat-card--sm {
     padding: 0.3rem 0.54rem;
   }
-  .zy-stat-card--sm .zy-stat-card__label {
+  .cad-stat-card--sm .cad-stat-card__label, .cad-stat-card--sm .zy-stat-card__label, .zy-stat-card--sm .cad-stat-card__label, .zy-stat-card--sm .zy-stat-card__label {
     font-size: 0.45rem;
   }
-  .zy-stat-card--sm .zy-stat-card__value {
+  .cad-stat-card--sm .cad-stat-card__value, .cad-stat-card--sm .zy-stat-card__value, .zy-stat-card--sm .cad-stat-card__value, .zy-stat-card--sm .zy-stat-card__value {
     font-size: 0.78rem;
   }
-  .zy-stat-card--lg {
+  .cad-stat-card--lg, .zy-stat-card--lg {
     padding: 0.4rem 0.74rem;
   }
-  .zy-stat-card--lg .zy-stat-card__label {
+  .cad-stat-card--lg .cad-stat-card__label, .cad-stat-card--lg .zy-stat-card__label, .zy-stat-card--lg .cad-stat-card__label, .zy-stat-card--lg .zy-stat-card__label {
     font-size: 0.52rem;
   }
-  .zy-stat-card--lg .zy-stat-card__value {
+  .cad-stat-card--lg .cad-stat-card__value, .cad-stat-card--lg .zy-stat-card__value, .zy-stat-card--lg .cad-stat-card__value, .zy-stat-card--lg .zy-stat-card__value {
     font-size: 0.96rem;
   }
 }
 @layer components {
   .cda-card {
-    border-radius: var(--radius-xl);
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-200);
-    background-color: var(--color-white);
     padding: calc(var(--spacing) * 4);
-    --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+    border-radius: var(--cad-radius-surface);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
+    box-shadow: var(--cad-shadow-soft);
   }
   .cda-board-card {
     display: flex;
     min-height: 13.75rem;
     flex-direction: column;
-    border-radius: 1.5rem;
     border-style: var(--tw-border-style);
     border-width: 1px;
     padding: calc(var(--spacing) * 4);
-    --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-    --tw-shadow-color: color-mix(in srgb, oklch(92.9% 0.013 255.508) 60%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-slate-200) 60%, transparent) var(--tw-shadow-alpha), transparent);
-    }
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
@@ -1733,20 +1891,14 @@
         translate: var(--tw-translate-x) var(--tw-translate-y);
       }
     }
-    &:hover {
-      @media (hover: hover) {
-        --tw-shadow: 0 10px 15px -3px var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 4px 6px -4px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
-        box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-      }
-    }
-    &:hover {
-      @media (hover: hover) {
-        --tw-shadow-color: color-mix(in srgb, oklch(92.9% 0.013 255.508) 70%, transparent);
-        @supports (color: color-mix(in lab, red, red)) {
-          --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-slate-200) 70%, transparent) var(--tw-shadow-alpha), transparent);
-        }
-      }
-    }
+    border-radius: var(--cad-radius-panel);
+    border-color: var(--cad-color-border-soft);
+    background: linear-gradient(180deg, var(--cad-color-surface) 0%, var(--cad-color-surface-soft) 100%);
+    color: var(--cad-color-text);
+    box-shadow: var(--cad-shadow-soft);
+  }
+  .cda-board-card:hover {
+    box-shadow: var(--cad-shadow-strong);
   }
   .cda-modal-shell {
     position: relative;
@@ -1755,98 +1907,164 @@
     max-width: var(--container-6xl);
     flex-direction: column;
     overflow: hidden;
-    border-radius: 2rem;
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: color-mix(in srgb, #fff 70%, transparent);
+    border-radius: var(--cad-radius-panel);
+    border-color: var(--cad-color-border-soft);
     @supports (color: color-mix(in lab, red, red)) {
-      border-color: color-mix(in oklab, var(--color-white) 70%, transparent);
+      border-color: color-mix(in srgb, var(--cad-color-border-soft) 70%, transparent);
     }
-    background-color: var(--color-white);
-    --tw-shadow: 0 25px 50px -12px var(--tw-shadow-color, rgb(0 0 0 / 0.25));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-    --tw-shadow-color: color-mix(in srgb, oklch(12.9% 0.042 264.695) 25%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-slate-950) 25%, transparent) var(--tw-shadow-alpha), transparent);
-    }
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
+    box-shadow: var(--cad-shadow-strong);
   }
   .cda-panel-card {
-    border-radius: 1.35rem;
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-200);
-    background-color: var(--color-white);
     padding: calc(var(--spacing) * 4);
+    border-radius: var(--cad-radius-surface);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
   }
   .cda-panel-card--soft {
-    border-radius: 1.35rem;
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-200);
-    background-color: color-mix(in srgb, oklch(98.4% 0.003 247.858) 80%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-slate-50) 80%, transparent);
-    }
     padding: calc(var(--spacing) * 4);
-    --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-    --tw-shadow-color: color-mix(in srgb, oklch(92.9% 0.013 255.508) 40%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-slate-200) 40%, transparent) var(--tw-shadow-alpha), transparent);
-    }
+    border-radius: var(--cad-radius-surface);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface-soft);
+    color: var(--cad-color-text);
+    box-shadow: var(--cad-shadow-soft);
   }
   .cda-action-card {
-    border-radius: 1.35rem;
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-200);
-    background-color: var(--color-slate-50);
     padding: calc(var(--spacing) * 4);
     text-align: left;
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
-    &:hover {
-      @media (hover: hover) {
-        border-color: var(--color-slate-300);
-      }
-    }
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-white);
-      }
-    }
+    border-radius: var(--cad-radius-surface);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface-soft);
+    color: var(--cad-color-text);
+  }
+  .cda-action-card:hover {
+    border-color: var(--cad-color-border);
+    background: var(--cad-color-surface);
   }
   .cda-surface-card {
-    border-radius: 1.5rem;
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-200);
-    background-color: var(--color-white);
     padding: calc(var(--spacing) * 5);
-    --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-    --tw-shadow-color: color-mix(in srgb, oklch(92.9% 0.013 255.508) 50%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-slate-200) 50%, transparent) var(--tw-shadow-alpha), transparent);
-    }
+    border-radius: var(--cad-radius-panel);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
+    box-shadow: var(--cad-shadow-soft);
   }
   .cda-surface-card--soft {
-    border-radius: 1.5rem;
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-200);
-    background-color: color-mix(in srgb, oklch(98.4% 0.003 247.858) 85%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-slate-50) 85%, transparent);
-    }
     padding: calc(var(--spacing) * 5);
-    --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-    --tw-shadow-color: color-mix(in srgb, oklch(92.9% 0.013 255.508) 40%, transparent);
+    border-radius: var(--cad-radius-panel);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface-soft);
+    color: var(--cad-color-text);
+    box-shadow: var(--cad-shadow-soft);
+  }
+  .cda-section-card {
+    height: 100%;
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+    padding: calc(var(--spacing) * 5);
+    border-radius: var(--cad-radius-panel);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
     @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-slate-200) 40%, transparent) var(--tw-shadow-alpha), transparent);
+      background: color-mix(in srgb, var(--cad-color-surface) 92%, transparent);
     }
+    color: var(--cad-color-text);
+    box-shadow: var(--cad-shadow-soft);
+  }
+  .cda-section-card__title {
+    font-size: var(--text-lg);
+    line-height: var(--tw-leading, var(--text-lg--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    color: var(--cad-color-text-strong);
+  }
+  .cda-section-card__description {
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    color: var(--cad-color-text-muted);
+  }
+  .cda-summary-tile {
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+    padding: calc(var(--spacing) * 5);
+    border-radius: var(--cad-radius-panel);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-color-surface) 94%, transparent);
+    }
+    color: var(--cad-color-text);
+    box-shadow: var(--cad-shadow-soft);
+  }
+  .cda-summary-tile--tone-info {
+    border-color: var(--cad-tone-info-soft-border);
+    background: var(--cad-tone-info-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-tone-info-soft-bg) 72%, var(--cad-color-surface) 28%);
+    }
+  }
+  .cda-summary-tile--tone-success {
+    border-color: var(--cad-tone-success-soft-border);
+    background: var(--cad-tone-success-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-tone-success-soft-bg) 72%, var(--cad-color-surface) 28%);
+    }
+  }
+  .cda-summary-tile--tone-secondary {
+    border-color: var(--cad-tone-secondary-soft-border);
+    background: var(--cad-tone-secondary-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-tone-secondary-soft-bg) 72%, var(--cad-color-surface) 28%);
+    }
+  }
+  .cda-summary-tile--tone-warning {
+    border-color: var(--cad-tone-warning-soft-border);
+    background: var(--cad-tone-warning-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-tone-warning-soft-bg) 72%, var(--cad-color-surface) 28%);
+    }
+  }
+  .cda-summary-tile--tone-danger {
+    border-color: var(--cad-tone-danger-soft-border);
+    background: var(--cad-tone-danger-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-tone-danger-soft-bg) 72%, var(--cad-color-surface) 28%);
+    }
+  }
+  .cda-summary-tile__value {
+    margin-top: calc(var(--spacing) * 3);
+    font-size: var(--text-2xl);
+    line-height: var(--tw-leading, var(--text-2xl--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    --tw-tracking: var(--tracking-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--cad-color-text-strong);
+  }
+  .cda-summary-tile__helper {
+    margin-top: calc(var(--spacing) * 2);
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    --tw-leading: calc(var(--spacing) * 6);
+    line-height: calc(var(--spacing) * 6);
+    color: var(--cad-color-text-muted);
   }
 }
 @layer components {
@@ -2018,8 +2236,8 @@
     font-weight: var(--font-weight-semibold);
     --tw-tracking: 0.2em;
     letter-spacing: 0.2em;
-    color: var(--color-slate-500);
     text-transform: uppercase;
+    color: var(--cad-color-text-soft);
   }
   .cda-eyebrow--tight {
     font-size: 10px;
@@ -2031,14 +2249,14 @@
     line-height: var(--tw-leading, var(--text-sm--line-height));
     --tw-font-weight: var(--font-weight-semibold);
     font-weight: var(--font-weight-semibold);
-    color: var(--color-slate-950);
+    color: var(--cad-color-text-strong);
   }
   .cda-body-muted {
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
     --tw-leading: calc(var(--spacing) * 6);
     line-height: calc(var(--spacing) * 6);
-    color: var(--color-slate-600);
+    color: var(--cad-color-text-muted);
   }
   .cda-title-lg {
     font-size: var(--text-lg);
@@ -2047,14 +2265,14 @@
     font-weight: var(--font-weight-semibold);
     --tw-tracking: var(--tracking-tight);
     letter-spacing: var(--tracking-tight);
-    color: var(--color-slate-950);
+    color: var(--cad-color-text-strong);
   }
   .cda-title-xl {
     font-size: var(--text-xl);
     line-height: var(--tw-leading, var(--text-xl--line-height));
     --tw-font-weight: var(--font-weight-semibold);
     font-weight: var(--font-weight-semibold);
-    color: var(--color-slate-950);
+    color: var(--cad-color-text-strong);
   }
   .cda-title-display {
     font-size: var(--text-3xl);
@@ -2063,7 +2281,173 @@
     font-weight: var(--font-weight-semibold);
     --tw-tracking: var(--tracking-tight);
     letter-spacing: var(--tracking-tight);
-    color: var(--color-slate-950);
+    color: var(--cad-color-text-strong);
+  }
+  .cda-text-block {
+    color: var(--cad-color-text);
+  }
+  .cda-text-block--h1 {
+    font-size: var(--text-4xl);
+    line-height: var(--tw-leading, var(--text-4xl--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    color: var(--cad-color-text-strong);
+  }
+  .cda-text-block--h2 {
+    font-size: var(--text-3xl);
+    line-height: var(--tw-leading, var(--text-3xl--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    color: var(--cad-color-text-strong);
+  }
+  .cda-text-block--h3 {
+    font-size: var(--text-2xl);
+    line-height: var(--tw-leading, var(--text-2xl--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    color: var(--cad-color-text-strong);
+  }
+  .cda-text-block--h4 {
+    font-size: var(--text-xl);
+    line-height: var(--tw-leading, var(--text-xl--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    color: var(--cad-color-text-strong);
+  }
+  .cda-text-block--h5 {
+    font-size: var(--text-lg);
+    line-height: var(--tw-leading, var(--text-lg--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    color: var(--cad-color-text-strong);
+  }
+  .cda-text-block--h6 {
+    font-size: var(--text-base);
+    line-height: var(--tw-leading, var(--text-base--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    --tw-tracking: 0.18em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cad-color-text-muted);
+  }
+  .cda-text-block--subtitle1 {
+    font-size: var(--text-lg);
+    line-height: var(--tw-leading, var(--text-lg--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    color: var(--cad-color-text);
+  }
+  .cda-text-block--subtitle2 {
+    font-size: var(--text-base);
+    line-height: var(--tw-leading, var(--text-base--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    color: var(--cad-color-text-muted);
+  }
+  .cda-text-block--body1 {
+    font-size: var(--text-base);
+    line-height: var(--tw-leading, var(--text-base--line-height));
+    color: var(--cad-color-text);
+  }
+  .cda-text-block--body2 {
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    color: var(--cad-color-text);
+  }
+  .cda-text-block--small, .cda-text-block--caption {
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+    color: var(--cad-color-text-soft);
+  }
+  .cda-text-block--note, .cda-text-block--muted, .cda-text-block--mono {
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    color: var(--cad-color-text-muted);
+  }
+  .cda-text-block--mono {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+  }
+  .cda-text-block--eyebrow, .cda-text-block--footer {
+    font-size: 10px;
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    --tw-tracking: 0.18em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cad-color-text-soft);
+  }
+  .cda-text-block--footer {
+    --tw-font-weight: var(--font-weight-normal);
+    font-weight: var(--font-weight-normal);
+  }
+}
+@layer components {
+  .cda-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--spacing) * 1);
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+    padding-inline: calc(var(--spacing) * 2.5);
+    padding-block: calc(var(--spacing) * 1);
+    font-size: 0.7rem;
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    --tw-tracking: 0.18em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border-radius: 9999px;
+  }
+  .cda-status-badge {
+    display: inline-flex;
+    align-items: center;
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+    padding-inline: calc(var(--spacing) * 2.5);
+    padding-block: calc(var(--spacing) * 1);
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+    --tw-font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-medium);
+    border-radius: 9999px;
+  }
+  .cda-badge--tone-primary, .cda-status-badge--tone-primary {
+    border-color: var(--cad-tone-primary-solid-border);
+    background: var(--cad-tone-primary-solid-bg);
+    color: var(--cad-tone-primary-solid-fg);
+  }
+  .cda-badge--tone-base, .cda-status-badge--tone-base {
+    border-color: var(--cad-tone-base-soft-border);
+    background: var(--cad-tone-base-soft-bg);
+    color: var(--cad-tone-base-soft-fg);
+  }
+  .cda-badge--tone-secondary, .cda-status-badge--tone-secondary {
+    border-color: var(--cad-tone-secondary-soft-border);
+    background: var(--cad-tone-secondary-soft-bg);
+    color: var(--cad-tone-secondary-soft-fg);
+  }
+  .cda-badge--tone-success, .cda-status-badge--tone-success {
+    border-color: var(--cad-tone-success-soft-border);
+    background: var(--cad-tone-success-soft-bg);
+    color: var(--cad-tone-success-soft-fg);
+  }
+  .cda-badge--tone-info, .cda-status-badge--tone-info {
+    border-color: var(--cad-tone-info-soft-border);
+    background: var(--cad-tone-info-soft-bg);
+    color: var(--cad-tone-info-soft-fg);
+  }
+  .cda-badge--tone-warning, .cda-status-badge--tone-warning {
+    border-color: var(--cad-tone-warning-soft-border);
+    background: var(--cad-tone-warning-soft-bg);
+    color: var(--cad-tone-warning-soft-fg);
+  }
+  .cda-badge--tone-danger, .cda-status-badge--tone-danger {
+    border-color: var(--cad-tone-danger-soft-border);
+    background: var(--cad-tone-danger-soft-bg);
+    color: var(--cad-tone-danger-soft-fg);
   }
 }
 @layer components {
@@ -2072,7 +2456,6 @@
     align-items: center;
     justify-content: center;
     gap: calc(var(--spacing) * 2);
-    border-radius: var(--radius-xl);
     border-style: var(--tw-border-style);
     border-width: 1px;
     --tw-font-weight: var(--font-weight-semibold);
@@ -2086,6 +2469,7 @@
     &:disabled {
       opacity: 50%;
     }
+    border-radius: var(--cad-radius-control);
   }
   .cda-button--size-sm {
     padding-inline: calc(var(--spacing) * 3);
@@ -2106,95 +2490,86 @@
     line-height: var(--tw-leading, var(--text-base--line-height));
   }
   .cda-button--filled.cda-button--tone-primary {
-    border-color: var(--color-slate-900);
-    background-color: var(--color-slate-900);
-    color: var(--color-white);
-    --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-    --tw-shadow-color: color-mix(in srgb, oklch(86.9% 0.022 252.894) 50%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-slate-300) 50%, transparent) var(--tw-shadow-alpha), transparent);
-    }
-    &:hover {
-      @media (hover: hover) {
-        border-color: var(--color-slate-800);
-      }
-    }
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-slate-800);
-      }
-    }
+    border-color: var(--cad-tone-primary-solid-border);
+    background: var(--cad-tone-primary-solid-bg);
+    color: var(--cad-tone-primary-solid-fg);
+    box-shadow: var(--cad-shadow-soft);
+  }
+  .cda-button--filled.cda-button--tone-primary:hover {
+    border-color: var(--cad-tone-primary-solid-hover);
+    background: var(--cad-tone-primary-solid-hover);
   }
   .cda-button--outlined.cda-button--tone-primary {
-    border-color: var(--color-slate-300);
-    background-color: var(--color-white);
-    color: var(--color-slate-900);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-slate-50);
-      }
-    }
+    border-color: var(--cad-tone-primary-soft-border);
+    background: var(--cad-tone-primary-soft-bg);
+    color: var(--cad-tone-primary-soft-fg);
+  }
+  .cda-button--outlined.cda-button--tone-primary:hover {
+    background: var(--cad-tone-primary-soft-hover);
   }
   .cda-button--filled.cda-button--tone-light, .cda-button--outlined.cda-button--tone-light, .cda-button--filled.cda-button--tone-base, .cda-button--outlined.cda-button--tone-base, .cda-button--filled.cda-button--tone-dark, .cda-button--outlined.cda-button--tone-dark {
-    border-color: var(--color-slate-300);
-    background-color: var(--color-white);
-    color: var(--color-slate-700);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-slate-50);
-      }
-    }
+    border-color: var(--cad-tone-light-soft-border);
+    background: var(--cad-tone-light-soft-bg);
+    color: var(--cad-tone-light-soft-fg);
   }
   .cda-button--filled.cda-button--tone-secondary, .cda-button--outlined.cda-button--tone-secondary {
-    border-color: var(--color-fuchsia-300);
-    background-color: var(--color-fuchsia-100);
-    color: var(--color-fuchsia-800);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-fuchsia-200);
-      }
-    }
+    border-color: var(--cad-tone-secondary-soft-border);
+    background: var(--cad-tone-secondary-soft-bg);
+    color: var(--cad-tone-secondary-soft-fg);
   }
   .cda-button--filled.cda-button--tone-success, .cda-button--outlined.cda-button--tone-success {
-    border-color: var(--color-emerald-300);
-    background-color: var(--color-emerald-100);
-    color: var(--color-emerald-800);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-emerald-200);
-      }
-    }
+    border-color: var(--cad-tone-success-soft-border);
+    background: var(--cad-tone-success-soft-bg);
+    color: var(--cad-tone-success-soft-fg);
   }
   .cda-button--filled.cda-button--tone-info, .cda-button--outlined.cda-button--tone-info {
-    border-color: var(--color-sky-300);
-    background-color: var(--color-sky-100);
-    color: var(--color-sky-800);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-sky-200);
-      }
-    }
+    border-color: var(--cad-tone-info-soft-border);
+    background: var(--cad-tone-info-soft-bg);
+    color: var(--cad-tone-info-soft-fg);
   }
   .cda-button--filled.cda-button--tone-warning, .cda-button--outlined.cda-button--tone-warning {
-    border-color: var(--color-amber-300);
-    background-color: var(--color-amber-100);
-    color: var(--color-amber-900);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-amber-200);
-      }
-    }
+    border-color: var(--cad-tone-warning-soft-border);
+    background: var(--cad-tone-warning-soft-bg);
+    color: var(--cad-tone-warning-soft-fg);
   }
   .cda-button--filled.cda-button--tone-danger, .cda-button--outlined.cda-button--tone-danger {
-    border-color: var(--color-rose-300);
-    background-color: var(--color-rose-50);
-    color: var(--color-rose-700);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-rose-100);
-      }
-    }
+    border-color: var(--cad-tone-danger-soft-border);
+    background: var(--cad-tone-danger-soft-bg);
+    color: var(--cad-tone-danger-soft-fg);
+  }
+  .cda-button--filled.cda-button--tone-light:hover, .cda-button--outlined.cda-button--tone-light:hover {
+    background: var(--cad-tone-light-soft-hover);
+  }
+  .cda-button--filled.cda-button--tone-base, .cda-button--outlined.cda-button--tone-base {
+    border-color: var(--cad-tone-base-soft-border);
+    background: var(--cad-tone-base-soft-bg);
+    color: var(--cad-tone-base-soft-fg);
+  }
+  .cda-button--filled.cda-button--tone-base:hover, .cda-button--outlined.cda-button--tone-base:hover {
+    background: var(--cad-tone-base-soft-hover);
+  }
+  .cda-button--filled.cda-button--tone-dark, .cda-button--outlined.cda-button--tone-dark {
+    border-color: var(--cad-tone-dark-soft-border);
+    background: var(--cad-tone-dark-soft-bg);
+    color: var(--cad-tone-dark-soft-fg);
+  }
+  .cda-button--filled.cda-button--tone-dark:hover, .cda-button--outlined.cda-button--tone-dark:hover {
+    background: var(--cad-tone-dark-soft-hover);
+  }
+  .cda-button--filled.cda-button--tone-secondary:hover, .cda-button--outlined.cda-button--tone-secondary:hover {
+    background: var(--cad-tone-secondary-soft-hover);
+  }
+  .cda-button--filled.cda-button--tone-success:hover, .cda-button--outlined.cda-button--tone-success:hover {
+    background: var(--cad-tone-success-soft-hover);
+  }
+  .cda-button--filled.cda-button--tone-info:hover, .cda-button--outlined.cda-button--tone-info:hover {
+    background: var(--cad-tone-info-soft-hover);
+  }
+  .cda-button--filled.cda-button--tone-warning:hover, .cda-button--outlined.cda-button--tone-warning:hover {
+    background: var(--cad-tone-warning-soft-hover);
+  }
+  .cda-button--filled.cda-button--tone-danger:hover, .cda-button--outlined.cda-button--tone-danger:hover {
+    background: var(--cad-tone-danger-soft-hover);
   }
   .cda-button--text {
     border-color: transparent;
@@ -2203,51 +2578,57 @@
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
   .cda-button--text.cda-button--tone-danger {
-    color: var(--color-rose-700);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-rose-50);
-      }
+    color: var(--cad-tone-danger-soft-fg);
+  }
+  .cda-button--text.cda-button--tone-danger:hover {
+    background: var(--cad-tone-danger-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-tone-danger-soft-bg) 78%, transparent);
     }
   }
   .cda-button--text.cda-button--tone-secondary {
-    color: var(--color-fuchsia-800);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-fuchsia-50);
-      }
+    color: var(--cad-tone-secondary-soft-fg);
+  }
+  .cda-button--text.cda-button--tone-secondary:hover {
+    background: var(--cad-tone-secondary-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-tone-secondary-soft-bg) 78%, transparent);
     }
   }
   .cda-button--text.cda-button--tone-success {
-    color: var(--color-emerald-800);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-emerald-50);
-      }
+    color: var(--cad-tone-success-soft-fg);
+  }
+  .cda-button--text.cda-button--tone-success:hover {
+    background: var(--cad-tone-success-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-tone-success-soft-bg) 78%, transparent);
     }
   }
   .cda-button--text.cda-button--tone-info {
-    color: var(--color-sky-800);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-sky-50);
-      }
+    color: var(--cad-tone-info-soft-fg);
+  }
+  .cda-button--text.cda-button--tone-info:hover {
+    background: var(--cad-tone-info-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-tone-info-soft-bg) 78%, transparent);
     }
   }
   .cda-button--text.cda-button--tone-warning {
-    color: var(--color-amber-900);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-amber-50);
-      }
+    color: var(--cad-tone-warning-soft-fg);
+  }
+  .cda-button--text.cda-button--tone-warning:hover {
+    background: var(--cad-tone-warning-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-tone-warning-soft-bg) 78%, transparent);
     }
   }
   .cda-button--text.cda-button--tone-primary, .cda-button--text.cda-button--tone-light, .cda-button--text.cda-button--tone-base, .cda-button--text.cda-button--tone-dark {
-    color: var(--color-slate-700);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-slate-100);
-      }
+    color: var(--cad-tone-primary-soft-fg);
+  }
+  .cda-button--text.cda-button--tone-primary:hover, .cda-button--text.cda-button--tone-light:hover, .cda-button--text.cda-button--tone-base:hover, .cda-button--text.cda-button--tone-dark:hover {
+    background: var(--cad-tone-primary-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-tone-primary-soft-bg) 82%, transparent);
     }
   }
   .cda-button__spinner {
@@ -2281,84 +2662,78 @@
     letter-spacing: 0.18em;
     text-transform: uppercase;
   }
-  .zy-card-button {
+  .cad-card-button, .zy-card-button {
     display: inline-flex;
     height: calc(var(--spacing) * 9);
     align-items: center;
     justify-content: center;
     gap: calc(var(--spacing) * 2);
-    border-radius: var(--radius-xl);
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-300);
-    background-color: var(--color-white);
     padding-inline: calc(var(--spacing) * 3);
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
     --tw-font-weight: var(--font-weight-semibold);
     font-weight: var(--font-weight-semibold);
-    color: var(--color-slate-700);
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-slate-50);
-      }
-    }
     &:disabled {
       cursor: not-allowed;
     }
     &:disabled {
       opacity: 50%;
     }
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-tone-light-soft-border);
+    background: var(--cad-tone-light-soft-bg);
+    color: var(--cad-tone-light-soft-fg);
   }
-  .zy-card-button--ghost {
+  .cad-card-button:hover, .zy-card-button:hover {
+    background: var(--cad-tone-light-soft-hover);
+  }
+  .cad-card-button--ghost, .zy-card-button--ghost {
     background-color: transparent;
     --tw-shadow: 0 0 #0000;
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
-  .zy-card-button--warn {
-    border-color: var(--color-rose-300);
-    background-color: var(--color-rose-50);
-    color: var(--color-rose-700);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-rose-100);
-      }
-    }
+  .cad-card-button--warn, .zy-card-button--warn {
+    border-color: var(--cad-tone-danger-soft-border);
+    background: var(--cad-tone-danger-soft-bg);
+    color: var(--cad-tone-danger-soft-fg);
+  }
+  .cad-card-button--warn:hover, .zy-card-button--warn:hover {
+    background: var(--cad-tone-danger-soft-hover);
   }
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: calc(var(--spacing) * 2);
-    border-radius: var(--radius-xl);
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-300);
-    background-color: var(--color-white);
     padding-inline: calc(var(--spacing) * 4);
     padding-block: calc(var(--spacing) * 2);
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
     --tw-font-weight: var(--font-weight-semibold);
     font-weight: var(--font-weight-semibold);
-    color: var(--color-slate-700);
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-slate-50);
-      }
-    }
     &:disabled {
       cursor: not-allowed;
     }
     &:disabled {
       opacity: 50%;
     }
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-tone-light-soft-border);
+    background: var(--cad-tone-light-soft-bg);
+    color: var(--cad-tone-light-soft-fg);
+  }
+  .btn:hover {
+    background: var(--cad-tone-light-soft-hover);
   }
   .btn.ghost {
     background-color: transparent;
@@ -2372,19 +2747,54 @@
     line-height: var(--tw-leading, var(--text-xs--line-height));
   }
   .btn.primary {
-    border-color: var(--color-slate-900);
-    background-color: var(--color-slate-900);
-    color: var(--color-white);
-    &:hover {
-      @media (hover: hover) {
-        border-color: var(--color-slate-800);
-      }
-    }
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-slate-800);
-      }
-    }
+    border-color: var(--cad-tone-primary-solid-border);
+    background: var(--cad-tone-primary-solid-bg);
+    color: var(--cad-tone-primary-solid-fg);
+  }
+  .btn.primary:hover {
+    border-color: var(--cad-tone-primary-solid-hover);
+    background: var(--cad-tone-primary-solid-hover);
+  }
+}
+@layer components {
+  .cda-alert {
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+    padding-inline: calc(var(--spacing) * 4);
+    padding-block: calc(var(--spacing) * 3);
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    border-radius: var(--cad-radius-surface);
+  }
+  .cda-alert--tone-base {
+    border-color: var(--cad-tone-base-soft-border);
+    background: var(--cad-tone-base-soft-bg);
+    color: var(--cad-tone-base-soft-fg);
+  }
+  .cda-alert--tone-info {
+    border-color: var(--cad-tone-info-soft-border);
+    background: var(--cad-tone-info-soft-bg);
+    color: var(--cad-tone-info-soft-fg);
+  }
+  .cda-alert--tone-success {
+    border-color: var(--cad-tone-success-soft-border);
+    background: var(--cad-tone-success-soft-bg);
+    color: var(--cad-tone-success-soft-fg);
+  }
+  .cda-alert--tone-warning {
+    border-color: var(--cad-tone-warning-soft-border);
+    background: var(--cad-tone-warning-soft-bg);
+    color: var(--cad-tone-warning-soft-fg);
+  }
+  .cda-alert--tone-danger {
+    border-color: var(--cad-tone-danger-soft-border);
+    background: var(--cad-tone-danger-soft-bg);
+    color: var(--cad-tone-danger-soft-fg);
+  }
+  .cda-alert--tone-secondary {
+    border-color: var(--cad-tone-secondary-soft-border);
+    background: var(--cad-tone-secondary-soft-bg);
+    color: var(--cad-tone-secondary-soft-fg);
   }
 }
 @layer components {
@@ -2435,8 +2845,8 @@
     font-weight: var(--font-weight-bold);
     --tw-tracking: 0.18em;
     letter-spacing: 0.18em;
-    color: var(--color-slate-400);
     text-transform: uppercase;
+    color: var(--cad-color-text-soft);
   }
   .cda-prefixed-field__suffix {
     pointer-events: none;
@@ -2450,8 +2860,8 @@
     font-weight: var(--font-weight-bold);
     --tw-tracking: 0.18em;
     letter-spacing: 0.18em;
-    color: var(--color-slate-400);
     text-transform: uppercase;
+    color: var(--cad-color-text-soft);
   }
   .cda-form-field__label {
     font-size: var(--text-xs);
@@ -2460,8 +2870,8 @@
     font-weight: var(--font-weight-semibold);
     --tw-tracking: 0.18em;
     letter-spacing: 0.18em;
-    color: var(--color-slate-500);
     text-transform: uppercase;
+    color: var(--cad-color-text-soft);
   }
   .cda-form-field__content {
     display: flex;
@@ -2475,24 +2885,39 @@
     line-height: var(--tw-leading, var(--text-sm--line-height));
     --tw-font-weight: var(--font-weight-medium);
     font-weight: var(--font-weight-medium);
-    color: var(--color-slate-700);
+    color: var(--cad-color-text-muted);
   }
   .cda-input {
     width: 100%;
     min-width: calc(var(--spacing) * 0);
-    border-radius: var(--radius-xl);
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-300);
-    background-color: var(--color-white);
     padding-inline: calc(var(--spacing) * 3);
     padding-block: calc(var(--spacing) * 2);
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
-    color: var(--color-slate-700);
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+    --tw-outline-style: none;
+    outline-style: none;
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-color-border);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
   }
   .cda-input::placeholder {
-    color: #94a3b8;
+    color: var(--cad-color-text-soft);
+  }
+  .cda-input:hover {
+    border-color: var(--cad-color-border-soft);
+  }
+  .cda-input:focus {
+    border-color: var(--cad-tone-primary-soft-border);
+    box-shadow: 0 0 0 3px var(--cad-tone-primary-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--cad-tone-primary-soft-bg) 70%, transparent);
+    }
   }
   .cda-input--textarea {
     --tw-leading: calc(var(--spacing) * 6);
@@ -2502,37 +2927,32 @@
     font-family: var(--font-mono);
   }
   .cda-input--toolbar {
-    --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-    --tw-shadow-color: color-mix(in srgb, oklch(92.9% 0.013 255.508) 60%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-slate-200) 60%, transparent) var(--tw-shadow-alpha), transparent);
-    }
+    box-shadow: var(--cad-shadow-soft);
   }
   .cda-inline-option {
     display: flex;
     width: 100%;
     align-items: center;
     gap: calc(var(--spacing) * 2);
-    border-radius: var(--radius-xl);
-    background-color: var(--color-white);
+    border-style: var(--tw-border-style);
+    border-width: 1px;
     padding-inline: calc(var(--spacing) * 3);
     padding-block: calc(var(--spacing) * 2);
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
-    color: var(--color-slate-700);
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
   }
   .cda-inline-option--muted {
-    background-color: var(--color-slate-50);
+    background: var(--cad-color-surface-soft);
   }
   .cda-code-input {
     width: 100%;
     max-width: 100%;
-    border-radius: var(--radius-xl);
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-300);
-    background-color: var(--color-white);
     padding-inline: calc(var(--spacing) * 3);
     padding-block: calc(var(--spacing) * 2);
     font-family: var(--font-mono);
@@ -2540,11 +2960,14 @@
     line-height: var(--tw-leading, var(--text-xs--line-height));
     word-break: break-all;
     white-space: pre-wrap;
-    color: var(--color-slate-700);
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-color-border);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
   }
 }
 @layer components {
-  .zy-tag-textedit {
+  .cad-tag-textedit, .zy-tag-textedit {
     position: relative;
     display: flex;
     min-width: 0;
@@ -2552,10 +2975,10 @@
     flex-direction: column;
     gap: 0.25rem;
   }
-  .zy-tag-textedit:focus-within {
+  .cad-tag-textedit:focus-within, .zy-tag-textedit:focus-within {
     z-index: 5;
   }
-  .zy-tag-textedit__surface {
+  .cad-tag-textedit__surface, .zy-tag-textedit__surface {
     display: flex;
     min-height: 2.35rem;
     flex-wrap: wrap;
@@ -2567,7 +2990,7 @@
     padding: 0.28rem 0.55rem;
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
   }
-  .zy-sheet-field .zy-tag-textedit__surface {
+  .cad-sheet-field .cad-tag-textedit__surface, .cad-sheet-field .zy-tag-textedit__surface, .zy-sheet-field .cad-tag-textedit__surface, .zy-sheet-field .zy-tag-textedit__surface {
     flex: 1 1 auto;
     min-height: auto;
     flex-wrap: wrap;
@@ -2578,17 +3001,17 @@
     padding: 0;
     box-shadow: none;
   }
-  .zy-sheet-field .zy-tag-textedit__hint {
+  .cad-sheet-field .cad-tag-textedit__hint, .cad-sheet-field .zy-tag-textedit__hint, .zy-sheet-field .cad-tag-textedit__hint, .zy-sheet-field .zy-tag-textedit__hint {
     display: none;
   }
-  .zy-tag-textedit__surface:focus-within {
+  .cad-tag-textedit__surface:focus-within, .zy-tag-textedit__surface:focus-within {
     border-color: rgba(16, 185, 129, 0.82);
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
   }
-  .zy-tag-textedit__surface.is-disabled {
+  .cad-tag-textedit__surface.is-disabled, .zy-tag-textedit__surface.is-disabled {
     opacity: 0.64;
   }
-  .zy-tag-textedit__chip, .zy-tag-textedit__suggestion {
+  .cad-tag-textedit__chip, .zy-tag-textedit__chip, .cad-tag-textedit__suggestion, .zy-tag-textedit__suggestion {
     display: inline-flex;
     align-items: center;
     gap: 0.2rem;
@@ -2604,67 +3027,67 @@
     user-select: none;
     box-shadow: none;
   }
-  .zy-tag-textedit__chip {
+  .cad-tag-textedit__chip, .zy-tag-textedit__chip {
     cursor: pointer;
   }
-  .zy-tag-textedit__suggestion {
+  .cad-tag-textedit__suggestion, .zy-tag-textedit__suggestion {
     cursor: pointer;
   }
-  .zy-tag-textedit__chip--0, .zy-tag-textedit__suggestion--0 {
+  .cad-tag-textedit__chip--0, .zy-tag-textedit__chip--0, .cad-tag-textedit__suggestion--0, .zy-tag-textedit__suggestion--0 {
     background: #e0f2fe;
     border-color: #7dd3fc;
     color: #0c4a6e;
   }
-  .zy-tag-textedit__chip--1, .zy-tag-textedit__suggestion--1 {
+  .cad-tag-textedit__chip--1, .zy-tag-textedit__chip--1, .cad-tag-textedit__suggestion--1, .zy-tag-textedit__suggestion--1 {
     background: #fce7f3;
     border-color: #f9a8d4;
     color: #831843;
   }
-  .zy-tag-textedit__chip--2, .zy-tag-textedit__suggestion--2 {
+  .cad-tag-textedit__chip--2, .zy-tag-textedit__chip--2, .cad-tag-textedit__suggestion--2, .zy-tag-textedit__suggestion--2 {
     background: #d1fae5;
     border-color: #6ee7b7;
     color: #064e3b;
   }
-  .zy-tag-textedit__chip--3, .zy-tag-textedit__suggestion--3 {
+  .cad-tag-textedit__chip--3, .zy-tag-textedit__chip--3, .cad-tag-textedit__suggestion--3, .zy-tag-textedit__suggestion--3 {
     background: #fef3c7;
     border-color: #fcd34d;
     color: #78350f;
   }
-  .zy-tag-textedit__chip--4, .zy-tag-textedit__suggestion--4 {
+  .cad-tag-textedit__chip--4, .zy-tag-textedit__chip--4, .cad-tag-textedit__suggestion--4, .zy-tag-textedit__suggestion--4 {
     background: #ede9fe;
     border-color: #c4b5fd;
     color: #4c1d95;
   }
-  .zy-tag-textedit__chip--5, .zy-tag-textedit__suggestion--5 {
+  .cad-tag-textedit__chip--5, .zy-tag-textedit__chip--5, .cad-tag-textedit__suggestion--5, .zy-tag-textedit__suggestion--5 {
     background: #ffedd5;
     border-color: #fdba74;
     color: #7c2d12;
   }
-  .zy-tag-textedit__chip--6, .zy-tag-textedit__suggestion--6 {
+  .cad-tag-textedit__chip--6, .zy-tag-textedit__chip--6, .cad-tag-textedit__suggestion--6, .zy-tag-textedit__suggestion--6 {
     background: #e0e7ff;
     border-color: #a5b4fc;
     color: #312e81;
   }
-  .zy-tag-textedit__chip--7, .zy-tag-textedit__suggestion--7 {
+  .cad-tag-textedit__chip--7, .zy-tag-textedit__chip--7, .cad-tag-textedit__suggestion--7, .zy-tag-textedit__suggestion--7 {
     background: #ccfbf1;
     border-color: #5eead4;
     color: #134e4a;
   }
-  .zy-tag-textedit__chip--8, .zy-tag-textedit__suggestion--8 {
+  .cad-tag-textedit__chip--8, .zy-tag-textedit__chip--8, .cad-tag-textedit__suggestion--8, .zy-tag-textedit__suggestion--8 {
     background: #fce4ec;
     border-color: #f48fb1;
     color: #880e4f;
   }
-  .zy-tag-textedit__chip--9, .zy-tag-textedit__suggestion--9 {
+  .cad-tag-textedit__chip--9, .zy-tag-textedit__chip--9, .cad-tag-textedit__suggestion--9, .zy-tag-textedit__suggestion--9 {
     background: #e8f5e9;
     border-color: #81c784;
     color: #1b5e20;
   }
-  .zy-tag-textedit__chip:disabled, .zy-tag-textedit__suggestion:disabled {
+  .cad-tag-textedit__chip:disabled, .zy-tag-textedit__chip:disabled, .cad-tag-textedit__suggestion:disabled, .zy-tag-textedit__suggestion:disabled {
     cursor: default;
     opacity: 0.7;
   }
-  .zy-tag-textedit__chip-x {
+  .cad-tag-textedit__chip-x, .zy-tag-textedit__chip-x {
     display: inline-flex;
     width: 0.72rem;
     height: 0.72rem;
@@ -2676,7 +3099,7 @@
     font-weight: 700;
     line-height: 1;
   }
-  .zy-tag-textedit__input {
+  .cad-tag-textedit__input, .zy-tag-textedit__input {
     min-width: 4rem;
     flex: 1 1 6rem;
     border: 0 !important;
@@ -2690,10 +3113,10 @@
     box-shadow: none !important;
     min-height: auto !important;
   }
-  .zy-tag-textedit__input::placeholder {
+  .cad-tag-textedit__input::placeholder, .zy-tag-textedit__input::placeholder {
     color: #64748b;
   }
-  .zy-tag-textedit__suggestions {
+  .cad-tag-textedit__suggestions, .zy-tag-textedit__suggestions {
     position: absolute;
     top: calc(100% + 0.2rem);
     left: 0;
@@ -2709,7 +3132,7 @@
     background: rgba(255, 255, 255, 0.99);
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
   }
-  .zy-tag-textedit__hint {
+  .cad-tag-textedit__hint, .zy-tag-textedit__hint {
     color: #64748b;
     font-size: 0.78rem;
     line-height: 1.45;
@@ -2722,7 +3145,6 @@
     gap: calc(var(--spacing) * 3);
     border-bottom-style: var(--tw-border-style);
     border-bottom-width: 1px;
-    border-color: var(--color-slate-200);
     padding-bottom: calc(var(--spacing) * 4);
     @media (width >= 48rem) {
       flex-direction: row;
@@ -2733,6 +3155,7 @@
     @media (width >= 48rem) {
       justify-content: space-between;
     }
+    border-color: var(--cad-color-border-soft);
   }
   .cda-page-header--compact {
     display: flex;
@@ -2763,8 +3186,8 @@
     font-weight: var(--font-weight-semibold);
     --tw-tracking: 0.2em;
     letter-spacing: 0.2em;
-    color: var(--color-slate-500);
     text-transform: uppercase;
+    color: var(--cad-color-text-soft);
   }
   .cda-page-header__eyebrow--compact {
     font-size: 10px;
@@ -2778,7 +3201,7 @@
     font-weight: var(--font-weight-semibold);
     --tw-tracking: var(--tracking-tight);
     letter-spacing: var(--tracking-tight);
-    color: var(--color-slate-950);
+    color: var(--cad-color-text-strong);
   }
   .cda-page-header__title--compact {
     font-size: var(--text-lg);
@@ -2790,7 +3213,7 @@
     line-height: var(--tw-leading, var(--text-sm--line-height));
     --tw-leading: calc(var(--spacing) * 6);
     line-height: calc(var(--spacing) * 6);
-    color: var(--color-slate-600);
+    color: var(--cad-color-text-muted);
   }
   .cda-page-header__actions {
     display: flex;
@@ -2835,21 +3258,18 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    border-radius: var(--radius-xl);
-    color: var(--color-slate-500);
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-slate-100);
-      }
+    border-radius: var(--cad-radius-control);
+    color: var(--cad-color-text-soft);
+  }
+  .cda-treeview__toggle:hover {
+    background: var(--cad-color-surface-soft);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-color-surface-soft) 80%, transparent);
     }
-    &:hover {
-      @media (hover: hover) {
-        color: var(--color-slate-700);
-      }
-    }
+    color: var(--cad-color-text-muted);
   }
   .cda-treeview__toggle--placeholder {
     opacity: 0%;
@@ -2863,28 +3283,25 @@
     align-items: center;
     gap: calc(var(--spacing) * 2);
     overflow: hidden;
-    border-radius: var(--radius-xl);
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: transparent;
     padding-inline: calc(var(--spacing) * 2.5);
     padding-block: calc(var(--spacing) * 2);
     text-align: left;
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
-    color: var(--color-slate-700);
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
-    &:hover {
-      @media (hover: hover) {
-        border-color: var(--color-slate-200);
-      }
-    }
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-slate-50);
-      }
+    border-radius: var(--cad-radius-control);
+    border-color: transparent;
+    color: var(--cad-color-text);
+  }
+  .cda-treeview__row:hover {
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface-soft);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-color-surface-soft) 80%, transparent);
     }
   }
   .cda-treeview__row--branch {
@@ -2892,9 +3309,9 @@
     font-weight: var(--font-weight-semibold);
   }
   .cda-treeview__row--selected {
-    border-color: var(--color-sky-200);
-    background-color: var(--color-sky-50);
-    color: var(--color-sky-950);
+    border-color: var(--cad-tone-info-soft-border);
+    background: var(--cad-tone-info-soft-bg);
+    color: var(--cad-tone-info-soft-fg);
   }
   .cda-treeview__row--disabled {
     cursor: not-allowed;
@@ -2907,7 +3324,7 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    color: var(--color-slate-500);
+    color: var(--cad-color-text-soft);
   }
   .cda-treeview__text {
     min-width: calc(var(--spacing) * 0);
@@ -2918,8 +3335,6 @@
   }
   .cda-treeview__badge {
     flex-shrink: 0;
-    border-radius: calc(infinity * 1px);
-    background-color: var(--color-slate-200);
     padding-inline: calc(var(--spacing) * 2);
     padding-block: calc(var(--spacing) * 0.5);
     font-size: 10px;
@@ -2927,72 +3342,49 @@
     font-weight: var(--font-weight-semibold);
     --tw-tracking: 0.18em;
     letter-spacing: 0.18em;
-    color: var(--color-slate-600);
     text-transform: uppercase;
+    border-radius: 9999px;
+    background: var(--cad-tone-base-soft-bg);
+    color: var(--cad-tone-base-soft-fg);
   }
   .cda-treeview--workbench .cda-treeview__toggle {
-    color: var(--color-slate-300);
-    &:hover {
-      @media (hover: hover) {
-        background-color: color-mix(in srgb, #fff 10%, transparent);
-        @supports (color: color-mix(in lab, red, red)) {
-          background-color: color-mix(in oklab, var(--color-white) 10%, transparent);
-        }
-      }
+    color: var(--cad-color-text-soft);
+  }
+  .cda-treeview--workbench .cda-treeview__toggle:hover {
+    background: var(--cad-color-surface-soft);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-color-surface-soft) 68%, transparent);
     }
-    &:hover {
-      @media (hover: hover) {
-        color: var(--color-white);
-      }
-    }
+    color: var(--cad-color-text-strong);
   }
   .cda-treeview--workbench .cda-treeview__row {
-    border-color: color-mix(in srgb, oklch(27.9% 0.041 260.031) 20%, transparent);
+    border-color: var(--cad-color-border);
     @supports (color: color-mix(in lab, red, red)) {
-      border-color: color-mix(in oklab, var(--color-slate-800) 20%, transparent);
+      border-color: color-mix(in srgb, var(--cad-color-border) 55%, transparent);
     }
-    background-color: color-mix(in srgb, oklch(12.9% 0.042 264.695) 20%, transparent);
+    background: var(--cad-color-surface-soft);
     @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-slate-950) 20%, transparent);
+      background: color-mix(in srgb, var(--cad-color-surface-soft) 72%, transparent);
     }
-    color: var(--color-slate-100);
-    &:hover {
-      @media (hover: hover) {
-        border-color: color-mix(in srgb, oklch(44.6% 0.043 257.281) 40%, transparent);
-        @supports (color: color-mix(in lab, red, red)) {
-          border-color: color-mix(in oklab, var(--color-slate-600) 40%, transparent);
-        }
-      }
-    }
-    &:hover {
-      @media (hover: hover) {
-        background-color: color-mix(in srgb, oklch(20.8% 0.042 265.755) 45%, transparent);
-        @supports (color: color-mix(in lab, red, red)) {
-          background-color: color-mix(in oklab, var(--color-slate-900) 45%, transparent);
-        }
-      }
-    }
+    color: var(--cad-color-text-strong);
   }
   .cda-treeview--workbench .cda-treeview__row--selected {
-    border-color: color-mix(in srgb, oklch(82.8% 0.111 230.318) 40%, transparent);
+    border-color: var(--cad-tone-primary-soft-border);
+    background: var(--cad-tone-primary-soft-bg);
     @supports (color: color-mix(in lab, red, red)) {
-      border-color: color-mix(in oklab, var(--color-sky-300) 40%, transparent);
+      background: color-mix(in srgb, var(--cad-tone-primary-soft-bg) 88%, transparent);
     }
-    background-color: color-mix(in srgb, oklch(74.6% 0.16 232.661) 20%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-sky-400) 20%, transparent);
-    }
-    color: var(--color-white);
+    color: var(--cad-tone-primary-soft-fg);
   }
   .cda-treeview--workbench .cda-treeview__icon {
-    color: var(--color-slate-200);
+    color: var(--cad-color-text);
   }
   .cda-treeview--workbench .cda-treeview__badge {
-    background-color: color-mix(in srgb, #fff 12%, transparent);
+    background: var(--cad-tone-base-soft-bg);
     @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-white) 12%, transparent);
+      background: color-mix(in srgb, var(--cad-tone-base-soft-bg) 72%, transparent);
     }
-    color: var(--color-slate-100);
+    color: var(--cad-tone-base-soft-fg);
   }
 }
 @layer components {
@@ -3007,23 +3399,27 @@
   }
   .cda-tab-search {
     width: calc(var(--spacing) * 36);
-    border-radius: var(--radius-lg);
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-200);
-    background-color: var(--color-white);
     padding-inline: calc(var(--spacing) * 2);
     padding-block: calc(var(--spacing) * 1);
     font-size: var(--text-xs);
     line-height: var(--tw-leading, var(--text-xs--line-height));
-    color: var(--color-slate-700);
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
     --tw-outline-style: none;
     outline-style: none;
-    &:focus {
-      border-color: var(--color-slate-400);
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
+  }
+  .cda-tab-search:focus {
+    border-color: var(--cad-tone-primary-soft-border);
+    box-shadow: 0 0 0 3px var(--cad-tone-primary-soft-bg);
+    @supports (color: color-mix(in lab, red, red)) {
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--cad-tone-primary-soft-bg) 70%, transparent);
     }
   }
   .cda-tab-menu {
@@ -3032,36 +3428,32 @@
   .cda-tab-menu__summary {
     cursor: pointer;
     list-style-type: none;
-    border-radius: var(--radius-lg);
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-200);
-    background-color: var(--color-slate-50);
     padding-inline: calc(var(--spacing) * 2);
     padding-block: calc(var(--spacing) * 1);
     font-size: var(--text-xs);
     line-height: var(--tw-leading, var(--text-xs--line-height));
     --tw-font-weight: var(--font-weight-semibold);
     font-weight: var(--font-weight-semibold);
-    color: var(--color-slate-700);
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface-soft);
+    color: var(--cad-color-text);
   }
   .cda-tab-menu__panel {
     position: absolute;
     right: calc(var(--spacing) * 0);
     z-index: 20;
     margin-top: calc(var(--spacing) * 2);
-    border-radius: var(--radius-2xl);
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-200);
-    background-color: var(--color-white);
     padding: calc(var(--spacing) * 3);
-    --tw-shadow: 0 25px 50px -12px var(--tw-shadow-color, rgb(0 0 0 / 0.25));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-    --tw-shadow-color: color-mix(in srgb, oklch(20.8% 0.042 265.755) 10%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-slate-900) 10%, transparent) var(--tw-shadow-alpha), transparent);
-    }
+    border-radius: var(--cad-radius-panel);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
+    box-shadow: var(--cad-shadow-strong);
   }
   .cda-tab-menu__panel--wide {
     width: calc(var(--spacing) * 80);
@@ -3081,34 +3473,26 @@
     width: 100%;
     align-items: center;
     justify-content: space-between;
-    border-radius: var(--radius-xl);
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-200);
-    background-color: var(--color-slate-50);
     padding-inline: calc(var(--spacing) * 3);
     padding-block: calc(var(--spacing) * 2);
     text-align: left;
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
-    color: var(--color-slate-700);
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
-    &:hover {
-      @media (hover: hover) {
-        border-color: var(--color-slate-300);
-      }
-    }
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-slate-100);
-      }
-    }
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface-soft);
+    color: var(--cad-color-text);
+  }
+  .cda-tab-menu__item:hover {
+    border-color: var(--cad-color-border);
+    background: var(--cad-color-surface);
   }
   .cda-tab-menu__badge {
-    border-radius: calc(infinity * 1px);
-    background-color: var(--color-slate-200);
     padding-inline: calc(var(--spacing) * 2);
     padding-block: calc(var(--spacing) * 0.5);
     font-size: 10px;
@@ -3116,24 +3500,17 @@
     font-weight: var(--font-weight-semibold);
     --tw-tracking: var(--tracking-wide);
     letter-spacing: var(--tracking-wide);
-    color: var(--color-slate-700);
     text-transform: uppercase;
+    border-radius: 9999px;
+    background: var(--cad-tone-base-soft-bg);
+    color: var(--cad-tone-base-soft-fg);
   }
   .cda-tab-summary {
     display: flex;
     flex-direction: column;
     gap: calc(var(--spacing) * 2);
-    border-radius: var(--radius-xl);
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: color-mix(in srgb, oklch(92.9% 0.013 255.508) 80%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      border-color: color-mix(in oklab, var(--color-slate-200) 80%, transparent);
-    }
-    background-color: color-mix(in srgb, oklch(98.4% 0.003 247.858) 80%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-slate-50) 80%, transparent);
-    }
     padding-inline: calc(var(--spacing) * 3);
     padding-block: calc(var(--spacing) * 2);
     @media (width >= 80rem) {
@@ -3145,9 +3522,17 @@
     @media (width >= 80rem) {
       justify-content: space-between;
     }
+    border-radius: var(--cad-radius-surface);
+    border-color: var(--cad-color-border-soft);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in srgb, var(--cad-color-border-soft) 85%, transparent);
+    }
+    background: var(--cad-color-surface-soft);
+    @supports (color: color-mix(in lab, red, red)) {
+      background: color-mix(in srgb, var(--cad-color-surface-soft) 92%, transparent);
+    }
   }
   .cda-tab-summary-chip {
-    border-radius: calc(infinity * 1px);
     background-color: var(--color-white);
     padding-inline: calc(var(--spacing) * 1.5);
     padding-block: calc(var(--spacing) * 0.5);
@@ -3156,36 +3541,38 @@
     font-weight: var(--font-weight-semibold);
     --tw-tracking: 0.2em;
     letter-spacing: 0.2em;
-    color: var(--color-slate-500);
     text-transform: uppercase;
+    border-radius: 9999px;
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text-soft);
   }
   .cda-tab-summary-chip--info {
-    background-color: var(--color-sky-50);
-    color: var(--color-sky-700);
+    background: var(--cad-tone-info-soft-bg);
+    color: var(--cad-tone-info-soft-fg);
   }
   .cda-tab-summary-action {
-    border-radius: var(--radius-lg);
     border-style: var(--tw-border-style);
     border-width: 1px;
-    border-color: var(--color-slate-200);
-    background-color: var(--color-white);
     padding-inline: calc(var(--spacing) * 2);
     padding-block: calc(var(--spacing) * 1);
     font-size: 10px;
     --tw-font-weight: var(--font-weight-semibold);
     font-weight: var(--font-weight-semibold);
-    color: var(--color-slate-600);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-slate-50);
-      }
-    }
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text-muted);
+  }
+  .cda-tab-summary-action:hover {
+    background: var(--cad-color-surface-soft);
   }
   .cda-inline-tab {
     display: inline-flex;
     align-items: center;
     gap: calc(var(--spacing) * 1);
-    border-radius: var(--radius-lg);
     border-style: var(--tw-border-style);
     border-width: 1px;
     padding-inline: calc(var(--spacing) * 2);
@@ -3195,29 +3582,24 @@
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
+    border-radius: var(--cad-radius-control);
   }
   .cda-inline-tab--active {
-    border-color: var(--color-slate-900);
-    background-color: var(--color-slate-900);
-    color: var(--color-white);
+    border-color: var(--cad-tone-primary-solid-border);
+    background: var(--cad-tone-primary-solid-bg);
+    color: var(--cad-tone-primary-solid-fg);
   }
   .cda-inline-tab--inactive {
     border-color: transparent;
-    background-color: color-mix(in srgb, oklch(96.8% 0.007 247.896) 80%, transparent);
+    background: var(--cad-color-surface-soft);
     @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-slate-100) 80%, transparent);
+      background: color-mix(in srgb, var(--cad-color-surface-soft) 85%, transparent);
     }
-    color: var(--color-slate-600);
-    &:hover {
-      @media (hover: hover) {
-        border-color: var(--color-slate-200);
-      }
-    }
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-slate-50);
-      }
-    }
+    color: var(--cad-color-text-muted);
+  }
+  .cda-inline-tab--inactive:hover {
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
   }
   .cda-inline-tab__actions {
     display: none;

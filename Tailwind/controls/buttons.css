@@ -1,6 +1,7 @@
 @layer components {
   .cda-button {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 border font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    border-radius: var(--cad-radius-control);
   }
 
   .cda-button--size-sm {
@@ -16,11 +17,25 @@
   }
 
   .cda-button--filled.cda-button--tone-primary {
-    @apply border-slate-900 bg-slate-900 text-white shadow-sm shadow-slate-300/50 hover:border-slate-800 hover:bg-slate-800;
+    border-color: var(--cad-tone-primary-solid-border);
+    background: var(--cad-tone-primary-solid-bg);
+    color: var(--cad-tone-primary-solid-fg);
+    box-shadow: var(--cad-shadow-soft);
+  }
+
+  .cda-button--filled.cda-button--tone-primary:hover {
+    border-color: var(--cad-tone-primary-solid-hover);
+    background: var(--cad-tone-primary-solid-hover);
   }
 
   .cda-button--outlined.cda-button--tone-primary {
-    @apply border-slate-300 bg-white text-slate-900 hover:bg-slate-50;
+    border-color: var(--cad-tone-primary-soft-border);
+    background: var(--cad-tone-primary-soft-bg);
+    color: var(--cad-tone-primary-soft-fg);
+  }
+
+  .cda-button--outlined.cda-button--tone-primary:hover {
+    background: var(--cad-tone-primary-soft-hover);
   }
 
   .cda-button--filled.cda-button--tone-light,
@@ -29,32 +44,98 @@
   .cda-button--outlined.cda-button--tone-base,
   .cda-button--filled.cda-button--tone-dark,
   .cda-button--outlined.cda-button--tone-dark {
-    @apply border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+    border-color: var(--cad-tone-light-soft-border);
+    background: var(--cad-tone-light-soft-bg);
+    color: var(--cad-tone-light-soft-fg);
   }
 
   .cda-button--filled.cda-button--tone-secondary,
   .cda-button--outlined.cda-button--tone-secondary {
-    @apply border-fuchsia-300 bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-200;
+    border-color: var(--cad-tone-secondary-soft-border);
+    background: var(--cad-tone-secondary-soft-bg);
+    color: var(--cad-tone-secondary-soft-fg);
   }
 
   .cda-button--filled.cda-button--tone-success,
   .cda-button--outlined.cda-button--tone-success {
-    @apply border-emerald-300 bg-emerald-100 text-emerald-800 hover:bg-emerald-200;
+    border-color: var(--cad-tone-success-soft-border);
+    background: var(--cad-tone-success-soft-bg);
+    color: var(--cad-tone-success-soft-fg);
   }
 
   .cda-button--filled.cda-button--tone-info,
   .cda-button--outlined.cda-button--tone-info {
-    @apply border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200;
+    border-color: var(--cad-tone-info-soft-border);
+    background: var(--cad-tone-info-soft-bg);
+    color: var(--cad-tone-info-soft-fg);
   }
 
   .cda-button--filled.cda-button--tone-warning,
   .cda-button--outlined.cda-button--tone-warning {
-    @apply border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200;
+    border-color: var(--cad-tone-warning-soft-border);
+    background: var(--cad-tone-warning-soft-bg);
+    color: var(--cad-tone-warning-soft-fg);
   }
 
   .cda-button--filled.cda-button--tone-danger,
   .cda-button--outlined.cda-button--tone-danger {
-    @apply border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100;
+    border-color: var(--cad-tone-danger-soft-border);
+    background: var(--cad-tone-danger-soft-bg);
+    color: var(--cad-tone-danger-soft-fg);
+  }
+
+  .cda-button--filled.cda-button--tone-light:hover,
+  .cda-button--outlined.cda-button--tone-light:hover {
+    background: var(--cad-tone-light-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-base,
+  .cda-button--outlined.cda-button--tone-base {
+    border-color: var(--cad-tone-base-soft-border);
+    background: var(--cad-tone-base-soft-bg);
+    color: var(--cad-tone-base-soft-fg);
+  }
+
+  .cda-button--filled.cda-button--tone-base:hover,
+  .cda-button--outlined.cda-button--tone-base:hover {
+    background: var(--cad-tone-base-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-dark,
+  .cda-button--outlined.cda-button--tone-dark {
+    border-color: var(--cad-tone-dark-soft-border);
+    background: var(--cad-tone-dark-soft-bg);
+    color: var(--cad-tone-dark-soft-fg);
+  }
+
+  .cda-button--filled.cda-button--tone-dark:hover,
+  .cda-button--outlined.cda-button--tone-dark:hover {
+    background: var(--cad-tone-dark-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-secondary:hover,
+  .cda-button--outlined.cda-button--tone-secondary:hover {
+    background: var(--cad-tone-secondary-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-success:hover,
+  .cda-button--outlined.cda-button--tone-success:hover {
+    background: var(--cad-tone-success-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-info:hover,
+  .cda-button--outlined.cda-button--tone-info:hover {
+    background: var(--cad-tone-info-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-warning:hover,
+  .cda-button--outlined.cda-button--tone-warning:hover {
+    background: var(--cad-tone-warning-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-danger:hover,
+  .cda-button--outlined.cda-button--tone-danger:hover {
+    background: var(--cad-tone-danger-soft-hover);
   }
 
   .cda-button--text {
@@ -62,30 +143,57 @@
   }
 
   .cda-button--text.cda-button--tone-danger {
-    @apply text-rose-700 hover:bg-rose-50;
+    color: var(--cad-tone-danger-soft-fg);
+  }
+
+  .cda-button--text.cda-button--tone-danger:hover {
+    background: color-mix(in srgb, var(--cad-tone-danger-soft-bg) 78%, transparent);
   }
 
   .cda-button--text.cda-button--tone-secondary {
-    @apply text-fuchsia-800 hover:bg-fuchsia-50;
+    color: var(--cad-tone-secondary-soft-fg);
+  }
+
+  .cda-button--text.cda-button--tone-secondary:hover {
+    background: color-mix(in srgb, var(--cad-tone-secondary-soft-bg) 78%, transparent);
   }
 
   .cda-button--text.cda-button--tone-success {
-    @apply text-emerald-800 hover:bg-emerald-50;
+    color: var(--cad-tone-success-soft-fg);
+  }
+
+  .cda-button--text.cda-button--tone-success:hover {
+    background: color-mix(in srgb, var(--cad-tone-success-soft-bg) 78%, transparent);
   }
 
   .cda-button--text.cda-button--tone-info {
-    @apply text-sky-800 hover:bg-sky-50;
+    color: var(--cad-tone-info-soft-fg);
+  }
+
+  .cda-button--text.cda-button--tone-info:hover {
+    background: color-mix(in srgb, var(--cad-tone-info-soft-bg) 78%, transparent);
   }
 
   .cda-button--text.cda-button--tone-warning {
-    @apply text-amber-900 hover:bg-amber-50;
+    color: var(--cad-tone-warning-soft-fg);
+  }
+
+  .cda-button--text.cda-button--tone-warning:hover {
+    background: color-mix(in srgb, var(--cad-tone-warning-soft-bg) 78%, transparent);
   }
 
   .cda-button--text.cda-button--tone-primary,
   .cda-button--text.cda-button--tone-light,
   .cda-button--text.cda-button--tone-base,
   .cda-button--text.cda-button--tone-dark {
-    @apply text-slate-700 hover:bg-slate-100;
+    color: var(--cad-tone-primary-soft-fg);
+  }
+
+  .cda-button--text.cda-button--tone-primary:hover,
+  .cda-button--text.cda-button--tone-light:hover,
+  .cda-button--text.cda-button--tone-base:hover,
+  .cda-button--text.cda-button--tone-dark:hover {
+    background: color-mix(in srgb, var(--cad-tone-primary-soft-bg) 82%, transparent);
   }
 
   .cda-button__spinner {
@@ -100,20 +208,47 @@
     @apply h-9 w-11 justify-center px-0 text-[10px] font-bold uppercase tracking-[0.18em];
   }
 
+  .cad-card-button,
   .zy-card-button {
-    @apply inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex h-9 items-center justify-center gap-2 border px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-tone-light-soft-border);
+    background: var(--cad-tone-light-soft-bg);
+    color: var(--cad-tone-light-soft-fg);
   }
 
+  .cad-card-button:hover,
+  .zy-card-button:hover {
+    background: var(--cad-tone-light-soft-hover);
+  }
+
+  .cad-card-button--ghost,
   .zy-card-button--ghost {
     @apply bg-transparent shadow-none;
   }
 
+  .cad-card-button--warn,
   .zy-card-button--warn {
-    @apply border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100;
+    border-color: var(--cad-tone-danger-soft-border);
+    background: var(--cad-tone-danger-soft-bg);
+    color: var(--cad-tone-danger-soft-fg);
+  }
+
+  .cad-card-button--warn:hover,
+  .zy-card-button--warn:hover {
+    background: var(--cad-tone-danger-soft-hover);
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 border px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-tone-light-soft-border);
+    background: var(--cad-tone-light-soft-bg);
+    color: var(--cad-tone-light-soft-fg);
+  }
+
+  .btn:hover {
+    background: var(--cad-tone-light-soft-hover);
   }
 
   .btn.ghost {
@@ -125,6 +260,13 @@
   }
 
   .btn.primary {
-    @apply border-slate-900 bg-slate-900 text-white hover:border-slate-800 hover:bg-slate-800;
+    border-color: var(--cad-tone-primary-solid-border);
+    background: var(--cad-tone-primary-solid-bg);
+    color: var(--cad-tone-primary-solid-fg);
+  }
+
+  .btn.primary:hover {
+    border-color: var(--cad-tone-primary-solid-hover);
+    background: var(--cad-tone-primary-solid-hover);
   }
 }

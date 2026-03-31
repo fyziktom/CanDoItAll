@@ -1,6 +1,6 @@
 @namespace CanDoItAll.Components.BaseLib
 <Stack GapScale="LayoutGap.Large"
-       Class="h-full rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm shadow-slate-200/60">
+       Class="cda-section-card">
     @if (!string.IsNullOrWhiteSpace(Title))
     {
         <Split Breakpoint="LayoutBreakpoint.None"
@@ -10,10 +10,10 @@
                Wrap="FlexWrap.Wrap"
                Class="mb-4">
             <Stack GapScale="LayoutGap.Tiny">
-                <h2 class="text-lg font-semibold text-slate-950">@Title</h2>
+                <h2 class="cda-section-card__title">@Title</h2>
                 @if (!string.IsNullOrWhiteSpace(Description))
                 {
-                    <p class="text-sm text-slate-600">@Description</p>
+                    <p class="cda-section-card__description">@Description</p>
                 }
             </Stack>
 

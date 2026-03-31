@@ -1,0 +1,24 @@
+# Source Artifacts
+
+- User request captured in `C:\repositories\CanDoItAll\solution-theme-system-bundle-v1\inputs\00-original-request.md`
+- Existing broad style-unification bundle used as background context only:
+  - `C:\repositories\CanDoItAll\solution-style-unification-bundle-v1\README.md`
+  - `C:\repositories\CanDoItAll\solution-style-unification-bundle-v1\analysis\01-current-state.md`
+  - `C:\repositories\CanDoItAll\solution-style-unification-bundle-v1\inventories\02-tailwind-taxonomy.md`
+- Machine-generated workbook and CSV inventories created for this bundle:
+  - `C:\repositories\CanDoItAll\output\spreadsheet\theme-system-scope-inventory.xlsx`
+  - `C:\repositories\CanDoItAll\solution-theme-system-bundle-v1\inventories\01-prefix-inventory.csv`
+  - `C:\repositories\CanDoItAll\solution-theme-system-bundle-v1\inventories\02-color-hotspots.csv`
+  - `C:\repositories\CanDoItAll\solution-theme-system-bundle-v1\inventories\03-route-and-theme-hooks.csv`
+  - `C:\repositories\CanDoItAll\solution-theme-system-bundle-v1\inventories\04-file-hotspots.csv`
+  - `C:\repositories\CanDoItAll\solution-theme-system-bundle-v1\inventories\05-execution-steps.csv`
+- Relevant repo sources inspected during preparation:
+  - `C:\repositories\CanDoItAll\Tailwind\input.css`
+  - `C:\repositories\CanDoItAll\Tailwind\controls\buttons.css`
+  - `C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\Components\Buttons\Button.razor`
+  - `C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\Components\Buttons\ButtonPrimitives.cs`
+  - `C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\Components\Feedback\AlertPrimitives.cs`
+  - `C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\Components\Badges\BadgePrimitives.cs`
+  - `C:\repositories\CanDoItAll\src\CanDoItAll.Components.CanvasLib\Canvas\Core\CanvasThemeTokenPack.cs`
+  - `C:\repositories\CanDoItAll\src\CanDoItAll.Web\Components\App.razor`
+  - `C:\repositories\CanDoItAll\src\CanDoItAll.Components.Sandbox\Components\App.razor`

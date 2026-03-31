@@ -1,0 +1,30 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes("cad-theme-host", ResolveBaseStyle())'
+     data-cad-theme="@ThemeKey"
+     data-cad-theme-key="@ThemeKey">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public string ThemeKey { get; set; } = CadThemes.Light;
+
+    [Parameter]
+    public string? ColorScheme { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string? ResolveBaseStyle()
+    {
+        var resolvedColorScheme = string.IsNullOrWhiteSpace(ColorScheme)
+            ? CadThemes.ResolveColorScheme(ThemeKey)
+            : ColorScheme;
+
+        return string.IsNullOrWhiteSpace(resolvedColorScheme)
+            ? null
+            : $"color-scheme:{resolvedColorScheme}";
+    }
+}

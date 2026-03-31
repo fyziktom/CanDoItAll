@@ -1,0 +1,217 @@
+@layer base {
+  :root,
+  [data-cad-theme="light"] {
+    color-scheme: light;
+    --cad-radius-control: 0.875rem;
+    --cad-radius-surface: 1.5rem;
+    --cad-radius-panel: 1.75rem;
+    --cad-color-page-bg: #f8fafc;
+    --cad-color-surface: rgba(255, 255, 255, 0.96);
+    --cad-color-surface-soft: rgba(248, 250, 252, 0.88);
+    --cad-color-border: #cbd5e1;
+    --cad-color-border-soft: #e2e8f0;
+    --cad-color-text-strong: #020617;
+    --cad-color-text: #0f172a;
+    --cad-color-text-muted: #475569;
+    --cad-color-text-soft: #64748b;
+    --cad-color-inverse: #f8fafc;
+    --cad-shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.08);
+    --cad-shadow-strong: 0 20px 48px rgba(15, 23, 42, 0.14);
+    --cad-tone-primary-solid-bg: #0f172a;
+    --cad-tone-primary-solid-hover: #1e293b;
+    --cad-tone-primary-solid-border: #0f172a;
+    --cad-tone-primary-solid-fg: #ffffff;
+    --cad-tone-primary-soft-bg: rgba(255, 255, 255, 0.96);
+    --cad-tone-primary-soft-hover: #f8fafc;
+    --cad-tone-primary-soft-border: #cbd5e1;
+    --cad-tone-primary-soft-fg: #0f172a;
+    --cad-tone-secondary-soft-bg: #fae8ff;
+    --cad-tone-secondary-soft-hover: #f5d0fe;
+    --cad-tone-secondary-soft-border: #f0abfc;
+    --cad-tone-secondary-soft-fg: #86198f;
+    --cad-tone-success-soft-bg: #d1fae5;
+    --cad-tone-success-soft-hover: #a7f3d0;
+    --cad-tone-success-soft-border: #6ee7b7;
+    --cad-tone-success-soft-fg: #065f46;
+    --cad-tone-info-soft-bg: #e0f2fe;
+    --cad-tone-info-soft-hover: #bae6fd;
+    --cad-tone-info-soft-border: #7dd3fc;
+    --cad-tone-info-soft-fg: #075985;
+    --cad-tone-warning-soft-bg: #fef3c7;
+    --cad-tone-warning-soft-hover: #fde68a;
+    --cad-tone-warning-soft-border: #fcd34d;
+    --cad-tone-warning-soft-fg: #92400e;
+    --cad-tone-danger-soft-bg: #ffe4e6;
+    --cad-tone-danger-soft-hover: #fecdd3;
+    --cad-tone-danger-soft-border: #fda4af;
+    --cad-tone-danger-soft-fg: #9f1239;
+    --cad-tone-light-soft-bg: rgba(255, 255, 255, 0.96);
+    --cad-tone-light-soft-hover: #f8fafc;
+    --cad-tone-light-soft-border: #cbd5e1;
+    --cad-tone-light-soft-fg: #475569;
+    --cad-tone-base-soft-bg: rgba(255, 255, 255, 0.96);
+    --cad-tone-base-soft-hover: #f8fafc;
+    --cad-tone-base-soft-border: #cbd5e1;
+    --cad-tone-base-soft-fg: #475569;
+    --cad-tone-dark-soft-bg: #e2e8f0;
+    --cad-tone-dark-soft-hover: #cbd5e1;
+    --cad-tone-dark-soft-border: #94a3b8;
+    --cad-tone-dark-soft-fg: #0f172a;
+  }
+
+  [data-cad-theme="dark"] {
+    color-scheme: dark;
+    --cad-color-page-bg: #020617;
+    --cad-color-surface: rgba(15, 23, 42, 0.92);
+    --cad-color-surface-soft: rgba(30, 41, 59, 0.82);
+    --cad-color-border: rgba(148, 163, 184, 0.35);
+    --cad-color-border-soft: rgba(71, 85, 105, 0.45);
+    --cad-color-text-strong: #f8fafc;
+    --cad-color-text: #e2e8f0;
+    --cad-color-text-muted: #cbd5e1;
+    --cad-color-text-soft: #94a3b8;
+    --cad-color-inverse: #020617;
+    --cad-shadow-soft: 0 18px 40px rgba(2, 6, 23, 0.45);
+    --cad-shadow-strong: 0 24px 56px rgba(2, 6, 23, 0.58);
+    --cad-tone-primary-solid-bg: #cbd5e1;
+    --cad-tone-primary-solid-hover: #e2e8f0;
+    --cad-tone-primary-solid-border: #cbd5e1;
+    --cad-tone-primary-solid-fg: #0f172a;
+    --cad-tone-primary-soft-bg: rgba(30, 41, 59, 0.78);
+    --cad-tone-primary-soft-hover: rgba(51, 65, 85, 0.84);
+    --cad-tone-primary-soft-border: rgba(148, 163, 184, 0.35);
+    --cad-tone-primary-soft-fg: #e2e8f0;
+    --cad-tone-secondary-soft-bg: rgba(112, 26, 117, 0.32);
+    --cad-tone-secondary-soft-hover: rgba(134, 25, 143, 0.4);
+    --cad-tone-secondary-soft-border: rgba(232, 121, 249, 0.38);
+    --cad-tone-secondary-soft-fg: #f5d0fe;
+    --cad-tone-success-soft-bg: rgba(6, 95, 70, 0.34);
+    --cad-tone-success-soft-hover: rgba(6, 120, 85, 0.44);
+    --cad-tone-success-soft-border: rgba(52, 211, 153, 0.35);
+    --cad-tone-success-soft-fg: #a7f3d0;
+    --cad-tone-info-soft-bg: rgba(7, 89, 133, 0.32);
+    --cad-tone-info-soft-hover: rgba(3, 105, 161, 0.42);
+    --cad-tone-info-soft-border: rgba(56, 189, 248, 0.34);
+    --cad-tone-info-soft-fg: #bae6fd;
+    --cad-tone-warning-soft-bg: rgba(146, 64, 14, 0.34);
+    --cad-tone-warning-soft-hover: rgba(180, 83, 9, 0.42);
+    --cad-tone-warning-soft-border: rgba(251, 191, 36, 0.35);
+    --cad-tone-warning-soft-fg: #fde68a;
+    --cad-tone-danger-soft-bg: rgba(159, 18, 57, 0.34);
+    --cad-tone-danger-soft-hover: rgba(190, 24, 93, 0.42);
+    --cad-tone-danger-soft-border: rgba(251, 113, 133, 0.35);
+    --cad-tone-danger-soft-fg: #fecdd3;
+    --cad-tone-light-soft-bg: rgba(30, 41, 59, 0.74);
+    --cad-tone-light-soft-hover: rgba(51, 65, 85, 0.82);
+    --cad-tone-light-soft-border: rgba(148, 163, 184, 0.28);
+    --cad-tone-light-soft-fg: #e2e8f0;
+    --cad-tone-base-soft-bg: rgba(30, 41, 59, 0.74);
+    --cad-tone-base-soft-hover: rgba(51, 65, 85, 0.82);
+    --cad-tone-base-soft-border: rgba(148, 163, 184, 0.28);
+    --cad-tone-base-soft-fg: #e2e8f0;
+    --cad-tone-dark-soft-bg: rgba(226, 232, 240, 0.14);
+    --cad-tone-dark-soft-hover: rgba(226, 232, 240, 0.2);
+    --cad-tone-dark-soft-border: rgba(148, 163, 184, 0.32);
+    --cad-tone-dark-soft-fg: #f8fafc;
+  }
+
+  .cad-theme-host {
+    display: block;
+    min-height: 100%;
+    background: var(--cad-color-page-bg);
+    color: var(--cad-color-text);
+  }
+}
+
+@layer components {
+  .cad-theme-switcher {
+    @apply inline-flex flex-wrap items-center gap-2;
+  }
+
+  .cad-theme-proof {
+    @apply mt-5 flex flex-col gap-4 border p-4 md:p-5;
+    border-radius: var(--cad-radius-panel);
+    border-color: var(--cad-color-border-soft);
+    background: linear-gradient(180deg, var(--cad-color-surface) 0%, var(--cad-color-surface-soft) 100%);
+    color: var(--cad-color-text);
+    box-shadow: var(--cad-shadow-soft);
+  }
+
+  .cad-theme-proof__header {
+    @apply flex flex-col gap-3 md:flex-row md:items-start md:justify-between;
+  }
+
+  .cad-theme-proof__eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.22em];
+    color: var(--cad-color-text-soft);
+  }
+
+  .cad-theme-proof__title {
+    @apply text-lg font-semibold tracking-tight;
+    color: var(--cad-color-text-strong);
+  }
+
+  .cad-theme-proof__summary {
+    @apply mt-2 text-sm leading-6;
+    color: var(--cad-color-text-muted);
+  }
+
+  .cad-theme-proof__pill {
+    @apply inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em];
+    border-color: var(--cad-color-border);
+    background: var(--cad-tone-primary-soft-bg);
+    color: var(--cad-tone-primary-soft-fg);
+  }
+
+  .cad-theme-proof__swatches {
+    @apply flex flex-wrap gap-3;
+  }
+
+  .cad-theme-proof__swatch {
+    @apply inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold;
+  }
+
+  .cad-theme-proof__swatch--primary {
+    border-color: var(--cad-tone-primary-solid-border);
+    background: var(--cad-tone-primary-solid-bg);
+    color: var(--cad-tone-primary-solid-fg);
+  }
+
+  .cad-theme-proof__swatch--secondary {
+    border-color: var(--cad-tone-secondary-soft-border);
+    background: var(--cad-tone-secondary-soft-bg);
+    color: var(--cad-tone-secondary-soft-fg);
+  }
+
+  .cad-theme-proof__swatch--danger {
+    border-color: var(--cad-tone-danger-soft-border);
+    background: var(--cad-tone-danger-soft-bg);
+    color: var(--cad-tone-danger-soft-fg);
+  }
+
+  .cad-theme-proof__swatch--surface {
+    border-color: var(--cad-color-border);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
+  }
+
+  .cad-theme-proof__metrics {
+    @apply grid gap-3 md:grid-cols-3;
+  }
+
+  .cad-theme-proof__metric {
+    @apply rounded-2xl border p-3;
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+  }
+
+  .cad-theme-proof__metric-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em];
+    color: var(--cad-color-text-soft);
+  }
+
+  .cad-theme-proof__metric-value {
+    @apply mt-2 block text-sm font-semibold;
+    color: var(--cad-color-text-strong);
+  }
+}

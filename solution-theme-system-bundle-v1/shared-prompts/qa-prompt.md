@@ -1,0 +1,1 @@
+Review the changed surface as a senior Tailwind and Blazor QA engineer. Verify runtime theme switching, contrast, spacing, radii, prefix migration safety, and whether the screenshots prove that semantic tones are consistent across different primitives instead of only one component family.

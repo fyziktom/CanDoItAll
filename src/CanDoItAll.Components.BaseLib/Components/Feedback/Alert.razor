@@ -21,19 +21,17 @@
 
     private string ResolveCssClass()
     {
-        var baseCss = "rz-alert rounded-lg border px-4 py-3 text-sm";
-
         var themeCss = AlertStyle switch
         {
-            AlertStyle.Success => "border-emerald-300 bg-emerald-50 text-emerald-900",
-            AlertStyle.Warning => "border-amber-300 bg-amber-50 text-amber-900",
-            AlertStyle.Danger => "border-red-300 bg-red-50 text-red-900",
-            AlertStyle.Light => "border-slate-200 bg-slate-50 text-slate-700",
-            AlertStyle.Secondary => "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-900",
-            _ => "border-sky-300 bg-sky-50 text-sky-900"
+            AlertStyle.Success => "cda-alert--tone-success",
+            AlertStyle.Warning => "cda-alert--tone-warning",
+            AlertStyle.Danger => "cda-alert--tone-danger",
+            AlertStyle.Light => "cda-alert--tone-base",
+            AlertStyle.Secondary => "cda-alert--tone-secondary",
+            _ => "cda-alert--tone-info"
         };
 
-        return $"{baseCss} {themeCss}";
+        return $"rz-alert cda-alert {themeCss}";
     }
 }
 

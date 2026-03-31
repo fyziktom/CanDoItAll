@@ -8,7 +8,16 @@
   }
 
   .cda-tab-search {
-    @apply w-36 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 outline-none transition focus:border-slate-400;
+    @apply w-36 border px-2 py-1 text-xs outline-none transition;
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
+  }
+
+  .cda-tab-search:focus {
+    border-color: var(--cad-tone-primary-soft-border);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cad-tone-primary-soft-bg) 70%, transparent);
   }
 
   .cda-tab-menu {
@@ -16,11 +25,20 @@
   }
 
   .cda-tab-menu__summary {
-    @apply cursor-pointer list-none rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700;
+    @apply cursor-pointer list-none border px-2 py-1 text-xs font-semibold;
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface-soft);
+    color: var(--cad-color-text);
   }
 
   .cda-tab-menu__panel {
-    @apply absolute right-0 z-20 mt-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-900/10;
+    @apply absolute right-0 z-20 mt-2 border p-3;
+    border-radius: var(--cad-radius-panel);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text);
+    box-shadow: var(--cad-shadow-strong);
   }
 
   .cda-tab-menu__panel--wide {
@@ -36,39 +54,76 @@
   }
 
   .cda-tab-menu__item {
-    @apply flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-700 transition hover:border-slate-300 hover:bg-slate-100;
+    @apply flex w-full items-center justify-between border px-3 py-2 text-left text-sm transition;
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface-soft);
+    color: var(--cad-color-text);
+  }
+
+  .cda-tab-menu__item:hover {
+    border-color: var(--cad-color-border);
+    background: var(--cad-color-surface);
   }
 
   .cda-tab-menu__badge {
-    @apply rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700;
+    @apply px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide;
+    border-radius: 9999px;
+    background: var(--cad-tone-base-soft-bg);
+    color: var(--cad-tone-base-soft-fg);
   }
 
   .cda-tab-summary {
-    @apply flex flex-col gap-2 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2 xl:flex-row xl:items-center xl:justify-between;
+    @apply flex flex-col gap-2 border px-3 py-2 xl:flex-row xl:items-center xl:justify-between;
+    border-radius: var(--cad-radius-surface);
+    border-color: color-mix(in srgb, var(--cad-color-border-soft) 85%, transparent);
+    background: color-mix(in srgb, var(--cad-color-surface-soft) 92%, transparent);
   }
 
   .cda-tab-summary-chip {
-    @apply rounded-full bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-500;
+    @apply bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em];
+    border-radius: 9999px;
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text-soft);
   }
 
   .cda-tab-summary-chip--info {
-    @apply bg-sky-50 text-sky-700;
+    background: var(--cad-tone-info-soft-bg);
+    color: var(--cad-tone-info-soft-fg);
   }
 
   .cda-tab-summary-action {
-    @apply rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-50;
+    @apply border px-2 py-1 text-[10px] font-semibold transition;
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
+    color: var(--cad-color-text-muted);
+  }
+
+  .cda-tab-summary-action:hover {
+    background: var(--cad-color-surface-soft);
   }
 
   .cda-inline-tab {
-    @apply inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs transition;
+    @apply inline-flex items-center gap-1 border px-2 py-1 text-xs transition;
+    border-radius: var(--cad-radius-control);
   }
 
   .cda-inline-tab--active {
-    @apply border-slate-900 bg-slate-900 text-white;
+    border-color: var(--cad-tone-primary-solid-border);
+    background: var(--cad-tone-primary-solid-bg);
+    color: var(--cad-tone-primary-solid-fg);
   }
 
   .cda-inline-tab--inactive {
-    @apply border-transparent bg-slate-100/80 text-slate-600 hover:border-slate-200 hover:bg-slate-50;
+    border-color: transparent;
+    background: color-mix(in srgb, var(--cad-color-surface-soft) 85%, transparent);
+    color: var(--cad-color-text-muted);
+  }
+
+  .cda-inline-tab--inactive:hover {
+    border-color: var(--cad-color-border-soft);
+    background: var(--cad-color-surface);
   }
 
   .cda-inline-tab__actions {

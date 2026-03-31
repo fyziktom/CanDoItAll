@@ -1,0 +1,1 @@
+Implement only the selected subbundle. Keep the change minimal and strongly typed, prefer semantic CSS variables over raw palette utilities, keep `cad-*` as the canonical shared non-canvas prefix, and preserve compatibility behavior when a hard cut would be risky. Do not introduce public shorthand strings such as `prim` or `sec`.

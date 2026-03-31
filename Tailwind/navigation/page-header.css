@@ -1,6 +1,7 @@
 @layer components {
   .cda-page-header {
-    @apply flex flex-col gap-3 border-b border-slate-200 pb-4 md:flex-row md:items-end md:justify-between;
+    @apply flex flex-col gap-3 border-b pb-4 md:flex-row md:items-end md:justify-between;
+    border-color: var(--cad-color-border-soft);
   }
 
   .cda-page-header--compact {
@@ -16,7 +17,8 @@
   }
 
   .cda-page-header__eyebrow {
-    @apply text-xs font-semibold uppercase tracking-[0.2em] text-slate-500;
+    @apply text-xs font-semibold uppercase tracking-[0.2em];
+    color: var(--cad-color-text-soft);
   }
 
   .cda-page-header__eyebrow--compact {
@@ -24,7 +26,8 @@
   }
 
   .cda-page-header__title {
-    @apply text-3xl font-semibold tracking-tight text-slate-950;
+    @apply text-3xl font-semibold tracking-tight;
+    color: var(--cad-color-text-strong);
   }
 
   .cda-page-header__title--compact {
@@ -32,7 +35,8 @@
   }
 
   .cda-page-header__description {
-    @apply max-w-3xl text-sm leading-6 text-slate-600;
+    @apply max-w-3xl text-sm leading-6;
+    color: var(--cad-color-text-muted);
   }
 
   .cda-page-header__actions {

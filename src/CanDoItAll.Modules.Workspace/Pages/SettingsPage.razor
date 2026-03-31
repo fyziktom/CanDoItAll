@@ -113,8 +113,8 @@
                 <DetailHeader>
                     <Stack GapScale="LayoutGap.Tiny">
                         <p class="cda-eyebrow">Secret editor</p>
-                        <h2 class="text-xl font-semibold text-slate-950">@(secretModel.Id.HasValue ? secretModel.Name : "New secret")</h2>
-                        <p class="text-sm leading-6 text-slate-600">Secrets stay encrypted at rest and can be referenced from providers, resources, or other modules.</p>
+                        <h2 class="cda-title-xl">@(secretModel.Id.HasValue ? secretModel.Name : "New secret")</h2>
+                        <p class="cda-body-muted">Secrets stay encrypted at rest and can be referenced from providers, resources, or other modules.</p>
                     </Stack>
                 </DetailHeader>
 
@@ -224,8 +224,8 @@
                 <DetailHeader>
                     <Stack GapScale="LayoutGap.Tiny">
                         <p class="cda-eyebrow">Provider editor</p>
-                        <h2 class="text-xl font-semibold text-slate-950">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
-                        <p class="text-sm leading-6 text-slate-600">Profiles keep provider-specific transport, capability flags, and health status in one editor.</p>
+                        <h2 class="cda-title-xl">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
+                        <p class="cda-body-muted">Profiles keep provider-specific transport, capability flags, and health status in one editor.</p>
                     </Stack>
                 </DetailHeader>
 

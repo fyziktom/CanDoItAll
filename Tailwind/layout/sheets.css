@@ -1,9 +1,11 @@
 @layer components {
+  .cad-sheet-section,
   .zy-sheet-section {
     display: grid;
     gap: 1rem;
   }
 
+  .cad-sheet-toolbar,
   .zy-sheet-toolbar {
     display: grid;
     gap: 0.75rem;
@@ -14,12 +16,14 @@
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
   }
 
+  .cad-sheet-toolbar-row,
   .zy-sheet-toolbar-row {
     display: grid;
     gap: 0.75rem;
     align-items: start;
   }
 
+  .cad-sheet-toolbar-fields,
   .zy-sheet-toolbar-fields {
     display: grid;
     gap: 0.75rem;
@@ -27,6 +31,7 @@
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
   }
 
+  .cad-sheet-toolbar-actions,
   .zy-sheet-toolbar-actions {
     display: flex;
     flex-wrap: wrap;
@@ -34,6 +39,7 @@
     gap: 0.5rem;
   }
 
+  .cad-sheet-field,
   .zy-sheet-field {
     display: flex;
     width: 100%;
@@ -49,11 +55,14 @@
     line-height: 1.35;
   }
 
+  .cad-sheet-field--search,
   .zy-sheet-field--search,
+  .cad-sheet-field--tag,
   .zy-sheet-field--tag {
     min-width: 0;
   }
 
+  .cad-sheet-field--submit-wrap,
   .zy-sheet-field--submit-wrap {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -61,6 +70,7 @@
     gap: 0.45rem;
   }
 
+  .cad-sheet-grid,
   .zy-sheet-grid {
     display: grid;
     gap: 1rem;
@@ -69,10 +79,12 @@
     align-items: stretch;
   }
 
+  .cad-sheet-grid--packages,
   .zy-sheet-grid--packages {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 20.75rem), 26rem));
   }
 
+  .cad-sheet-card,
   .zy-sheet-card {
     display: grid;
     width: 100%;
@@ -86,6 +98,7 @@
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
   }
 
+  .cad-sheet-card--package,
   .zy-sheet-card--package {
     gap: 1rem;
     background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.98));
@@ -93,11 +106,13 @@
 }
 
 @media (min-width: 1280px) {
+  .cad-sheet-toolbar-row,
   .zy-sheet-toolbar-row {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
   }
 
+  .cad-sheet-toolbar-actions,
   .zy-sheet-toolbar-actions {
     justify-content: flex-end;
   }
