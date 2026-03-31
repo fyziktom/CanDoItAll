@@ -12,7 +12,7 @@
                     Title="Validation center"
                     Description="Run deterministic reviews, store findings, and keep final review decisions attached to each run.">
             <Actions>
-                <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">New validation</button>
+                <Button Text="New validation" Click="CreateNewAsync" />
             </Actions>
         </PageHeader>
     </Header>
@@ -32,22 +32,22 @@
                                  Count="@($"{FilteredRuns.Count} run(s)")">
                     <Filters>
                         <FilterBar ResultText="@($"{FilteredRuns.Count} matching run(s)")">
-                            <input @bind="runSearch" @bind:event="oninput" class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700" placeholder="Search validations" />
-                            <InputSelect @bind-Value="typeFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                            <input @bind="runSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search validations" />
+                            <InputSelect @bind-Value="typeFilter" class="cda-input">
                                 <option value="">All types</option>
                                 @foreach (var type in Enum.GetValues<ValidationType>())
                                 {
                                     <option value="@type.ToString()">@type</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="decisionFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                            <InputSelect @bind-Value="decisionFilter" class="cda-input">
                                 <option value="">All decisions</option>
                                 @foreach (var decision in Enum.GetValues<ValidationDecision>())
                                 {
                                     <option value="@decision.ToString()">@decision</option>
                                 }
                             </InputSelect>
-                            <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ResetFilters">Reset</button>
+                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetFilters" />
                         </FilterBar>
                     </Filters>
                 </ListPanelHeader>
@@ -60,13 +60,13 @@
                                 Title="Run the first review"
                                 Description="Validation runs appear here after the editor executes a deterministic review.">
                         <Actions>
-                            <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">New validation</button>
+                            <Button Text="New validation" Click="CreateNewAsync" />
                         </Actions>
                     </EmptyState>
                 }
                 else
                 {
-                    <div class="space-y-3">
+                    <div class="cda-stack-3">
                         @foreach (var run in FilteredRuns)
                         {
                             <SelectionListItem Title="@run.ArtifactTitle"
@@ -85,9 +85,9 @@
             </ListContent>
 
             <DetailHeader>
-                <div class="space-y-3">
+                <div class="cda-stack-3">
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div class="space-y-1">
+                        <div class="cda-stack-1">
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Run editor</p>
                             <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
                             <p class="text-sm leading-6 text-slate-600">Configure the review, run it, then inspect the stored summary and findings without leaving the detail pane.</p>
@@ -109,10 +109,10 @@
                         @if (string.Equals(detailTab, "overview", StringComparison.Ordinal))
                         {
                             <FormSection Title="Run setup" Description="Choose the project, checklist, and artifact metadata before launching the deterministic review.">
-                                <div class="grid gap-4 md:grid-cols-2">
+                                <div class="cda-form-grid">
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Project</label>
-                                        <InputSelect @bind-Value="editor.ProjectId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                        <label class="cda-field-label">Project</label>
+                                        <InputSelect @bind-Value="editor.ProjectId" class="cda-input">
                                             <option value="">None</option>
                                             @foreach (var project in projects)
                                             {
@@ -121,8 +121,8 @@
                                         </InputSelect>
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Validation type</label>
-                                        <InputSelect @bind-Value="editor.ValidationType" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                        <label class="cda-field-label">Validation type</label>
+                                        <InputSelect @bind-Value="editor.ValidationType" class="cda-input">
                                             @foreach (var type in Enum.GetValues<ValidationType>())
                                             {
                                                 <option value="@type">@type</option>
@@ -131,10 +131,10 @@
                                     </div>
                                 </div>
 
-                                <div class="grid gap-4 md:grid-cols-2">
+                                <div class="cda-form-grid">
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Checklist</label>
-                                        <InputSelect @bind-Value="editor.ChecklistId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                        <label class="cda-field-label">Checklist</label>
+                                        <InputSelect @bind-Value="editor.ChecklistId" class="cda-input">
                                             @foreach (var checklist in checklists.Where(item => item.ValidationType == editor.ValidationType))
                                             {
                                                 <option value="@checklist.Id">@($"{checklist.Name} ({checklist.VersionLabel})")</option>
@@ -142,21 +142,21 @@
                                         </InputSelect>
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Artifact route</label>
-                                        <InputText @bind-Value="editor.ArtifactRoute" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Artifact route</label>
+                                        <InputText @bind-Value="editor.ArtifactRoute" class="cda-input" />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Artifact title</label>
-                                    <InputText @bind-Value="editor.ArtifactTitle" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    <label class="cda-field-label">Artifact title</label>
+                                    <InputText @bind-Value="editor.ArtifactTitle" class="cda-input" />
                                 </div>
                             </FormSection>
 
                             <FormSection Title="Source content" Description="Paste or stage the content that the deterministic checks should evaluate.">
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Source content</label>
-                                    <InputTextArea @bind-Value="editor.SourceContent" class="min-h-72 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-sm" />
+                                    <label class="cda-field-label">Source content</label>
+                                    <InputTextArea @bind-Value="editor.SourceContent" class="cda-input cda-input--textarea cda-input--mono min-h-72" />
                                 </div>
 
                                 @if (!string.IsNullOrWhiteSpace(editor.Summary))
@@ -174,8 +174,8 @@
                                 @if (editor.Id.HasValue)
                                 {
                                     <div class="max-w-xs">
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Decision</label>
-                                        <InputSelect @bind-Value="editor.Decision" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" @onchange="SetDecisionAsync">
+                                        <label class="cda-field-label">Decision</label>
+                                        <InputSelect @bind-Value="editor.Decision" class="cda-input" @onchange="SetDecisionAsync">
                                             @foreach (var decision in Enum.GetValues<ValidationDecision>())
                                             {
                                                 <option value="@decision">@decision</option>
@@ -200,10 +200,10 @@
                                 }
                                 else
                                 {
-                                    <div class="space-y-3">
+                                    <div class="cda-stack-3">
                                         @foreach (var finding in editor.Findings)
                                         {
-                                            <div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+                                            <div class="cda-panel-card">
                                                 <div class="flex flex-wrap items-center justify-between gap-3">
                                                     <div>
                                                         <p class="text-sm font-semibold text-slate-950">@finding.Title</p>
@@ -222,10 +222,10 @@
 
                         <StickyActionFooter StatusLabel="Validation status" StatusMessage="@message" StatusTone="success">
                             <SecondaryActions>
-                                <button type="button" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateNewAsync">Reset</button>
+                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
                             </SecondaryActions>
                             <PrimaryActions>
-                                <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" data-testid="validation-run-button">Run validation</button>
+                                <Button Text="Run validation" Type="submit" data-testid="validation-run-button" />
                             </PrimaryActions>
                         </StickyActionFooter>
                     </div>

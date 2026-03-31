@@ -14,54 +14,54 @@
                     <SummaryTile Label="Knowledge" Value="@knowledgeEntries.Count.ToString()" HelperText="Seeded guidance entries visible in settings and API." />
                 </SummaryTiles>
 
-                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                <div class="mt-6 cda-form-grid">
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Central base URL</label>
-                        <InputText @bind-Value="settingsModel.CentralBaseUrl" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="project-structure-settings-base-url" />
+                        <label class="cda-field-label">Central base URL</label>
+                        <InputText @bind-Value="settingsModel.CentralBaseUrl" class="cda-input" data-testid="project-structure-settings-base-url" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Install script path</label>
-                        <InputText @bind-Value="settingsModel.InstallScriptPath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        <label class="cda-field-label">Install script path</label>
+                        <InputText @bind-Value="settingsModel.InstallScriptPath" class="cda-input" />
                     </div>
                 </div>
 
-                <div class="mt-4 grid gap-4 md:grid-cols-3">
+                <div class="mt-4 cda-form-grid cda-form-grid--triple">
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Setup README path</label>
-                        <InputText @bind-Value="settingsModel.SetupReadmePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        <label class="cda-field-label">Setup README path</label>
+                        <InputText @bind-Value="settingsModel.SetupReadmePath" class="cda-input" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Default auto-approve up to (minutes)</label>
-                        <InputNumber @bind-Value="settingsModel.DefaultAutoApproveMinutes" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        <label class="cda-field-label">Default auto-approve up to (minutes)</label>
+                        <InputNumber @bind-Value="settingsModel.DefaultAutoApproveMinutes" class="cda-input" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Default approval required over (minutes)</label>
-                        <InputNumber @bind-Value="settingsModel.DefaultApprovalRequiredMinutes" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        <label class="cda-field-label">Default approval required over (minutes)</label>
+                        <InputNumber @bind-Value="settingsModel.DefaultApprovalRequiredMinutes" class="cda-input" />
                     </div>
                 </div>
             </FormSection>
 
             <StickyActionFooter StatusLabel="Project-structure MCP settings" StatusMessage="@settingsMessage" StatusTone="success">
                 <PrimaryActions>
-                    <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" data-testid="project-structure-settings-save">Save central settings</button>
+                    <Button Text="Save central settings" Type="submit" data-testid="project-structure-settings-save" />
                 </PrimaryActions>
             </StickyActionFooter>
         </div>
     </EditForm>
 
     <div class="grid gap-6 xl:grid-cols-[22rem,1fr]">
-        <div class="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="cda-panel-card cda-stack-4 rounded-3xl">
             <div class="flex items-center justify-between gap-4">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Agent profiles</p>
                     <h2 class="text-lg font-semibold text-slate-950">Project-structure MCP agents</h2>
                 </div>
-                <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ResetProfileAsync" data-testid="project-structure-profile-new">New profile</button>
+                <Button Text="New profile" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProfileAsync" data-testid="project-structure-profile-new" />
             </div>
 
-            <div class="space-y-2">
-                <input @bind="profileSearch" @bind:event="oninput" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700" placeholder="Search profiles" />
-                <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ResetProfileSearch">Reset</button>
+            <div class="cda-stack-2">
+                <input @bind="profileSearch" @bind:event="oninput" class="cda-input" placeholder="Search profiles" />
+                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProfileSearch" />
             </div>
 
             @if (FilteredProfiles.Count == 0)
@@ -70,7 +70,7 @@
             }
             else
             {
-                <div class="space-y-3">
+                <div class="cda-stack-3">
                     @foreach (var profile in FilteredProfiles)
                     {
                         <SelectionListItem Title="@profile.Name"
@@ -89,7 +89,7 @@
         </div>
 
         <EditForm Model="profileModel" OnValidSubmit="SaveProfileAsync">
-            <div class="flex min-h-full flex-col gap-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div class="cda-panel-card flex min-h-full flex-col gap-6 rounded-3xl p-6 shadow-sm">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Project-structure MCP profile</p>
                     <h2 class="text-xl font-semibold text-slate-950">@(profileModel.Id.HasValue ? profileModel.Name : "New project-structure agent")</h2>
@@ -97,13 +97,13 @@
                 </div>
 
                 <FormSection Title="Profile identity" Description="Define the operator-facing label and whether the central API should accept this profile.">
-                    <div class="grid gap-4 md:grid-cols-2">
+                    <div class="cda-form-grid">
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Profile name</label>
-                            <InputText @bind-Value="profileModel.Name" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="project-structure-profile-name" />
+                            <label class="cda-field-label">Profile name</label>
+                            <InputText @bind-Value="profileModel.Name" class="cda-input" data-testid="project-structure-profile-name" />
                         </div>
                         <div class="flex items-end">
-                            <label class="flex w-full items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700">
+                            <label class="cda-inline-option">
                                 <InputCheckbox @bind-Value="profileModel.IsEnabled" />
                                 Profile enabled
                             </label>
@@ -111,13 +111,13 @@
                     </div>
 
                     <div class="mt-4">
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-                        <InputTextArea @bind-Value="profileModel.Description" class="min-h-24 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        <label class="cda-field-label">Description</label>
+                        <InputTextArea @bind-Value="profileModel.Description" class="cda-input cda-input--textarea min-h-24" />
                     </div>
 
                     <div class="mt-4">
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Operator notes</label>
-                        <InputTextArea @bind-Value="profileModel.Notes" class="min-h-20 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                        <label class="cda-field-label">Operator notes</label>
+                        <InputTextArea @bind-Value="profileModel.Notes" class="cda-input cda-input--textarea min-h-20" />
                     </div>
                 </FormSection>
 
@@ -125,7 +125,7 @@
                     <div class="grid gap-3 md:grid-cols-2" data-testid="project-structure-capabilities">
                         @foreach (var capability in CapabilityOptions)
                         {
-                            <label class="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                            <label class="cda-inline-option cda-inline-option--muted">
                                 <input type="checkbox" checked="@HasProfileCapability(capability.Capability)" @onchange="args => ToggleProfileCapability(capability.Capability, args.Value)" data-testid="@capability.TestId" />
                                 @capability.Label
                             </label>
@@ -134,17 +134,17 @@
                 </FormSection>
 
                 <FormSection Title="Approval policy" Description="Thresholds are enforced centrally. Set a value of 0 to disable that threshold.">
-                    <div class="grid gap-4 md:grid-cols-3">
+                    <div class="cda-form-grid cda-form-grid--triple">
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Auto-approve up to (minutes)</label>
-                            <InputNumber @bind-Value="profileModel.AutoApproveMinutes" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="project-structure-profile-auto-approve" />
+                            <label class="cda-field-label">Auto-approve up to (minutes)</label>
+                            <InputNumber @bind-Value="profileModel.AutoApproveMinutes" class="cda-input" data-testid="project-structure-profile-auto-approve" />
                         </div>
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Approval required over (minutes)</label>
-                            <InputNumber @bind-Value="profileModel.ApprovalRequiredMinutes" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="project-structure-profile-approval-required" />
+                            <label class="cda-field-label">Approval required over (minutes)</label>
+                            <InputNumber @bind-Value="profileModel.ApprovalRequiredMinutes" class="cda-input" data-testid="project-structure-profile-approval-required" />
                         </div>
                         <div class="flex items-end">
-                            <label class="flex w-full items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                            <label class="cda-inline-option cda-inline-option--muted">
                                 <InputCheckbox @bind-Value="profileModel.RequireApprovalForAllMutations" />
                                 Require approval for every mutation
                             </label>
@@ -155,14 +155,14 @@
                 <FormSection Title="Token and workstation setup" Description="The token is encrypted at rest. Rotate it when a workstation changes or the token leaks.">
                     <div class="grid gap-4 md:grid-cols-[1fr_auto]">
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Profile token</label>
-                            <input class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700"
+                            <label class="cda-field-label">Profile token</label>
+                            <input class="cda-input"
                                    value="@DisplayToken"
                                    readonly
                                    data-testid="project-structure-profile-token" />
                         </div>
                         <div class="flex items-end">
-                            <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="RotateToken" data-testid="project-structure-profile-rotate-token">Rotate token on save</button>
+                            <Button Text="Rotate token on save" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="RotateToken" data-testid="project-structure-profile-rotate-token" />
                         </div>
                     </div>
 
@@ -174,20 +174,20 @@
                     }
                     else
                     {
-                        <div class="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4" data-testid="project-structure-setup-guide">
-                            <div class="grid gap-4 md:grid-cols-2">
+                        <div class="mt-4 cda-stack-4 rounded-2xl border border-slate-200 bg-slate-50 p-4" data-testid="project-structure-setup-guide">
+                            <div class="cda-form-grid">
                                 <div>
                                     <p class="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Local settings file</p>
-                                    <textarea class="min-h-40 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-700" readonly>@currentSetupGuide.SettingsJson</textarea>
+                                    <textarea class="cda-code-input min-h-40" readonly>@currentSetupGuide.SettingsJson</textarea>
                                 </div>
-                                <div class="space-y-4">
+                                <div class="cda-stack-4">
                                     <div>
                                         <p class="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Install command</p>
-                                        <textarea class="min-h-24 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-700" readonly data-testid="project-structure-setup-command">@currentSetupGuide.PowerShellCommand</textarea>
+                                        <textarea class="cda-code-input min-h-24" readonly data-testid="project-structure-setup-command">@currentSetupGuide.PowerShellCommand</textarea>
                                     </div>
                                     <div>
                                         <p class="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Codex config section</p>
-                                        <textarea class="min-h-28 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-700" readonly>@currentSetupGuide.CodexConfigSnippet</textarea>
+                                        <textarea class="cda-code-input min-h-28" readonly>@currentSetupGuide.CodexConfigSnippet</textarea>
                                     </div>
                                 </div>
                             </div>
@@ -203,7 +203,7 @@
                 </FormSection>
 
                 <FormSection Title="Project overrides" Description="Overrides replace the profile defaults for a specific project when the central API evaluates that project scope.">
-                    <div class="space-y-4" data-testid="project-structure-profile-overrides">
+                    <div class="cda-stack-4" data-testid="project-structure-profile-overrides">
                         @if (profileModel.ProjectOverrides.Count == 0)
                         {
                             <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
@@ -213,12 +213,12 @@
 
                         @foreach (var overrideModel in profileModel.ProjectOverrides)
                         {
-                            <div class="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4" data-testid="project-structure-override-card">
+                            <div class="cda-stack-4 rounded-2xl border border-slate-200 bg-slate-50 p-4" data-testid="project-structure-override-card">
                                 <div class="flex items-start justify-between gap-4">
                                     <div class="grid flex-1 gap-4 md:grid-cols-2">
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Project</label>
-                                            <InputSelect @bind-Value="overrideModel.ProjectId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" @bind-Value:after="() => SyncOverrideProjectName(overrideModel)">
+                                            <label class="cda-field-label">Project</label>
+                                            <InputSelect @bind-Value="overrideModel.ProjectId" class="cda-input" @bind-Value:after="() => SyncOverrideProjectName(overrideModel)">
                                                 <option value="@Guid.Empty">Select project</option>
                                                 @foreach (var projectChoice in projectChoices)
                                                 {
@@ -227,37 +227,37 @@
                                             </InputSelect>
                                         </div>
                                         <div class="flex items-end">
-                                            <label class="flex w-full items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700">
+                                            <label class="cda-inline-option">
                                                 <InputCheckbox @bind-Value="overrideModel.IsEnabled" />
                                                 Override enabled
                                             </label>
                                         </div>
                                     </div>
 
-                                    <button type="button" class="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700" @onclick="@(() => RemoveOverride(overrideModel))">Remove</button>
+                                    <Button Text="Remove" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => RemoveOverride(overrideModel))" />
                                 </div>
 
                                 <div class="grid gap-3 md:grid-cols-2">
                                     @foreach (var capability in CapabilityOptions)
                                     {
-                                        <label class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700">
+                                        <label class="cda-inline-option">
                                             <input type="checkbox" checked="@HasOverrideCapability(overrideModel, capability.Capability)" @onchange="args => ToggleOverrideCapability(overrideModel, capability.Capability, args.Value)" />
                                             @capability.Label
                                         </label>
                                     }
                                 </div>
 
-                                <div class="grid gap-4 md:grid-cols-3">
+                                <div class="cda-form-grid cda-form-grid--triple">
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Auto-approve up to (minutes)</label>
-                                        <InputNumber @bind-Value="overrideModel.AutoApproveMinutes" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Auto-approve up to (minutes)</label>
+                                        <InputNumber @bind-Value="overrideModel.AutoApproveMinutes" class="cda-input" />
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Approval required over (minutes)</label>
-                                        <InputNumber @bind-Value="overrideModel.ApprovalRequiredMinutes" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Approval required over (minutes)</label>
+                                        <InputNumber @bind-Value="overrideModel.ApprovalRequiredMinutes" class="cda-input" />
                                     </div>
                                     <div class="flex items-end">
-                                        <label class="flex w-full items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700">
+                                        <label class="cda-inline-option">
                                             <InputCheckbox @bind-Value="overrideModel.RequireApprovalForAllMutations" />
                                             Require approval for every mutation
                                         </label>
@@ -266,7 +266,7 @@
                             </div>
                         }
 
-                        <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="AddOverride" data-testid="project-structure-profile-add-override">Add project override</button>
+                        <Button Text="Add project override" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="AddOverride" data-testid="project-structure-profile-add-override" />
                     </div>
                 </FormSection>
 
@@ -292,15 +292,15 @@
 
                 <StickyActionFooter StatusLabel="Project-structure MCP profiles" StatusMessage="@profileMessage" StatusTone="success">
                     <SecondaryActions>
-                        <button type="button" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="ResetProfileAsync">Clear</button>
+                        <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetProfileAsync" />
                     </SecondaryActions>
                     <PrimaryActions>
-                        <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" data-testid="project-structure-profile-save">Save profile</button>
+                        <Button Text="Save profile" Type="submit" data-testid="project-structure-profile-save" />
                     </PrimaryActions>
                     <DangerActions>
                         @if (profileModel.Id.HasValue)
                         {
-                            <button type="button" class="inline-flex items-center rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700" @onclick="DeleteProfileAsync">Delete</button>
+                            <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="DeleteProfileAsync" />
                         }
                     </DangerActions>
                 </StickyActionFooter>

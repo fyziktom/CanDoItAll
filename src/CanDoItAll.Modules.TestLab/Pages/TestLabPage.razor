@@ -12,7 +12,7 @@
                     Title="Tests, evidence, and execution results"
                     Description="Track planned coverage, linked cases, evidence artifacts, and the latest execution results for each phase.">
             <Actions>
-                <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">New test plan</button>
+                <Button Text="New test plan" Click="CreateNewAsync" />
             </Actions>
         </PageHeader>
     </Header>
@@ -32,29 +32,29 @@
                                  Count="@($"{FilteredPlans.Count} plan(s)")">
                     <Filters>
                         <FilterBar ResultText="@($"{FilteredPlans.Count} matching plan(s)")">
-                            <input @bind="planSearch" @bind:event="oninput" class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700" placeholder="Search test plans" />
-                            <InputSelect @bind-Value="projectFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                            <input @bind="planSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search test plans" />
+                            <InputSelect @bind-Value="projectFilter" class="cda-input">
                                 <option value="">All projects</option>
                                 @foreach (var project in projects.OrderBy(item => item.Name))
                                 {
                                     <option value="@project.Id.ToString()">@project.Name</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="phaseFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                            <InputSelect @bind-Value="phaseFilter" class="cda-input">
                                 <option value="">All phases</option>
                                 @foreach (var phase in plans.Select(item => item.Phase).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(item => item))
                                 {
                                     <option value="@phase">@phase</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="resultFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                            <InputSelect @bind-Value="resultFilter" class="cda-input">
                                 <option value="">All latest results</option>
                                 @foreach (var status in Enum.GetValues<TestCaseStatus>())
                                 {
                                     <option value="@status.ToString()">@status</option>
                                 }
                             </InputSelect>
-                            <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ResetFilters">Reset</button>
+                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetFilters" />
                         </FilterBar>
                     </Filters>
                 </ListPanelHeader>
@@ -67,13 +67,13 @@
                                 Title="Create the first test plan"
                                 Description="Plans appear here after they have been saved with coverage, evidence, and run data.">
                         <Actions>
-                            <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">New test plan</button>
+                            <Button Text="New test plan" Click="CreateNewAsync" />
                         </Actions>
                     </EmptyState>
                 }
                 else
                 {
-                    <div class="space-y-3">
+                    <div class="cda-stack-3">
                         @foreach (var plan in FilteredPlans)
                         {
                             <SelectionListItem Title="@plan.Title"
@@ -92,9 +92,9 @@
             </ListContent>
 
             <DetailHeader>
-                <div class="space-y-3">
+                <div class="cda-stack-3">
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div class="space-y-1">
+                        <div class="cda-stack-1">
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Plan editor</p>
                             <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
                             <p class="text-sm leading-6 text-slate-600">Coverage, cases, evidence, and run history stay in one detail pane with predictable sections.</p>
@@ -116,10 +116,10 @@
                         @if (string.Equals(detailTab, "overview", StringComparison.Ordinal))
                         {
                             <FormSection Title="Plan overview" Description="Anchor the plan to the correct project and phase before editing cases and evidence.">
-                                <div class="grid gap-4 md:grid-cols-2">
+                                <div class="cda-form-grid">
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Project</label>
-                                        <InputSelect @bind-Value="editor.ProjectId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                        <label class="cda-field-label">Project</label>
+                                        <InputSelect @bind-Value="editor.ProjectId" class="cda-input">
                                             <option value="">None</option>
                                             @foreach (var project in projects)
                                             {
@@ -128,24 +128,24 @@
                                         </InputSelect>
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Phase</label>
-                                        <InputText @bind-Value="editor.Phase" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Phase</label>
+                                        <InputText @bind-Value="editor.Phase" class="cda-input" />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Title</label>
-                                    <InputText @bind-Value="editor.Title" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    <label class="cda-field-label">Title</label>
+                                    <InputText @bind-Value="editor.Title" class="cda-input" />
                                 </div>
 
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Coverage goal</label>
-                                    <InputTextArea @bind-Value="editor.CoverageGoal" class="min-h-24 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    <label class="cda-field-label">Coverage goal</label>
+                                    <InputTextArea @bind-Value="editor.CoverageGoal" class="cda-input cda-input--textarea min-h-24" />
                                 </div>
 
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Playwright spec path</label>
-                                    <InputText @bind-Value="editor.PlaywrightSpecPath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    <label class="cda-field-label">Playwright spec path</label>
+                                    <InputText @bind-Value="editor.PlaywrightSpecPath" class="cda-input" />
                                 </div>
                             </FormSection>
                         }
@@ -161,19 +161,19 @@
                                 }
                                 else
                                 {
-                                    <div class="space-y-3">
+                                    <div class="cda-stack-3">
                                         @foreach (var testCase in editor.Cases)
                                         {
-                                            <div class="grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-4 md:grid-cols-4">
-                                                <InputText @bind-Value="testCase.Name" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                                <InputText @bind-Value="testCase.StoryOrFeature" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                                <InputSelect @bind-Value="testCase.Status" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                            <div class="grid gap-3 cda-panel-card md:grid-cols-4">
+                                                <InputText @bind-Value="testCase.Name" class="cda-input" />
+                                                <InputText @bind-Value="testCase.StoryOrFeature" class="cda-input" />
+                                                <InputSelect @bind-Value="testCase.Status" class="cda-input">
                                                     @foreach (var status in Enum.GetValues<TestCaseStatus>())
                                                     {
                                                         <option value="@status">@status</option>
                                                     }
                                                 </InputSelect>
-                                                <InputText @bind-Value="testCase.Notes" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                                <InputText @bind-Value="testCase.Notes" class="cda-input" />
                                             </div>
                                         }
                                     </div>
@@ -192,14 +192,14 @@
                                 }
                                 else
                                 {
-                                    <div class="space-y-3">
+                                    <div class="cda-stack-3">
                                         @foreach (var evidence in editor.Evidence)
                                         {
-                                            <div class="grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-4 md:grid-cols-4">
-                                                <InputText @bind-Value="evidence.EvidenceLabel" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                                <InputText @bind-Value="evidence.ArtifactPath" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                                <InputText @bind-Value="evidence.EvidenceKind" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                                <InputText @bind-Value="evidence.Notes" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                            <div class="grid gap-3 cda-panel-card md:grid-cols-4">
+                                                <InputText @bind-Value="evidence.EvidenceLabel" class="cda-input" />
+                                                <InputText @bind-Value="evidence.ArtifactPath" class="cda-input" />
+                                                <InputText @bind-Value="evidence.EvidenceKind" class="cda-input" />
+                                                <InputText @bind-Value="evidence.Notes" class="cda-input" />
                                             </div>
                                         }
                                     </div>
@@ -218,19 +218,19 @@
                                 }
                                 else
                                 {
-                                    <div class="space-y-3">
+                                    <div class="cda-stack-3">
                                         @foreach (var run in editor.Runs)
                                         {
-                                            <div class="grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-4 md:grid-cols-4">
-                                                <InputDate @bind-Value="run.ExecutedAtUtc" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                                <InputText @bind-Value="run.Runner" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                                <InputSelect @bind-Value="run.Result" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                            <div class="grid gap-3 cda-panel-card md:grid-cols-4">
+                                                <InputDate @bind-Value="run.ExecutedAtUtc" class="cda-input" />
+                                                <InputText @bind-Value="run.Runner" class="cda-input" />
+                                                <InputSelect @bind-Value="run.Result" class="cda-input">
                                                     @foreach (var status in Enum.GetValues<TestCaseStatus>())
                                                     {
                                                         <option value="@status">@status</option>
                                                     }
                                                 </InputSelect>
-                                                <InputText @bind-Value="run.Summary" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                                <InputText @bind-Value="run.Summary" class="cda-input" />
                                             </div>
                                         }
                                     </div>
@@ -240,10 +240,10 @@
 
                         <StickyActionFooter StatusLabel="Plan save state" StatusMessage="@message" StatusTone="success">
                             <SecondaryActions>
-                                <button type="button" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateNewAsync">Reset</button>
+                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
                             </SecondaryActions>
                             <PrimaryActions>
-                                <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" data-testid="testlab-save-button">Save plan</button>
+                                <Button Text="Save plan" Type="submit" data-testid="testlab-save-button" />
                             </PrimaryActions>
                         </StickyActionFooter>
                     </div>
@@ -295,11 +295,11 @@
 
     private TestCaseStatus? LatestRunResult => editor.Runs.OrderByDescending(run => run.ExecutedAtUtc).FirstOrDefault()?.Result;
 
-    private RenderFragment CaseActions => @<button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="AddCaseAsync">Add case</button>;
+    private RenderFragment CaseActions => @<Button Text="Add case" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="AddCaseAsync" />;
 
-    private RenderFragment EvidenceActions => @<button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="AddEvidenceAsync">Add evidence</button>;
+    private RenderFragment EvidenceActions => @<Button Text="Add evidence" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="AddEvidenceAsync" />;
 
-    private RenderFragment RunActions => @<button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="AddRunAsync">Add run</button>;
+    private RenderFragment RunActions => @<Button Text="Add run" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="AddRunAsync" />;
 
     protected override async Task OnParametersSetAsync() => await LoadAsync(PlanIdQuery, ProjectIdQuery);
 

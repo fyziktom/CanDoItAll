@@ -1,0 +1,41 @@
+@layer components {
+  .cda-page-header {
+    @apply flex flex-col gap-3 border-b border-slate-200 pb-4 md:flex-row md:items-end md:justify-between;
+  }
+
+  .cda-page-header--compact {
+    @apply flex items-center justify-between gap-3 border-none pb-0;
+  }
+
+  .cda-page-header__copy {
+    @apply space-y-1;
+  }
+
+  .cda-page-header__copy--compact {
+    @apply flex min-w-0 items-center gap-3;
+  }
+
+  .cda-page-header__eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.2em] text-slate-500;
+  }
+
+  .cda-page-header__eyebrow--compact {
+    @apply text-[10px] tracking-[0.18em];
+  }
+
+  .cda-page-header__title {
+    @apply text-3xl font-semibold tracking-tight text-slate-950;
+  }
+
+  .cda-page-header__title--compact {
+    @apply text-lg;
+  }
+
+  .cda-page-header__description {
+    @apply max-w-3xl text-sm leading-6 text-slate-600;
+  }
+
+  .cda-page-header__actions {
+    @apply flex flex-shrink-0 flex-wrap items-center gap-2;
+  }
+}

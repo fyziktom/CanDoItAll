@@ -1,0 +1,130 @@
+@layer components {
+  .cda-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .cda-button--size-sm {
+    @apply px-3 py-2 text-xs;
+  }
+
+  .cda-button--size-md {
+    @apply px-4 py-2 text-sm;
+  }
+
+  .cda-button--size-lg {
+    @apply px-4 py-2.5 text-base;
+  }
+
+  .cda-button--filled.cda-button--tone-primary {
+    @apply border-slate-900 bg-slate-900 text-white shadow-sm shadow-slate-300/50 hover:border-slate-800 hover:bg-slate-800;
+  }
+
+  .cda-button--outlined.cda-button--tone-primary {
+    @apply border-slate-300 bg-white text-slate-900 hover:bg-slate-50;
+  }
+
+  .cda-button--filled.cda-button--tone-light,
+  .cda-button--outlined.cda-button--tone-light,
+  .cda-button--filled.cda-button--tone-base,
+  .cda-button--outlined.cda-button--tone-base,
+  .cda-button--filled.cda-button--tone-dark,
+  .cda-button--outlined.cda-button--tone-dark {
+    @apply border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+  }
+
+  .cda-button--filled.cda-button--tone-secondary,
+  .cda-button--outlined.cda-button--tone-secondary {
+    @apply border-fuchsia-300 bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-200;
+  }
+
+  .cda-button--filled.cda-button--tone-success,
+  .cda-button--outlined.cda-button--tone-success {
+    @apply border-emerald-300 bg-emerald-100 text-emerald-800 hover:bg-emerald-200;
+  }
+
+  .cda-button--filled.cda-button--tone-info,
+  .cda-button--outlined.cda-button--tone-info {
+    @apply border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200;
+  }
+
+  .cda-button--filled.cda-button--tone-warning,
+  .cda-button--outlined.cda-button--tone-warning {
+    @apply border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200;
+  }
+
+  .cda-button--filled.cda-button--tone-danger,
+  .cda-button--outlined.cda-button--tone-danger {
+    @apply border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100;
+  }
+
+  .cda-button--text {
+    @apply border-transparent bg-transparent shadow-none;
+  }
+
+  .cda-button--text.cda-button--tone-danger {
+    @apply text-rose-700 hover:bg-rose-50;
+  }
+
+  .cda-button--text.cda-button--tone-secondary {
+    @apply text-fuchsia-800 hover:bg-fuchsia-50;
+  }
+
+  .cda-button--text.cda-button--tone-success {
+    @apply text-emerald-800 hover:bg-emerald-50;
+  }
+
+  .cda-button--text.cda-button--tone-info {
+    @apply text-sky-800 hover:bg-sky-50;
+  }
+
+  .cda-button--text.cda-button--tone-warning {
+    @apply text-amber-900 hover:bg-amber-50;
+  }
+
+  .cda-button--text.cda-button--tone-primary,
+  .cda-button--text.cda-button--tone-light,
+  .cda-button--text.cda-button--tone-base,
+  .cda-button--text.cda-button--tone-dark {
+    @apply text-slate-700 hover:bg-slate-100;
+  }
+
+  .cda-button__spinner {
+    @apply inline-flex h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent;
+  }
+
+  .cda-button__token {
+    @apply text-[10px] font-bold uppercase tracking-[0.18em];
+  }
+
+  .cda-button--quick {
+    @apply h-9 w-11 justify-center px-0 text-[10px] font-bold uppercase tracking-[0.18em];
+  }
+
+  .zy-card-button {
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .zy-card-button--ghost {
+    @apply bg-transparent shadow-none;
+  }
+
+  .zy-card-button--warn {
+    @apply border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn.ghost {
+    @apply bg-transparent shadow-none;
+  }
+
+  .btn.xs {
+    @apply px-3 py-2 text-xs;
+  }
+
+  .btn.primary {
+    @apply border-slate-900 bg-slate-900 text-white hover:border-slate-800 hover:bg-slate-800;
+  }
+}

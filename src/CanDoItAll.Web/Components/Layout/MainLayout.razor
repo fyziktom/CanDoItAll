@@ -51,11 +51,11 @@
     <TopBar>
         <div class="flex items-center justify-between gap-3">
             <div class="flex min-w-0 items-center gap-2">
-                <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-500">@ActiveWorkspaceTitle</span>
+                <span class="cda-shell-pill cda-shell-pill--neutral">@ActiveWorkspaceTitle</span>
                 <h2 class="text-sm font-semibold tracking-tight text-slate-950">@ActiveNavigation.Title</h2>
                 @if (ShellMode == AppShellMode.FocusWorkbench && !string.IsNullOrWhiteSpace(ActiveProjectTitle))
                 {
-                    <span class="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-sky-700">@ActiveProjectTitle</span>
+                    <span class="cda-shell-pill cda-shell-pill--info">@ActiveProjectTitle</span>
                 }
                 <span class="hidden truncate text-xs text-slate-400 lg:inline">@CurrentRouteDisplay</span>
                 @if (!string.IsNullOrWhiteSpace(ActivePhaseTitle))
@@ -95,17 +95,17 @@
             {
                 <SectionCard Title="Workbench" Description="Internal tabs now track artifact identity, recent closures, and contextual restore instead of flat route launches.">
                     <div class="grid gap-3">
-                        <div class="rounded-2xl bg-slate-50 p-3">
+                        <div class="cda-shell-stat-card">
                             <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Current route</p>
                             <p class="mt-2 text-sm font-medium text-slate-900">@CurrentRouteDisplay</p>
                         </div>
-                        <div class="rounded-2xl bg-slate-50 p-3">
+                        <div class="cda-shell-stat-card">
                             <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Active tab</p>
                             <p class="mt-2 text-sm font-medium text-slate-900">@ActiveTabTitle</p>
                         </div>
                         @if (Workbench.LastRestoreReport is not null)
                         {
-                            <div class="rounded-2xl bg-slate-50 p-3">
+                            <div class="cda-shell-stat-card">
                                 <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Restore report</p>
                                 <p class="mt-2 text-sm font-medium text-slate-900">@($"{Workbench.LastRestoreReport.RestoredCount} tab(s) restored")</p>
                                 @if (Workbench.LastRestoreReport.Failures.Count > 0)
@@ -145,7 +145,7 @@
                         }
                         else
                         {
-                            <div class="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+                            <div class="cda-shell-stat-card text-sm text-slate-700">
                                 <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Target</p>
                                 <p class="mt-2 font-semibold text-slate-900">@TuningCoordinator.CurrentRequest.ComponentName</p>
                                 <p class="mt-1 text-xs text-slate-500">@TuningCoordinator.CurrentRequest.CapsuleKey</p>
@@ -153,9 +153,9 @@
                             </div>
 
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Instruction</label>
+                                <label class="cda-field-label">Instruction</label>
                                 <InputTextArea @bind-Value="tuningInstruction"
-                                               class="min-h-28 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                                               class="cda-input cda-input--textarea min-h-28"
                                                data-testid="tuning-instruction" />
                             </div>
 
@@ -163,15 +163,14 @@
                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                     <label class="text-sm font-medium text-slate-700">Attachments</label>
                                     <div class="flex flex-wrap gap-2">
-                                        <label class="cursor-pointer rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">
+                                        <label class="cda-shell-upload">
                                             Add image
                                             <InputFile class="hidden" accept="image/*" OnChange="HandleTuningFilesSelectedAsync" />
                                         </label>
-                                        <button type="button"
-                                                class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
-                                                @onclick="PasteClipboardImageAsync">
-                                            Paste clipboard image
-                                        </button>
+                                        <Button ButtonStyle="ButtonStyle.Light"
+                                                Text="Paste clipboard image"
+                                                Size="ButtonSize.Small"
+                                                Click="PasteClipboardImageAsync" />
                                     </div>
                                 </div>
 
@@ -184,7 +183,7 @@
                                     <div class="space-y-2">
                                         @foreach (var attachment in tuningAttachments)
                                         {
-                                            <div class="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                                            <div class="cda-shell-attachment">
                                                 <span>@attachment.FileName (@attachment.Source)</span>
                                                 <button type="button" class="font-semibold text-rose-700" @onclick="() => RemoveTuningAttachment(attachment.FileName)">Remove</button>
                                             </div>
@@ -194,26 +193,19 @@
                             </div>
 
                             <div class="flex flex-wrap gap-2">
-                                <button type="button"
-                                        class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                                        disabled="@tuningBusy"
+                                <Button Text="Send request"
+                                        Disabled="@tuningBusy"
                                         data-testid="tuning-send"
-                                        @onclick="SendTuningRequestAsync">
-                                    Send request
-                                </button>
-                                <button type="button"
-                                        class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
-                                        @onclick="ClearTuningRequest">
-                                    Clear
-                                </button>
+                                        Click="SendTuningRequestAsync" />
+                                <Button ButtonStyle="ButtonStyle.Light"
+                                        Text="Clear"
+                                        Click="ClearTuningRequest" />
                                 @if (pendingTuningRequest is { Status: "AwaitingApproval" })
                                 {
-                                    <button type="button"
-                                            class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                            disabled="@tuningBusy"
-                                            @onclick="SubmitPendingTuningRequestAsync">
-                                        Submit after review
-                                    </button>
+                                    <Button ButtonStyle="ButtonStyle.Warning"
+                                            Text="Submit after review"
+                                            Disabled="@tuningBusy"
+                                            Click="SubmitPendingTuningRequestAsync" />
                                 }
                             </div>
                         }
@@ -225,7 +217,7 @@
 
                         @if (pendingTuningRequest is not null)
                         {
-                            <div class="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+                            <div class="cda-shell-stat-card text-sm text-slate-700">
                                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Latest request</p>
                                 <p class="mt-2 font-semibold text-slate-900">@pendingTuningRequest.ComponentName</p>
                                 <p class="mt-1 text-xs text-slate-500">@pendingTuningRequest.Status</p>

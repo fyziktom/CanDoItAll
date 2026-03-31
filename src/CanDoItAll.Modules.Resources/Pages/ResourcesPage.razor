@@ -14,7 +14,7 @@
                     Title="Typed project resources"
                     Description="Register repositories, folders, scripts, links, and secret-backed connectors through one shared registry.">
             <Actions>
-                <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">New resource</button>
+                <Button Text="New resource" Click="CreateNewAsync" />
             </Actions>
         </PageHeader>
     </Header>
@@ -34,29 +34,29 @@
                                  Count="@($"{FilteredResources.Count} item(s)")">
                     <Filters>
                         <FilterBar ResultText="@($"{FilteredResources.Count} matching resource(s)")">
-                            <input @bind="resourceSearch" @bind:event="oninput" class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700" placeholder="Search resources" />
-                            <InputSelect @bind-Value="projectFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                            <input @bind="resourceSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search resources" />
+                            <InputSelect @bind-Value="projectFilter" class="cda-input">
                                 <option value="">All projects</option>
                                 @foreach (var project in projects.OrderBy(item => item.Name))
                                 {
                                     <option value="@project.Id.ToString()">@project.Name</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="kindFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                            <InputSelect @bind-Value="kindFilter" class="cda-input">
                                 <option value="">All kinds</option>
                                 @foreach (var kind in Enum.GetValues<ResourceKind>())
                                 {
                                     <option value="@kind.ToString()">@kind</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="validationFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                            <InputSelect @bind-Value="validationFilter" class="cda-input">
                                 <option value="">All validation states</option>
                                 @foreach (var status in Enum.GetValues<ResourceValidationStatus>())
                                 {
                                     <option value="@status.ToString()">@status</option>
                                 }
                             </InputSelect>
-                            <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ResetFilters">Reset</button>
+                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetFilters" />
                         </FilterBar>
                     </Filters>
                 </ListPanelHeader>
@@ -69,13 +69,13 @@
                                 Title="Register the first typed resource"
                                 Description="Resources appear here once they have been saved through the shared editor.">
                         <Actions>
-                            <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">New resource</button>
+                            <Button Text="New resource" Click="CreateNewAsync" />
                         </Actions>
                     </EmptyState>
                 }
                 else
                 {
-                    <div class="space-y-3">
+                    <div class="cda-stack-3">
                         @foreach (var resource in FilteredResources)
                         {
                             <SelectionListItem Title="@resource.Name"
@@ -94,9 +94,9 @@
             </ListContent>
 
             <DetailHeader>
-                <div class="space-y-3">
+                <div class="cda-stack-3">
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div class="space-y-1">
+                        <div class="cda-stack-1">
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Resource editor</p>
                             <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
                             <p class="text-sm leading-6 text-slate-600">Keep ownership, connector location, and validation state together in one predictable detail pane.</p>
@@ -122,10 +122,10 @@
                 <EditForm Model="editor" OnValidSubmit="SaveAsync">
                     <div class="flex min-h-full flex-col gap-6">
                         <FormSection Title="Identity and ownership" Description="Link the resource to the correct project and choose its typed shape before editing connector fields.">
-                            <div class="grid gap-4 md:grid-cols-2">
+                            <div class="cda-form-grid">
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Project</label>
-                                    <InputSelect @bind-Value="editor.ProjectId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-project-select">
+                                    <label class="cda-field-label">Project</label>
+                                    <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="resource-project-select">
                                         <option value="">Select a project</option>
                                         @foreach (var project in projects)
                                         {
@@ -134,8 +134,8 @@
                                     </InputSelect>
                                 </div>
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Kind</label>
-                                    <InputSelect @bind-Value="editor.ResourceKind" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-kind-select">
+                                    <label class="cda-field-label">Kind</label>
+                                    <InputSelect @bind-Value="editor.ResourceKind" class="cda-input" data-testid="resource-kind-select">
                                         @foreach (var kind in Enum.GetValues<ResourceKind>())
                                         {
                                             <option value="@kind">@kind</option>
@@ -144,14 +144,14 @@
                                 </div>
                             </div>
 
-                            <div class="grid gap-4 md:grid-cols-2">
+                            <div class="cda-form-grid">
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
-                                    <InputText @bind-Value="editor.Name" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-name-input" />
+                                    <label class="cda-field-label">Name</label>
+                                    <InputText @bind-Value="editor.Name" class="cda-input" data-testid="resource-name-input" />
                                 </div>
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Linked secret</label>
-                                    <InputSelect @bind-Value="editor.LinkedSecretId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                    <label class="cda-field-label">Linked secret</label>
+                                    <InputSelect @bind-Value="editor.LinkedSecretId" class="cda-input">
                                         <option value="">None</option>
                                         @foreach (var secret in secrets)
                                         {
@@ -166,140 +166,140 @@
                             @switch (editor.ResourceKind)
                             {
                                 case ResourceKind.Repository:
-                                    <div class="grid gap-4 md:grid-cols-3">
+                                    <div class="cda-form-grid cda-form-grid--triple">
                                         <div class="md:col-span-2">
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Repository URL</label>
-                                            <InputText @bind-Value="editor.RepositoryUrl" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                            <label class="cda-field-label">Repository URL</label>
+                                            <InputText @bind-Value="editor.RepositoryUrl" class="cda-input" data-testid="resource-primary-input" />
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Default branch</label>
-                                            <InputText @bind-Value="editor.DefaultBranch" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                            <label class="cda-field-label">Default branch</label>
+                                            <InputText @bind-Value="editor.DefaultBranch" class="cda-input" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Relative path</label>
-                                        <InputText @bind-Value="editor.RelativePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Relative path</label>
+                                        <InputText @bind-Value="editor.RelativePath" class="cda-input" />
                                     </div>
                                     break;
                                 case ResourceKind.Folder:
-                                    <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="cda-form-grid">
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Folder path</label>
-                                            <InputText @bind-Value="editor.FolderPath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                            <label class="cda-field-label">Folder path</label>
+                                            <InputText @bind-Value="editor.FolderPath" class="cda-input" data-testid="resource-primary-input" />
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
-                                            <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                            <label class="cda-field-label">Working directory</label>
+                                            <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
                                         </div>
                                     </div>
                                     break;
                                 case ResourceKind.File:
-                                    <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="cda-form-grid">
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">File path</label>
-                                            <InputText @bind-Value="editor.FilePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                            <label class="cda-field-label">File path</label>
+                                            <InputText @bind-Value="editor.FilePath" class="cda-input" data-testid="resource-primary-input" />
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
-                                            <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                            <label class="cda-field-label">Working directory</label>
+                                            <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
                                         </div>
                                     </div>
                                     break;
                                 case ResourceKind.WebLink:
                                     <div class="grid gap-4">
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">URL</label>
-                                            <InputText @bind-Value="editor.WebUrl" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                            <label class="cda-field-label">URL</label>
+                                            <InputText @bind-Value="editor.WebUrl" class="cda-input" data-testid="resource-primary-input" />
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Title hint</label>
-                                            <InputText @bind-Value="editor.UrlTitleHint" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                            <label class="cda-field-label">Title hint</label>
+                                            <InputText @bind-Value="editor.UrlTitleHint" class="cda-input" />
                                         </div>
                                     </div>
                                     break;
                                 case ResourceKind.Ftp:
                                     <div class="grid gap-4 md:grid-cols-4">
                                         <div class="md:col-span-2">
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Host</label>
-                                            <InputText @bind-Value="editor.Host" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                            <label class="cda-field-label">Host</label>
+                                            <InputText @bind-Value="editor.Host" class="cda-input" data-testid="resource-primary-input" />
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Port</label>
-                                            <InputNumber @bind-Value="editor.Port" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                            <label class="cda-field-label">Port</label>
+                                            <InputNumber @bind-Value="editor.Port" class="cda-input" />
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">User</label>
-                                            <InputText @bind-Value="editor.UserName" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                            <label class="cda-field-label">User</label>
+                                            <InputText @bind-Value="editor.UserName" class="cda-input" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Remote path</label>
-                                        <InputText @bind-Value="editor.RemotePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Remote path</label>
+                                        <InputText @bind-Value="editor.RemotePath" class="cda-input" />
                                     </div>
                                     break;
                                 case ResourceKind.Ssh:
                                     <div class="grid gap-4 md:grid-cols-4">
                                         <div class="md:col-span-2">
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Host</label>
-                                            <InputText @bind-Value="editor.Host" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                            <label class="cda-field-label">Host</label>
+                                            <InputText @bind-Value="editor.Host" class="cda-input" data-testid="resource-primary-input" />
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Port</label>
-                                            <InputNumber @bind-Value="editor.Port" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                            <label class="cda-field-label">Port</label>
+                                            <InputNumber @bind-Value="editor.Port" class="cda-input" />
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">User</label>
-                                            <InputText @bind-Value="editor.UserName" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                            <label class="cda-field-label">User</label>
+                                            <InputText @bind-Value="editor.UserName" class="cda-input" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
-                                        <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Working directory</label>
+                                        <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
                                     </div>
                                     break;
                                 case ResourceKind.PowerShellScript:
-                                    <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="cda-form-grid">
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Script path</label>
-                                            <InputText @bind-Value="editor.ScriptPath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                            <label class="cda-field-label">Script path</label>
+                                            <InputText @bind-Value="editor.ScriptPath" class="cda-input" data-testid="resource-primary-input" />
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Working directory</label>
-                                            <InputText @bind-Value="editor.WorkingDirectory" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                            <label class="cda-field-label">Working directory</label>
+                                            <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Arguments</label>
-                                        <InputText @bind-Value="editor.ScriptArguments" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Arguments</label>
+                                        <InputText @bind-Value="editor.ScriptArguments" class="cda-input" />
                                     </div>
                                     break;
                                 case ResourceKind.DockerCompose:
-                                    <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="cda-form-grid">
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Compose file</label>
-                                            <InputText @bind-Value="editor.ComposeFilePath" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                            <label class="cda-field-label">Compose file</label>
+                                            <InputText @bind-Value="editor.ComposeFilePath" class="cda-input" data-testid="resource-primary-input" />
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Service name</label>
-                                            <InputText @bind-Value="editor.ComposeService" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                            <label class="cda-field-label">Service name</label>
+                                            <InputText @bind-Value="editor.ComposeService" class="cda-input" />
                                         </div>
                                     </div>
                                     break;
                                 case ResourceKind.SecretLink:
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Secret purpose</label>
-                                        <InputText @bind-Value="editor.SecretPurpose" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                        <label class="cda-field-label">Secret purpose</label>
+                                        <InputText @bind-Value="editor.SecretPurpose" class="cda-input" data-testid="resource-primary-input" />
                                     </div>
                                     break;
                                 case ResourceKind.PromptLink:
-                                    <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="cda-form-grid">
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Prompt reference</label>
-                                            <InputText @bind-Value="editor.PromptReference" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="resource-primary-input" />
+                                            <label class="cda-field-label">Prompt reference</label>
+                                            <InputText @bind-Value="editor.PromptReference" class="cda-input" data-testid="resource-primary-input" />
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-slate-700">Prompt title hint</label>
-                                            <InputText @bind-Value="editor.PromptTitleHint" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                            <label class="cda-field-label">Prompt title hint</label>
+                                            <InputText @bind-Value="editor.PromptTitleHint" class="cda-input" />
                                         </div>
                                     </div>
                                     break;
@@ -313,14 +313,14 @@
 
                         <FormSection Title="Metadata and capabilities" Description="Keep validation, sensitivity, and handling flags explicit on every resource record.">
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-                                <InputTextArea @bind-Value="editor.Description" class="min-h-24 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                <label class="cda-field-label">Description</label>
+                                <InputTextArea @bind-Value="editor.Description" class="cda-input cda-input--textarea min-h-24" />
                             </div>
 
-                            <div class="grid gap-4 md:grid-cols-2">
+                            <div class="cda-form-grid">
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Validation</label>
-                                    <InputSelect @bind-Value="editor.ValidationStatus" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                    <label class="cda-field-label">Validation</label>
+                                    <InputSelect @bind-Value="editor.ValidationStatus" class="cda-input">
                                         @foreach (var status in Enum.GetValues<ResourceValidationStatus>())
                                         {
                                             <option value="@status">@status</option>
@@ -328,8 +328,8 @@
                                     </InputSelect>
                                 </div>
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Sensitivity</label>
-                                    <InputSelect @bind-Value="editor.Sensitivity" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                    <label class="cda-field-label">Sensitivity</label>
+                                    <InputSelect @bind-Value="editor.Sensitivity" class="cda-input">
                                         @foreach (var sensitivity in Enum.GetValues<ResourceSensitivity>())
                                         {
                                             <option value="@sensitivity">@sensitivity</option>
@@ -339,22 +339,22 @@
                             </div>
 
                             <div class="grid gap-3 md:grid-cols-2">
-                                <label class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="editor.SupportsPreview" /> Preview capable</label>
-                                <label class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="editor.SupportsIndexing" /> Indexing capable</label>
+                                <label class="cda-inline-option"><InputCheckbox @bind-Value="editor.SupportsPreview" /> Preview capable</label>
+                                <label class="cda-inline-option"><InputCheckbox @bind-Value="editor.SupportsIndexing" /> Indexing capable</label>
                             </div>
                         </FormSection>
 
                         <StickyActionFooter StatusLabel="Resource save state" StatusMessage="@message" StatusTone="success">
                             <SecondaryActions>
-                                <button type="button" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateNewAsync">Reset</button>
+                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
                             </SecondaryActions>
                             <PrimaryActions>
-                                <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" data-testid="resource-save-button">Save resource</button>
+                                <Button Text="Save resource" Type="submit" data-testid="resource-save-button" />
                             </PrimaryActions>
                             <DangerActions>
                                 @if (editor.Id.HasValue)
                                 {
-                                    <button type="button" class="inline-flex items-center rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700" @onclick="DeleteAsync">Delete</button>
+                                    <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
                                 }
                             </DangerActions>
                         </StickyActionFooter>

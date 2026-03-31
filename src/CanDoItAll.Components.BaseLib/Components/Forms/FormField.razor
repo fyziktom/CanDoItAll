@@ -1,12 +1,12 @@
 @namespace CanDoItAll.Components.BaseLib
 @inherits StyledComponentBase
 
-<div @attributes='BuildAttributes(BuildClass("rz-form-field flex flex-col gap-2", ContainerClass))'>
+<div @attributes='BuildAttributes(BuildClass("rz-form-field cda-form-field", ContainerClass))'>
     @if (!string.IsNullOrWhiteSpace(Text))
     {
-        <label class="@BuildClass("text-xs font-semibold uppercase tracking-wide text-slate-500", LabelClass)">@Text</label>
+        <label class="@BuildClass("cda-form-field__label", LabelClass)">@Text</label>
     }
-    <div class="@BuildClass("flex items-center gap-2", ContentClass)">
+    <div class="@BuildClass("cda-form-field__content", ContentClass)">
         @if (Start is not null)
         {
             <div class="rz-form-field-start">@Start</div>

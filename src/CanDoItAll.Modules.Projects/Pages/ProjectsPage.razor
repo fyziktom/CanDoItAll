@@ -32,27 +32,27 @@ Title="Project workspace">
          style="height: calc(100vh - 15rem);">
 <div class="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 xl:flex-row xl:items-center xl:justify-between"
      data-testid="projects-command-bar">
-<div class="min-w-0 space-y-3">
+<div class="min-w-0 cda-stack-3">
 <div class="flex flex-wrap items-center gap-2">
 <h2 class="text-lg font-semibold tracking-tight text-slate-950">Portfolio board</h2>
 <StatusBadge Tone="info" Text="@($"{FilteredProjectSummaries.Count} visible")" />
 </div>
 <p class="max-w-3xl text-sm leading-6 text-slate-600">Search, inspect, edit, and jump into dashboard, structure, or calendar from one compact board without losing the project list.</p>
-<div class="flex flex-wrap items-center gap-2 text-xs">
-<span class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 font-medium text-sky-700">
-<span class="text-[10px] font-bold uppercase tracking-[0.18em]">ACT</span>
+<div class="cda-stat-pill-row">
+<span class="cda-stat-pill cda-stat-pill--info">
+<span class="cda-stat-pill__token">ACT</span>
 <span>@projectSummaries.Count(project => project.Status == ProjectStatus.Active) active</span>
 </span>
-<span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-600">
-<span class="text-[10px] font-bold uppercase tracking-[0.18em]">DRF</span>
+<span class="cda-stat-pill cda-stat-pill--neutral">
+<span class="cda-stat-pill__token">DRF</span>
 <span>@projectSummaries.Count(project => project.Status == ProjectStatus.Draft) draft</span>
 </span>
-<span class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 font-medium text-amber-700">
-<span class="text-[10px] font-bold uppercase tracking-[0.18em]">UPD</span>
+<span class="cda-stat-pill cda-stat-pill--warning">
+<span class="cda-stat-pill__token">UPD</span>
 <span>@LatestUpdatedProjectLabel</span>
 </span>
-<span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600">
-<span class="text-[10px] font-bold uppercase tracking-[0.18em]">NOTE</span>
+<span class="cda-stat-pill cda-stat-pill--plain">
+<span class="cda-stat-pill__token">NOTE</span>
 <span>@LatestUpdatedProjectHelper</span>
 </span>
 </div>
@@ -60,80 +60,79 @@ Title="Project workspace">
 
 <div class="flex w-full max-w-2xl flex-col gap-2">
 <div class="flex flex-wrap items-center justify-end gap-2">
-<button type="button"
-class="inline-flex h-9 items-center gap-2 rounded-xl bg-slate-900 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+<Button Class="h-9 px-3"
 data-testid="projects-new-button"
-@onclick="OpenNewProjectAsync">
+Click="OpenNewProjectAsync">
 <span aria-hidden="true" class="text-base font-bold leading-none">+</span>
 <span>New</span>
-</button>
-<button type="button"
-class="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-@onclick="NavigateHome">
+</Button>
+<Button ButtonStyle="ButtonStyle.Light"
+Class="h-9 px-3"
+Click="NavigateHome">
 <span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">DB</span>
 <span>Dashboard</span>
-</button>
+</Button>
 </div>
-<label class="relative block min-w-0 flex-1">
-<span class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+<label class="cda-prefixed-field">
+<span class="cda-prefixed-field__prefix">
 FIND
 </span>
 <input @bind="projectSearch"
 @bind:event="oninput"
-class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 pl-14 text-sm text-slate-700 shadow-sm"
+class="cda-input cda-input--toolbar pl-14"
 placeholder="Search by name or current phase" />
 </label>
 <div class="flex flex-wrap items-center gap-2">
-<label class="relative min-w-[12rem] flex-1 sm:flex-none">
-<span class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+<label class="cda-prefixed-field min-w-[12rem] sm:flex-none">
+<span class="cda-prefixed-field__prefix">
 STATUS
 </span>
-<InputSelect @bind-Value="statusFilter" class="w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 py-2 pl-[4.6rem] pr-9 text-sm text-slate-700 shadow-sm">
+<InputSelect @bind-Value="statusFilter" class="cda-input cda-input--toolbar appearance-none pl-[4.6rem] pr-9">
 <option value="">All statuses</option>
 @foreach (var status in Enum.GetValues<ProjectStatus>())
 {
 <option value="@status.ToString()">@status</option>
 }
 </InputSelect>
-<span class="pointer-events-none absolute inset-y-0 right-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+<span class="cda-prefixed-field__suffix">
 V
 </span>
 </label>
-<label class="relative min-w-[14rem] flex-1 sm:flex-none">
-<span class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+<label class="cda-prefixed-field min-w-[14rem] sm:flex-none">
+<span class="cda-prefixed-field__prefix">
 PROJECT
 </span>
-<InputSelect @bind-Value="hierarchyFilterProjectId" class="w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 py-2 pl-[4.9rem] pr-9 text-sm text-slate-700 shadow-sm" data-testid="hierarchy-filter-project">
+<InputSelect @bind-Value="hierarchyFilterProjectId" class="cda-input cda-input--toolbar appearance-none pl-[4.9rem] pr-9" data-testid="hierarchy-filter-project">
 <option value="">Any project</option>
 @foreach (var project in projectSummaries.OrderBy(project => project.Name))
 {
 <option value="@project.Id">@project.Name</option>
 }
 </InputSelect>
-<span class="pointer-events-none absolute inset-y-0 right-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+<span class="cda-prefixed-field__suffix">
 V
 </span>
 </label>
-<label class="relative min-w-[12rem] flex-1 sm:flex-none">
-<span class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+<label class="cda-prefixed-field min-w-[12rem] sm:flex-none">
+<span class="cda-prefixed-field__prefix">
 LINK
 </span>
-<InputSelect @bind-Value="hierarchyFilterMode" class="w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 py-2 pl-[3.8rem] pr-9 text-sm text-slate-700 shadow-sm" data-testid="hierarchy-filter-mode">
+<InputSelect @bind-Value="hierarchyFilterMode" class="cda-input cda-input--toolbar appearance-none pl-[3.8rem] pr-9" data-testid="hierarchy-filter-mode">
 <option value="">All links</option>
 <option value="children">Subprojects</option>
 <option value="parents">Parents</option>
 <option value="related">Related</option>
 </InputSelect>
-<span class="pointer-events-none absolute inset-y-0 right-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+<span class="cda-prefixed-field__suffix">
 V
 </span>
 </label>
-<button type="button"
-class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-@onclick="ResetFilters">
+<Button ButtonStyle="ButtonStyle.Light"
+Class="h-10 px-3"
+Click="ResetFilters">
 <span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">RST</span>
 <span>Reset</span>
-</button>
+</Button>
 </div>
 <p class="text-xs leading-5 text-slate-500">@HierarchyFilterHelper</p>
 </div>
@@ -146,11 +145,7 @@ class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-300 bg
 Title="Adjust the filters or start a new project"
 Description="When projects match the current filters, they appear here as compact cards with overview and dashboard actions.">
 <Actions>
-<button type="button"
-class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-@onclick="OpenNewProjectAsync">
-New project
-</button>
+<Button Text="New project" Click="OpenNewProjectAsync" />
 </Actions>
 </EmptyState>
 }
@@ -177,63 +172,65 @@ else
 </div>
 
 <div class="mt-4 grid gap-2 sm:grid-cols-4">
-<div class="rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5">
-<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Phases</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@project.PhaseCount</p>
+<div class="cda-metric-card">
+<p class="cda-metric-card__label">Phases</p>
+<p class="cda-metric-card__value">@project.PhaseCount</p>
 </div>
-<div class="rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5">
-<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Parents</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@project.ParentCount</p>
+<div class="cda-metric-card">
+<p class="cda-metric-card__label">Parents</p>
+<p class="cda-metric-card__value">@project.ParentCount</p>
 </div>
-<div class="rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5">
-<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Subprojects</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@project.ChildCount</p>
+<div class="cda-metric-card">
+<p class="cda-metric-card__label">Subprojects</p>
+<p class="cda-metric-card__value">@project.ChildCount</p>
 </div>
-<div class="rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5">
-<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Updated</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@project.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
+<div class="cda-metric-card">
+<p class="cda-metric-card__label">Updated</p>
+<p class="cda-metric-card__value">@project.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
 </div>
 </div>
 
 <div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/70 pt-3">
 <div class="flex flex-wrap items-center gap-2">
-<button type="button"
-class="inline-flex h-9 items-center gap-2 rounded-xl bg-slate-900 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+<Button Class="h-9 px-3"
 data-testid="project-card-details-button"
-@onclick="@(() => OpenProjectPreviewAsync(project.Id))">
+Click="@(() => OpenProjectPreviewAsync(project.Id))">
 <span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">VIEW</span>
 <span>View</span>
-</button>
-<button type="button"
-class="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+</Button>
+<Button ButtonStyle="ButtonStyle.Light"
+Class="h-9 px-3"
 data-testid="project-card-subprojects-button"
-@onclick="@(() => OpenHierarchyModalAsync(project.Id))">
+Click="@(() => OpenHierarchyModalAsync(project.Id))">
 <span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">SUB</span>
 <span>Subprojects</span>
-</button>
+</Button>
 </div>
 <div class="flex flex-wrap items-center gap-1.5">
-<button type="button"
-class="@GetQuickActionButtonCss()"
+<Button ButtonStyle="ButtonStyle.Light"
+Size="ButtonSize.Small"
+Class="cda-button--quick"
 title="Open dashboard tab"
 aria-label="Open dashboard tab"
-@onclick="@(() => OpenProjectDashboard(project.Id))">
+Click="@(() => OpenProjectDashboard(project.Id))">
 <span aria-hidden="true">DB</span>
-</button>
-<button type="button"
-class="@GetQuickActionButtonCss()"
+</Button>
+<Button ButtonStyle="ButtonStyle.Light"
+Size="ButtonSize.Small"
+Class="cda-button--quick"
 title="Open structure"
 aria-label="Open structure"
-@onclick="@(() => OpenStructure(project.Id))">
+Click="@(() => OpenStructure(project.Id))">
 <span aria-hidden="true">ST</span>
-</button>
-<button type="button"
-class="@GetQuickActionButtonCss()"
+</Button>
+<Button ButtonStyle="ButtonStyle.Light"
+Size="ButtonSize.Small"
+Class="cda-button--quick"
 title="Open calendar"
 aria-label="Open calendar"
-@onclick="@(() => OpenCalendar(project.Id))">
+Click="@(() => OpenCalendar(project.Id))">
 <span aria-hidden="true">CAL</span>
-</button>
+</Button>
 </div>
 </div>
 </article>
@@ -252,10 +249,10 @@ aria-label="Open calendar"
 
 @if (modalMode == ProjectModalMode.Editor)
 {
-<EditForm Model="editor" OnValidSubmit="SaveAsync" class="relative flex w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/25" style="z-index: 141; max-height: min(92vh, calc(100% - 2rem));" data-testid="projects-editor-modal" @onclick:stopPropagation="true">
+<EditForm Model="editor" OnValidSubmit="SaveAsync" class="cda-modal-shell" style="z-index: 141; max-height: min(92vh, calc(100% - 2rem));" data-testid="projects-editor-modal" @onclick:stopPropagation="true">
 <div class="border-b border-slate-200 px-6 py-5">
 <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-<div class="space-y-2">
+<div class="cda-stack-2">
 <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Project editor</p>
 <h2 class="text-2xl font-semibold tracking-tight text-slate-950">@(editor.Id.HasValue ? editor.Name : "New project")</h2>
 <p class="max-w-3xl text-sm leading-6 text-slate-600">Use the editor only when you need to shape the project deeply. The main page stays dedicated to scanning cards and opening focused tabs.</p>
@@ -264,17 +261,13 @@ aria-label="Open calendar"
 <div class="flex flex-wrap items-center gap-2">
 @if (editor.Id.HasValue)
 {
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="SwitchToOverview">
-Back to details
-</button>
+<Button ButtonStyle="ButtonStyle.Light"
+Text="Back to details"
+Click="SwitchToOverview" />
 }
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="CloseProjectModalAsync">
-Close
-</button>
+<Button ButtonStyle="ButtonStyle.Light"
+Text="Close"
+Click="CloseProjectModalAsync" />
 </div>
 </div>
 
@@ -292,7 +285,7 @@ SelectedKeyChanged="HandleWizardTabChanged" />
 </div>
 
 <div class="flex-1 overflow-y-auto px-6 py-6">
-<div class="space-y-6">
+<div class="cda-stack-4">
 <SummaryTiles>
 <SummaryTile Label="Step" Value="@($"{wizardStep + 1} / {wizardSteps.Length}")" HelperText="@wizardSteps[wizardStep]" Tone="info" />
 <SummaryTile Label="Current phase" Value="@(string.IsNullOrWhiteSpace(editor.CurrentPhase) ? "Unset" : editor.CurrentPhase)" HelperText="The phase the workspace should foreground." />
@@ -307,19 +300,19 @@ case 0:
 Description="Frame the project clearly before moving into phases and downstream workbench actions.">
 <div class="grid gap-4 lg:grid-cols-2">
 <div>
-<label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
-<InputText @bind-Value="editor.Name" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="project-name-input" />
+<label class="cda-field-label">Name</label>
+<InputText @bind-Value="editor.Name" class="cda-input" data-testid="project-name-input" />
 </div>
 <div>
-<label class="mb-1 block text-sm font-medium text-slate-700">Current phase</label>
-<InputText @bind-Value="editor.CurrentPhase" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+<label class="cda-field-label">Current phase</label>
+<InputText @bind-Value="editor.CurrentPhase" class="cda-input" />
 </div>
 </div>
 
 <div class="grid gap-4 lg:grid-cols-2">
 <div>
-<label class="mb-1 block text-sm font-medium text-slate-700">Status</label>
-<InputSelect @bind-Value="editor.Status" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+<label class="cda-field-label">Status</label>
+<InputSelect @bind-Value="editor.Status" class="cda-input">
 @foreach (var status in Enum.GetValues<ProjectStatus>())
 {
 <option value="@status">@status</option>
@@ -327,19 +320,19 @@ Description="Frame the project clearly before moving into phases and downstream 
 </InputSelect>
 </div>
 <div>
-<label class="mb-1 block text-sm font-medium text-slate-700">Target date</label>
-<InputDate @bind-Value="editor.TargetDateUtc" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+<label class="cda-field-label">Target date</label>
+<InputDate @bind-Value="editor.TargetDateUtc" class="cda-input" />
 </div>
 </div>
 
 <div>
-<label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-<InputTextArea @bind-Value="editor.Description" class="min-h-28 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+<label class="cda-field-label">Description</label>
+<InputTextArea @bind-Value="editor.Description" class="cda-input cda-input--textarea min-h-28" />
 </div>
 
 <div>
-<label class="mb-1 block text-sm font-medium text-slate-700">Objective</label>
-<InputTextArea @bind-Value="editor.Objective" class="min-h-28 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+<label class="cda-field-label">Objective</label>
+<InputTextArea @bind-Value="editor.Objective" class="cda-input cda-input--textarea min-h-28" />
 </div>
 </FormSection>
 break;
@@ -354,36 +347,31 @@ Actions="PhaseActions">
 Title="Add the first phase"
 Description="Phases become the backbone for structure, validation, and calendar work.">
 <Actions>
-<button type="button"
-class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-@onclick="AddPhaseAsync">
-Add phase
-</button>
+<Button Text="Add phase" Click="AddPhaseAsync" />
 </Actions>
 </EmptyState>
 }
 else
 {
-<div class="space-y-4">
+<div class="cda-stack-4">
 @foreach (var phase in editor.Phases)
 {
-<div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+<div class="cda-panel-card">
 <div class="grid gap-3 xl:grid-cols-5">
-<InputText @bind-Value="phase.Name" class="rounded-xl border border-slate-300 px-3 py-2 text-sm xl:col-span-2" />
-<InputSelect @bind-Value="phase.Status" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+<InputText @bind-Value="phase.Name" class="cda-input xl:col-span-2" />
+<InputSelect @bind-Value="phase.Status" class="cda-input">
 @foreach (var status in Enum.GetValues<ProjectPhaseStatus>())
 {
 <option value="@status">@status</option>
 }
 </InputSelect>
-<InputDate @bind-Value="phase.StartDateUtc" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-<InputDate @bind-Value="phase.EndDateUtc" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-<InputTextArea @bind-Value="phase.Goal" class="min-h-20 rounded-xl border border-slate-300 px-3 py-2 text-sm xl:col-span-4" />
-<button type="button"
-class="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700"
-@onclick="@(() => RemovePhaseAsync(phase))">
-Remove
-</button>
+<InputDate @bind-Value="phase.StartDateUtc" class="cda-input" />
+<InputDate @bind-Value="phase.EndDateUtc" class="cda-input" />
+<InputTextArea @bind-Value="phase.Goal" class="cda-input cda-input--textarea min-h-20 xl:col-span-4" />
+<Button ButtonStyle="ButtonStyle.Danger"
+Text="Remove"
+Size="ButtonSize.Small"
+Click="@(() => RemovePhaseAsync(phase))" />
 </div>
 </div>
 }
@@ -397,11 +385,11 @@ Description="Capture the main platform decisions once so downstream prompts and 
 <div class="grid gap-4 lg:grid-cols-2">
 @foreach (var option in editor.Options.OrderBy(item => item.Category))
 {
-<div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+<div class="cda-panel-card">
 <div class="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">@option.Category</div>
 <div class="grid gap-3">
-<InputText @bind-Value="option.OptionName" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-<InputText @bind-Value="option.Notes" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+<InputText @bind-Value="option.OptionName" class="cda-input" />
+<InputText @bind-Value="option.Notes" class="cda-input" />
 </div>
 </div>
 }
@@ -419,33 +407,28 @@ Actions="StarterActions">
 Title="Seed the first artifacts"
 Description="Add the initial objects you expect to create right after the project workspace is saved.">
 <Actions>
-<button type="button"
-class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-@onclick="AddStarterObject">
-Add planned object
-</button>
+<Button Text="Add planned object" Click="AddStarterObject" />
 </Actions>
 </EmptyState>
 }
 else
 {
-<div class="space-y-4">
+<div class="cda-stack-4">
 @foreach (var starter in starterObjects)
 {
-<div class="grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-4 xl:grid-cols-4">
-<InputSelect @bind-Value="starter.ObjectType" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+<div class="cda-panel-card grid gap-3 xl:grid-cols-4">
+<InputSelect @bind-Value="starter.ObjectType" class="cda-input">
 @foreach (var kind in starterObjectKinds)
 {
 <option value="@kind">@kind</option>
 }
 </InputSelect>
-<InputText @bind-Value="starter.Title" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-<InputText @bind-Value="starter.Subtitle" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-<button type="button"
-class="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700"
-@onclick="@(() => starterObjects.Remove(starter))">
-Remove
-</button>
+<InputText @bind-Value="starter.Title" class="cda-input" />
+<InputText @bind-Value="starter.Subtitle" class="cda-input" />
+<Button ButtonStyle="ButtonStyle.Danger"
+Text="Remove"
+Size="ButtonSize.Small"
+Click="@(() => starterObjects.Remove(starter))" />
 </div>
 }
 </div>
@@ -456,29 +439,29 @@ default:
 <FormSection Title="Review"
 Description="Confirm the project shape before opening the next workbench surface.">
 <div class="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-<div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+<div class="cda-panel-card">
 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Project summary</p>
 <p class="mt-2 text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(editor.Name) ? "Unnamed project" : editor.Name)</p>
 <p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(editor.Description) ? "No description captured yet." : editor.Description)</p>
 </div>
 
-<div class="rounded-[1.35rem] border border-sky-200 bg-sky-50/80 p-4 text-sm leading-6 text-sky-900">
+<div class="cda-panel-card border-sky-200 bg-sky-50/80 text-sm leading-6 text-sky-900">
 Saving keeps the card list current, preserves the modal context, and lets the user open structure or calendar tabs only when they actually need a larger work surface.
 </div>
 </div>
 
 <div class="grid gap-4 md:grid-cols-3">
-<div class="rounded-[1.2rem] bg-white px-4 py-3">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Status</p>
-<p class="mt-2 text-sm font-semibold text-slate-950">@editor.Status</p>
+<div class="cda-metric-card">
+<p class="cda-metric-card__label">Status</p>
+<p class="cda-metric-card__value">@editor.Status</p>
 </div>
-<div class="rounded-[1.2rem] bg-white px-4 py-3">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Phases</p>
-<p class="mt-2 text-sm font-semibold text-slate-950">@editor.Phases.Count</p>
+<div class="cda-metric-card">
+<p class="cda-metric-card__label">Phases</p>
+<p class="cda-metric-card__value">@editor.Phases.Count</p>
 </div>
-<div class="rounded-[1.2rem] bg-white px-4 py-3">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Starter objects</p>
-<p class="mt-2 text-sm font-semibold text-slate-950">@starterObjects.Count</p>
+<div class="cda-metric-card">
+<p class="cda-metric-card__label">Starter objects</p>
+<p class="cda-metric-card__value">@starterObjects.Count</p>
 </div>
 </div>
 </FormSection>
@@ -495,40 +478,28 @@ break;
 </div>
 
 <div class="flex flex-wrap items-center gap-2">
-<button type="button"
-class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
-disabled="@(wizardStep == 0)"
-@onclick="PreviousStep">
-Back
-</button>
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-disabled="@(wizardStep == wizardSteps.Length - 1)"
-@onclick="NextStep">
-Next
-</button>
-<button type="submit"
-class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-data-testid="project-save-button">
-Save project
-</button>
-<button type="button"
-class="inline-flex items-center rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700"
-@onclick="SaveAndOpenStructureAsync">
-Save and open structure
-</button>
+<Button ButtonStyle="ButtonStyle.Light"
+Text="Back"
+Disabled="@(wizardStep == 0)"
+Click="PreviousStep" />
+<Button ButtonStyle="ButtonStyle.Light"
+Text="Next"
+Disabled="@(wizardStep == wizardSteps.Length - 1)"
+Click="NextStep" />
+<Button Type="submit"
+Text="Save project"
+data-testid="project-save-button" />
+<Button ButtonStyle="ButtonStyle.Info"
+Text="Save and open structure"
+Click="SaveAndOpenStructureAsync" />
 @if (editor.Id.HasValue)
 {
-<button type="button"
-class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="OpenProjectDashboardAsync">
-Open dashboard tab
-</button>
-<button type="button"
-class="inline-flex items-center rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700"
-@onclick="DeleteAsync">
-Delete
-</button>
+<Button ButtonStyle="ButtonStyle.Light"
+Text="Open dashboard tab"
+Click="OpenProjectDashboardAsync" />
+<Button ButtonStyle="ButtonStyle.Danger"
+Text="Delete"
+Click="DeleteAsync" />
 }
 </div>
 </div>
@@ -537,10 +508,10 @@ Delete
 }
 else
 {
-<div class="relative flex w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/25" style="z-index: 141; max-height: min(92vh, calc(100% - 2rem));" data-testid="projects-detail-modal" @onclick:stopPropagation="true">
+<div class="cda-modal-shell" style="z-index: 141; max-height: min(92vh, calc(100% - 2rem));" data-testid="projects-detail-modal" @onclick:stopPropagation="true">
 <div class="border-b border-slate-200 px-6 py-5">
 <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-<div class="space-y-2">
+<div class="cda-stack-2">
 <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Project details</p>
 <h2 class="text-2xl font-semibold tracking-tight text-slate-950">@(string.IsNullOrWhiteSpace(editor.Name) ? "Project overview" : editor.Name)</h2>
 <p class="max-w-3xl text-sm leading-6 text-slate-600">This modal keeps the overview compact. Use the focused tabs only when the work really needs structure, calendar, or a dedicated dashboard route.</p>
@@ -549,17 +520,15 @@ else
 <div class="flex flex-wrap items-center gap-2">
 <StatusBadge Tone="@GetStatusTone(editor.Status)" Text="@editor.Status.ToString()" />
 <StatusBadge Tone="neutral" Text="@($"{editor.Phases.Count} phase(s)")" />
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="CloseProjectModalAsync">
-Close
-</button>
+<Button ButtonStyle="ButtonStyle.Light"
+Text="Close"
+Click="CloseProjectModalAsync" />
 </div>
 </div>
 </div>
 
 <div class="flex-1 overflow-y-auto px-6 py-6">
-<div class="space-y-6">
+<div class="cda-stack-4">
 <SummaryTiles>
 <SummaryTile Label="Current phase" Value="@(string.IsNullOrWhiteSpace(editor.CurrentPhase) ? "Unset" : editor.CurrentPhase)" HelperText="The phase currently highlighted for delivery." Tone="info" />
 <SummaryTile Label="Target date" Value="@FormatDate(editor.TargetDateUtc)" HelperText="Leave flexible when the delivery window is still moving." />
@@ -568,7 +537,7 @@ Close
 </SummaryTiles>
 
 <div class="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-<section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+<section class="cda-surface-card">
 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Description</p>
 <p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(editor.Description) ? "No description has been captured for this project yet." : editor.Description)</p>
 
@@ -576,36 +545,31 @@ Close
 <p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(editor.Objective) ? "No explicit objective has been recorded yet." : editor.Objective)</p>
 </section>
 
-<section class="rounded-[1.5rem] border border-slate-200 bg-slate-50/85 p-5 shadow-sm shadow-slate-200/40">
+<section class="cda-surface-card--soft">
 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Next actions</p>
 <div class="mt-4 grid gap-3">
-<button type="button"
-class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
-@onclick="SwitchToEditor">
-Edit project
-</button>
-<button type="button"
-class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
-@onclick="OpenProjectDashboardAsync">
-Open dashboard tab
-</button>
-<button type="button"
-class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
-@onclick="@(() => OpenStructure(editor.Id ?? Guid.Empty))"
-disabled="@(!editor.Id.HasValue)">
-Open structure
-</button>
-<button type="button"
-class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
-@onclick="@(() => OpenCalendar(editor.Id ?? Guid.Empty))"
-disabled="@(!editor.Id.HasValue)">
-Open calendar
-</button>
+<Button Class="w-full"
+Text="Edit project"
+Click="SwitchToEditor" />
+<Button ButtonStyle="ButtonStyle.Light"
+Class="w-full"
+Text="Open dashboard tab"
+Click="OpenProjectDashboardAsync" />
+<Button ButtonStyle="ButtonStyle.Light"
+Class="w-full"
+Text="Open structure"
+Disabled="@(!editor.Id.HasValue)"
+Click="@(() => OpenStructure(editor.Id ?? Guid.Empty))" />
+<Button ButtonStyle="ButtonStyle.Light"
+Class="w-full"
+Text="Open calendar"
+Disabled="@(!editor.Id.HasValue)"
+Click="@(() => OpenCalendar(editor.Id ?? Guid.Empty))" />
 </div>
 </section>
 </div>
 
-<section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+<section class="cda-surface-card">
 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 <div>
 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Phase plan</p>
@@ -623,7 +587,7 @@ else
 <div class="mt-4 grid gap-3 lg:grid-cols-2">
 @foreach (var phase in editor.Phases.OrderBy(GetPhaseOrderKey).ThenBy(item => item.Name))
 {
-<div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4">
+<div class="cda-panel-card--soft">
 <div class="flex items-start justify-between gap-3">
 <div class="min-w-0">
 <p class="text-sm font-semibold text-slate-950">@phase.Name</p>
@@ -639,7 +603,7 @@ else
 }
 </section>
 
-<section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+<section class="cda-surface-card">
 <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
 <div>
 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Stack profile</p>
@@ -657,7 +621,7 @@ else
 <div class="mt-4 grid gap-3 lg:grid-cols-2">
 @foreach (var option in MeaningfulOptions.OrderBy(item => item.Category).ThenBy(item => item.OptionName))
 {
-<div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4">
+<div class="cda-panel-card--soft">
 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">@option.Category</p>
 <p class="mt-2 text-sm font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(option.OptionName) ? "Not specified" : option.OptionName)</p>
 <p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(option.Notes) ? "No notes recorded." : option.Notes)</p>
@@ -677,16 +641,11 @@ else
 </div>
 
 <div class="flex flex-wrap items-center gap-2">
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="SwitchToEditor">
-Edit project
-</button>
-<button type="button"
-class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-@onclick="OpenProjectDashboardAsync">
-Open dashboard tab
-</button>
+<Button ButtonStyle="ButtonStyle.Light"
+Text="Edit project"
+Click="SwitchToEditor" />
+<Button Text="Open dashboard tab"
+Click="OpenProjectDashboardAsync" />
 </div>
 </div>
 </div>
@@ -700,10 +659,10 @@ Open dashboard tab
 <div class="fixed inset-0 flex items-start justify-center overflow-y-auto p-4 sm:p-6" style="z-index: 145;">
 <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" @onclick="CloseHierarchyModal"></div>
 
-<div class="relative flex w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/25" style="z-index: 146; max-height: min(92vh, calc(100% - 2rem));" data-testid="projects-hierarchy-modal" @onclick:stopPropagation="true">
+<div class="cda-modal-shell" style="z-index: 146; max-height: min(92vh, calc(100% - 2rem));" data-testid="projects-hierarchy-modal" @onclick:stopPropagation="true">
 <div class="border-b border-slate-200 px-6 py-5">
 <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-<div class="space-y-2">
+<div class="cda-stack-2">
 <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Project hierarchy</p>
 <h2 class="text-2xl font-semibold tracking-tight text-slate-950">@hierarchyDialog.ProjectName</h2>
 <p class="max-w-3xl text-sm leading-6 text-slate-600">Inspect direct parents, browse direct subprojects, and keep drilling into deeper project branches without leaving the Projects board.</p>
@@ -712,18 +671,16 @@ Open dashboard tab
 <div class="flex flex-wrap items-center gap-2">
 <StatusBadge Tone="neutral" Text="@($"{hierarchyDialog.ParentProjects.Count} parent(s)")" />
 <StatusBadge Tone="info" Text="@($"{hierarchyDialog.Subprojects.Count} subproject(s)")" />
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="CloseHierarchyModal">
-Close
-</button>
+<Button ButtonStyle="ButtonStyle.Light"
+Text="Close"
+Click="CloseHierarchyModal" />
 </div>
 </div>
 </div>
 
 <div class="flex-1 overflow-y-auto px-6 py-6">
 <div class="grid gap-4 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
-<section class="rounded-[1.5rem] border border-slate-200 bg-slate-50/85 p-5 shadow-sm shadow-slate-200/40">
+<section class="cda-surface-card--soft">
 <div class="flex items-center justify-between gap-3">
 <div>
 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Parents</p>
@@ -741,7 +698,7 @@ else
 <div class="mt-4 space-y-3">
 @foreach (var parentProject in hierarchyDialog.ParentProjects.OrderBy(project => project.Name))
 {
-<article class="rounded-[1.2rem] border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/30">
+<article class="cda-panel-card">
 <div class="flex items-start justify-between gap-3">
 <div class="min-w-0">
 <p class="text-sm font-semibold text-slate-950">@parentProject.Name</p>
@@ -750,16 +707,14 @@ else
 <StatusBadge Tone="@GetStatusTone(parentProject.Status)" Text="@parentProject.Status.ToString()" />
 </div>
 <div class="mt-4 flex flex-wrap items-center gap-2">
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-@onclick="@(() => OpenProjectPreviewFromHierarchyAsync(parentProject.Id))">
-View
-</button>
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-@onclick="@(() => OpenStructure(parentProject.Id))">
-Structure
-</button>
+<Button ButtonStyle="ButtonStyle.Light"
+Text="View"
+Size="ButtonSize.Small"
+Click="@(() => OpenProjectPreviewFromHierarchyAsync(parentProject.Id))" />
+<Button ButtonStyle="ButtonStyle.Light"
+Text="Structure"
+Size="ButtonSize.Small"
+Click="@(() => OpenStructure(parentProject.Id))" />
 </div>
 </article>
 }
@@ -767,7 +722,7 @@ Structure
 }
 </section>
 
-<section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+<section class="cda-surface-card">
 <div class="flex items-center justify-between gap-3">
 <div>
 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Subprojects</p>
@@ -785,7 +740,7 @@ else
 <div class="mt-4 grid gap-3 md:grid-cols-2">
 @foreach (var subproject in hierarchyDialog.Subprojects.OrderBy(project => project.Name))
 {
-<article class="rounded-[1.35rem] border border-slate-200 bg-slate-50/80 p-4 shadow-sm shadow-slate-200/40" data-testid="hierarchy-subproject-card">
+<article class="cda-panel-card--soft" data-testid="hierarchy-subproject-card">
 <div class="flex items-start justify-between gap-3">
 <div class="min-w-0">
 <p class="text-sm font-semibold text-slate-950">@subproject.Name</p>
@@ -795,37 +750,33 @@ else
 </div>
 
 <div class="mt-4 grid gap-2 sm:grid-cols-3">
-<div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-<p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Parents</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@subproject.ParentCount</p>
+<div class="cda-metric-card">
+<p class="cda-metric-card__label">Parents</p>
+<p class="cda-metric-card__value">@subproject.ParentCount</p>
 </div>
-<div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-<p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Subprojects</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@subproject.ChildCount</p>
+<div class="cda-metric-card">
+<p class="cda-metric-card__label">Subprojects</p>
+<p class="cda-metric-card__value">@subproject.ChildCount</p>
 </div>
-<div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-<p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Updated</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@subproject.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
+<div class="cda-metric-card">
+<p class="cda-metric-card__label">Updated</p>
+<p class="cda-metric-card__value">@subproject.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
 </div>
 </div>
 
 <div class="mt-4 flex flex-wrap items-center gap-2">
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-@onclick="@(() => OpenProjectPreviewFromHierarchyAsync(subproject.Id))">
-View
-</button>
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-@onclick="@(() => OpenStructure(subproject.Id))">
-Structure
-</button>
-<button type="button"
-class="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
+<Button ButtonStyle="ButtonStyle.Light"
+Text="View"
+Size="ButtonSize.Small"
+Click="@(() => OpenProjectPreviewFromHierarchyAsync(subproject.Id))" />
+<Button ButtonStyle="ButtonStyle.Light"
+Text="Structure"
+Size="ButtonSize.Small"
+Click="@(() => OpenStructure(subproject.Id))" />
+<Button Text="Subprojects"
+Size="ButtonSize.Small"
 data-testid="hierarchy-card-subprojects-button"
-@onclick="@(() => OpenHierarchyModalAsync(subproject.Id))">
-Subprojects
-</button>
+Click="@(() => OpenHierarchyModalAsync(subproject.Id))" />
 </div>
 </article>
 }
@@ -902,17 +853,15 @@ private IReadOnlyList<SecondaryTabItem> WizardTabs => wizardSteps
 .Select((step, index) => new SecondaryTabItem(index.ToString(), $"{index + 1}. {step}"))
 .ToList();
 
-private RenderFragment PhaseActions => @<button type="button"
-class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
-@onclick="AddPhaseAsync">
-Add phase
-</button>;
+private RenderFragment PhaseActions => @<Button ButtonStyle="ButtonStyle.Light"
+Text="Add phase"
+Size="ButtonSize.Small"
+Click="AddPhaseAsync" />;
 
-private RenderFragment StarterActions => @<button type="button"
-class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
-@onclick="AddStarterObject">
-Add planned object
-</button>;
+private RenderFragment StarterActions => @<Button ButtonStyle="ButtonStyle.Light"
+Text="Add planned object"
+Size="ButtonSize.Small"
+Click="AddStarterObject" />;
 
 private bool IsErrorMessage
 => !string.IsNullOrWhiteSpace(message) &&
@@ -1210,7 +1159,7 @@ ProjectStatus.Archived => "border-slate-300 bg-[linear-gradient(180deg,_rgba(248
 _ => "border-slate-200 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]"
 };
 
-return $"flex min-h-[13.75rem] flex-col rounded-[1.5rem] border p-4 shadow-sm shadow-slate-200/60 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/70 {accent}";
+return $"cda-board-card {accent}";
 }
 
 private static string GetStatusTone(ProjectStatus status)
@@ -1240,9 +1189,6 @@ private static string FormatTimestamp(DateTimeOffset? value)
 
 private static DateTime GetPhaseOrderKey(ProjectPhaseEditorModel phase)
 => phase.StartDateUtc ?? phase.EndDateUtc ?? DateTime.MaxValue;
-
-private static string GetQuickActionButtonCss()
-=> "inline-flex h-9 min-w-[2.85rem] items-center justify-center rounded-xl border border-slate-200 bg-white px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600 shadow-sm transition-colors hover:bg-slate-50";
 
 private static string GetProjectMonogram(string? name)
 {

@@ -1,0 +1,29 @@
+@layer components {
+  .cda-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.2em] text-slate-500;
+  }
+
+  .cda-eyebrow--tight {
+    @apply text-[10px] tracking-[0.18em];
+  }
+
+  .cda-copy-strong {
+    @apply text-sm font-semibold text-slate-950;
+  }
+
+  .cda-body-muted {
+    @apply text-sm leading-6 text-slate-600;
+  }
+
+  .cda-title-lg {
+    @apply text-lg font-semibold tracking-tight text-slate-950;
+  }
+
+  .cda-title-xl {
+    @apply text-xl font-semibold text-slate-950;
+  }
+
+  .cda-title-display {
+    @apply text-3xl font-semibold tracking-tight text-slate-950;
+  }
+}
