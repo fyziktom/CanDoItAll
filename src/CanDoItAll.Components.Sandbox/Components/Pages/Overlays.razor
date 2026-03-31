@@ -30,7 +30,11 @@
         else
         {
             <SectionCard Title="Contextual help" Description="Help should be available at the point of confusion without forcing a route change.">
-                <div class="flex flex-col gap-4 rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-5 md:flex-row md:items-start md:justify-between">
+                <Split Breakpoint="LayoutBreakpoint.Md"
+                       Gap="LayoutGap.Large"
+                       AlignItems="AlignItems.Start"
+                       JustifyContent="JustifyContent.SpaceBetween"
+                       Class="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-5">
                     <div class="space-y-2">
                         <TextBlock TextStyle="@(TextStyle.Subtitle1)" Value="Review decision support" />
                         <TextBlock TextStyle="@(TextStyle.Body2)" Value="@HelpCopy" />
@@ -47,18 +51,19 @@
                             </div>
                         </PanelContent>
                     </HelpPopover>
-                </div>
+                </Split>
             </SectionCard>
 
-            <div class="sandbox-demo-grid sandbox-demo-grid--two">
+            <Grid Gap="LayoutGap.Large"
+                  ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
                 <SectionCard Title="Overlay hosts" Description="Hidden hosts should still be mounted centrally so pages do not create their own overlay plumbing.">
                     <div class="space-y-4">
                         <Alert AlertStyle="@(AlertStyle.Info)">Dialog and tooltip hosts stay mounted as shared infrastructure while individual pages focus on rendering and orchestration.</Alert>
-                        <div class="flex flex-wrap gap-2">
+                        <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Text="Dialog host mounted" Tone="success" />
                             <StatusBadge Text="Tooltip host mounted" Tone="success" />
                             <StatusBadge Text="Page context preserved" Tone="info" />
-                        </div>
+                        </Cluster>
                         <Dialog />
                         <Tooltip />
                     </div>
@@ -74,15 +79,15 @@
                         <div class="space-y-3">
                             <TextBlock TextStyle="@(TextStyle.Subtitle1)" Value="Shared migration approval" />
                             <TextBlock TextStyle="@(TextStyle.Body2)" Value="@SurfaceCopy" />
-                            <div class="flex flex-wrap gap-2">
+                            <Cluster Gap="LayoutGap.Small">
                                 <StatusBadge Text="Needs review" Tone="warning" />
                                 <StatusBadge Text="Help available" Tone="info" />
                                 <StatusBadge Text="Shared host" Tone="success" />
-                            </div>
+                            </Cluster>
                         </div>
                     }
                 </SectionCard>
-            </div>
+            </Grid>
 
             <StickyActionFooter StatusLabel="Overlay state"
                                 StatusMessage="@FooterMessage"

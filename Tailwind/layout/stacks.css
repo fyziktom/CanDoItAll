@@ -19,8 +19,16 @@
     @apply grid gap-4 md:grid-cols-2;
   }
 
+  .cda-form-grid > * {
+    min-width: 0;
+  }
+
   .cda-form-grid--triple {
     @apply grid gap-4 md:grid-cols-3;
+  }
+
+  .cda-form-grid--triple > * {
+    min-width: 0;
   }
 
   .cda-toolbar-row {

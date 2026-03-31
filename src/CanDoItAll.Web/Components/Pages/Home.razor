@@ -11,6 +11,7 @@ risks: stale-startup-copy, missing-next-step
 tests: component:HomePageTests, e2e:smoke-dashboard
 *@
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
 @using CanDoItAll.Infrastructure.BackgroundJobs
 @using CanDoItAll.Modules.Automation
 @using CanDoItAll.Modules.Workbench
@@ -48,9 +49,10 @@ tests: component:HomePageTests, e2e:smoke-dashboard
             <SummaryTile Label="Failed jobs" Value="@failedJobs.Count.ToString()" HelperText="Operational issues that likely need attention." Tone="@(failedJobs.Count > 0 ? "warning" : "success")" />
         </SummaryTiles>
 
-        <div class="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+        <Grid Gap="LayoutGap.XXLarge"
+              ColumnTemplateXl="minmax(0,1.05fr) minmax(0,0.95fr)">
             <SectionCard Title="Quick actions" Description="Go directly to the next likely task instead of starting from a documentation-style overview.">
-                <div class="grid gap-3 sm:grid-cols-2">
+                <Grid Gap="LayoutGap.Medium" ColumnsSm="2">
                     <div class="h-full">
                         <SelectionListItem Eyebrow="Projects"
                                            Title="Start or reopen project work"
@@ -75,7 +77,7 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                                            Summary="Confirm workspace defaults, provider health, and secret-backed connections."
                                            OnSelect="@(() => Navigation.NavigateTo("/settings"))" />
                     </div>
-                </div>
+                </Grid>
             </SectionCard>
 
             <SectionCard Title="Attention queue" Description="Surface the follow-up items that should interrupt new work.">
@@ -91,13 +93,16 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                         @foreach (var job in failedJobs.Take(3))
                         {
                             <div class="cda-panel-card border-amber-200 bg-amber-50/80">
-                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                <Split Breakpoint="LayoutBreakpoint.None"
+                                       Gap="LayoutGap.Medium"
+                                       JustifyContent="JustifyContent.SpaceBetween"
+                                       Wrap="FlexWrap.Wrap">
                                     <div>
                                         <p class="text-sm font-semibold text-slate-950">@job.Description</p>
                                         <p class="mt-1 text-xs text-slate-600">@job.JobType / @job.CorrelationId</p>
                                     </div>
                                     <StatusBadge Tone="warning" Text="@job.State.ToString()" />
-                                </div>
+                                </Split>
                                 @if (!string.IsNullOrWhiteSpace(job.ErrorSummary))
                                 {
                                     <p class="mt-3 text-sm leading-6 text-amber-900">@job.ErrorSummary</p>
@@ -115,9 +120,10 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                     </div>
                 }
             </SectionCard>
-        </div>
+        </Grid>
 
-        <div class="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+        <Grid Gap="LayoutGap.XXLarge"
+              ColumnTemplateXl="minmax(0,1.05fr) minmax(0,0.95fr)">
             <SectionCard Title="Resume work" Description="These tabs are already live in the current workspace session.">
                 @if (openWorkItems.Count == 0)
                 {
@@ -149,14 +155,14 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                 <div class="space-y-3 text-sm leading-6 text-slate-600">
                     <p>The workbench restores tabs from browser storage, keeps route groups recoverable, and leaves room for the protected canvas-heavy surfaces to stay focused.</p>
                     <p>Generated artifacts still live under `.artifacts/`, the development runtime endpoint remains available, and tuning continues to attach only to explicit component boundaries.</p>
-                    <div class="flex flex-wrap gap-2">
+                    <Cluster Gap="LayoutGap.Small">
                         <StatusBadge Tone="success" Text="Workbench restore active" />
                         <StatusBadge Tone="info" Text="Module seams active" />
                         <StatusBadge Tone="neutral" Text="Focused shell enabled" />
-                    </div>
+                    </Cluster>
                 </div>
             </SectionCard>
-        </div>
+        </Grid>
     </ChildContent>
 </PageScaffold>
 

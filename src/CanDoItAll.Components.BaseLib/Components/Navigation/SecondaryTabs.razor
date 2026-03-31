@@ -9,7 +9,7 @@
             </div>
         }
 
-        <div class="flex flex-wrap gap-2">
+        <Cluster Gap="LayoutGap.Small">
             @foreach (var item in Items)
             {
                 var isSelected = string.Equals(item.Key, SelectedKey, StringComparison.Ordinal);
@@ -23,7 +23,7 @@
                     }
                 </button>
             }
-        </div>
+        </Cluster>
 
         @if (ActiveItem?.Description is { Length: > 0 } description)
         {

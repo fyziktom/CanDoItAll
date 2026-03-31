@@ -315,7 +315,8 @@
 
                         <SurfaceCard Soft="true">
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Next actions</p>
-                            <div class="mt-4 grid gap-3">
+                            <Grid Gap="LayoutGap.Medium"
+                                  Class="mt-4">
                                 <Button Class="w-full"
                                         Text="Edit project"
                                         Click="SwitchToEditor" />
@@ -333,7 +334,7 @@
                                         Text="Open calendar"
                                         Disabled="@(!Editor.Id.HasValue)"
                                         Click="HandleOpenCalendarAsync" />
-                            </div>
+                            </Grid>
                         </SurfaceCard>
                     </Grid>
 

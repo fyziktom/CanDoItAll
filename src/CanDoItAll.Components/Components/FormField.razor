@@ -1,10 +1,16 @@
 @namespace CanDoItAll.Components
-<div @attributes='AdditionalAttributes.WithClass("rz-form-field flex flex-col gap-2")'>
+@using CanDoItAll.Components.BaseLib
+
+<Stack Gap="0.5rem"
+       Class="rz-form-field"
+       AdditionalAttributes="AdditionalAttributes">
     @if (!string.IsNullOrWhiteSpace(Text))
     {
         <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">@Text</label>
     }
-    <div class="flex items-center gap-2">
+    <Cluster Wrap="FlexWrap.NoWrap"
+             Gap="LayoutGap.Small"
+             AlignItems="AlignItems.Center">
         @if (Start is not null)
         {
             <div class="rz-form-field-start">@Start</div>
@@ -16,8 +22,8 @@
         {
             <div class="rz-form-field-end">@End</div>
         }
-    </div>
-</div>
+    </Cluster>
+</Stack>
 
 @code {
     [Parameter]

@@ -95,21 +95,21 @@
 
             <DetailHeader>
                 <div class="cda-stack-3">
-                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <Split Gap="LayoutGap.Medium">
                         <div class="cda-stack-1">
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Resource editor</p>
                             <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
                             <p class="text-sm leading-6 text-slate-600">Keep ownership, connector location, and validation state together in one predictable detail pane.</p>
                         </div>
-                        <div class="flex flex-wrap items-center gap-2">
+                        <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Tone="@ResolveTone(editor.ValidationStatus)" Text="@editor.ValidationStatus.ToString()" />
                             <StatusBadge Tone="neutral" Text="@editor.ResourceKind.ToString()" />
                             @if (!string.IsNullOrWhiteSpace(SelectedProjectName))
                             {
                                 <StatusBadge Tone="info" Text="@SelectedProjectName" />
                             }
-                        </div>
-                    </div>
+                        </Cluster>
+                    </Split>
 
                     <div class="rounded-[1.35rem] border border-sky-200 bg-sky-50/70 px-4 py-3 text-sm leading-6 text-sky-900">
                         <p class="font-semibold text-sky-950">@Descriptor.DisplayName</p>
@@ -120,7 +120,7 @@
 
             <DetailContent>
                 <EditForm Model="editor" OnValidSubmit="SaveAsync">
-                    <div class="flex min-h-full flex-col gap-6">
+                    <Stack Class="min-h-full" Gap="1.5rem">
                         <FormSection Title="Identity and ownership" Description="Link the resource to the correct project and choose its typed shape before editing connector fields.">
                             <div class="cda-form-grid">
                                 <div>
@@ -206,7 +206,7 @@
                                     </div>
                                     break;
                                 case ResourceKind.WebLink:
-                                    <div class="grid gap-4">
+                                    <Grid Gap="LayoutGap.Large">
                                         <div>
                                             <label class="cda-field-label">URL</label>
                                             <InputText @bind-Value="editor.WebUrl" class="cda-input" data-testid="resource-primary-input" />
@@ -215,10 +215,10 @@
                                             <label class="cda-field-label">Title hint</label>
                                             <InputText @bind-Value="editor.UrlTitleHint" class="cda-input" />
                                         </div>
-                                    </div>
+                                    </Grid>
                                     break;
                                 case ResourceKind.Ftp:
-                                    <div class="grid gap-4 md:grid-cols-4">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="4">
                                         <div class="md:col-span-2">
                                             <label class="cda-field-label">Host</label>
                                             <InputText @bind-Value="editor.Host" class="cda-input" data-testid="resource-primary-input" />
@@ -231,14 +231,14 @@
                                             <label class="cda-field-label">User</label>
                                             <InputText @bind-Value="editor.UserName" class="cda-input" />
                                         </div>
-                                    </div>
+                                    </Grid>
                                     <div>
                                         <label class="cda-field-label">Remote path</label>
                                         <InputText @bind-Value="editor.RemotePath" class="cda-input" />
                                     </div>
                                     break;
                                 case ResourceKind.Ssh:
-                                    <div class="grid gap-4 md:grid-cols-4">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="4">
                                         <div class="md:col-span-2">
                                             <label class="cda-field-label">Host</label>
                                             <InputText @bind-Value="editor.Host" class="cda-input" data-testid="resource-primary-input" />
@@ -251,7 +251,7 @@
                                             <label class="cda-field-label">User</label>
                                             <InputText @bind-Value="editor.UserName" class="cda-input" />
                                         </div>
-                                    </div>
+                                    </Grid>
                                     <div>
                                         <label class="cda-field-label">Working directory</label>
                                         <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
@@ -338,10 +338,10 @@
                                 </div>
                             </div>
 
-                            <div class="grid gap-3 md:grid-cols-2">
+                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                 <label class="cda-inline-option"><InputCheckbox @bind-Value="editor.SupportsPreview" /> Preview capable</label>
                                 <label class="cda-inline-option"><InputCheckbox @bind-Value="editor.SupportsIndexing" /> Indexing capable</label>
-                            </div>
+                            </Grid>
                         </FormSection>
 
                         <StickyActionFooter StatusLabel="Resource save state" StatusMessage="@message" StatusTone="success">
@@ -358,7 +358,7 @@
                                 }
                             </DangerActions>
                         </StickyActionFooter>
-                    </div>
+                    </Stack>
                 </EditForm>
             </DetailContent>
         </ListDetailShell>

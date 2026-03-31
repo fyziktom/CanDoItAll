@@ -1,6 +1,7 @@
 @namespace CanDoItAll.Components.Sandbox.Components
 @page "/groups/inputs"
 @inherits CatalogPageBase
+@using CanDoItAll.Components.Common
 
 <PageTitle>Inputs</PageTitle>
 
@@ -34,7 +35,8 @@
         else
         {
             <FormSection Title="Review intake" Description="A realistic form with text, numeric, selection, and boolean inputs.">
-                <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                <Grid Gap="LayoutGap.Large"
+                      ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
                     <FormField Text="Title">
                         <TextBox Value="@FormState.Title"
                                  ValueChanged="HandleTitleChanged"
@@ -78,7 +80,11 @@
                     </FormField>
 
                     <FormField Text="Reminders">
-                        <div class="flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-white px-4 py-3">
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Medium"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Class="rounded-[1rem] border border-slate-200 bg-white px-4 py-3">
                             <div class="space-y-1">
                                 <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="Send daily reminders" />
                                 <TextBlock TextStyle="@(TextStyle.Caption)" Value="Keep reviewers aligned before the approval window closes." />
@@ -86,9 +92,9 @@
                             <Switch Value="@FormState.RemindersEnabled"
                                     ValueChanged="HandleReminderChanged"
                                     Disabled="@IsDisabled" />
-                        </div>
+                        </Split>
                     </FormField>
-                </div>
+                </Grid>
             </FormSection>
 
             <SectionCard Title="Notes and toggles" Description="Longer text and binary settings should remain stable when the surface gets denser.">
@@ -101,27 +107,32 @@
                                   Disabled="@IsDisabled" />
                     </FormField>
 
-                    <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                    <Grid Gap="LayoutGap.Large"
+                          ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
                         <div class="rounded-[1rem] border border-slate-200 bg-white px-4 py-3">
-                            <div class="flex items-start gap-3">
+                            <Cluster AlignItems="AlignItems.Start"
+                                     Wrap="FlexWrap.NoWrap"
+                                     Gap="LayoutGap.Medium">
                                 <CheckBox TValue="bool" Value="@FormState.RequiresApproval" ValueChanged="HandleApprovalChanged" Disabled="@IsDisabled" />
                                 <div class="space-y-1">
                                     <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="Requires approval" />
                                     <TextBlock TextStyle="@(TextStyle.Caption)" Value="Gate release until the designated reviewer signs off." />
                                 </div>
-                            </div>
+                            </Cluster>
                         </div>
 
                         <div class="rounded-[1rem] border border-slate-200 bg-white px-4 py-3">
-                            <div class="flex items-start gap-3">
+                            <Cluster AlignItems="AlignItems.Start"
+                                     Wrap="FlexWrap.NoWrap"
+                                     Gap="LayoutGap.Medium">
                                 <CheckBox TValue="bool" Value="@FormState.PublishExternally" ValueChanged="HandlePublishChanged" Disabled="@IsDisabled" />
                                 <div class="space-y-1">
                                     <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="Publish externally" />
                                     <TextBlock TextStyle="@(TextStyle.Caption)" Value="Expose the final draft to downstream reporting and partner tooling." />
                                 </div>
-                            </div>
+                            </Cluster>
                         </div>
-                    </div>
+                    </Grid>
                 </div>
             </SectionCard>
         }

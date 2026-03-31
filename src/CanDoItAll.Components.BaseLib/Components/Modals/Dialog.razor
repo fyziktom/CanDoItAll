@@ -3,8 +3,11 @@
 
 @if (IsOpen)
 {
-    <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6"
-         data-testid="@TestId">
+    <Stack AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.Center"
+           Gap="0"
+           Class="fixed inset-0 z-[70] p-4 sm:p-6"
+           data-testid="@TestId">
         <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm"
              @onclick="HandleBackdropCloseAsync"></div>
 
@@ -14,7 +17,11 @@
                  aria-label="@ResolvedAriaLabel"
                  @onclick:stopPropagation="true">
             <header class="flex flex-col gap-4 border-b border-slate-200 px-6 py-5">
-                <div class="flex flex-wrap items-start justify-between gap-3">
+                <Split Breakpoint="LayoutBreakpoint.None"
+                       Gap="LayoutGap.Medium"
+                       AlignItems="AlignItems.Start"
+                       JustifyContent="JustifyContent.SpaceBetween"
+                       Wrap="FlexWrap.Wrap">
                     <div class="min-w-0 space-y-1">
                         @if (!string.IsNullOrWhiteSpace(Eyebrow))
                         {
@@ -29,7 +36,8 @@
                         }
                     </div>
 
-                    <div class="flex items-center gap-2">
+                    <Cluster Wrap="FlexWrap.NoWrap"
+                             Gap="LayoutGap.Small">
                         @if (HeaderActions is not null)
                         {
                             @HeaderActions
@@ -45,8 +53,8 @@
                                 <span>Close</span>
                             </button>
                         }
-                    </div>
-                </div>
+                    </Cluster>
+                </Split>
             </header>
 
             <div class="flex-1 overflow-y-auto px-6 py-6">
@@ -60,7 +68,7 @@
                 </footer>
             }
         </section>
-    </div>
+    </Stack>
 }
 
 @code {

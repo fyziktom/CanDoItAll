@@ -1,6 +1,7 @@
 @namespace CanDoItAll.Components.Sandbox.Components
 @page "/groups/data-display"
 @inherits CatalogPageBase
+@using CanDoItAll.Components.Common
 
 <PageTitle>Data Display</PageTitle>
 
@@ -45,19 +46,24 @@
                 </SummaryTiles>
             </SectionCard>
 
-            <div class="sandbox-demo-grid sandbox-demo-grid--two">
+            <Grid Gap="LayoutGap.Large"
+                  ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
                 @foreach (var card in Cards)
                 {
                     <Card>
                         <div class="space-y-4">
-                            <div class="flex flex-wrap items-start justify-between gap-3">
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
                                 <div class="space-y-1">
                                     <TextBlock TextStyle="@(TextStyle.Eyebrow)" Value="@card.Eyebrow" />
                                     <TextBlock TextStyle="@(TextStyle.Subtitle1)" Value="@card.Title" />
                                     <TextBlock TextStyle="@(TextStyle.Body2)" Value="@card.Summary" />
                                 </div>
                                 <StatusBadge Text="@card.State" Tone="@card.Tone" />
-                            </div>
+                            </Split>
 
                             <div class="sandbox-kv-list">
                                 @foreach (var fact in card.Facts)
@@ -71,7 +77,7 @@
                         </div>
                     </Card>
                 }
-            </div>
+            </Grid>
 
             <SectionCard Title="Selection rows" Description="List-style display surfaces should preserve scanability and action clarity.">
                 <div class="sandbox-list">
@@ -91,12 +97,12 @@
                                         Disabled="@IsDisabled" />
                             </Actions>
                             <ChildContent>
-                                <div class="flex flex-wrap gap-2">
+                                <Cluster Gap="LayoutGap.Small">
                                     @foreach (var chip in row.Chips)
                                     {
                                         <StatusBadge Text="@chip.Text" Tone="@chip.Tone" />
                                     }
-                                </div>
+                                </Cluster>
                             </ChildContent>
                         </SelectionListItem>
                     }

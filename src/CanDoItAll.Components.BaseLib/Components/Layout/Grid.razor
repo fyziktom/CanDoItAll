@@ -106,7 +106,7 @@ else
     {
         return BuildClass(
             "grid min-w-0 [gap:var(--cda-grid-gap)] [column-gap:var(--cda-grid-column-gap)] [row-gap:var(--cda-grid-row-gap)]",
-            HasBaseColumns() ? "[grid-template-columns:var(--cda-grid-columns)]" : null,
+            "[grid-template-columns:var(--cda-grid-columns)]",
             HasResponsiveColumns(ColumnsSm, ColumnTemplateSm) ? "sm:[grid-template-columns:var(--cda-grid-columns-sm)]" : null,
             HasResponsiveColumns(ColumnsMd, ColumnTemplateMd) ? "md:[grid-template-columns:var(--cda-grid-columns-md)]" : null,
             HasResponsiveColumns(ColumnsLg, ColumnTemplateLg) ? "lg:[grid-template-columns:var(--cda-grid-columns-lg)]" : null,
@@ -129,7 +129,8 @@ else
         {
             $"--cda-grid-gap:{LayoutValueResolver.ResolveGap(Gap)}",
             $"--cda-grid-column-gap:{LayoutValueResolver.ResolveGap(columnGap)}",
-            $"--cda-grid-row-gap:{LayoutValueResolver.ResolveGap(rowGap)}"
+            $"--cda-grid-row-gap:{LayoutValueResolver.ResolveGap(rowGap)}",
+            "--cda-grid-columns:minmax(0,1fr)"
         };
 
         AppendTrackStyle(styles, "--cda-grid-columns", Columns, ColumnTemplate);

@@ -93,18 +93,18 @@
 
             <DetailHeader>
                 <div class="cda-stack-3">
-                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <Split Gap="LayoutGap.Medium">
                         <div class="cda-stack-1">
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Plan editor</p>
                             <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
                             <p class="text-sm leading-6 text-slate-600">Coverage, cases, evidence, and run history stay in one detail pane with predictable sections.</p>
                         </div>
-                        <div class="flex flex-wrap items-center gap-2">
+                        <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Tone="info" Text="@($"{editor.Cases.Count} case(s)")" />
                             <StatusBadge Tone="neutral" Text="@($"{editor.Evidence.Count} evidence")" />
                             <StatusBadge Tone="@ResolveStatusTone(LatestRunResult)" Text="@(LatestRunResult?.ToString() ?? "No run")" />
-                        </div>
-                    </div>
+                        </Cluster>
+                    </Split>
 
                     <SecondaryTabs Items="DetailTabs" SelectedKey="@detailTab" SelectedKeyChanged="HandleDetailTabChanged" />
                 </div>
@@ -112,7 +112,7 @@
 
             <DetailContent>
                 <EditForm Model="editor" OnValidSubmit="SaveAsync">
-                    <div class="flex min-h-full flex-col gap-6">
+                    <Stack Class="min-h-full" Gap="1.5rem">
                         @if (string.Equals(detailTab, "overview", StringComparison.Ordinal))
                         {
                             <FormSection Title="Plan overview" Description="Anchor the plan to the correct project and phase before editing cases and evidence.">
@@ -164,7 +164,7 @@
                                     <div class="cda-stack-3">
                                         @foreach (var testCase in editor.Cases)
                                         {
-                                            <div class="grid gap-3 cda-panel-card md:grid-cols-4">
+                                            <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
                                                 <InputText @bind-Value="testCase.Name" class="cda-input" />
                                                 <InputText @bind-Value="testCase.StoryOrFeature" class="cda-input" />
                                                 <InputSelect @bind-Value="testCase.Status" class="cda-input">
@@ -174,7 +174,7 @@
                                                     }
                                                 </InputSelect>
                                                 <InputText @bind-Value="testCase.Notes" class="cda-input" />
-                                            </div>
+                                            </Grid>
                                         }
                                     </div>
                                 }
@@ -195,12 +195,12 @@
                                     <div class="cda-stack-3">
                                         @foreach (var evidence in editor.Evidence)
                                         {
-                                            <div class="grid gap-3 cda-panel-card md:grid-cols-4">
+                                            <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
                                                 <InputText @bind-Value="evidence.EvidenceLabel" class="cda-input" />
                                                 <InputText @bind-Value="evidence.ArtifactPath" class="cda-input" />
                                                 <InputText @bind-Value="evidence.EvidenceKind" class="cda-input" />
                                                 <InputText @bind-Value="evidence.Notes" class="cda-input" />
-                                            </div>
+                                            </Grid>
                                         }
                                     </div>
                                 }
@@ -221,7 +221,7 @@
                                     <div class="cda-stack-3">
                                         @foreach (var run in editor.Runs)
                                         {
-                                            <div class="grid gap-3 cda-panel-card md:grid-cols-4">
+                                            <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
                                                 <InputDate @bind-Value="run.ExecutedAtUtc" class="cda-input" />
                                                 <InputText @bind-Value="run.Runner" class="cda-input" />
                                                 <InputSelect @bind-Value="run.Result" class="cda-input">
@@ -231,7 +231,7 @@
                                                     }
                                                 </InputSelect>
                                                 <InputText @bind-Value="run.Summary" class="cda-input" />
-                                            </div>
+                                            </Grid>
                                         }
                                     </div>
                                 }
@@ -246,7 +246,7 @@
                                 <Button Text="Save plan" Type="submit" data-testid="testlab-save-button" />
                             </PrimaryActions>
                         </StickyActionFooter>
-                    </div>
+                    </Stack>
                 </EditForm>
             </DetailContent>
         </ListDetailShell>

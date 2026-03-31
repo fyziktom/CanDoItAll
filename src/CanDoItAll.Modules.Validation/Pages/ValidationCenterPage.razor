@@ -1,5 +1,6 @@
 @page "/validation"
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
 @using CanDoItAll.Modules.Projects
 @inject ValidationService ValidationService
 @inject ProjectsService ProjectsService
@@ -86,18 +87,18 @@
 
             <DetailHeader>
                 <div class="cda-stack-3">
-                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <Split Gap="LayoutGap.Medium">
                         <div class="cda-stack-1">
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Run editor</p>
                             <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
                             <p class="text-sm leading-6 text-slate-600">Configure the review, run it, then inspect the stored summary and findings without leaving the detail pane.</p>
                         </div>
-                        <div class="flex flex-wrap items-center gap-2">
+                        <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Tone="@ResolveDecisionTone(editor.Decision)" Text="@editor.Decision.ToString()" />
                             <StatusBadge Tone="neutral" Text="@editor.ValidationType.ToString()" />
                             <StatusBadge Tone="info" Text="@($"{editor.Findings.Count} finding(s)")" />
-                        </div>
-                    </div>
+                        </Cluster>
+                    </Split>
 
                     <SecondaryTabs Items="DetailTabs" SelectedKey="@detailTab" SelectedKeyChanged="HandleDetailTabChanged" />
                 </div>
@@ -105,7 +106,7 @@
 
             <DetailContent>
                 <EditForm Model="editor" OnValidSubmit="RunAsync">
-                    <div class="flex min-h-full flex-col gap-6">
+                    <Stack Class="min-h-full" Gap="1.5rem">
                         @if (string.Equals(detailTab, "overview", StringComparison.Ordinal))
                         {
                             <FormSection Title="Run setup" Description="Choose the project, checklist, and artifact metadata before launching the deterministic review.">
@@ -204,13 +205,17 @@
                                         @foreach (var finding in editor.Findings)
                                         {
                                             <div class="cda-panel-card">
-                                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                                <Split Breakpoint="LayoutBreakpoint.None"
+                                                       Gap="LayoutGap.Medium"
+                                                       AlignItems="AlignItems.Center"
+                                                       JustifyContent="JustifyContent.SpaceBetween"
+                                                       Wrap="FlexWrap.Wrap">
                                                     <div>
                                                         <p class="text-sm font-semibold text-slate-950">@finding.Title</p>
                                                         <p class="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">@finding.RuleCode</p>
                                                     </div>
                                                     <StatusBadge Tone="@ResolveFindingTone(finding.Severity)" Text="@finding.Severity.ToString()" />
-                                                </div>
+                                                </Split>
                                                 <p class="mt-3 text-sm leading-6 text-slate-600">@finding.Detail</p>
                                                 <p class="mt-3 text-sm text-sky-700">@finding.RecommendedAction</p>
                                             </div>
@@ -228,7 +233,7 @@
                                 <Button Text="Run validation" Type="submit" data-testid="validation-run-button" />
                             </PrimaryActions>
                         </StickyActionFooter>
-                    </div>
+                    </Stack>
                 </EditForm>
             </DetailContent>
         </ListDetailShell>

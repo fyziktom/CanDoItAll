@@ -2,6 +2,7 @@
 @implements IDisposable
 @using CanDoItAll.Components
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
 @using CanDoItAll.Infrastructure.Configuration
 @using CanDoItAll.Modules.Factory
 @using CanDoItAll.Modules.Projects
@@ -49,8 +50,14 @@
           CloseBackgroundTabs="HandleCloseBackgroundAsync"
           ReopenRecentTab="HandleReopenRecentAsync">
     <TopBar>
-        <div class="flex items-center justify-between gap-3">
-            <div class="flex min-w-0 items-center gap-2">
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap">
+            <Cluster Wrap="FlexWrap.NoWrap"
+                     Gap="LayoutGap.Small"
+                     Class="min-w-0">
                 <span class="cda-shell-pill cda-shell-pill--neutral">@ActiveWorkspaceTitle</span>
                 <h2 class="text-sm font-semibold tracking-tight text-slate-950">@ActiveNavigation.Title</h2>
                 @if (ShellMode == AppShellMode.FocusWorkbench && !string.IsNullOrWhiteSpace(ActiveProjectTitle))
@@ -62,14 +69,16 @@
                 {
                     <span class="hidden text-xs text-slate-400 lg:inline">/ phase: @ActivePhaseTitle</span>
                 }
-            </div>
+            </Cluster>
 
-            <div class="flex flex-shrink-0 items-center gap-1.5">
+            <Cluster Wrap="FlexWrap.NoWrap"
+                     Gap="LayoutGap.Small"
+                     Class="flex-shrink-0">
                 <StatusBadge Tone="info" Text="Interactive Server" />
                 <StatusBadge Tone="success" Text="@($"Live items {OpenedProjectTabs.Count + OpenedPromptSessionTabs.Count}")" />
                 <StatusBadge Tone="neutral" Text="@($"Tabs {Workbench.Tabs.Count}")" />
-            </div>
-        </div>
+            </Cluster>
+        </Split>
     </TopBar>
     <Body>
         @if (CurrentTuningSurface is { } tuningSurface)
@@ -94,7 +103,7 @@
             @if (ShowStandardRail)
             {
                 <SectionCard Title="Workbench" Description="Internal tabs now track artifact identity, recent closures, and contextual restore instead of flat route launches.">
-                    <div class="grid gap-3">
+                    <Grid Gap="LayoutGap.Medium">
                         <div class="cda-shell-stat-card">
                             <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Current route</p>
                             <p class="mt-2 text-sm font-medium text-slate-900">@CurrentRouteDisplay</p>
@@ -114,7 +123,7 @@
                                 }
                             </div>
                         }
-                    </div>
+                    </Grid>
                 </SectionCard>
 
                 <SectionCard Title="Context Queue" Description="The shell keeps active projects and prompt sessions visible so work starts from artifacts instead of a flat route list.">
@@ -160,9 +169,13 @@
                             </div>
 
                             <div class="space-y-2">
-                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                <Split Breakpoint="LayoutBreakpoint.None"
+                                       Gap="LayoutGap.Small"
+                                       AlignItems="AlignItems.Center"
+                                       JustifyContent="JustifyContent.SpaceBetween"
+                                       Wrap="FlexWrap.Wrap">
                                     <label class="text-sm font-medium text-slate-700">Attachments</label>
-                                    <div class="flex flex-wrap gap-2">
+                                    <Cluster Gap="LayoutGap.Small">
                                         <label class="cda-shell-upload">
                                             Add image
                                             <InputFile class="hidden" accept="image/*" OnChange="HandleTuningFilesSelectedAsync" />
@@ -171,8 +184,8 @@
                                                 Text="Paste clipboard image"
                                                 Size="ButtonSize.Small"
                                                 Click="PasteClipboardImageAsync" />
-                                    </div>
-                                </div>
+                                    </Cluster>
+                                </Split>
 
                                 @if (tuningAttachments.Count == 0)
                                 {
@@ -192,7 +205,7 @@
                                 }
                             </div>
 
-                            <div class="flex flex-wrap gap-2">
+                            <Cluster Gap="LayoutGap.Small">
                                 <Button Text="Send request"
                                         Disabled="@tuningBusy"
                                         data-testid="tuning-send"
@@ -207,7 +220,7 @@
                                             Disabled="@tuningBusy"
                                             Click="SubmitPendingTuningRequestAsync" />
                                 }
-                            </div>
+                            </Cluster>
                         }
 
                         @if (!string.IsNullOrWhiteSpace(tuningMessage))

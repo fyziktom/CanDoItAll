@@ -42,8 +42,8 @@ This bundle is a coordination and execution package for `solution-style-unificat
 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Passed`
-- Execution status: `Reopened wrapper-follow-up wave executed; initiative still partially complete`
-- Subbundle gate review: `Critical foundations need a refreshed census and wrapper-expansion pass before more migration claims are trusted`
-- Final closure gate: `Open because component-level hotspots like ProjectsBoard and PromptFactoryPage still retain too much raw markup`
-- Browser validation analytics: `Fresh browser proof now exists for the Projects wrapper-driven wave, including desktop, modal, and mobile evidence after a Tailwind rebuild and responsive repair.`
-- Latest follow-up wave: `Workbook refreshed, BaseLib wrapper set expanded (Pill, MetricCard, PanelCard, SurfaceCard, PrefixedField), and ProjectsBoard / ProjectModalHost / ProjectHierarchyModal were refactored and revalidated without touching CanvasLib internals.`
+- Execution status: `Reopened layout-wrapper follow-up wave executed; initiative still partially complete`
+- Subbundle gate review: `Critical foundations remain valid, the strict non-canvas div layout-wrapper census is now clean, and later closure claims should focus on the broader remaining markup hotspots rather than these layout wrappers.`
+- Final closure gate: `Open because broader non-canvas hotspots like PromptFactoryPage and a few custom shell surfaces still need follow-up beyond the strict layout-wrapper census.`
+- Browser validation analytics: `Fresh browser proof now exists for the main app layout-wrapper wave (/activity, /automation, /projects, /settings) plus the sandbox catalog pages touched in this pass, including desktop and narrow-width overflow checks.`
+- Latest follow-up wave: `layout-census-wave1.xlsx was refreshed with Wave5 results, shared layout primitives were applied across BaseLib, main app pages, and sandbox catalog pages, the strict non-canvas div flex/grid census moved from 28 to 0, and the wave was revalidated with local build, managed build op_d8451696961a42e9bed8720ae4c4d4c0, and Playwright CLI screenshots after Playwright MCP remained blocked by EPERM.`

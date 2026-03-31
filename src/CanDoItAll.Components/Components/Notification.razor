@@ -1,8 +1,10 @@
 @namespace CanDoItAll.Components
+@using CanDoItAll.Components.BaseLib
 @implements IDisposable
 @inject NotificationService NotificationService
 
-<div class="rz-notification fixed right-4 top-4 z-50 flex max-w-sm flex-col gap-2">
+<Stack Gap="0.5rem"
+       Class="rz-notification fixed right-4 top-4 z-50 max-w-sm">
     @foreach (var toast in toasts)
     {
         <div class="rounded-lg border px-4 py-3 shadow-lg @GetSeverityCss(toast.Message.Severity)">
@@ -16,7 +18,7 @@
             }
         </div>
     }
-</div>
+</Stack>
 
 @code {
     private readonly List<ToastEntry> toasts = [];

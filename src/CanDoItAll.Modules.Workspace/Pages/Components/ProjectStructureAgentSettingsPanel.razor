@@ -1,10 +1,11 @@
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
 @inject ProjectStructureAgentAdministrationService AdministrationService
 @inject ProjectManagementKnowledgeService KnowledgeService
 
-<div class="flex min-h-full flex-col gap-6" data-testid="settings-project-structure-agent-panel">
+<Stack Class="min-h-full" Gap="1.5rem" data-testid="settings-project-structure-agent-panel">
     <EditForm Model="settingsModel" OnValidSubmit="SaveSettingsAsync">
-        <div class="flex min-h-full flex-col gap-6">
+        <Stack Class="min-h-full" Gap="1.5rem">
             <FormSection Title="Central project-structure MCP settings"
                          Description="These values define how remote workstation MCP clients find the main CanDoItAll machine and which setup script operators should use.">
                 <SummaryTiles>
@@ -46,18 +47,23 @@
                     <Button Text="Save central settings" Type="submit" data-testid="project-structure-settings-save" />
                 </PrimaryActions>
             </StickyActionFooter>
-        </div>
+        </Stack>
     </EditForm>
 
-    <div class="grid gap-6 xl:grid-cols-[22rem,1fr]">
+    <Grid Gap="LayoutGap.XXLarge"
+          ColumnTemplateXl="22rem minmax(0,1fr)">
         <div class="cda-admin-panel cda-stack-4">
-            <div class="flex items-center justify-between gap-4">
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Large"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
                 <div>
                     <p class="cda-admin-kicker">Agent profiles</p>
                     <h2 class="cda-admin-heading">Project-structure MCP agents</h2>
                 </div>
                 <Button Text="New profile" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProfileAsync" data-testid="project-structure-profile-new" />
-            </div>
+            </Split>
 
             <div class="cda-stack-2">
                 <input @bind="profileSearch" @bind:event="oninput" class="cda-input" placeholder="Search profiles" />
@@ -102,12 +108,14 @@
                             <label class="cda-field-label">Profile name</label>
                             <InputText @bind-Value="profileModel.Name" class="cda-input" data-testid="project-structure-profile-name" />
                         </div>
-                        <div class="flex items-end">
+                        <Stack JustifyContent="JustifyContent.End"
+                               Gap="0"
+                               Class="h-full">
                             <label class="cda-inline-option">
                                 <InputCheckbox @bind-Value="profileModel.IsEnabled" />
                                 Profile enabled
                             </label>
-                        </div>
+                        </Stack>
                     </div>
 
                     <div class="mt-4">
@@ -122,7 +130,7 @@
                 </FormSection>
 
                 <FormSection Title="Capabilities" Description="The central API enforces these permissions for every request authenticated with this profile token.">
-                    <div class="grid gap-3 md:grid-cols-2" data-testid="project-structure-capabilities">
+                    <Grid Gap="LayoutGap.Medium" ColumnsMd="2" data-testid="project-structure-capabilities">
                         @foreach (var capability in CapabilityOptions)
                         {
                             <label class="cda-inline-option cda-inline-option--muted">
@@ -130,7 +138,7 @@
                                 @capability.Label
                             </label>
                         }
-                    </div>
+                    </Grid>
                 </FormSection>
 
                 <FormSection Title="Approval policy" Description="Thresholds are enforced centrally. Set a value of 0 to disable that threshold.">
@@ -143,17 +151,20 @@
                             <label class="cda-field-label">Approval required over (minutes)</label>
                             <InputNumber @bind-Value="profileModel.ApprovalRequiredMinutes" class="cda-input" data-testid="project-structure-profile-approval-required" />
                         </div>
-                        <div class="flex items-end">
+                        <Stack JustifyContent="JustifyContent.End"
+                               Gap="0"
+                               Class="h-full">
                             <label class="cda-inline-option cda-inline-option--muted">
                                 <InputCheckbox @bind-Value="profileModel.RequireApprovalForAllMutations" />
                                 Require approval for every mutation
                             </label>
-                        </div>
+                        </Stack>
                     </div>
                 </FormSection>
 
                 <FormSection Title="Token and workstation setup" Description="The token is encrypted at rest. Rotate it when a workstation changes or the token leaks.">
-                    <div class="grid gap-4 md:grid-cols-[1fr_auto]">
+                    <Grid Gap="LayoutGap.Large"
+                          ColumnTemplateMd="minmax(0,1fr) auto">
                         <div>
                             <label class="cda-field-label">Profile token</label>
                             <input class="cda-input"
@@ -161,10 +172,12 @@
                                    readonly
                                    data-testid="project-structure-profile-token" />
                         </div>
-                        <div class="flex items-end">
+                        <Stack JustifyContent="JustifyContent.End"
+                               Gap="0"
+                               Class="h-full">
                             <Button Text="Rotate token on save" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="RotateToken" data-testid="project-structure-profile-rotate-token" />
-                        </div>
-                    </div>
+                        </Stack>
+                    </Grid>
 
                     @if (currentSetupGuide is null)
                     {
@@ -214,8 +227,12 @@
                         @foreach (var overrideModel in profileModel.ProjectOverrides)
                         {
                             <div class="cda-admin-subpanel cda-stack-4" data-testid="project-structure-override-card">
-                                <div class="flex items-start justify-between gap-4">
-                                    <div class="grid flex-1 gap-4 md:grid-cols-2">
+                                <Split Breakpoint="LayoutBreakpoint.None"
+                                       Gap="LayoutGap.Large"
+                                       AlignItems="AlignItems.Start"
+                                       JustifyContent="JustifyContent.SpaceBetween"
+                                       Wrap="FlexWrap.Wrap">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="flex-1">
                                         <div>
                                             <label class="cda-field-label">Project</label>
                                             <InputSelect @bind-Value="overrideModel.ProjectId" class="cda-input" @bind-Value:after="() => SyncOverrideProjectName(overrideModel)">
@@ -226,18 +243,20 @@
                                                 }
                                             </InputSelect>
                                         </div>
-                                        <div class="flex items-end">
+                                        <Stack JustifyContent="JustifyContent.End"
+                                               Gap="0"
+                                               Class="h-full">
                                             <label class="cda-inline-option">
                                                 <InputCheckbox @bind-Value="overrideModel.IsEnabled" />
                                                 Override enabled
                                             </label>
-                                        </div>
-                                    </div>
+                                        </Stack>
+                                    </Grid>
 
                                     <Button Text="Remove" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => RemoveOverride(overrideModel))" />
-                                </div>
+                                </Split>
 
-                                <div class="grid gap-3 md:grid-cols-2">
+                                <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                     @foreach (var capability in CapabilityOptions)
                                     {
                                         <label class="cda-inline-option">
@@ -245,7 +264,7 @@
                                             @capability.Label
                                         </label>
                                     }
-                                </div>
+                                </Grid>
 
                                 <div class="cda-form-grid cda-form-grid--triple">
                                     <div>
@@ -256,12 +275,14 @@
                                         <label class="cda-field-label">Approval required over (minutes)</label>
                                         <InputNumber @bind-Value="overrideModel.ApprovalRequiredMinutes" class="cda-input" />
                                     </div>
-                                    <div class="flex items-end">
+                                    <Stack JustifyContent="JustifyContent.End"
+                                           Gap="0"
+                                           Class="h-full">
                                         <label class="cda-inline-option">
                                             <InputCheckbox @bind-Value="overrideModel.RequireApprovalForAllMutations" />
                                             Require approval for every mutation
                                         </label>
-                                    </div>
+                                    </Stack>
                                 </div>
                             </div>
                         }
@@ -271,23 +292,27 @@
                 </FormSection>
 
                 <FormSection Title="Knowledge guidance" Description="This is the current static provider content served by the central API for planning, approval, and reporting discussions.">
-                    <div class="grid gap-4 xl:grid-cols-2" data-testid="project-structure-knowledge-list">
+                    <Grid Gap="LayoutGap.Large" ColumnsXl="2" data-testid="project-structure-knowledge-list">
                         @foreach (var entry in knowledgeEntries)
                         {
                             <div class="cda-admin-knowledge-card">
-                                <div class="flex items-center justify-between gap-4">
+                                <Split Breakpoint="LayoutBreakpoint.None"
+                                       Gap="LayoutGap.Large"
+                                       AlignItems="AlignItems.Center"
+                                       JustifyContent="JustifyContent.SpaceBetween"
+                                       Wrap="FlexWrap.Wrap">
                                     <p class="cda-admin-kicker">@entry.Category</p>
                                     @if (entry.IsMissionAnchor)
                                     {
                                         <StatusBadge Tone="info" Text="Mission" />
                                     }
-                                </div>
+                                </Split>
                                 <h3 class="mt-2 text-base font-semibold text-slate-950">@entry.Title</h3>
                                 <p class="mt-1 cda-admin-copy">@entry.Summary</p>
                                 <p class="mt-3 text-sm leading-6 text-slate-700">@entry.Guidance</p>
                             </div>
                         }
-                    </div>
+                    </Grid>
                 </FormSection>
 
                 <StickyActionFooter StatusLabel="Project-structure MCP profiles" StatusMessage="@profileMessage" StatusTone="success">
@@ -306,8 +331,8 @@
                 </StickyActionFooter>
             </div>
         </EditForm>
-    </div>
-</div>
+    </Grid>
+</Stack>
 
 @code {
     private static readonly CapabilityOption[] CapabilityOptions =

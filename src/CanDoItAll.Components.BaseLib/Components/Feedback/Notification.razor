@@ -2,11 +2,16 @@
 @implements IDisposable
 @inject NotificationService NotificationService
 
-<div class="rz-notification fixed right-4 top-4 z-50 flex max-w-sm flex-col gap-2">
+<Stack Gap="0.5rem"
+       Class="rz-notification fixed right-4 top-4 z-50 max-w-sm">
     @foreach (var toast in toasts)
     {
         <div class="rounded-2xl border px-4 py-3 shadow-lg @GetSeverityCss(toast.Message.Severity)">
-            <div class="flex items-start justify-between gap-3">
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Start"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
                 <div class="min-w-0 space-y-1">
                     @if (!string.IsNullOrWhiteSpace(toast.Message.Summary))
                     {
@@ -22,10 +27,10 @@
                         @onclick="@(() => DismissToastAsync(toast))">
                     Close
                 </button>
-            </div>
+            </Split>
         </div>
     }
-</div>
+</Stack>
 
 @code {
     private readonly List<ToastEntry> toasts = [];

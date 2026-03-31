@@ -9,6 +9,7 @@ risks: hidden-job-failure, stale-status
 tests: component:AutomationPageTests, e2e:automation-smoke
 *@
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
 @using CanDoItAll.Infrastructure.BackgroundJobs
 @inject AutomationWorkspaceService AutomationWorkspaceService
 
@@ -62,13 +63,17 @@ tests: component:AutomationPageTests, e2e:automation-smoke
                     @foreach (var job in FilteredJobs)
                     {
                         <div class="cda-panel-card--soft">
-                            <div class="flex flex-wrap items-start justify-between gap-3">
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
                                 <div>
                                     <p class="text-sm font-semibold text-slate-900">@job.Description</p>
                                     <p class="mt-1 text-xs text-slate-500">@job.JobType / @job.CorrelationId</p>
                                 </div>
                                 <StatusBadge Tone="@ResolveTone(job.State)" Text="@job.State.ToString()" />
-                            </div>
+                            </Split>
                             @if (!string.IsNullOrWhiteSpace(job.ErrorSummary))
                             {
                                 <p class="mt-3 text-sm leading-6 text-rose-700">@job.ErrorSummary</p>

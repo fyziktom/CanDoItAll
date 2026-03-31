@@ -69,7 +69,7 @@
         @if (activeItem.ChildContent is not null)
         {
             <div class="rounded-[1.5rem] border border-slate-200/80 bg-slate-50/70 p-4 shadow-inner shadow-white md:p-5">
-                <div class="flex flex-col gap-4">
+                <Stack Gap="1rem">
                     <Split Breakpoint="LayoutBreakpoint.Lg"
                            Gap="LayoutGap.Medium"
                            AlignItems="AlignItems.Start"
@@ -102,7 +102,7 @@
                             @RenderNavigationButtons(isTop: false)
                         </Cluster>
                     }
-                </div>
+                </Stack>
             </div>
         }
     </div>

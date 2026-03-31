@@ -57,7 +57,7 @@
   }
 
   .cda-input {
-    @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700;
+    @apply min-w-0 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700;
   }
 
   .cda-input::placeholder {
@@ -85,6 +85,6 @@
   }
 
   .cda-code-input {
-    @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-700;
+    @apply w-full max-w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-700 whitespace-pre-wrap break-all;
   }
 }
