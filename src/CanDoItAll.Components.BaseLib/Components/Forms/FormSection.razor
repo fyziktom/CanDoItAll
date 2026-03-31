@@ -1,16 +1,18 @@
 @namespace CanDoItAll.Components.BaseLib
-<section class="space-y-4 rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-5">
+<Stack Section="true"
+       GapScale="LayoutGap.Large"
+       Class="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-5">
     <Split Breakpoint="LayoutBreakpoint.Md"
            Gap="LayoutGap.Medium"
            AlignItems="AlignItems.Start"
            JustifyContent="JustifyContent.SpaceBetween">
-        <div class="space-y-1">
+        <Stack GapScale="LayoutGap.Tiny">
             <h2 class="text-base font-semibold text-slate-950">@Title</h2>
             @if (!string.IsNullOrWhiteSpace(Description))
             {
                 <p class="text-sm leading-6 text-slate-600">@Description</p>
             }
-        </div>
+        </Stack>
 
         @if (Actions is not null)
         {
@@ -20,10 +22,8 @@
         }
     </Split>
 
-    <div class="space-y-4">
-        @ChildContent
-    </div>
-</section>
+    @ChildContent
+</Stack>
 
 @code {
     [Parameter, EditorRequired]

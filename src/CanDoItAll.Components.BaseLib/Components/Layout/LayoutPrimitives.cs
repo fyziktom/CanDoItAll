@@ -29,7 +29,8 @@ public enum LayoutGap
     Medium,
     Large,
     XLarge,
-    XXLarge
+    XXLarge,
+    Tiny
 }
 
 public enum LayoutBreakpoint
@@ -49,6 +50,7 @@ internal static class LayoutValueResolver
         return gap switch
         {
             LayoutGap.None => "0rem",
+            LayoutGap.Tiny => "0.25rem",
             LayoutGap.XSmall => "0.375rem",
             LayoutGap.Small => "0.5rem",
             LayoutGap.Medium => "0.75rem",

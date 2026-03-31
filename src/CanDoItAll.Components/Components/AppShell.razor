@@ -5,17 +5,19 @@
 <div class="cda-shell-root">
     <div class="cda-shell-frame">
         <aside class="cda-shell-sidebar @(Mode == AppShellMode.FocusWorkbench ? "cda-shell-sidebar--focus" : "cda-shell-sidebar--standard")">
-                <div class="mb-7 space-y-4">
-                    <div class="space-y-1">
-                        <p class="text-xs font-semibold uppercase tracking-[0.35em] text-sky-300">CanDoItAll</p>
+                <Stack GapScale="LayoutGap.Large"
+                       Class="mb-7">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow text-sky-300 tracking-[0.35em]">CanDoItAll</p>
                         <h1 class="@(Mode == AppShellMode.FocusWorkbench ? "text-xl" : "text-2xl") font-semibold tracking-tight text-white">Local delivery workbench</h1>
                         <p class="text-sm leading-6 text-slate-400">Projects, prompts, validation, scheduling, and evidence in one recoverable workspace.</p>
-                    </div>
+                    </Stack>
 
                     @if (Workspaces.Count > 0)
                     {
-                        <div class="cda-shell-card-dark cda-stack-2">
-                            <p class="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">Workspace</p>
+                        <Stack GapScale="LayoutGap.Small"
+                               Class="cda-shell-card-dark">
+                            <p class="cda-eyebrow cda-eyebrow--tight text-slate-400 tracking-[0.28em]">Workspace</p>
                             @foreach (var workspace in Workspaces)
                             {
                                 <button type="button"
@@ -25,13 +27,13 @@
                                     <span class="mt-1 block text-xs leading-5 text-slate-400">@workspace.Description</span>
                                 </button>
                             }
-                        </div>
+                        </Stack>
                     }
 
                     @if (!string.IsNullOrWhiteSpace(ProjectContextTitle))
                     {
                         <div class="cda-shell-card-info">
-                            <p class="text-[10px] font-semibold uppercase tracking-[0.28em] text-sky-300">Project Context</p>
+                            <p class="cda-eyebrow cda-eyebrow--tight text-sky-300 tracking-[0.28em]">Project Context</p>
                             <p class="mt-2 text-sm font-semibold text-white">@ProjectContextTitle</p>
                             @if (!string.IsNullOrWhiteSpace(PhaseContextTitle))
                             {
@@ -39,7 +41,7 @@
                             }
                         </div>
                     }
-                </div>
+                </Stack>
 
                 <nav class="space-y-2">
                     @foreach (var item in NavigationItems)
@@ -60,8 +62,9 @@
 
                 @if (OpenedProjects.Count > 0)
                     {
-                        <div class="mt-8 space-y-2">
-                            <p class="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">Opened Projects</p>
+                        <Stack GapScale="LayoutGap.Small"
+                               Class="mt-8">
+                            <p class="cda-eyebrow cda-eyebrow--tight text-slate-400 tracking-[0.3em]">Opened Projects</p>
                             @foreach (var item in OpenedProjects)
                             {
                                 <button type="button"
@@ -70,14 +73,15 @@
                                 <span class="block text-sm font-semibold text-white">@item.Title</span>
                                 <span class="mt-1 block text-xs text-slate-400">@item.TabKind / @item.Route</span>
                                 </button>
-                        }
-                    </div>
+                            }
+                        </Stack>
                 }
 
                 @if (OpenedSessions.Count > 0)
                     {
-                        <div class="mt-8 space-y-2">
-                            <p class="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">Prompt Sessions</p>
+                        <Stack GapScale="LayoutGap.Small"
+                               Class="mt-8">
+                            <p class="cda-eyebrow cda-eyebrow--tight text-slate-400 tracking-[0.3em]">Prompt Sessions</p>
                             @foreach (var item in OpenedSessions)
                             {
                                 <button type="button"
@@ -86,8 +90,8 @@
                                 <span class="block text-sm font-semibold text-white">@item.Title</span>
                                 <span class="mt-1 block text-xs text-slate-400">@item.Route</span>
                                 </button>
-                        }
-                    </div>
+                            }
+                        </Stack>
                 }
         </aside>
 
@@ -96,7 +100,8 @@
                 <summary class="cursor-pointer list-none text-sm font-semibold text-slate-900">
                     Workspace navigation
                 </summary>
-                <div class="mt-4 space-y-4">
+                <Stack GapScale="LayoutGap.Large"
+                       Class="mt-4">
                     @if (Workspaces.Count > 0)
                     {
                         <Grid Gap="LayoutGap.Small"
@@ -122,7 +127,7 @@
                             <button type="button"
                                     class="cda-shell-mobile-card @(isActive ? "cda-shell-mobile-card--active" : "cda-shell-mobile-card--inactive")"
                                     @onclick="() => Navigate.InvokeAsync(item.Route)">
-                                <span class="text-xs font-semibold uppercase tracking-[0.2em] @(isActive ? "text-slate-200" : "text-slate-500")">@item.Icon</span>
+                                <span class="cda-eyebrow @(isActive ? "text-slate-200" : "text-slate-500")">@item.Icon</span>
                                 <span class="mt-2 block text-sm font-semibold">@item.Title</span>
                                 <span class="mt-1 block text-xs leading-5 @(isActive ? "text-slate-200" : "text-slate-500")">@item.Description</span>
                             </button>
@@ -135,8 +140,8 @@
                               ColumnsLg="2">
                             @if (OpenedProjects.Count > 0)
                             {
-                                <div class="space-y-2">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Opened Projects</p>
+                                <Stack GapScale="LayoutGap.Small">
+                                    <p class="cda-eyebrow">Opened Projects</p>
                                     @foreach (var item in OpenedProjects)
                                     {
                                         <button type="button"
@@ -146,13 +151,13 @@
                                             <span class="mt-1 block text-xs text-slate-500">@item.Route</span>
                                         </button>
                                     }
-                                </div>
+                                </Stack>
                             }
 
                             @if (OpenedSessions.Count > 0)
                             {
-                                <div class="space-y-2">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Prompt Sessions</p>
+                                <Stack GapScale="LayoutGap.Small">
+                                    <p class="cda-eyebrow">Prompt Sessions</p>
                                     @foreach (var item in OpenedSessions)
                                     {
                                         <button type="button"
@@ -162,11 +167,11 @@
                                             <span class="mt-1 block text-xs text-slate-500">@item.Route</span>
                                         </button>
                                     }
-                                </div>
+                                </Stack>
                             }
                         </Grid>
                     }
-                </div>
+                </Stack>
             </details>
 
             @if (TopBar is not null)

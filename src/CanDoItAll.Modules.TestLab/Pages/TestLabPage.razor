@@ -73,7 +73,7 @@
                 }
                 else
                 {
-                    <div class="cda-stack-3">
+                    <Stack GapScale="LayoutGap.Medium">
                         @foreach (var plan in FilteredPlans)
                         {
                             <SelectionListItem Title="@plan.Title"
@@ -87,18 +87,18 @@
                                 </Status>
                             </SelectionListItem>
                         }
-                    </div>
+                    </Stack>
                 }
             </ListContent>
 
             <DetailHeader>
-                <div class="cda-stack-3">
+                <Stack GapScale="LayoutGap.Medium">
                     <Split Gap="LayoutGap.Medium">
-                        <div class="cda-stack-1">
-                            <p class="tracking-[0.2em] text-xs font-semibold uppercase text-slate-500">Plan editor</p>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <p class="cda-eyebrow">Plan editor</p>
                             <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
                             <p class="text-sm leading-6 text-slate-600">Coverage, cases, evidence, and run history stay in one detail pane with predictable sections.</p>
-                        </div>
+                        </Stack>
                         <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Tone="info" Text="@($"{editor.Cases.Count} case(s)")" />
                             <StatusBadge Tone="neutral" Text="@($"{editor.Evidence.Count} evidence")" />
@@ -107,16 +107,16 @@
                     </Split>
 
                     <SecondaryTabs Items="DetailTabs" SelectedKey="@detailTab" SelectedKeyChanged="HandleDetailTabChanged" />
-                </div>
+                </Stack>
             </DetailHeader>
 
             <DetailContent>
                 <EditForm Model="editor" OnValidSubmit="SaveAsync">
-                    <Stack Class="min-h-full" Gap="1.5rem">
+                    <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
                         @if (string.Equals(detailTab, "overview", StringComparison.Ordinal))
                         {
                             <FormSection Title="Plan overview" Description="Anchor the plan to the correct project and phase before editing cases and evidence.">
-                                <div class="cda-form-grid">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Project</label>
                                         <InputSelect @bind-Value="editor.ProjectId" class="cda-input">
@@ -131,7 +131,7 @@
                                         <label class="cda-field-label">Phase</label>
                                         <InputText @bind-Value="editor.Phase" class="cda-input" />
                                     </div>
-                                </div>
+                                </Grid>
 
                                 <div>
                                     <label class="cda-field-label">Title</label>
@@ -161,7 +161,7 @@
                                 }
                                 else
                                 {
-                                    <div class="cda-stack-3">
+                                    <Stack GapScale="LayoutGap.Medium">
                                         @foreach (var testCase in editor.Cases)
                                         {
                                             <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
@@ -176,7 +176,7 @@
                                                 <InputText @bind-Value="testCase.Notes" class="cda-input" />
                                             </Grid>
                                         }
-                                    </div>
+                                    </Stack>
                                 }
                             </FormSection>
                         }
@@ -192,7 +192,7 @@
                                 }
                                 else
                                 {
-                                    <div class="cda-stack-3">
+                                    <Stack GapScale="LayoutGap.Medium">
                                         @foreach (var evidence in editor.Evidence)
                                         {
                                             <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
@@ -202,7 +202,7 @@
                                                 <InputText @bind-Value="evidence.Notes" class="cda-input" />
                                             </Grid>
                                         }
-                                    </div>
+                                    </Stack>
                                 }
                             </FormSection>
                         }
@@ -218,7 +218,7 @@
                                 }
                                 else
                                 {
-                                    <div class="cda-stack-3">
+                                    <Stack GapScale="LayoutGap.Medium">
                                         @foreach (var run in editor.Runs)
                                         {
                                             <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
@@ -233,7 +233,7 @@
                                                 <InputText @bind-Value="run.Summary" class="cda-input" />
                                             </Grid>
                                         }
-                                    </div>
+                                    </Stack>
                                 }
                             </FormSection>
                         }

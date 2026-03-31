@@ -89,7 +89,7 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                 }
                 else
                 {
-                    <div class="cda-stack-3">
+                    <Stack GapScale="LayoutGap.Medium">
                         @foreach (var job in failedJobs.Take(3))
                         {
                             <div class="cda-panel-card border-amber-200 bg-amber-50/80">
@@ -117,7 +117,7 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                                                Meta="@recent.Route"
                                                OnSelect="@(() => Navigation.NavigateTo(recent.Route))" />
                         }
-                    </div>
+                    </Stack>
                 }
             </SectionCard>
         </Grid>
@@ -133,7 +133,7 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                 }
                 else
                 {
-                    <div class="cda-stack-3">
+                    <Stack GapScale="LayoutGap.Medium">
                         @foreach (var tab in openWorkItems.Take(5))
                         {
                             <SelectionListItem Title="@tab.Title"
@@ -147,12 +147,13 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                                 </Status>
                             </SelectionListItem>
                         }
-                    </div>
+                    </Stack>
                 }
             </SectionCard>
 
             <SectionCard Title="System footing" Description="Keep the platform context available, but subordinate it to task entry points.">
-                <div class="space-y-3 text-sm leading-6 text-slate-600">
+                <Stack GapScale="LayoutGap.Medium"
+                       Class="text-sm leading-6 text-slate-600">
                     <p>The workbench restores tabs from browser storage, keeps route groups recoverable, and leaves room for the protected canvas-heavy surfaces to stay focused.</p>
                     <p>Generated artifacts still live under `.artifacts/`, the development runtime endpoint remains available, and tuning continues to attach only to explicit component boundaries.</p>
                     <Cluster Gap="LayoutGap.Small">
@@ -160,7 +161,7 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                         <StatusBadge Tone="info" Text="Module seams active" />
                         <StatusBadge Tone="neutral" Text="Focused shell enabled" />
                     </Cluster>
-                </div>
+                </Stack>
             </SectionCard>
         </Grid>
     </ChildContent>

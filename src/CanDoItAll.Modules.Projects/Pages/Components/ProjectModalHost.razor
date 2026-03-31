@@ -28,7 +28,7 @@
                             Click="Close" />
                 </HeaderActions>
                 <ChildContent>
-                    <div class="cda-stack-4">
+                    <Stack GapScale="LayoutGap.Large">
                         <Split Breakpoint="LayoutBreakpoint.Xl"
                                Gap="LayoutGap.Large"
                                AlignItems="AlignItems.Center"
@@ -93,8 +93,8 @@
                                 </FormSection>
                                 break;
                             case 1:
-                                <FormSection Title="Dates and phases"
-                                             Description="Keep phase planning explicit so the project calendar and workbench stay aligned.">
+                            <FormSection Title="Dates and phases"
+                                         Description="Keep phase planning explicit so the project calendar and workbench stay aligned.">
                                     <Actions>
                                         <Button ButtonStyle="ButtonStyle.Light"
                                                 Text="Add phase"
@@ -113,7 +113,7 @@
                                         }
                                         else
                                         {
-                                            <div class="cda-stack-4">
+                                            <Stack GapScale="LayoutGap.Large">
                                                 @foreach (var phase in Editor.Phases)
                                                 {
                                                     <PanelCard>
@@ -136,7 +136,7 @@
                                                         </Grid>
                                                     </PanelCard>
                                                 }
-                                            </div>
+                                            </Stack>
                                         }
                                     </ChildContent>
                                 </FormSection>
@@ -182,7 +182,7 @@
                                         }
                                         else
                                         {
-                                            <div class="cda-stack-4">
+                                            <Stack GapScale="LayoutGap.Large">
                                                 @foreach (var starter in StarterObjects)
                                                 {
                                                     <PanelCard>
@@ -203,19 +203,19 @@
                                                         </Grid>
                                                     </PanelCard>
                                                 }
-                                            </div>
+                                            </Stack>
                                         }
                                     </ChildContent>
                                 </FormSection>
                                 break;
                             default:
                                 <FormSection Title="Review"
-                                             Description="Confirm the project shape before opening the next workbench surface.">
+                                            Description="Confirm the project shape before opening the next workbench surface.">
                                     <ChildContent>
                                         <Grid Gap="LayoutGap.Large"
                                               ColumnTemplateXl="minmax(0,1.15fr) minmax(18rem,0.85fr)">
                                             <PanelCard>
-                                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Project summary</p>
+                                                <p class="cda-eyebrow cda-eyebrow--tight">Project summary</p>
                                                 <p class="mt-2 text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(Editor.Name) ? "Unnamed project" : Editor.Name)</p>
                                                 <p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(Editor.Description) ? "No description captured yet." : Editor.Description)</p>
                                             </PanelCard>
@@ -235,17 +235,17 @@
                                 </FormSection>
                                 break;
                         }
-                    </div>
+                    </Stack>
                 </ChildContent>
                 <Footer>
                     <Split Breakpoint="LayoutBreakpoint.Xl"
                            Gap="LayoutGap.Large"
                            AlignItems="AlignItems.Center"
                            JustifyContent="JustifyContent.SpaceBetween">
-                        <div class="space-y-1">
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Project save state</p>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <p class="cda-eyebrow">Project save state</p>
                             <p class="text-sm @(IsErrorMessage ? "text-rose-700" : "text-slate-600")">@(string.IsNullOrWhiteSpace(Message) ? "Save keeps the grid in sync without leaving the page." : Message)</p>
-                        </div>
+                        </Stack>
 
                         <Cluster>
                             <Button ButtonStyle="ButtonStyle.Light"
@@ -295,7 +295,7 @@
                         Click="Close" />
             </HeaderActions>
             <ChildContent>
-                <div class="cda-stack-4">
+                <Stack GapScale="LayoutGap.Large">
                     <SummaryTiles>
                         <SummaryTile Label="Current phase" Value="@(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)" HelperText="The phase currently highlighted for delivery." Tone="info" />
                         <SummaryTile Label="Target date" Value="@ProjectsPresentation.FormatDate(Editor.TargetDateUtc)" HelperText="Leave flexible when the delivery window is still moving." />
@@ -306,15 +306,15 @@
                     <Grid Gap="LayoutGap.Large"
                           ColumnTemplateXl="minmax(0,1.15fr) minmax(18rem,0.85fr)">
                         <SurfaceCard>
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Description</p>
+                            <p class="cda-eyebrow">Description</p>
                             <p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(Editor.Description) ? "No description has been captured for this project yet." : Editor.Description)</p>
 
-                            <p class="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Objective</p>
+                            <p class="mt-6 cda-eyebrow">Objective</p>
                             <p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(Editor.Objective) ? "No explicit objective has been recorded yet." : Editor.Objective)</p>
                         </SurfaceCard>
 
                         <SurfaceCard Soft="true">
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Next actions</p>
+                            <p class="cda-eyebrow">Next actions</p>
                             <Grid Gap="LayoutGap.Medium"
                                   Class="mt-4">
                                 <Button Class="w-full"
@@ -344,7 +344,7 @@
                                AlignItems="AlignItems.Center"
                                JustifyContent="JustifyContent.SpaceBetween">
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Phase plan</p>
+                                <p class="cda-eyebrow">Phase plan</p>
                                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Delivery sequence</h3>
                             </div>
                             <StatusBadge Tone="neutral" Text="@($"{Editor.Phases.Count} phase(s)")" />
@@ -369,7 +369,7 @@
                                                Wrap="FlexWrap.Wrap">
                                             <div class="min-w-0">
                                                 <p class="text-sm font-semibold text-slate-950">@phase.Name</p>
-                                                <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@phase.Status</p>
+                                                <p class="mt-1 cda-eyebrow cda-eyebrow--tight">@phase.Status</p>
                                             </div>
                                             <StatusBadge Tone="@ProjectsPresentation.GetPhaseStatusTone(phase.Status)" Text="@phase.Status.ToString()" />
                                         </Split>
@@ -387,7 +387,7 @@
                                AlignItems="AlignItems.Center"
                                JustifyContent="JustifyContent.SpaceBetween">
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Stack profile</p>
+                                <p class="cda-eyebrow">Stack profile</p>
                                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Captured platform choices</h3>
                             </div>
                             <StatusBadge Tone="warning" Text="@($"{MeaningfulOptions.Count} filled")" />
@@ -405,7 +405,7 @@
                                 @foreach (var option in MeaningfulOptions.OrderBy(item => item.Category).ThenBy(item => item.OptionName))
                                 {
                                     <PanelCard Soft="true">
-                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">@option.Category</p>
+                                        <p class="cda-eyebrow cda-eyebrow--tight">@option.Category</p>
                                         <p class="mt-2 text-sm font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(option.OptionName) ? "Not specified" : option.OptionName)</p>
                                         <p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(option.Notes) ? "No notes recorded." : option.Notes)</p>
                                     </PanelCard>
@@ -413,17 +413,17 @@
                             </Grid>
                         }
                     </SurfaceCard>
-                </div>
+                </Stack>
             </ChildContent>
             <Footer>
                 <Split Breakpoint="LayoutBreakpoint.Xl"
                        Gap="LayoutGap.Large"
                        AlignItems="AlignItems.Center"
                        JustifyContent="JustifyContent.SpaceBetween">
-                    <div class="space-y-1">
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Project dashboard</p>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Project dashboard</p>
                         <p class="text-sm text-slate-600">Use the modal to inspect and decide. Use tabs only when you want the project overview or a deeper work surface to stay open alongside other work.</p>
-                    </div>
+                    </Stack>
 
                     <Cluster>
                         <Button ButtonStyle="ButtonStyle.Light"

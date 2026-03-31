@@ -12,7 +12,8 @@
            JustifyContent="JustifyContent.SpaceBetween"
            Class="border-b border-slate-200 px-4 py-4"
            data-testid="projects-command-bar">
-        <div class="min-w-0 cda-stack-3">
+        <Stack GapScale="LayoutGap.Medium"
+               Class="min-w-0">
             <Cluster>
                 <h2 class="text-lg font-semibold tracking-tight text-slate-950">Portfolio board</h2>
                 <StatusBadge Tone="info" Text="@($"{FilteredProjectSummaries.Count} visible")" />
@@ -32,9 +33,9 @@
                       Token="NOTE"
                       Text="@LatestUpdatedProjectHelper" />
             </PillList>
-        </div>
+        </Stack>
 
-        <Stack Class="w-full max-w-2xl" Gap="0.5rem">
+        <Stack Class="w-full max-w-2xl" GapScale="LayoutGap.Small">
             <Cluster JustifyContent="JustifyContent.End">
                 <Button Class="h-9 px-3"
                         Token="+"
@@ -146,7 +147,7 @@
                                        JustifyContent="JustifyContent.SpaceBetween"
                                        Wrap="FlexWrap.Wrap">
                                     <div class="min-w-0">
-                                        <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Project</p>
+                                        <p class="cda-eyebrow cda-eyebrow--tight text-slate-400">Project</p>
                                         <h3 class="mt-1 text-base font-bold tracking-tight text-slate-950">@project.Name</h3>
                                     </div>
                                     <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(project.Status)" Text="@project.Status.ToString()" />

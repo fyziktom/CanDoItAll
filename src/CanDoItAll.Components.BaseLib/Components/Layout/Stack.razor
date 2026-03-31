@@ -1,9 +1,18 @@
 @namespace CanDoItAll.Components.BaseLib
 @inherits StyledComponentBase
 
-<div @attributes='BuildAttributes("rz-stack flex", ResolveStackStyle())'>
-    @ChildContent
-</div>
+@if (Section)
+{
+    <section @attributes='BuildAttributes("rz-stack flex min-w-0", ResolveStackStyle())'>
+        @ChildContent
+    </section>
+}
+else
+{
+    <div @attributes='BuildAttributes("rz-stack flex min-w-0", ResolveStackStyle())'>
+        @ChildContent
+    </div>
+}
 
 @code {
     [Parameter]
@@ -20,6 +29,12 @@
 
     [Parameter]
     public string? Gap { get; set; }
+
+    [Parameter]
+    public LayoutGap? GapScale { get; set; }
+
+    [Parameter]
+    public bool Section { get; set; }
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
@@ -51,9 +66,11 @@
             ? "wrap"
             : "nowrap";
 
-        var gap = string.IsNullOrWhiteSpace(Gap)
-            ? "0"
-            : Gap;
+        var gap = GapScale.HasValue
+            ? LayoutValueResolver.ResolveGap(GapScale.Value)
+            : string.IsNullOrWhiteSpace(Gap)
+                ? "0"
+                : Gap;
 
         return $"display:flex;flex-direction:{direction};align-items:{align};justify-content:{justify};flex-wrap:{wrap};gap:{gap};";
     }

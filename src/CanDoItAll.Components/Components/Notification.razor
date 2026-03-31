@@ -3,7 +3,7 @@
 @implements IDisposable
 @inject NotificationService NotificationService
 
-<Stack Gap="0.5rem"
+<Stack GapScale="LayoutGap.Small"
        Class="rz-notification fixed right-4 top-4 z-50 max-w-sm">
     @foreach (var toast in toasts)
     {

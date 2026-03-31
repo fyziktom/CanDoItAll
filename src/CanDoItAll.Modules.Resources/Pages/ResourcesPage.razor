@@ -75,7 +75,7 @@
                 }
                 else
                 {
-                    <div class="cda-stack-3">
+                    <Stack GapScale="LayoutGap.Medium">
                         @foreach (var resource in FilteredResources)
                         {
                             <SelectionListItem Title="@resource.Name"
@@ -89,18 +89,18 @@
                                 </Status>
                             </SelectionListItem>
                         }
-                    </div>
+                    </Stack>
                 }
             </ListContent>
 
             <DetailHeader>
-                <div class="cda-stack-3">
+                <Stack GapScale="LayoutGap.Medium">
                     <Split Gap="LayoutGap.Medium">
-                        <div class="cda-stack-1">
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Resource editor</p>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <p class="cda-eyebrow">Resource editor</p>
                             <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
                             <p class="text-sm leading-6 text-slate-600">Keep ownership, connector location, and validation state together in one predictable detail pane.</p>
-                        </div>
+                        </Stack>
                         <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Tone="@ResolveTone(editor.ValidationStatus)" Text="@editor.ValidationStatus.ToString()" />
                             <StatusBadge Tone="neutral" Text="@editor.ResourceKind.ToString()" />
@@ -115,14 +115,14 @@
                         <p class="font-semibold text-sky-950">@Descriptor.DisplayName</p>
                         <p class="mt-1">@Descriptor.Summary</p>
                     </div>
-                </div>
+                </Stack>
             </DetailHeader>
 
             <DetailContent>
                 <EditForm Model="editor" OnValidSubmit="SaveAsync">
-                    <Stack Class="min-h-full" Gap="1.5rem">
+                    <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
                         <FormSection Title="Identity and ownership" Description="Link the resource to the correct project and choose its typed shape before editing connector fields.">
-                            <div class="cda-form-grid">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">Project</label>
                                     <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="resource-project-select">
@@ -142,9 +142,9 @@
                                         }
                                     </InputSelect>
                                 </div>
-                            </div>
+                            </Grid>
 
-                            <div class="cda-form-grid">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">Name</label>
                                     <InputText @bind-Value="editor.Name" class="cda-input" data-testid="resource-name-input" />
@@ -159,14 +159,14 @@
                                         }
                                     </InputSelect>
                                 </div>
-                            </div>
+                            </Grid>
                         </FormSection>
 
                         <FormSection Title="Location and connector details" Description="The typed editor only shows the fields that matter for the selected resource kind.">
                             @switch (editor.ResourceKind)
                             {
                                 case ResourceKind.Repository:
-                                    <div class="cda-form-grid cda-form-grid--triple">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                                         <div class="md:col-span-2">
                                             <label class="cda-field-label">Repository URL</label>
                                             <InputText @bind-Value="editor.RepositoryUrl" class="cda-input" data-testid="resource-primary-input" />
@@ -175,14 +175,14 @@
                                             <label class="cda-field-label">Default branch</label>
                                             <InputText @bind-Value="editor.DefaultBranch" class="cda-input" />
                                         </div>
-                                    </div>
+                                    </Grid>
                                     <div>
                                         <label class="cda-field-label">Relative path</label>
                                         <InputText @bind-Value="editor.RelativePath" class="cda-input" />
                                     </div>
                                     break;
                                 case ResourceKind.Folder:
-                                    <div class="cda-form-grid">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                         <div>
                                             <label class="cda-field-label">Folder path</label>
                                             <InputText @bind-Value="editor.FolderPath" class="cda-input" data-testid="resource-primary-input" />
@@ -191,10 +191,10 @@
                                             <label class="cda-field-label">Working directory</label>
                                             <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
                                         </div>
-                                    </div>
+                                    </Grid>
                                     break;
                                 case ResourceKind.File:
-                                    <div class="cda-form-grid">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                         <div>
                                             <label class="cda-field-label">File path</label>
                                             <InputText @bind-Value="editor.FilePath" class="cda-input" data-testid="resource-primary-input" />
@@ -203,7 +203,7 @@
                                             <label class="cda-field-label">Working directory</label>
                                             <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
                                         </div>
-                                    </div>
+                                    </Grid>
                                     break;
                                 case ResourceKind.WebLink:
                                     <Grid Gap="LayoutGap.Large">
@@ -258,7 +258,7 @@
                                     </div>
                                     break;
                                 case ResourceKind.PowerShellScript:
-                                    <div class="cda-form-grid">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                         <div>
                                             <label class="cda-field-label">Script path</label>
                                             <InputText @bind-Value="editor.ScriptPath" class="cda-input" data-testid="resource-primary-input" />
@@ -267,14 +267,14 @@
                                             <label class="cda-field-label">Working directory</label>
                                             <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
                                         </div>
-                                    </div>
+                                    </Grid>
                                     <div>
                                         <label class="cda-field-label">Arguments</label>
                                         <InputText @bind-Value="editor.ScriptArguments" class="cda-input" />
                                     </div>
                                     break;
                                 case ResourceKind.DockerCompose:
-                                    <div class="cda-form-grid">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                         <div>
                                             <label class="cda-field-label">Compose file</label>
                                             <InputText @bind-Value="editor.ComposeFilePath" class="cda-input" data-testid="resource-primary-input" />
@@ -283,7 +283,7 @@
                                             <label class="cda-field-label">Service name</label>
                                             <InputText @bind-Value="editor.ComposeService" class="cda-input" />
                                         </div>
-                                    </div>
+                                    </Grid>
                                     break;
                                 case ResourceKind.SecretLink:
                                     <div>
@@ -292,7 +292,7 @@
                                     </div>
                                     break;
                                 case ResourceKind.PromptLink:
-                                    <div class="cda-form-grid">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                         <div>
                                             <label class="cda-field-label">Prompt reference</label>
                                             <InputText @bind-Value="editor.PromptReference" class="cda-input" data-testid="resource-primary-input" />
@@ -301,12 +301,12 @@
                                             <label class="cda-field-label">Prompt title hint</label>
                                             <InputText @bind-Value="editor.PromptTitleHint" class="cda-input" />
                                         </div>
-                                    </div>
+                                    </Grid>
                                     break;
                             }
 
                             <div class="rounded-[1.2rem] bg-white px-4 py-3">
-                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Stored identifier preview</p>
+                                <p class="cda-eyebrow cda-eyebrow--tight">Stored identifier preview</p>
                                 <p class="mt-2 break-all text-sm text-slate-700">@PreviewLocation</p>
                             </div>
                         </FormSection>
@@ -317,7 +317,7 @@
                                 <InputTextArea @bind-Value="editor.Description" class="cda-input cda-input--textarea min-h-24" />
                             </div>
 
-                            <div class="cda-form-grid">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">Validation</label>
                                     <InputSelect @bind-Value="editor.ValidationStatus" class="cda-input">
@@ -336,7 +336,7 @@
                                         }
                                     </InputSelect>
                                 </div>
-                            </div>
+                            </Grid>
 
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                 <label class="cda-inline-option"><InputCheckbox @bind-Value="editor.SupportsPreview" /> Preview capable</label>

@@ -29,7 +29,7 @@
                            JustifyContent="JustifyContent.SpaceBetween"
                            Wrap="FlexWrap.Wrap">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Parents</p>
+                            <p class="cda-eyebrow">Parents</p>
                             <h3 class="mt-1 text-lg font-semibold text-slate-950">Direct parent projects</h3>
                         </div>
                         <StatusBadge Tone="neutral" Text="@($"{State.ParentProjects.Count} linked")" />
@@ -41,7 +41,8 @@
                     }
                     else
                     {
-                        <div class="mt-4 space-y-3">
+                        <Stack GapScale="LayoutGap.Medium"
+                               Class="mt-4">
                             @foreach (var parentProject in State.ParentProjects.OrderBy(project => project.Name))
                             {
                                 <PanelCard>
@@ -52,7 +53,7 @@
                                            Wrap="FlexWrap.Wrap">
                                         <div class="min-w-0">
                                             <p class="text-sm font-semibold text-slate-950">@parentProject.Name</p>
-                                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@(string.IsNullOrWhiteSpace(parentProject.CurrentPhase) ? "Parent project" : parentProject.CurrentPhase)</p>
+                                            <p class="mt-1 cda-eyebrow cda-eyebrow--tight">@(string.IsNullOrWhiteSpace(parentProject.CurrentPhase) ? "Parent project" : parentProject.CurrentPhase)</p>
                                         </div>
                                         <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(parentProject.Status)" Text="@parentProject.Status.ToString()" />
                                     </Split>
@@ -65,10 +66,10 @@
                                                 Text="Structure"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => OpenStructure.InvokeAsync(parentProject.Id))" />
-                                    </Cluster>
-                                </PanelCard>
-                            }
-                        </div>
+                                        </Cluster>
+                                    </PanelCard>
+                                }
+                        </Stack>
                     }
                 </SurfaceCard>
 
@@ -79,7 +80,7 @@
                            JustifyContent="JustifyContent.SpaceBetween"
                            Wrap="FlexWrap.Wrap">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Subprojects</p>
+                            <p class="cda-eyebrow">Subprojects</p>
                             <h3 class="mt-1 text-lg font-semibold text-slate-950">Direct child projects</h3>
                         </div>
                         <StatusBadge Tone="info" Text="@($"{State.Subprojects.Count} linked")" />
@@ -104,7 +105,7 @@
                                            Wrap="FlexWrap.Wrap">
                                         <div class="min-w-0">
                                             <p class="text-sm font-semibold text-slate-950">@subproject.Name</p>
-                                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@(string.IsNullOrWhiteSpace(subproject.CurrentPhase) ? "Subproject" : subproject.CurrentPhase)</p>
+                                            <p class="mt-1 cda-eyebrow cda-eyebrow--tight">@(string.IsNullOrWhiteSpace(subproject.CurrentPhase) ? "Subproject" : subproject.CurrentPhase)</p>
                                         </div>
                                         <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(subproject.Status)" Text="@subproject.Status.ToString()" />
                                     </Split>

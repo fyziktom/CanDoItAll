@@ -29,6 +29,11 @@
 - `candoitall_solution_build` with `StopAndResume` succeeded after the repair:
   - `op_d8451696961a42e9bed8720ae4c4d4c0` => `Build succeeded`
 - `dotnet run --project C:\repositories\CanDoItAll\src\CanDoItAll.Components.Sandbox\CanDoItAll.Components.Sandbox.csproj --urls http://127.0.0.1:5510` was used for sandbox proof because `candoitall_app_start` returned a generic invocation error for the sandbox app.
+- `npm run build` in `C:\repositories\CanDoItAll\Tailwind` succeeded again for the repeated-pattern follow-up after removing the legacy `cda-stack-*` and `cda-form-grid*` aliases and normalizing the shared layout and eyebrow helpers.
+- `dotnet build C:\repositories\CanDoItAll\CanDoItAll.slnx -v:minimal -nologo` was rerun for the repeated-pattern follow-up and compiled the edited projects cleanly before the expected final web copy lock from the running host.
+- `candoitall_solution_build` with `StopAndResume` succeeded for the repeated-pattern follow-up:
+  - `op_2936d9edc1984f0abdd526a69d246568` => `Build succeeded`
+- Playwright MCP was attempted again on `http://127.0.0.1:5501/` and again failed with `EPERM` creating `C:\Windows\System32\.playwright-mcp`; real browser proof continued through `npx --yes --package @playwright/cli playwright-cli` with `18` saved screenshots and explicit overflow checks on the touched routes, panels, and modals.
 - `python C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed C:\repositories\CanDoItAll\solution-style-unification-bundle-v1` => `Bundle is valid for stage 'completed'`
 
 ## Browser Artifacts
@@ -79,6 +84,24 @@
 - `sandbox-feedback-layout-wave5.png`
 - `sandbox-inputs-layout-wave5.png`
 - `sandbox-inputs-layout-wave5-mobile.png`
+- `home-layout-wave6.png`
+- `home-layout-wave6-mobile.png`
+- `prompt-gallery-layout-wave6.png`
+- `prompt-gallery-layout-wave6-mobile.png`
+- `resources-layout-wave6.png`
+- `activity-layout-wave6.png`
+- `automation-layout-wave6.png`
+- `validation-layout-wave6.png`
+- `testlab-layout-wave6.png`
+- `settings-layout-wave6.png`
+- `settings-layout-wave6-mobile.png`
+- `settings-project-structure-wave6.png`
+- `settings-project-structure-wave6-mobile.png`
+- `projects-board-wave6.png`
+- `projects-board-wave6-mobile.png`
+- `projects-detail-modal-wave6.png`
+- `projects-editor-modal-wave6.png`
+- `projects-hierarchy-modal-wave6.png`
 
 ## Subbundle Gate Results
 
@@ -104,6 +127,7 @@
 | `05-browser-validation-regression-repair-and-closure-audit` | `/projects` wrapper-driven follow-up including board, detail modal, hierarchy modal, editor modal, and mobile filter stack repair | `1440x1200`, `1024x1180`, `390x960` | `playwright-cli open`, `reload`, `eval`, `run-code`, `screenshot` | `projects-board-wave4.png`, `projects-detail-modal-wave4.png`, `projects-hierarchy-modal-wave4.png`, `projects-editor-modal-wave4.png`, `projects-board-wave4-mobile.png` | `Passed after runtime string-binding fix and Tailwind rebuild` |
 | `05-browser-validation-regression-repair-and-closure-audit` | `/activity`, `/automation`, `/projects`, `/settings` layout-wrapper follow-up | `1440x1200`, `390x960` | `playwright-cli open`, `goto`, `run-code`, `screenshot` | `activity-layout-wave5.png`, `activity-layout-wave5-mobile.png`, `automation-layout-wave5.png`, `automation-layout-wave5-mobile.png`, `projects-board-layout-wave5.png`, `projects-board-layout-wave5-mobile.png`, `projects-detail-layout-wave5.png`, `settings-project-structure-layout-wave5.png`, `settings-project-structure-layout-wave5-mobile.png` | `Passed with zero horizontal overflow on all checked surfaces` |
 | `05-browser-validation-regression-repair-and-closure-audit` | `/groups/actions`, `/groups/data-display`, `/groups/feedback`, `/groups/inputs` sandbox layout-wrapper follow-up | `1440x1200`, `390x960` | `playwright-cli open`, `goto`, `run-code`, `screenshot` | `sandbox-actions-layout-wave5.png`, `sandbox-data-display-layout-wave5.png`, `sandbox-feedback-layout-wave5.png`, `sandbox-inputs-layout-wave5.png`, `sandbox-inputs-layout-wave5-mobile.png` | `Passed with zero horizontal overflow on all checked surfaces` |
+| `05-browser-validation-regression-repair-and-closure-audit` | `/`, `/prompt-gallery`, `/resources`, `/activity`, `/automation`, `/validation`, `/test-lab`, `/settings`, `/projects` plus open project modals and the `Project Structure MCP` tab in the repeated-pattern follow-up | `1440x1200`, `390x960` | `playwright MCP navigate attempted then blocked by EPERM`, `playwright-cli open`, `goto`, `run-code`, `screenshot` | `home-layout-wave6.png`, `home-layout-wave6-mobile.png`, `prompt-gallery-layout-wave6.png`, `prompt-gallery-layout-wave6-mobile.png`, `resources-layout-wave6.png`, `activity-layout-wave6.png`, `automation-layout-wave6.png`, `validation-layout-wave6.png`, `testlab-layout-wave6.png`, `settings-layout-wave6.png`, `settings-layout-wave6-mobile.png`, `settings-project-structure-wave6.png`, `settings-project-structure-wave6-mobile.png`, `projects-board-wave6.png`, `projects-board-wave6-mobile.png`, `projects-detail-modal-wave6.png`, `projects-editor-modal-wave6.png`, `projects-hierarchy-modal-wave6.png` | `Passed with zero horizontal overflow on all checked surfaces and strict tracked patterns at 0` |
 
 ## Analytics Review
 
@@ -116,6 +140,9 @@
 - The layout-wrapper follow-up proved the main app routes touched in this wave (`/activity`, `/automation`, `/projects`, `/settings`) on desktop and narrow widths, and every checked surface reported `scrollWidth == clientWidth`.
 - The sandbox follow-up proved the catalog pages touched in this wave (`/groups/actions`, `/groups/data-display`, `/groups/feedback`, `/groups/inputs`) on desktop and narrow widths, and every checked surface reported `scrollWidth == clientWidth`.
 - The strict non-canvas `div` wrapper census for raw `flex` and `grid` classes ended this wave at `0` outside the explicitly excluded canvas-first surfaces.
+- The repeated-pattern follow-up proved the named target families from the latest prompt are now `0` in `.razor` under `src`: `cda-stack-*`, `cda-form-grid*`, the repeated uppercase eyebrow utility variants, and the tracked raw `Gap` string literals.
+- The repeated-pattern follow-up also strengthened the shared primitives instead of keeping legacy helpers alive: `LayoutGap.Tiny` was added, `Stack` now supports typed `GapScale` plus `Section`, `Grid` now enforces child `min-w-0`, and the old Tailwind aliases were removed from `Tailwind/layout/stacks.css`.
+- Playwright MCP was attempted first again for the repeated-pattern follow-up and failed with the same `EPERM` session-folder issue; the route was still validated honestly through Playwright CLI with `18` saved screenshots and overflow checks.
 - Live browser proof in the component-wrapper wave surfaced two real regressions: `ProjectsPage.razor` string parameters were being passed as literals, and the Tailwind `output.css` bundle was stale. Both issues were repaired and revalidated before closure.
 - A watch bookkeeping issue appeared after one static-asset hot reload where the generation counter did not confirm even though Playwright showed the updated UI. That was neutralized by a final managed build plus post-build browser refresh.
 
@@ -158,14 +185,22 @@
 | `Validate the replacement across the main app routes that changed` | `Solved` | Main-app Playwright CLI proof covered `/activity`, `/automation`, `/projects`, and `/settings` with desktop and mobile screenshots plus overflow checks. |
 | `Validate the sandbox pages that were refactored in this wave` | `Solved` | A temporary sandbox run at `http://127.0.0.1:5510` was browser-validated for `/groups/actions`, `/groups/data-display`, `/groups/feedback`, and `/groups/inputs`, including mobile overflow checks and saved screenshots. |
 
+## Repeated-Pattern Follow-Up Closure
+
+| Follow-up note | Status | Proof |
+| --- | --- | --- |
+| `Locate repeating cda-stack-*, cda-form-grid*, repeated eyebrow text helpers, and similar layout/text shortcuts and replace them with Stack, Grid, or shared typography helpers` | `Solved for the strict target` | Workbook `layout-census-wave1.xlsx` sheets `Wave6Results`, `Wave6PatternBreakdown`, and `Wave6TouchedFiles` record the wave-start counts and the `0` end-state for every tracked pattern. |
+| `Tune the shared layout primitives instead of keeping legacy wrapper classes alive` | `Solved for this wave` | `LayoutPrimitives` gained `LayoutGap.Tiny`, `Stack` gained typed `GapScale` and `Section` support, `Grid` gained child `min-w-0`, and `Tailwind/layout/stacks.css` no longer carries the legacy `cda-stack-*` or `cda-form-grid*` aliases. |
+| `Validate the touched routes, panels, and modals with real browser proof and screenshots` | `Solved` | Managed build `op_2936d9edc1984f0abdd526a69d246568` passed and the repeated-pattern follow-up produced `18` browser screenshots across desktop and mobile states after Playwright MCP was honestly retried and blocked by `EPERM`. |
+
 ## Step 0 Answers
 
 - `Did I do everything that was requested in original prompt?`
-  - `No.` I completed the shared Tailwind architecture, BaseLib alignment, shell alignment, the earlier `Home` and `ProjectsPage` page-level cleanup, the component-wrapper wave for `ProjectsBoard`, `ProjectModalHost`, and `ProjectHierarchyModal`, and this stricter layout-wrapper wave that drove the non-canvas `div` flex/grid census to `0`, but I still did not finish every remaining broader non-canvas raw-markup/custom-style surface across the whole solution.
+  - `No.` I completed the shared Tailwind architecture, BaseLib alignment, shell alignment, the earlier `Home` and `ProjectsPage` page-level cleanup, the component-wrapper wave for `ProjectsBoard`, `ProjectModalHost`, and `ProjectHierarchyModal`, the stricter layout-wrapper wave that drove the non-canvas `div` flex/grid census to `0`, and this repeated-pattern follow-up that cleared the named `cda-stack-*`, `cda-form-grid*`, eyebrow-helper, and raw-gap families, but I still did not finish every remaining broader non-canvas raw-markup/custom-style surface across the whole solution.
 - `Is it truly the best work I can do?`
-  - `Not absolutely.` This wave materially improved the shared layout system and cleared the strict layout-wrapper census, but `PromptFactoryPage.razor` still deserves a deeper non-canvas decomposition wave and some broader raw-markup hotspots remain outside this strict census.
+  - `Not absolutely.` This wave materially improved the shared layout system and cleared the named repeated-pattern family, but `PromptFactoryPage.razor` still deserves a deeper non-canvas decomposition wave and some broader raw-markup hotspots remain outside this now-clean strict pattern set.
 - `Did I covered all and truly validated all?`
-  - `No.` I truly validated the reopened routes I changed in the earlier follow-up (`/`, `/projects`, `/prompt-factory`), the wrapper-driven `/projects` wave, and this layout-wrapper wave for the main app plus sandbox catalog with real browser automation, screenshots, Tailwind rebuild proof, and clean local plus managed builds, but I still did not validate every broader remaining non-canvas hotspot because not every remaining page was migrated in this wave.
+  - `No.` I truly validated the reopened routes I changed in the earlier follow-up (`/`, `/projects`, `/prompt-factory`), the wrapper-driven `/projects` wave, the layout-wrapper wave for the main app plus sandbox catalog, and this repeated-pattern follow-up for the touched routes and panels with real browser automation, screenshots, Tailwind rebuild proof, and a clean managed build, but I still did not validate every broader remaining non-canvas hotspot because not every remaining page was migrated in this wave.
 - `Is codebase now better maintainable and easier to read?`
   - `Yes, for the touched areas.` The touched pages and shell now use a materially more reusable semantic style layer instead of repeating long raw utility strings and one-off variations, and the `Projects` route is easier to read both at page level and now at component level after the wrapper pass.
 
@@ -214,6 +249,8 @@
   - `C:\repositories\CanDoItAll\output\spreadsheet\style-census-component-followup-wave.xlsx` now includes sheet `Wave4Results`
 - Workbook refresh for the layout-wrapper wave:
   - `C:\repositories\CanDoItAll\output\spreadsheet\layout-census-wave1.xlsx` now includes sheets `Wave5Results` and `Wave5TouchedFiles`
+- Workbook refresh for the repeated-pattern follow-up wave:
+  - `C:\repositories\CanDoItAll\output\spreadsheet\layout-census-wave1.xlsx` now includes sheets `Wave6Results`, `Wave6PatternBreakdown`, and `Wave6TouchedFiles`
 - Component-wrapper wave metrics:
   - `ProjectsBoard.razor`: raw tracked tags `70 -> 21`, line count `296 -> 281`, wrapper usages `12`
   - `ProjectModalHost.razor`: raw tracked tags `81 -> 54`, line count `523 -> 509`, wrapper usages `19`
@@ -223,6 +260,14 @@
   - Strict non-canvas raw `div` wrapper census for `flex` or `grid`: `28 -> 0`
   - Main app browser proof in this wave: `4` routes on desktop plus `4` routes on narrow width
   - Sandbox browser proof in this wave: `4` routes on desktop plus `4` routes on narrow width
+- Repeated-pattern follow-up wave metrics:
+  - `cda-stack-*`: `46 -> 0`
+  - `cda-form-grid*`: `30 -> 0`
+  - Repeated raw eyebrow variants: `29 -> 0`
+  - Tracked raw Stack gap literals in `.razor` under `src`: `0` after the wave
+  - Wave6 touched-file diff: `32 files changed`, `348 insertions`, `339 deletions`
+  - Browser proof in this wave: `18` screenshots across desktop and mobile states
+  - Managed build proof in this wave: `op_2936d9edc1984f0abdd526a69d246568`
 - New BaseLib primitives added in the component-wrapper wave:
   - `MetricCard`
   - `PanelCard`
@@ -248,4 +293,5 @@
 - `ProjectStructurePage.razor`, `ProjectStructureSelectionPanel.razor`, and `ProjectCalendarPage.razor` remain intentionally excluded because they are canvas-first or canvas-adjacent workbench surfaces.
 - `PromptFactoryPage.razor` is only partially cleaned in this reopened wave. CanvasLib internals were kept untouched, but the page still contains significant non-canvas raw layout markup that should be split further in a later safe pass.
 - The strict non-canvas raw `div` layout-wrapper census is clean after this wave, but broader raw-markup and utility duplication still remain in larger surfaces such as `PromptFactoryPage.razor` and some custom shell components.
+- The named repeated-pattern family from the latest prompt is no longer a residual risk; the remaining follow-up work is now concentrated in broader page-level and shell-level surfaces rather than these `cda-stack-*`, `cda-form-grid*`, or repeated eyebrow helpers.
 - Playwright MCP itself was blocked in this wave by a local `EPERM` session-folder issue under `C:\Windows\System32`; browser proof still happened for the route through Playwright CLI, but the MCP tooling problem remains external to the product code.

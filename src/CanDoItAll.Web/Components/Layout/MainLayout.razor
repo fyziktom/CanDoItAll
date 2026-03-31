@@ -99,23 +99,23 @@
         }
     </Body>
     <RightRail>
-        <div class="space-y-4">
+        <Stack GapScale="LayoutGap.Large">
             @if (ShowStandardRail)
             {
                 <SectionCard Title="Workbench" Description="Internal tabs now track artifact identity, recent closures, and contextual restore instead of flat route launches.">
                     <Grid Gap="LayoutGap.Medium">
                         <div class="cda-shell-stat-card">
-                            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Current route</p>
+                            <p class="cda-eyebrow tracking-[0.25em]">Current route</p>
                             <p class="mt-2 text-sm font-medium text-slate-900">@CurrentRouteDisplay</p>
                         </div>
                         <div class="cda-shell-stat-card">
-                            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Active tab</p>
+                            <p class="cda-eyebrow tracking-[0.25em]">Active tab</p>
                             <p class="mt-2 text-sm font-medium text-slate-900">@ActiveTabTitle</p>
                         </div>
                         @if (Workbench.LastRestoreReport is not null)
                         {
                             <div class="cda-shell-stat-card">
-                                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Restore report</p>
+                                <p class="cda-eyebrow tracking-[0.25em]">Restore report</p>
                                 <p class="mt-2 text-sm font-medium text-slate-900">@($"{Workbench.LastRestoreReport.RestoredCount} tab(s) restored")</p>
                                 @if (Workbench.LastRestoreReport.Failures.Count > 0)
                                 {
@@ -127,27 +127,28 @@
                 </SectionCard>
 
                 <SectionCard Title="Context Queue" Description="The shell keeps active projects and prompt sessions visible so work starts from artifacts instead of a flat route list.">
-                    <div class="space-y-3 text-sm text-slate-700">
+                    <Stack GapScale="LayoutGap.Medium"
+                           Class="text-sm text-slate-700">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Opened projects</p>
+                            <p class="cda-eyebrow">Opened projects</p>
                             <p class="mt-1">@OpenedProjectTabs.Count</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Prompt sessions</p>
+                            <p class="cda-eyebrow">Prompt sessions</p>
                             <p class="mt-1">@OpenedPromptSessionTabs.Count</p>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Recent closures</p>
+                            <p class="cda-eyebrow">Recent closures</p>
                             <p class="mt-1">@Workbench.RecentTabs.Count</p>
                         </div>
-                    </div>
+                    </Stack>
                 </SectionCard>
             }
 
             @if (DevelopmentManagerOptions.Value.TuningModeEnabled)
             {
                 <SectionCard Title="Tuning Mode" Description="Development-only request packaging for the active page surface.">
-                    <div class="space-y-3">
+                    <Stack GapScale="LayoutGap.Medium">
                         @if (TuningCoordinator.CurrentRequest is null)
                         {
                             <p class="text-sm leading-6 text-slate-600">Use the `tune` handle on the current page surface to capture route, project, and tab context before opening a tuning request.</p>
@@ -155,7 +156,7 @@
                         else
                         {
                             <div class="cda-shell-stat-card text-sm text-slate-700">
-                                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Target</p>
+                                <p class="cda-eyebrow tracking-[0.25em]">Target</p>
                                 <p class="mt-2 font-semibold text-slate-900">@TuningCoordinator.CurrentRequest.ComponentName</p>
                                 <p class="mt-1 text-xs text-slate-500">@TuningCoordinator.CurrentRequest.CapsuleKey</p>
                                 <p class="mt-1 text-xs text-slate-500">@TuningCoordinator.CurrentRequest.Route</p>
@@ -168,7 +169,7 @@
                                                data-testid="tuning-instruction" />
                             </div>
 
-                            <div class="space-y-2">
+                            <Stack GapScale="LayoutGap.Small">
                                 <Split Breakpoint="LayoutBreakpoint.None"
                                        Gap="LayoutGap.Small"
                                        AlignItems="AlignItems.Center"
@@ -193,7 +194,7 @@
                                 }
                                 else
                                 {
-                                    <div class="space-y-2">
+                                    <Stack GapScale="LayoutGap.Small">
                                         @foreach (var attachment in tuningAttachments)
                                         {
                                             <div class="cda-shell-attachment">
@@ -201,9 +202,9 @@
                                                 <button type="button" class="font-semibold text-rose-700" @onclick="() => RemoveTuningAttachment(attachment.FileName)">Remove</button>
                                             </div>
                                         }
-                                    </div>
+                                    </Stack>
                                 }
-                            </div>
+                            </Stack>
 
                             <Cluster Gap="LayoutGap.Small">
                                 <Button Text="Send request"
@@ -231,7 +232,7 @@
                         @if (pendingTuningRequest is not null)
                         {
                             <div class="cda-shell-stat-card text-sm text-slate-700">
-                                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Latest request</p>
+                                <p class="cda-eyebrow">Latest request</p>
                                 <p class="mt-2 font-semibold text-slate-900">@pendingTuningRequest.ComponentName</p>
                                 <p class="mt-1 text-xs text-slate-500">@pendingTuningRequest.Status</p>
                                 <p class="mt-1 text-xs text-slate-500">@pendingTuningRequest.Summary</p>
@@ -241,10 +242,10 @@
                                 }
                             </div>
                         }
-                    </div>
+                    </Stack>
                 </SectionCard>
             }
-        </div>
+        </Stack>
     </RightRail>
 </AppShell>
 

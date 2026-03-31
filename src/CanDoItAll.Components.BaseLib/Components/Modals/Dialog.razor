@@ -5,7 +5,7 @@
 {
     <Stack AlignItems="AlignItems.Center"
            JustifyContent="JustifyContent.Center"
-           Gap="0"
+           GapScale="LayoutGap.None"
            Class="fixed inset-0 z-[70] p-4 sm:p-6"
            data-testid="@TestId">
         <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm"
@@ -22,10 +22,11 @@
                        AlignItems="AlignItems.Start"
                        JustifyContent="JustifyContent.SpaceBetween"
                        Wrap="FlexWrap.Wrap">
-                    <div class="min-w-0 space-y-1">
+                    <Stack GapScale="LayoutGap.Tiny"
+                           Class="min-w-0">
                         @if (!string.IsNullOrWhiteSpace(Eyebrow))
                         {
-                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">@Eyebrow</div>
+                            <div class="cda-eyebrow">@Eyebrow</div>
                         }
 
                         <h2 class="text-2xl font-semibold tracking-tight text-slate-950">@Title</h2>
@@ -34,7 +35,7 @@
                         {
                             <p class="max-w-3xl text-sm leading-6 text-slate-600">@Subtitle</p>
                         }
-                    </div>
+                    </Stack>
 
                     <Cluster Wrap="FlexWrap.NoWrap"
                              Gap="LayoutGap.Small">

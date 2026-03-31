@@ -42,8 +42,8 @@ This bundle is a coordination and execution package for `solution-style-unificat
 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Passed`
-- Execution status: `Reopened layout-wrapper follow-up wave executed; initiative still partially complete`
-- Subbundle gate review: `Critical foundations remain valid, the strict non-canvas div layout-wrapper census is now clean, and later closure claims should focus on the broader remaining markup hotspots rather than these layout wrappers.`
+- Execution status: `Reopened repeated-pattern follow-up wave executed; initiative still partially complete`
+- Subbundle gate review: `Critical foundations remain valid, the strict non-canvas div layout-wrapper census remains clean, and the named repeated-pattern family from the latest prompt is now cleared; later closure claims should focus on the broader remaining page-level and shell-level markup hotspots.`
 - Final closure gate: `Open because broader non-canvas hotspots like PromptFactoryPage and a few custom shell surfaces still need follow-up beyond the strict layout-wrapper census.`
-- Browser validation analytics: `Fresh browser proof now exists for the main app layout-wrapper wave (/activity, /automation, /projects, /settings) plus the sandbox catalog pages touched in this pass, including desktop and narrow-width overflow checks.`
-- Latest follow-up wave: `layout-census-wave1.xlsx was refreshed with Wave5 results, shared layout primitives were applied across BaseLib, main app pages, and sandbox catalog pages, the strict non-canvas div flex/grid census moved from 28 to 0, and the wave was revalidated with local build, managed build op_d8451696961a42e9bed8720ae4c4d4c0, and Playwright CLI screenshots after Playwright MCP remained blocked by EPERM.`
+- Browser validation analytics: `Fresh browser proof now exists for the repeated-pattern follow-up across desktop and narrow-width states on /, /prompt-gallery, /resources, /activity, /automation, /validation, /test-lab, /settings, /projects, the Project Structure MCP tab, and the open Projects modals.`
+- Latest follow-up wave: `layout-census-wave1.xlsx was refreshed with Wave6Results, Wave6PatternBreakdown, and Wave6TouchedFiles; shared Stack/Grid/TextBlock helpers were tuned, legacy cda-stack/form-grid aliases were removed, the tracked repeated-pattern family moved to 0, and the wave was revalidated with Tailwind build, managed build op_2936d9edc1984f0abdd526a69d246568, and Playwright CLI screenshots after Playwright MCP remained blocked by EPERM.`

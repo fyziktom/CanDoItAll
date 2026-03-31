@@ -3,9 +3,9 @@
 @inject ProjectStructureAgentAdministrationService AdministrationService
 @inject ProjectManagementKnowledgeService KnowledgeService
 
-<Stack Class="min-h-full" Gap="1.5rem" data-testid="settings-project-structure-agent-panel">
+<Stack Class="min-h-full" GapScale="LayoutGap.XXLarge" data-testid="settings-project-structure-agent-panel">
     <EditForm Model="settingsModel" OnValidSubmit="SaveSettingsAsync">
-        <Stack Class="min-h-full" Gap="1.5rem">
+        <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
             <FormSection Title="Central project-structure MCP settings"
                          Description="These values define how remote workstation MCP clients find the main CanDoItAll machine and which setup script operators should use.">
                 <SummaryTiles>
@@ -15,7 +15,7 @@
                     <SummaryTile Label="Knowledge" Value="@knowledgeEntries.Count.ToString()" HelperText="Seeded guidance entries visible in settings and API." />
                 </SummaryTiles>
 
-                <div class="mt-6 cda-form-grid">
+                <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-6">
                     <div>
                         <label class="cda-field-label">Central base URL</label>
                         <InputText @bind-Value="settingsModel.CentralBaseUrl" class="cda-input" data-testid="project-structure-settings-base-url" />
@@ -24,9 +24,9 @@
                         <label class="cda-field-label">Install script path</label>
                         <InputText @bind-Value="settingsModel.InstallScriptPath" class="cda-input" />
                     </div>
-                </div>
+                </Grid>
 
-                <div class="mt-4 cda-form-grid cda-form-grid--triple">
+                <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-4">
                     <div>
                         <label class="cda-field-label">Setup README path</label>
                         <InputText @bind-Value="settingsModel.SetupReadmePath" class="cda-input" />
@@ -39,7 +39,7 @@
                         <label class="cda-field-label">Default approval required over (minutes)</label>
                         <InputNumber @bind-Value="settingsModel.DefaultApprovalRequiredMinutes" class="cda-input" />
                     </div>
-                </div>
+                </Grid>
             </FormSection>
 
             <StickyActionFooter StatusLabel="Project-structure MCP settings" StatusMessage="@settingsMessage" StatusTone="success">
@@ -52,7 +52,8 @@
 
     <Grid Gap="LayoutGap.XXLarge"
           ColumnTemplateXl="22rem minmax(0,1fr)">
-        <div class="cda-admin-panel cda-stack-4">
+        <Stack GapScale="LayoutGap.Large"
+               Class="cda-admin-panel">
             <Split Breakpoint="LayoutBreakpoint.None"
                    Gap="LayoutGap.Large"
                    AlignItems="AlignItems.Center"
@@ -65,10 +66,10 @@
                 <Button Text="New profile" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProfileAsync" data-testid="project-structure-profile-new" />
             </Split>
 
-            <div class="cda-stack-2">
+            <Stack GapScale="LayoutGap.Small">
                 <input @bind="profileSearch" @bind:event="oninput" class="cda-input" placeholder="Search profiles" />
                 <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProfileSearch" />
-            </div>
+            </Stack>
 
             @if (FilteredProfiles.Count == 0)
             {
@@ -76,7 +77,7 @@
             }
             else
             {
-                <div class="cda-stack-3">
+                <Stack GapScale="LayoutGap.Medium">
                     @foreach (var profile in FilteredProfiles)
                     {
                         <SelectionListItem Title="@profile.Name"
@@ -90,33 +91,33 @@
                             </Status>
                         </SelectionListItem>
                     }
-                </div>
+                </Stack>
             }
-        </div>
+        </Stack>
 
         <EditForm Model="profileModel" OnValidSubmit="SaveProfileAsync">
             <div class="cda-admin-panel">
-                <div class="cda-stack-1">
+                <Stack GapScale="LayoutGap.Tiny">
                     <p class="cda-admin-kicker">Project-structure MCP profile</p>
                     <h2 class="cda-admin-title">@(profileModel.Id.HasValue ? profileModel.Name : "New project-structure agent")</h2>
                     <p class="cda-admin-copy">Keep capabilities, approval limits, project overrides, and workstation setup guidance in one operator-facing surface.</p>
-                </div>
+                </Stack>
 
                 <FormSection Title="Profile identity" Description="Define the operator-facing label and whether the central API should accept this profile.">
-                    <div class="cda-form-grid">
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                         <div>
                             <label class="cda-field-label">Profile name</label>
                             <InputText @bind-Value="profileModel.Name" class="cda-input" data-testid="project-structure-profile-name" />
                         </div>
                         <Stack JustifyContent="JustifyContent.End"
-                               Gap="0"
+                               GapScale="LayoutGap.None"
                                Class="h-full">
                             <label class="cda-inline-option">
                                 <InputCheckbox @bind-Value="profileModel.IsEnabled" />
                                 Profile enabled
                             </label>
                         </Stack>
-                    </div>
+                    </Grid>
 
                     <div class="mt-4">
                         <label class="cda-field-label">Description</label>
@@ -142,7 +143,7 @@
                 </FormSection>
 
                 <FormSection Title="Approval policy" Description="Thresholds are enforced centrally. Set a value of 0 to disable that threshold.">
-                    <div class="cda-form-grid cda-form-grid--triple">
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                         <div>
                             <label class="cda-field-label">Auto-approve up to (minutes)</label>
                             <InputNumber @bind-Value="profileModel.AutoApproveMinutes" class="cda-input" data-testid="project-structure-profile-auto-approve" />
@@ -152,14 +153,14 @@
                             <InputNumber @bind-Value="profileModel.ApprovalRequiredMinutes" class="cda-input" data-testid="project-structure-profile-approval-required" />
                         </div>
                         <Stack JustifyContent="JustifyContent.End"
-                               Gap="0"
+                               GapScale="LayoutGap.None"
                                Class="h-full">
                             <label class="cda-inline-option cda-inline-option--muted">
                                 <InputCheckbox @bind-Value="profileModel.RequireApprovalForAllMutations" />
                                 Require approval for every mutation
                             </label>
                         </Stack>
-                    </div>
+                    </Grid>
                 </FormSection>
 
                 <FormSection Title="Token and workstation setup" Description="The token is encrypted at rest. Rotate it when a workstation changes or the token leaks.">
@@ -173,7 +174,7 @@
                                    data-testid="project-structure-profile-token" />
                         </div>
                         <Stack JustifyContent="JustifyContent.End"
-                               Gap="0"
+                               GapScale="LayoutGap.None"
                                Class="h-full">
                             <Button Text="Rotate token on save" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="RotateToken" data-testid="project-structure-profile-rotate-token" />
                         </Stack>
@@ -187,13 +188,15 @@
                     }
                     else
                     {
-                        <div class="mt-4 cda-admin-subpanel cda-stack-4" data-testid="project-structure-setup-guide">
-                            <div class="cda-form-grid">
+                        <Stack GapScale="LayoutGap.Large"
+                               Class="mt-4 cda-admin-subpanel"
+                               data-testid="project-structure-setup-guide">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <p class="cda-admin-code-label">Local settings file</p>
                                     <textarea class="cda-code-input min-h-40" readonly>@currentSetupGuide.SettingsJson</textarea>
                                 </div>
-                                <div class="cda-stack-4">
+                                <Stack GapScale="LayoutGap.Large">
                                     <div>
                                         <p class="cda-admin-code-label">Install command</p>
                                         <textarea class="cda-code-input min-h-24" readonly data-testid="project-structure-setup-command">@currentSetupGuide.PowerShellCommand</textarea>
@@ -202,8 +205,8 @@
                                         <p class="cda-admin-code-label">Codex config section</p>
                                         <textarea class="cda-code-input min-h-28" readonly>@currentSetupGuide.CodexConfigSnippet</textarea>
                                     </div>
-                                </div>
-                            </div>
+                                </Stack>
+                            </Grid>
 
                             <div class="cda-admin-note">
                                 <p><span class="font-semibold text-slate-900">Base URL:</span> @currentSetupGuide.BaseUrl</p>
@@ -211,12 +214,12 @@
                                 <p><span class="font-semibold text-slate-900">README:</span> @currentSetupGuide.ReadmePath</p>
                                 <p class="mt-2">@currentSetupGuide.TokenUsageNote</p>
                             </div>
-                        </div>
+                        </Stack>
                     }
                 </FormSection>
 
                 <FormSection Title="Project overrides" Description="Overrides replace the profile defaults for a specific project when the central API evaluates that project scope.">
-                    <div class="cda-stack-4" data-testid="project-structure-profile-overrides">
+                    <Stack GapScale="LayoutGap.Large" data-testid="project-structure-profile-overrides">
                         @if (profileModel.ProjectOverrides.Count == 0)
                         {
                             <div class="cda-admin-empty">
@@ -226,7 +229,9 @@
 
                         @foreach (var overrideModel in profileModel.ProjectOverrides)
                         {
-                            <div class="cda-admin-subpanel cda-stack-4" data-testid="project-structure-override-card">
+                            <Stack GapScale="LayoutGap.Large"
+                                   Class="cda-admin-subpanel"
+                                   data-testid="project-structure-override-card">
                                 <Split Breakpoint="LayoutBreakpoint.None"
                                        Gap="LayoutGap.Large"
                                        AlignItems="AlignItems.Start"
@@ -244,7 +249,7 @@
                                             </InputSelect>
                                         </div>
                                         <Stack JustifyContent="JustifyContent.End"
-                                               Gap="0"
+                                               GapScale="LayoutGap.None"
                                                Class="h-full">
                                             <label class="cda-inline-option">
                                                 <InputCheckbox @bind-Value="overrideModel.IsEnabled" />
@@ -266,7 +271,7 @@
                                     }
                                 </Grid>
 
-                                <div class="cda-form-grid cda-form-grid--triple">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                                     <div>
                                         <label class="cda-field-label">Auto-approve up to (minutes)</label>
                                         <InputNumber @bind-Value="overrideModel.AutoApproveMinutes" class="cda-input" />
@@ -276,19 +281,19 @@
                                         <InputNumber @bind-Value="overrideModel.ApprovalRequiredMinutes" class="cda-input" />
                                     </div>
                                     <Stack JustifyContent="JustifyContent.End"
-                                           Gap="0"
+                                           GapScale="LayoutGap.None"
                                            Class="h-full">
-                                        <label class="cda-inline-option">
-                                            <InputCheckbox @bind-Value="overrideModel.RequireApprovalForAllMutations" />
-                                            Require approval for every mutation
-                                        </label>
-                                    </Stack>
-                                </div>
-                            </div>
+                                            <label class="cda-inline-option">
+                                                <InputCheckbox @bind-Value="overrideModel.RequireApprovalForAllMutations" />
+                                                Require approval for every mutation
+                                            </label>
+                                        </Stack>
+                                </Grid>
+                            </Stack>
                         }
 
                         <Button Text="Add project override" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="AddOverride" data-testid="project-structure-profile-add-override" />
-                    </div>
+                    </Stack>
                 </FormSection>
 
                 <FormSection Title="Knowledge guidance" Description="This is the current static provider content served by the central API for planning, approval, and reporting discussions.">

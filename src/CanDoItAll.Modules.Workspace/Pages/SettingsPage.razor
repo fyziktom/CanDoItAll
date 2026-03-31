@@ -29,13 +29,13 @@
         @if (string.Equals(settingsTab, "workspace", StringComparison.Ordinal))
         {
             <EditForm Model="settingsModel" OnValidSubmit="SaveSettingsAsync">
-                <Stack Class="min-h-full" Gap="1.5rem">
+                <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
                     <FormSection Title="Workspace defaults" Description="These values define how the rest of the app boots and which provider profile new prompt sessions prefer.">
                         <div>
                             <label class="cda-field-label">Workspace name</label>
                             <InputText @bind-Value="settingsModel.WorkspaceName" class="cda-input" />
                         </div>
-                        <div class="cda-form-grid">
+                        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                             <div>
                                 <label class="cda-field-label">Default output format</label>
                                 <InputText @bind-Value="settingsModel.DefaultPromptOutputFormat" class="cda-input" />
@@ -50,7 +50,7 @@
                                     }
                                 </InputSelect>
                             </div>
-                        </div>
+                        </Grid>
                     </FormSection>
 
                     <FormSection Title="Workspace notes" Description="Keep any operating notes or setup caveats close to the defaults.">
@@ -92,7 +92,7 @@
                     }
                     else
                     {
-                        <div class="cda-stack-3">
+                        <Stack GapScale="LayoutGap.Medium">
                             @foreach (var secret in FilteredSecrets)
                             {
                                 <SelectionListItem Title="@secret.Name"
@@ -106,23 +106,23 @@
                                     </Status>
                                 </SelectionListItem>
                             }
-                        </div>
+                        </Stack>
                     }
                 </ListContent>
 
                 <DetailHeader>
-                    <div class="cda-stack-1">
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Secret editor</p>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Secret editor</p>
                         <h2 class="text-xl font-semibold text-slate-950">@(secretModel.Id.HasValue ? secretModel.Name : "New secret")</h2>
                         <p class="text-sm leading-6 text-slate-600">Secrets stay encrypted at rest and can be referenced from providers, resources, or other modules.</p>
-                    </div>
+                    </Stack>
                 </DetailHeader>
 
                 <DetailContent>
                     <EditForm Model="secretModel" OnValidSubmit="SaveSecretAsync">
-                        <Stack Class="min-h-full" Gap="1.5rem">
+                        <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
                             <FormSection Title="Secret metadata" Description="Name the secret clearly and capture its usage scope.">
-                                <div class="cda-form-grid">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Name</label>
                                         <InputText @bind-Value="secretModel.Name" class="cda-input" />
@@ -136,8 +136,8 @@
                                             }
                                         </InputSelect>
                                     </div>
-                                </div>
-                                <div class="cda-form-grid">
+                                </Grid>
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Scope</label>
                                         <InputText @bind-Value="secretModel.Scope" class="cda-input" />
@@ -146,7 +146,7 @@
                                         <label class="cda-field-label">Rotation note</label>
                                         <InputText @bind-Value="secretModel.RotationNote" class="cda-input" />
                                     </div>
-                                </div>
+                                </Grid>
                             </FormSection>
 
                             <FormSection Title="Encrypted payload" Description="The raw value is only edited here, while other areas consume references to the saved record.">
@@ -203,7 +203,7 @@
                     }
                     else
                     {
-                        <div class="cda-stack-3">
+                        <Stack GapScale="LayoutGap.Medium">
                             @foreach (var provider in FilteredProviders)
                             {
                                 <SelectionListItem Title="@provider.Name"
@@ -217,23 +217,23 @@
                                     </Status>
                                 </SelectionListItem>
                             }
-                        </div>
+                        </Stack>
                     }
                 </ListContent>
 
                 <DetailHeader>
-                    <div class="cda-stack-1">
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Provider editor</p>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Provider editor</p>
                         <h2 class="text-xl font-semibold text-slate-950">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
                         <p class="text-sm leading-6 text-slate-600">Profiles keep provider-specific transport, capability flags, and health status in one editor.</p>
-                    </div>
+                    </Stack>
                 </DetailHeader>
 
                 <DetailContent>
                     <EditForm Model="providerModel" OnValidSubmit="SaveProviderAsync">
-                        <Stack Class="min-h-full" Gap="1.5rem">
+                        <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
                             <FormSection Title="Provider identity" Description="Define the provider kind, transport endpoint, and default model.">
-                                <div class="cda-form-grid">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Profile name</label>
                                         <InputText @bind-Value="providerModel.Name" class="cda-input" />
@@ -247,8 +247,8 @@
                                             }
                                         </InputSelect>
                                     </div>
-                                </div>
-                                <div class="cda-form-grid">
+                                </Grid>
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Base URL</label>
                                         <InputText @bind-Value="providerModel.BaseUrl" class="cda-input" />
@@ -257,11 +257,11 @@
                                         <label class="cda-field-label">Default model</label>
                                         <InputText @bind-Value="providerModel.DefaultModel" class="cda-input" />
                                     </div>
-                                </div>
+                                </Grid>
                             </FormSection>
 
                             <FormSection Title="Auth and capabilities" Description="Attach the secret reference and advertise what the profile supports.">
-                                <div class="cda-form-grid">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">API key secret</label>
                                         <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="cda-input">
@@ -276,7 +276,7 @@
                                         <label class="cda-field-label">Timeout (seconds)</label>
                                         <InputNumber @bind-Value="providerModel.TimeoutSeconds" class="cda-input" />
                                     </div>
-                                </div>
+                                </Grid>
 
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                     <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.IsEnabled" /> Enabled</label>

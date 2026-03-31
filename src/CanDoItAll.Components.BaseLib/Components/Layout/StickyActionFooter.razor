@@ -4,17 +4,17 @@
            Gap="LayoutGap.Medium"
            AlignItems="AlignItems.Center"
            JustifyContent="JustifyContent.SpaceBetween">
-        <div class="space-y-1">
+        <Stack GapScale="LayoutGap.Tiny">
             @if (!string.IsNullOrWhiteSpace(StatusLabel))
             {
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">@StatusLabel</p>
+                <p class="cda-eyebrow cda-eyebrow--tight">@StatusLabel</p>
             }
 
             @if (!string.IsNullOrWhiteSpace(StatusMessage))
             {
                 <p class="@ResolveStatusClass()">@StatusMessage</p>
             }
-        </div>
+        </Stack>
 
         <Cluster JustifyContent="JustifyContent.End"
                  Class="w-full xl:w-auto">

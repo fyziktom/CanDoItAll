@@ -1,7 +1,7 @@
 @namespace CanDoItAll.Components.BaseLib
 @if (Items.Count > 0)
 {
-    <div class="space-y-4">
+    <Stack GapScale="LayoutGap.Large">
         @if (Header is not null)
         {
             <div>
@@ -29,7 +29,7 @@
         {
             <p class="text-sm leading-6 text-slate-600">@description</p>
         }
-    </div>
+    </Stack>
 }
 
 @code {

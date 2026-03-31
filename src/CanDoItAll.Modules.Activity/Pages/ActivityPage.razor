@@ -58,7 +58,7 @@ tests: component:ActivityPageTests, e2e:activity-smoke
                 }
                 else
                 {
-                    <div class="cda-stack-3">
+                    <Stack GapScale="LayoutGap.Medium">
                         @foreach (var result in results)
                         {
                             <SelectionListItem Title="@result.Title"
@@ -66,15 +66,15 @@ tests: component:ActivityPageTests, e2e:activity-smoke
                                                Summary="@result.Summary"
                                                OnSelect="@(() => OpenResult(result))" />
                         }
-                    </div>
+                    </Stack>
                 }
             </ListContent>
             <DetailHeader>
-                <div class="cda-stack-1">
-                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Recent timeline</p>
+                <Stack GapScale="LayoutGap.Tiny">
+                    <p class="cda-eyebrow">Recent timeline</p>
                     <h2 class="text-xl font-semibold text-slate-950">Workspace history</h2>
                     <p class="text-sm leading-6 text-slate-600">Major module actions are grouped by date so recent work is easier to scan and reopen.</p>
-                </div>
+                </Stack>
             </DetailHeader>
             <DetailContent>
                 @if (items.Count == 0)
@@ -85,10 +85,10 @@ tests: component:ActivityPageTests, e2e:activity-smoke
                 }
                 else
                 {
-                    <div class="cda-stack-4">
+                    <Stack GapScale="LayoutGap.Large">
                         @foreach (var group in GroupedItems)
                         {
-                            <div class="cda-stack-3">
+                            <Stack GapScale="LayoutGap.Medium">
                                 <Cluster Wrap="FlexWrap.NoWrap"
                                          Gap="LayoutGap.Small">
                                     <span class="cda-shell-pill cda-shell-pill--neutral">@group.Key.ToString("MMM d, yyyy")</span>
@@ -102,7 +102,7 @@ tests: component:ActivityPageTests, e2e:activity-smoke
                                                JustifyContent="JustifyContent.SpaceBetween"
                                                Wrap="FlexWrap.Wrap">
                                             <div>
-                                                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">@item.Category / @item.Action</p>
+                                                <p class="cda-eyebrow">@item.Category / @item.Action</p>
                                                 <p class="mt-1 text-sm font-semibold text-slate-900">@item.Title</p>
                                             </div>
                                             <span class="text-xs text-slate-500">@item.CreatedAtUtc.LocalDateTime:g</span>
@@ -125,9 +125,9 @@ tests: component:ActivityPageTests, e2e:activity-smoke
                                         </Split>
                                     </div>
                                 }
-                            </div>
+                            </Stack>
                         }
-                    </div>
+                    </Stack>
                 }
             </DetailContent>
         </ListDetailShell>
