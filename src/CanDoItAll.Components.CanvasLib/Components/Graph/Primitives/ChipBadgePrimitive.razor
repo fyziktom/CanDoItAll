@@ -13,7 +13,7 @@
             <span class="cw-preview-chip" data-tone="@chip.Tone">
                 @if (!string.IsNullOrWhiteSpace(chip.Icon))
                 {
-                    <span class="cw-preview-chip__icon">@chip.Icon</span>
+                    <Icon Name="@chip.Icon" class="cw-preview-chip__icon" />
                 }
 
                 <span>@chip.Text</span>

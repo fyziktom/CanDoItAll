@@ -48,9 +48,9 @@ public static class ChipBadgePrimitiveFactory
         {
             chips =
             [
-                new ChipBadgePrimitiveSample { Text = "Priority", Tone = "accent", Icon = "!" },
-                new ChipBadgePrimitiveSample { Text = "Ready", Tone = "success", Icon = "OK" },
-                new ChipBadgePrimitiveSample { Text = "Linked", Tone = "info", Icon = "->" }
+                new ChipBadgePrimitiveSample { Text = "Priority", Tone = "accent", Icon = "priority_high" },
+                new ChipBadgePrimitiveSample { Text = "Ready", Tone = "success", Icon = "check_circle" },
+                new ChipBadgePrimitiveSample { Text = "Linked", Tone = "info", Icon = "arrow_forward" }
             ];
         }
 
@@ -79,12 +79,12 @@ public static class ChipBadgePrimitiveFactory
     private static string ResolveToneIcon(string? tone)
         => tone?.Trim().ToLowerInvariant() switch
         {
-            "accent" => "!",
-            "success" => "OK",
-            "warning" => "!!",
-            "danger" => "X",
-            "info" => "i",
-            _ => "."
+            "accent" => "priority_high",
+            "success" => "check_circle",
+            "warning" => "warning",
+            "danger" => "close",
+            "info" => "info",
+            _ => "fiber_manual_record"
         };
 }
 

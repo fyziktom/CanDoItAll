@@ -51,7 +51,7 @@
                         <button type="button"
                                 class="cda-shell-nav-button @(isActive ? "cda-shell-nav-button--active" : "cda-shell-nav-button--inactive")"
                                 @onclick="() => Navigate.InvokeAsync(item.Route)">
-                            <span class="cda-shell-nav-icon">@item.Icon</span>
+                            <span class="cda-shell-nav-icon" aria-hidden="true"><Icon Name="@item.Icon" /></span>
                             <span class="space-y-1">
                                 <span class="block text-sm font-semibold">@item.Title</span>
                                 <span class="block text-xs leading-5 text-slate-400">@item.Description</span>
@@ -127,7 +127,7 @@
                             <button type="button"
                                     class="cda-shell-mobile-card @(isActive ? "cda-shell-mobile-card--active" : "cda-shell-mobile-card--inactive")"
                                     @onclick="() => Navigate.InvokeAsync(item.Route)">
-                                <span class="cda-eyebrow @(isActive ? "text-slate-200" : "text-slate-500")">@item.Icon</span>
+                                <span class="cda-eyebrow inline-flex @(isActive ? "text-slate-200" : "text-slate-500")" aria-hidden="true"><Icon Name="@item.Icon" /></span>
                                 <span class="mt-2 block text-sm font-semibold">@item.Title</span>
                                 <span class="mt-1 block text-xs leading-5 @(isActive ? "text-slate-200" : "text-slate-500")">@item.Description</span>
                             </button>

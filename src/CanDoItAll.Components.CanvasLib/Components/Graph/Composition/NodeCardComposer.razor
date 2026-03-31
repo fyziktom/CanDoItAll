@@ -11,7 +11,7 @@
                            Metrics="@Snapshot.Metrics">
     <article class="cw-preview-node-card" style="@($"--cw-preview-accent:{Snapshot.AccentColor};")" @ref="host">
         <div class="cw-preview-node-card__header">
-            <span class="cw-preview-node-card__icon">@Snapshot.Icon</span>
+            <Icon Name="@Snapshot.Icon" class="cw-preview-node-card__icon" />
             <div>
                 <p class="cw-preview-node-card__title">@Snapshot.CardTitle</p>
                 <p class="cw-preview-node-card__subtitle">@Snapshot.CardSubtitle</p>

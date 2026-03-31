@@ -33,7 +33,7 @@
                 var tab = visibleItems[visibleIndex];
                 var isSelected = visibleIndex == selectedVisibleIndex;
                 var isFocused = visibleIndex == focusedVisibleIndex;
-                var iconCssClass = ResolveIconCssClass(tab.Icon);
+                var iconName = ResolveIconName(tab.Icon);
                 var tabId = GetTabId(visibleIndex);
                 var panelId = GetPanelId(visibleIndex);
 
@@ -52,9 +52,9 @@
                         @onfocus="@(() => HandleTabFocused(visibleIndex))"
                         @onkeydown="@((args) => HandleTabKeyDownAsync(args, visibleIndex, visibleItems))"
                         @onclick="@(() => SelectTabAsync(visibleIndex, userInitiated: true))">
-                    @if (iconCssClass is not null)
+                    @if (iconName is not null)
                     {
-                        <i class="@($"rz-fa-icon {iconCssClass} cad-tabs__icon zy-tabs__icon")" aria-hidden="true"></i>
+                        <span class="rz-icon cda-material-icon material-icons cad-tabs__icon zy-tabs__icon" aria-hidden="true">@iconName</span>
                     }
                     else if (!string.IsNullOrWhiteSpace(tab.Icon))
                     {
@@ -451,11 +451,11 @@
             : item.Text;
     }
 
-    private static string? ResolveIconCssClass(string? iconToken)
+    private static string? ResolveIconName(string? iconToken)
     {
-        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        if (MaterialIconCatalog.TryResolveIconName(iconToken, out var iconName))
         {
-            return cssClass;
+            return iconName;
         }
 
         return null;

@@ -42,7 +42,7 @@
                                     </span>
                                     @if (tab.IsSleeping)
                                     {
-                                        <span class="cda-tab-menu__badge">zZ</span>
+                                        <span class="cda-tab-menu__badge" aria-hidden="true"><Icon Name="bedtime" /></span>
                                     }
                                 </button>
                             }
@@ -69,7 +69,7 @@
                                         <span class="block truncate font-semibold text-slate-900">@recent.Title</span>
                                         <span class="block truncate text-xs text-slate-500">@recent.TabGroup / @recent.Route</span>
                                     </span>
-                                    <span class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">restore</span>
+                                    <span class="text-slate-500" aria-hidden="true"><Icon Name="restore" /></span>
                                 </button>
                             }
                         </div>
@@ -193,18 +193,18 @@
             }
             @if (tab.IsPinned)
             {
-                <span class="text-[9px] font-semibold uppercase text-sky-400">pin</span>
+                <span class="text-sky-400" aria-hidden="true"><Icon Name="push_pin" /></span>
             }
         </button>
 
         <div class="cda-inline-tab__actions group-hover/tab:inline-flex @(IsActive(tab) ? "cda-inline-tab__actions--active" : string.Empty)">
-            <button type="button" class="cda-inline-tab__action" title="Move left" @onclick="() => MoveLeft.InvokeAsync(tab.TabId)">&#x2039;</button>
-            <button type="button" class="cda-inline-tab__action" title="Move right" @onclick="() => MoveRight.InvokeAsync(tab.TabId)">&#x203A;</button>
-            <button type="button" class="cda-inline-tab__action" title="Pin tab" @onclick="() => TogglePin.InvokeAsync(tab.TabId)">pin</button>
-            <button type="button" class="cda-inline-tab__action" title="Sleep/wake" @onclick="() => ToggleSleep.InvokeAsync(tab.TabId)">zZ</button>
+            <button type="button" class="cda-inline-tab__action" title="Move left" @onclick="() => MoveLeft.InvokeAsync(tab.TabId)"><Icon Name="chevron_left" /><span class="sr-only">Move left</span></button>
+            <button type="button" class="cda-inline-tab__action" title="Move right" @onclick="() => MoveRight.InvokeAsync(tab.TabId)"><Icon Name="chevron_right" /><span class="sr-only">Move right</span></button>
+            <button type="button" class="cda-inline-tab__action" title="Pin tab" @onclick="() => TogglePin.InvokeAsync(tab.TabId)"><Icon Name="push_pin" /><span class="sr-only">Pin tab</span></button>
+            <button type="button" class="cda-inline-tab__action" title="Sleep/wake" @onclick="() => ToggleSleep.InvokeAsync(tab.TabId)"><Icon Name="bedtime" /><span class="sr-only">Sleep or wake tab</span></button>
             @if (tab.CanClose)
             {
-                <button type="button" class="cda-inline-tab__action" title="Close tab" @onclick="() => Close.InvokeAsync(tab.TabId)">x</button>
+                <button type="button" class="cda-inline-tab__action" title="Close tab" @onclick="() => Close.InvokeAsync(tab.TabId)"><Icon Name="close" /><span class="sr-only">Close tab</span></button>
             }
         </div>
     </div>;
