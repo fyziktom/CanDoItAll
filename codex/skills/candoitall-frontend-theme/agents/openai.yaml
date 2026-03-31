@@ -1,0 +1,4 @@
+interface:
+  display_name: "CanDoItAll Frontend Theme"
+  short_description: "Set or override custom CanDoItAll frontend themes"
+  default_prompt: "Use the shipped ThemeHost and semantic CAD tokens to set or override a custom CanDoItAll frontend theme."

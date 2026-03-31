@@ -11,6 +11,7 @@ It includes these custom skills:
 - `candoitall-subbundle-validator`
 - `candoitall-watch-playwright-loop`
 - `candoitall-dotnetwatch-setup`
+- `candoitall-frontend-theme`
 
 It also depends on these public sibling skills:
 
