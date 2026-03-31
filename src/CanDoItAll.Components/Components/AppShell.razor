@@ -1,4 +1,5 @@
 @namespace CanDoItAll.Components
+@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.SharedKernel
 
 <div class="cda-shell-root">
@@ -98,7 +99,8 @@
                 <div class="mt-4 space-y-4">
                     @if (Workspaces.Count > 0)
                     {
-                        <div class="grid gap-2 md:grid-cols-3">
+                        <Grid Gap="LayoutGap.Small"
+                              ColumnsMd="3">
                             @foreach (var workspace in Workspaces)
                             {
                                 <button type="button"
@@ -108,10 +110,11 @@
                                     <span class="mt-1 block text-xs leading-5 @(workspace.Id == ActiveWorkspaceId ? "text-slate-200" : "text-slate-500")">@workspace.Description</span>
                                 </button>
                             }
-                        </div>
+                        </Grid>
                     }
 
-                    <div class="grid gap-2 lg:grid-cols-2">
+                    <Grid Gap="LayoutGap.Small"
+                          ColumnsLg="2">
                         @foreach (var item in NavigationItems)
                         {
                             var normalizedCurrentRoute = string.IsNullOrWhiteSpace(CurrentRoute) ? "/" : $"/{CurrentRoute.TrimStart('/')}";
@@ -124,11 +127,12 @@
                                 <span class="mt-1 block text-xs leading-5 @(isActive ? "text-slate-200" : "text-slate-500")">@item.Description</span>
                             </button>
                         }
-                    </div>
+                    </Grid>
 
                     @if (OpenedProjects.Count > 0 || OpenedSessions.Count > 0)
                     {
-                        <div class="grid gap-4 lg:grid-cols-2">
+                        <Grid Gap="LayoutGap.Large"
+                              ColumnsLg="2">
                             @if (OpenedProjects.Count > 0)
                             {
                                 <div class="space-y-2">
@@ -160,7 +164,7 @@
                                     }
                                 </div>
                             }
-                        </div>
+                        </Grid>
                     }
                 </div>
             </details>

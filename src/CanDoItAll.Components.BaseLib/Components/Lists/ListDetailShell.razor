@@ -1,5 +1,7 @@
 @namespace CanDoItAll.Components.BaseLib
-<div class="grid gap-5 xl:grid-cols-[minmax(0,var(--list-pane-width))_minmax(0,1fr)]" style="@($"--list-pane-width:{ListPaneWidth};")">
+<Grid Gap="LayoutGap.XLarge"
+      ColumnTemplateXl="minmax(0,var(--list-pane-width)) minmax(0,1fr)"
+      Style="@($"--list-pane-width:{ListPaneWidth};")">
     <section class="@ResolvePaneClass(ListPaneClass)">
         @if (ListHeader is not null)
         {
@@ -25,7 +27,7 @@
             @DetailContent
         </div>
     </section>
-</div>
+</Grid>
 
 @code {
     [Parameter]

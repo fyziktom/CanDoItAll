@@ -1,16 +1,20 @@
 @namespace CanDoItAll.Components
+@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.SharedKernel
 
 <div class="cda-tab-strip @(Compact ? string.Empty : "cda-tab-strip--standard")">
-    <div class="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-        <div class="flex min-w-0 flex-wrap items-center gap-1.5">
+    <Split Breakpoint="LayoutBreakpoint.Xl"
+           Gap="LayoutGap.Small"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween">
+        <Cluster Gap="LayoutGap.XSmall" Class="min-w-0">
             @foreach (var tab in InlineTabs)
             {
                 @RenderTab(tab)
             }
-        </div>
+        </Cluster>
 
-        <div class="flex flex-shrink-0 flex-wrap items-center gap-1.5">
+        <Cluster Gap="LayoutGap.XSmall" Class="flex-shrink-0">
             @if (Items.Count > InlineTabLimit || RecentTabs.Count > 0)
             {
                 <input @bind="searchText"
@@ -72,13 +76,13 @@
                     </div>
                 </details>
             }
-        </div>
-    </div>
+        </Cluster>
+    </Split>
 
     @if (ShowActiveSummary && ActiveTab is not null)
     {
         <div class="cda-tab-summary">
-            <div class="flex min-w-0 flex-wrap items-center gap-1.5">
+            <Cluster Gap="LayoutGap.XSmall" Class="min-w-0">
                 <p class="text-xs font-semibold text-slate-900">@ActiveTab.Title</p>
                 <span class="cda-tab-summary-chip">@ActiveTab.TabGroup</span>
                 @if (!string.IsNullOrWhiteSpace(ActiveTab.ProjectName))
@@ -86,9 +90,11 @@
                     <span class="cda-tab-summary-chip cda-tab-summary-chip--info">@ActiveTab.ProjectName</span>
                 }
                 <span class="truncate text-[10px] text-slate-400">@ActiveTab.Route</span>
-            </div>
+            </Cluster>
 
-            <div class="flex flex-shrink-0 items-center gap-1">
+            <Cluster Wrap="FlexWrap.NoWrap"
+                     Gap="LayoutGap.XSmall"
+                     Class="flex-shrink-0">
                 <button type="button"
                         class="cda-tab-summary-action"
                         title="Close other tabs"
@@ -101,7 +107,7 @@
                         @onclick="() => CloseRight.InvokeAsync(ActiveTab.TabId)">
                     Close right
                 </button>
-            </div>
+            </Cluster>
         </div>
     }
 </div>

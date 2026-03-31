@@ -1,9 +1,27 @@
 @namespace CanDoItAll.Components.BaseLib
 @inherits StyledComponentBase
 
-<div @attributes='BuildAttributes(Secondary ? "flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3" : "flex flex-wrap items-center gap-2")'>
-    @ChildContent
-</div>
+@if (Secondary)
+{
+    <Split Breakpoint="LayoutBreakpoint.None"
+           Gap="LayoutGap.Small"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween"
+           Wrap="FlexWrap.Wrap"
+           Class="@BuildClass("border-t border-slate-200 pt-3")"
+           Style="@Style"
+           @attributes="AdditionalAttributes">
+        @ChildContent
+    </Split>
+}
+else
+{
+    <Cluster Class="@Class"
+             Style="@Style"
+             @attributes="AdditionalAttributes">
+        @ChildContent
+    </Cluster>
+}
 
 @code {
     [Parameter]

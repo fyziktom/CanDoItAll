@@ -70,7 +70,11 @@
         {
             <div class="rounded-[1.5rem] border border-slate-200/80 bg-slate-50/70 p-4 shadow-inner shadow-white md:p-5">
                 <div class="flex flex-col gap-4">
-                    <div class="flex flex-col gap-3 border-b border-slate-200/80 pb-4 lg:flex-row lg:items-start lg:justify-between">
+                    <Split Breakpoint="LayoutBreakpoint.Lg"
+                           Gap="LayoutGap.Medium"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Class="border-b border-slate-200/80 pb-4">
                         <div class="min-w-0 space-y-2">
                             <div class="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-violet-700">Step @(EffectiveValue + 1) of @items.Count</div>
                             <div class="text-[1.7rem] font-semibold leading-tight text-slate-950">@activeItem.Text</div>
@@ -82,19 +86,21 @@
 
                         @if (ShouldRenderNavigation(isTop: true))
                         {
-                            <div class="flex shrink-0 flex-wrap items-center gap-3">
+                            <Cluster Gap="LayoutGap.Medium" Class="shrink-0">
                                 @RenderNavigationButtons(isTop: true)
-                            </div>
+                            </Cluster>
                         }
-                    </div>
+                    </Split>
 
                     @activeItem.ChildContent
 
                     @if (ShouldRenderNavigation(isTop: false))
                     {
-                        <div class="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200/80 pt-4">
+                        <Cluster JustifyContent="JustifyContent.End"
+                                 Gap="LayoutGap.Medium"
+                                 Class="border-t border-slate-200/80 pt-4">
                             @RenderNavigationButtons(isTop: false)
-                        </div>
+                        </Cluster>
                     }
                 </div>
             </div>

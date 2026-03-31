@@ -1,6 +1,9 @@
 @namespace CanDoItAll.Components.BaseLib
 <div class="sticky bottom-0 z-10 -mx-5 mt-6 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+    <Split Breakpoint="LayoutBreakpoint.Xl"
+           Gap="LayoutGap.Medium"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween">
         <div class="space-y-1">
             @if (!string.IsNullOrWhiteSpace(StatusLabel))
             {
@@ -13,7 +16,8 @@
             }
         </div>
 
-        <div class="flex flex-wrap items-center justify-end gap-2">
+        <Cluster JustifyContent="JustifyContent.End"
+                 Class="w-full xl:w-auto">
             @if (SecondaryActions is not null)
             {
                 @SecondaryActions
@@ -26,12 +30,12 @@
 
             @if (DangerActions is not null)
             {
-                <div class="ml-0 flex flex-wrap items-center gap-2 md:ml-3 md:border-l md:border-slate-200 md:pl-3">
+                <Cluster Class="ml-0 md:ml-3 md:border-l md:border-slate-200 md:pl-3">
                     @DangerActions
-                </div>
+                </Cluster>
             }
-        </div>
-    </div>
+        </Cluster>
+    </Split>
 </div>
 
 @code {

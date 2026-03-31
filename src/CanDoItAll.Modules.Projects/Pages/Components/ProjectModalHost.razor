@@ -1,4 +1,5 @@
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.SharedKernel
 
@@ -28,17 +29,20 @@
                 </HeaderActions>
                 <ChildContent>
                     <div class="cda-stack-4">
-                        <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                        <Split Breakpoint="LayoutBreakpoint.Xl"
+                               Gap="LayoutGap.Large"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween">
                             <SecondaryTabs Items="WizardTabs"
                                            SelectedKey="@WizardStep.ToString()"
                                            SelectedKeyChanged="WizardTabChanged" />
 
-                            <div class="flex flex-wrap items-center gap-2">
+                            <Cluster>
                                 <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(Editor.Status)" Text="@Editor.Status.ToString()" />
                                 <StatusBadge Tone="neutral" Text="@($"{Editor.Phases.Count} phase(s)")" />
                                 <StatusBadge Tone="info" Text="@($"{StarterObjects.Count} starter object(s)")" />
-                            </div>
-                        </div>
+                            </Cluster>
+                        </Split>
 
                         <SummaryTiles>
                             <SummaryTile Label="Step" Value="@($"{WizardStep + 1} / {WizardSteps.Count}")" HelperText="@WizardSteps[WizardStep]" Tone="info" />
@@ -53,16 +57,18 @@
                                 <FormSection Title="Identity"
                                              Description="Frame the project clearly before moving into phases and downstream workbench actions.">
                                     <ChildContent>
-                                        <div class="grid gap-4 lg:grid-cols-2">
+                                        <Grid Gap="LayoutGap.Large"
+                                              ColumnsLg="2">
                                             <FormField Text="Name">
                                                 <InputText @bind-Value="Editor.Name" class="cda-input" data-testid="project-name-input" />
                                             </FormField>
                                             <FormField Text="Current phase">
                                                 <InputText @bind-Value="Editor.CurrentPhase" class="cda-input" />
                                             </FormField>
-                                        </div>
+                                        </Grid>
 
-                                        <div class="grid gap-4 lg:grid-cols-2">
+                                        <Grid Gap="LayoutGap.Large"
+                                              ColumnsLg="2">
                                             <FormField Text="Status">
                                                 <InputSelect @bind-Value="Editor.Status" class="cda-input">
                                                     @foreach (var status in Enum.GetValues<ProjectStatus>())
@@ -74,7 +80,7 @@
                                             <FormField Text="Target date">
                                                 <InputDate @bind-Value="Editor.TargetDateUtc" class="cda-input" />
                                             </FormField>
-                                        </div>
+                                        </Grid>
 
                                         <FormField Text="Description">
                                             <InputTextArea @bind-Value="Editor.Description" class="cda-input cda-input--textarea min-h-28" />
@@ -111,7 +117,8 @@
                                                 @foreach (var phase in Editor.Phases)
                                                 {
                                                     <PanelCard>
-                                                        <div class="grid gap-3 xl:grid-cols-5">
+                                                        <Grid Gap="LayoutGap.Medium"
+                                                              ColumnsXl="5">
                                                             <InputText @bind-Value="phase.Name" class="cda-input xl:col-span-2" />
                                                             <InputSelect @bind-Value="phase.Status" class="cda-input">
                                                                 @foreach (var status in Enum.GetValues<ProjectPhaseStatus>())
@@ -126,7 +133,7 @@
                                                                     Text="Remove"
                                                                     Size="ButtonSize.Small"
                                                                     Click="@(() => RemovePhase.InvokeAsync(phase))" />
-                                                        </div>
+                                                        </Grid>
                                                     </PanelCard>
                                                 }
                                             </div>
@@ -138,18 +145,19 @@
                                 <FormSection Title="Stack profile"
                                              Description="Capture the main platform decisions once so downstream prompts and validations inherit the same context.">
                                     <ChildContent>
-                                        <div class="grid gap-4 lg:grid-cols-2">
+                                        <Grid Gap="LayoutGap.Large"
+                                              ColumnsLg="2">
                                             @foreach (var option in Editor.Options.OrderBy(item => item.Category))
                                             {
                                                 <PanelCard>
                                                     <div class="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">@option.Category</div>
-                                                    <div class="grid gap-3">
+                                                    <Grid Gap="LayoutGap.Medium">
                                                         <InputText @bind-Value="option.OptionName" class="cda-input" />
                                                         <InputText @bind-Value="option.Notes" class="cda-input" />
-                                                    </div>
+                                                    </Grid>
                                                 </PanelCard>
                                             }
-                                        </div>
+                                        </Grid>
                                     </ChildContent>
                                 </FormSection>
                                 break;
@@ -177,19 +185,22 @@
                                             <div class="cda-stack-4">
                                                 @foreach (var starter in StarterObjects)
                                                 {
-                                                    <PanelCard Class="grid gap-3 xl:grid-cols-4">
-                                                        <InputSelect @bind-Value="starter.ObjectType" class="cda-input">
-                                                            @foreach (var kind in StarterObjectKinds)
-                                                            {
-                                                                <option value="@kind">@kind</option>
-                                                            }
-                                                        </InputSelect>
-                                                        <InputText @bind-Value="starter.Title" class="cda-input" />
-                                                        <InputText @bind-Value="starter.Subtitle" class="cda-input" />
-                                                        <Button ButtonStyle="ButtonStyle.Danger"
-                                                                Text="Remove"
-                                                                Size="ButtonSize.Small"
-                                                                Click="@(() => RemoveStarterObject.InvokeAsync(starter))" />
+                                                    <PanelCard>
+                                                        <Grid Gap="LayoutGap.Medium"
+                                                              ColumnsXl="4">
+                                                            <InputSelect @bind-Value="starter.ObjectType" class="cda-input">
+                                                                @foreach (var kind in StarterObjectKinds)
+                                                                {
+                                                                    <option value="@kind">@kind</option>
+                                                                }
+                                                            </InputSelect>
+                                                            <InputText @bind-Value="starter.Title" class="cda-input" />
+                                                            <InputText @bind-Value="starter.Subtitle" class="cda-input" />
+                                                            <Button ButtonStyle="ButtonStyle.Danger"
+                                                                    Text="Remove"
+                                                                    Size="ButtonSize.Small"
+                                                                    Click="@(() => RemoveStarterObject.InvokeAsync(starter))" />
+                                                        </Grid>
                                                     </PanelCard>
                                                 }
                                             </div>
@@ -201,7 +212,8 @@
                                 <FormSection Title="Review"
                                              Description="Confirm the project shape before opening the next workbench surface.">
                                     <ChildContent>
-                                        <div class="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
+                                        <Grid Gap="LayoutGap.Large"
+                                              ColumnTemplateXl="minmax(0,1.15fr) minmax(18rem,0.85fr)">
                                             <PanelCard>
                                                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Project summary</p>
                                                 <p class="mt-2 text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(Editor.Name) ? "Unnamed project" : Editor.Name)</p>
@@ -211,13 +223,14 @@
                                             <div class="cda-panel-card border-sky-200 bg-sky-50/80 text-sm leading-6 text-sky-900">
                                                 Saving keeps the card list current, preserves the modal context, and lets the user open structure or calendar tabs only when they actually need a larger work surface.
                                             </div>
-                                        </div>
+                                        </Grid>
 
-                                        <div class="grid gap-4 md:grid-cols-3">
+                                        <Grid Gap="LayoutGap.Large"
+                                              ColumnsMd="3">
                                             <MetricCard Label="Status" Value="@Editor.Status.ToString()" />
                                             <MetricCard Label="Phases" Value="@Editor.Phases.Count.ToString()" />
                                             <MetricCard Label="Starter objects" Value="@StarterObjects.Count.ToString()" />
-                                        </div>
+                                        </Grid>
                                     </ChildContent>
                                 </FormSection>
                                 break;
@@ -225,13 +238,16 @@
                     </div>
                 </ChildContent>
                 <Footer>
-                    <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <Split Breakpoint="LayoutBreakpoint.Xl"
+                           Gap="LayoutGap.Large"
+                           AlignItems="AlignItems.Center"
+                           JustifyContent="JustifyContent.SpaceBetween">
                         <div class="space-y-1">
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Project save state</p>
                             <p class="text-sm @(IsErrorMessage ? "text-rose-700" : "text-slate-600")">@(string.IsNullOrWhiteSpace(Message) ? "Save keeps the grid in sync without leaving the page." : Message)</p>
                         </div>
 
-                        <div class="flex flex-wrap items-center gap-2">
+                        <Cluster>
                             <Button ButtonStyle="ButtonStyle.Light"
                                     Text="Back"
                                     Disabled="@(WizardStep == 0)"
@@ -255,8 +271,8 @@
                                         Text="Delete"
                                         Click="Delete" />
                             }
-                        </div>
-                    </div>
+                        </Cluster>
+                    </Split>
                 </Footer>
             </Dialog>
         </EditForm>
@@ -287,7 +303,8 @@
                         <SummaryTile Label="Stack decisions" Value="@MeaningfulOptions.Count.ToString()" HelperText="Filled stack-profile entries captured for this project." Tone="warning" />
                     </SummaryTiles>
 
-                    <div class="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
+                    <Grid Gap="LayoutGap.Large"
+                          ColumnTemplateXl="minmax(0,1.15fr) minmax(18rem,0.85fr)">
                         <SurfaceCard>
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Description</p>
                             <p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(Editor.Description) ? "No description has been captured for this project yet." : Editor.Description)</p>
@@ -318,16 +335,19 @@
                                         Click="HandleOpenCalendarAsync" />
                             </div>
                         </SurfaceCard>
-                    </div>
+                    </Grid>
 
                     <SurfaceCard>
-                        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <Split Breakpoint="LayoutBreakpoint.Md"
+                               Gap="LayoutGap.Medium"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween">
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Phase plan</p>
                                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Delivery sequence</h3>
                             </div>
                             <StatusBadge Tone="neutral" Text="@($"{Editor.Phases.Count} phase(s)")" />
-                        </div>
+                        </Split>
 
                         @if (Editor.Phases.Count == 0)
                         {
@@ -335,33 +355,42 @@
                         }
                         else
                         {
-                            <div class="mt-4 grid gap-3 lg:grid-cols-2">
+                            <Grid Gap="LayoutGap.Medium"
+                                  ColumnsLg="2"
+                                  Class="mt-4">
                                 @foreach (var phase in Editor.Phases.OrderBy(ProjectsPresentation.GetPhaseOrderKey).ThenBy(item => item.Name))
                                 {
                                     <PanelCard Soft="true">
-                                        <div class="flex items-start justify-between gap-3">
+                                        <Split Breakpoint="LayoutBreakpoint.None"
+                                               Gap="LayoutGap.Medium"
+                                               AlignItems="AlignItems.Start"
+                                               JustifyContent="JustifyContent.SpaceBetween"
+                                               Wrap="FlexWrap.Wrap">
                                             <div class="min-w-0">
                                                 <p class="text-sm font-semibold text-slate-950">@phase.Name</p>
                                                 <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@phase.Status</p>
                                             </div>
                                             <StatusBadge Tone="@ProjectsPresentation.GetPhaseStatusTone(phase.Status)" Text="@phase.Status.ToString()" />
-                                        </div>
+                                        </Split>
                                         <p class="mt-3 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(phase.Goal) ? "No goal has been captured for this phase yet." : phase.Goal)</p>
                                         <p class="mt-3 text-xs font-medium text-slate-500">@($"{ProjectsPresentation.FormatDate(phase.StartDateUtc)} to {ProjectsPresentation.FormatDate(phase.EndDateUtc)}")</p>
                                     </PanelCard>
                                 }
-                            </div>
+                            </Grid>
                         }
                     </SurfaceCard>
 
                     <SurfaceCard>
-                        <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <Split Breakpoint="LayoutBreakpoint.Md"
+                               Gap="LayoutGap.Small"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween">
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Stack profile</p>
                                 <h3 class="mt-1 text-lg font-semibold text-slate-950">Captured platform choices</h3>
                             </div>
                             <StatusBadge Tone="warning" Text="@($"{MeaningfulOptions.Count} filled")" />
-                        </div>
+                        </Split>
 
                         @if (MeaningfulOptions.Count == 0)
                         {
@@ -369,7 +398,9 @@
                         }
                         else
                         {
-                            <div class="mt-4 grid gap-3 lg:grid-cols-2">
+                            <Grid Gap="LayoutGap.Medium"
+                                  ColumnsLg="2"
+                                  Class="mt-4">
                                 @foreach (var option in MeaningfulOptions.OrderBy(item => item.Category).ThenBy(item => item.OptionName))
                                 {
                                     <PanelCard Soft="true">
@@ -378,26 +409,29 @@
                                         <p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(option.Notes) ? "No notes recorded." : option.Notes)</p>
                                     </PanelCard>
                                 }
-                            </div>
+                            </Grid>
                         }
                     </SurfaceCard>
                 </div>
             </ChildContent>
             <Footer>
-                <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <Split Breakpoint="LayoutBreakpoint.Xl"
+                       Gap="LayoutGap.Large"
+                       AlignItems="AlignItems.Center"
+                       JustifyContent="JustifyContent.SpaceBetween">
                     <div class="space-y-1">
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Project dashboard</p>
                         <p class="text-sm text-slate-600">Use the modal to inspect and decide. Use tabs only when you want the project overview or a deeper work surface to stay open alongside other work.</p>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2">
+                    <Cluster>
                         <Button ButtonStyle="ButtonStyle.Light"
                                 Text="Edit project"
                                 Click="SwitchToEditor" />
                         <Button Text="Open dashboard tab"
                                 Click="OpenProjectDashboard" />
-                    </div>
-                </div>
+                    </Cluster>
+                </Split>
             </Footer>
         </Dialog>
     }
