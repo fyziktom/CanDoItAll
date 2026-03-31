@@ -1,0 +1,49 @@
+<div class="pf-history-toolbar" role="group" aria-label="History controls">
+    <button type="button"
+            class="cw-toolbar-action cw-toolbar-action--icon"
+            data-testid="prompt-factory-undo"
+            title="Undo (Ctrl/Cmd + Z)"
+            aria-label="Undo"
+            disabled="@(!CanUndo)"
+            @onclick="Undo">
+        <span class="cw-toolbar-symbol" aria-hidden="true">&#x21B6;</span>
+        <span class="sr-only">Undo</span>
+    </button>
+    <button type="button"
+            class="cw-toolbar-action cw-toolbar-action--icon"
+            data-testid="prompt-factory-redo"
+            title="Redo (Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y)"
+            aria-label="Redo"
+            disabled="@(!CanRedo)"
+            @onclick="Redo">
+        <span class="cw-toolbar-symbol" aria-hidden="true">&#x21B7;</span>
+        <span class="sr-only">Redo</span>
+    </button>
+    <button type="button"
+            class="cw-toolbar-action pf-toolbar-toggle @(IsToolboxVisible ? "is-active" : string.Empty)"
+            data-testid="prompt-factory-components-toolbox-toggle"
+            title="Show or hide the components toolbox"
+            @onclick="ToggleToolbox">
+        Components
+    </button>
+</div>
+
+@code {
+    [Parameter]
+    public bool CanUndo { get; set; }
+
+    [Parameter]
+    public bool CanRedo { get; set; }
+
+    [Parameter]
+    public bool IsToolboxVisible { get; set; }
+
+    [Parameter]
+    public EventCallback Undo { get; set; }
+
+    [Parameter]
+    public EventCallback Redo { get; set; }
+
+    [Parameter]
+    public EventCallback ToggleToolbox { get; set; }
+}

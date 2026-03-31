@@ -2,11 +2,11 @@
 
 ## Status
 
-- `Completed`
+- `Blocked`
 
 ## Objective
 
-- Finish the route sweep, repair any browser-visible regressions, refresh the census if needed, close the raw prompt note by note, and answer the mandatory step `0` questions with facts.
+- Finish the reopened route sweep, repair any browser-visible regressions, refresh the census if needed, close the raw prompt and follow-up feedback note by note, and answer the mandatory step `0` questions with facts.
 
 ## Covered Inputs
 
@@ -34,6 +34,7 @@
 - Final browser route sweep with regression repairs completed.
 - Final metrics and refreshed census if the migration materially changed the raw utility landscape.
 - A note-by-note closure result against the original prompt.
+- A note-by-note closure result against the reopened follow-up feedback for `Home.razor`, `ProjectsPage.razor`, and `PromptFactoryPage.razor`.
 - Honest answers to the four mandatory step `0` questions.
 - Final bundle sync and validator pass.
 
@@ -51,7 +52,7 @@
 1. Re-run the route matrix and capture final screenshots on desktop and narrower widths.
 2. Repair any remaining visual or behavioral regressions discovered during the sweep.
 3. Refresh metrics and the census workbook if migration materially changed the remaining raw utility surface.
-4. Close the original prompt note by note in the execution report.
+4. Close the original prompt and reopened follow-up feedback note by note in the execution report.
 5. Answer the step `0` questions with facts and rerun the final validators.
 
 ## Scope Exceptions
@@ -78,6 +79,12 @@
 - Any targeted test command chosen during execution
 - Final Playwright screenshots for the migrated non-canvas route matrix
 - Passing `validate_bundle.py --stage completed`
+
+## Current Follow-Up Closure
+
+- Browser proof now includes refreshed screenshots for `/`, `/projects`, and `/prompt-factory`.
+- The reopened `Home.razor` and `ProjectsPage.razor` notes are closed with page-file census proof and browser screenshots.
+- `PromptFactoryPage.razor` is still only partially closed. The route is revalidated and safer than before, but deeper non-canvas decomposition is still warranted.
 
 ## Browser Validation Logging
 

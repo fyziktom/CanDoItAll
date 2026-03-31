@@ -1,0 +1,296 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
+@using CanDoItAll.SharedKernel
+
+<section class="flex min-h-[26rem] flex-col overflow-hidden rounded-[1.85rem] border border-slate-200 bg-white/92 shadow-sm shadow-slate-200/60"
+         data-testid="projects-board"
+         style="height: calc(100vh - 15rem);">
+    <div class="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 xl:flex-row xl:items-center xl:justify-between"
+         data-testid="projects-command-bar">
+        <div class="min-w-0 cda-stack-3">
+            <div class="flex flex-wrap items-center gap-2">
+                <h2 class="text-lg font-semibold tracking-tight text-slate-950">Portfolio board</h2>
+                <StatusBadge Tone="info" Text="@($"{FilteredProjectSummaries.Count} visible")" />
+            </div>
+            <p class="max-w-3xl text-sm leading-6 text-slate-600">Search, inspect, edit, and jump into dashboard, structure, or calendar from one compact board without losing the project list.</p>
+            <div class="cda-stat-pill-row">
+                <span class="cda-stat-pill cda-stat-pill--info">
+                    <span class="cda-stat-pill__token">ACT</span>
+                    <span>@ProjectSummaries.Count(project => project.Status == ProjectStatus.Active) active</span>
+                </span>
+                <span class="cda-stat-pill cda-stat-pill--neutral">
+                    <span class="cda-stat-pill__token">DRF</span>
+                    <span>@ProjectSummaries.Count(project => project.Status == ProjectStatus.Draft) draft</span>
+                </span>
+                <span class="cda-stat-pill cda-stat-pill--warning">
+                    <span class="cda-stat-pill__token">UPD</span>
+                    <span>@LatestUpdatedProjectLabel</span>
+                </span>
+                <span class="cda-stat-pill cda-stat-pill--plain">
+                    <span class="cda-stat-pill__token">NOTE</span>
+                    <span>@LatestUpdatedProjectHelper</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="flex w-full max-w-2xl flex-col gap-2">
+            <div class="flex flex-wrap items-center justify-end gap-2">
+                <Button Class="h-9 px-3"
+                        data-testid="projects-new-button"
+                        Click="OpenNewProject">
+                    <span aria-hidden="true" class="text-base font-bold leading-none">+</span>
+                    <span>New</span>
+                </Button>
+                <Button ButtonStyle="ButtonStyle.Light"
+                        Class="h-9 px-3"
+                        Click="NavigateHome">
+                    <span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">DB</span>
+                    <span>Dashboard</span>
+                </Button>
+            </div>
+            <label class="cda-prefixed-field">
+                <span class="cda-prefixed-field__prefix">FIND</span>
+                <InputText @bind-Value="ProjectSearchProxy"
+                           @bind-Value:event="oninput"
+                           class="cda-input cda-input--toolbar pl-14"
+                           placeholder="Search by name or current phase" />
+            </label>
+            <div class="flex flex-wrap items-center gap-2">
+                <label class="cda-prefixed-field min-w-[12rem] sm:flex-none">
+                    <span class="cda-prefixed-field__prefix">STATUS</span>
+                    <InputSelect @bind-Value="StatusFilterProxy"
+                                 class="cda-input cda-input--toolbar appearance-none pl-[4.6rem] pr-9">
+                        <option value="">All statuses</option>
+                        @foreach (var status in Enum.GetValues<ProjectStatus>())
+                        {
+                            <option value="@status.ToString()">@status</option>
+                        }
+                    </InputSelect>
+                    <span class="cda-prefixed-field__suffix">V</span>
+                </label>
+                <label class="cda-prefixed-field min-w-[14rem] sm:flex-none">
+                    <span class="cda-prefixed-field__prefix">PROJECT</span>
+                    <InputSelect @bind-Value="HierarchyFilterProjectIdProxy"
+                                 class="cda-input cda-input--toolbar appearance-none pl-[4.9rem] pr-9"
+                                 data-testid="hierarchy-filter-project">
+                        <option value="">Any project</option>
+                        @foreach (var project in ProjectSummaries.OrderBy(project => project.Name))
+                        {
+                            <option value="@project.Id">@project.Name</option>
+                        }
+                    </InputSelect>
+                    <span class="cda-prefixed-field__suffix">V</span>
+                </label>
+                <label class="cda-prefixed-field min-w-[12rem] sm:flex-none">
+                    <span class="cda-prefixed-field__prefix">LINK</span>
+                    <InputSelect @bind-Value="HierarchyFilterModeProxy"
+                                 class="cda-input cda-input--toolbar appearance-none pl-[3.8rem] pr-9"
+                                 data-testid="hierarchy-filter-mode">
+                        <option value="">All links</option>
+                        <option value="children">Subprojects</option>
+                        <option value="parents">Parents</option>
+                        <option value="related">Related</option>
+                    </InputSelect>
+                    <span class="cda-prefixed-field__suffix">V</span>
+                </label>
+                <Button ButtonStyle="ButtonStyle.Light"
+                        Class="h-10 px-3"
+                        Click="ResetFilters">
+                    <span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">RST</span>
+                    <span>Reset</span>
+                </Button>
+            </div>
+            <p class="text-xs leading-5 text-slate-500">@HierarchyFilterHelper</p>
+        </div>
+    </div>
+
+    <div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" data-testid="projects-cards-scroll">
+        @if (FilteredProjectSummaries.Count == 0)
+        {
+            <EmptyState Eyebrow="No matching projects"
+                        Title="Adjust the filters or start a new project"
+                        Description="When projects match the current filters, they appear here as compact cards with overview and dashboard actions.">
+                <Actions>
+                    <Button Text="New project" Click="OpenNewProject" />
+                </Actions>
+            </EmptyState>
+        }
+        else
+        {
+            <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                @foreach (var project in FilteredProjectSummaries)
+                {
+                    <article class="@ProjectsPresentation.GetProjectCardCss(project.Status)" data-testid="project-card">
+                        <div class="flex items-start gap-3">
+                            <div class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-xs font-bold uppercase tracking-[0.18em] text-slate-600 shadow-sm">
+                                @ProjectsPresentation.GetProjectMonogram(project.Name)
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Project</p>
+                                        <h3 class="mt-1 text-base font-bold tracking-tight text-slate-950">@project.Name</h3>
+                                    </div>
+                                    <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(project.Status)" Text="@project.Status.ToString()" />
+                                </div>
+                                <p class="mt-2 text-sm leading-5 text-slate-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : project.CurrentPhase)</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 grid gap-2 sm:grid-cols-4">
+                            <div class="cda-metric-card">
+                                <p class="cda-metric-card__label">Phases</p>
+                                <p class="cda-metric-card__value">@project.PhaseCount</p>
+                            </div>
+                            <div class="cda-metric-card">
+                                <p class="cda-metric-card__label">Parents</p>
+                                <p class="cda-metric-card__value">@project.ParentCount</p>
+                            </div>
+                            <div class="cda-metric-card">
+                                <p class="cda-metric-card__label">Subprojects</p>
+                                <p class="cda-metric-card__value">@project.ChildCount</p>
+                            </div>
+                            <div class="cda-metric-card">
+                                <p class="cda-metric-card__label">Updated</p>
+                                <p class="cda-metric-card__value">@project.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/70 pt-3">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <Button Class="h-9 px-3"
+                                        data-testid="project-card-details-button"
+                                        Click="@(() => OpenProjectPreview.InvokeAsync(project.Id))">
+                                    <span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">VIEW</span>
+                                    <span>View</span>
+                                </Button>
+                                <Button ButtonStyle="ButtonStyle.Light"
+                                        Class="h-9 px-3"
+                                        data-testid="project-card-subprojects-button"
+                                        Click="@(() => OpenHierarchyModal.InvokeAsync(project.Id))">
+                                    <span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">SUB</span>
+                                    <span>Subprojects</span>
+                                </Button>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <Button ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Class="cda-button--quick"
+                                        title="Open dashboard tab"
+                                        aria-label="Open dashboard tab"
+                                        Click="@(() => OpenProjectDashboard.InvokeAsync(project.Id))">
+                                    <span aria-hidden="true">DB</span>
+                                </Button>
+                                <Button ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Class="cda-button--quick"
+                                        title="Open structure"
+                                        aria-label="Open structure"
+                                        Click="@(() => OpenStructure.InvokeAsync(project.Id))">
+                                    <span aria-hidden="true">ST</span>
+                                </Button>
+                                <Button ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Class="cda-button--quick"
+                                        title="Open calendar"
+                                        aria-label="Open calendar"
+                                        Click="@(() => OpenCalendar.InvokeAsync(project.Id))">
+                                    <span aria-hidden="true">CAL</span>
+                                </Button>
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProjectSummary> ProjectSummaries { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProjectSummary> FilteredProjectSummaries { get; set; } = default!;
+
+    [Parameter]
+    public string ProjectSearch { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> ProjectSearchChanged { get; set; }
+
+    [Parameter]
+    public string StatusFilter { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> StatusFilterChanged { get; set; }
+
+    [Parameter]
+    public string HierarchyFilterProjectId { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> HierarchyFilterProjectIdChanged { get; set; }
+
+    [Parameter]
+    public string HierarchyFilterMode { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> HierarchyFilterModeChanged { get; set; }
+
+    [Parameter]
+    public string HierarchyFilterHelper { get; set; } = string.Empty;
+
+    [Parameter]
+    public string LatestUpdatedProjectLabel { get; set; } = string.Empty;
+
+    [Parameter]
+    public string LatestUpdatedProjectHelper { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback OpenNewProject { get; set; }
+
+    [Parameter]
+    public EventCallback NavigateHome { get; set; }
+
+    [Parameter]
+    public EventCallback ResetFilters { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenProjectPreview { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenHierarchyModal { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenProjectDashboard { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenStructure { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenCalendar { get; set; }
+
+    private string ProjectSearchProxy
+    {
+        get => ProjectSearch;
+        set => _ = ProjectSearchChanged.InvokeAsync(value);
+    }
+
+    private string StatusFilterProxy
+    {
+        get => StatusFilter;
+        set => _ = StatusFilterChanged.InvokeAsync(value);
+    }
+
+    private string HierarchyFilterProjectIdProxy
+    {
+        get => HierarchyFilterProjectId;
+        set => _ = HierarchyFilterProjectIdChanged.InvokeAsync(value);
+    }
+
+    private string HierarchyFilterModeProxy
+    {
+        get => HierarchyFilterMode;
+        set => _ = HierarchyFilterModeChanged.InvokeAsync(value);
+    }
+}

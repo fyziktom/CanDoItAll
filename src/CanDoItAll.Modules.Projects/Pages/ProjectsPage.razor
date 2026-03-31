@@ -9,6 +9,7 @@ risks: route-driven-modal-state, modal-save-regressions
 tests: component:ProjectsPageTests, e2e:projects-smoke
 *@
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.SharedKernel
 @inject ProjectsService ProjectsService
 @inject IProjectWorkbenchSeedService ProjectWorkbenchSeedService
@@ -17,1214 +18,432 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 <PageTitle>Projects</PageTitle>
 
 <PageScaffold>
-<Header>
-<div class="pr-20 sm:pr-24">
-<PageHeader Eyebrow="Projects"
-Compact="true"
-Title="Project workspace">
-</PageHeader>
-</div>
-</Header>
+    <Header>
+        <div class="pr-20 sm:pr-24">
+            <PageHeader Eyebrow="Projects"
+                        Compact="true"
+                        Title="Project workspace" />
+        </div>
+    </Header>
 
-<ChildContent>
-<section class="flex min-h-[26rem] flex-col overflow-hidden rounded-[1.85rem] border border-slate-200 bg-white/92 shadow-sm shadow-slate-200/60"
-         data-testid="projects-board"
-         style="height: calc(100vh - 15rem);">
-<div class="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 xl:flex-row xl:items-center xl:justify-between"
-     data-testid="projects-command-bar">
-<div class="min-w-0 cda-stack-3">
-<div class="flex flex-wrap items-center gap-2">
-<h2 class="text-lg font-semibold tracking-tight text-slate-950">Portfolio board</h2>
-<StatusBadge Tone="info" Text="@($"{FilteredProjectSummaries.Count} visible")" />
-</div>
-<p class="max-w-3xl text-sm leading-6 text-slate-600">Search, inspect, edit, and jump into dashboard, structure, or calendar from one compact board without losing the project list.</p>
-<div class="cda-stat-pill-row">
-<span class="cda-stat-pill cda-stat-pill--info">
-<span class="cda-stat-pill__token">ACT</span>
-<span>@projectSummaries.Count(project => project.Status == ProjectStatus.Active) active</span>
-</span>
-<span class="cda-stat-pill cda-stat-pill--neutral">
-<span class="cda-stat-pill__token">DRF</span>
-<span>@projectSummaries.Count(project => project.Status == ProjectStatus.Draft) draft</span>
-</span>
-<span class="cda-stat-pill cda-stat-pill--warning">
-<span class="cda-stat-pill__token">UPD</span>
-<span>@LatestUpdatedProjectLabel</span>
-</span>
-<span class="cda-stat-pill cda-stat-pill--plain">
-<span class="cda-stat-pill__token">NOTE</span>
-<span>@LatestUpdatedProjectHelper</span>
-</span>
-</div>
-</div>
-
-<div class="flex w-full max-w-2xl flex-col gap-2">
-<div class="flex flex-wrap items-center justify-end gap-2">
-<Button Class="h-9 px-3"
-data-testid="projects-new-button"
-Click="OpenNewProjectAsync">
-<span aria-hidden="true" class="text-base font-bold leading-none">+</span>
-<span>New</span>
-</Button>
-<Button ButtonStyle="ButtonStyle.Light"
-Class="h-9 px-3"
-Click="NavigateHome">
-<span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">DB</span>
-<span>Dashboard</span>
-</Button>
-</div>
-<label class="cda-prefixed-field">
-<span class="cda-prefixed-field__prefix">
-FIND
-</span>
-<input @bind="projectSearch"
-@bind:event="oninput"
-class="cda-input cda-input--toolbar pl-14"
-placeholder="Search by name or current phase" />
-</label>
-<div class="flex flex-wrap items-center gap-2">
-<label class="cda-prefixed-field min-w-[12rem] sm:flex-none">
-<span class="cda-prefixed-field__prefix">
-STATUS
-</span>
-<InputSelect @bind-Value="statusFilter" class="cda-input cda-input--toolbar appearance-none pl-[4.6rem] pr-9">
-<option value="">All statuses</option>
-@foreach (var status in Enum.GetValues<ProjectStatus>())
-{
-<option value="@status.ToString()">@status</option>
-}
-</InputSelect>
-<span class="cda-prefixed-field__suffix">
-V
-</span>
-</label>
-<label class="cda-prefixed-field min-w-[14rem] sm:flex-none">
-<span class="cda-prefixed-field__prefix">
-PROJECT
-</span>
-<InputSelect @bind-Value="hierarchyFilterProjectId" class="cda-input cda-input--toolbar appearance-none pl-[4.9rem] pr-9" data-testid="hierarchy-filter-project">
-<option value="">Any project</option>
-@foreach (var project in projectSummaries.OrderBy(project => project.Name))
-{
-<option value="@project.Id">@project.Name</option>
-}
-</InputSelect>
-<span class="cda-prefixed-field__suffix">
-V
-</span>
-</label>
-<label class="cda-prefixed-field min-w-[12rem] sm:flex-none">
-<span class="cda-prefixed-field__prefix">
-LINK
-</span>
-<InputSelect @bind-Value="hierarchyFilterMode" class="cda-input cda-input--toolbar appearance-none pl-[3.8rem] pr-9" data-testid="hierarchy-filter-mode">
-<option value="">All links</option>
-<option value="children">Subprojects</option>
-<option value="parents">Parents</option>
-<option value="related">Related</option>
-</InputSelect>
-<span class="cda-prefixed-field__suffix">
-V
-</span>
-</label>
-<Button ButtonStyle="ButtonStyle.Light"
-Class="h-10 px-3"
-Click="ResetFilters">
-<span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">RST</span>
-<span>Reset</span>
-</Button>
-</div>
-<p class="text-xs leading-5 text-slate-500">@HierarchyFilterHelper</p>
-</div>
-</div>
-
-<div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" data-testid="projects-cards-scroll">
-@if (FilteredProjectSummaries.Count == 0)
-{
-<EmptyState Eyebrow="No matching projects"
-Title="Adjust the filters or start a new project"
-Description="When projects match the current filters, they appear here as compact cards with overview and dashboard actions.">
-<Actions>
-<Button Text="New project" Click="OpenNewProjectAsync" />
-</Actions>
-</EmptyState>
-}
-else
-{
-<div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-@foreach (var project in FilteredProjectSummaries)
-{
-<article class="@GetProjectCardCss(project.Status)" data-testid="project-card">
-<div class="flex items-start gap-3">
-<div class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-xs font-bold uppercase tracking-[0.18em] text-slate-600 shadow-sm">
-@GetProjectMonogram(project.Name)
-</div>
-<div class="min-w-0 flex-1">
-<div class="flex items-start justify-between gap-3">
-<div class="min-w-0">
-<p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Project</p>
-<h3 class="mt-1 text-base font-bold tracking-tight text-slate-950">@project.Name</h3>
-</div>
-<StatusBadge Tone="@GetStatusTone(project.Status)" Text="@project.Status.ToString()" />
-</div>
-<p class="mt-2 text-sm leading-5 text-slate-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : project.CurrentPhase)</p>
-</div>
-</div>
-
-<div class="mt-4 grid gap-2 sm:grid-cols-4">
-<div class="cda-metric-card">
-<p class="cda-metric-card__label">Phases</p>
-<p class="cda-metric-card__value">@project.PhaseCount</p>
-</div>
-<div class="cda-metric-card">
-<p class="cda-metric-card__label">Parents</p>
-<p class="cda-metric-card__value">@project.ParentCount</p>
-</div>
-<div class="cda-metric-card">
-<p class="cda-metric-card__label">Subprojects</p>
-<p class="cda-metric-card__value">@project.ChildCount</p>
-</div>
-<div class="cda-metric-card">
-<p class="cda-metric-card__label">Updated</p>
-<p class="cda-metric-card__value">@project.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
-</div>
-</div>
-
-<div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/70 pt-3">
-<div class="flex flex-wrap items-center gap-2">
-<Button Class="h-9 px-3"
-data-testid="project-card-details-button"
-Click="@(() => OpenProjectPreviewAsync(project.Id))">
-<span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">VIEW</span>
-<span>View</span>
-</Button>
-<Button ButtonStyle="ButtonStyle.Light"
-Class="h-9 px-3"
-data-testid="project-card-subprojects-button"
-Click="@(() => OpenHierarchyModalAsync(project.Id))">
-<span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">SUB</span>
-<span>Subprojects</span>
-</Button>
-</div>
-<div class="flex flex-wrap items-center gap-1.5">
-<Button ButtonStyle="ButtonStyle.Light"
-Size="ButtonSize.Small"
-Class="cda-button--quick"
-title="Open dashboard tab"
-aria-label="Open dashboard tab"
-Click="@(() => OpenProjectDashboard(project.Id))">
-<span aria-hidden="true">DB</span>
-</Button>
-<Button ButtonStyle="ButtonStyle.Light"
-Size="ButtonSize.Small"
-Class="cda-button--quick"
-title="Open structure"
-aria-label="Open structure"
-Click="@(() => OpenStructure(project.Id))">
-<span aria-hidden="true">ST</span>
-</Button>
-<Button ButtonStyle="ButtonStyle.Light"
-Size="ButtonSize.Small"
-Class="cda-button--quick"
-title="Open calendar"
-aria-label="Open calendar"
-Click="@(() => OpenCalendar(project.Id))">
-<span aria-hidden="true">CAL</span>
-</Button>
-</div>
-</div>
-</article>
-}
-</div>
-}
-</div>
-</section>
-</ChildContent>
+    <ChildContent>
+        <ProjectsBoard ProjectSummaries="projectSummaries"
+                       FilteredProjectSummaries="FilteredProjectSummaries"
+                       ProjectSearch="projectSearch"
+                       ProjectSearchChanged="@(value => { projectSearch = value; })"
+                       StatusFilter="statusFilter"
+                       StatusFilterChanged="@(value => { statusFilter = value; })"
+                       HierarchyFilterProjectId="hierarchyFilterProjectId"
+                       HierarchyFilterProjectIdChanged="@(value => { hierarchyFilterProjectId = value; })"
+                       HierarchyFilterMode="hierarchyFilterMode"
+                       HierarchyFilterModeChanged="@(value => { hierarchyFilterMode = value; })"
+                       HierarchyFilterHelper="HierarchyFilterHelper"
+                       LatestUpdatedProjectLabel="LatestUpdatedProjectLabel"
+                       LatestUpdatedProjectHelper="LatestUpdatedProjectHelper"
+                       OpenNewProject="OpenNewProjectAsync"
+                       NavigateHome="NavigateHome"
+                       ResetFilters="ResetFilters"
+                       OpenProjectPreview="OpenProjectPreviewAsync"
+                       OpenHierarchyModal="OpenHierarchyModalAsync"
+                       OpenProjectDashboard="OpenProjectDashboard"
+                       OpenStructure="OpenStructure"
+                       OpenCalendar="OpenCalendar" />
+    </ChildContent>
 </PageScaffold>
 
-@if (showProjectModal)
-{
-<div class="fixed inset-0 flex items-start justify-center overflow-y-auto p-4 sm:p-6" style="z-index: 140;">
-<div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" @onclick="CloseProjectModalAsync"></div>
+<ProjectModalHost IsOpen="showProjectModal"
+                  IsEditorMode="@(modalMode == ProjectModalMode.Editor)"
+                  Editor="editor"
+                  StarterObjects="starterObjects"
+                  StarterObjectKinds="starterObjectKinds"
+                  ProjectSummaries="projectSummaries"
+                  WizardStep="wizardStep"
+                  WizardSteps="wizardSteps"
+                  WizardTabs="WizardTabs"
+                  Message="message"
+                  IsErrorMessage="IsErrorMessage"
+                  Close="CloseProjectModalAsync"
+                  SwitchToOverview="SwitchToOverview"
+                  SwitchToEditor="SwitchToEditor"
+                  WizardTabChanged="HandleWizardTabChanged"
+                  AddPhase="AddPhaseAsync"
+                  RemovePhase="RemovePhaseAsync"
+                  AddStarterObject="AddStarterObject"
+                  RemoveStarterObject="RemoveStarterObject"
+                  PreviousStep="PreviousStep"
+                  NextStep="NextStep"
+                  Save="SaveAsync"
+                  SaveAndOpenStructure="SaveAndOpenStructureAsync"
+                  Delete="DeleteAsync"
+                  OpenProjectDashboard="OpenProjectDashboardAsync"
+                  OpenStructure="OpenStructure"
+                  OpenCalendar="OpenCalendar" />
 
-@if (modalMode == ProjectModalMode.Editor)
-{
-<EditForm Model="editor" OnValidSubmit="SaveAsync" class="cda-modal-shell" style="z-index: 141; max-height: min(92vh, calc(100% - 2rem));" data-testid="projects-editor-modal" @onclick:stopPropagation="true">
-<div class="border-b border-slate-200 px-6 py-5">
-<div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-<div class="cda-stack-2">
-<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Project editor</p>
-<h2 class="text-2xl font-semibold tracking-tight text-slate-950">@(editor.Id.HasValue ? editor.Name : "New project")</h2>
-<p class="max-w-3xl text-sm leading-6 text-slate-600">Use the editor only when you need to shape the project deeply. The main page stays dedicated to scanning cards and opening focused tabs.</p>
-</div>
-
-<div class="flex flex-wrap items-center gap-2">
-@if (editor.Id.HasValue)
-{
-<Button ButtonStyle="ButtonStyle.Light"
-Text="Back to details"
-Click="SwitchToOverview" />
-}
-<Button ButtonStyle="ButtonStyle.Light"
-Text="Close"
-Click="CloseProjectModalAsync" />
-</div>
-</div>
-
-<div class="mt-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-<SecondaryTabs Items="WizardTabs"
-SelectedKey="@wizardStep.ToString()"
-SelectedKeyChanged="HandleWizardTabChanged" />
-
-<div class="flex flex-wrap items-center gap-2">
-<StatusBadge Tone="@GetStatusTone(editor.Status)" Text="@editor.Status.ToString()" />
-<StatusBadge Tone="neutral" Text="@($"{editor.Phases.Count} phase(s)")" />
-<StatusBadge Tone="info" Text="@($"{starterObjects.Count} starter object(s)")" />
-</div>
-</div>
-</div>
-
-<div class="flex-1 overflow-y-auto px-6 py-6">
-<div class="cda-stack-4">
-<SummaryTiles>
-<SummaryTile Label="Step" Value="@($"{wizardStep + 1} / {wizardSteps.Length}")" HelperText="@wizardSteps[wizardStep]" Tone="info" />
-<SummaryTile Label="Current phase" Value="@(string.IsNullOrWhiteSpace(editor.CurrentPhase) ? "Unset" : editor.CurrentPhase)" HelperText="The phase the workspace should foreground." />
-<SummaryTile Label="Target date" Value="@FormatDate(editor.TargetDateUtc)" HelperText="Leave empty when timing is still fluid." />
-<SummaryTile Label="Stack decisions" Value="@MeaningfulOptions.Count().ToString()" HelperText="Profile choices already captured for prompts and validation." />
-</SummaryTiles>
-
-@switch (wizardStep)
-{
-case 0:
-<FormSection Title="Identity"
-Description="Frame the project clearly before moving into phases and downstream workbench actions.">
-<div class="grid gap-4 lg:grid-cols-2">
-<div>
-<label class="cda-field-label">Name</label>
-<InputText @bind-Value="editor.Name" class="cda-input" data-testid="project-name-input" />
-</div>
-<div>
-<label class="cda-field-label">Current phase</label>
-<InputText @bind-Value="editor.CurrentPhase" class="cda-input" />
-</div>
-</div>
-
-<div class="grid gap-4 lg:grid-cols-2">
-<div>
-<label class="cda-field-label">Status</label>
-<InputSelect @bind-Value="editor.Status" class="cda-input">
-@foreach (var status in Enum.GetValues<ProjectStatus>())
-{
-<option value="@status">@status</option>
-}
-</InputSelect>
-</div>
-<div>
-<label class="cda-field-label">Target date</label>
-<InputDate @bind-Value="editor.TargetDateUtc" class="cda-input" />
-</div>
-</div>
-
-<div>
-<label class="cda-field-label">Description</label>
-<InputTextArea @bind-Value="editor.Description" class="cda-input cda-input--textarea min-h-28" />
-</div>
-
-<div>
-<label class="cda-field-label">Objective</label>
-<InputTextArea @bind-Value="editor.Objective" class="cda-input cda-input--textarea min-h-28" />
-</div>
-</FormSection>
-break;
-case 1:
-<FormSection Title="Dates and phases"
-Description="Keep phase planning explicit so the project calendar and workbench stay aligned."
-Actions="PhaseActions">
-
-@if (editor.Phases.Count == 0)
-{
-<EmptyState Eyebrow="No phases"
-Title="Add the first phase"
-Description="Phases become the backbone for structure, validation, and calendar work.">
-<Actions>
-<Button Text="Add phase" Click="AddPhaseAsync" />
-</Actions>
-</EmptyState>
-}
-else
-{
-<div class="cda-stack-4">
-@foreach (var phase in editor.Phases)
-{
-<div class="cda-panel-card">
-<div class="grid gap-3 xl:grid-cols-5">
-<InputText @bind-Value="phase.Name" class="cda-input xl:col-span-2" />
-<InputSelect @bind-Value="phase.Status" class="cda-input">
-@foreach (var status in Enum.GetValues<ProjectPhaseStatus>())
-{
-<option value="@status">@status</option>
-}
-</InputSelect>
-<InputDate @bind-Value="phase.StartDateUtc" class="cda-input" />
-<InputDate @bind-Value="phase.EndDateUtc" class="cda-input" />
-<InputTextArea @bind-Value="phase.Goal" class="cda-input cda-input--textarea min-h-20 xl:col-span-4" />
-<Button ButtonStyle="ButtonStyle.Danger"
-Text="Remove"
-Size="ButtonSize.Small"
-Click="@(() => RemovePhaseAsync(phase))" />
-</div>
-</div>
-}
-</div>
-}
-</FormSection>
-break;
-case 2:
-<FormSection Title="Stack profile"
-Description="Capture the main platform decisions once so downstream prompts and validations inherit the same context.">
-<div class="grid gap-4 lg:grid-cols-2">
-@foreach (var option in editor.Options.OrderBy(item => item.Category))
-{
-<div class="cda-panel-card">
-<div class="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">@option.Category</div>
-<div class="grid gap-3">
-<InputText @bind-Value="option.OptionName" class="cda-input" />
-<InputText @bind-Value="option.Notes" class="cda-input" />
-</div>
-</div>
-}
-</div>
-</FormSection>
-break;
-case 3:
-<FormSection Title="Linked object planning"
-Description="Capture the first notes, milestones, repositories, or links that should appear when the structure workbench opens."
-Actions="StarterActions">
-
-@if (starterObjects.Count == 0)
-{
-<EmptyState Eyebrow="No starter objects"
-Title="Seed the first artifacts"
-Description="Add the initial objects you expect to create right after the project workspace is saved.">
-<Actions>
-<Button Text="Add planned object" Click="AddStarterObject" />
-</Actions>
-</EmptyState>
-}
-else
-{
-<div class="cda-stack-4">
-@foreach (var starter in starterObjects)
-{
-<div class="cda-panel-card grid gap-3 xl:grid-cols-4">
-<InputSelect @bind-Value="starter.ObjectType" class="cda-input">
-@foreach (var kind in starterObjectKinds)
-{
-<option value="@kind">@kind</option>
-}
-</InputSelect>
-<InputText @bind-Value="starter.Title" class="cda-input" />
-<InputText @bind-Value="starter.Subtitle" class="cda-input" />
-<Button ButtonStyle="ButtonStyle.Danger"
-Text="Remove"
-Size="ButtonSize.Small"
-Click="@(() => starterObjects.Remove(starter))" />
-</div>
-}
-</div>
-}
-</FormSection>
-break;
-default:
-<FormSection Title="Review"
-Description="Confirm the project shape before opening the next workbench surface.">
-<div class="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-<div class="cda-panel-card">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Project summary</p>
-<p class="mt-2 text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(editor.Name) ? "Unnamed project" : editor.Name)</p>
-<p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(editor.Description) ? "No description captured yet." : editor.Description)</p>
-</div>
-
-<div class="cda-panel-card border-sky-200 bg-sky-50/80 text-sm leading-6 text-sky-900">
-Saving keeps the card list current, preserves the modal context, and lets the user open structure or calendar tabs only when they actually need a larger work surface.
-</div>
-</div>
-
-<div class="grid gap-4 md:grid-cols-3">
-<div class="cda-metric-card">
-<p class="cda-metric-card__label">Status</p>
-<p class="cda-metric-card__value">@editor.Status</p>
-</div>
-<div class="cda-metric-card">
-<p class="cda-metric-card__label">Phases</p>
-<p class="cda-metric-card__value">@editor.Phases.Count</p>
-</div>
-<div class="cda-metric-card">
-<p class="cda-metric-card__label">Starter objects</p>
-<p class="cda-metric-card__value">@starterObjects.Count</p>
-</div>
-</div>
-</FormSection>
-break;
-}
-</div>
-</div>
-
-<div class="border-t border-slate-200 bg-slate-50/90 px-6 py-4">
-<div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-<div class="space-y-1">
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Project save state</p>
-<p class="text-sm @(IsErrorMessage ? "text-rose-700" : "text-slate-600")">@(string.IsNullOrWhiteSpace(message) ? "Save keeps the grid in sync without leaving the page." : message)</p>
-</div>
-
-<div class="flex flex-wrap items-center gap-2">
-<Button ButtonStyle="ButtonStyle.Light"
-Text="Back"
-Disabled="@(wizardStep == 0)"
-Click="PreviousStep" />
-<Button ButtonStyle="ButtonStyle.Light"
-Text="Next"
-Disabled="@(wizardStep == wizardSteps.Length - 1)"
-Click="NextStep" />
-<Button Type="submit"
-Text="Save project"
-data-testid="project-save-button" />
-<Button ButtonStyle="ButtonStyle.Info"
-Text="Save and open structure"
-Click="SaveAndOpenStructureAsync" />
-@if (editor.Id.HasValue)
-{
-<Button ButtonStyle="ButtonStyle.Light"
-Text="Open dashboard tab"
-Click="OpenProjectDashboardAsync" />
-<Button ButtonStyle="ButtonStyle.Danger"
-Text="Delete"
-Click="DeleteAsync" />
-}
-</div>
-</div>
-</div>
-</EditForm>
-}
-else
-{
-<div class="cda-modal-shell" style="z-index: 141; max-height: min(92vh, calc(100% - 2rem));" data-testid="projects-detail-modal" @onclick:stopPropagation="true">
-<div class="border-b border-slate-200 px-6 py-5">
-<div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-<div class="cda-stack-2">
-<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Project details</p>
-<h2 class="text-2xl font-semibold tracking-tight text-slate-950">@(string.IsNullOrWhiteSpace(editor.Name) ? "Project overview" : editor.Name)</h2>
-<p class="max-w-3xl text-sm leading-6 text-slate-600">This modal keeps the overview compact. Use the focused tabs only when the work really needs structure, calendar, or a dedicated dashboard route.</p>
-</div>
-
-<div class="flex flex-wrap items-center gap-2">
-<StatusBadge Tone="@GetStatusTone(editor.Status)" Text="@editor.Status.ToString()" />
-<StatusBadge Tone="neutral" Text="@($"{editor.Phases.Count} phase(s)")" />
-<Button ButtonStyle="ButtonStyle.Light"
-Text="Close"
-Click="CloseProjectModalAsync" />
-</div>
-</div>
-</div>
-
-<div class="flex-1 overflow-y-auto px-6 py-6">
-<div class="cda-stack-4">
-<SummaryTiles>
-<SummaryTile Label="Current phase" Value="@(string.IsNullOrWhiteSpace(editor.CurrentPhase) ? "Unset" : editor.CurrentPhase)" HelperText="The phase currently highlighted for delivery." Tone="info" />
-<SummaryTile Label="Target date" Value="@FormatDate(editor.TargetDateUtc)" HelperText="Leave flexible when the delivery window is still moving." />
-<SummaryTile Label="Last updated" Value="@FormatTimestamp(editor.Id.HasValue ? projectSummaries.FirstOrDefault(project => project.Id == editor.Id.Value)?.UpdatedAtUtc : null)" HelperText="Pulled from the live project list." />
-<SummaryTile Label="Stack decisions" Value="@MeaningfulOptions.Count().ToString()" HelperText="Filled stack-profile entries captured for this project." Tone="warning" />
-</SummaryTiles>
-
-<div class="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-<section class="cda-surface-card">
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Description</p>
-<p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(editor.Description) ? "No description has been captured for this project yet." : editor.Description)</p>
-
-<p class="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Objective</p>
-<p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(editor.Objective) ? "No explicit objective has been recorded yet." : editor.Objective)</p>
-</section>
-
-<section class="cda-surface-card--soft">
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Next actions</p>
-<div class="mt-4 grid gap-3">
-<Button Class="w-full"
-Text="Edit project"
-Click="SwitchToEditor" />
-<Button ButtonStyle="ButtonStyle.Light"
-Class="w-full"
-Text="Open dashboard tab"
-Click="OpenProjectDashboardAsync" />
-<Button ButtonStyle="ButtonStyle.Light"
-Class="w-full"
-Text="Open structure"
-Disabled="@(!editor.Id.HasValue)"
-Click="@(() => OpenStructure(editor.Id ?? Guid.Empty))" />
-<Button ButtonStyle="ButtonStyle.Light"
-Class="w-full"
-Text="Open calendar"
-Disabled="@(!editor.Id.HasValue)"
-Click="@(() => OpenCalendar(editor.Id ?? Guid.Empty))" />
-</div>
-</section>
-</div>
-
-<section class="cda-surface-card">
-<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-<div>
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Phase plan</p>
-<h3 class="mt-1 text-lg font-semibold text-slate-950">Delivery sequence</h3>
-</div>
-<StatusBadge Tone="neutral" Text="@($"{editor.Phases.Count} phase(s)")" />
-</div>
-
-@if (editor.Phases.Count == 0)
-{
-<p class="mt-4 text-sm leading-6 text-slate-600">No phase plan exists yet. Use the editor to map the first delivery stages before opening structure or calendar tabs.</p>
-}
-else
-{
-<div class="mt-4 grid gap-3 lg:grid-cols-2">
-@foreach (var phase in editor.Phases.OrderBy(GetPhaseOrderKey).ThenBy(item => item.Name))
-{
-<div class="cda-panel-card--soft">
-<div class="flex items-start justify-between gap-3">
-<div class="min-w-0">
-<p class="text-sm font-semibold text-slate-950">@phase.Name</p>
-<p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@phase.Status</p>
-</div>
-<StatusBadge Tone="@GetPhaseStatusTone(phase.Status)" Text="@phase.Status.ToString()" />
-</div>
-<p class="mt-3 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(phase.Goal) ? "No goal has been captured for this phase yet." : phase.Goal)</p>
-<p class="mt-3 text-xs font-medium text-slate-500">@($"{FormatDate(phase.StartDateUtc)} to {FormatDate(phase.EndDateUtc)}")</p>
-</div>
-}
-</div>
-}
-</section>
-
-<section class="cda-surface-card">
-<div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-<div>
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Stack profile</p>
-<h3 class="mt-1 text-lg font-semibold text-slate-950">Captured platform choices</h3>
-</div>
-<StatusBadge Tone="warning" Text="@($"{MeaningfulOptions.Count()} filled")" />
-</div>
-
-@if (!MeaningfulOptions.Any())
-{
-<p class="mt-4 text-sm leading-6 text-slate-600">No stack profile has been captured yet. The editor can record platform, storage, testing, deployment, and external dependency choices.</p>
-}
-else
-{
-<div class="mt-4 grid gap-3 lg:grid-cols-2">
-@foreach (var option in MeaningfulOptions.OrderBy(item => item.Category).ThenBy(item => item.OptionName))
-{
-<div class="cda-panel-card--soft">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">@option.Category</p>
-<p class="mt-2 text-sm font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(option.OptionName) ? "Not specified" : option.OptionName)</p>
-<p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(option.Notes) ? "No notes recorded." : option.Notes)</p>
-</div>
-}
-</div>
-}
-</section>
-</div>
-</div>
-
-<div class="border-t border-slate-200 bg-slate-50/90 px-6 py-4">
-<div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-<div class="space-y-1">
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Project dashboard</p>
-<p class="text-sm text-slate-600">Use the modal to inspect and decide. Use tabs only when you want the project overview or a deeper work surface to stay open alongside other work.</p>
-</div>
-
-<div class="flex flex-wrap items-center gap-2">
-<Button ButtonStyle="ButtonStyle.Light"
-Text="Edit project"
-Click="SwitchToEditor" />
-<Button Text="Open dashboard tab"
-Click="OpenProjectDashboardAsync" />
-</div>
-</div>
-</div>
-</div>
-}
-</div>
-}
-
-@if (hierarchyDialog is not null)
-{
-<div class="fixed inset-0 flex items-start justify-center overflow-y-auto p-4 sm:p-6" style="z-index: 145;">
-<div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" @onclick="CloseHierarchyModal"></div>
-
-<div class="cda-modal-shell" style="z-index: 146; max-height: min(92vh, calc(100% - 2rem));" data-testid="projects-hierarchy-modal" @onclick:stopPropagation="true">
-<div class="border-b border-slate-200 px-6 py-5">
-<div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-<div class="cda-stack-2">
-<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Project hierarchy</p>
-<h2 class="text-2xl font-semibold tracking-tight text-slate-950">@hierarchyDialog.ProjectName</h2>
-<p class="max-w-3xl text-sm leading-6 text-slate-600">Inspect direct parents, browse direct subprojects, and keep drilling into deeper project branches without leaving the Projects board.</p>
-</div>
-
-<div class="flex flex-wrap items-center gap-2">
-<StatusBadge Tone="neutral" Text="@($"{hierarchyDialog.ParentProjects.Count} parent(s)")" />
-<StatusBadge Tone="info" Text="@($"{hierarchyDialog.Subprojects.Count} subproject(s)")" />
-<Button ButtonStyle="ButtonStyle.Light"
-Text="Close"
-Click="CloseHierarchyModal" />
-</div>
-</div>
-</div>
-
-<div class="flex-1 overflow-y-auto px-6 py-6">
-<div class="grid gap-4 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
-<section class="cda-surface-card--soft">
-<div class="flex items-center justify-between gap-3">
-<div>
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Parents</p>
-<h3 class="mt-1 text-lg font-semibold text-slate-950">Direct parent projects</h3>
-</div>
-<StatusBadge Tone="neutral" Text="@($"{hierarchyDialog.ParentProjects.Count} linked")" />
-</div>
-
-@if (hierarchyDialog.ParentProjects.Count == 0)
-{
-<p class="mt-4 text-sm leading-6 text-slate-600">This project does not currently sit under any parent project.</p>
-}
-else
-{
-<div class="mt-4 space-y-3">
-@foreach (var parentProject in hierarchyDialog.ParentProjects.OrderBy(project => project.Name))
-{
-<article class="cda-panel-card">
-<div class="flex items-start justify-between gap-3">
-<div class="min-w-0">
-<p class="text-sm font-semibold text-slate-950">@parentProject.Name</p>
-<p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@(string.IsNullOrWhiteSpace(parentProject.CurrentPhase) ? "Parent project" : parentProject.CurrentPhase)</p>
-</div>
-<StatusBadge Tone="@GetStatusTone(parentProject.Status)" Text="@parentProject.Status.ToString()" />
-</div>
-<div class="mt-4 flex flex-wrap items-center gap-2">
-<Button ButtonStyle="ButtonStyle.Light"
-Text="View"
-Size="ButtonSize.Small"
-Click="@(() => OpenProjectPreviewFromHierarchyAsync(parentProject.Id))" />
-<Button ButtonStyle="ButtonStyle.Light"
-Text="Structure"
-Size="ButtonSize.Small"
-Click="@(() => OpenStructure(parentProject.Id))" />
-</div>
-</article>
-}
-</div>
-}
-</section>
-
-<section class="cda-surface-card">
-<div class="flex items-center justify-between gap-3">
-<div>
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Subprojects</p>
-<h3 class="mt-1 text-lg font-semibold text-slate-950">Direct child projects</h3>
-</div>
-<StatusBadge Tone="info" Text="@($"{hierarchyDialog.Subprojects.Count} linked")" />
-</div>
-
-@if (hierarchyDialog.Subprojects.Count == 0)
-{
-<p class="mt-4 text-sm leading-6 text-slate-600">No direct subprojects are connected to this project yet.</p>
-}
-else
-{
-<div class="mt-4 grid gap-3 md:grid-cols-2">
-@foreach (var subproject in hierarchyDialog.Subprojects.OrderBy(project => project.Name))
-{
-<article class="cda-panel-card--soft" data-testid="hierarchy-subproject-card">
-<div class="flex items-start justify-between gap-3">
-<div class="min-w-0">
-<p class="text-sm font-semibold text-slate-950">@subproject.Name</p>
-<p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@(string.IsNullOrWhiteSpace(subproject.CurrentPhase) ? "Subproject" : subproject.CurrentPhase)</p>
-</div>
-<StatusBadge Tone="@GetStatusTone(subproject.Status)" Text="@subproject.Status.ToString()" />
-</div>
-
-<div class="mt-4 grid gap-2 sm:grid-cols-3">
-<div class="cda-metric-card">
-<p class="cda-metric-card__label">Parents</p>
-<p class="cda-metric-card__value">@subproject.ParentCount</p>
-</div>
-<div class="cda-metric-card">
-<p class="cda-metric-card__label">Subprojects</p>
-<p class="cda-metric-card__value">@subproject.ChildCount</p>
-</div>
-<div class="cda-metric-card">
-<p class="cda-metric-card__label">Updated</p>
-<p class="cda-metric-card__value">@subproject.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
-</div>
-</div>
-
-<div class="mt-4 flex flex-wrap items-center gap-2">
-<Button ButtonStyle="ButtonStyle.Light"
-Text="View"
-Size="ButtonSize.Small"
-Click="@(() => OpenProjectPreviewFromHierarchyAsync(subproject.Id))" />
-<Button ButtonStyle="ButtonStyle.Light"
-Text="Structure"
-Size="ButtonSize.Small"
-Click="@(() => OpenStructure(subproject.Id))" />
-<Button Text="Subprojects"
-Size="ButtonSize.Small"
-data-testid="hierarchy-card-subprojects-button"
-Click="@(() => OpenHierarchyModalAsync(subproject.Id))" />
-</div>
-</article>
-}
-</div>
-}
-</section>
-</div>
-</div>
-</div>
-</div>
-}
+<ProjectHierarchyModal State="hierarchyDialog"
+                       Close="CloseHierarchyModal"
+                       OpenProjectPreview="OpenProjectPreviewFromHierarchyAsync"
+                       OpenStructure="OpenStructure"
+                       OpenHierarchy="OpenHierarchyModalAsync" />
 
 @code {
-private static readonly string[] wizardSteps = ["Identity", "Dates and phases", "Stack profile", "Linked objects", "Review"];
+    private static readonly string[] wizardSteps = ["Identity", "Dates and phases", "Stack profile", "Linked objects", "Review"];
 
-private static readonly ProjectObjectType[] starterObjectKinds =
-[
-ProjectObjectType.Note,
-ProjectObjectType.Decision,
-ProjectObjectType.Milestone,
-ProjectObjectType.Repository,
-ProjectObjectType.Link
-];
+    private static readonly ProjectObjectType[] starterObjectKinds =
+    [
+        ProjectObjectType.Note,
+        ProjectObjectType.Decision,
+        ProjectObjectType.Milestone,
+        ProjectObjectType.Repository,
+        ProjectObjectType.Link
+    ];
 
-[SupplyParameterFromQuery(Name = "projectId")]
-public Guid? ProjectIdQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "projectId")]
+    public Guid? ProjectIdQuery { get; set; }
 
-private IReadOnlyList<ProjectSummary> projectSummaries = [];
-private IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks = [];
-private ProjectEditorModel editor = new();
-private readonly List<StarterObjectDraft> starterObjects = [];
-private string? message;
-private int wizardStep;
-private bool showProjectModal;
-private string projectSearch = string.Empty;
-private string statusFilter = string.Empty;
-private string hierarchyFilterMode = string.Empty;
-private string hierarchyFilterProjectId = string.Empty;
-private ProjectModalMode modalMode = ProjectModalMode.Overview;
-private bool modalOpenedFromRoute;
-private Guid? handledProjectQueryId;
-private ProjectHierarchyDialogState? hierarchyDialog;
+    private IReadOnlyList<ProjectSummary> projectSummaries = [];
+    private IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks = [];
+    private ProjectEditorModel editor = new();
+    private readonly List<StarterObjectDraft> starterObjects = [];
+    private string? message;
+    private int wizardStep;
+    private bool showProjectModal;
+    private string projectSearch = string.Empty;
+    private string statusFilter = string.Empty;
+    private string hierarchyFilterMode = string.Empty;
+    private string hierarchyFilterProjectId = string.Empty;
+    private ProjectModalMode modalMode = ProjectModalMode.Overview;
+    private bool modalOpenedFromRoute;
+    private Guid? handledProjectQueryId;
+    private ProjectHierarchyDialogState? hierarchyDialog;
 
-private IReadOnlyList<ProjectSummary> FilteredProjectSummaries => projectSummaries
-.Where(project =>
-(string.IsNullOrWhiteSpace(projectSearch) ||
-project.Name.Contains(projectSearch, StringComparison.OrdinalIgnoreCase) ||
-project.CurrentPhase.Contains(projectSearch, StringComparison.OrdinalIgnoreCase)) &&
-(string.IsNullOrWhiteSpace(statusFilter) ||
-string.Equals(project.Status.ToString(), statusFilter, StringComparison.OrdinalIgnoreCase)) &&
-MatchesHierarchyFilter(project))
-.OrderByDescending(project => project.UpdatedAtUtc)
-.ToList();
+    private IReadOnlyList<ProjectSummary> FilteredProjectSummaries => projectSummaries
+        .Where(project =>
+            (string.IsNullOrWhiteSpace(projectSearch) ||
+             project.Name.Contains(projectSearch, StringComparison.OrdinalIgnoreCase) ||
+             project.CurrentPhase.Contains(projectSearch, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(statusFilter) ||
+             string.Equals(project.Status.ToString(), statusFilter, StringComparison.OrdinalIgnoreCase)) &&
+            MatchesHierarchyFilter(project))
+        .OrderByDescending(project => project.UpdatedAtUtc)
+        .ToList();
 
-private Guid? SelectedHierarchyFilterProjectId
-=> Guid.TryParse(hierarchyFilterProjectId, out var parsedProjectId) ? parsedProjectId : null;
+    private Guid? SelectedHierarchyFilterProjectId
+        => Guid.TryParse(hierarchyFilterProjectId, out var parsedProjectId) ? parsedProjectId : null;
 
-private string HierarchyFilterHelper
-=> !SelectedHierarchyFilterProjectId.HasValue
-? "Choose a project to filter direct subprojects, direct parents, or the immediate relationship neighborhood."
-: hierarchyFilterMode switch
-{
-"children" => $"Showing direct subprojects of {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
-"parents" => $"Showing direct parents of {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
-"related" => $"Showing the direct relationship neighborhood around {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
-_ => $"Project {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)} is selected. Pick Subprojects, Parents, or Related to narrow the board."
-};
+    private string HierarchyFilterHelper
+        => !SelectedHierarchyFilterProjectId.HasValue
+            ? "Choose a project to filter direct subprojects, direct parents, or the immediate relationship neighborhood."
+            : hierarchyFilterMode switch
+            {
+                "children" => $"Showing direct subprojects of {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
+                "parents" => $"Showing direct parents of {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
+                "related" => $"Showing the direct relationship neighborhood around {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
+                _ => $"Project {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)} is selected. Pick Subprojects, Parents, or Related to narrow the board."
+            };
 
-private IReadOnlyList<ProjectOptionEditorModel> MeaningfulOptions => editor.Options
-.Where(option => !string.IsNullOrWhiteSpace(option.OptionName) || !string.IsNullOrWhiteSpace(option.Notes))
-.ToList();
+    private IReadOnlyList<ProjectOptionEditorModel> MeaningfulOptions => editor.Options
+        .Where(option => !string.IsNullOrWhiteSpace(option.OptionName) || !string.IsNullOrWhiteSpace(option.Notes))
+        .ToList();
 
-private IReadOnlyList<SecondaryTabItem> WizardTabs => wizardSteps
-.Select((step, index) => new SecondaryTabItem(index.ToString(), $"{index + 1}. {step}"))
-.ToList();
+    private IReadOnlyList<SecondaryTabItem> WizardTabs => wizardSteps
+        .Select((step, index) => new SecondaryTabItem(index.ToString(), $"{index + 1}. {step}"))
+        .ToList();
 
-private RenderFragment PhaseActions => @<Button ButtonStyle="ButtonStyle.Light"
-Text="Add phase"
-Size="ButtonSize.Small"
-Click="AddPhaseAsync" />;
+    private bool IsErrorMessage
+        => !string.IsNullOrWhiteSpace(message) &&
+           (message.StartsWith("Unable", StringComparison.OrdinalIgnoreCase) ||
+            message.StartsWith("No ", StringComparison.OrdinalIgnoreCase));
 
-private RenderFragment StarterActions => @<Button ButtonStyle="ButtonStyle.Light"
-Text="Add planned object"
-Size="ButtonSize.Small"
-Click="AddStarterObject" />;
+    private string LatestUpdatedProjectLabel
+        => projectSummaries.Count == 0
+            ? "No projects"
+            : projectSummaries.OrderByDescending(project => project.UpdatedAtUtc).First().UpdatedAtUtc.LocalDateTime.ToString("g");
 
-private bool IsErrorMessage
-=> !string.IsNullOrWhiteSpace(message) &&
-(message.StartsWith("Unable", StringComparison.OrdinalIgnoreCase) ||
-message.StartsWith("No ", StringComparison.OrdinalIgnoreCase));
+    private string LatestUpdatedProjectHelper
+        => projectSummaries.Count == 0
+            ? "Save the first project to populate the workspace."
+            : projectSummaries.OrderByDescending(project => project.UpdatedAtUtc).First().Name;
 
-private string LatestUpdatedProjectLabel
-=> projectSummaries.Count == 0
-? "No projects"
-: projectSummaries.OrderByDescending(project => project.UpdatedAtUtc).First().UpdatedAtUtc.LocalDateTime.ToString("g");
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadProjectSummariesAsync();
 
-private string LatestUpdatedProjectHelper
-=> projectSummaries.Count == 0
-? "Save the first project to populate the workspace."
-: projectSummaries.OrderByDescending(project => project.UpdatedAtUtc).First().Name;
+        if (ProjectIdQuery == handledProjectQueryId)
+        {
+            return;
+        }
 
-protected override async Task OnParametersSetAsync()
-{
-await LoadProjectSummariesAsync();
+        handledProjectQueryId = ProjectIdQuery;
 
-if (ProjectIdQuery == handledProjectQueryId)
-{
-return;
+        if (ProjectIdQuery.HasValue)
+        {
+            await LoadEditorAsync(ProjectIdQuery.Value);
+            modalMode = ProjectModalMode.Overview;
+            showProjectModal = true;
+            modalOpenedFromRoute = true;
+            message = null;
+            return;
+        }
+
+        if (modalOpenedFromRoute)
+        {
+            showProjectModal = false;
+            modalOpenedFromRoute = false;
+            message = null;
+        }
+    }
+
+    private async Task LoadProjectSummariesAsync()
+    {
+        projectSummaries = await ProjectsService.ListAsync();
+        hierarchyLinks = await ProjectsService.ListHierarchyLinksAsync();
+    }
+
+    private async Task LoadEditorAsync(Guid? projectId)
+    {
+        editor = await ProjectsService.GetAsync(projectId);
+        wizardStep = 0;
+
+        if (!projectId.HasValue)
+        {
+            starterObjects.Clear();
+        }
+    }
+
+    private async Task OpenNewProjectAsync()
+    {
+        await LoadEditorAsync(null);
+        showProjectModal = true;
+        modalMode = ProjectModalMode.Editor;
+        modalOpenedFromRoute = false;
+        message = null;
+
+        if (ProjectIdQuery.HasValue)
+        {
+            Navigation.NavigateTo("/projects", replace: true);
+        }
+    }
+
+    private async Task OpenProjectPreviewAsync(Guid id)
+    {
+        await LoadEditorAsync(id);
+        showProjectModal = true;
+        modalMode = ProjectModalMode.Overview;
+        modalOpenedFromRoute = false;
+        message = null;
+    }
+
+    private void OpenProjectDashboard(Guid id)
+        => Navigation.NavigateTo($"/projects?projectId={id}");
+
+    private void OpenProjectDashboardAsync()
+    {
+        if (editor.Id.HasValue)
+        {
+            OpenProjectDashboard(editor.Id.Value);
+        }
+    }
+
+    private Task HandleWizardTabChanged(string key)
+    {
+        if (int.TryParse(key, out var parsed))
+        {
+            wizardStep = parsed;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void SwitchToOverview()
+        => modalMode = ProjectModalMode.Overview;
+
+    private void SwitchToEditor()
+    {
+        modalMode = ProjectModalMode.Editor;
+        message = null;
+    }
+
+    private Task CloseProjectModalAsync()
+    {
+        showProjectModal = false;
+        message = null;
+
+        if (modalOpenedFromRoute)
+        {
+            modalOpenedFromRoute = false;
+            Navigation.NavigateTo("/projects", replace: true);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task AddPhaseAsync()
+    {
+        editor.Phases.Add(new ProjectPhaseEditorModel());
+        return Task.CompletedTask;
+    }
+
+    private Task RemovePhaseAsync(ProjectPhaseEditorModel phase)
+    {
+        editor.Phases.Remove(phase);
+        return Task.CompletedTask;
+    }
+
+    private void AddStarterObject()
+        => starterObjects.Add(new StarterObjectDraft());
+
+    private void RemoveStarterObject(StarterObjectDraft starter)
+        => starterObjects.Remove(starter);
+
+    private void NextStep()
+        => wizardStep = Math.Min(wizardSteps.Length - 1, wizardStep + 1);
+
+    private void PreviousStep()
+        => wizardStep = Math.Max(0, wizardStep - 1);
+
+    private void ResetFilters()
+    {
+        projectSearch = string.Empty;
+        statusFilter = string.Empty;
+        hierarchyFilterMode = string.Empty;
+        hierarchyFilterProjectId = string.Empty;
+    }
+
+    private async Task SaveAsync()
+    {
+        var result = await ProjectsService.SaveAsync(editor);
+        message = result.IsSuccess ? "Project saved." : string.Join(" ", result.Errors.Select(error => error.Message));
+        await LoadProjectSummariesAsync();
+
+        if (!result.IsSuccess)
+        {
+            return;
+        }
+
+        if (starterObjects.Count > 0)
+        {
+            await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(
+                result.Value,
+                starterObjects
+                    .Where(item => !string.IsNullOrWhiteSpace(item.Title))
+                    .Select(item => new ProjectObjectSeedDraft(item.ObjectType, item.Title, item.Subtitle, item.Subtitle))
+                    .ToList());
+            starterObjects.Clear();
+            message = "Project saved and starter objects seeded to the structure workbench.";
+        }
+
+        editor = await ProjectsService.GetAsync(result.Value);
+
+        if (ProjectIdQuery.HasValue && ProjectIdQuery != result.Value)
+        {
+            Navigation.NavigateTo($"/projects?projectId={result.Value}");
+        }
+    }
+
+    private async Task SaveAndOpenStructureAsync()
+    {
+        await SaveAsync();
+
+        if (editor.Id.HasValue)
+        {
+            Navigation.NavigateTo($"/projects/{editor.Id.Value}/structure");
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!editor.Id.HasValue)
+        {
+            return;
+        }
+
+        await ProjectsService.DeleteAsync(editor.Id.Value);
+        await LoadProjectSummariesAsync();
+        showProjectModal = false;
+        message = "Project deleted.";
+
+        if (ProjectIdQuery.HasValue)
+        {
+            modalOpenedFromRoute = false;
+            Navigation.NavigateTo("/projects", replace: true);
+        }
+    }
+
+    private bool MatchesHierarchyFilter(ProjectSummary project)
+    {
+        if (!SelectedHierarchyFilterProjectId.HasValue || string.IsNullOrWhiteSpace(hierarchyFilterMode))
+        {
+            return true;
+        }
+
+        return hierarchyFilterMode switch
+        {
+            "children" => hierarchyLinks.Any(link => link.ParentProjectId == SelectedHierarchyFilterProjectId.Value && link.ChildProjectId == project.Id),
+            "parents" => hierarchyLinks.Any(link => link.ChildProjectId == SelectedHierarchyFilterProjectId.Value && link.ParentProjectId == project.Id),
+            "related" => hierarchyLinks.Any(link =>
+                (link.ParentProjectId == SelectedHierarchyFilterProjectId.Value && link.ChildProjectId == project.Id) ||
+                (link.ChildProjectId == SelectedHierarchyFilterProjectId.Value && link.ParentProjectId == project.Id)),
+            _ => true
+        };
+    }
+
+    private string ResolveProjectName(Guid projectId)
+        => projectSummaries.FirstOrDefault(project => project.Id == projectId)?.Name ?? "Selected project";
+
+    private async Task OpenHierarchyModalAsync(Guid projectId)
+    {
+        var project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
+
+        if (project is null)
+        {
+            await LoadProjectSummariesAsync();
+            project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
+
+            if (project is null)
+            {
+                return;
+            }
+        }
+
+        var hierarchy = await ProjectsService.GetHierarchyAsync(projectId);
+        hierarchyDialog = new ProjectHierarchyDialogState(
+            project.Id,
+            project.Name,
+            hierarchy.ParentProjects,
+            hierarchy.ChildProjects);
+    }
+
+    private void CloseHierarchyModal()
+        => hierarchyDialog = null;
+
+    private async Task OpenProjectPreviewFromHierarchyAsync(Guid projectId)
+    {
+        hierarchyDialog = null;
+        await OpenProjectPreviewAsync(projectId);
+    }
+
+    private void OpenStructure(Guid projectId)
+    {
+        if (projectId != Guid.Empty)
+        {
+            Navigation.NavigateTo($"/projects/{projectId}/structure");
+        }
+    }
+
+    private void OpenCalendar(Guid projectId)
+    {
+        if (projectId != Guid.Empty)
+        {
+            Navigation.NavigateTo($"/projects/{projectId}/calendar");
+        }
+    }
+
+    private void NavigateHome()
+        => Navigation.NavigateTo("/");
+
+    private enum ProjectModalMode
+    {
+        Overview,
+        Editor
+    }
 }
-
-handledProjectQueryId = ProjectIdQuery;
-
-if (ProjectIdQuery.HasValue)
-{
-await LoadEditorAsync(ProjectIdQuery.Value);
-modalMode = ProjectModalMode.Overview;
-showProjectModal = true;
-modalOpenedFromRoute = true;
-message = null;
-return;
-}
-
-if (modalOpenedFromRoute)
-{
-showProjectModal = false;
-modalOpenedFromRoute = false;
-message = null;
-}
-}
-
-private async Task LoadProjectSummariesAsync()
-{
-projectSummaries = await ProjectsService.ListAsync();
-hierarchyLinks = await ProjectsService.ListHierarchyLinksAsync();
-}
-
-private async Task LoadEditorAsync(Guid? projectId)
-{
-editor = await ProjectsService.GetAsync(projectId);
-wizardStep = 0;
-if (!projectId.HasValue)
-{
-starterObjects.Clear();
-}
-}
-
-private async Task OpenNewProjectAsync()
-{
-await LoadEditorAsync(null);
-showProjectModal = true;
-modalMode = ProjectModalMode.Editor;
-modalOpenedFromRoute = false;
-message = null;
-
-if (ProjectIdQuery.HasValue)
-{
-Navigation.NavigateTo("/projects", replace: true);
-}
-}
-
-private async Task OpenProjectPreviewAsync(Guid id)
-{
-await LoadEditorAsync(id);
-showProjectModal = true;
-modalMode = ProjectModalMode.Overview;
-modalOpenedFromRoute = false;
-message = null;
-}
-
-private void OpenProjectDashboard(Guid id)
-=> Navigation.NavigateTo($"/projects?projectId={id}");
-
-private void OpenProjectDashboardAsync()
-{
-if (editor.Id.HasValue)
-{
-OpenProjectDashboard(editor.Id.Value);
-}
-}
-
-private Task HandleWizardTabChanged(string key)
-{
-if (int.TryParse(key, out var parsed))
-{
-wizardStep = parsed;
-}
-
-return Task.CompletedTask;
-}
-
-private void SwitchToOverview()
-=> modalMode = ProjectModalMode.Overview;
-
-private void SwitchToEditor()
-{
-modalMode = ProjectModalMode.Editor;
-message = null;
-}
-
-private Task CloseProjectModalAsync()
-{
-showProjectModal = false;
-message = null;
-
-if (modalOpenedFromRoute)
-{
-modalOpenedFromRoute = false;
-Navigation.NavigateTo("/projects", replace: true);
-return Task.CompletedTask;
-}
-
-return Task.CompletedTask;
-}
-
-private Task AddPhaseAsync()
-{
-editor.Phases.Add(new ProjectPhaseEditorModel());
-return Task.CompletedTask;
-}
-
-private Task RemovePhaseAsync(ProjectPhaseEditorModel phase)
-{
-editor.Phases.Remove(phase);
-return Task.CompletedTask;
-}
-
-private void AddStarterObject()
-=> starterObjects.Add(new StarterObjectDraft());
-
-private void NextStep()
-=> wizardStep = Math.Min(wizardSteps.Length - 1, wizardStep + 1);
-
-private void PreviousStep()
-=> wizardStep = Math.Max(0, wizardStep - 1);
-
-private void ResetFilters()
-{
-projectSearch = string.Empty;
-statusFilter = string.Empty;
-hierarchyFilterMode = string.Empty;
-hierarchyFilterProjectId = string.Empty;
-}
-
-private async Task SaveAsync()
-{
-var result = await ProjectsService.SaveAsync(editor);
-message = result.IsSuccess ? "Project saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-await LoadProjectSummariesAsync();
-
-if (!result.IsSuccess)
-{
-return;
-}
-
-if (starterObjects.Count > 0)
-{
-await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(
-result.Value,
-starterObjects
-.Where(item => !string.IsNullOrWhiteSpace(item.Title))
-.Select(item => new ProjectObjectSeedDraft(item.ObjectType, item.Title, item.Subtitle, item.Subtitle))
-.ToList());
-starterObjects.Clear();
-message = "Project saved and starter objects seeded to the structure workbench.";
-}
-
-editor = await ProjectsService.GetAsync(result.Value);
-
-if (ProjectIdQuery.HasValue && ProjectIdQuery != result.Value)
-{
-Navigation.NavigateTo($"/projects?projectId={result.Value}");
-}
-}
-
-private async Task SaveAndOpenStructureAsync()
-{
-await SaveAsync();
-if (editor.Id.HasValue)
-{
-Navigation.NavigateTo($"/projects/{editor.Id.Value}/structure");
-}
-}
-
-private async Task DeleteAsync()
-{
-if (!editor.Id.HasValue)
-{
-return;
-}
-
-await ProjectsService.DeleteAsync(editor.Id.Value);
-await LoadProjectSummariesAsync();
-showProjectModal = false;
-message = "Project deleted.";
-
-if (ProjectIdQuery.HasValue)
-{
-modalOpenedFromRoute = false;
-Navigation.NavigateTo("/projects", replace: true);
-}
-}
-
-private bool MatchesHierarchyFilter(ProjectSummary project)
-{
-if (!SelectedHierarchyFilterProjectId.HasValue || string.IsNullOrWhiteSpace(hierarchyFilterMode))
-{
-return true;
-}
-
-return hierarchyFilterMode switch
-{
-"children" => hierarchyLinks.Any(link => link.ParentProjectId == SelectedHierarchyFilterProjectId.Value && link.ChildProjectId == project.Id),
-"parents" => hierarchyLinks.Any(link => link.ChildProjectId == SelectedHierarchyFilterProjectId.Value && link.ParentProjectId == project.Id),
-"related" => hierarchyLinks.Any(link =>
-(link.ParentProjectId == SelectedHierarchyFilterProjectId.Value && link.ChildProjectId == project.Id) ||
-(link.ChildProjectId == SelectedHierarchyFilterProjectId.Value && link.ParentProjectId == project.Id)),
-_ => true
-};
-}
-
-private string ResolveProjectName(Guid projectId)
-=> projectSummaries.FirstOrDefault(project => project.Id == projectId)?.Name ?? "Selected project";
-
-private async Task OpenHierarchyModalAsync(Guid projectId)
-{
-var project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
-if (project is null)
-{
-await LoadProjectSummariesAsync();
-project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
-if (project is null)
-{
-return;
-}
-}
-
-var hierarchy = await ProjectsService.GetHierarchyAsync(projectId);
-hierarchyDialog = new ProjectHierarchyDialogState(
-project.Id,
-project.Name,
-hierarchy.ParentProjects,
-hierarchy.ChildProjects);
-}
-
-private void CloseHierarchyModal()
-=> hierarchyDialog = null;
-
-private async Task OpenProjectPreviewFromHierarchyAsync(Guid projectId)
-{
-hierarchyDialog = null;
-await OpenProjectPreviewAsync(projectId);
-}
-
-private void OpenStructure(Guid projectId)
-{
-if (projectId != Guid.Empty)
-{
-Navigation.NavigateTo($"/projects/{projectId}/structure");
-}
-}
-
-private void OpenCalendar(Guid projectId)
-{
-if (projectId != Guid.Empty)
-{
-Navigation.NavigateTo($"/projects/{projectId}/calendar");
-}
-}
-
-private void NavigateHome() => Navigation.NavigateTo("/");
-
-private static string GetProjectCardCss(ProjectStatus status)
-{
-var accent = status switch
-{
-ProjectStatus.Active => "border-emerald-200 bg-[linear-gradient(180deg,_rgba(236,253,245,0.96),_rgba(255,255,255,0.98))]",
-ProjectStatus.Completed => "border-sky-200 bg-[linear-gradient(180deg,_rgba(240,249,255,0.96),_rgba(255,255,255,0.98))]",
-ProjectStatus.OnHold => "border-amber-200 bg-[linear-gradient(180deg,_rgba(255,251,235,0.96),_rgba(255,255,255,0.98))]",
-ProjectStatus.Archived => "border-slate-300 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]",
-_ => "border-slate-200 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]"
-};
-
-return $"cda-board-card {accent}";
-}
-
-private static string GetStatusTone(ProjectStatus status)
-=> status switch
-{
-ProjectStatus.Active => "success",
-ProjectStatus.Completed => "info",
-ProjectStatus.OnHold => "warning",
-ProjectStatus.Archived => "neutral",
-_ => "neutral"
-};
-
-private static string GetPhaseStatusTone(ProjectPhaseStatus status)
-=> status switch
-{
-ProjectPhaseStatus.Active => "success",
-ProjectPhaseStatus.Completed => "info",
-ProjectPhaseStatus.Blocked => "danger",
-_ => "neutral"
-};
-
-private static string FormatDate(DateTime? value)
-=> value.HasValue ? value.Value.ToString("MMM d, yyyy") : "Not set";
-
-private static string FormatTimestamp(DateTimeOffset? value)
-=> value.HasValue ? value.Value.LocalDateTime.ToString("g") : "Not available";
-
-private static DateTime GetPhaseOrderKey(ProjectPhaseEditorModel phase)
-=> phase.StartDateUtc ?? phase.EndDateUtc ?? DateTime.MaxValue;
-
-private static string GetProjectMonogram(string? name)
-{
-if (string.IsNullOrWhiteSpace(name))
-{
-return "PR";
-}
-
-var parts = name
-.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-.Where(part => part.Length > 0)
-.Take(2)
-.Select(part => char.ToUpperInvariant(part[0]))
-.ToArray();
-
-return parts.Length == 0 ? "PR" : new string(parts);
-}
-
-private sealed class StarterObjectDraft
-{
-public ProjectObjectType ObjectType { get; set; } = ProjectObjectType.Note;
-public string Title { get; set; } = string.Empty;
-public string Subtitle { get; set; } = string.Empty;
-}
-
-private sealed record ProjectHierarchyDialogState(
-Guid ProjectId,
-string ProjectName,
-IReadOnlyList<ProjectSummary> ParentProjects,
-IReadOnlyList<ProjectSummary> Subprojects);
-
-private enum ProjectModalMode
-{
-Overview,
-Editor
-}
-}
-
-

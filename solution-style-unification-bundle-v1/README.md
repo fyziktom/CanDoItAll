@@ -42,8 +42,8 @@ This bundle is a coordination and execution package for `solution-style-unificat
 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Passed`
-- Execution status: `Partially complete`
-- Subbundle gate review: `Critical foundations passed`
-- Final closure gate: `Partially closed with explicit follow-up`
-- Browser validation analytics: `Recorded with screenshots`
-- Latest follow-up wave: `Project Structure MCP` settings panel plus reconnect overlay moved to shared semantic classes and revalidated with a clean managed build plus Playwright screenshots.
+- Execution status: `Reopened follow-up executed with honest partial closure`
+- Subbundle gate review: `Critical foundations passed; migration and closure phases reopened`
+- Final closure gate: `Still partial because PromptFactoryPage remains a follow-up hotspot`
+- Browser validation analytics: `Recorded with refreshed follow-up screenshots for Home, Projects, and Prompt Factory`
+- Latest follow-up wave: `Home.razor` and `ProjectsPage.razor` follow-up notes are now closed; `PromptFactoryPage.razor` is improved and revalidated but still not fully decomposed.

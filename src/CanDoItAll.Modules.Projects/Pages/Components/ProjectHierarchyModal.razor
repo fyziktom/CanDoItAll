@@ -1,0 +1,146 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
+
+@if (State is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Project hierarchy"
+            Title="@State.ProjectName"
+            Subtitle="Inspect direct parents, browse direct subprojects, and keep drilling into deeper project branches without leaving the Projects board."
+            Size="ModalSize.Wide"
+            ShowCloseButton="false"
+            TestId="projects-hierarchy-modal"
+            OnClose="Close">
+        <HeaderActions>
+            <StatusBadge Tone="neutral" Text="@($"{State.ParentProjects.Count} parent(s)")" />
+            <StatusBadge Tone="info" Text="@($"{State.Subprojects.Count} subproject(s)")" />
+            <Button ButtonStyle="ButtonStyle.Light"
+                    Text="Close"
+                    Click="Close" />
+        </HeaderActions>
+        <ChildContent>
+            <div class="grid gap-4 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
+                <section class="cda-surface-card--soft">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Parents</p>
+                            <h3 class="mt-1 text-lg font-semibold text-slate-950">Direct parent projects</h3>
+                        </div>
+                        <StatusBadge Tone="neutral" Text="@($"{State.ParentProjects.Count} linked")" />
+                    </div>
+
+                    @if (State.ParentProjects.Count == 0)
+                    {
+                        <p class="mt-4 text-sm leading-6 text-slate-600">This project does not currently sit under any parent project.</p>
+                    }
+                    else
+                    {
+                        <div class="mt-4 space-y-3">
+                            @foreach (var parentProject in State.ParentProjects.OrderBy(project => project.Name))
+                            {
+                                <article class="cda-panel-card">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-semibold text-slate-950">@parentProject.Name</p>
+                                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@(string.IsNullOrWhiteSpace(parentProject.CurrentPhase) ? "Parent project" : parentProject.CurrentPhase)</p>
+                                        </div>
+                                        <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(parentProject.Status)" Text="@parentProject.Status.ToString()" />
+                                    </div>
+                                    <div class="mt-4 flex flex-wrap items-center gap-2">
+                                        <Button ButtonStyle="ButtonStyle.Light"
+                                                Text="View"
+                                                Size="ButtonSize.Small"
+                                                Click="@(() => OpenProjectPreview.InvokeAsync(parentProject.Id))" />
+                                        <Button ButtonStyle="ButtonStyle.Light"
+                                                Text="Structure"
+                                                Size="ButtonSize.Small"
+                                                Click="@(() => OpenStructure.InvokeAsync(parentProject.Id))" />
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    }
+                </section>
+
+                <section class="cda-surface-card">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Subprojects</p>
+                            <h3 class="mt-1 text-lg font-semibold text-slate-950">Direct child projects</h3>
+                        </div>
+                        <StatusBadge Tone="info" Text="@($"{State.Subprojects.Count} linked")" />
+                    </div>
+
+                    @if (State.Subprojects.Count == 0)
+                    {
+                        <p class="mt-4 text-sm leading-6 text-slate-600">No direct subprojects are connected to this project yet.</p>
+                    }
+                    else
+                    {
+                        <div class="mt-4 grid gap-3 md:grid-cols-2">
+                            @foreach (var subproject in State.Subprojects.OrderBy(project => project.Name))
+                            {
+                                <article class="cda-panel-card--soft" data-testid="hierarchy-subproject-card">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-semibold text-slate-950">@subproject.Name</p>
+                                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@(string.IsNullOrWhiteSpace(subproject.CurrentPhase) ? "Subproject" : subproject.CurrentPhase)</p>
+                                        </div>
+                                        <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(subproject.Status)" Text="@subproject.Status.ToString()" />
+                                    </div>
+
+                                    <div class="mt-4 grid gap-2 sm:grid-cols-3">
+                                        <div class="cda-metric-card">
+                                            <p class="cda-metric-card__label">Parents</p>
+                                            <p class="cda-metric-card__value">@subproject.ParentCount</p>
+                                        </div>
+                                        <div class="cda-metric-card">
+                                            <p class="cda-metric-card__label">Subprojects</p>
+                                            <p class="cda-metric-card__value">@subproject.ChildCount</p>
+                                        </div>
+                                        <div class="cda-metric-card">
+                                            <p class="cda-metric-card__label">Updated</p>
+                                            <p class="cda-metric-card__value">@subproject.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4 flex flex-wrap items-center gap-2">
+                                        <Button ButtonStyle="ButtonStyle.Light"
+                                                Text="View"
+                                                Size="ButtonSize.Small"
+                                                Click="@(() => OpenProjectPreview.InvokeAsync(subproject.Id))" />
+                                        <Button ButtonStyle="ButtonStyle.Light"
+                                                Text="Structure"
+                                                Size="ButtonSize.Small"
+                                                Click="@(() => OpenStructure.InvokeAsync(subproject.Id))" />
+                                        <Button Text="Subprojects"
+                                                Size="ButtonSize.Small"
+                                                data-testid="hierarchy-card-subprojects-button"
+                                                Click="@(() => OpenHierarchy.InvokeAsync(subproject.Id))" />
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    }
+                </section>
+            </div>
+        </ChildContent>
+    </Dialog>
+}
+
+@code {
+    [Parameter]
+    public ProjectHierarchyDialogState? State { get; set; }
+
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenProjectPreview { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenStructure { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenHierarchy { get; set; }
+}
