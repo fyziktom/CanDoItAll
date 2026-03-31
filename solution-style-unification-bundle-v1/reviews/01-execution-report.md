@@ -13,6 +13,8 @@
 - `candoitall_solution_build` with `StopAndResume` succeeded twice:
   - `op_910933f32e1949fca03b4e9302e38baa` => `Build succeeded`
   - `op_a0eb0f6c1e2a4a97852bfc67e7e9727f` => `Build succeeded`
+- `candoitall_solution_build` with `StopAndResume` succeeded again for the admin-surface follow-up wave:
+  - `op_4c56cb2c3b0a4a108f214dcb9e0cbc6e` => `Build succeeded`
 - Playwright MCP browser proof was executed through `browser_run_code` against the live app with saved screenshots under `solution-style-unification-bundle-v1/evidence/`.
 - `python C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed C:\repositories\CanDoItAll\solution-style-unification-bundle-v1` => `Bundle is valid for stage 'completed'`
 
@@ -30,6 +32,10 @@
 - `activity-desktop.png`
 - `activity-postbuild.png`
 - `automation-desktop.png`
+- `settings-project-structure-desktop.png`
+- `settings-project-structure-panel.png`
+- `reconnect-modal-open-desktop.png`
+- `reconnect-modal-panel.png`
 - `resources-desktop.png`
 - `settings-desktop.png`
 - `prompt-gallery-desktop.png`
@@ -43,8 +49,8 @@
 | `01-tailwind-style-census-and-canonical-taxonomy` | `Passed` | `Passed` | `Yes` | `Passed` | Workbook `style-census-initial.xlsx`, exclusion list, taxonomy, and baseline metrics recorded during preparation and accepted as executed proof. |
 | `02-tailwind-component-layer-architecture-and-shared-css-imports` | `Passed` | `Passed` | `Yes` | `Passed` | `Tailwind/input.css` was split into imported foundation/layout/surface/typography/controls/forms/navigation files. Tailwind build passed. |
 | `03-baselib-primitive-alignment-and-wrapper-expansion` | `Passed` | `Passed` | `Yes` | `Passed` | BaseLib `Button`, `Card`, `FormField`, `PageHeader`, and shared wrapper usage were aligned with the semantic Tailwind layer and browser-smoked on dependent routes. |
-| `04-app-and-module-migration-from-duplicated-utilities-and-custom-css` | `Passed` | `Partially passed` | `Yes` | `Passed with follow-up` | High-value non-canvas routes and the shared shell were migrated, but some remaining non-canvas pages still contain raw utility duplication and are listed in residual follow-up. |
-| `05-browser-validation-regression-repair-and-closure-audit` | `Passed` | `Partially passed` | `Yes` | `Passed with honest partial closure` | Playwright screenshots and managed builds were completed. The original prompt is closed note by note below with explicit `Partially solved` status where remaining work still exists. |
+| `04-app-and-module-migration-from-duplicated-utilities-and-custom-css` | `Passed` | `Partially passed` | `Yes` | `Passed with follow-up` | High-value non-canvas routes, the shared shell, the project-structure MCP settings panel, and the reconnect overlay were migrated toward shared semantic classes, but some remaining non-canvas pages still contain raw utility duplication and are listed in residual follow-up. |
+| `05-browser-validation-regression-repair-and-closure-audit` | `Passed` | `Partially passed` | `Yes` | `Passed with honest partial closure` | Playwright screenshots and managed builds were completed, including focused proof for the settings panel and the forced-open reconnect overlay. The original prompt is closed note by note below with explicit `Partially solved` status where remaining work still exists. |
 
 ## Browser Validation Analytics
 
@@ -54,13 +60,15 @@
 | `02-tailwind-component-layer-architecture-and-shared-css-imports` | `/projects` | `1600x1200` | `goto`, DOM evaluation, screenshot | `projects-board-desktop.png` | `Passed` |
 | `03-baselib-primitive-alignment-and-wrapper-expansion` | `/projects`, `/resources`, `/settings`, `/prompt-gallery`, `/validation`, `/test-lab` | `1600x1200` | `goto`, DOM evaluation, screenshot | `projects-editor-desktop.png`, `resources-desktop.png`, `settings-desktop.png`, `prompt-gallery-desktop.png`, `validation-desktop.png`, `test-lab-desktop.png` | `Passed` |
 | `04-app-and-module-migration-from-duplicated-utilities-and-custom-css` | `/dashboard`, `/activity`, `/automation` | `1600x1200` | `goto`, DOM evaluation, screenshot | `dashboard-desktop.png`, `activity-desktop.png`, `automation-desktop.png` | `Passed` |
-| `05-browser-validation-regression-repair-and-closure-audit` | `/projects` shell plus responsive sweep, `/dashboard`, `/activity` post-build | `1600x1200`, `768x1024`, `393x852` | `goto`, click/open modal, expand mobile details, DOM evaluation, screenshot` | `projects-shell-desktop.png`, `projects-shell-mobile.png`, `projects-editor-tablet.png`, `projects-editor-mobile.png`, `projects-postbuild-desktop.png`, `dashboard-postbuild.png`, `activity-postbuild.png` | `Passed` |
+| `04-app-and-module-migration-from-duplicated-utilities-and-custom-css` | `/settings` Project Structure MCP tab | `1600x1200` | `goto`, tab activation via DOM evaluation, class-count assertion, locator screenshot | `settings-project-structure-panel.png` | `Passed` |
+| `05-browser-validation-regression-repair-and-closure-audit` | `/projects` shell plus responsive sweep, `/dashboard`, `/activity` post-build, `/settings` reconnect overlay | `1600x1200`, `768x1024`, `393x852` | `goto`, click/open modal, expand mobile details, forced-open dialog via DOM evaluation, geometry assertion, locator screenshot | `projects-shell-desktop.png`, `projects-shell-mobile.png`, `projects-editor-tablet.png`, `projects-editor-mobile.png`, `projects-postbuild-desktop.png`, `dashboard-postbuild.png`, `activity-postbuild.png`, `reconnect-modal-panel.png` | `Passed` |
 
 ## Analytics Review
 
 - The touched non-canvas routes were browser-validated with real screenshots and DOM checks.
 - Desktop proof exists for every migrated page touched in this wave.
 - Responsive proof exists for the highest-risk route in this wave: `Projects` plus the shared shell.
+- The follow-up admin wave also proved the `Project Structure MCP` settings panel and the reconnect overlay in-browser with saved locator screenshots and zero horizontal overflow.
 - A watch bookkeeping issue appeared after one static-asset hot reload where the generation counter did not confirm even though Playwright showed the updated UI. That was neutralized by a final managed build plus post-build browser refresh.
 
 ## Raw Note Closure
@@ -98,6 +106,9 @@
   - `controls`
   - `forms`
   - `navigation`
+- Follow-up surface layers added in this wave:
+  - `surfaces/admin.css`
+  - `surfaces/overlays.css`
 - Migrated non-canvas route and shell surfaces in this wave:
   - `/projects`
   - `/resources`
@@ -108,7 +119,16 @@
   - `/dashboard`
   - `/activity`
   - `/automation`
+  - `/settings` `Project Structure MCP` panel
+  - shared reconnect overlay in `ReconnectModal`
   - shared shell: `AppShell`, `AppTabStrip`, `MainLayout`
+- New semantic class uptake in the admin follow-up:
+  - `ProjectStructureAgentSettingsPanel.razor`: `2` `cda-admin-panel`, `2` `cda-admin-subpanel`, `2` `cda-admin-empty`, `3` `cda-admin-code-label`
+  - `ReconnectModal.razor`: `1` `cda-reconnect-dialog`, `1` `cda-reconnect-stack`, `5` `cda-reconnect-copy`, `2` `cda-reconnect-action`
+- Incremental diff for this follow-up wave:
+  - `5 files changed`
+  - `192 insertions`
+  - `66 deletions`
 - Current diff magnitude:
   - `18 files changed`
   - `2501 insertions`
@@ -119,14 +139,15 @@
   - `SettingsPage.razor`: `12` shared button usages and `22` shared input usages
   - `TestLabPage.razor`: `8` shared button usages and `22` shared input usages
 - Remaining top non-canvas hotspots from the refreshed census:
-  - `src\CanDoItAll.Modules.Projects\Pages\ProjectsPage.razor`
-  - `src\CanDoItAll.Components\Components\AppShell.razor`
-  - `src\CanDoItAll.Web\Components\Layout\MainLayout.razor`
+  - `src\CanDoItAll.Components\Components\AppTabStrip.razor`
+  - `src\CanDoItAll.Components.BaseLib\Components\Navigation\Steps.razor`
+  - `src\CanDoItAll.Components.BaseLib\Components\Navigation\Tabs.razor`
+  - `src\CanDoItAll.Web\Components\Layout\ReconnectModal.razor`
   - `src\CanDoItAll.Modules.Workspace\Pages\Components\ProjectStructureAgentSettingsPanel.razor`
-  - `src\CanDoItAll.Modules.Prompts\Pages\PromptGalleryPage.razor`
 
 ## Residual Risks
 
 - CanvasLib and canvas-host surfaces are intentionally deferred to a later wave.
+- `PromptFactoryPage.razor`, `ProjectStructurePage.razor`, `ProjectStructureSelectionPanel.razor`, and `ProjectCalendarPage.razor` remain intentionally excluded because they are canvas-first or canvas-adjacent workbench surfaces.
 - Remaining non-canvas pages still contain raw utility duplication and should be handled in a follow-up wave if the goal is true whole-solution closure.
 - The refreshed census still shows some raw utility density in already-touched large files because they retain route-specific layout details even after the shared-class extraction.

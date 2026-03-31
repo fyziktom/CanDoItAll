@@ -46,3 +46,4 @@ This bundle is a coordination and execution package for `solution-style-unificat
 - Subbundle gate review: `Critical foundations passed`
 - Final closure gate: `Partially closed with explicit follow-up`
 - Browser validation analytics: `Recorded with screenshots`
+- Latest follow-up wave: `Project Structure MCP` settings panel plus reconnect overlay moved to shared semantic classes and revalidated with a clean managed build plus Playwright screenshots.
