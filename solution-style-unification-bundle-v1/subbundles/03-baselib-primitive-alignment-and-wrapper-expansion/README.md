@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Completed`
+- `Blocked`
 
 ## Objective
 
@@ -28,12 +28,16 @@
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\Components\Typography\TextBlock.razor`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\StyledComponentBase.cs`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\Pages\ProjectsPage.razor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\Components\Badges\Pill.razor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\Components\Badges\PillList.razor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\Components\Buttons\Button.razor`
 
 ## Deliverables
 
 - Updated BaseLib primitives that consume the shared Tailwind class families instead of ad hoc per-component combinations where reasonable.
 - New reusable BaseLib primitives only for repeated patterns that cannot be expressed cleanly with the current library.
 - Compatibility wrappers kept or expanded where they reduce migration churn without hiding semantics.
+- Wrapper expansion for repeated component-level patterns such as stat pills, metric cards, and prefixed fields when the refreshed census proves they have multi-surface reuse.
 
 ## Dependency Impact
 

@@ -24,6 +24,9 @@ else
     public PillTone Tone { get; set; } = PillTone.Default;
 
     [Parameter]
+    public string? Token { get; set; }
+
+    [Parameter]
     public string? Text { get; set; }
 
     [Parameter]
@@ -56,22 +59,46 @@ else
     {
         var toneCss = Tone switch
         {
-            PillTone.Ok => "border-emerald-200 bg-emerald-50 text-emerald-700",
-            PillTone.Warn => "border-amber-200 bg-amber-50 text-amber-800",
-            PillTone.Label => "border-slate-200 bg-white text-slate-600 uppercase tracking-[0.18em]",
-            _ => "border-slate-200 bg-slate-100 text-slate-700"
+            PillTone.Neutral => "cda-stat-pill cda-stat-pill--neutral",
+            PillTone.Ok => "cda-stat-pill cda-stat-pill--success",
+            PillTone.Info => "cda-stat-pill cda-stat-pill--info",
+            PillTone.Warn => "cda-stat-pill cda-stat-pill--warning",
+            PillTone.Plain => "cda-stat-pill cda-stat-pill--plain",
+            PillTone.Label => "cda-stat-pill cda-stat-pill--plain uppercase tracking-[0.18em]",
+            _ => "cda-stat-pill cda-stat-pill--neutral"
         };
 
-        return $"inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium {toneCss}";
+        return toneCss;
     }
 
     private RenderFragment RenderContent()
     {
-        if (ChildContent is not null)
+        return builder =>
         {
-            return ChildContent;
-        }
+            var sequence = 0;
 
-        return builder => builder.AddContent(0, Text);
+            if (!string.IsNullOrWhiteSpace(Token))
+            {
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "cda-stat-pill__token");
+                builder.AddContent(sequence++, Token);
+                builder.CloseElement();
+            }
+
+            if (ChildContent is not null)
+            {
+                builder.OpenElement(sequence++, "span");
+                builder.AddContent(sequence++, ChildContent);
+                builder.CloseElement();
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(Text))
+            {
+                builder.OpenElement(sequence++, "span");
+                builder.AddContent(sequence++, Text);
+                builder.CloseElement();
+            }
+        };
     }
 }

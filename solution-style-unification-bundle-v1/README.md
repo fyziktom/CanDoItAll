@@ -42,8 +42,8 @@ This bundle is a coordination and execution package for `solution-style-unificat
 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Passed`
-- Execution status: `Reopened follow-up executed with honest partial closure`
-- Subbundle gate review: `Critical foundations passed; migration and closure phases reopened`
-- Final closure gate: `Still partial because PromptFactoryPage remains a follow-up hotspot`
-- Browser validation analytics: `Recorded with refreshed follow-up screenshots for Home, Projects, and Prompt Factory`
-- Latest follow-up wave: `Home.razor` and `ProjectsPage.razor` follow-up notes are now closed; `PromptFactoryPage.razor` is improved and revalidated but still not fully decomposed.
+- Execution status: `Reopened wrapper-follow-up wave executed; initiative still partially complete`
+- Subbundle gate review: `Critical foundations need a refreshed census and wrapper-expansion pass before more migration claims are trusted`
+- Final closure gate: `Open because component-level hotspots like ProjectsBoard and PromptFactoryPage still retain too much raw markup`
+- Browser validation analytics: `Fresh browser proof now exists for the Projects wrapper-driven wave, including desktop, modal, and mobile evidence after a Tailwind rebuild and responsive repair.`
+- Latest follow-up wave: `Workbook refreshed, BaseLib wrapper set expanded (Pill, MetricCard, PanelCard, SurfaceCard, PrefixedField), and ProjectsBoard / ProjectModalHost / ProjectHierarchyModal were refactored and revalidated without touching CanvasLib internals.`

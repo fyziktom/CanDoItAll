@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Completed`
+- `Blocked`
 
 ## Objective
 
@@ -28,6 +28,9 @@
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Components\Components\AppShell.razor`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Factory\Pages\PromptFactoryPage.razor.css`
 - `C:\repositories\CanDoItAll\output\spreadsheet\style-census-initial.xlsx`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\Pages\Components\ProjectsBoard.razor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\Pages\Components\ProjectModalHost.razor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\Pages\Components\ProjectHierarchyModal.razor`
 
 ## Deliverables
 
@@ -35,6 +38,7 @@
 - A written taxonomy of canonical shared families and unification rules.
 - A documented exclusion list for all canvas and canvas-host files that this wave must not edit.
 - Baseline metrics for repeated occurrences, custom CSS hotspots, and top migration targets.
+- A refreshed component-level hotspot sheet that separates top non-canvas derived Razor components from explicitly deferred canvas-adjacent files.
 
 ## Dependency Impact
 

@@ -40,6 +40,7 @@
 - Repeated raw markup families replaced by shared Tailwind classes or BaseLib primitives on the targeted routes.
 - Safe custom CSS reduced, removed, or converted to Tailwind-backed shared classes.
 - `Home.razor`, `ProjectsPage.razor`, and `PromptFactoryPage.razor` materially shortened through logical Razor component extraction where the page files had become maintenance hotspots.
+- Derived Razor components produced by the earlier page split are revisited so they consume the expanded BaseLib wrappers instead of freezing raw markup one layer lower.
 - Measured progress showing occurrences replaced, near-duplicates unified, and code or selector reduction achieved.
 
 ## Dependency Impact

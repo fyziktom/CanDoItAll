@@ -30,6 +30,9 @@ else
     public string? Text { get; set; }
 
     [Parameter]
+    public string? Token { get; set; }
+
+    [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
     [Parameter]
@@ -152,6 +155,14 @@ else
                 builder.AddAttribute(sequence++, "title", $"Unknown icon token: {Icon}");
                 builder.AddAttribute(sequence++, "aria-hidden", "true");
                 builder.AddContent(sequence++, Icon);
+                builder.CloseElement();
+            }
+
+            if (!string.IsNullOrWhiteSpace(Token))
+            {
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "cda-button__token");
+                builder.AddContent(sequence++, Token);
                 builder.CloseElement();
             }
 

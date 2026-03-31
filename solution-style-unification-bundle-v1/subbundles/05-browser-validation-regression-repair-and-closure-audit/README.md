@@ -85,6 +85,7 @@
 - Browser proof now includes refreshed screenshots for `/`, `/projects`, and `/prompt-factory`.
 - The reopened `Home.razor` and `ProjectsPage.razor` notes are closed with page-file census proof and browser screenshots.
 - `PromptFactoryPage.razor` is still only partially closed. The route is revalidated and safer than before, but deeper non-canvas decomposition is still warranted.
+- This follow-up is reopened again for component-level wrapper proof after the refreshed census and BaseLib expansion pass.
 
 ## Browser Validation Logging
 

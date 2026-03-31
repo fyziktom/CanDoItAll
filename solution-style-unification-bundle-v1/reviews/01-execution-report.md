@@ -18,7 +18,11 @@
 - `candoitall_solution_build` with `StopAndResume` succeeded for the reopened `Home` / `ProjectsPage` / `PromptFactoryPage` wave:
   - `op_50d80dd5d70f48fda9e133b327374c2b` => `Build succeeded`
   - `op_28747e55f779434aa15e28b0fa809a90` => `Build succeeded`
-- Playwright MCP browser proof was executed through `browser_run_code` against the live app with saved screenshots under `solution-style-unification-bundle-v1/evidence/`.
+- `candoitall_solution_build` with `StopAndResume` succeeded twice for the reopened component-wrapper wave:
+  - `op_99b65acca9e8451bb7681e1da90ad41b` => `Build succeeded`
+  - `op_4dcad4279554406c8a27e4690b148145` => `Build succeeded`
+- `npm run build` in `C:\repositories\CanDoItAll\Tailwind` was required again in the component-wrapper wave because the generated `output.css` bundle had gone stale and mobile Playwright proof confirmed the new `fields.css` rules were not yet live.
+- Playwright MCP could not be used for this reopened wave because the tool tried to create `C:\Windows\System32\.playwright-mcp` and failed with `EPERM`. Real browser proof continued through `npx --yes --package @playwright/cli playwright-cli` against the same managed app session, with saved screenshots under `solution-style-unification-bundle-v1/evidence/`.
 - `python C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed C:\repositories\CanDoItAll\solution-style-unification-bundle-v1` => `Bundle is valid for stage 'completed'`
 
 ## Browser Artifacts
@@ -48,6 +52,11 @@
 - `projects-board-wave3.png`
 - `projects-detail-modal-wave3.png`
 - `projects-editor-modal-wave3.png`
+- `projects-board-wave4.png`
+- `projects-detail-modal-wave4.png`
+- `projects-hierarchy-modal-wave4.png`
+- `projects-editor-modal-wave4.png`
+- `projects-board-wave4-mobile.png`
 - `prompt-factory-wave3.png`
 - `prompt-factory-wave3-postfix.png`
 
@@ -72,6 +81,7 @@
 | `04-app-and-module-migration-from-duplicated-utilities-and-custom-css` | `/settings` Project Structure MCP tab | `1600x1200` | `goto`, tab activation via DOM evaluation, class-count assertion, locator screenshot | `settings-project-structure-panel.png` | `Passed` |
 | `05-browser-validation-regression-repair-and-closure-audit` | `/projects` shell plus responsive sweep, `/dashboard`, `/activity` post-build, `/settings` reconnect overlay | `1600x1200`, `768x1024`, `393x852` | `goto`, click/open modal, expand mobile details, forced-open dialog via DOM evaluation, geometry assertion, locator screenshot | `projects-shell-desktop.png`, `projects-shell-mobile.png`, `projects-editor-tablet.png`, `projects-editor-mobile.png`, `projects-postbuild-desktop.png`, `dashboard-postbuild.png`, `activity-postbuild.png`, `reconnect-modal-panel.png` | `Passed` |
 | `05-browser-validation-regression-repair-and-closure-audit` | `/`, `/projects`, `/prompt-factory` reopened follow-up | `1440x1200` | `goto`, DOM evaluation, open detail/editor modal, open prompt-preview dialog through DOM click, screenshot | `home-dashboard-wave3.png`, `projects-board-wave3.png`, `projects-detail-modal-wave3.png`, `projects-editor-modal-wave3.png`, `prompt-factory-wave3.png`, `prompt-factory-wave3-postfix.png` | `Passed` |
+| `05-browser-validation-regression-repair-and-closure-audit` | `/projects` wrapper-driven follow-up including board, detail modal, hierarchy modal, editor modal, and mobile filter stack repair | `1440x1200`, `1024x1180`, `390x960` | `playwright-cli open`, `reload`, `eval`, `run-code`, `screenshot` | `projects-board-wave4.png`, `projects-detail-modal-wave4.png`, `projects-hierarchy-modal-wave4.png`, `projects-editor-modal-wave4.png`, `projects-board-wave4-mobile.png` | `Passed after runtime string-binding fix and Tailwind rebuild` |
 
 ## Analytics Review
 
@@ -80,6 +90,8 @@
 - Responsive proof exists for the highest-risk route in this wave: `Projects` plus the shared shell.
 - The follow-up admin wave also proved the `Project Structure MCP` settings panel and the reconnect overlay in-browser with saved locator screenshots and zero horizontal overflow.
 - The reopened follow-up also proved `Home`, the refactored `Projects` board plus detail/editor modals, and `Prompt Factory` after the action-button normalization and dead-layout removal.
+- The reopened component-wrapper wave proved `ProjectsBoard`, `ProjectModalHost`, and `ProjectHierarchyModal` again with fresh desktop and mobile evidence after introducing new BaseLib wrappers.
+- Live browser proof in the component-wrapper wave surfaced two real regressions: `ProjectsPage.razor` string parameters were being passed as literals, and the Tailwind `output.css` bundle was stale. Both issues were repaired and revalidated before closure.
 - A watch bookkeeping issue appeared after one static-asset hot reload where the generation counter did not confirm even though Playwright showed the updated UI. That was neutralized by a final managed build plus post-build browser refresh.
 
 ## Raw Note Closure
@@ -104,16 +116,25 @@
 | `ProjectsPage.razor still contains excessive raw markup, poor indentation, and needs logical component extraction` | `Solved` | `ProjectsPage.razor` was rewritten to page-level composition only, with `ProjectsBoard`, `ProjectModalHost`, and `ProjectHierarchyModal` plus supporting typed models. Case-sensitive page-file census: `button=0`, `span=0`. Line count dropped from `1114` to `449`. Browser proof: `projects-board-wave3.png`, `projects-detail-modal-wave3.png`, `projects-editor-modal-wave3.png`. |
 | `PromptFactoryPage.razor still contains excessive raw markup and needs logical page-level component extraction without changing CanvasLib internals` | `Partially solved` | Added `PromptFactoryActionButton`, `PromptFactorySupportLaneTabs`, `PromptFactoryHistoryToolbar`, `PromptFactoryRecommendationOverlay`, and `PromptFactoryDialogs`. Live action rows were migrated onto the shared action component and the dead legacy supporting layout block was removed. Case-sensitive raw page-file button count dropped from `105` to `28`, but the page still retains substantial raw non-canvas layout markup and remains a follow-up hotspot. Browser proof: `prompt-factory-wave3-postfix.png`. |
 
+## Component-Wrapper Follow-Up Closure
+
+| Follow-up note | Status | Proof |
+| --- | --- | --- |
+| `ProjectsBoard.razor still contains too many raw div/span/label/button structures instead of shared wrappers` | `Solved for this wave` | Shared wrappers now replace the raw stat-pill row, prefixed filter fields, metric cards, and tokenized card actions. Census moved from `70` raw tracked tags to `21`, with `12` wrapper usages in-file. Browser proof: `projects-board-wave4.png`, `projects-board-wave4-mobile.png`. |
+| `ProjectModalHost.razor still repeats raw form-label/panel/metric markup` | `Solved for this wave` | Identity inputs now use `FormField`, repeated cards now use `PanelCard` and `SurfaceCard`, and review metrics now use `MetricCard`. Census moved from `81` raw tracked tags to `54`, with `19` wrapper usages in-file. Browser proof: `projects-detail-modal-wave4.png`, `projects-editor-modal-wave4.png`. |
+| `ProjectHierarchyModal.razor still repeats raw surface and metric markup` | `Solved for this wave` | Parent and subproject surfaces now use `SurfaceCard`, `PanelCard`, and `MetricCard`. Census moved from `31` raw tracked tags to `22`, with populated-hierarchy browser proof. Screenshots: `projects-hierarchy-modal-wave4.png`. |
+| `ProjectsPage.razor string bindings must stay factual and not leak placeholder tokens to the UI` | `Solved` | Live browser proof caught literal placeholder strings on the board. The parent page now passes actual expressions with `@projectSearch`, `@statusFilter`, `@HierarchyFilterHelper`, `@LatestUpdatedProjectLabel`, `@LatestUpdatedProjectHelper`, and `@message`. |
+
 ## Step 0 Answers
 
 - `Did I do everything that was requested in original prompt?`
-  - `No.` I completed the shared Tailwind architecture, BaseLib alignment, shell alignment, two fully cleaned follow-up page files (`Home` action markup and `ProjectsPage`), and an additional cleanup pass on `PromptFactoryPage` with build and browser proof, but I still did not finish every remaining non-canvas raw-utility/custom-style surface across the whole solution.
+  - `No.` I completed the shared Tailwind architecture, BaseLib alignment, shell alignment, the earlier `Home` and `ProjectsPage` page-level cleanup, and this new component-wrapper wave for `ProjectsBoard`, `ProjectModalHost`, and `ProjectHierarchyModal` with fresh build and browser proof, but I still did not finish every remaining non-canvas raw-utility/custom-style surface across the whole solution.
 - `Is it truly the best work I can do?`
-  - `Not absolutely.` I pushed through another safe follow-up wave and removed a real amount of remaining raw page markup, but `PromptFactoryPage.razor` still deserves a deeper non-canvas decomposition wave.
+  - `Not absolutely.` This wave materially improved the `Projects` component family and closed real browser-found regressions, but `PromptFactoryPage.razor` still deserves a deeper non-canvas decomposition wave and the refreshed census still lists remaining wrapper-poor hotspots.
 - `Did I covered all and truly validated all?`
-  - `No.` I truly validated the reopened routes I changed in this follow-up (`/`, `/projects`, `/prompt-factory`) with Playwright MCP plus screenshots and clean managed builds, but I did not validate every remaining non-canvas page because not every remaining page was migrated in this wave.
+  - `No.` I truly validated the reopened routes I changed in the earlier follow-up (`/`, `/projects`, `/prompt-factory`) and the new wrapper-driven `/projects` wave with real browser automation, screenshots, Tailwind rebuild proof, and clean managed builds, but I did not validate every remaining non-canvas page because not every remaining page was migrated in this wave.
 - `Is codebase now better maintainable and easier to read?`
-  - `Yes, for the touched areas.` The touched pages and shell now use a materially more reusable semantic style layer instead of repeating long raw utility strings and one-off variations, and the `Projects` route in particular is much easier to read after the page split.
+  - `Yes, for the touched areas.` The touched pages and shell now use a materially more reusable semantic style layer instead of repeating long raw utility strings and one-off variations, and the `Projects` route is easier to read both at page level and now at component level after the wrapper pass.
 
 ## Progress Metrics
 
@@ -156,6 +177,21 @@
   - `Home.razor` case-sensitive raw page tags: `button 0`, `span 0`
   - `ProjectsPage.razor` case-sensitive raw page tags: `button 0`, `span 0`; line count `1114 -> 449`
   - `PromptFactoryPage.razor` case-sensitive raw page tags: `button 105 -> 28`
+- Workbook refresh for the component-wrapper wave:
+  - `C:\repositories\CanDoItAll\output\spreadsheet\style-census-component-followup-wave.xlsx` now includes sheet `Wave4Results`
+- Component-wrapper wave metrics:
+  - `ProjectsBoard.razor`: raw tracked tags `70 -> 21`, line count `296 -> 281`, wrapper usages `12`
+  - `ProjectModalHost.razor`: raw tracked tags `81 -> 54`, line count `523 -> 509`, wrapper usages `19`
+  - `ProjectHierarchyModal.razor`: raw tracked tags `31 -> 22`, line count `146 -> 138`, wrapper usages `7`
+  - Combined reduction across those three component files: `85` raw tracked tags removed and `37` lines removed while adding reusable BaseLib primitives
+- New BaseLib primitives added in the component-wrapper wave:
+  - `MetricCard`
+  - `PanelCard`
+  - `SurfaceCard`
+  - `PrefixedField` with `StackOnMobile`
+- BaseLib primitives expanded in the component-wrapper wave:
+  - `Pill` now supports tokenized content and new tones (`Neutral`, `Info`, `Plain`)
+  - `Button` now supports tokenized content without raw child spans
 - Example shared-usage counts in touched files after migration:
   - `ProjectsPage.razor`: `39` shared button usages and `27` shared input usages
   - `ResourcesPage.razor`: `37` shared input usages
@@ -175,3 +211,4 @@
 - `PromptFactoryPage.razor` is only partially cleaned in this reopened wave. CanvasLib internals were kept untouched, but the page still contains significant non-canvas raw layout markup that should be split further in a later safe pass.
 - Remaining non-canvas pages still contain raw utility duplication and should be handled in a follow-up wave if the goal is true whole-solution closure.
 - The refreshed census still shows some raw utility density in already-touched large files because they retain route-specific layout details even after the shared-class extraction.
+- Playwright MCP itself was blocked in this wave by a local `EPERM` session-folder issue under `C:\Windows\System32`; browser proof still happened for the route through Playwright CLI, but the MCP tooling problem remains external to the product code.

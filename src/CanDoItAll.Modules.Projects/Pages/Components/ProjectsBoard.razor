@@ -13,65 +13,65 @@
                 <StatusBadge Tone="info" Text="@($"{FilteredProjectSummaries.Count} visible")" />
             </div>
             <p class="max-w-3xl text-sm leading-6 text-slate-600">Search, inspect, edit, and jump into dashboard, structure, or calendar from one compact board without losing the project list.</p>
-            <div class="cda-stat-pill-row">
-                <span class="cda-stat-pill cda-stat-pill--info">
-                    <span class="cda-stat-pill__token">ACT</span>
-                    <span>@ProjectSummaries.Count(project => project.Status == ProjectStatus.Active) active</span>
-                </span>
-                <span class="cda-stat-pill cda-stat-pill--neutral">
-                    <span class="cda-stat-pill__token">DRF</span>
-                    <span>@ProjectSummaries.Count(project => project.Status == ProjectStatus.Draft) draft</span>
-                </span>
-                <span class="cda-stat-pill cda-stat-pill--warning">
-                    <span class="cda-stat-pill__token">UPD</span>
-                    <span>@LatestUpdatedProjectLabel</span>
-                </span>
-                <span class="cda-stat-pill cda-stat-pill--plain">
-                    <span class="cda-stat-pill__token">NOTE</span>
-                    <span>@LatestUpdatedProjectHelper</span>
-                </span>
-            </div>
+            <PillList>
+                <Pill Tone="PillTone.Info"
+                      Token="ACT"
+                      Text="@($"{ProjectSummaries.Count(project => project.Status == ProjectStatus.Active)} active")" />
+                <Pill Tone="PillTone.Neutral"
+                      Token="DRF"
+                      Text="@($"{ProjectSummaries.Count(project => project.Status == ProjectStatus.Draft)} draft")" />
+                <Pill Tone="PillTone.Warn"
+                      Token="UPD"
+                      Text="@LatestUpdatedProjectLabel" />
+                <Pill Tone="PillTone.Plain"
+                      Token="NOTE"
+                      Text="@LatestUpdatedProjectHelper" />
+            </PillList>
         </div>
 
         <div class="flex w-full max-w-2xl flex-col gap-2">
             <div class="flex flex-wrap items-center justify-end gap-2">
                 <Button Class="h-9 px-3"
+                        Token="+"
+                        Text="New"
                         data-testid="projects-new-button"
-                        Click="OpenNewProject">
-                    <span aria-hidden="true" class="text-base font-bold leading-none">+</span>
-                    <span>New</span>
-                </Button>
+                        Click="OpenNewProject" />
                 <Button ButtonStyle="ButtonStyle.Light"
                         Class="h-9 px-3"
-                        Click="NavigateHome">
-                    <span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">DB</span>
-                    <span>Dashboard</span>
-                </Button>
+                        Token="DB"
+                        Text="Dashboard"
+                        Click="NavigateHome" />
             </div>
-            <label class="cda-prefixed-field">
-                <span class="cda-prefixed-field__prefix">FIND</span>
+            <PrefixedField Prefix="FIND">
                 <InputText @bind-Value="ProjectSearchProxy"
                            @bind-Value:event="oninput"
-                           class="cda-input cda-input--toolbar pl-14"
+                           class="cda-input cda-input--toolbar"
                            placeholder="Search by name or current phase" />
-            </label>
-            <div class="flex flex-wrap items-center gap-2">
-                <label class="cda-prefixed-field min-w-[12rem] sm:flex-none">
-                    <span class="cda-prefixed-field__prefix">STATUS</span>
+            </PrefixedField>
+            <div class="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+                <PrefixedField Prefix="STATUS"
+                               Suffix="V"
+                               PrefixPaddingRem="4.6"
+                               SuffixPaddingRem="2.25"
+                               StackOnMobile="true"
+                               Class="w-full sm:min-w-[12rem] sm:flex-none">
                     <InputSelect @bind-Value="StatusFilterProxy"
-                                 class="cda-input cda-input--toolbar appearance-none pl-[4.6rem] pr-9">
+                                 class="cda-input cda-input--toolbar appearance-none">
                         <option value="">All statuses</option>
                         @foreach (var status in Enum.GetValues<ProjectStatus>())
                         {
                             <option value="@status.ToString()">@status</option>
                         }
                     </InputSelect>
-                    <span class="cda-prefixed-field__suffix">V</span>
-                </label>
-                <label class="cda-prefixed-field min-w-[14rem] sm:flex-none">
-                    <span class="cda-prefixed-field__prefix">PROJECT</span>
+                </PrefixedField>
+                <PrefixedField Prefix="PROJECT"
+                               Suffix="V"
+                               PrefixPaddingRem="4.9"
+                               SuffixPaddingRem="2.25"
+                               StackOnMobile="true"
+                               Class="w-full sm:min-w-[14rem] sm:flex-none">
                     <InputSelect @bind-Value="HierarchyFilterProjectIdProxy"
-                                 class="cda-input cda-input--toolbar appearance-none pl-[4.9rem] pr-9"
+                                 class="cda-input cda-input--toolbar appearance-none"
                                  data-testid="hierarchy-filter-project">
                         <option value="">Any project</option>
                         @foreach (var project in ProjectSummaries.OrderBy(project => project.Name))
@@ -79,26 +79,27 @@
                             <option value="@project.Id">@project.Name</option>
                         }
                     </InputSelect>
-                    <span class="cda-prefixed-field__suffix">V</span>
-                </label>
-                <label class="cda-prefixed-field min-w-[12rem] sm:flex-none">
-                    <span class="cda-prefixed-field__prefix">LINK</span>
+                </PrefixedField>
+                <PrefixedField Prefix="LINK"
+                               Suffix="V"
+                               PrefixPaddingRem="3.8"
+                               SuffixPaddingRem="2.25"
+                               StackOnMobile="true"
+                               Class="w-full sm:min-w-[12rem] sm:flex-none">
                     <InputSelect @bind-Value="HierarchyFilterModeProxy"
-                                 class="cda-input cda-input--toolbar appearance-none pl-[3.8rem] pr-9"
+                                 class="cda-input cda-input--toolbar appearance-none"
                                  data-testid="hierarchy-filter-mode">
                         <option value="">All links</option>
                         <option value="children">Subprojects</option>
                         <option value="parents">Parents</option>
                         <option value="related">Related</option>
                     </InputSelect>
-                    <span class="cda-prefixed-field__suffix">V</span>
-                </label>
+                </PrefixedField>
                 <Button ButtonStyle="ButtonStyle.Light"
-                        Class="h-10 px-3"
-                        Click="ResetFilters">
-                    <span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">RST</span>
-                    <span>Reset</span>
-                </Button>
+                        Class="h-10 w-full px-3 sm:w-auto"
+                        Token="RST"
+                        Text="Reset"
+                        Click="ResetFilters" />
             </div>
             <p class="text-xs leading-5 text-slate-500">@HierarchyFilterHelper</p>
         </div>
@@ -138,65 +139,48 @@
                         </div>
 
                         <div class="mt-4 grid gap-2 sm:grid-cols-4">
-                            <div class="cda-metric-card">
-                                <p class="cda-metric-card__label">Phases</p>
-                                <p class="cda-metric-card__value">@project.PhaseCount</p>
-                            </div>
-                            <div class="cda-metric-card">
-                                <p class="cda-metric-card__label">Parents</p>
-                                <p class="cda-metric-card__value">@project.ParentCount</p>
-                            </div>
-                            <div class="cda-metric-card">
-                                <p class="cda-metric-card__label">Subprojects</p>
-                                <p class="cda-metric-card__value">@project.ChildCount</p>
-                            </div>
-                            <div class="cda-metric-card">
-                                <p class="cda-metric-card__label">Updated</p>
-                                <p class="cda-metric-card__value">@project.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
-                            </div>
+                            <MetricCard Label="Phases" Value="@project.PhaseCount.ToString()" />
+                            <MetricCard Label="Parents" Value="@project.ParentCount.ToString()" />
+                            <MetricCard Label="Subprojects" Value="@project.ChildCount.ToString()" />
+                            <MetricCard Label="Updated" Value="@project.UpdatedAtUtc.LocalDateTime.ToString("g")" />
                         </div>
 
                         <div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/70 pt-3">
                             <div class="flex flex-wrap items-center gap-2">
                                 <Button Class="h-9 px-3"
+                                        Token="VIEW"
+                                        Text="View"
                                         data-testid="project-card-details-button"
-                                        Click="@(() => OpenProjectPreview.InvokeAsync(project.Id))">
-                                    <span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">VIEW</span>
-                                    <span>View</span>
-                                </Button>
+                                        Click="@(() => OpenProjectPreview.InvokeAsync(project.Id))" />
                                 <Button ButtonStyle="ButtonStyle.Light"
                                         Class="h-9 px-3"
+                                        Token="SUB"
+                                        Text="Subprojects"
                                         data-testid="project-card-subprojects-button"
-                                        Click="@(() => OpenHierarchyModal.InvokeAsync(project.Id))">
-                                    <span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">SUB</span>
-                                    <span>Subprojects</span>
-                                </Button>
+                                        Click="@(() => OpenHierarchyModal.InvokeAsync(project.Id))" />
                             </div>
                             <div class="flex flex-wrap items-center gap-1.5">
                                 <Button ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Class="cda-button--quick"
+                                        Token="DB"
                                         title="Open dashboard tab"
                                         aria-label="Open dashboard tab"
-                                        Click="@(() => OpenProjectDashboard.InvokeAsync(project.Id))">
-                                    <span aria-hidden="true">DB</span>
-                                </Button>
+                                        Click="@(() => OpenProjectDashboard.InvokeAsync(project.Id))" />
                                 <Button ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Class="cda-button--quick"
+                                        Token="ST"
                                         title="Open structure"
                                         aria-label="Open structure"
-                                        Click="@(() => OpenStructure.InvokeAsync(project.Id))">
-                                    <span aria-hidden="true">ST</span>
-                                </Button>
+                                        Click="@(() => OpenStructure.InvokeAsync(project.Id))" />
                                 <Button ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Class="cda-button--quick"
+                                        Token="CAL"
                                         title="Open calendar"
                                         aria-label="Open calendar"
-                                        Click="@(() => OpenCalendar.InvokeAsync(project.Id))">
-                                    <span aria-hidden="true">CAL</span>
-                                </Button>
+                                        Click="@(() => OpenCalendar.InvokeAsync(project.Id))" />
                             </div>
                         </div>
                     </article>

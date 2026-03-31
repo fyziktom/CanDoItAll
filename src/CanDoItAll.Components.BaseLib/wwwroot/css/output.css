@@ -1625,6 +1625,11 @@
     background-color: var(--color-sky-50);
     color: var(--color-sky-700);
   }
+  .cda-stat-pill--success {
+    border-color: var(--color-emerald-200);
+    background-color: var(--color-emerald-50);
+    color: var(--color-emerald-700);
+  }
   .cda-stat-pill--neutral {
     border-color: var(--color-slate-200);
     background-color: var(--color-slate-50);
@@ -2422,6 +2427,30 @@
     display: block;
     min-width: calc(var(--spacing) * 0);
     flex: 1;
+  }
+  .cda-prefixed-field .cda-input {
+    padding-left: var(--cda-prefixed-field-prefix-pad, 0.75rem);
+    padding-right: var(--cda-prefixed-field-suffix-pad, 0.75rem);
+  }
+  @media (max-width: 639px) {
+    .cda-prefixed-field--stack-mobile {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .cda-prefixed-field--stack-mobile .cda-prefixed-field__prefix {
+      position: static;
+      display: inline-flex;
+      padding-left: 0;
+    }
+    .cda-prefixed-field--stack-mobile .cda-input {
+      padding-left: 0.75rem;
+      padding-right: var(--cda-prefixed-field-suffix-pad, 2.25rem);
+    }
+    .cda-prefixed-field--stack-mobile .cda-prefixed-field__suffix {
+      top: auto;
+      bottom: 0.75rem;
+    }
   }
   .cda-prefixed-field__prefix {
     pointer-events: none;

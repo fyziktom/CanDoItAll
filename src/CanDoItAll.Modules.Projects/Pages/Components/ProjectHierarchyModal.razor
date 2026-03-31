@@ -20,7 +20,7 @@
         </HeaderActions>
         <ChildContent>
             <div class="grid gap-4 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
-                <section class="cda-surface-card--soft">
+                <SurfaceCard Soft="true">
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Parents</p>
@@ -38,7 +38,7 @@
                         <div class="mt-4 space-y-3">
                             @foreach (var parentProject in State.ParentProjects.OrderBy(project => project.Name))
                             {
-                                <article class="cda-panel-card">
+                                <PanelCard>
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="min-w-0">
                                             <p class="text-sm font-semibold text-slate-950">@parentProject.Name</p>
@@ -56,13 +56,13 @@
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => OpenStructure.InvokeAsync(parentProject.Id))" />
                                     </div>
-                                </article>
+                                </PanelCard>
                             }
                         </div>
                     }
-                </section>
+                </SurfaceCard>
 
-                <section class="cda-surface-card">
+                <SurfaceCard>
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Subprojects</p>
@@ -80,7 +80,7 @@
                         <div class="mt-4 grid gap-3 md:grid-cols-2">
                             @foreach (var subproject in State.Subprojects.OrderBy(project => project.Name))
                             {
-                                <article class="cda-panel-card--soft" data-testid="hierarchy-subproject-card">
+                                <PanelCard Soft="true" data-testid="hierarchy-subproject-card">
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="min-w-0">
                                             <p class="text-sm font-semibold text-slate-950">@subproject.Name</p>
@@ -90,18 +90,9 @@
                                     </div>
 
                                     <div class="mt-4 grid gap-2 sm:grid-cols-3">
-                                        <div class="cda-metric-card">
-                                            <p class="cda-metric-card__label">Parents</p>
-                                            <p class="cda-metric-card__value">@subproject.ParentCount</p>
-                                        </div>
-                                        <div class="cda-metric-card">
-                                            <p class="cda-metric-card__label">Subprojects</p>
-                                            <p class="cda-metric-card__value">@subproject.ChildCount</p>
-                                        </div>
-                                        <div class="cda-metric-card">
-                                            <p class="cda-metric-card__label">Updated</p>
-                                            <p class="cda-metric-card__value">@subproject.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
-                                        </div>
+                                        <MetricCard Label="Parents" Value="@subproject.ParentCount.ToString()" />
+                                        <MetricCard Label="Subprojects" Value="@subproject.ChildCount.ToString()" />
+                                        <MetricCard Label="Updated" Value="@subproject.UpdatedAtUtc.LocalDateTime.ToString("g")" />
                                     </div>
 
                                     <div class="mt-4 flex flex-wrap items-center gap-2">
@@ -118,11 +109,11 @@
                                                 data-testid="hierarchy-card-subprojects-button"
                                                 Click="@(() => OpenHierarchy.InvokeAsync(subproject.Id))" />
                                     </div>
-                                </article>
+                                </PanelCard>
                             }
                         </div>
                     }
-                </section>
+                </SurfaceCard>
             </div>
         </ChildContent>
     </Dialog>
