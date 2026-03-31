@@ -4,7 +4,7 @@ using System.Xml;
 
 namespace CanDoItAll.Modules.Workbench;
 
-internal sealed record ProjectStructureSummaryNode(
+public sealed record ProjectStructureSummaryNode(
     string NodeId,
     string Title,
     string KindLabel,
@@ -15,7 +15,7 @@ internal sealed record ProjectStructureSummaryNode(
     DateTimeOffset? EndUtc,
     IReadOnlyList<ProjectStructureSummaryNode> Children);
 
-internal sealed record ProjectStructureSummary(
+public sealed record ProjectStructureSummary(
     ProjectStructureSummaryNode Root,
     IReadOnlyList<ProjectStructureSummaryNode> Rows,
     int CompletedCount,

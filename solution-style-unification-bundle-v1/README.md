@@ -30,7 +30,8 @@ This bundle is a coordination and execution package for `solution-style-unificat
 2. `subbundles/02-tailwind-component-layer-architecture-and-shared-css-imports`
 3. `subbundles/03-baselib-primitive-alignment-and-wrapper-expansion`
 4. `subbundles/04-app-and-module-migration-from-duplicated-utilities-and-custom-css`
-5. `subbundles/05-browser-validation-regression-repair-and-closure-audit`
+5. `subbundles/05a-workbench-project-structure-page-refactor-and-validation`
+6. `subbundles/05-browser-validation-regression-repair-and-closure-audit`
 
 ## Dependency And Validation Map
 
@@ -42,8 +43,8 @@ This bundle is a coordination and execution package for `solution-style-unificat
 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Passed`
-- Execution status: `Reopened repeated-pattern follow-up wave executed; initiative still partially complete`
-- Subbundle gate review: `Critical foundations remain valid, the strict non-canvas div layout-wrapper census remains clean, and the named repeated-pattern family from the latest prompt is now cleared; later closure claims should focus on the broader remaining page-level and shell-level markup hotspots.`
+- Execution status: `Repeated-pattern follow-up and ProjectStructurePage follow-up executed; initiative still partially complete`
+- Subbundle gate review: `Critical foundations remain valid, the strict non-canvas div layout-wrapper census remains clean, the named repeated-pattern family remains cleared, and ProjectStructurePage now sits on shared wrappers/treeview/detail-preview infrastructure; later closure claims should focus on the broader remaining page-level and shell-level markup hotspots.`
 - Final closure gate: `Open because broader non-canvas hotspots like PromptFactoryPage and a few custom shell surfaces still need follow-up beyond the strict layout-wrapper census.`
-- Browser validation analytics: `Fresh browser proof now exists for the repeated-pattern follow-up across desktop and narrow-width states on /, /prompt-gallery, /resources, /activity, /automation, /validation, /test-lab, /settings, /projects, the Project Structure MCP tab, and the open Projects modals.`
-- Latest follow-up wave: `layout-census-wave1.xlsx was refreshed with Wave6Results, Wave6PatternBreakdown, and Wave6TouchedFiles; shared Stack/Grid/TextBlock helpers were tuned, legacy cda-stack/form-grid aliases were removed, the tracked repeated-pattern family moved to 0, and the wave was revalidated with Tailwind build, managed build op_2936d9edc1984f0abdd526a69d246568, and Playwright CLI screenshots after Playwright MCP remained blocked by EPERM.`
+- Browser validation analytics: `Fresh browser proof now exists for the repeated-pattern follow-up across desktop and narrow-width states on /, /prompt-gallery, /resources, /activity, /automation, /validation, /test-lab, /settings, /projects, the Project Structure MCP tab, the open Projects modals, and the refactored /projects/{projectId}/structure workbench route.`
+- Latest follow-up wave: `ProjectStructurePage now delegates to extracted workbench components, uses the shared BaseLib TreeView for the toolbox, uses a reflection-backed detail preview, and was revalidated with Tailwind build, clean solution build, focused ProjectStructurePage component tests, and Playwright CLI screenshots after Playwright MCP remained blocked by EPERM. Live proof also caught and repaired a narrow-width overflow in the support panels before closure.`

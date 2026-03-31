@@ -12,5 +12,6 @@
 @import "./forms/fields.css";
 @import "./forms/tag-editor.css";
 @import "./navigation/page-header.css";
+@import "./navigation/treeview.css";
 @import "./navigation/tabs.css";
 @import "./navigation/workbench-shell.css";

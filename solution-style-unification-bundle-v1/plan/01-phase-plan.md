@@ -7,7 +7,8 @@
 3. Execute subbundle `02` to restructure Tailwind imports and prove the new component-layer foundation in a real browser.
 4. Execute subbundle `03` to align BaseLib primitives and smoke-test dependent routes before any wide page migration.
 5. Execute subbundle `04` to migrate high-churn pages and safe custom-CSS hotspots using the proven shared system.
-6. Execute subbundle `05` for route sweep, screenshot review, regression repair, raw-note closure, and final bundle closure.
+6. Execute subbundle `05a` to refactor the deferred `ProjectStructurePage` workbench surface onto shared components and prove the new toolbox and detail patterns.
+7. Execute subbundle `05` for route sweep, screenshot review, regression repair, raw-note closure, and final bundle closure.
 
 ## Subbundle Dependency Map
 
@@ -21,7 +22,9 @@ flowchart LR
     S3 --> G3{"Gate: dependent-route browser smoke, screenshots, no foundation regressions"}
     G3 --> S4["04 App/module migration"]
     S4 --> G4{"Gate: route matrix passes, metrics recorded, custom CSS safely reduced"}
-    G4 --> S5["05 Validation, repair, and closure audit"]
+    G4 --> S5A["05a ProjectStructurePage workbench refactor"]
+    S5A --> G5A{"Gate: treeview, page split, tests, workbench browser proof"}
+    G5A --> S5["05 Validation, repair, and closure audit"]
     S5 --> G5{"Final closure gate"}
 ```
 
@@ -42,4 +45,5 @@ flowchart LR
 - After subbundle `02`: require `Tailwind` build success, `dotnet build`, and a large-screen Playwright smoke on shell-level routes before continuing.
 - After subbundle `03`: require one dependent-route browser smoke in addition to the immediate component checks because later migrations depend on these primitives.
 - After subbundle `04`: require large-screen and narrower-width screenshots on all migrated routes and recorded progress metrics.
+- After subbundle `05a`: require a focused `ProjectStructurePage` test pass, workbench browser proof for the toolbox and detail windows, and explicit confirmation that canvas behavior was preserved while only the non-canvas surfaces were refactored.
 - Before closure: rerun validators, answer the step `0` questions against facts, reopen weak earlier phases if needed, and do not treat missing browser proof as acceptable risk.

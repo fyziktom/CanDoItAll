@@ -148,6 +148,7 @@ public partial class ProjectStructurePage
             CanShowAdvancedDetails(node),
             string.IsNullOrWhiteSpace(node.ArtifactKind) ? "None" : node.ArtifactKind,
             $"{Math.Round(node.X)}, {Math.Round(node.Y)}",
+            ProjectStructureNodeDetailFactory.BuildSections(node),
             SelectedNodeFacts);
     }
 

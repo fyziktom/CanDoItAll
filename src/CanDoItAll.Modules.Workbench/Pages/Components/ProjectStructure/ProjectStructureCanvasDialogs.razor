@@ -1,0 +1,228 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.SharedKernel
+
+@if (ProjectHierarchyDialog is not null)
+{
+    var hierarchyDialog = ProjectHierarchyDialog;
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@hierarchyDialog.Title"
+                                   Kicker="Project hierarchy"
+                                   Title="@hierarchyDialog.Title"
+                                   Summary="@hierarchyDialog.Copy"
+                                   DataTestId="project-structure-hierarchy-dialog"
+                                   Close="CloseProjectHierarchy">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseProjectHierarchy" />
+            <Button Text="@hierarchyDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Info"
+                    data-testid="project-structure-hierarchy-submit"
+                    Disabled="@(hierarchyDialog.AvailableProjects.Count == 0)"
+                    Click="ExecuteProjectHierarchyCommand" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                @if (!string.IsNullOrWhiteSpace(hierarchyDialog.CurrentParentProjectTitle))
+                {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current parent" />
+                            <TextBlock TextStyle="TextStyle.Note" Value="@hierarchyDialog.CurrentParentProjectTitle" Class="cw-panel-copy" />
+                        </Stack>
+                    </PanelCard>
+                }
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Footer" Value="Project" Class="cw-panel-copy" />
+                        <select class="cw-context-toolbox__search"
+                                data-testid="project-structure-hierarchy-project-select"
+                                value="@(hierarchyDialog.SelectedProjectId?.ToString() ?? string.Empty)"
+                                @onchange="ProjectHierarchySelectionChanged">
+                            <option value="">Select a project</option>
+                            @foreach (var projectOption in hierarchyDialog.AvailableProjects)
+                            {
+                                <option value="@projectOption.Id">@projectOption.Name</option>
+                            }
+                        </select>
+                    </Stack>
+                </PanelCard>
+
+                @if (!string.IsNullOrWhiteSpace(hierarchyDialog.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @hierarchyDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@if (QuickActionDialog is not null)
+{
+    var quickActionDialog = QuickActionDialog;
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@($"{quickActionDialog.Title} quick actions")"
+                                   Kicker="Node quick actions"
+                                   Title="@quickActionDialog.Title"
+                                   Summary="@quickActionDialog.Copy"
+                                   DialogClass="project-structure-quick-action-dialog"
+                                   BodyClass="project-structure-quick-action-dialog__body"
+                                   DataTestId="project-structure-node-quick-actions"
+                                   Close="CloseQuickActionDialog">
+        <Actions>
+            <Pill Tone="PillTone.Info" Text="@quickActionDialog.NodeLabel" />
+            <Button Text="Close"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseQuickActionDialog" />
+        </Actions>
+        <Body>
+            <Grid Columns="2"
+                  Gap="LayoutGap.Medium"
+                  Class="project-structure-quick-action-grid">
+                @foreach (var action in new[] { quickActionDialog.EditAction, quickActionDialog.PrimaryAction })
+                {
+                    <Button ButtonStyle="@ResolveButtonStyle(action.Tone)"
+                            Variant="Variant.Outlined"
+                            Class="project-structure-quick-action-card"
+                            data-testid="@(action.ExecutionKind == ProjectStructureQuickActionExecutionKind.Edit ? "project-structure-quick-action-edit" : "project-structure-quick-action-primary")"
+                            Disabled="@action.IsDisabled"
+                            Click="@(() => ExecuteQuickAction.InvokeAsync(action))">
+                        <Stack GapScale="LayoutGap.Small"
+                               Class="items-center text-center">
+                            <Icon Name="@action.Icon" />
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@action.Label" />
+                            <TextBlock TextStyle="TextStyle.Note" Value="@action.Description" />
+                        </Stack>
+                    </Button>
+                }
+            </Grid>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@if (PreviewNode is not null)
+{
+    var previewNode = PreviewNode;
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@($"{ResolveAttachmentDisplayName.Invoke(previewNode)} preview")"
+                                   Kicker="Canvas preview"
+                                   Title="@ResolveAttachmentDisplayName.Invoke(previewNode)"
+                                   Summary="@ResolveAttachmentLeadCopy.Invoke(previewNode)"
+                                   Close="CloseAttachmentPreview">
+        <Actions>
+            @if (CanShowLocalOpen.Invoke(previewNode))
+            {
+                <Button Text="Open locally"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Click="@(() => OpenAttachmentLocally.InvokeAsync(previewNode))" />
+            }
+            <Button Text="Open in new tab"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Href="@previewNode.Route"
+                    Target="_blank"
+                    Rel="noopener noreferrer" />
+            <Button Text="Close"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseAttachmentPreview" />
+        </Actions>
+        <Body>
+            @switch (ResolveAttachmentPreviewKind.Invoke(previewNode))
+            {
+                case AttachmentPreviewKind.Image:
+                    <img class="project-structure-preview-dialog__media"
+                         src="@previewNode.Route"
+                         alt="@previewNode.Title" />
+                    break;
+                case AttachmentPreviewKind.Video:
+                    <video class="project-structure-preview-dialog__media"
+                           controls
+                           preload="metadata"
+                           src="@previewNode.Route"></video>
+                    break;
+                case AttachmentPreviewKind.Audio:
+                    <audio class="project-structure-audio-preview project-structure-preview-dialog__audio"
+                           controls
+                           preload="metadata"
+                           src="@previewNode.Route"></audio>
+                    break;
+                case AttachmentPreviewKind.Document:
+                    <iframe class="project-structure-preview-dialog__frame"
+                            src="@ResolveAttachmentPreviewSource.Invoke(previewNode)"
+                            title="@($"{ResolveAttachmentDisplayName.Invoke(previewNode)} dialog preview")"></iframe>
+                    break;
+            }
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@code {
+    [Parameter]
+    public ProjectStructureProjectHierarchyDialogState? ProjectHierarchyDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseProjectHierarchy { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> ProjectHierarchySelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteProjectHierarchyCommand { get; set; }
+
+    [Parameter]
+    public ProjectStructureQuickActionDialogState? QuickActionDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseQuickActionDialog { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureQuickActionButton> ExecuteQuickAction { get; set; }
+
+    [Parameter]
+    public ProjectStructureNode? PreviewNode { get; set; }
+
+    [Parameter]
+    public EventCallback CloseAttachmentPreview { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureNode> OpenAttachmentLocally { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanShowLocalOpen { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, string> ResolveAttachmentDisplayName { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, string> ResolveAttachmentLeadCopy { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, AttachmentPreviewKind> ResolveAttachmentPreviewKind { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, string> ResolveAttachmentPreviewSource { get; set; } = default!;
+
+    private static ButtonStyle ResolveButtonStyle(string tone)
+    {
+        return tone switch
+        {
+            "danger" => ButtonStyle.Danger,
+            "warn" => ButtonStyle.Warning,
+            "mint" => ButtonStyle.Success,
+            "sky" => ButtonStyle.Info,
+            _ => ButtonStyle.Primary
+        };
+    }
+}

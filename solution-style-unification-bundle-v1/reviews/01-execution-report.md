@@ -34,6 +34,12 @@
 - `candoitall_solution_build` with `StopAndResume` succeeded for the repeated-pattern follow-up:
   - `op_2936d9edc1984f0abdd526a69d246568` => `Build succeeded`
 - Playwright MCP was attempted again on `http://127.0.0.1:5501/` and again failed with `EPERM` creating `C:\Windows\System32\.playwright-mcp`; real browser proof continued through `npx --yes --package @playwright/cli playwright-cli` with `18` saved screenshots and explicit overflow checks on the touched routes, panels, and modals.
+- `npm run build` in `C:\repositories\CanDoItAll\Tailwind` succeeded for the `ProjectStructurePage` follow-up after adding the shared `TreeView` component layer and again after repairing the support-panel mobile overflow.
+- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter ProjectStructurePageTests -v:minimal -nologo` succeeded twice for the `ProjectStructurePage` follow-up:
+  - initial refactor confirmation => `28/28 passed`
+  - final clean confirmation after the support-panel width fix and nullable guard => `28/28 passed`
+- `dotnet build C:\repositories\CanDoItAll\CanDoItAll.slnx -v:minimal -nologo` succeeded repeatedly for the `ProjectStructurePage` follow-up; one intermediate pass hit the expected file lock from the live `CanDoItAll.Web` host, then the clean follow-up pass succeeded after stopping the local app.
+- Playwright MCP was attempted first on `http://localhost:5032/projects/6edb658b-2a65-4e6d-bad7-74f26ff793df/structure` and again failed with `EPERM` creating `C:\Windows\System32\.playwright-mcp`; the workbench route was then browser-validated honestly through `npx --yes --package @playwright/cli playwright-cli`, including live interaction with the toolbox tree, selection panel, advanced detail preview, and narrow-width overflow checks.
 - `python C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed C:\repositories\CanDoItAll\solution-style-unification-bundle-v1` => `Bundle is valid for stage 'completed'`
 
 ## Browser Artifacts
@@ -102,6 +108,13 @@
 - `projects-detail-modal-wave6.png`
 - `projects-editor-modal-wave6.png`
 - `projects-hierarchy-modal-wave6.png`
+- `project-structure-page-wave.png`
+- `project-structure-page-node-selected-wave.png`
+- `project-structure-page-selection-expanded-wave.png`
+- `project-structure-page-selection-details-wave.png`
+- `project-structure-page-toolbox-wave.png`
+- `project-structure-page-mobile-wave.png`
+- `project-structure-page-desktop-final-wave.png`
 
 ## Subbundle Gate Results
 
@@ -111,6 +124,7 @@
 | `02-tailwind-component-layer-architecture-and-shared-css-imports` | `Passed` | `Passed` | `Yes` | `Passed` | `Tailwind/input.css` was split into imported foundation/layout/surface/typography/controls/forms/navigation files. Tailwind build passed. |
 | `03-baselib-primitive-alignment-and-wrapper-expansion` | `Passed` | `Passed` | `Yes` | `Passed` | BaseLib `Button`, `Card`, `FormField`, `PageHeader`, and shared wrapper usage were aligned with the semantic Tailwind layer and browser-smoked on dependent routes. |
 | `04-app-and-module-migration-from-duplicated-utilities-and-custom-css` | `Passed` | `Partially passed` | `Yes` | `Passed with follow-up` | High-value non-canvas routes, the shared shell, the project-structure MCP settings panel, and the reconnect overlay were migrated toward shared semantic classes, but some remaining non-canvas pages still contain raw utility duplication and are listed in residual follow-up. |
+| `05a-workbench-project-structure-page-refactor-and-validation` | `Passed` | `Passed` | `Yes` | `Passed` | `ProjectStructurePage` now delegates to focused workbench components, the toolbox runs on the shared `TreeView`, the selection preview uses a reflection-backed detail factory, and the mobile support-panel overflow found during browser proof was repaired before closure. |
 | `05-browser-validation-regression-repair-and-closure-audit` | `Passed` | `Partially passed` | `Yes` | `Passed with honest partial closure` | Playwright screenshots and managed builds were completed, including focused proof for the settings panel and the forced-open reconnect overlay. The original prompt is closed note by note below with explicit `Partially solved` status where remaining work still exists. |
 
 ## Browser Validation Analytics
@@ -128,6 +142,7 @@
 | `05-browser-validation-regression-repair-and-closure-audit` | `/activity`, `/automation`, `/projects`, `/settings` layout-wrapper follow-up | `1440x1200`, `390x960` | `playwright-cli open`, `goto`, `run-code`, `screenshot` | `activity-layout-wave5.png`, `activity-layout-wave5-mobile.png`, `automation-layout-wave5.png`, `automation-layout-wave5-mobile.png`, `projects-board-layout-wave5.png`, `projects-board-layout-wave5-mobile.png`, `projects-detail-layout-wave5.png`, `settings-project-structure-layout-wave5.png`, `settings-project-structure-layout-wave5-mobile.png` | `Passed with zero horizontal overflow on all checked surfaces` |
 | `05-browser-validation-regression-repair-and-closure-audit` | `/groups/actions`, `/groups/data-display`, `/groups/feedback`, `/groups/inputs` sandbox layout-wrapper follow-up | `1440x1200`, `390x960` | `playwright-cli open`, `goto`, `run-code`, `screenshot` | `sandbox-actions-layout-wave5.png`, `sandbox-data-display-layout-wave5.png`, `sandbox-feedback-layout-wave5.png`, `sandbox-inputs-layout-wave5.png`, `sandbox-inputs-layout-wave5-mobile.png` | `Passed with zero horizontal overflow on all checked surfaces` |
 | `05-browser-validation-regression-repair-and-closure-audit` | `/`, `/prompt-gallery`, `/resources`, `/activity`, `/automation`, `/validation`, `/test-lab`, `/settings`, `/projects` plus open project modals and the `Project Structure MCP` tab in the repeated-pattern follow-up | `1440x1200`, `390x960` | `playwright MCP navigate attempted then blocked by EPERM`, `playwright-cli open`, `goto`, `run-code`, `screenshot` | `home-layout-wave6.png`, `home-layout-wave6-mobile.png`, `prompt-gallery-layout-wave6.png`, `prompt-gallery-layout-wave6-mobile.png`, `resources-layout-wave6.png`, `activity-layout-wave6.png`, `automation-layout-wave6.png`, `validation-layout-wave6.png`, `testlab-layout-wave6.png`, `settings-layout-wave6.png`, `settings-layout-wave6-mobile.png`, `settings-project-structure-wave6.png`, `settings-project-structure-wave6-mobile.png`, `projects-board-wave6.png`, `projects-board-wave6-mobile.png`, `projects-detail-modal-wave6.png`, `projects-editor-modal-wave6.png`, `projects-hierarchy-modal-wave6.png` | `Passed with zero horizontal overflow on all checked surfaces and strict tracked patterns at 0` |
+| `05a-workbench-project-structure-page-refactor-and-validation` | `/projects/6edb658b-2a65-4e6d-bad7-74f26ff793df/structure` with toolbox, selection window, advanced detail preview, and narrow-width regression repair | `1440x1100`, `420x900` | `playwright MCP open attempted then blocked by EPERM`, `playwright-cli open`, `click`, `resize`, `eval`, `screenshot` | `project-structure-page-wave.png`, `project-structure-page-node-selected-wave.png`, `project-structure-page-selection-expanded-wave.png`, `project-structure-page-selection-details-wave.png`, `project-structure-page-toolbox-wave.png`, `project-structure-page-mobile-wave.png`, `project-structure-page-desktop-final-wave.png` | `Passed after repairing support-panel width constraints; final narrow-width proof reported body/doc scroll width 405 against innerWidth 420` |
 
 ## Analytics Review
 
@@ -145,6 +160,8 @@
 - Playwright MCP was attempted first again for the repeated-pattern follow-up and failed with the same `EPERM` session-folder issue; the route was still validated honestly through Playwright CLI with `18` saved screenshots and overflow checks.
 - Live browser proof in the component-wrapper wave surfaced two real regressions: `ProjectsPage.razor` string parameters were being passed as literals, and the Tailwind `output.css` bundle was stale. Both issues were repaired and revalidated before closure.
 - A watch bookkeeping issue appeared after one static-asset hot reload where the generation counter did not confirm even though Playwright showed the updated UI. That was neutralized by a final managed build plus post-build browser refresh.
+- The `ProjectStructurePage` follow-up also used honest Playwright CLI proof after the same MCP `EPERM` blocker, and that browser loop surfaced one real narrow-width regression: the outline support panel was sizing to content and drove the page to `scrollWidth 1444` at `420px`. The fix landed in shared `TreeView` constraints plus workbench support-panel width constraints, and the final narrow-width proof measured `bodyScrollWidth 405` and `docScrollWidth 405` against `innerWidth 420`.
+- The workbench follow-up now has direct proof for the rebuilt toolbox treeview, the extracted selection panel, and the reflection-backed advanced detail section instead of relying only on component tests.
 
 ## Raw Note Closure
 
@@ -192,6 +209,16 @@
 | `Locate repeating cda-stack-*, cda-form-grid*, repeated eyebrow text helpers, and similar layout/text shortcuts and replace them with Stack, Grid, or shared typography helpers` | `Solved for the strict target` | Workbook `layout-census-wave1.xlsx` sheets `Wave6Results`, `Wave6PatternBreakdown`, and `Wave6TouchedFiles` record the wave-start counts and the `0` end-state for every tracked pattern. |
 | `Tune the shared layout primitives instead of keeping legacy wrapper classes alive` | `Solved for this wave` | `LayoutPrimitives` gained `LayoutGap.Tiny`, `Stack` gained typed `GapScale` and `Section` support, `Grid` gained child `min-w-0`, and `Tailwind/layout/stacks.css` no longer carries the legacy `cda-stack-*` or `cda-form-grid*` aliases. |
 | `Validate the touched routes, panels, and modals with real browser proof and screenshots` | `Solved` | Managed build `op_2936d9edc1984f0abdd526a69d246568` passed and the repeated-pattern follow-up produced `18` browser screenshots across desktop and mobile states after Playwright MCP was honestly retried and blocked by `EPERM`. |
+
+## Workbench ProjectStructurePage Follow-Up Closure
+
+| Follow-up note | Status | Proof |
+| --- | --- | --- |
+| `ProjectStructurePage should replace raw div/button/span/p markup with shared components and prepared styles` | `Solved for the page file` | Case-sensitive page-file census after the refactor: `<div=0`, `<button=0`, `<span=0`, `<p =0`. The page now delegates toolbar, toolbox, support panels, canvas dialogs, and support dialogs to focused components. |
+| `Project Structure Toolbox must be rebuilt as a treeview with one-line rows (icon + text + tooltip)` | `Solved` | Shared BaseLib `TreeView`, `TreeViewNodeRow`, and `TreeViewPrimitives` were added and consumed by the toolbox. Browser proof shows grouped tree rows plus searchable catalog state: `project-structure-page-toolbox-wave.png`. |
+| `Split the page into logical subparts/components` | `Solved` | `ProjectStructurePage.razor` line count moved from `1775` at `HEAD` to `1464`, and `8` extracted workbench component files now carry `1020` lines of delegated UI surface. |
+| `Node data preview should be improved through typed or reflection-backed rendering` | `Solved` | `ProjectStructurePreviewFieldAttribute`, `ProjectStructureNodeDetailFactory`, and typed detail models now feed `ProjectStructureNodeDetailPreview`. Live proof exists in the expanded selection panel screenshot: `project-structure-page-selection-details-wave.png`. |
+| `Validate large and narrower viewports and repair any overlap or overflow` | `Solved` | Live browser proof found one real narrow-width regression in the outline support panel, repaired it, and reran the route. Final narrow-width measurement: `innerWidth 420`, `bodyScrollWidth 405`, `docScrollWidth 405`. |
 
 ## Step 0 Answers
 
@@ -251,6 +278,11 @@
   - `C:\repositories\CanDoItAll\output\spreadsheet\layout-census-wave1.xlsx` now includes sheets `Wave5Results` and `Wave5TouchedFiles`
 - Workbook refresh for the repeated-pattern follow-up wave:
   - `C:\repositories\CanDoItAll\output\spreadsheet\layout-census-wave1.xlsx` now includes sheets `Wave6Results`, `Wave6PatternBreakdown`, and `Wave6TouchedFiles`
+- Workbench `ProjectStructurePage` follow-up metrics:
+  - `ProjectStructurePage.razor` line count `1775 -> 1464`
+  - Extracted workbench component files: `8`
+  - Extracted component lines: `1020`
+  - Case-sensitive raw page tags after refactor: `<div 0`, `<button 0`, `<span 0`, `<p 0`
 - Component-wrapper wave metrics:
   - `ProjectsBoard.razor`: raw tracked tags `70 -> 21`, line count `296 -> 281`, wrapper usages `12`
   - `ProjectModalHost.razor`: raw tracked tags `81 -> 54`, line count `523 -> 509`, wrapper usages `19`

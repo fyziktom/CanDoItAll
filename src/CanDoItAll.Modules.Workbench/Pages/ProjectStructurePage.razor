@@ -1,4 +1,4 @@
-@page "/projects/{ProjectId:guid}/structure"
+﻿@page "/projects/{ProjectId:guid}/structure"
 @* codex-capsule
 kind: page
 name: ProjectStructurePage
@@ -37,7 +37,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 }
 else
 {
-    <div class="space-y-6 project-structure-page">
+    <Stack Gap="1.5rem"
+           Class="project-structure-page">
         <PageHeader Eyebrow="Workbench"
                     Title="@($"{surface.ProjectName} structure")"
                     Compact="true" />
@@ -57,197 +58,45 @@ else
                                  NodeOpened="HandleNodeOpenedAsync"
                                  StateChanged="HandleCanvasStateChangedAsync">
                     <ToolbarLeftContent>
-                        <div class="project-structure-toolbar-windows">
-                            <button type="button"
-                                    class="cw-toolbar-action project-structure-toolbar-toggle @(SelectionWindowState.IsVisible ? "is-active" : string.Empty)"
-                                    title="Show or hide the selection panel"
-                                    @onclick="@(() => ToggleWindowAsync(SelectionWindowKey))">
-                                Inspector
-                            </button>
-                            <button type="button"
-                                    class="cw-toolbar-action project-structure-toolbar-toggle @(HealthWindowState.IsVisible ? "is-active" : string.Empty)"
-                                    title="Show or hide canvas health"
-                                    @onclick="@(() => ToggleWindowAsync(HealthWindowKey))">
-                                Health
-                            </button>
-                            <button type="button"
-                                    class="cw-toolbar-action project-structure-toolbar-toggle @(ToolboxWindowState.IsVisible ? "is-active" : string.Empty)"
-                                    data-testid="project-structure-toolbox-toggle"
-                                    title="Show or hide the standard blocks toolbox"
-                                    @onclick="@(() => ToggleWindowAsync(ToolboxWindowKey))">
-                                Blocks
-                            </button>
-                            <button type="button"
-                                    class="cw-toolbar-action"
-                                    data-testid="project-structure-recompose-toolbar-button"
-                                    title="Redistribute descendants under the selected node without changing relationships."
-                                    disabled="@(!CanRecomposeSelectedBranch)"
-                                    @onclick="RecomposeSelectedBranchAsync">
-                                @(isSubtreeRecompositionInProgress ? "Recomposing" : "Recompose")
-                            </button>
-                        </div>
+                        <ProjectStructureToolbarActions SelectionWindowVisible="@SelectionWindowState.IsVisible"
+                                                       HealthWindowVisible="@HealthWindowState.IsVisible"
+                                                       ToolboxWindowVisible="@ToolboxWindowState.IsVisible"
+                                                       CanRecomposeSelectedBranch="@CanRecomposeSelectedBranch"
+                                                       IsSubtreeRecompositionInProgress="@isSubtreeRecompositionInProgress"
+                                                       ToggleSelectionWindow="ToggleSelectionWindowAsync"
+                                                       ToggleHealthWindow="ToggleHealthWindowAsync"
+                                                       ToggleToolboxWindow="ToggleToolboxWindowAsync"
+                                                       RecomposeBranch="RecomposeSelectedBranchAsync" />
                     </ToolbarLeftContent>
                     <OverlayContent>
                         @if (ToolboxWindowState.IsVisible)
                         {
-                            <CanvasFloatingWindow WindowId="@ToolboxWindowKey"
-                                                  TestId="project-structure-toolbox-window"
-                                                  AriaLabel="Project structure standard blocks toolbox"
-                                                  Kicker="Standard blocks"
-                                                  Title="Project structure toolbox"
-                                                  Summary="Search the shared block catalog, drag the window where you need it, and create against the currently selected source."
-                                                  BodyClass="project-structure-toolbox-window__body"
-                                                  DefaultPlacement="top-left"
-                                                  DefaultWidth="@ToolboxWindowDefaultWidth"
-                                                  DefaultHeight="420"
-                                                  MinWidth="320"
-                                                  MinHeight="240"
-                                                  MaxWidth="520"
-                                                  MaxHeight="520"
-                                                  State="@ToolboxWindowState"
-                                                  StateChanged="HandleToolboxWindowStateChangedAsync">
-                                <section class="cw-context-toolbox project-structure-toolbox"
-                                         data-testid="project-structure-standard-blocks-toolbox">
-                                    <div class="project-structure-toolbox__meta"
-                                         data-testid="project-structure-toolbox-meta">
-                                        <span class="cw-context-toolbox__count">@($"{ToolboxCreateGroups.Sum(group => group.Actions.Count)} items")</span>
-                                        <span class="cw-node__chip">@ToolboxSourceLabel</span>
-                                    </div>
-
-                                    <input class="cw-context-toolbox__search project-structure-toolbox__search"
-                                           type="search"
-                                           placeholder="Search blocks, files, runtime, or infrastructure"
-                                           @bind="structureToolboxSearchText"
-                                           @bind:event="oninput" />
-
-                                    <div class="cw-context-toolbox__body project-structure-toolbox__body">
-                                        <div class="cw-context-toolbox__sections project-structure-toolbox__sections">
-                                            @if (ToolboxCreateGroups.Count == 0)
-                                            {
-                                                <div class="cw-context-toolbox__empty">
-                                                    <strong>No blocks match the current search.</strong>
-                                                    <span>Clear the filter to restore the full catalog.</span>
-                                                </div>
-                                            }
-                                            else
-                                            {
-                                                @foreach (var group in ToolboxCreateGroups)
-                                                {
-                                                    <section class="cw-context-toolbox__section"
-                                                             data-testid="@($"project-structure-toolbox-group-shell-{group.Key}")">
-                                                        <button type="button"
-                                                                class="cw-context-toolbox__section-summary project-structure-toolbox__section-summary"
-                                                                data-testid="@($"project-structure-toolbox-group-{group.Key}")"
-                                                                aria-expanded="@(group.IsOpen ? "true" : "false")"
-                                                                @onclick="@(() => ExpandToolboxGroup(group.Key))">
-                                                            <span class="cw-context-toolbox__section-copy">
-                                                                <strong>@group.Label</strong>
-                                                                <small>@group.Description</small>
-                                                            </span>
-                                                            <span class="project-structure-toolbox__section-summary-meta">
-                                                                <span class="cw-context-toolbox__section-badge tone-accent">@group.Actions.Count</span>
-                                                                <span class="project-structure-toolbox__section-toggle-icon" aria-hidden="true">
-                                                                    <Icon Name="@(group.IsOpen ? "expand_less" : "expand_more")" />
-                                                                </span>
-                                                            </span>
-                                                        </button>
-                                                        @if (group.IsOpen)
-                                                        {
-                                                            <div class="cw-context-toolbox__section-body"
-                                                                 data-testid="@($"project-structure-toolbox-group-body-{group.Key}")">
-                                                                <div class="cw-context-toolbox__item-list">
-                                                                    @foreach (var action in group.Actions)
-                                                                    {
-                                                                        <button type="button"
-                                                                                class="cw-context-toolbox__item"
-                                                                                data-testid="@($"project-structure-toolbox-{action.ActionId}")"
-                                                                                @onclick="@(() => OpenCreateDialogAsync(action))">
-                                                                            <span class="cw-context-toolbox__item-icon">
-                                                                                <Icon Name="@action.Icon" />
-                                                                            </span>
-                                                                            <span class="cw-context-toolbox__item-body">
-                                                                                <strong>@action.Label</strong>
-                                                                                <small>@action.Description</small>
-                                                                            </span>
-                                                                        </button>
-                                                                    }
-                                                                </div>
-                                                            </div>
-                                                        }
-                                                    </section>
-                                                }
-                                            }
-                                        </div>
-                                    </div>
-                                </section>
-                            </CanvasFloatingWindow>
+                            <ProjectStructureToolboxWindow WindowId="@ToolboxWindowKey"
+                                                           TestId="project-structure-toolbox-window"
+                                                           AriaLabel="Project structure standard blocks toolbox"
+                                                           Kicker="Standard blocks"
+                                                           Title="Project structure toolbox"
+                                                           Summary="Search the shared block catalog, drag the window where you need it, and create against the currently selected source."
+                                                           State="@ToolboxWindowState"
+                                                           StateChanged="HandleToolboxWindowStateChangedAsync"
+                                                           Groups="@ToolboxCreateGroups"
+                                                           SearchText="@structureToolboxSearchText"
+                                                           SearchTextChanged="@((string? value) => structureToolboxSearchText = value ?? string.Empty)"
+                                                           SourceLabel="@ToolboxSourceLabel"
+                                                           DefaultWidth="@ToolboxWindowDefaultWidth"
+                                                           OnToggleGroup="ExpandToolboxGroup"
+                                                           OnOpenAction="HandleToolboxActionSelectedAsync" />
                         }
                         @if (HealthWindowState.IsVisible)
                         {
-                            <CanvasFloatingWindow WindowId="@HealthWindowKey"
-                                                  TestId="project-structure-validation-window"
-                                                  AriaLabel="Project structure canvas health"
-                                                  Kicker="Canvas health"
-                                                  Title="Canvas health"
-                                                  Summary="Validation pressure stays in the canvas now, but the toolbar safe zone remains clear."
-                                                  DefaultPlacement="top-left"
-                                                  DefaultWidth="320"
-                                                  DefaultHeight="326"
-                                                  MinWidth="280"
-                                                  MinHeight="220"
-                                                  State="@HealthWindowState"
-                                                  StateChanged="HandleHealthWindowStateChangedAsync">
-                                <section class="project-structure-validation-overlay"
-                                         aria-label="Project structure validation overlay"
-                                         data-testid="project-structure-validation-overlay">
-                                    <div class="project-structure-validation-overlay__header">
-                                        <p class="cw-panel-kicker">Project validation overlay</p>
-                                        <h3 class="cw-panel-title">Canvas health</h3>
-                                        <p class="cw-panel-copy">Surface dependency and review issues directly in the structure canvas without blocking the toolbar.</p>
-                                    </div>
-                                    <div class="project-structure-validation-overlay__metrics">
-                                        <div class="project-structure-validation-overlay__metric" data-validation-metric="blocked">
-                                            <span>Blocked</span>
-                                            <strong>@canvasValidationOverlay.BlockedCount</strong>
-                                        </div>
-                                        <div class="project-structure-validation-overlay__metric" data-validation-metric="review">
-                                            <span>Review</span>
-                                            <strong>@canvasValidationOverlay.ReviewCount</strong>
-                                        </div>
-                                        <div class="project-structure-validation-overlay__metric" data-validation-metric="priority">
-                                            <span>Priority</span>
-                                            <strong>@canvasValidationOverlay.PriorityCount</strong>
-                                        </div>
-                                        <div class="project-structure-validation-overlay__metric" data-validation-metric="selection">
-                                            <span>Selected issues</span>
-                                            <strong>@canvasValidationOverlay.SelectedIssueCount</strong>
-                                        </div>
-                                    </div>
-                                    @if (canvasValidationOverlay.SpotlightNodes.Count > 0)
-                                    {
-                                        <div class="project-structure-validation-overlay__spotlight">
-                                            <span>Spotlight</span>
-                                            <ul>
-                                                @foreach (var nodeTitle in canvasValidationOverlay.SpotlightNodes)
-                                                {
-                                                    <li>@nodeTitle</li>
-                                                }
-                                            </ul>
-                                        </div>
-                                    }
-                                    @if (selectedNode is not null && canvasValidationOverlay.SelectedIssueCount > 0)
-                                    {
-                                        <div class="project-structure-validation-overlay__actions">
-                                            <button type="button"
-                                                    class="cw-button"
-                                                    data-tone="accent"
-                                                    @onclick="RunSelectedValidationAsync">
-                                                Validate selected
-                                            </button>
-                                        </div>
-                                    }
-                                </section>
-                            </CanvasFloatingWindow>
+                            <ProjectStructureCanvasHealthWindow WindowId="@HealthWindowKey"
+                                                                TestId="project-structure-validation-window"
+                                                                AriaLabel="Project structure canvas health"
+                                                                State="@HealthWindowState"
+                                                                StateChanged="HandleHealthWindowStateChangedAsync"
+                                                                SummaryState="@canvasValidationOverlay"
+                                                                CanValidateSelected="@(selectedNode is not null && canvasValidationOverlay.SelectedIssueCount > 0)"
+                                                                ValidateSelected="RunSelectedValidationAsync" />
                         }
                         @if (SelectionWindowState.IsVisible)
                         {
@@ -285,412 +134,53 @@ else
                             </CanvasFloatingWindow>
                         }
                         <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
-                            @if (projectHierarchyDialog is not null)
-                            {
-                                <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseProjectHierarchyDialog">
-                                    <div class="project-structure-preview-dialog project-structure-summary-dialog"
-                                         role="dialog"
-                                         aria-modal="true"
-                                         aria-label="@projectHierarchyDialog.Title"
-                                         data-testid="project-structure-hierarchy-dialog"
-                                         @onclick:stopPropagation="true">
-                                        <div class="project-structure-preview-dialog__header">
-                                            <div class="project-structure-preview-dialog__copy">
-                                                <p class="cw-panel-kicker">Project hierarchy</p>
-                                                <h3 class="cw-panel-title">@projectHierarchyDialog.Title</h3>
-                                                <p class="cw-panel-copy">@projectHierarchyDialog.Copy</p>
-                                            </div>
-                                            <div class="project-structure-preview-dialog__actions">
-                                                <button type="button"
-                                                        class="cw-button"
-                                                        data-tone="ghost"
-                                                        @onclick="CloseProjectHierarchyDialog">
-                                                    Close
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="project-structure-preview-dialog__body">
-                                            @if (!string.IsNullOrWhiteSpace(projectHierarchyDialog.CurrentParentProjectTitle))
-                                            {
-                                                <div class="cw-panel-card">
-                                                    <p class="cw-panel-kicker">Current parent</p>
-                                                    <p class="cw-panel-copy">@projectHierarchyDialog.CurrentParentProjectTitle</p>
-                                                </div>
-                                            }
-                                            <div class="cw-panel-card">
-                                                <label class="cw-panel-copy" for="project-structure-hierarchy-project-select">
-                                                    Project
-                                                </label>
-                                                <select id="project-structure-hierarchy-project-select"
-                                                        class="cw-context-toolbox__search"
-                                                        data-testid="project-structure-hierarchy-project-select"
-                                                        value="@(projectHierarchyDialog.SelectedProjectId?.ToString() ?? string.Empty)"
-                                                        @onchange="HandleProjectHierarchySelectionChanged">
-                                                    <option value="">Select a project</option>
-                                                    @foreach (var projectOption in projectHierarchyDialog.AvailableProjects)
-                                                    {
-                                                        <option value="@projectOption.Id">
-                                                            @projectOption.Name
-                                                        </option>
-                                                    }
-                                                </select>
-                                            </div>
-                                            @if (!string.IsNullOrWhiteSpace(projectHierarchyDialog.Error))
-                                            {
-                                                <div class="project-structure-inline-feedback" data-tone="warn">
-                                                    @projectHierarchyDialog.Error
-                                                </div>
-                                            }
-                                        </div>
-                                        <div class="project-structure-preview-dialog__actions">
-                                            <button type="button"
-                                                    class="cw-button"
-                                                    data-tone="ghost"
-                                                    @onclick="CloseProjectHierarchyDialog">
-                                                Cancel
-                                            </button>
-                                            <button type="button"
-                                                    class="cw-button"
-                                                    data-tone="accent"
-                                                    data-testid="project-structure-hierarchy-submit"
-                                                    disabled="@(projectHierarchyDialog.AvailableProjects.Count == 0)"
-                                                    @onclick="ExecuteProjectHierarchyCommandAsync">
-                                                @projectHierarchyDialog.SubmitLabel
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                            @if (quickActionDialog is not null)
-                            {
-                                <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseQuickActionDialog">
-                                    <div class="project-structure-preview-dialog project-structure-quick-action-dialog"
-                                         role="dialog"
-                                         aria-modal="true"
-                                         aria-label="@($"{quickActionDialog.Title} quick actions")"
-                                         data-testid="project-structure-node-quick-actions"
-                                         @onclick:stopPropagation="true">
-                                        <div class="project-structure-preview-dialog__header">
-                                            <div class="project-structure-preview-dialog__copy">
-                                                <p class="cw-panel-kicker">Node quick actions</p>
-                                                <h3 class="cw-panel-title">@quickActionDialog.Title</h3>
-                                                <p class="cw-panel-copy">@quickActionDialog.Copy</p>
-                                            </div>
-
-                                            <div class="project-structure-preview-dialog__actions">
-                                                <span class="cw-node__chip">@quickActionDialog.NodeLabel</span>
-                                                <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseQuickActionDialog">Close</button>
-                                            </div>
-                                        </div>
-
-                                        <div class="project-structure-preview-dialog__body project-structure-quick-action-dialog__body">
-                                            <div class="project-structure-quick-action-grid">
-                                                @foreach (var action in new[] { quickActionDialog.EditAction, quickActionDialog.PrimaryAction })
-                                                {
-                                                    <button type="button"
-                                                            class="cw-button project-structure-quick-action-card"
-                                                            data-tone="@action.Tone"
-                                                            data-testid="@(action.ExecutionKind == ProjectStructureQuickActionExecutionKind.Edit ? "project-structure-quick-action-edit" : "project-structure-quick-action-primary")"
-                                                            disabled="@action.IsDisabled"
-                                                            @onclick="@(() => ExecuteQuickActionAsync(action))">
-                                                        <span class="project-structure-quick-action-card__icon" aria-hidden="true">
-                                                            <Icon Name="@action.Icon" />
-                                                        </span>
-                                                        <strong>@action.Label</strong>
-                                                        <small>@action.Description</small>
-                                                    </button>
-                                                }
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                            @if (previewNode is not null)
-                            {
-                                <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseAttachmentPreview">
-                                    <div class="project-structure-preview-dialog"
-                                         role="dialog"
-                                         aria-modal="true"
-                                         aria-label="@($"{ResolveAttachmentDisplayName(previewNode)} preview")"
-                                         @onclick:stopPropagation="true">
-                                        <div class="project-structure-preview-dialog__header">
-                                            <div class="project-structure-preview-dialog__copy">
-                                                <p class="cw-panel-kicker">Canvas preview</p>
-                                                <h3 class="cw-panel-title">@ResolveAttachmentDisplayName(previewNode)</h3>
-                                                <p class="cw-panel-copy">@ResolveAttachmentLeadCopy(previewNode)</p>
-                                            </div>
-
-                                            <div class="project-structure-preview-dialog__actions">
-                                                @if (CanShowLocalOpen(previewNode))
-                                                {
-                                                    <button type="button"
-                                                            class="cw-button"
-                                                            data-tone="primary"
-                                                            @onclick="@(() => OpenAttachmentLocallyAsync(previewNode))">
-                                                        Open locally
-                                                    </button>
-                                                }
-                                                <a class="cw-button"
-                                                   data-tone="ghost"
-                                                   href="@previewNode.Route"
-                                                   target="_blank"
-                                                   rel="noopener noreferrer">
-                                                    Open in new tab
-                                                </a>
-                                                <button type="button" class="cw-button" data-tone="primary" @onclick="CloseAttachmentPreview">Close</button>
-                                            </div>
-                                        </div>
-
-                                        <div class="project-structure-preview-dialog__body">
-                                            @switch (ResolveAttachmentPreviewKind(previewNode))
-                                            {
-                                                case AttachmentPreviewKind.Image:
-                                                    <img class="project-structure-preview-dialog__media"
-                                                         src="@previewNode.Route"
-                                                         alt="@previewNode.Title" />
-                                                    break;
-                                                case AttachmentPreviewKind.Video:
-                                                    <video class="project-structure-preview-dialog__media"
-                                                           controls
-                                                           preload="metadata"
-                                                           src="@previewNode.Route"></video>
-                                                    break;
-                                                case AttachmentPreviewKind.Audio:
-                                                    <audio class="project-structure-audio-preview project-structure-preview-dialog__audio"
-                                                           controls
-                                                           preload="metadata"
-                                                           src="@previewNode.Route"></audio>
-                                                    break;
-                                                case AttachmentPreviewKind.Document:
-                                                    <iframe class="project-structure-preview-dialog__frame"
-                                                            src="@ResolveAttachmentPreviewSource(previewNode)"
-                                                            title="@($"{ResolveAttachmentDisplayName(previewNode)} dialog preview")"></iframe>
-                                                    break;
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            }
+                            <ProjectStructureCanvasDialogs ProjectHierarchyDialog="@projectHierarchyDialog"
+                                                           CloseProjectHierarchy="CloseProjectHierarchyDialog"
+                                                           ProjectHierarchySelectionChanged="HandleProjectHierarchySelectionChanged"
+                                                           ExecuteProjectHierarchyCommand="ExecuteProjectHierarchyCommandAsync"
+                                                           QuickActionDialog="@quickActionDialog"
+                                                           CloseQuickActionDialog="CloseQuickActionDialog"
+                                                           ExecuteQuickAction="ExecuteQuickActionAsync"
+                                                           PreviewNode="@previewNode"
+                                                           CloseAttachmentPreview="CloseAttachmentPreview"
+                                                           OpenAttachmentLocally="OpenAttachmentLocallyAsync"
+                                                           CanShowLocalOpen="CanShowLocalOpen"
+                                                           ResolveAttachmentDisplayName="ResolveAttachmentDisplayName"
+                                                           ResolveAttachmentLeadCopy="ResolveAttachmentLeadCopy"
+                                                           ResolveAttachmentPreviewKind="ResolveAttachmentPreviewKind"
+                                                           ResolveAttachmentPreviewSource="ResolveAttachmentPreviewSource" />
                         </ProjectStructureDeferredSurface>
                     </OverlayContent>
                 </CanvasWorkbench>
             </Canvas>
             <Supporting>
-                <div class="cw-panel-card project-structure-support-card project-structure-support-card--outline">
-                    <p class="cw-panel-kicker">Outline</p>
-                    <h3 class="cw-panel-title">Project object index</h3>
-                    <div class="cw-list project-structure-outline-list">
-                        @foreach (var node in outlineNodes)
-                        {
-                            <button type="button"
-                                    class="cw-list-item @(selectedNodeIds.Contains(node.Id, StringComparer.Ordinal) ? "is-active" : string.Empty)"
-                                    @onclick="@(() => SelectNodeAsync(node.Id))">
-                                <strong>@node.Title</strong>
-                                <span>@($"{ProjectStructureCanvasCatalog.ResolveNodeLabel(node)} - {node.Status}")</span>
-                            </button>
-                        }
-                    </div>
-                </div>
-
-                <div class="cw-panel-card project-structure-support-card project-structure-support-card--health">
-                    <p class="cw-panel-kicker">Canvas coverage</p>
-                    <h3 class="cw-panel-title">Graph health</h3>
-                    <div class="cw-summary-grid">
-                        <div class="cw-summary-tile">
-                            <span>Total nodes</span>
-                            <strong>@surface.Nodes.Count</strong>
-                        </div>
-                        <div class="cw-summary-tile">
-                            <span>Total links</span>
-                            <strong>@surface.Links.Count</strong>
-                        </div>
-                        <div class="cw-summary-tile">
-                            <span>Selected</span>
-                            <strong>@selectedNodeIds.Count</strong>
-                        </div>
-                    </div>
-                    <p class="cw-panel-copy">Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.</p>
-                </div>
+                <ProjectStructureSupportPanels Nodes="@outlineNodes"
+                                              SelectedNodeIds="@selectedNodeIds"
+                                              OnSelectNode="SelectNodeAsync"
+                                              LinkCount="@surface.Links.Count" />
             </Supporting>
         </CanvasWorkbenchStage>
 
-    </div>
+    </Stack>
 }
 
 <ProjectStructureDeferredSurface RenderKey="@SupportDialogRenderKey">
-    @if (summaryDialog is not null)
-    {
-        <div class="project-structure-preview-backdrop" @onclick="CloseSummary">
-            <div class="project-structure-preview-dialog project-structure-summary-dialog"
-                 role="dialog"
-                 aria-modal="true"
-                 aria-label="@($"{summaryDialog.RootTitle} progress summary")"
-                 @onclick:stopPropagation="true">
-                <div class="project-structure-preview-dialog__header">
-                    <div class="project-structure-preview-dialog__copy">
-                        <p class="cw-panel-kicker">Progress summary</p>
-                        <h3 class="cw-panel-title">@summaryDialog.RootTitle</h3>
-                        <p class="cw-panel-copy">Hierarchy, inline status editing, and exports are generated from the same summary source.</p>
-                    </div>
-                    <div class="project-structure-preview-dialog__actions">
-                        <button type="button" class="cw-button" data-tone="accent" @onclick="ExportSummaryWorkbookAsync">Export XLSX</button>
-                        <button type="button" class="cw-button" data-tone="primary" @onclick="ExportSummaryGanttAsync">Export Gantt</button>
-                        <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseSummary">Close</button>
-                    </div>
-                </div>
-
-                <div class="project-structure-preview-dialog__body">
-                    <div class="cw-summary-grid">
-                        <div class="cw-summary-tile">
-                            <span>Done</span>
-                            <strong>@summaryDialog.Summary.CompletedCount</strong>
-                        </div>
-                        <div class="cw-summary-tile">
-                            <span>Active</span>
-                            <strong>@summaryDialog.Summary.ActiveCount</strong>
-                        </div>
-                        <div class="cw-summary-tile">
-                            <span>Blocked</span>
-                            <strong>@summaryDialog.Summary.BlockedCount</strong>
-                        </div>
-                        <div class="cw-summary-tile">
-                            <span>Review</span>
-                            <strong>@summaryDialog.Summary.ReviewCount</strong>
-                        </div>
-                        <div class="cw-summary-tile">
-                            <span>Undated</span>
-                            <strong>@summaryDialog.Summary.UndatedCount</strong>
-                        </div>
-                    </div>
-
-                    <div class="project-structure-summary-table">
-                        @foreach (var row in summaryDialog.Summary.Rows)
-                        {
-                            <div class="project-structure-summary-row" style="@($"--summary-depth:{row.Depth};")">
-                                <div class="project-structure-summary-row__node">
-                                    <strong>@row.Title</strong>
-                                    <span>@row.KindLabel</span>
-                                </div>
-                                <div class="project-structure-summary-row__meta">
-                                    <span>@row.ProgressLabel</span>
-                                    <span>@(row.StartUtc?.ToLocalTime().ToString("g") ?? "Undated")</span>
-                                </div>
-                                <select class="cw-context-toolbox__search project-structure-summary-row__select"
-                                        value="@row.Status"
-                                        @onchange="@(args => ChangeSummaryStatusAsync(row.NodeId, args))">
-                                    @foreach (var statusOption in SummaryStatusOptions)
-                                    {
-                                        <option value="@statusOption">@statusOption</option>
-                                    }
-                                </select>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
-    @if (pendingDeletePrompt is not null)
-    {
-        <div class="project-structure-preview-backdrop" @onclick="CancelDelete">
-            <div class="project-structure-preview-dialog project-structure-summary-dialog"
-                 role="dialog"
-                 aria-modal="true"
-                 aria-label="@($"Delete {pendingDeletePrompt.Title}")"
-                 @onclick:stopPropagation="true">
-                <div class="project-structure-preview-dialog__header">
-                    <div class="project-structure-preview-dialog__copy">
-                        <p class="cw-panel-kicker">Delete node</p>
-                        <h3 class="cw-panel-title">@pendingDeletePrompt.Title</h3>
-                        <p class="cw-panel-copy">@pendingDeletePrompt.ImpactCopy</p>
-                    </div>
-                    <div class="project-structure-preview-dialog__actions">
-                        <button type="button" class="cw-button" data-tone="danger" @onclick="ConfirmDeleteAsync">Delete</button>
-                        <button type="button" class="cw-button" data-tone="ghost" @onclick="CancelDelete">Cancel</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
-    @if (pendingTranscriptAction is not null)
-    {
-        <div class="project-structure-preview-backdrop" @onclick="CancelTranscriptAction">
-            <div class="project-structure-preview-dialog project-structure-summary-dialog"
-                 role="dialog"
-                 aria-modal="true"
-                 aria-label="@($"{ResolveTranscriptActionLabel(pendingTranscriptAction.ActionKind)} confirmation")"
-                 @onclick:stopPropagation="true">
-                <div class="project-structure-preview-dialog__header">
-                    <div class="project-structure-preview-dialog__copy">
-                        <p class="cw-panel-kicker">LLM confirmation</p>
-                        <h3 class="cw-panel-title">@ResolveTranscriptActionLabel(pendingTranscriptAction.ActionKind)</h3>
-                        <p class="cw-panel-copy">This action will send transcript content to an external or local provider. Confirmation and explicit provider selection are required.</p>
-                    </div>
-                    <div class="project-structure-preview-dialog__actions">
-                        <button type="button" class="cw-button" data-tone="accent" @onclick="ExecuteTranscriptActionAsync">Send request</button>
-                        <button type="button" class="cw-button" data-tone="ghost" @onclick="CancelTranscriptAction">Cancel</button>
-                    </div>
-                </div>
-
-                <div class="project-structure-preview-dialog__body">
-                    <label class="cw-field-shell">
-                        <span class="cw-panel-kicker">Provider profile</span>
-                        <select class="cw-context-toolbox__search"
-                                value="@pendingTranscriptAction.SelectedProviderId"
-                                @onchange="HandleTranscriptProviderChanged">
-                            <option value="">Select a provider</option>
-                            @foreach (var provider in pendingTranscriptAction.Providers)
-                            {
-                                <option value="@provider.Id">@($"{provider.Name} ({provider.ProviderKind})")</option>
-                            }
-                        </select>
-                    </label>
-
-                    @if (!string.IsNullOrWhiteSpace(pendingTranscriptAction.LastProviderName))
-                    {
-                        <div class="project-structure-inline-feedback" data-tone="accent">
-                            Last provider: @pendingTranscriptAction.LastProviderName
-                        </div>
-                    }
-
-                    @if (!string.IsNullOrWhiteSpace(pendingTranscriptAction.Error))
-                    {
-                        <div class="project-structure-inline-feedback" data-tone="warn">
-                            @pendingTranscriptAction.Error
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    }
-
-    @if (mermaidPreviewNode is not null)
-    {
-        <div class="project-structure-preview-backdrop" @onclick="CloseMermaidViewer">
-            <div class="project-structure-preview-dialog project-structure-summary-dialog"
-                 role="dialog"
-                 aria-modal="true"
-                 aria-label="@($"{mermaidPreviewNode.Title} Mermaid viewer")"
-                 @onclick:stopPropagation="true">
-                <div class="project-structure-preview-dialog__header">
-                    <div class="project-structure-preview-dialog__copy">
-                        <p class="cw-panel-kicker">Mermaid viewer</p>
-                        <h3 class="cw-panel-title">@mermaidPreviewNode.Title</h3>
-                        <p class="cw-panel-copy">Detected diagram type: @ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(mermaidPreviewNode.Notes)</p>
-                    </div>
-                    <div class="project-structure-preview-dialog__actions">
-                        <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseMermaidViewer">Close</button>
-                    </div>
-                </div>
-
-                <div class="project-structure-preview-dialog__body">
-                    <pre class="pf-components-toolbox__preview-content project-structure-mermaid-source">@mermaidPreviewNode.Notes</pre>
-                </div>
-            </div>
-        </div>
-    }
+    <ProjectStructureSupportDialogs SummaryDialog="@summaryDialog"
+                                    CloseSummary="CloseSummary"
+                                    ExportSummaryWorkbook="ExportSummaryWorkbookAsync"
+                                    ExportSummaryGantt="ExportSummaryGanttAsync"
+                                    ChangeSummaryStatus="HandleSummaryStatusChangedAsync"
+                                    SummaryStatuses="@SummaryStatusOptions"
+                                    PendingDeletePrompt="@pendingDeletePrompt"
+                                    ConfirmDelete="ConfirmDeleteAsync"
+                                    CancelDelete="CancelDelete"
+                                    PendingTranscriptAction="@pendingTranscriptAction"
+                                    ExecuteTranscriptAction="ExecuteTranscriptActionAsync"
+                                    CancelTranscriptAction="CancelTranscriptAction"
+                                    HandleTranscriptProviderChanged="HandleTranscriptProviderChanged"
+                                    MermaidPreviewNode="@mermaidPreviewNode"
+                                    CloseMermaidViewer="CloseMermaidViewer"
+                                    ResolveTranscriptActionLabel="ResolveTranscriptActionLabel" />
 </ProjectStructureDeferredSurface>
 
 @code {
@@ -1077,6 +567,11 @@ else
             BuildSimpleNoteTitle(request.Notes),
             string.Empty,
             request.Notes);
+        if (updatedNode is null)
+        {
+            return;
+        }
+
         await ApplySurfaceNodeUpdatesAsync([updatedNode]);
     }
 

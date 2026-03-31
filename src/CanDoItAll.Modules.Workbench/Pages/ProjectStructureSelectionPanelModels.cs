@@ -35,6 +35,7 @@ public sealed record ProjectStructureSelectionDetailState(
     bool ShowAdvancedDetails,
     string ArtifactKind,
     string LocationLabel,
+    IReadOnlyList<ProjectStructureDetailSection> DetailSections,
     IReadOnlyList<ProjectStructureNodeFact> Facts);
 
 public sealed record ProjectStructureAttachmentPreviewCardState(

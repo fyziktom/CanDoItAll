@@ -27,7 +27,7 @@ internal sealed record ProjectStructureCreateLeafDefinition(
     IReadOnlyList<CanvasWorkbenchInputField>? InputFields = null,
     IReadOnlyList<CanvasWorkbenchInputValue>? DefaultInputValues = null);
 
-internal sealed record ProjectStructureInspectorCreateGroup(
+public sealed record ProjectStructureInspectorCreateGroup(
     string Key,
     string Label,
     string Description,

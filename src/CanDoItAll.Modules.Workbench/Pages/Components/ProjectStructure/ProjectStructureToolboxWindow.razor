@@ -1,0 +1,146 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Components.Common
+
+<CanvasFloatingWindow WindowId="@WindowId"
+                      TestId="@TestId"
+                      AriaLabel="@AriaLabel"
+                      Kicker="@Kicker"
+                      Title="@Title"
+                      Summary="@Summary"
+                      BodyClass="project-structure-toolbox-window__body"
+                      DefaultPlacement="top-left"
+                      DefaultWidth="@DefaultWidth"
+                      DefaultHeight="420"
+                      MinWidth="320"
+                      MinHeight="240"
+                      MaxWidth="520"
+                      MaxHeight="520"
+                      State="@State"
+                      StateChanged="StateChanged">
+    <Stack GapScale="LayoutGap.Medium"
+           Class="cw-context-toolbox project-structure-toolbox"
+           data-testid="project-structure-standard-blocks-toolbox">
+        <Split Breakpoint="LayoutBreakpoint.Sm"
+               Gap="LayoutGap.Small"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap"
+               Class="project-structure-toolbox__meta"
+               data-testid="project-structure-toolbox-meta">
+            <Pill Tone="PillTone.Label" Text="@($"{ItemCount} items")" />
+            <Pill Tone="PillTone.Info" Text="@SourceLabel" />
+        </Split>
+
+        <TextBox Value="@SearchText"
+                 ValueChanged="SearchTextChanged"
+                 Placeholder="Search blocks, files, runtime, or infrastructure"
+                 Immediate="true"
+                 Class="project-structure-toolbox__search" />
+
+        @if (Groups.Count == 0)
+        {
+            <PanelCard Class="cw-context-toolbox__empty">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="No blocks match the current search." />
+                    <TextBlock TextStyle="TextStyle.Note" Value="Clear the filter to restore the full catalog." />
+                </Stack>
+            </PanelCard>
+        }
+        else
+        {
+            <div class="project-structure-toolbox__body">
+                <TreeView Items="@TreeNodes"
+                          Style="TreeViewStyle.Workbench"
+                          AriaLabel="Project structure toolbox groups"
+                          OnSelect="HandleNodeSelectedAsync"
+                          OnToggle="OnToggleGroup"
+                          Class="project-structure-toolbox__sections" />
+            </div>
+        }
+    </Stack>
+</CanvasFloatingWindow>
+
+@code {
+    [Parameter, EditorRequired]
+    public string WindowId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string TestId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Kicker { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Summary { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public CanvasWorkbenchWindowState State { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<CanvasWorkbenchWindowState> StateChanged { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProjectStructureInspectorCreateGroup> Groups { get; set; } = [];
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string?> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public string SourceLabel { get; set; } = string.Empty;
+
+    [Parameter]
+    public double DefaultWidth { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnToggleGroup { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnOpenAction { get; set; }
+
+    private int ItemCount => Groups.Sum(group => group.Actions.Count);
+
+    private IReadOnlyList<TreeViewNode> TreeNodes
+        => Groups
+            .Select(BuildGroupNode)
+            .ToList();
+
+    private TreeViewNode BuildGroupNode(ProjectStructureInspectorCreateGroup group)
+    {
+        return new TreeViewNode
+        {
+            Id = group.Key,
+            Text = group.Label,
+            Icon = group.Actions.FirstOrDefault()?.Icon ?? "folder",
+            Tooltip = group.Description,
+            IsExpanded = group.IsOpen,
+            IsSelectable = false,
+            BadgeText = group.Actions.Count.ToString(),
+            DataTestId = $"project-structure-toolbox-group-{group.Key}",
+            ChildrenDataTestId = $"project-structure-toolbox-group-body-{group.Key}",
+            Children = group.Actions
+                .Select(action => new TreeViewNode
+                {
+                    Id = action.ActionId,
+                    Text = action.Label,
+                    Icon = action.Icon,
+                    Tooltip = action.Description,
+                    DataTestId = $"project-structure-toolbox-{action.ActionId}"
+                })
+                .ToList()
+        };
+    }
+
+    private Task HandleNodeSelectedAsync(string nodeId)
+        => OnOpenAction.InvokeAsync(nodeId);
+}

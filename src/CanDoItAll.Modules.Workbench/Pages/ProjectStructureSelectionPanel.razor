@@ -112,18 +112,18 @@ else if (State.SelectedNode is not null)
             <p class="cw-panel-copy">@selectedNode.LeadText</p>
 
             <div class="cw-chip-row project-structure-selection-chip-row">
-                <span class="cw-node__chip project-structure-selection-chip project-structure-selection-chip--status"
+                <Pill Tone="PillTone.Neutral"
+                      Text="@selectedNode.Status"
+                      Class="project-structure-selection-chip project-structure-selection-chip--status"
                       data-testid="project-structure-selection-status"
-                      data-badge-style="Status">
-                    @selectedNode.Status
-                </span>
+                      data-badge-style="Status" />
                 @foreach (var badge in selectedNode.BadgePresentations)
                 {
-                    <span class="cw-node__chip project-structure-selection-chip"
+                    <Pill Tone="PillTone.Neutral"
+                          Text="@badge.Text"
+                          Class="project-structure-selection-chip"
                           data-testid="@badge.TestId"
-                          data-badge-style="@badge.Style">
-                        @badge.Text
-                    </span>
+                          data-badge-style="@badge.Style" />
                 }
             </div>
 
@@ -265,15 +265,15 @@ else if (State.SelectedNode is not null)
                  data-testid="project-structure-node-actions">
                 @foreach (var action in selectedNode.Actions)
                 {
-                    <button type="button"
-                            class="cw-button project-structure-node-action"
-                            data-tone="@action.Tone"
-                            @onclick="@(() => ExecuteInspectorActionAsync.InvokeAsync(action.ActionId))">
+                    <Button Variant="Variant.Outlined"
+                            ButtonStyle="@ResolveActionButtonStyle(action.Tone)"
+                            Class="project-structure-node-action"
+                            Click="@(() => ExecuteInspectorActionAsync.InvokeAsync(action.ActionId))">
                         <span class="project-structure-node-action__icon" aria-hidden="true">
                             <Icon Name="@action.Icon" />
                         </span>
                         <span>@action.Label</span>
-                    </button>
+                    </Button>
                 }
             </div>
         </div>
@@ -290,16 +290,13 @@ else if (State.SelectedNode is not null)
             <h3 class="cw-panel-title">Use the floating toolbox</h3>
             <p class="cw-panel-copy">The toolbox owns the long-form block catalog now. It keeps grouping, search, and scrolling inside the canvas while placement still resolves from <strong>@selectedNode.Title</strong>.</p>
             <div class="cw-chip-row">
-                <span class="cw-node__chip">Source: @selectedNode.Title</span>
-                <span class="cw-node__chip">Mode: child placement</span>
+                <Pill Tone="PillTone.Info" Text="@($"Source: {selectedNode.Title}")" />
+                <Pill Tone="PillTone.Label" Text="Mode: child placement" />
             </div>
             <div class="cw-button-row">
-                <button type="button"
-                        class="cw-button"
-                        data-tone="accent"
-                        @onclick="OpenToolboxAsync">
-                    Open standard blocks
-                </button>
+                <Button Text="Open standard blocks"
+                        ButtonStyle="ButtonStyle.Info"
+                        Click="OpenToolboxAsync" />
             </div>
         </div>
 
@@ -340,6 +337,11 @@ else if (State.SelectedNode is not null)
                             <strong>@selectedNode.LocationLabel</strong>
                         </div>
                     </div>
+
+                    @if (selectedNode.DetailSections.Count > 0)
+                    {
+                        <ProjectStructureNodeDetailPreview Sections="@selectedNode.DetailSections" />
+                    }
 
                     @if (selectedNode.Facts.Count > 0)
                     {
@@ -423,4 +425,16 @@ else if (State.SelectedNode is not null)
 
     private Task HandleSelectionBorderNameChangedAsync(ChangeEventArgs args)
         => SelectionBorderNameChangedAsync.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+
+    private static ButtonStyle ResolveActionButtonStyle(string tone)
+    {
+        return tone switch
+        {
+            "danger" => ButtonStyle.Danger,
+            "warn" => ButtonStyle.Warning,
+            "mint" => ButtonStyle.Success,
+            "sky" => ButtonStyle.Info,
+            _ => ButtonStyle.Base
+        };
+    }
 }

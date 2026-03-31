@@ -1,0 +1,72 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+
+<Cluster Gap="LayoutGap.Small"
+         Class="project-structure-toolbar-windows">
+    <Button Text="Inspector"
+            Variant="Variant.Text"
+            ButtonStyle="ButtonStyle.Base"
+            Class="@ResolveToolbarButtonCssClass(SelectionWindowVisible)"
+            title="Show or hide the selection panel"
+            Click="ToggleSelectionWindow" />
+
+    <Button Text="Health"
+            Variant="Variant.Text"
+            ButtonStyle="ButtonStyle.Base"
+            Class="@ResolveToolbarButtonCssClass(HealthWindowVisible)"
+            title="Show or hide canvas health"
+            Click="ToggleHealthWindow" />
+
+    <Button Text="Blocks"
+            Variant="Variant.Text"
+            ButtonStyle="ButtonStyle.Base"
+            Class="@ResolveToolbarButtonCssClass(ToolboxWindowVisible)"
+            data-testid="project-structure-toolbox-toggle"
+            title="Show or hide the standard blocks toolbox"
+            Click="ToggleToolboxWindow" />
+
+    <Button Text="@(IsSubtreeRecompositionInProgress ? "Recomposing" : "Recompose")"
+            Variant="Variant.Text"
+            ButtonStyle="ButtonStyle.Base"
+            Class="cw-toolbar-action"
+            data-testid="project-structure-recompose-toolbar-button"
+            title="Redistribute descendants under the selected node without changing relationships."
+            Disabled="@(!CanRecomposeSelectedBranch)"
+            Click="RecomposeBranch" />
+</Cluster>
+
+@code {
+    [Parameter]
+    public bool SelectionWindowVisible { get; set; }
+
+    [Parameter]
+    public bool HealthWindowVisible { get; set; }
+
+    [Parameter]
+    public bool ToolboxWindowVisible { get; set; }
+
+    [Parameter]
+    public bool CanRecomposeSelectedBranch { get; set; }
+
+    [Parameter]
+    public bool IsSubtreeRecompositionInProgress { get; set; }
+
+    [Parameter]
+    public EventCallback ToggleSelectionWindow { get; set; }
+
+    [Parameter]
+    public EventCallback ToggleHealthWindow { get; set; }
+
+    [Parameter]
+    public EventCallback ToggleToolboxWindow { get; set; }
+
+    [Parameter]
+    public EventCallback RecomposeBranch { get; set; }
+
+    private string ResolveToolbarButtonCssClass(bool isActive)
+    {
+        return isActive
+            ? "cw-toolbar-action project-structure-toolbar-toggle is-active"
+            : "cw-toolbar-action project-structure-toolbar-toggle";
+    }
+}

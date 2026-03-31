@@ -4,13 +4,13 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
-internal enum ProjectStructureProjectHierarchyDialogMode
+public enum ProjectStructureProjectHierarchyDialogMode
 {
     AddSubproject,
     ReconnectSubproject
 }
 
-internal sealed record ProjectStructureProjectHierarchyDialogState(
+public sealed record ProjectStructureProjectHierarchyDialogState(
     ProjectStructureProjectHierarchyDialogMode Mode,
     Guid SubjectProjectId,
     string SubjectProjectTitle,
@@ -40,7 +40,7 @@ internal sealed record ProjectStructureProjectHierarchyDialogState(
     };
 }
 
-internal sealed record ProjectStructureQuickActionDialogState(
+public sealed record ProjectStructureQuickActionDialogState(
     string NodeId,
     string Title,
     string NodeLabel,
@@ -48,7 +48,7 @@ internal sealed record ProjectStructureQuickActionDialogState(
     ProjectStructureQuickActionButton EditAction,
     ProjectStructureQuickActionButton PrimaryAction);
 
-internal sealed record ProjectStructureQuickActionButton(
+public sealed record ProjectStructureQuickActionButton(
     ProjectStructureQuickActionExecutionKind ExecutionKind,
     string Label,
     string Description,
@@ -58,26 +58,26 @@ internal sealed record ProjectStructureQuickActionButton(
     ProjectStructureCommandKind? CommandKind = null,
     bool IsDisabled = false);
 
-internal enum ProjectStructureQuickActionExecutionKind
+public enum ProjectStructureQuickActionExecutionKind
 {
     Edit,
     InspectorAction,
     CommandInNewTab
 }
 
-internal sealed record ProjectStructureDeletePrompt(
+public sealed record ProjectStructureDeletePrompt(
     string NodeId,
     string Title,
     int DescendantCount,
     bool RequiresConfirmation,
     string ImpactCopy);
 
-internal sealed record ProjectStructureSummaryDialogState(
+public sealed record ProjectStructureSummaryDialogState(
     string RootNodeId,
     string RootTitle,
     ProjectStructureSummary Summary);
 
-internal sealed record ProjectStructureTranscriptActionDialogState(
+public sealed record ProjectStructureTranscriptActionDialogState(
     string NodeId,
     string NodeTitle,
     ProjectLlmActionKind ActionKind,

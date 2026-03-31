@@ -188,14 +188,19 @@ public sealed class ProjectObjectMetadataEnvelope
 
 public sealed class ProjectMeetingMetadata
 {
+    [ProjectStructurePreviewField("Channel", 10)]
     public ProjectMeetingChannel Channel { get; set; }
 
+    [ProjectStructurePreviewField("Repeat", 20)]
     public ProjectRepeatCadence RepeatCadence { get; set; }
 
+    [ProjectStructurePreviewField("Address", 30)]
     public string Address { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Meeting URL", 40)]
     public string MeetingUrl { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Map URL", 50)]
     public string MapUrl { get; set; } = string.Empty;
 
     public List<Guid> ParticipantIds { get; set; } = [];
@@ -203,14 +208,17 @@ public sealed class ProjectMeetingMetadata
 
 public sealed class ProjectRecordingMetadata
 {
+    [ProjectStructurePreviewField("Source", 10)]
     public string RecordingSource { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Storage", 20)]
     public string StorageReference { get; set; } = string.Empty;
 
     public Guid? MeetingNodeArtifactId { get; set; }
 
     public Guid? TranscriptNodeArtifactId { get; set; }
 
+    [ProjectStructurePreviewField("Duration (min)", 30)]
     public int DurationMinutes { get; set; }
 }
 
@@ -220,31 +228,42 @@ public sealed class ProjectTranscriptMetadata
 
     public Guid? LastProviderProfileId { get; set; }
 
+    [ProjectStructurePreviewField("Last provider", 10)]
     public string LastProviderName { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Last action", 20)]
     public ProjectLlmActionKind? LastActionKind { get; set; }
 
     public string TranscriptText { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Summary", 30)]
     public string SummaryText { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("My tasks", 40)]
     public string MyTasksText { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Others to me", 50)]
     public string OthersDeliveriesText { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Generated", 60)]
     public DateTimeOffset? LastGeneratedAtUtc { get; set; }
 }
 
 public sealed class ProjectParticipantMetadata
 {
+    [ProjectStructurePreviewField("Kind", 10)]
     public ProjectParticipantKind ParticipantKind { get; set; }
 
+    [ProjectStructurePreviewField("Role", 20)]
     public string Role { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Organization", 30)]
     public string Organization { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Email", 40)]
     public string Email { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Phone", 50)]
     public string Phone { get; set; } = string.Empty;
 
     public Guid? ParentParticipantArtifactId { get; set; }
@@ -252,37 +271,49 @@ public sealed class ProjectParticipantMetadata
 
 public sealed class ProjectWorkItemMetadata
 {
+    [ProjectStructurePreviewField("Kind", 10)]
     public ProjectWorkItemKind WorkItemKind { get; set; }
 
     public Guid? AssigneeParticipantArtifactId { get; set; }
 
     public Guid? RepositoryResourceId { get; set; }
 
+    [ProjectStructurePreviewField("Send kind", 20)]
     public ProjectSendKind? SendKind { get; set; }
 
+    [ProjectStructurePreviewField("Channel", 30)]
     public ProjectMessageChannel DeliveryChannel { get; set; }
 
+    [ProjectStructurePreviewField("Amount", 40)]
     public decimal? Amount { get; set; }
 
+    [ProjectStructurePreviewField("Currency", 50)]
     public string CurrencyCode { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Description", 60)]
     public string Description { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Due", 70)]
     public DateTimeOffset? DueUtc { get; set; }
 }
 
 public sealed class ProjectRepositoryMetadata
 {
+    [ProjectStructurePreviewField("Mode", 10)]
     public ProjectRepositoryMode RepositoryMode { get; set; }
 
     public Guid? ResourceId { get; set; }
 
+    [ProjectStructurePreviewField("Repository URL", 20)]
     public string RepositoryUrl { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Local path", 30)]
     public string LocalPath { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Default branch", 40)]
     public string DefaultBranch { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Relative path", 50)]
     public string RelativePath { get; set; } = string.Empty;
 }
 
@@ -290,106 +321,149 @@ public sealed class ProjectFileMetadata
 {
     public ProjectFileSubtype FileSubtype { get; set; } = ProjectFileSubtype.Unknown;
 
+    [ProjectStructurePreviewField("Diagram", 10)]
     public MermaidDiagramKind MermaidDiagramKind { get; set; } = MermaidDiagramKind.Unknown;
 
+    [ProjectStructurePreviewField("Clipboard capture", 20)]
     public bool IsClipboardCapture { get; set; }
 
+    [ProjectStructurePreviewField("Source hint", 30)]
     public string SourceHint { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("External path", 40)]
     public string ExternalPath { get; set; } = string.Empty;
 }
 
 public sealed class ProjectScriptMetadata
 {
+    [ProjectStructurePreviewField("Kind", 10)]
     public ProjectScriptKind ScriptKind { get; set; }
 
+    [ProjectStructurePreviewField("Script path", 20)]
     public string ScriptPath { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Command", 30)]
     public string Command { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Arguments", 40)]
     public string Arguments { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Working directory", 50)]
     public string WorkingDirectory { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Terminal route", 60)]
     public string TerminalRoute { get; set; } = string.Empty;
 }
 
 public sealed class ProjectEnvironmentMetadata
 {
+    [ProjectStructurePreviewField("Kind", 10)]
     public ProjectEnvironmentKind EnvironmentKind { get; set; }
 
+    [ProjectStructurePreviewField("Python provider", 20)]
     public ProjectPythonProvider? PythonProvider { get; set; }
 
     public Guid? RepositoryResourceId { get; set; }
 
+    [ProjectStructurePreviewField("Environment name", 30)]
     public string EnvironmentName { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Project path", 40)]
     public string ProjectPath { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Launch profile", 50)]
     public string LaunchProfileName { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Runtime protocol", 60)]
     public ProjectRuntimeProtocol RuntimeProtocol { get; set; } = ProjectRuntimeProtocol.Https;
 
+    [ProjectStructurePreviewField("Localhost URL", 70)]
     public string LocalhostUrl { get; set; } = string.Empty;
 }
 
 public sealed class ProjectInfrastructureMetadata
 {
+    [ProjectStructurePreviewField("Kind", 10)]
     public ProjectInfrastructureKind InfrastructureKind { get; set; }
 
+    [ProjectStructurePreviewField("Host", 20)]
     public string Host { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Port", 30)]
     public int? Port { get; set; }
 
+    [ProjectStructurePreviewField("Address", 40)]
     public string Address { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Provider", 50)]
     public string ProviderName { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Provider URL", 60)]
     public string ProviderUrl { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Login URL", 70)]
     public string LoginUrl { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Account", 80)]
     public string AccountName { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("CPU cores", 90)]
     public decimal? CpuCores { get; set; }
 
+    [ProjectStructurePreviewField("Memory (GB)", 100)]
     public decimal? MemoryGb { get; set; }
 
+    [ProjectStructurePreviewField("Storage (GB)", 110)]
     public decimal? StorageGb { get; set; }
 
+    [ProjectStructurePreviewField("Monthly price", 120)]
     public decimal? MonthlyPrice { get; set; }
 
     public Guid? SecretReferenceArtifactId { get; set; }
 
+    [ProjectStructurePreviewField("Domain", 130)]
     public string DomainName { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Owner", 140)]
     public string OwnerName { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("DNS record type", 150)]
     public string DnsRecordType { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("DNS record value", 160)]
     public string DnsRecordValue { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Docker mode", 170)]
     public string DockerMode { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Proxy provider", 180)]
     public string ProxyProvider { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Database", 190)]
     public string DatabaseType { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Connection reference", 200)]
     public string ConnectionReference { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Folder path", 210)]
     public string FolderPath { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("AI reference kind", 220)]
     public ProjectAiReferenceKind? AiReferenceKind { get; set; }
 
+    [ProjectStructurePreviewField("AI reference URL", 230)]
     public string AiReferenceUrl { get; set; } = string.Empty;
 }
 
 public sealed class ProjectLinkMetadata
 {
+    [ProjectStructurePreviewField("URL", 10)]
     public string Url { get; set; } = string.Empty;
 
+    [ProjectStructurePreviewField("Channel", 20)]
     public ProjectMessageChannel Channel { get; set; }
 
+    [ProjectStructurePreviewField("Display hint", 30)]
     public string DisplayHint { get; set; } = string.Empty;
 }
 
