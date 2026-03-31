@@ -1,0 +1,29 @@
+@layer components {
+  .cda-stack-1 {
+    @apply space-y-1;
+  }
+
+  .cda-stack-2 {
+    @apply space-y-2;
+  }
+
+  .cda-stack-3 {
+    @apply space-y-3;
+  }
+
+  .cda-stack-4 {
+    @apply space-y-4;
+  }
+
+  .cda-form-grid {
+    @apply grid gap-4 md:grid-cols-2;
+  }
+
+  .cda-form-grid--triple {
+    @apply grid gap-4 md:grid-cols-3;
+  }
+
+  .cda-toolbar-row {
+    @apply flex flex-wrap items-center gap-2;
+  }
+}

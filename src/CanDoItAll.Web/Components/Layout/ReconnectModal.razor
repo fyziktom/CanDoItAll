@@ -1,30 +1,30 @@
 <script type="module" src="@Assets["Components/Layout/ReconnectModal.razor.js"]"></script>
 
-<dialog id="components-reconnect-modal" data-nosnippet>
-    <div class="components-reconnect-container">
-        <div class="components-rejoining-animation" aria-hidden="true">
+<dialog id="components-reconnect-modal" class="cda-reconnect-dialog" data-nosnippet>
+    <div class="cda-reconnect-stack">
+        <div class="components-rejoining-animation cda-reconnect-spinner" aria-hidden="true">
             <div></div>
             <div></div>
         </div>
-        <p class="components-reconnect-first-attempt-visible">
+        <p class="components-reconnect-first-attempt-visible cda-reconnect-copy">
             Rejoining the server...
         </p>
-        <p class="components-reconnect-repeated-attempt-visible">
+        <p class="components-reconnect-repeated-attempt-visible cda-reconnect-copy">
             Rejoin failed... trying again in <span id="components-seconds-to-next-attempt"></span> seconds.
         </p>
-        <p class="components-reconnect-failed-visible">
+        <p class="components-reconnect-failed-visible cda-reconnect-copy">
             Failed to rejoin.<br />Please retry or reload the page.
         </p>
-        <button id="components-reconnect-button" class="components-reconnect-failed-visible">
+        <button id="components-reconnect-button" class="components-reconnect-failed-visible cda-reconnect-action">
             Retry
         </button>
-        <p class="components-pause-visible">
+        <p class="components-pause-visible cda-reconnect-copy">
             The session has been paused by the server.
         </p>
-        <p class="components-resume-failed-visible">
+        <p class="components-resume-failed-visible cda-reconnect-copy">
             Failed to resume the session.<br />Please retry or reload the page.
         </p>
-        <button id="components-resume-button" class="components-pause-visible components-resume-failed-visible">
+        <button id="components-resume-button" class="components-pause-visible components-resume-failed-visible cda-reconnect-action">
             Resume
         </button>
     </div>

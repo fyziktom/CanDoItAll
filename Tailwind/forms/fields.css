@@ -1,0 +1,61 @@
+@layer components {
+  .cda-form-field {
+    @apply flex flex-col gap-2;
+  }
+
+  .cda-prefixed-field {
+    @apply relative block min-w-0 flex-1;
+  }
+
+  .cda-prefixed-field__prefix {
+    @apply pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400;
+  }
+
+  .cda-prefixed-field__suffix {
+    @apply pointer-events-none absolute inset-y-0 right-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400;
+  }
+
+  .cda-form-field__label {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-slate-500;
+  }
+
+  .cda-form-field__content {
+    @apply flex items-center gap-2;
+  }
+
+  .cda-field-label {
+    @apply mb-1 block text-sm font-medium text-slate-700;
+  }
+
+  .cda-input {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700;
+  }
+
+  .cda-input::placeholder {
+    color: #94a3b8;
+  }
+
+  .cda-input--textarea {
+    @apply leading-6;
+  }
+
+  .cda-input--mono {
+    @apply font-mono;
+  }
+
+  .cda-input--toolbar {
+    @apply shadow-sm shadow-slate-200/60;
+  }
+
+  .cda-inline-option {
+    @apply flex w-full items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700;
+  }
+
+  .cda-inline-option--muted {
+    @apply bg-slate-50;
+  }
+
+  .cda-code-input {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-700;
+  }
+}

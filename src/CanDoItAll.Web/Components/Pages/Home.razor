@@ -31,16 +31,11 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                     Title="Delivery control surface"
                     Description="Resume active work, reopen recent sessions, and move directly into the next project, validation, or prompt task.">
             <Actions>
-                <button type="button"
-                        class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-                        @onclick="@(() => Navigation.NavigateTo("/projects"))">
-                    New project
-                </button>
-                <button type="button"
-                        class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-                        @onclick="@(() => Navigation.NavigateTo("/projects"))">
-                    Open projects
-                </button>
+                <Button Text="New project"
+                        Click="@(() => Navigation.NavigateTo("/projects"))" />
+                <Button ButtonStyle="ButtonStyle.Light"
+                        Text="Open projects"
+                        Click="@(() => Navigation.NavigateTo("/projects"))" />
             </Actions>
         </PageHeader>
     </Header>
@@ -56,26 +51,30 @@ tests: component:HomePageTests, e2e:smoke-dashboard
         <div class="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
             <SectionCard Title="Quick actions" Description="Go directly to the next likely task instead of starting from a documentation-style overview.">
                 <div class="grid gap-3 sm:grid-cols-2">
-                    <button type="button" class="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300 hover:bg-white" @onclick="@(() => Navigation.NavigateTo("/projects"))">
-                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Projects</span>
-                        <span class="mt-2 block text-sm font-semibold text-slate-950">Start or reopen project work</span>
-                        <span class="mt-1 block text-sm leading-6 text-slate-600">Create a new project or continue a staged authoring session.</span>
-                    </button>
-                    <button type="button" class="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300 hover:bg-white" @onclick="@(() => Navigation.NavigateTo("/prompt-factory"))">
-                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Prompt factory</span>
-                        <span class="mt-2 block text-sm font-semibold text-slate-950">Open a prompt session</span>
-                        <span class="mt-1 block text-sm leading-6 text-slate-600">Move into the focused workbench for prompt assembly and review.</span>
-                    </button>
-                    <button type="button" class="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300 hover:bg-white" @onclick="@(() => Navigation.NavigateTo("/validation"))">
-                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Validation</span>
-                        <span class="mt-2 block text-sm font-semibold text-slate-950">Run a new validation</span>
-                        <span class="mt-1 block text-sm leading-6 text-slate-600">Launch a deterministic review and capture findings or decisions.</span>
-                    </button>
-                    <button type="button" class="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300 hover:bg-white" @onclick="@(() => Navigation.NavigateTo("/settings"))">
-                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Settings</span>
-                        <span class="mt-2 block text-sm font-semibold text-slate-950">Check providers and secrets</span>
-                        <span class="mt-1 block text-sm leading-6 text-slate-600">Confirm workspace defaults, provider health, and secret-backed connections.</span>
-                    </button>
+                    <div class="h-full">
+                        <SelectionListItem Eyebrow="Projects"
+                                           Title="Start or reopen project work"
+                                           Summary="Create a new project or continue a staged authoring session."
+                                           OnSelect="@(() => Navigation.NavigateTo("/projects"))" />
+                    </div>
+                    <div class="h-full">
+                        <SelectionListItem Eyebrow="Prompt factory"
+                                           Title="Open a prompt session"
+                                           Summary="Move into the focused workbench for prompt assembly and review."
+                                           OnSelect="@(() => Navigation.NavigateTo("/prompt-factory"))" />
+                    </div>
+                    <div class="h-full">
+                        <SelectionListItem Eyebrow="Validation"
+                                           Title="Run a new validation"
+                                           Summary="Launch a deterministic review and capture findings or decisions."
+                                           OnSelect="@(() => Navigation.NavigateTo("/validation"))" />
+                    </div>
+                    <div class="h-full">
+                        <SelectionListItem Eyebrow="Settings"
+                                           Title="Check providers and secrets"
+                                           Summary="Confirm workspace defaults, provider health, and secret-backed connections."
+                                           OnSelect="@(() => Navigation.NavigateTo("/settings"))" />
+                    </div>
                 </div>
             </SectionCard>
 
@@ -88,10 +87,10 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                 }
                 else
                 {
-                    <div class="space-y-3">
+                    <div class="cda-stack-3">
                         @foreach (var job in failedJobs.Take(3))
                         {
-                            <div class="rounded-[1.35rem] border border-amber-200 bg-amber-50/80 p-4">
+                            <div class="cda-panel-card border-amber-200 bg-amber-50/80">
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>
                                         <p class="text-sm font-semibold text-slate-950">@job.Description</p>
@@ -108,13 +107,10 @@ tests: component:HomePageTests, e2e:smoke-dashboard
 
                         @foreach (var recent in recentTabs.Take(2))
                         {
-                            <button type="button"
-                                    class="w-full rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300 hover:bg-white"
-                                    @onclick="@(() => Navigation.NavigateTo(recent.Route))">
-                                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Recent tab</span>
-                                <span class="mt-2 block text-sm font-semibold text-slate-950">@recent.Title</span>
-                                <span class="mt-1 block text-sm leading-6 text-slate-600">@recent.Route</span>
-                            </button>
+                            <SelectionListItem Eyebrow="Recent tab"
+                                               Title="@recent.Title"
+                                               Meta="@recent.Route"
+                                               OnSelect="@(() => Navigation.NavigateTo(recent.Route))" />
                         }
                     </div>
                 }
@@ -131,23 +127,19 @@ tests: component:HomePageTests, e2e:smoke-dashboard
                 }
                 else
                 {
-                    <div class="space-y-3">
+                    <div class="cda-stack-3">
                         @foreach (var tab in openWorkItems.Take(5))
                         {
-                            <button type="button"
-                                    class="w-full rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300 hover:bg-white"
-                                    @onclick="@(() => Navigation.NavigateTo(tab.Route))">
-                                <div class="flex flex-wrap items-center justify-between gap-3">
-                                    <div>
-                                        <p class="text-sm font-semibold text-slate-950">@tab.Title</p>
-                                        <p class="mt-1 text-xs text-slate-500">@tab.TabGroup / @tab.Route</p>
-                                    </div>
+                            <SelectionListItem Title="@tab.Title"
+                                               Meta="@($"{tab.TabGroup} / {tab.Route}")"
+                                               OnSelect="@(() => Navigation.NavigateTo(tab.Route))">
+                                <Status>
                                     @if (!string.IsNullOrWhiteSpace(tab.ProjectName))
                                     {
                                         <StatusBadge Tone="info" Text="@tab.ProjectName" />
                                     }
-                                </div>
-                            </button>
+                                </Status>
+                            </SelectionListItem>
                         }
                     </div>
                 }

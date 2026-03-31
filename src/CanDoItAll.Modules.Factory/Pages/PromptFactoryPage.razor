@@ -11,6 +11,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Factory.CanvasAdapters
+@using CanDoItAll.Modules.Factory.Pages.Components
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Resources
 @using CanDoItAll.Modules.Workspace
@@ -31,34 +32,11 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     @if (canvasSurface is not null)
     {
-        <section class="cw-panel-card pf-page-tabs">
-            <div class="pf-page-tabs__header">
-                <div class="pf-page-tabs__copy">
-                    <p class="cw-panel-kicker">Prompt Factory tabs</p>
-                    <h3 class="cw-panel-title">@ResolveSupportLaneTitle()</h3>
-                </div>
-                <p class="cw-panel-copy">@ResolveSupportLaneDescription()</p>
-            </div>
-            <div class="pf-page-tablist" role="tablist" aria-label="Prompt Factory workspaces">
-                @foreach (var item in SupportLaneTabs)
-                {
-                    var isSelected = string.Equals(item.Key, supportLaneTab, StringComparison.Ordinal);
-                    <button type="button"
-                            id="@($"{item.Key}-tab")"
-                            role="tab"
-                            aria-selected="@(isSelected ? "true" : "false")"
-                            aria-controls="@($"{item.Key}-panel")"
-                            class="pf-page-tab @(isSelected ? "is-active" : string.Empty)"
-                            @onclick="@(() => SetSupportLaneTabAsync(item.Key))">
-                        <span>@item.Label</span>
-                        @if (!string.IsNullOrWhiteSpace(item.Count))
-                        {
-                            <span class="pf-page-tab__count">@item.Count</span>
-                        }
-                    </button>
-                }
-            </div>
-        </section>
+        <PromptFactorySupportLaneTabs Items="SupportLaneTabs"
+                                      SelectedKey="supportLaneTab"
+                                      SelectedKeyChanged="SetSupportLaneTabAsync"
+                                      Title="@ResolveSupportLaneTitle()"
+                                      Description="@ResolveSupportLaneDescription()" />
 
         @if (IsSupportLaneTab(SupportLaneTabCanvas))
         {
@@ -87,79 +65,17 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                  NodeOpened="HandleCanvasNodeOpenedAsync"
                                  StateChanged="HandleCanvasStateChangedAsync">
                     <ToolbarLeftContent>
-                        <div class="pf-history-toolbar" role="group" aria-label="History controls">
-                            <button type="button"
-                                    class="cw-toolbar-action cw-toolbar-action--icon"
-                                    data-testid="prompt-factory-undo"
-                                    title="Undo (Ctrl/Cmd + Z)"
-                                    aria-label="Undo"
-                                    disabled="@(!CanUndo)"
-                                    @onclick="UndoAsync">
-                                <span class="cw-toolbar-symbol" aria-hidden="true">â†¶</span>
-                                <span class="sr-only">Undo</span>
-                            </button>
-                            <button type="button"
-                                    class="cw-toolbar-action cw-toolbar-action--icon"
-                                    data-testid="prompt-factory-redo"
-                                    title="Redo (Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y)"
-                                    aria-label="Redo"
-                                    disabled="@(!CanRedo)"
-                                    @onclick="RedoAsync">
-                                <span class="cw-toolbar-symbol" aria-hidden="true">â†·</span>
-                                <span class="sr-only">Redo</span>
-                            </button>
-                            <button type="button"
-                                    class="cw-toolbar-action pf-toolbar-toggle @(ComponentsToolboxWindowState.IsVisible ? "is-active" : string.Empty)"
-                                    data-testid="prompt-factory-components-toolbox-toggle"
-                                    title="Show or hide the components toolbox"
-                                    @onclick='@(() => ToggleCanvasWindowAsync(ComponentsToolboxWindowKey))'>
-                                Components
-                            </button>
-                        </div>
+                        <PromptFactoryHistoryToolbar CanUndo="CanUndo"
+                                                     CanRedo="CanRedo"
+                                                     IsToolboxVisible="ComponentsToolboxWindowState.IsVisible"
+                                                     Undo="UndoAsync"
+                                                     Redo="RedoAsync"
+                                                     ToggleToolbox="@(() => ToggleCanvasWindowAsync(ComponentsToolboxWindowKey))" />
                     </ToolbarLeftContent>
                     <OverlayContent>
-                        @if (canvasRecommendationOverlay.IsVisible)
-                        {
-                            <section class="pf-recommendation-overlay"
-                                     aria-label="Recommendation overlay"
-                                     data-testid="prompt-factory-recommendation-overlay">
-                                <div class="pf-recommendation-overlay__header">
-                                    <p class="cw-panel-kicker">@canvasRecommendationOverlay.Title</p>
-                                    <h3 class="cw-panel-title">Next canvas moves</h3>
-                                    <p class="cw-panel-copy">@canvasRecommendationOverlay.Description</p>
-                                </div>
-                                <div class="pf-recommendation-overlay__list">
-                                    @foreach (var item in canvasRecommendationOverlay.Items)
-                                    {
-                                        <article class="pf-recommendation-overlay__item"
-                                                 data-recommendation-tone="@item.Tone">
-                                            <strong>@item.Label</strong>
-                                            <span>@item.Detail</span>
-                                        </article>
-                                    }
-                                </div>
-                                <div class="pf-recommendation-overlay__actions">
-                                    @if (canvasRecommendationOverlay.CanApplyRecommendations)
-                                    {
-                                        <button type="button"
-                                                class="cw-button"
-                                                data-tone="accent"
-                                                @onclick="ApplyCanvasRecommendationsAsync">
-                                            Apply recommendations
-                                        </button>
-                                    }
-                                    @if (canvasRecommendationOverlay.CanBuildFlow)
-                                    {
-                                        <button type="button"
-                                                class="cw-button"
-                                                data-tone="ghost"
-                                                @onclick="BuildCanvasFlowAsync">
-                                            Build flow
-                                        </button>
-                                    }
-                                </div>
-                            </section>
-                        }
+                        <PromptFactoryRecommendationOverlay Overlay="canvasRecommendationOverlay"
+                                                            ApplyRecommendations="ApplyCanvasRecommendationsAsync"
+                                                            BuildFlow="BuildCanvasFlowAsync" />
 
                         @if (ComponentsToolboxWindowState.IsVisible)
                         {
@@ -351,8 +267,12 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             <h3 class="cw-panel-title">@($"{selectedCanvasNodeIds.Count} flow elements selected")</h3>
                             <p class="cw-panel-copy">Use the canvas to batch-move the current set. Inspector actions stay intentionally conservative so prompt-state mutations remain explicit.</p>
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearCanvasSelectionAsync">Clear selection</button>
-                                <button type="button" class="cw-button" data-tone="accent" @onclick="SelectRootNodeAsync">Focus session</button>
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Clear selection"
+                                                           Click="ClearCanvasSelectionAsync" />
+                                <PromptFactoryActionButton Tone="accent"
+                                                           Text="Focus session"
+                                                           Click="SelectRootNodeAsync" />
                             </div>
                         </div>
 
@@ -389,9 +309,15 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Selection</p>
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="accent" @onclick="ApplyRecommendationsAsync">Apply recommendations</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
-                                <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => HandleCanvasActionAsync("clear:blueprint", selectedCanvasNodeId))">Clear blueprint</button>
+                                <PromptFactoryActionButton Tone="accent"
+                                                           Text="Apply recommendations"
+                                                           Click="ApplyRecommendationsAsync" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Preview selection"
+                                                           Click="OpenSelectionPromptPreviewAsync" />
+                                <PromptFactoryActionButton Tone="warn"
+                                                           Text="Clear blueprint"
+                                                           Click="@(() => HandleCanvasActionAsync("clear:blueprint", selectedCanvasNodeId))" />
                             </div>
                         </div>
                     </div>
@@ -412,9 +338,15 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Selection</p>
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="mint" @onclick="BuildAsync">Build prompt</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
-                                <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => HandleCanvasActionAsync("clear:flow", selectedCanvasNodeId))">Clear flow</button>
+                                <PromptFactoryActionButton Tone="mint"
+                                                           Text="Build prompt"
+                                                           Click="BuildAsync" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Preview selection"
+                                                           Click="OpenSelectionPromptPreviewAsync" />
+                                <PromptFactoryActionButton Tone="warn"
+                                                           Text="Clear flow"
+                                                           Click="@(() => HandleCanvasActionAsync("clear:flow", selectedCanvasNodeId))" />
                             </div>
                         </div>
                     </div>
@@ -547,10 +479,18 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                 </div>
                             </div>
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabSetup))">Open Setup tab</button>
-                                <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSetupProfileAsync">Save setup</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="SelectRootNodeAsync">Focus session</button>
+                                <PromptFactoryActionButton Tone="accent"
+                                                           Text="Open Setup tab"
+                                                           Click="@(() => SetSupportLaneTabAsync(SupportLaneTabSetup))" />
+                                <PromptFactoryActionButton Tone="primary"
+                                                           Text="Save setup"
+                                                           Click="SaveSetupProfileAsync" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Preview selection"
+                                                           Click="OpenSelectionPromptPreviewAsync" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Focus session"
+                                                           Click="SelectRootNodeAsync" />
                             </div>
                         </div>
                     </div>
@@ -574,8 +514,12 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Selection</p>
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
-                                <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => HandleCanvasActionAsync($"input:remove:{selectedAttachmentNode.Id}", selectedCanvasNodeId))">Remove input</button>
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Preview selection"
+                                                           Click="OpenSelectionPromptPreviewAsync" />
+                                <PromptFactoryActionButton Tone="warn"
+                                                           Text="Remove input"
+                                                           Click="@(() => HandleCanvasActionAsync($"input:remove:{selectedAttachmentNode.Id}", selectedCanvasNodeId))" />
                             </div>
                         </div>
                     </div>
@@ -623,15 +567,29 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
 
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSelectedPromptNodeAsync">Save step</button>
-                                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => BranchAsync(selectedPromptNode.Id))">Branch</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
-                                <button type="button" class="cw-button" data-tone="mint" @onclick="@(() => SetPromptNodeStateAsync(selectedPromptNode.Id, PromptRunNodeState.Used))">Mark used</button>
-                                <button type="button" class="cw-button" data-tone="mint" @onclick="@(() => SetPromptNodeStateAsync(selectedPromptNode.Id, PromptRunNodeState.Validated))">Validate</button>
-                                <button type="button" class="cw-button" data-tone="warn" @onclick="@(() => SetPromptNodeStateAsync(selectedPromptNode.Id, PromptRunNodeState.Skipped))">Skip</button>
+                                <PromptFactoryActionButton Tone="primary"
+                                                           Text="Save step"
+                                                           Click="SaveSelectedPromptNodeAsync" />
+                                <PromptFactoryActionButton Tone="accent"
+                                                           Text="Branch"
+                                                           Click="@(() => BranchAsync(selectedPromptNode.Id))" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Preview selection"
+                                                           Click="OpenSelectionPromptPreviewAsync" />
+                                <PromptFactoryActionButton Tone="mint"
+                                                           Text="Mark used"
+                                                           Click="@(() => SetPromptNodeStateAsync(selectedPromptNode.Id, PromptRunNodeState.Used))" />
+                                <PromptFactoryActionButton Tone="mint"
+                                                           Text="Validate"
+                                                           Click="@(() => SetPromptNodeStateAsync(selectedPromptNode.Id, PromptRunNodeState.Validated))" />
+                                <PromptFactoryActionButton Tone="warn"
+                                                           Text="Skip"
+                                                           Click="@(() => SetPromptNodeStateAsync(selectedPromptNode.Id, PromptRunNodeState.Skipped))" />
                                 @if (selectedPromptNode.PromptArtifactId.HasValue)
                                 {
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => OpenPromptArtifact(selectedPromptNode.PromptArtifactId.Value))">Open prompt</button>
+                                    <PromptFactoryActionButton Tone="ghost"
+                                                               Text="Open prompt"
+                                                               Click="@(() => OpenPromptArtifact(selectedPromptNode.PromptArtifactId.Value))" />
                                 }
                             </div>
                         </div>
@@ -645,9 +603,15 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             <h3 class="cw-panel-title">@selectedBranchLabel</h3>
                             <p class="cw-panel-copy">@($"{selectedBranchNodes.Count} step(s) in this branch")</p>
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="accent" @onclick="BuildAsync">Build prompt</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="SelectRootNodeAsync">Focus session</button>
+                                <PromptFactoryActionButton Tone="accent"
+                                                           Text="Build prompt"
+                                                           Click="BuildAsync" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Preview selection"
+                                                           Click="OpenSelectionPromptPreviewAsync" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Focus session"
+                                                           Click="SelectRootNodeAsync" />
                             </div>
                         </div>
 
@@ -699,12 +663,24 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                 </div>
                             </div>
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabSetup))">Open Setup tab</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabGovernance))">Open Governance tab</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabAssembly))">Open Assembly tab</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabReview))">Open Review tab</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="OpenSelectionPromptPreviewAsync">Preview selection</button>
-                                <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session</button>
+                                <PromptFactoryActionButton Tone="accent"
+                                                           Text="Open Setup tab"
+                                                           Click="@(() => SetSupportLaneTabAsync(SupportLaneTabSetup))" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Open Governance tab"
+                                                           Click="@(() => SetSupportLaneTabAsync(SupportLaneTabGovernance))" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Open Assembly tab"
+                                                           Click="@(() => SetSupportLaneTabAsync(SupportLaneTabAssembly))" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Open Review tab"
+                                                           Click="@(() => SetSupportLaneTabAsync(SupportLaneTabReview))" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="Preview selection"
+                                                           Click="OpenSelectionPromptPreviewAsync" />
+                                <PromptFactoryActionButton Tone="primary"
+                                                           Text="Save session"
+                                                           Click="SaveSessionStateAsync" />
                             </div>
                         </div>
                     </div>
@@ -806,9 +782,15 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         </div>
                         <div class="cw-button-row">
-                            <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSetupProfileAsync">Save setup</button>
-                            <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabCanvas))">Open canvas</button>
-                            <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabGovernance))">Continue to governance</button>
+                            <PromptFactoryActionButton Tone="primary"
+                                                       Text="Save setup"
+                                                       Click="SaveSetupProfileAsync" />
+                            <PromptFactoryActionButton Tone="ghost"
+                                                       Text="Open canvas"
+                                                       Click="@(() => SetSupportLaneTabAsync(SupportLaneTabCanvas))" />
+                            <PromptFactoryActionButton Tone="ghost"
+                                                       Text="Continue to governance"
+                                                       Click="@(() => SetSupportLaneTabAsync(SupportLaneTabGovernance))" />
                         </div>
                     </section>
 
@@ -899,9 +881,15 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         </div>
 
                         <div class="cw-button-row">
-                            <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSetupProfileAsync">Save setup</button>
-                            <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SelectSetupNodeAsync())">Focus setup node</button>
-                            <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabGovernance))">Continue to governance</button>
+                            <PromptFactoryActionButton Tone="primary"
+                                                       Text="Save setup"
+                                                       Click="SaveSetupProfileAsync" />
+                            <PromptFactoryActionButton Tone="ghost"
+                                                       Text="Focus setup node"
+                                                       Click="@(() => SelectSetupNodeAsync())" />
+                            <PromptFactoryActionButton Tone="accent"
+                                                       Text="Continue to governance"
+                                                       Click="@(() => SetSupportLaneTabAsync(SupportLaneTabGovernance))" />
                         </div>
                     </section>
 
@@ -984,9 +972,15 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                             <div class="pf-next-step">Continue to <strong>Governance</strong> only after the base prompt shape is set.</div>
                                         </div>
                                         <div class="cw-button-row">
-                                            <button type="button" class="cw-button" data-tone="accent" @onclick="() => SetContextWorkspaceView(ContextViewStarters)">Open starters</button>
-                                            <button type="button" class="cw-button" data-tone="ghost" @onclick="() => SetContextWorkspaceView(ContextViewLibrary)">Open library</button>
-                                            <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => SetSupportLaneTabAsync(SupportLaneTabGovernance))">Go to governance</button>
+                                            <PromptFactoryActionButton Tone="accent"
+                                                                       Text="Open starters"
+                                                                       Click="@(() => SetContextWorkspaceView(ContextViewStarters))" />
+                                            <PromptFactoryActionButton Tone="ghost"
+                                                                       Text="Open library"
+                                                                       Click="@(() => SetContextWorkspaceView(ContextViewLibrary))" />
+                                            <PromptFactoryActionButton Tone="ghost"
+                                                                       Text="Go to governance"
+                                                                       Click="@(() => SetSupportLaneTabAsync(SupportLaneTabGovernance))" />
                                         </div>
                                     </article>
 
@@ -1085,11 +1079,15 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                                         <div class="cw-button-row">
                                                             @if (editor.BlueprintId == blueprint.Id)
                                                             {
-                                                                <button type="button" class="cw-button" data-tone="ghost" disabled>Selected</button>
+                                                                <PromptFactoryActionButton Tone="ghost"
+                                                                                           Text="Selected"
+                                                                                           Disabled="true" />
                                                             }
                                                             else
                                                             {
-                                                                <button type="button" class="cw-button" data-tone="accent" @onclick="() => SelectBlueprintByKeyAsync(blueprint.Key)">Use blueprint</button>
+                                                                <PromptFactoryActionButton Tone="accent"
+                                                                                           Text="Use blueprint"
+                                                                                           Click="@(() => SelectBlueprintByKeyAsync(blueprint.Key))" />
                                                             }
                                                         </div>
                                                     </article>
@@ -1134,11 +1132,15 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                                         <div class="cw-button-row">
                                                             @if (editor.FlowTemplateId == template.Id)
                                                             {
-                                                                <button type="button" class="cw-button" data-tone="ghost" disabled>Selected</button>
+                                                                <PromptFactoryActionButton Tone="ghost"
+                                                                                           Text="Selected"
+                                                                                           Disabled="true" />
                                                             }
                                                             else
                                                             {
-                                                                <button type="button" class="cw-button" data-tone="accent" @onclick="() => SelectFlowByKeyAsync(template.Key)">Use flow</button>
+                                                                <PromptFactoryActionButton Tone="accent"
+                                                                                           Text="Use flow"
+                                                                                           Click="@(() => SelectFlowByKeyAsync(template.Key))" />
                                                             }
                                                         </div>
                                                     </article>
@@ -1176,9 +1178,15 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         </div>
                         <div class="cw-button-row">
-                            <button type="button" class="cw-button" data-tone="accent" @onclick="ApplyRecommendationsAsync">Apply recommendations</button>
-                            <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session state</button>
-                            <button type="button" class="cw-button" data-tone="ghost" @onclick="CreateNewBlock">New block</button>
+                            <PromptFactoryActionButton Tone="accent"
+                                                       Text="Apply recommendations"
+                                                       Click="ApplyRecommendationsAsync" />
+                            <PromptFactoryActionButton Tone="primary"
+                                                       Text="Save session state"
+                                                       Click="SaveSessionStateAsync" />
+                            <PromptFactoryActionButton Tone="ghost"
+                                                       Text="New block"
+                                                       Click="CreateNewBlock" />
                         </div>
                     </section>
 
@@ -1270,8 +1278,12 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                 <h3 class="cw-panel-title">Flow templates stay visible, not overwhelming</h3>
                             </div>
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="CreateNewTemplate">New template</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => templateAdminExpanded = !templateAdminExpanded)">@(templateAdminExpanded ? "Hide editor" : "Open editor")</button>
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="New template"
+                                                           Click="CreateNewTemplate" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="@(templateAdminExpanded ? "Hide editor" : "Open editor")"
+                                                           Click="@(() => templateAdminExpanded = !templateAdminExpanded)" />
                             </div>
                         </div>
                         @if (templates.Count == 0)
@@ -1358,11 +1370,17 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                 <p class="cw-panel-copy">The editor is intentionally hidden by default. That keeps curation and authoring separate, which cuts a large chunk of page height from the normal workflow.</p>
                             </div>
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => blockAdminExpanded = !blockAdminExpanded)">@(blockAdminExpanded ? "Hide block editor" : "Open block editor")</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="CreateNewBlock">New block</button>
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="@(blockAdminExpanded ? "Hide block editor" : "Open block editor")"
+                                                           Click="@(() => blockAdminExpanded = !blockAdminExpanded)" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="New block"
+                                                           Click="CreateNewBlock" />
                                 @foreach (var block in blocks.Take(4))
                                 {
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => EditBlockAsync(block.Id))">@block.Name</button>
+                                    <PromptFactoryActionButton Tone="ghost"
+                                                               Text="@block.Name"
+                                                               Click="@(() => EditBlockAsync(block.Id))" />
                                 }
                             </div>
                         </div>
@@ -1412,7 +1430,9 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                     <input type="checkbox" @bind="blockEditor.IsRecommendedByDefault" />
                                 </label>
                                 <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="primary" @onclick="SaveBlockAsync">Save block</button>
+                                    <PromptFactoryActionButton Tone="primary"
+                                                               Text="Save block"
+                                                               Click="SaveBlockAsync" />
                                 </div>
                             </div>
                         }
@@ -1433,11 +1453,17 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                 <p class="cw-panel-copy">Template governance still exists, but it no longer expands into another full-length checklist unless the user opens it.</p>
                             </div>
                             <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => templateAdminExpanded = !templateAdminExpanded)">@(templateAdminExpanded ? "Hide template editor" : "Open template editor")</button>
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="CreateNewTemplate">New template</button>
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="@(templateAdminExpanded ? "Hide template editor" : "Open template editor")"
+                                                           Click="@(() => templateAdminExpanded = !templateAdminExpanded)" />
+                                <PromptFactoryActionButton Tone="ghost"
+                                                           Text="New template"
+                                                           Click="CreateNewTemplate" />
                                 @foreach (var template in templates.Take(4))
                                 {
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => EditTemplateAsync(template.Id))">@template.Name</button>
+                                    <PromptFactoryActionButton Tone="ghost"
+                                                               Text="@template.Name"
+                                                               Click="@(() => EditTemplateAsync(template.Id))" />
                                 }
                             </div>
                         </div>
@@ -1477,7 +1503,9 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                     </div>
                                 </div>
                                 <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="primary" @onclick="SaveTemplateAsync">Save template</button>
+                                    <PromptFactoryActionButton Tone="primary"
+                                                               Text="Save template"
+                                                               Click="SaveTemplateAsync" />
                                 </div>
                             </div>
                         }
@@ -1670,12 +1698,24 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             </div>
                         </div>
                         <div class="cw-button-row">
-                            <button type="button" class="cw-button" data-tone="accent" @onclick="BuildAsync">Build prompt</button>
-                            <button type="button" class="cw-button" data-tone="ghost" @onclick="CopyAsync">Copy</button>
-                            <button type="button" class="cw-button" data-tone="ghost" @onclick="ExportAsync">Export</button>
-                            <button type="button" class="cw-button" data-tone="primary" @onclick="SaveDraftAsync">Save draft</button>
-                            <button type="button" class="cw-button" data-tone="mint" @onclick="SaveFinalAsync">Save final</button>
-                            <button type="button" class="cw-button" data-tone="warn" @onclick="SendAsync">Send</button>
+                            <PromptFactoryActionButton Tone="accent"
+                                                       Text="Build prompt"
+                                                       Click="BuildAsync" />
+                            <PromptFactoryActionButton Tone="ghost"
+                                                       Text="Copy"
+                                                       Click="CopyAsync" />
+                            <PromptFactoryActionButton Tone="ghost"
+                                                       Text="Export"
+                                                       Click="ExportAsync" />
+                            <PromptFactoryActionButton Tone="primary"
+                                                       Text="Save draft"
+                                                       Click="SaveDraftAsync" />
+                            <PromptFactoryActionButton Tone="mint"
+                                                       Text="Save final"
+                                                       Click="SaveFinalAsync" />
+                            <PromptFactoryActionButton Tone="warn"
+                                                       Text="Send"
+                                                       Click="SendAsync" />
                         </div>
                     </section>
 
@@ -1785,300 +1825,31 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                     </section>
                 }
 
-                @* Legacy supporting layout retired after staged UX redesign.
-                {
-                <div class="cw-panel-card">
-                    <p class="cw-panel-kicker">Governed blocks</p>
-                    <h3 class="cw-panel-title">Prompt block selection</h3>
-                    <div class="cw-button-row">
-                        <button type="button" class="cw-button" data-tone="accent" @onclick="ApplyRecommendationsAsync">Apply recommendations</button>
-                        <button type="button" class="cw-button" data-tone="ghost" @onclick="CreateNewBlock">New block</button>
-                    </div>
-
-                    <div class="cw-list">
-                        @foreach (var block in blocks)
-                        {
-                            <label class="cw-list-item">
-                                <strong>@block.Name</strong>
-                                <span>@block.BlockKind Â· @block.Summary</span>
-                                <input type="checkbox"
-                                       checked="@editor.SelectedBlockIds.Contains(block.Id)"
-                                       @onchange="args => ToggleBlock(block.Id, ReadCheckboxValue(args))" />
-                            </label>
-                        }
-                    </div>
-
-                    <div class="cw-form-grid">
-                        <div class="cw-form-field">
-                            <label>Block name</label>
-                            <input class="cw-text-input" @bind="blockEditor.Name" />
-                        </div>
-                        <div class="cw-form-field">
-                            <label>Kind</label>
-                            <select class="cw-select" @bind="blockEditor.BlockKind">
-                                @foreach (var kind in Enum.GetValues<PromptBlockKind>())
-                                {
-                                    <option value="@kind">@kind</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="cw-form-field">
-                            <label>Summary</label>
-                            <textarea class="cw-textarea" @bind="blockEditor.Summary"></textarea>
-                        </div>
-                        <div class="cw-form-field">
-                            <label>Reusable content</label>
-                            <textarea class="cw-textarea" @bind="blockEditor.Content"></textarea>
-                        </div>
-                        <div class="cw-form-grid cw-form-grid--split">
-                            <div class="cw-form-field">
-                                <label>Prompt types</label>
-                                <input class="cw-text-input" @bind="blockEditor.PromptTypes" />
-                            </div>
-                            <div class="cw-form-field">
-                                <label>Blueprints</label>
-                                <input class="cw-text-input" @bind="blockEditor.Blueprints" />
-                            </div>
-                            <div class="cw-form-field">
-                                <label>Phases</label>
-                                <input class="cw-text-input" @bind="blockEditor.Phases" />
-                            </div>
-                        </div>
-                        <label class="cw-list-item">
-                            <strong>Recommended by default</strong>
-                            <span>Make this block part of the seeded governance set.</span>
-                            <input type="checkbox" @bind="blockEditor.IsRecommendedByDefault" />
-                        </label>
-                        <div class="cw-button-row">
-                            <button type="button" class="cw-button" data-tone="primary" @onclick="SaveBlockAsync">Save block</button>
-                            @foreach (var block in blocks.Take(6))
-                            {
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => EditBlockAsync(block.Id))">@block.Name</button>
-                            }
-                        </div>
-                    </div>
-                </div>
-
-                <div class="cw-panel-card">
-                    <p class="cw-panel-kicker">Flow templates</p>
-                    <h3 class="cw-panel-title">Template governance</h3>
-                    <div class="cw-button-row">
-                        <button type="button" class="cw-button" data-tone="ghost" @onclick="CreateNewTemplate">New template</button>
-                        @foreach (var template in templates.Take(6))
-                        {
-                            <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => EditTemplateAsync(template.Id))">@template.Name</button>
-                        }
-                    </div>
-
-                    <div class="cw-form-grid">
-                        <div class="cw-form-field">
-                            <label>Template name</label>
-                            <input class="cw-text-input" @bind="templateEditor.Name" />
-                        </div>
-                        <div class="cw-form-field">
-                            <label>Summary</label>
-                            <textarea class="cw-textarea" @bind="templateEditor.Summary"></textarea>
-                        </div>
-                        <div class="cw-form-field">
-                            <label>Recommended prompt types</label>
-                            <input class="cw-text-input" @bind="templateEditor.RecommendedPromptTypes" />
-                        </div>
-                        <div class="cw-list">
-                            @foreach (var block in blocks)
-                            {
-                                <label class="cw-list-item">
-                                    <strong>@block.Name</strong>
-                                    <span>@block.BlockKind</span>
-                                    <input type="checkbox"
-                                           checked="@templateEditor.SelectedBlockIds.Contains(block.Id)"
-                                           @onchange="args => ToggleTemplateBlock(block.Id, ReadCheckboxValue(args))" />
-                                </label>
-                            }
-                        </div>
-                        <button type="button" class="cw-button" data-tone="primary" @onclick="SaveTemplateAsync">Save template</button>
-                    </div>
-                </div>
-
-                <div class="cw-panel-card">
-                    <p class="cw-panel-kicker">Prompt library pack</p>
-                    <h3 class="cw-panel-title">Imported catalog</h3>
-                    <div class="cw-summary-grid">
-                        <div class="cw-summary-tile">
-                            <span>Components</span>
-                            <strong>@libraryCatalog.ComponentCount</strong>
-                        </div>
-                        <div class="cw-summary-tile">
-                            <span>Flows</span>
-                            <strong>@libraryCatalog.FlowCount</strong>
-                        </div>
-                        <div class="cw-summary-tile">
-                            <span>Blueprints</span>
-                            <strong>@libraryCatalog.BlueprintCount</strong>
-                        </div>
-                    </div>
-                    <div class="cw-list">
-                        @foreach (var group in libraryCatalog.Groups.OrderBy(item => item.Order))
-                        {
-                            <div class="cw-list-item">
-                                <strong>@group.Name</strong>
-                                <span>@($"{group.ComponentCount} components Â· {group.Purpose}")</span>
-                            </div>
-                        }
-                    </div>
-                </div>
-
-                <div class="cw-panel-card">
-                    <p class="cw-panel-kicker">Context assembly</p>
-                    <h3 class="cw-panel-title">Project resources</h3>
-                    <div class="cw-button-row">
-                        <button type="button" class="cw-button" data-tone="mint" data-testid="prompt-factory-build" @onclick="BuildAsync">Build prompt</button>
-                        <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session state</button>
-                        <button type="button" class="cw-button" data-tone="warn" data-testid="prompt-factory-reset-session" @onclick='@(() => HandleCanvasActionAsync("reset:session", "session-root"))'>Reset session</button>
-                    </div>
-
-                    @if (projectResources.Count == 0)
-                    {
-                        <p class="cw-panel-copy">Select a project to load linked resources for the prompt session.</p>
-                    }
-                    else
-                    {
-                        <div class="cw-list">
-                            @foreach (var resource in projectResources)
-                            {
-                                <label class="cw-list-item">
-                                    <strong>@resource.Name</strong>
-                                    <span>@resource.ResourceKind Â· @resource.ValidationStatus Â· @resource.Sensitivity</span>
-                                    <input type="checkbox"
-                                           checked="@editor.SelectedResourceIds.Contains(resource.Id)"
-                                           @onchange="args => ToggleResource(resource.Id, ReadCheckboxValue(args))" />
-                                </label>
-                            }
-                        </div>
-                    }
-                </div>
-
-                <div class="cw-panel-card">
-                    <p class="cw-panel-kicker">Prompt review</p>
-                    <h3 class="cw-panel-title">Generated prompt</h3>
-                    @if (editor.Warnings.Count > 0)
-                    {
-                        <div class="cw-list">
-                            @foreach (var warning in editor.Warnings)
-                            {
-                                <div class="cw-list-item">
-                                    <strong>Warning</strong>
-                                    <span>@warning</span>
-                                </div>
-                            }
-                        </div>
-                    }
-                    <div class="cw-form-field">
-                        <label>Prompt preview</label>
-                        <textarea class="cw-textarea" @bind="editor.GeneratedPrompt"></textarea>
-                    </div>
-                    <div class="cw-button-row">
-                        <button type="button" class="cw-button" data-tone="ghost" @onclick="CopyAsync">Copy</button>
-                        <button type="button" class="cw-button" data-tone="ghost" @onclick="ExportAsync">Export</button>
-                        <button type="button" class="cw-button" data-tone="primary" @onclick="SaveDraftAsync">Save draft</button>
-                        <button type="button" class="cw-button" data-tone="mint" @onclick="SaveFinalAsync">Save final</button>
-                        <button type="button" class="cw-button" data-tone="warn" @onclick="SendAsync">Send</button>
-                    </div>
-
-                    @if (!string.IsNullOrWhiteSpace(message))
-                    {
-                        <p class="@(isError ? "text-sm text-rose-700" : "text-sm text-emerald-700")">@message</p>
-                    }
-                </div>
-                *@
             </div>
         }
     }
 </div>
 
-@if (showPromptPreviewDialog)
-{
-    <div class="pf-prompt-modal-backdrop" @onclick="ClosePromptPreviewDialogAsync">
-        <div class="pf-prompt-modal"
-             role="dialog"
-             aria-modal="true"
-             aria-label="Prompt preview"
-             data-testid="prompt-factory-prompt-modal"
-             @onclick:stopPropagation="true">
-            <div class="pf-prompt-modal__header">
-                <div>
-                    <p class="cw-panel-kicker">@promptPreviewKicker</p>
-                    <h3 class="cw-panel-title">@promptPreviewTitle</h3>
-                    <p class="cw-panel-copy">@promptPreviewDescription</p>
-                </div>
-                <button type="button" class="cw-button" data-tone="ghost" @onclick="ClosePromptPreviewDialogAsync">Close</button>
-            </div>
-
-            <textarea class="cw-textarea pf-prompt-preview"
-                      readonly
-                      data-testid="prompt-factory-prompt-modal-text">@promptPreviewText</textarea>
-
-            <div class="cw-button-row">
-                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => CopyAsync(promptPreviewText))">Copy prompt</button>
-                <button type="button" class="cw-button" data-tone="ghost" @onclick="ClosePromptPreviewDialogAsync">Done</button>
-            </div>
-        </div>
-    </div>
-}
-
-@if (showComponentEditorModal)
-{
-    <div class="pf-prompt-modal-backdrop" @onclick="CloseComponentEditorModal">
-        <div class="pf-prompt-modal pf-component-editor-modal"
-             role="dialog"
-             aria-modal="true"
-             aria-label="Edit component text"
-             @onclick:stopPropagation="true">
-            <div class="pf-prompt-modal__header">
-                <div>
-                    <p class="cw-panel-kicker">Session prompt text</p>
-                    <h3 class="cw-panel-title">@selectedComponentNode?.Name</h3>
-                    <p class="cw-panel-copy">Edit the actual text that this session will use for the selected component.</p>
-                </div>
-                <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseComponentEditorModal">Close</button>
-            </div>
-            <textarea class="cw-textarea pf-component-editor-modal__textarea"
-                      @bind="SelectedComponentRenderedContent"></textarea>
-            <div class="cw-button-row">
-                <button type="button"
-                        class="cw-button"
-                        data-tone="accent"
-                        disabled="@(!SelectedComponentIsModified)"
-                        @onclick="ResetSelectedComponentRenderedContent">Reset</button>
-                <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseComponentEditorModal">Done</button>
-            </div>
-        </div>
-    </div>
-}
-
-@if (showImpactDialog)
-{
-    <div class="pf-prompt-modal-backdrop" @onclick="CloseImpactDialogAsync">
-        <div class="pf-prompt-modal pf-impact-modal"
-             role="dialog"
-             aria-modal="true"
-             aria-label="Confirm prompt-factory action"
-             @onclick:stopPropagation="true">
-            <div class="pf-prompt-modal__header">
-                <div>
-                    <p class="cw-panel-kicker">Confirm action</p>
-                    <h3 class="cw-panel-title">@impactDialogTitle</h3>
-                    <p class="cw-panel-copy">@impactDialogBody</p>
-                </div>
-                <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseImpactDialogAsync">Close</button>
-            </div>
-
-            <div class="cw-button-row">
-                <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseImpactDialogAsync">Cancel</button>
-                <button type="button" class="cw-button" data-tone="warn" @onclick="ConfirmImpactDialogAsync">@impactDialogConfirmLabel</button>
-            </div>
-        </div>
-    </div>
-}
+<PromptFactoryDialogs ShowPromptPreviewDialog="showPromptPreviewDialog"
+                      PromptPreviewKicker="promptPreviewKicker"
+                      PromptPreviewTitle="promptPreviewTitle"
+                      PromptPreviewDescription="promptPreviewDescription"
+                      PromptPreviewText="promptPreviewText"
+                      ClosePromptPreviewDialog="ClosePromptPreviewDialogAsync"
+                      CopyPrompt="@(() => CopyAsync(promptPreviewText))"
+                      ShowComponentEditorModal="showComponentEditorModal"
+                      SelectedComponentName="@selectedComponentNode?.Name"
+                      SelectedComponentRenderedContent="SelectedComponentRenderedContent"
+                      SelectedComponentRenderedContentChanged="@(value => { SelectedComponentRenderedContent = value; })"
+                      SelectedComponentIsModified="SelectedComponentIsModified"
+                      ResetSelectedComponentRenderedContent="ResetSelectedComponentRenderedContent"
+                      CloseComponentEditor="CloseComponentEditorModal"
+                      ShowImpactDialog="showImpactDialog"
+                      ImpactDialogTitle="impactDialogTitle"
+                      ImpactDialogBody="impactDialogBody"
+                      ImpactDialogConfirmLabel="impactDialogConfirmLabel"
+                      CloseImpactDialog="CloseImpactDialogAsync"
+                      ConfirmImpactDialog="ConfirmImpactDialogAsync" />
 
 @code {
     private static readonly string[] wizardSteps = ["Context", "Governance", "Assembly", "Review"];
