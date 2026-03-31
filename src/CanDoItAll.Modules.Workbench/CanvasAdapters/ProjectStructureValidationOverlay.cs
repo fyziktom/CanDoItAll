@@ -18,7 +18,7 @@ public static class ProjectStructureValidationOverlay
                 Tone = "danger",
                 Label = "Blocked",
                 Description = $"This {ProjectStructureCanvasCatalog.ResolveNodeLabel(node)} is marked '{status}'. Open validation tooling before continuing.",
-                Icon = "QA",
+                Icon = "fact_check",
                 ActionId = "validate"
             });
         }
@@ -31,7 +31,7 @@ public static class ProjectStructureValidationOverlay
                 Tone = "warn",
                 Label = "Review",
                 Description = "This validation artifact still needs a pass or decision.",
-                Icon = "QA",
+                Icon = "fact_check",
                 ActionId = "validate"
             });
         }
@@ -45,7 +45,7 @@ public static class ProjectStructureValidationOverlay
                 Tone = "warn",
                 Label = $"P{node.Priority}",
                 Description = "High-priority work item. Keep it visible while reflowing the structure.",
-                Icon = "!",
+                Icon = "priority_high",
                 ActionId = "open"
             });
         }

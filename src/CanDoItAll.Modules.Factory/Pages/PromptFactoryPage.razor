@@ -2069,7 +2069,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 Id = "session-root",
                 Family = "root",
                 Kind = "session",
-                Icon = "PF",
+                Icon = "auto_awesome",
                 Title = string.IsNullOrWhiteSpace(editor.SessionName) ? "Prompt session" : editor.SessionName,
                 Subtitle = string.IsNullOrWhiteSpace(editor.Phase) ? "Phase not selected" : editor.Phase,
                 LeadText = string.IsNullOrWhiteSpace(editor.DraftTitle) ? "Build the session to materialize prompt steps." : editor.DraftTitle,
@@ -2145,7 +2145,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 ParentId = parentCanvasId,
                 Family = "group",
                 Kind = "branch",
-                Icon = "BR",
+                Icon = "call_split",
                 Title = branch.BranchLabel,
                 Subtitle = branch.BranchKey,
                 LeadText = branch.Items.Count == 0 ? "Build the prompt to materialize steps in this branch." : $"{branch.Items.Count} step(s) in this branch.",
@@ -2186,7 +2186,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                     ParentId = groupId,
                     Family = "item",
                     Kind = "prompt step",
-                    Icon = "ST",
+                    Icon = "format_list_numbered",
                     Title = node.Title,
                     Subtitle = $"{node.BranchLabel} Â· step {node.Sequence}",
                     LeadText = string.IsNullOrWhiteSpace(node.Notes) ? "Prompt step ready for review." : node.Notes,
@@ -2259,7 +2259,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
     [
         new() { ActionId = "branch", Label = "Branch", Icon = "fork", Tone = "accent" },
         new() { ActionId = "mark-used", Label = "Used", Icon = "use", Tone = "mint" },
-        new() { ActionId = "validate-node", Label = "Validate", Icon = "qa", Tone = "mint" },
+        new() { ActionId = "validate-node", Label = "Validate", Icon = "fact_check", Tone = "mint" },
         new() { ActionId = "skip-node", Label = "Skip", Icon = "skip", Tone = "warn" },
         new() { ActionId = "open-prompt", Label = "Open", Icon = "open", Tone = "ghost" }
     ];

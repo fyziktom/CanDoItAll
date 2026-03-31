@@ -1,3 +1,5 @@
+@using CanDoItAll.Components.BaseLib
+
 <div class="pf-history-toolbar" role="group" aria-label="History controls">
     <button type="button"
             class="cw-toolbar-action cw-toolbar-action--icon"
@@ -6,7 +8,7 @@
             aria-label="Undo"
             disabled="@(!CanUndo)"
             @onclick="Undo">
-        <span class="cw-toolbar-symbol" aria-hidden="true">&#x21B6;</span>
+        <Icon Name="undo" />
         <span class="sr-only">Undo</span>
     </button>
     <button type="button"
@@ -16,7 +18,7 @@
             aria-label="Redo"
             disabled="@(!CanRedo)"
             @onclick="Redo">
-        <span class="cw-toolbar-symbol" aria-hidden="true">&#x21B7;</span>
+        <Icon Name="redo" />
         <span class="sr-only">Redo</span>
     </button>
     <button type="button"

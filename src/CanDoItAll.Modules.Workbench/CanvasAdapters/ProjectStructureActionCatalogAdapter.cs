@@ -22,7 +22,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             BuildProgressAction(),
             BuildMarkerAction(),
             BuildPriorityAction(),
-            new() { ActionId = "validate", Label = "Validate", MenuLabel = "Validate", Description = "Open project validation tooling from this node.", Icon = "qa", Tone = "mint" },
+            new() { ActionId = "validate", Label = "Validate", MenuLabel = "Validate", Description = "Open project validation tooling from this node.", Icon = "fact_check", Tone = "mint" },
             new() { ActionId = "test", Label = "Test", MenuLabel = "Test", Description = "Open test planning and evidence flows.", Icon = "test", Tone = "warn" },
             new() { ActionId = "delete", Label = "Delete", MenuLabel = "Delete", Description = "Delete this node, with confirmation when the impact is not trivial.", Icon = "delete", Tone = "danger" }
         };

@@ -66,7 +66,7 @@ public sealed class PromptFactorySessionGraphAdapter
                 ParentId = SessionRootCanvasNodeId,
                 Family = "special",
                 Kind = "blueprint",
-                Icon = "BP",
+                Icon = "design_services",
                 Title = blueprint.Name,
                 Subtitle = blueprint.PromptType,
                 LeadText = string.IsNullOrWhiteSpace(blueprint.Guidance) ? blueprint.Summary : blueprint.Guidance,
@@ -100,7 +100,7 @@ public sealed class PromptFactorySessionGraphAdapter
                 ParentId = SessionRootCanvasNodeId,
                 Family = "special",
                 Kind = "flow",
-                Icon = "FL",
+                Icon = "account_tree",
                 Title = flow.Name,
                 Subtitle = $"{flow.AgentSequence.Count} agent step(s)",
                 LeadText = flow.Summary,
@@ -140,7 +140,7 @@ public sealed class PromptFactorySessionGraphAdapter
                 ParentId = SessionRootCanvasNodeId,
                 Family = "group",
                 Kind = "components",
-                Icon = "CP",
+                Icon = "widgets",
                 Title = "Prompt components",
                 Subtitle = $"{selectedBlocks.Count} selected",
                 LeadText = "Prompt library components currently active in this session.",
@@ -179,7 +179,7 @@ public sealed class PromptFactorySessionGraphAdapter
                     ParentId = ComponentsRootCanvasNodeId,
                     Family = "group",
                     Kind = "component section",
-                    Icon = "SC",
+                    Icon = "grid_view",
                     Title = ResolveComponentSectionLabel(section.Key),
                     Subtitle = $"{section.Count()} component(s)",
                     LeadText = ResolveComponentSectionDescription(section.Key),
@@ -210,7 +210,7 @@ public sealed class PromptFactorySessionGraphAdapter
                         ParentId = sectionNodeId,
                         Family = "group",
                         Kind = "component group",
-                        Icon = "GR",
+                        Icon = "folder",
                         Title = ResolveLibraryGroupLabel(request.LibraryCatalog, blockGroup.Key),
                         Subtitle = $"{blockGroup.Count()} selected",
                         LeadText = ResolveLibraryGroupSummary(request.LibraryCatalog, blockGroup.Key),
@@ -236,7 +236,7 @@ public sealed class PromptFactorySessionGraphAdapter
                             ParentId = groupNodeId,
                             Family = "item",
                             Kind = "component",
-                            Icon = "BL",
+                            Icon = "extension",
                             Title = block.Name,
                             Subtitle = block.BlockKind.ToString(),
                             LeadText = ResolveComponentLeadText(block, customization),
@@ -280,7 +280,7 @@ public sealed class PromptFactorySessionGraphAdapter
                 Id = SessionRootCanvasNodeId,
                 Family = "root",
                 Kind = "session",
-                Icon = "PF",
+                Icon = "auto_awesome",
                 Title = string.IsNullOrWhiteSpace(request.Editor.SessionName) ? "Prompt session" : request.Editor.SessionName,
                 Subtitle = string.IsNullOrWhiteSpace(request.Editor.Phase) ? "Phase not selected" : request.Editor.Phase,
                 LeadText = string.IsNullOrWhiteSpace(request.Editor.DraftTitle) ? "Build the session to materialize prompt steps." : request.Editor.DraftTitle,
@@ -365,7 +365,7 @@ public sealed class PromptFactorySessionGraphAdapter
                     ParentId = groupId,
                     Family = "item",
                     Kind = "prompt step",
-                    Icon = "ST",
+                    Icon = "format_list_numbered",
                     Title = node.Title,
                     Subtitle = $"{node.BranchLabel} · step {node.Sequence}",
                     LeadText = string.IsNullOrWhiteSpace(node.Notes) ? "Prompt step ready for review." : node.Notes,
@@ -447,7 +447,7 @@ public sealed class PromptFactorySessionGraphAdapter
             ParentId = SessionRootCanvasNodeId,
             Family = "special",
             Kind = "setup",
-            Icon = "SET",
+            Icon = "settings",
             Title = "Session setup",
             Subtitle = request.SetupSummaryLine,
             LeadText = request.SetupLeadCopy,
@@ -506,7 +506,7 @@ public sealed class PromptFactorySessionGraphAdapter
             ParentId = SessionRootCanvasNodeId,
             Family = "group",
             Kind = "inputs",
-            Icon = "IN",
+            Icon = "input",
             Title = "Prompt inputs",
             Subtitle = $"{request.VisibleSessionAttachments.Count} attached",
             LeadText = "Files, media, links, and notes explicitly attached to the prompt session.",
@@ -738,7 +738,7 @@ public sealed class PromptFactorySessionGraphAdapter
         [
             new() { ActionId = "branch", Label = "Branch", Icon = "fork", Tone = "accent" },
             new() { ActionId = "mark-used", Label = "Used", Icon = "use", Tone = "mint" },
-            new() { ActionId = "validate-node", Label = "Validate", Icon = "qa", Tone = "mint" },
+            new() { ActionId = "validate-node", Label = "Validate", Icon = "fact_check", Tone = "mint" },
             new() { ActionId = "skip-node", Label = "Skip", Icon = "skip", Tone = "warn" },
             new() { ActionId = "open-prompt", Label = "Open", Icon = "open", Tone = "ghost" }
         ];
@@ -791,7 +791,7 @@ public sealed class PromptFactorySessionGraphAdapter
                 Tone = "warn",
                 Label = $"{request.MissingSetupFieldCount} missing",
                 Description = "Complete the repository, provider, and project setup fields before building or sending the session.",
-                Icon = "SET"
+                Icon = "settings"
             }
         ];
     }
@@ -815,7 +815,7 @@ public sealed class PromptFactorySessionGraphAdapter
                 Tone = "warn",
                 Label = "Missing blocks",
                 Description = "This flow template has no linked blocks, so the run graph will stay sparse until you add content.",
-                Icon = "QA"
+                Icon = "fact_check"
             }
         ];
     }
@@ -833,7 +833,7 @@ public sealed class PromptFactorySessionGraphAdapter
                 Tone = "warn",
                 Label = "Needs inputs",
                 Description = "One or more template values are still missing for this prompt component.",
-                Icon = "QA"
+                Icon = "fact_check"
             });
         }
 
@@ -856,7 +856,7 @@ public sealed class PromptFactorySessionGraphAdapter
                     Tone = "danger",
                     Label = "Failed",
                     Description = "This prompt step failed and should be validated or branched before reuse.",
-                    Icon = "QA",
+                    Icon = "fact_check",
                     ActionId = "validate-node"
                 }
             ],
@@ -869,7 +869,7 @@ public sealed class PromptFactorySessionGraphAdapter
                     Tone = "warn",
                     Label = "Review",
                     Description = "Prepared steps are ready for validation, preview, or branching.",
-                    Icon = "QA",
+                    Icon = "fact_check",
                     ActionId = "validate-node"
                 }
             ],

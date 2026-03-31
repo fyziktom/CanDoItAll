@@ -91,14 +91,8 @@
 }
 
 .cw-toolbar-action--icon .rz-icon,
-.cw-toolbar-action--icon .rz-icon-fallback,
-.cw-toolbar-symbol {
+.cw-toolbar-action--icon .rz-icon-fallback {
     font-size: 0.95rem;
-}
-
-.cw-toolbar-symbol {
-    font-weight: 800;
-    line-height: 1;
 }
 
 .cw-toolbar-action--primary {
@@ -114,7 +108,8 @@
     border-color: rgba(255, 255, 255, 0.28);
 }
 
-.cw-toolbar-action--primary .cw-toolbar-symbol {
+.cw-toolbar-action--primary .rz-icon,
+.cw-toolbar-action--primary .rz-icon-fallback {
     font-size: 1.4rem;
 }
 
@@ -323,7 +318,6 @@
 }
 
 .cw-floating-window__action .rz-icon,
-.cw-floating-window__action .rz-fa-icon,
 .cw-floating-window__action .rz-icon-fallback {
     color: #000;
     font-size: 0.9rem;

@@ -1,6 +1,6 @@
 @namespace CanDoItAll.Components
 @{
-    var iconCssClass = ResolveIconCssClass(Icon);
+    var iconName = ResolveIconName(Icon);
 }
 
 <button type="button"
@@ -12,9 +12,9 @@
     {
         <span class="cda-button__spinner"></span>
     }
-    else if (iconCssClass is not null)
+    else if (iconName is not null)
     {
-        <i class="@($"rz-fa-icon {iconCssClass}")" aria-hidden="true"></i>
+        <span class="rz-icon cda-material-icon material-icons" aria-hidden="true">@iconName</span>
     }
     else if (!string.IsNullOrWhiteSpace(Icon))
     {
@@ -71,11 +71,11 @@
         }
     }
 
-    private static string? ResolveIconCssClass(string? iconToken)
+    private static string? ResolveIconName(string? iconToken)
     {
-        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        if (MaterialIconCatalog.TryResolveIconName(iconToken, out var iconName))
         {
-            return cssClass;
+            return iconName;
         }
 
         return null;

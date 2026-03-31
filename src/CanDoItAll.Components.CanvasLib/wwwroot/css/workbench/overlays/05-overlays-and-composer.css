@@ -707,8 +707,7 @@
 }
 
 .cw-toolbar-action:disabled .rz-icon,
-.cw-toolbar-action:disabled .rz-icon-fallback,
-.cw-toolbar-action:disabled .cw-toolbar-symbol {
+.cw-toolbar-action:disabled .rz-icon-fallback {
     opacity: 0.42;
 }
 

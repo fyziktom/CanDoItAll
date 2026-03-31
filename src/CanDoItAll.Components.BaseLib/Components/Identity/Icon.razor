@@ -2,10 +2,10 @@
 @inherits StyledComponentBase
 @if (!string.IsNullOrWhiteSpace(Name))
 {
-    var iconCssClass = ResolveIconCssClass(Name);
-    if (iconCssClass is not null)
+    var iconName = ResolveIconName(Name);
+    if (iconName is not null)
     {
-        <i @attributes='BuildAttributes($"rz-icon rz-fa-icon {iconCssClass}")' aria-hidden="true"></i>
+        <span @attributes='BuildAttributes("rz-icon cda-material-icon material-icons")' aria-hidden="true">@iconName</span>
     }
     else
     {
@@ -17,20 +17,13 @@
     [Parameter]
     public string? Name { get; set; }
 
-    private static string? ResolveIconCssClass(string? iconToken)
+    private static string? ResolveIconName(string? iconToken)
     {
-        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        if (MaterialIconCatalog.TryResolveIconName(iconToken, out var iconName))
         {
-            return cssClass;
+            return iconName;
         }
 
         return null;
     }
 }
-
-
-
-
-
-
-

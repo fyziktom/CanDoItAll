@@ -23,13 +23,13 @@
                 var tabIndex = index;
                 var tab = items[tabIndex];
                 var isActive = tabIndex == EffectiveSelectedIndex;
-                var iconCssClass = ResolveIconCssClass(tab.Icon);
+                var iconName = ResolveIconName(tab.Icon);
                 <button type="button"
                         class="rounded-md px-3 py-1.5 text-sm font-medium @(isActive ? "bg-indigo-100 text-indigo-900" : "bg-slate-100 text-slate-700")"
                         @onclick="() => SelectTabAsync(tabIndex)">
-                    @if (iconCssClass is not null)
+                    @if (iconName is not null)
                     {
-                        <i class="@($"rz-fa-icon {iconCssClass}")" aria-hidden="true"></i>
+                        <span class="rz-icon cda-material-icon material-icons" aria-hidden="true">@iconName</span>
                     }
                     else if (!string.IsNullOrWhiteSpace(tab.Icon))
                     {
@@ -117,11 +117,11 @@
         await SelectedIndexChanged.InvokeAsync(SelectedIndex);
     }
 
-    private static string? ResolveIconCssClass(string? iconToken)
+    private static string? ResolveIconName(string? iconToken)
     {
-        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        if (MaterialIconCatalog.TryResolveIconName(iconToken, out var iconName))
         {
-            return cssClass;
+            return iconName;
         }
 
         return null;

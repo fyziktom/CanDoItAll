@@ -13,7 +13,7 @@
         @foreach (var action in Snapshot.Actions)
         {
             <div class="cw-preview-menu__item">
-                <span class="cw-preview-menu__icon">@(!string.IsNullOrWhiteSpace(action.Icon) ? action.Icon : ">")</span>
+                <Icon Name="@(string.IsNullOrWhiteSpace(action.Icon) ? "arrow_forward" : action.Icon)" class="cw-preview-menu__icon" />
                 <span class="cw-preview-menu__label">@action.Label</span>
                 @if (action.Children.Count > 0)
                 {

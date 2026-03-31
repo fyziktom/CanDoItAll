@@ -1,7 +1,7 @@
 @namespace CanDoItAll.Components.BaseLib
 @inherits StyledComponentBase
 @{
-    var iconCssClass = ResolveIconCssClass(Icon);
+    var iconName = ResolveIconName(Icon);
 }
 
 @if (IsAnchor)
@@ -12,7 +12,7 @@
        aria-disabled="@IsDisabled"
        @attributes="BuildAttributes(ResolveButtonCssClass())"
        @onclick="OnClickAsync">
-        @RenderButtonContent(iconCssClass)
+        @RenderButtonContent(iconName)
     </a>
 }
 else
@@ -21,7 +21,7 @@ else
             disabled="@IsDisabled"
             @attributes="BuildAttributes(ResolveButtonCssClass())"
             @onclick="OnClickAsync">
-        @RenderButtonContent(iconCssClass)
+        @RenderButtonContent(iconName)
     </button>
 }
 
@@ -86,11 +86,11 @@ else
         }
     }
 
-    private static string? ResolveIconCssClass(string? iconToken)
+    private static string? ResolveIconName(string? iconToken)
     {
-        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        if (MaterialIconCatalog.TryResolveIconName(iconToken, out var resolvedIconName))
         {
-            return cssClass;
+            return resolvedIconName;
         }
 
         return null;
@@ -129,7 +129,7 @@ else
         return $"rz-button cda-button {ResolveSizeCssClass()} {ResolveVariantCssClass()} {ResolveToneCssClass()}";
     }
 
-    private RenderFragment RenderButtonContent(string? iconCssClass)
+    private RenderFragment RenderButtonContent(string? iconName)
     {
         return builder =>
         {
@@ -141,11 +141,12 @@ else
                 builder.AddAttribute(sequence++, "class", "cda-button__spinner");
                 builder.CloseElement();
             }
-            else if (iconCssClass is not null)
+            else if (iconName is not null)
             {
-                builder.OpenElement(sequence++, "i");
-                builder.AddAttribute(sequence++, "class", $"rz-fa-icon {iconCssClass}");
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "rz-icon cda-material-icon material-icons");
                 builder.AddAttribute(sequence++, "aria-hidden", "true");
+                builder.AddContent(sequence++, iconName);
                 builder.CloseElement();
             }
             else if (!string.IsNullOrWhiteSpace(Icon))

@@ -19,19 +19,16 @@
                       MaxHeight="520"
                       State="@State"
                       StateChanged="StateChanged">
+                      <div>
+
     <Stack GapScale="LayoutGap.Medium"
            Class="cw-context-toolbox project-structure-toolbox"
            data-testid="project-structure-standard-blocks-toolbox">
-        <Split Breakpoint="LayoutBreakpoint.Sm"
-               Gap="LayoutGap.Small"
-               AlignItems="AlignItems.Center"
-               JustifyContent="JustifyContent.SpaceBetween"
-               Wrap="FlexWrap.Wrap"
-               Class="project-structure-toolbox__meta"
-               data-testid="project-structure-toolbox-meta">
-            <Pill Tone="PillTone.Label" Text="@($"{ItemCount} items")" />
-            <Pill Tone="PillTone.Info" Text="@SourceLabel" />
-        </Split>
+
+            <Stack Orientation="Orientation.Horizontal" Gap="1rem">
+                <Pill Tone="PillTone.Info" Text="@SourceLabel" />
+                <Pill Tone="PillTone.Label" Text="@($"{ItemCount} items")" />
+            </Stack>
 
         <TextBox Value="@SearchText"
                  ValueChanged="SearchTextChanged"
@@ -60,6 +57,8 @@
             </div>
         }
     </Stack>
+    
+    </div>
 </CanvasFloatingWindow>
 
 @code {

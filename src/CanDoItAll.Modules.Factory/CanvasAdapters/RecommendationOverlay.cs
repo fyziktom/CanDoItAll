@@ -93,7 +93,7 @@ public static class RecommendationOverlay
                 Description = string.IsNullOrWhiteSpace(request.Editor.WarningSummary)
                     ? request.Editor.Warnings[0]
                     : request.Editor.WarningSummary,
-                Icon = "!",
+                Icon = "priority_high",
                 ActionId = "apply-recommendations"
             }
         ];
@@ -115,7 +115,7 @@ public static class RecommendationOverlay
                 Tone = "accent",
                 Label = "Recommended flow",
                 Description = $"This blueprint prefers '{blueprint.RecommendedFlowKey}'. Apply recommendations to sync blocks and flow.",
-                Icon = "REC",
+                Icon = "auto_awesome",
                 ActionId = "apply-recommendations"
             }
         ];
@@ -137,7 +137,7 @@ public static class RecommendationOverlay
                 Tone = "accent",
                 Label = "Recommended",
                 Description = "This block is part of the recommended baseline for the current blueprint or phase.",
-                Icon = "REC"
+                Icon = "auto_awesome"
             }
         ];
     }
@@ -158,7 +158,7 @@ public static class RecommendationOverlay
                 Tone = "accent",
                 Label = "Build branch",
                 Description = "Run the build flow to materialize prompt steps for this branch.",
-                Icon = "BR",
+                Icon = "call_split",
                 ActionId = "build-flow"
             }
         ];
