@@ -172,6 +172,10 @@
 html.cw-body-lock,
 body.cw-body-lock {
     overflow: hidden;
+    overflow: clip;
+    height: 100dvh;
+    min-height: 100dvh;
+    overscroll-behavior: none;
 }
 
 .cw-workbench-frame {

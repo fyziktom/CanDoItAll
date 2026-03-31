@@ -134,6 +134,55 @@ public sealed partial class AppSmokeTests
     }
 
     [Fact]
+    public async Task Structure_canvas_maximize_locks_viewport_without_residual_document_scroll()
+    {
+        var repoRoot = GetRepoRoot();
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "maximize-lock");
+        ResetDirectory(artifactsDir);
+
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1920,
+                Height = 945
+            }
+        });
+
+        var page = await context.NewPageAsync();
+        await CreateProjectAsync(page, "Playwright Maximize Lock", "Validation");
+        await page.Locator(".cw-workbench-shell").WaitForAsync();
+
+        if (await page.EvaluateAsync<bool>("() => document.querySelector('.cw-workbench-shell')?.classList.contains('is-maximized') === true"))
+        {
+            await EnsureCanvasMaximizedStateAsync(page, isMaximized: false);
+        }
+
+        var docked = await ReadCanvasViewportStateAsync(page);
+        Assert.False(docked.IsMaximized);
+        Assert.False(docked.BodyLock);
+        Assert.True(docked.HostWidth < docked.ViewportWidth, $"Expected docked host width to be smaller than viewport. Host={docked.HostWidth}, viewport={docked.ViewportWidth}.");
+
+        await EnsureCanvasMaximizedStateAsync(page, isMaximized: true);
+        var maximized = await ReadCanvasViewportStateAsync(page);
+        Assert.True(maximized.IsMaximized);
+        Assert.True(maximized.BodyLock);
+        Assert.InRange(Math.Abs(maximized.HostLeft), 0, 1);
+        Assert.InRange(Math.Abs(maximized.HostTop), 0, 1);
+        Assert.InRange(Math.Abs(maximized.HostWidth - maximized.ViewportWidth), 0, 1);
+        Assert.InRange(Math.Abs(maximized.HostHeight - maximized.ViewportHeight), 0, 1);
+        Assert.InRange(Math.Abs(maximized.DocumentClientHeight - maximized.ViewportHeight), 0, 1);
+        Assert.InRange(Math.Abs(maximized.DocumentScrollHeight - maximized.ViewportHeight), 0, 1);
+
+        await page.ScreenshotAsync(new()
+        {
+            Path = Path.Combine(artifactsDir, "structure-canvas-maximized.png"),
+            FullPage = false
+        });
+    }
+
+    [Fact]
     public async Task Structure_canvas_supports_inline_note_creation_editing_and_context_create_dialogs()
     {
         await using var context = await fixture.Browser.NewContextAsync();
@@ -461,6 +510,8 @@ public sealed partial class AppSmokeTests
         Assert.InRange(Math.Abs(maximized.HostTop), 0, 1);
         Assert.InRange(Math.Abs(maximized.HostWidth - maximized.ViewportWidth), 0, 1);
         Assert.InRange(Math.Abs(maximized.HostHeight - maximized.ViewportHeight), 0, 1);
+        Assert.InRange(Math.Abs(maximized.DocumentClientHeight - maximized.ViewportHeight), 0, 1);
+        Assert.InRange(Math.Abs(maximized.DocumentScrollHeight - maximized.ViewportHeight), 0, 1);
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "structure-note-centered-pan.png"), FullPage = true });
     }
 
@@ -2331,6 +2382,8 @@ public sealed partial class AppSmokeTests
                     hostTop: host?.getBoundingClientRect().top ?? 0,
                     hostWidth: host?.getBoundingClientRect().width ?? 0,
                     hostHeight: host?.getBoundingClientRect().height ?? 0,
+                    documentClientHeight: document.documentElement.clientHeight,
+                    documentScrollHeight: document.documentElement.scrollHeight,
                     viewportWidth: window.innerWidth,
                     viewportHeight: window.innerHeight
                 };
@@ -4392,6 +4445,10 @@ public sealed partial class AppSmokeTests
         public double HostWidth { get; set; }
 
         public double HostHeight { get; set; }
+
+        public double DocumentClientHeight { get; set; }
+
+        public double DocumentScrollHeight { get; set; }
 
         public double ViewportWidth { get; set; }
 
