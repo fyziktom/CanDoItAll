@@ -379,9 +379,17 @@ public partial class ProjectStructurePage
             .Append(':')
             .Append(projectHierarchyDialog.SubjectProjectId)
             .Append(':')
+            .Append(projectHierarchyDialog.CurrentParentProjectId?.ToString() ?? string.Empty)
+            .Append(':')
             .Append(projectHierarchyDialog.SelectedProjectId?.ToString() ?? string.Empty)
             .Append(':')
             .Append(projectHierarchyDialog.Error);
+
+        foreach (var project in projectHierarchyDialog.AvailableProjects)
+        {
+            builder.Append(':')
+                .Append(project.Id);
+        }
     }
 
     private Task ApplySelectionProgressAsync(int progress)
