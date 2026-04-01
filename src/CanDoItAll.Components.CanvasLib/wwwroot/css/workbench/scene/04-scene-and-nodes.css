@@ -106,58 +106,66 @@
 }
 
 .cw-node[data-palette="primary"] {
-    --cw-node-surface-bg: var(--cad-tone-primary-soft-bg, rgba(255, 255, 255, 0.96));
-    --cw-node-surface-bg-soft: color-mix(in srgb, var(--cad-tone-primary-soft-hover, #f8fafc) 78%, white);
-    --cw-node-surface-overlay: color-mix(in srgb, var(--cad-tone-primary-soft-border, #cbd5e1) 34%, transparent);
-    --cw-node-surface-border: color-mix(in srgb, var(--cad-tone-primary-soft-border, #cbd5e1) 78%, white);
-    --cw-node-surface-shadow: 0 18px 30px rgba(15, 23, 42, 0.1);
+    --cw-node-surface-bg: #111827;
+    --cw-node-surface-bg-soft: #0f172a;
+    --cw-node-surface-overlay: rgba(255, 255, 255, 0.05);
+    --cw-node-surface-border: rgba(51, 65, 85, 0.92);
+    --cw-node-surface-shadow: 0 22px 34px rgba(15, 23, 42, 0.22);
+    --cw-node-surface-text: #f8fafc;
 }
 
 .cw-node[data-palette="secondary"] {
-    --cw-node-surface-bg: var(--cad-tone-secondary-soft-bg, #fae8ff);
-    --cw-node-surface-bg-soft: color-mix(in srgb, var(--cad-tone-secondary-soft-hover, #f5d0fe) 82%, white);
-    --cw-node-surface-overlay: color-mix(in srgb, var(--cad-tone-secondary-soft-border, #f0abfc) 34%, transparent);
-    --cw-node-surface-border: color-mix(in srgb, var(--cad-tone-secondary-soft-border, #f0abfc) 76%, white);
-    --cw-node-surface-shadow: 0 18px 30px rgba(134, 25, 143, 0.12);
+    --cw-node-surface-bg: #ede9fe;
+    --cw-node-surface-bg-soft: #ddd6fe;
+    --cw-node-surface-overlay: rgba(124, 58, 237, 0.08);
+    --cw-node-surface-border: rgba(167, 139, 250, 0.7);
+    --cw-node-surface-shadow: 0 20px 32px rgba(109, 40, 217, 0.15);
+    --cw-node-surface-text: #581c87;
 }
 
 .cw-node[data-palette="success"] {
-    --cw-node-surface-bg: var(--cad-tone-success-soft-bg, #d1fae5);
-    --cw-node-surface-bg-soft: color-mix(in srgb, var(--cad-tone-success-soft-hover, #a7f3d0) 84%, white);
-    --cw-node-surface-overlay: color-mix(in srgb, var(--cad-tone-success-soft-border, #6ee7b7) 34%, transparent);
-    --cw-node-surface-border: color-mix(in srgb, var(--cad-tone-success-soft-border, #6ee7b7) 74%, white);
-    --cw-node-surface-shadow: 0 18px 30px rgba(6, 95, 70, 0.12);
+    --cw-node-surface-bg: #dcfce7;
+    --cw-node-surface-bg-soft: #bbf7d0;
+    --cw-node-surface-overlay: rgba(22, 163, 74, 0.08);
+    --cw-node-surface-border: rgba(74, 222, 128, 0.72);
+    --cw-node-surface-shadow: 0 20px 32px rgba(22, 163, 74, 0.14);
+    --cw-node-surface-text: #14532d;
 }
 
 .cw-node[data-palette="info"] {
-    --cw-node-surface-bg: var(--cad-tone-info-soft-bg, #e0f2fe);
-    --cw-node-surface-bg-soft: color-mix(in srgb, var(--cad-tone-info-soft-hover, #bae6fd) 84%, white);
-    --cw-node-surface-overlay: color-mix(in srgb, var(--cad-tone-info-soft-border, #7dd3fc) 34%, transparent);
-    --cw-node-surface-border: color-mix(in srgb, var(--cad-tone-info-soft-border, #7dd3fc) 74%, white);
-    --cw-node-surface-shadow: 0 18px 30px rgba(7, 89, 133, 0.12);
+    --cw-node-surface-bg: #e0f2fe;
+    --cw-node-surface-bg-soft: #bae6fd;
+    --cw-node-surface-overlay: rgba(2, 132, 199, 0.08);
+    --cw-node-surface-border: rgba(125, 211, 252, 0.74);
+    --cw-node-surface-shadow: 0 20px 32px rgba(2, 132, 199, 0.14);
+    --cw-node-surface-text: #0c4a6e;
 }
 
 .cw-node[data-palette="warning"] {
-    --cw-node-surface-bg: var(--cad-tone-warning-soft-bg, #fef3c7);
-    --cw-node-surface-bg-soft: color-mix(in srgb, var(--cad-tone-warning-soft-hover, #fde68a) 84%, white);
-    --cw-node-surface-overlay: color-mix(in srgb, var(--cad-tone-warning-soft-border, #fcd34d) 34%, transparent);
-    --cw-node-surface-border: color-mix(in srgb, var(--cad-tone-warning-soft-border, #fcd34d) 74%, white);
-    --cw-node-surface-shadow: 0 18px 30px rgba(146, 64, 14, 0.12);
+    --cw-node-surface-bg: #fef3c7;
+    --cw-node-surface-bg-soft: #fde68a;
+    --cw-node-surface-overlay: rgba(217, 119, 6, 0.08);
+    --cw-node-surface-border: rgba(251, 191, 36, 0.74);
+    --cw-node-surface-shadow: 0 20px 32px rgba(217, 119, 6, 0.14);
+    --cw-node-surface-text: #78350f;
 }
 
 .cw-node[data-palette="danger"] {
-    --cw-node-surface-bg: var(--cad-tone-danger-soft-bg, #ffe4e6);
-    --cw-node-surface-bg-soft: color-mix(in srgb, var(--cad-tone-danger-soft-hover, #fecdd3) 84%, white);
-    --cw-node-surface-overlay: color-mix(in srgb, var(--cad-tone-danger-soft-border, #fda4af) 34%, transparent);
-    --cw-node-surface-border: color-mix(in srgb, var(--cad-tone-danger-soft-border, #fda4af) 74%, white);
-    --cw-node-surface-shadow: 0 18px 30px rgba(159, 18, 57, 0.12);
+    --cw-node-surface-bg: #fee2e2;
+    --cw-node-surface-bg-soft: #fecaca;
+    --cw-node-surface-overlay: rgba(220, 38, 38, 0.08);
+    --cw-node-surface-border: rgba(252, 165, 165, 0.78);
+    --cw-node-surface-shadow: 0 20px 32px rgba(220, 38, 38, 0.15);
+    --cw-node-surface-text: #7f1d1d;
 }
 
 .cw-node[data-palette="neutral"] {
-    --cw-node-surface-bg: var(--cad-tone-base-soft-bg, rgba(255, 255, 255, 0.96));
-    --cw-node-surface-bg-soft: color-mix(in srgb, var(--cad-tone-base-soft-hover, #f8fafc) 82%, white);
-    --cw-node-surface-overlay: color-mix(in srgb, var(--cad-tone-base-soft-border, #cbd5e1) 34%, transparent);
-    --cw-node-surface-border: color-mix(in srgb, var(--cad-tone-base-soft-border, #cbd5e1) 76%, white);
+    --cw-node-surface-bg: #f1f5f9;
+    --cw-node-surface-bg-soft: #e2e8f0;
+    --cw-node-surface-overlay: rgba(71, 85, 105, 0.04);
+    --cw-node-surface-border: rgba(148, 163, 184, 0.48);
+    --cw-node-surface-shadow: 0 18px 30px rgba(71, 85, 105, 0.1);
+    --cw-node-surface-text: #0f172a;
 }
 
 .cw-node.is-selected .cw-node__surface {

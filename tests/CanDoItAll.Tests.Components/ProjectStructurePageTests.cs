@@ -300,6 +300,74 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Copy_actions_write_rich_info_format_to_the_clipboard()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Clipboard Info Project");
+        var deploymentNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Main servers",
+                "Runtime cluster",
+                "Parent node for copy formatting coverage.",
+                $"project:{projectId}",
+                560,
+                220,
+                null,
+                null,
+                "deployment"));
+        var taskNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "API rollout",
+                "Execution",
+                "Child node for tree formatting coverage.",
+                deploymentNode.Id,
+                860,
+                420,
+                null,
+                null,
+                "task"));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Main servers", cut.Markup));
+
+        await InvokeCanvasContextActionAsync(cut, deploymentNode.Id, "copy-info");
+        await InvokeCanvasContextActionAsync(cut, deploymentNode.Id, "copy-subtree-ids");
+
+        cut.WaitForAssertion(() =>
+        {
+            var clipboardWrites = harness.Context.JSInterop.Invocations
+                .Where(invocation => string.Equals(invocation.Identifier, "navigator.clipboard.writeText", StringComparison.Ordinal))
+                .ToList();
+
+            Assert.Equal(2, clipboardWrites.Count);
+
+            var copiedInfo = Assert.IsType<string>(clipboardWrites[0].Arguments[0]);
+            var copiedTree = Assert.IsType<string>(clipboardWrites[1].Arguments[0]);
+
+            Assert.Equal($"deployment_Main-servers:{ExtractNodeHash(deploymentNode.Id)}", copiedInfo);
+            Assert.Equal(
+                string.Join(
+                    Environment.NewLine,
+                    [
+                        $"deployment_Main-servers:{ExtractNodeHash(deploymentNode.Id)}",
+                        $"  task_API-rollout:{ExtractNodeHash(taskNode.Id)}"
+                    ]),
+                copiedTree);
+
+            Assert.Contains("Main servers tree info was copied.", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Double_clicking_prompt_flow_nodes_opens_quick_action_modal_and_wizard_new_tab_action()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -1834,6 +1902,14 @@ public sealed class ProjectStructurePageTests
 
     private static string BuildProjectChildNodeKey(Guid projectId)
         => $"project-child:{projectId}";
+
+    private static string ExtractNodeHash(string nodeId)
+    {
+        var separatorIndex = nodeId.IndexOf(':', StringComparison.Ordinal);
+        return separatorIndex >= 0 && separatorIndex < nodeId.Length - 1
+            ? nodeId[(separatorIndex + 1)..]
+            : nodeId;
+    }
 
     private static CanvasWorkbenchNode BuildCanvasNode(ProjectStructureSurface surface, string nodeId)
     {

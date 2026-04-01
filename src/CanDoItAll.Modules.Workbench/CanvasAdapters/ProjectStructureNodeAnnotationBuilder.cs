@@ -19,11 +19,20 @@ internal static class ProjectStructureNodeAnnotationBuilder
             },
             new()
             {
+                Id = $"{node.Id}:copy-info",
+                Kind = "clipboard",
+                Tone = "primary",
+                Label = "INF",
+                Description = "Copy this node as type_title:id-hash.",
+                ActionId = "copy-info"
+            },
+            new()
+            {
                 Id = $"{node.Id}:copy-tree",
                 Kind = "clipboard",
                 Tone = "info",
                 Label = "Tree",
-                Description = "Copy this node id plus the descendant id structure.",
+                Description = "Copy this node and descendants as type_title:id-hash entries.",
                 ActionId = "copy-subtree-ids"
             }
         };

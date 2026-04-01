@@ -158,6 +158,145 @@
         }
     }
 
+    function resolveCanvasNodePaletteStyle(node, accent, isSelected) {
+        if (node?.isReadOnly) {
+            return {
+                surfaceFill: "rgba(248, 250, 252, 0.98)",
+                surfaceStroke: isSelected ? "rgba(71, 85, 105, 0.9)" : "rgba(148, 163, 184, 0.34)",
+                surfaceShadow: "rgba(100, 116, 139, 0.12)",
+                labelText: "rgba(71, 85, 105, 0.76)",
+                titleText: "rgba(51, 65, 85, 0.94)",
+                secondaryText: "rgba(100, 116, 139, 0.92)",
+                iconFill: "rgba(241, 245, 249, 0.94)",
+                iconStroke: "rgba(148, 163, 184, 0.28)",
+                iconText: "rgba(71, 85, 105, 0.96)",
+                subtleFill: "rgba(255, 255, 255, 0.86)",
+                subtleStroke: "rgba(148, 163, 184, 0.3)",
+                subtleText: "rgba(51, 65, 85, 0.9)",
+                progressTrack: "rgba(148, 163, 184, 0.28)",
+                progressText: "rgba(71, 85, 105, 0.9)"
+            };
+        }
+
+        const paletteKey = (node?.paletteKey || (node?.family === "root" ? "primary" : "neutral")).toLowerCase();
+        const palettes = {
+            primary: {
+                surfaceFill: "rgba(15, 23, 42, 0.98)",
+                surfaceStroke: isSelected ? "rgba(248, 250, 252, 0.94)" : "rgba(51, 65, 85, 0.96)",
+                surfaceShadow: "rgba(15, 23, 42, 0.28)",
+                labelText: "rgba(191, 219, 254, 0.78)",
+                titleText: "rgba(248, 250, 252, 0.98)",
+                secondaryText: "rgba(226, 232, 240, 0.84)",
+                iconFill: "rgba(255, 255, 255, 0.14)",
+                iconStroke: "rgba(255, 255, 255, 0.18)",
+                iconText: "rgba(248, 250, 252, 0.96)",
+                subtleFill: "rgba(255, 255, 255, 0.14)",
+                subtleStroke: "rgba(255, 255, 255, 0.18)",
+                subtleText: "rgba(248, 250, 252, 0.94)",
+                progressTrack: "rgba(248, 250, 252, 0.24)",
+                progressText: "rgba(248, 250, 252, 0.92)"
+            },
+            secondary: {
+                surfaceFill: "rgba(237, 233, 254, 0.98)",
+                surfaceStroke: isSelected ? "rgba(124, 58, 237, 0.92)" : "rgba(167, 139, 250, 0.62)",
+                surfaceShadow: "rgba(109, 40, 217, 0.16)",
+                labelText: "rgba(109, 40, 217, 0.72)",
+                titleText: "rgba(88, 28, 135, 0.94)",
+                secondaryText: "rgba(107, 33, 168, 0.82)",
+                iconFill: "rgba(255, 255, 255, 0.64)",
+                iconStroke: "rgba(167, 139, 250, 0.4)",
+                iconText: "rgba(109, 40, 217, 0.94)",
+                subtleFill: "rgba(255, 255, 255, 0.74)",
+                subtleStroke: "rgba(196, 181, 253, 0.44)",
+                subtleText: "rgba(88, 28, 135, 0.88)",
+                progressTrack: "rgba(139, 92, 246, 0.26)",
+                progressText: "rgba(88, 28, 135, 0.88)"
+            },
+            success: {
+                surfaceFill: "rgba(220, 252, 231, 0.98)",
+                surfaceStroke: isSelected ? "rgba(22, 163, 74, 0.92)" : "rgba(74, 222, 128, 0.62)",
+                surfaceShadow: "rgba(22, 163, 74, 0.14)",
+                labelText: "rgba(21, 128, 61, 0.72)",
+                titleText: "rgba(20, 83, 45, 0.95)",
+                secondaryText: "rgba(21, 128, 61, 0.82)",
+                iconFill: "rgba(255, 255, 255, 0.62)",
+                iconStroke: "rgba(74, 222, 128, 0.42)",
+                iconText: "rgba(21, 128, 61, 0.94)",
+                subtleFill: "rgba(255, 255, 255, 0.76)",
+                subtleStroke: "rgba(134, 239, 172, 0.46)",
+                subtleText: "rgba(20, 83, 45, 0.88)",
+                progressTrack: "rgba(22, 163, 74, 0.22)",
+                progressText: "rgba(20, 83, 45, 0.88)"
+            },
+            info: {
+                surfaceFill: "rgba(224, 242, 254, 0.98)",
+                surfaceStroke: isSelected ? "rgba(2, 132, 199, 0.92)" : "rgba(125, 211, 252, 0.64)",
+                surfaceShadow: "rgba(2, 132, 199, 0.15)",
+                labelText: "rgba(14, 116, 144, 0.72)",
+                titleText: "rgba(12, 74, 110, 0.95)",
+                secondaryText: "rgba(14, 116, 144, 0.82)",
+                iconFill: "rgba(255, 255, 255, 0.62)",
+                iconStroke: "rgba(125, 211, 252, 0.44)",
+                iconText: "rgba(2, 132, 199, 0.94)",
+                subtleFill: "rgba(255, 255, 255, 0.76)",
+                subtleStroke: "rgba(125, 211, 252, 0.46)",
+                subtleText: "rgba(12, 74, 110, 0.88)",
+                progressTrack: "rgba(2, 132, 199, 0.22)",
+                progressText: "rgba(12, 74, 110, 0.88)"
+            },
+            warning: {
+                surfaceFill: "rgba(254, 243, 199, 0.98)",
+                surfaceStroke: isSelected ? "rgba(217, 119, 6, 0.92)" : "rgba(251, 191, 36, 0.64)",
+                surfaceShadow: "rgba(217, 119, 6, 0.15)",
+                labelText: "rgba(180, 83, 9, 0.72)",
+                titleText: "rgba(120, 53, 15, 0.95)",
+                secondaryText: "rgba(146, 64, 14, 0.82)",
+                iconFill: "rgba(255, 255, 255, 0.58)",
+                iconStroke: "rgba(251, 191, 36, 0.42)",
+                iconText: "rgba(180, 83, 9, 0.94)",
+                subtleFill: "rgba(255, 255, 255, 0.76)",
+                subtleStroke: "rgba(252, 211, 77, 0.48)",
+                subtleText: "rgba(120, 53, 15, 0.88)",
+                progressTrack: "rgba(217, 119, 6, 0.22)",
+                progressText: "rgba(120, 53, 15, 0.88)"
+            },
+            danger: {
+                surfaceFill: "rgba(254, 226, 226, 0.98)",
+                surfaceStroke: isSelected ? "rgba(220, 38, 38, 0.94)" : "rgba(252, 165, 165, 0.7)",
+                surfaceShadow: "rgba(220, 38, 38, 0.16)",
+                labelText: "rgba(185, 28, 28, 0.72)",
+                titleText: "rgba(127, 29, 29, 0.95)",
+                secondaryText: "rgba(153, 27, 27, 0.82)",
+                iconFill: "rgba(255, 255, 255, 0.6)",
+                iconStroke: "rgba(252, 165, 165, 0.46)",
+                iconText: "rgba(185, 28, 28, 0.95)",
+                subtleFill: "rgba(255, 255, 255, 0.8)",
+                subtleStroke: "rgba(252, 165, 165, 0.48)",
+                subtleText: "rgba(127, 29, 29, 0.88)",
+                progressTrack: "rgba(220, 38, 38, 0.22)",
+                progressText: "rgba(127, 29, 29, 0.88)"
+            },
+            neutral: {
+                surfaceFill: "rgba(241, 245, 249, 0.98)",
+                surfaceStroke: isSelected ? "rgba(71, 85, 105, 0.92)" : "rgba(148, 163, 184, 0.44)",
+                surfaceShadow: "rgba(71, 85, 105, 0.1)",
+                labelText: "rgba(71, 85, 105, 0.7)",
+                titleText: "rgba(15, 23, 42, 0.94)",
+                secondaryText: "rgba(71, 85, 105, 0.84)",
+                iconFill: "rgba(255, 255, 255, 0.72)",
+                iconStroke: "rgba(148, 163, 184, 0.34)",
+                iconText: "rgba(71, 85, 105, 0.94)",
+                subtleFill: "rgba(255, 255, 255, 0.82)",
+                subtleStroke: "rgba(148, 163, 184, 0.38)",
+                subtleText: "rgba(30, 41, 59, 0.88)",
+                progressTrack: "rgba(148, 163, 184, 0.28)",
+                progressText: "rgba(51, 65, 85, 0.88)"
+            }
+        };
+
+        return palettes[paletteKey] || palettes.neutral;
+    }
+
     function resolveAnchorRect(anchor) {
         if (!anchor) {
             return null;
@@ -693,14 +832,14 @@
         context.restore();
     }
 
-    function drawCanvasProgressBadge(context, state, bounds, node) {
+    function drawCanvasProgressBadge(context, state, bounds, node, paletteStyle) {
         const display = resolveProgressDisplay(node?.progressMode, node?.progressPercent);
         const centerX = bounds.left + (bounds.width / 2);
         const centerY = bounds.top + (bounds.height / 2);
         const radius = Math.max(6, bounds.width / 2);
         context.save();
         context.lineWidth = Math.max(2, 2.2 * state.ui.zoom);
-        context.strokeStyle = "rgba(148, 163, 184, 0.28)";
+        context.strokeStyle = paletteStyle?.progressTrack || "rgba(148, 163, 184, 0.28)";
         context.beginPath();
         context.arc(centerX, centerY, radius - context.lineWidth, 0, Math.PI * 2);
         context.stroke();
@@ -714,7 +853,7 @@
         }
 
         setCanvasFont(context, 700, Math.max(7, 10 * state.ui.zoom));
-        context.fillStyle = "rgba(15, 23, 42, 0.78)";
+        context.fillStyle = paletteStyle?.progressText || "rgba(15, 23, 42, 0.78)";
         context.textAlign = "center";
         context.fillText(display.centerText || "", centerX, centerY + Math.max(2, 3 * state.ui.zoom));
         context.restore();
@@ -800,17 +939,19 @@
     }
 
     function renderCanvasMicroNode(context, state, node, hostBounds, accent, meta) {
+        const isSelected = state.selectedIds.has(node.id);
+        const paletteStyle = resolveCanvasNodePaletteStyle(node, accent, isSelected);
         drawRoundedPanel(
             context,
             hostBounds,
             Math.max(10, 16 * state.ui.zoom),
-            "rgba(255, 255, 255, 0.92)",
-            state.selectedIds.has(node.id) ? hexToRgba(accent, 0.94) : "rgba(148, 163, 184, 0.22)",
-            state.selectedIds.has(node.id) ? Math.max(1.4, 2 * state.ui.zoom) : 1,
-            hexToRgba(accent, state.selectedIds.has(node.id) ? 0.12 : 0.04));
+            paletteStyle.surfaceFill,
+            paletteStyle.surfaceStroke,
+            isSelected ? Math.max(1.4, 2 * state.ui.zoom) : 1,
+            paletteStyle.surfaceShadow);
         context.save();
         setCanvasFont(context, 700, Math.max(7, 10 * state.ui.zoom));
-        context.fillStyle = "rgba(15, 23, 42, 0.72)";
+        context.fillStyle = paletteStyle.titleText;
         context.textAlign = "center";
         const label = (node.title || node.kind || "Node").slice(0, 12);
         context.fillText(label, hostBounds.left + (hostBounds.width / 2), hostBounds.top + (hostBounds.height / 2) + 3);
@@ -819,14 +960,16 @@
     }
 
     function renderCanvasInlineTextNode(context, state, node, hostBounds, accent, detailMode, meta) {
+        const isSelected = state.selectedIds.has(node.id);
+        const paletteStyle = resolveCanvasNodePaletteStyle(node, accent, isSelected);
         drawRoundedPanel(
             context,
             hostBounds,
             Math.max(16, 20 * state.ui.zoom),
-            "rgba(255, 255, 255, 0.94)",
-            state.selectedIds.has(node.id) ? hexToRgba(accent, 0.94) : "rgba(148, 163, 184, 0.18)",
-            state.selectedIds.has(node.id) ? Math.max(1.5, 2.2 * state.ui.zoom) : 1,
-            hexToRgba(accent, state.selectedIds.has(node.id) ? 0.14 : 0.05));
+            paletteStyle.surfaceFill,
+            paletteStyle.surfaceStroke,
+            isSelected ? Math.max(1.5, 2.2 * state.ui.zoom) : 1,
+            paletteStyle.surfaceShadow);
         context.save();
         const padding = Math.max(12, 18 * state.ui.zoom);
         const contentWidth = Math.max(24, hostBounds.width - (padding * 2));
@@ -842,7 +985,7 @@
             hostBounds.left + padding,
             hostBounds.top + padding + Math.max(10, 14 * state.ui.zoom),
             Math.max(12, 16 * state.ui.zoom),
-            "rgba(15, 23, 42, 0.84)");
+            paletteStyle.titleText);
         context.restore();
 
         const badgeSize = Math.max(18, 22 * state.ui.zoom);
@@ -850,7 +993,7 @@
         const badgeTop = hostBounds.bottom - Math.max(24, 28 * state.ui.zoom);
         let badgeLeft = hostBounds.left + Math.max(10, 14 * state.ui.zoom);
         const indicatorBounds = buildRect(badgeLeft, badgeTop, badgeSize, badgeSize);
-        meta.progressTitle = drawCanvasProgressBadge(context, state, indicatorBounds, node);
+        meta.progressTitle = drawCanvasProgressBadge(context, state, indicatorBounds, node, paletteStyle);
         registerSceneHotZone(state, indicatorBounds, {
             type: "node-progress",
             nodeId: node.id
@@ -866,8 +1009,8 @@
                 markerBounds,
                 markerGlyph,
                 hexToRgba(resolveNodeAccentColor({ accentColor: node?.markerTone === "danger" ? "#dc2626" : accent }), 0.1),
-                "rgba(148, 163, 184, 0.18)",
-                "rgba(15, 23, 42, 0.78)",
+                paletteStyle.subtleStroke,
+                paletteStyle.subtleText,
                 Math.max(8, 9.5 * state.ui.zoom));
             badgeLeft = markerBounds.right + badgeGap;
         }
@@ -879,9 +1022,9 @@
                 context,
                 priorityBounds,
                 `${node.priority}`,
-                "rgba(248, 250, 252, 0.96)",
-                "rgba(148, 163, 184, 0.22)",
-                "rgba(15, 23, 42, 0.8)",
+                paletteStyle.subtleFill,
+                paletteStyle.subtleStroke,
+                paletteStyle.subtleText,
                 Math.max(8, 9.5 * state.ui.zoom));
             badgeLeft = priorityBounds.right + badgeGap;
         }
@@ -906,15 +1049,16 @@
 
     function renderCanvasStandardNode(context, state, node, hostBounds, accent, detailMode, meta) {
         const isSelected = state.selectedIds.has(node.id);
+        const paletteStyle = resolveCanvasNodePaletteStyle(node, accent, isSelected);
         const padding = Math.max(12, 18 * state.ui.zoom);
         drawRoundedPanel(
             context,
             hostBounds,
             Math.max(18, 22 * state.ui.zoom),
-            node.isReadOnly ? "rgba(248, 250, 252, 0.96)" : "rgba(255, 255, 255, 0.95)",
-            isSelected ? hexToRgba(accent, 0.98) : "rgba(148, 163, 184, 0.18)",
+            paletteStyle.surfaceFill,
+            paletteStyle.surfaceStroke,
             isSelected ? Math.max(1.6, 2.4 * state.ui.zoom) : 1,
-            hexToRgba(accent, isSelected ? 0.14 : 0.05));
+            paletteStyle.surfaceShadow);
         if (node.isPreviewOnly) {
             context.save();
             context.strokeStyle = "rgba(14, 165, 233, 0.38)";
@@ -933,15 +1077,15 @@
 
         context.save();
         setCanvasFont(context, 700, Math.max(8, 10.5 * state.ui.zoom));
-        context.fillStyle = "rgba(15, 23, 42, 0.58)";
+        context.fillStyle = paletteStyle.labelText;
         context.fillText(node.kind || node.family || "item", contentLeft + Math.max(20, 26 * state.ui.zoom), cursorY + Math.max(7, 10 * state.ui.zoom));
         drawCanvasBadgePill(
             context,
             buildRect(contentLeft, cursorY, Math.max(18, 22 * state.ui.zoom), Math.max(18, 22 * state.ui.zoom)),
             (node.icon || node.kind || "n").slice(0, 1).toUpperCase(),
-            hexToRgba(accent, 0.12),
-            hexToRgba(accent, 0.24),
-            hexToRgba(accent, 0.96),
+            paletteStyle.iconFill,
+            paletteStyle.iconStroke,
+            paletteStyle.iconText,
             Math.max(8, 9 * state.ui.zoom));
         context.restore();
 
@@ -949,7 +1093,7 @@
         const badgeSize = Math.max(18, 22 * state.ui.zoom);
         const badgeGap = Math.max(4, 6 * state.ui.zoom);
         const progressBounds = buildRect(rightCursor - badgeSize, cursorY, badgeSize, badgeSize);
-        meta.progressTitle = drawCanvasProgressBadge(context, state, progressBounds, node);
+        meta.progressTitle = drawCanvasProgressBadge(context, state, progressBounds, node, paletteStyle);
         registerSceneHotZone(state, progressBounds, {
             type: "node-progress",
             nodeId: node.id
@@ -965,8 +1109,8 @@
                 markerBounds,
                 markerGlyph,
                 hexToRgba(resolveNodeAccentColor({ accentColor: node?.markerTone === "danger" ? "#dc2626" : accent }), 0.1),
-                "rgba(148, 163, 184, 0.18)",
-                "rgba(15, 23, 42, 0.78)",
+                paletteStyle.subtleStroke,
+                paletteStyle.subtleText,
                 Math.max(8, 9.5 * state.ui.zoom));
             rightCursor = markerBounds.left - badgeGap;
         }
@@ -978,9 +1122,9 @@
                 context,
                 priorityBounds,
                 `${node.priority}`,
-                "rgba(248, 250, 252, 0.96)",
-                "rgba(148, 163, 184, 0.22)",
-                "rgba(15, 23, 42, 0.8)",
+                paletteStyle.subtleFill,
+                paletteStyle.subtleStroke,
+                paletteStyle.subtleText,
                 Math.max(8, 9.5 * state.ui.zoom));
             rightCursor = priorityBounds.left - badgeGap;
         }
@@ -1009,7 +1153,7 @@
             contentLeft,
             cursorY + Math.max(8, 12 * state.ui.zoom),
             Math.max(12, 17 * state.ui.zoom),
-            "rgba(15, 23, 42, 0.9)");
+            paletteStyle.titleText);
         cursorY += (titleLines.length * Math.max(12, 17 * state.ui.zoom)) + Math.max(4, 6 * state.ui.zoom);
         context.restore();
 
@@ -1028,7 +1172,7 @@
 
         context.save();
         setCanvasFont(context, 500, Math.max(8, 11.5 * state.ui.zoom));
-        context.fillStyle = "rgba(71, 85, 105, 0.88)";
+        context.fillStyle = paletteStyle.secondaryText;
         for (const line of secondaryLines.slice(0, detailMode === "compact" ? 1 : 3)) {
             const wrapped = primitives?.wrapText
                 ? primitives.wrapText(context, line, contentWidth, detailMode === "compact" ? 1 : 2)
@@ -1039,7 +1183,7 @@
                 contentLeft,
                 cursorY + Math.max(7, 10 * state.ui.zoom),
                 Math.max(10, 14 * state.ui.zoom),
-                "rgba(71, 85, 105, 0.88)");
+                paletteStyle.secondaryText);
             cursorY += (wrapped.length * Math.max(10, 14 * state.ui.zoom)) + Math.max(4, 6 * state.ui.zoom);
         }
         context.restore();
@@ -1051,8 +1195,8 @@
                 context,
                 pathBounds,
                 Math.max(8, 10 * state.ui.zoom),
-                "rgba(248, 250, 252, 0.94)",
-                "rgba(203, 213, 225, 0.68)",
+                paletteStyle.subtleFill,
+                paletteStyle.subtleStroke,
                 1,
                 "");
             context.save();
@@ -1061,7 +1205,7 @@
             const pathLabel = primitives?.fitText
                 ? primitives.fitText(context, node.compactPath.displayText || node.compactPath.fullPath, textWidth, "...")
                 : (node.compactPath.displayText || node.compactPath.fullPath);
-            context.fillStyle = "rgba(51, 65, 85, 0.9)";
+            context.fillStyle = paletteStyle.subtleText;
             context.fillText(pathLabel, pathBounds.left + Math.max(8, 10 * state.ui.zoom), pathBounds.top + Math.max(13, 15 * state.ui.zoom));
             context.textAlign = "right";
             context.fillText(
@@ -1111,9 +1255,9 @@
             context,
             footerPillBounds,
             node.isRequired ? "required" : "optional",
-            "rgba(248, 250, 252, 0.96)",
-            "rgba(203, 213, 225, 0.84)",
-            "rgba(51, 65, 85, 0.88)",
+            paletteStyle.subtleFill,
+            paletteStyle.subtleStroke,
+            paletteStyle.subtleText,
             Math.max(8, 9.5 * state.ui.zoom));
 
         if (node.isCollapsible) {
@@ -1123,9 +1267,9 @@
                 context,
                 collapseBounds,
                 state.collapsedIds.has(node.id) ? "+" : "-",
-                hexToRgba(accent, 0.12),
-                hexToRgba(accent, 0.24),
-                hexToRgba(accent, 0.96),
+                paletteStyle.iconFill,
+                paletteStyle.iconStroke,
+                paletteStyle.iconText,
                 Math.max(9, 11 * state.ui.zoom));
             registerSceneHotZone(state, collapseBounds, {
                 type: "node-collapse",

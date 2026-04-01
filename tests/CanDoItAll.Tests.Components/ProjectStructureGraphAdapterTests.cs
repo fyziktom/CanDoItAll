@@ -67,6 +67,46 @@ public sealed class ProjectStructureGraphAdapterTests
         Assert.Equal("neutral", sharedParentNode.PaletteKey);
     }
 
+    [Fact]
+    public void Nodes_expose_id_info_and_tree_annotations()
+    {
+        var adapter = new ProjectStructureGraphAdapter();
+        var actionCatalog = new ProjectStructureActionCatalogAdapter();
+        var surface = new ProjectStructureSurface(
+            Guid.NewGuid(),
+            "Clipboard annotations",
+            [
+                CreateFileNode("custom:1234567890abcdef", "pdf", "#dc2626", ProjectObjectPaletteKeys.Danger)
+            ],
+            [],
+            null);
+
+        var canvasSurface = adapter.BuildSurface(
+            surface,
+            new CanvasWorkbenchUiState(),
+            new CanvasWorkbenchChrome(),
+            actionCatalog);
+
+        var node = Assert.Single(canvasSurface.Nodes);
+        Assert.Collection(
+            node.Annotations.Take(3),
+            annotation =>
+            {
+                Assert.Equal("copy-id", annotation.ActionId);
+                Assert.Equal("ID", annotation.Label);
+            },
+            annotation =>
+            {
+                Assert.Equal("copy-info", annotation.ActionId);
+                Assert.Equal("INF", annotation.Label);
+            },
+            annotation =>
+            {
+                Assert.Equal("copy-subtree-ids", annotation.ActionId);
+                Assert.Equal("Tree", annotation.Label);
+            });
+    }
+
     private static ProjectStructureNode CreateFileNode(string id, string subtype, string accentColor, string paletteKey)
         => new(
             id,

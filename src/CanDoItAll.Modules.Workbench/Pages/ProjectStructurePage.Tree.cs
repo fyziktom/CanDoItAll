@@ -125,6 +125,14 @@ public partial class ProjectStructurePage
     private bool IsUserAuthoredCanvasNode(ProjectStructureNode node)
         => node.Id.StartsWith("custom:", StringComparison.Ordinal);
 
+    private string BuildNodeInfoCopyText(ProjectStructureNode node)
+    {
+        var nodeType = ResolveClipboardNodeTypeToken(node);
+        var nodeTitle = SanitizeClipboardSegment(node.Title, preserveCase: true, fallback: "Untitled");
+        var nodeHash = ExtractClipboardNodeHash(node.Id);
+        return $"{nodeType}_{nodeTitle}:{nodeHash}";
+    }
+
     private string BuildSubtreeIdCopyText(string rootNodeId)
     {
         var entries = ResolveSubtreeEntries(rootNodeId);
@@ -142,9 +150,67 @@ public partial class ProjectStructurePage
             }
 
             builder.Append(' ', entry.Depth * 2);
-            builder.Append(entry.Node.Id);
+            builder.Append(BuildNodeInfoCopyText(entry.Node));
         }
 
         return builder.ToString();
+    }
+
+    private static string ResolveClipboardNodeTypeToken(ProjectStructureNode node)
+    {
+        var label = SanitizeClipboardSegment(
+            ProjectStructureCanvasCatalog.ResolveNodeLabel(node),
+            preserveCase: false,
+            fallback: node.ObjectType.ToString().ToLowerInvariant());
+
+        return label.EndsWith("-block", StringComparison.Ordinal)
+            ? label[..^"-block".Length]
+            : label;
+    }
+
+    private static string ExtractClipboardNodeHash(string nodeId)
+    {
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            return "node";
+        }
+
+        var separatorIndex = nodeId.IndexOf(':', StringComparison.Ordinal);
+        return separatorIndex >= 0 && separatorIndex < nodeId.Length - 1
+            ? nodeId[(separatorIndex + 1)..]
+            : nodeId;
+    }
+
+    private static string SanitizeClipboardSegment(string? value, bool preserveCase, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return fallback;
+        }
+
+        var builder = new StringBuilder();
+        var justWroteDash = false;
+        foreach (var character in value.Trim())
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(preserveCase ? character : char.ToLowerInvariant(character));
+                justWroteDash = false;
+                continue;
+            }
+
+            if (justWroteDash)
+            {
+                continue;
+            }
+
+            builder.Append('-');
+            justWroteDash = true;
+        }
+
+        var sanitized = builder.ToString().Trim('-');
+        return string.IsNullOrWhiteSpace(sanitized)
+            ? fallback
+            : sanitized;
     }
 }

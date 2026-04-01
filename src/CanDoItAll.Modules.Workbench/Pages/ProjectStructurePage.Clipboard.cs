@@ -66,17 +66,20 @@ public partial class ProjectStructurePage
             case "copy-id":
                 await CopyToClipboardAsync(targetNode.Id, $"{targetNode.Title} id was copied.");
                 return true;
+            case "copy-info":
+                await CopyToClipboardAsync(BuildNodeInfoCopyText(targetNode), $"{targetNode.Title} info was copied.");
+                return true;
             case "copy-subtree-ids":
                 var subtreeText = BuildSubtreeIdCopyText(targetNode.Id);
                 if (string.IsNullOrWhiteSpace(subtreeText))
                 {
-                    workflowFeedback = "The selected node does not expose an id tree to copy.";
+                    workflowFeedback = "The selected node does not expose a tree to copy.";
                     workflowFeedbackTone = "warn";
                     await InvokeAsync(StateHasChanged);
                     return true;
                 }
 
-                await CopyToClipboardAsync(subtreeText, $"{targetNode.Title} id tree was copied.");
+                await CopyToClipboardAsync(subtreeText, $"{targetNode.Title} tree info was copied.");
                 return true;
             default:
                 return false;

@@ -16,7 +16,8 @@ public sealed class ProjectStructureActionCatalogAdapter
         {
             new() { ActionId = "open", Label = "Open", MenuLabel = "Open", Description = "Open the linked artifact or routed workspace.", Icon = "open", Tone = "accent" },
             new() { ActionId = "copy-id", Label = "Copy id", MenuLabel = "Copy id", Description = "Copy this node id to the clipboard.", Icon = "copy", Tone = "ghost" },
-            new() { ActionId = "copy-subtree-ids", Label = "Copy tree ids", MenuLabel = "Copy tree", Description = "Copy this node id plus the descendant id structure.", Icon = "copy", Tone = "sky" },
+            new() { ActionId = "copy-info", Label = "Copy info", MenuLabel = "Copy info", Description = "Copy this node as type_title:id-hash.", Icon = "copy", Tone = "primary" },
+            new() { ActionId = "copy-subtree-ids", Label = "Copy tree ids", MenuLabel = "Copy tree", Description = "Copy this node and descendants as type_title:id-hash entries.", Icon = "copy", Tone = "sky" },
             new() { ActionId = "summary", Label = "Summary", MenuLabel = "Summary", Description = "Open the hierarchical progress summary and export tools.", Icon = "summary", Tone = "sky" },
             new() { ActionId = "connect", Label = "Connect", MenuLabel = "Connect", Description = "Use the selected node as the source for a dependency link.", Icon = "link", Tone = "neutral" },
             new() { ActionId = "reconnect", Label = "Reconnect", MenuLabel = "Reconnect", Description = "Pick a new parent node for this branch explicitly.", Icon = "relink", Tone = "primary" },
@@ -241,10 +242,19 @@ public sealed class ProjectStructureActionCatalogAdapter
             },
             new()
             {
+                ActionId = "copy-info",
+                Label = "Copy info",
+                MenuLabel = "Copy info",
+                Description = "Copy this project node as type_title:id-hash.",
+                Icon = "copy",
+                Tone = "primary"
+            },
+            new()
+            {
                 ActionId = "copy-subtree-ids",
                 Label = "Copy tree ids",
                 MenuLabel = "Copy tree",
-                Description = "Copy this project node id plus the descendant id structure.",
+                Description = "Copy this project node and descendants as type_title:id-hash entries.",
                 Icon = "copy",
                 Tone = "sky"
             },
