@@ -35,27 +35,39 @@
             </PillList>
         </Stack>
 
-        <Stack Class="w-full max-w-2xl" GapScale="LayoutGap.Small">
-            <Cluster JustifyContent="JustifyContent.End">
-                <Button Class="h-9 px-3"
-                        Token="+"
-                        Text="New"
-                        data-testid="projects-new-button"
-                        Click="OpenNewProject" />
-                <Button ButtonStyle="ButtonStyle.Light"
-                        Class="h-9 px-3"
-                        Token="DB"
-                        Text="Dashboard"
-                        Click="NavigateHome" />
-            </Cluster>
+
+        <Stack Class="w-full max-w-2xl" GapScale="LayoutGap.Small" Orientation="Orientation.Horizontal">
+            
+            <Stack Orientation="Orientation.Vertical" Gap="1rem">
+
+                <Stack Orientation="Orientation.Horizontal" Gap="1rem">
+                    <Cluster JustifyContent="JustifyContent.End">
+                        <Button Class="h-9 px-3"
+                                Token="+"
+                                Text="New"
+                                data-testid="projects-new-button"
+                                Click="OpenNewProject" />
+                        <Button ButtonStyle="ButtonStyle.Light"
+                                Class="h-9 px-3"
+                                Token="DB"
+                                Text="Dashboard"
+                                Click="NavigateHome" />
+                    </Cluster>
+                </Stack>
+
             <PrefixedField Prefix="FIND">
                 <InputText @bind-Value="ProjectSearchProxy"
                            @bind-Value:event="oninput"
                            class="cda-input cda-input--toolbar"
                            placeholder="Search by name or current phase" />
             </PrefixedField>
-            <Split Breakpoint="LayoutBreakpoint.Sm"
-                   Gap="LayoutGap.Small"
+
+            <Stack Orientation="Orientation.Horizontal" Gap="1rem">
+
+            </Stack>
+
+            <Stack Orientation="Orientation.Horizontal"
+                   Gap="1rem"
                    AlignItems="AlignItems.Center"
                    JustifyContent="JustifyContent.Start"
                    Wrap="FlexWrap.Wrap">
@@ -79,10 +91,10 @@
                                PrefixPaddingRem="4.9"
                                SuffixPaddingRem="2.25"
                                StackOnMobile="true"
-                               Class="w-full sm:min-w-[14rem] sm:flex-none">
+                               Class="w-full sm:min-w-[14rem] sm:flex-none" style="width:100%;">
                     <InputSelect @bind-Value="HierarchyFilterProjectIdProxy"
                                  class="cda-input cda-input--toolbar appearance-none"
-                                 data-testid="hierarchy-filter-project">
+                                     data-testid="hierarchy-filter-project" style="width:100%;">
                         <option value="">Any project</option>
                         @foreach (var project in ProjectSummaries.OrderBy(project => project.Name))
                         {
@@ -110,8 +122,10 @@
                         Token="RST"
                         Text="Reset"
                         Click="ResetFilters" />
-            </Split>
+            </Stack>
             <p class="text-xs leading-5 text-slate-500">@HierarchyFilterHelper</p>
+        </Stack>
+        
         </Stack>
     </Split>
 
