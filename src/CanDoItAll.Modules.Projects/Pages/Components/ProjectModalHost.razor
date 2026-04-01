@@ -13,7 +13,7 @@
                         Class="projects-modal-host__dialog"
                         Eyebrow="Project editor"
                         Title="@(Editor.Id.HasValue ? Editor.Name : "New project")"
-                        Subtitle="Use the editor only when you need to shape the project deeply. The main page stays dedicated to scanning cards and opening focused tabs."
+                        Subtitle="Use the focused editor for deeper project shaping."
                         Size="ModalSize.Wide"
                         ShowCloseButton="false"
                         TestId="projects-editor-modal"
@@ -22,6 +22,11 @@
                     <Cluster Wrap="FlexWrap.Wrap"
                              Gap="LayoutGap.Small"
                              Class="projects-modal-host__header-actions">
+                        <HelpPopover AriaLabel="Show project editor help"
+                                     Title="Show project editor help"
+                                     Heading="Project editor"
+                                     Body="Use the editor when you need to shape phases, stack decisions, or starter objects in depth while the projects board stays focused on scanning cards and routing into dedicated workbench tabs."
+                                     Tip="The overview modal is still the faster path when you only need to inspect the project and open dashboard, structure, or calendar." />
                         @if (Editor.Id.HasValue)
                         {
                             <Button ButtonStyle="ButtonStyle.Light"
@@ -56,12 +61,13 @@
                             </Cluster>
                         </Split>
 
-                        <SummaryTiles>
-                            <SummaryTile Label="Step" Value="@($"{WizardStep + 1} / {WizardSteps.Count}")" HelperText="@WizardSteps[WizardStep]" Tone="info" />
-                            <SummaryTile Label="Current phase" Value="@(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)" HelperText="The phase the workspace should foreground." />
-                            <SummaryTile Label="Target date" Value="@ProjectsPresentation.FormatDate(Editor.TargetDateUtc)" HelperText="Leave empty when timing is still fluid." />
-                            <SummaryTile Label="Stack decisions" Value="@MeaningfulOptions.Count.ToString()" HelperText="Profile choices already captured for prompts and validation." />
-                        </SummaryTiles>
+                        <Cluster Gap="LayoutGap.Small"
+                                 Wrap="FlexWrap.Wrap">
+                            <span class="cda-shell-pill cda-shell-pill--info">@($"Step {WizardStep + 1} / {WizardSteps.Count}: {WizardSteps[WizardStep]}")</span>
+                            <span class="cda-shell-pill cda-shell-pill--neutral">@($"Current phase: {(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)}")</span>
+                            <span class="cda-shell-pill cda-shell-pill--neutral">@($"Target: {ProjectsPresentation.FormatDate(Editor.TargetDateUtc)}")</span>
+                            <span class="cda-shell-pill cda-shell-pill--info">@($"{MeaningfulOptions.Count} stack decision(s)")</span>
+                        </Cluster>
 
                         @switch (WizardStep)
                         {
@@ -299,7 +305,7 @@
                 Class="projects-modal-host__dialog"
                 Eyebrow="Project details"
                 Title="@(string.IsNullOrWhiteSpace(Editor.Name) ? "Project overview" : Editor.Name)"
-                Subtitle="This modal keeps the overview compact. Use the focused tabs only when the work really needs structure, calendar, or a dedicated dashboard route."
+                Subtitle="Keep inspection compact and open larger work surfaces only when they add value."
                 Size="ModalSize.Wide"
                 ShowCloseButton="false"
                 TestId="projects-detail-modal"
@@ -308,6 +314,11 @@
                 <Cluster Wrap="FlexWrap.Wrap"
                          Gap="LayoutGap.Small"
                          Class="projects-modal-host__header-actions">
+                    <HelpPopover AriaLabel="Show project overview help"
+                                 Title="Show project overview help"
+                                 Heading="Project overview"
+                                 Body="This modal is the compact inspection surface. Use it to review the project, decide what to do next, and open the dashboard, structure, or calendar only when the work needs a larger surface."
+                                 Tip="Use Edit project when the project shape itself needs to change." />
                     <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(Editor.Status)" Text="@Editor.Status.ToString()" />
                     <StatusBadge Tone="neutral" Text="@($"{Editor.Phases.Count} phase(s)")" />
                     <button type="button"
@@ -322,12 +333,13 @@
             </HeaderActions>
             <ChildContent>
                 <Stack GapScale="LayoutGap.Large">
-                    <SummaryTiles>
-                        <SummaryTile Label="Current phase" Value="@(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)" HelperText="The phase currently highlighted for delivery." Tone="info" />
-                        <SummaryTile Label="Target date" Value="@ProjectsPresentation.FormatDate(Editor.TargetDateUtc)" HelperText="Leave flexible when the delivery window is still moving." />
-                        <SummaryTile Label="Last updated" Value="@ProjectsPresentation.FormatTimestamp(LastUpdatedAtUtc)" HelperText="Pulled from the live project list." />
-                        <SummaryTile Label="Stack decisions" Value="@MeaningfulOptions.Count.ToString()" HelperText="Filled stack-profile entries captured for this project." Tone="warning" />
-                    </SummaryTiles>
+                    <Cluster Gap="LayoutGap.Small"
+                             Wrap="FlexWrap.Wrap">
+                        <span class="cda-shell-pill cda-shell-pill--info">@($"Current phase: {(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)}")</span>
+                        <span class="cda-shell-pill cda-shell-pill--neutral">@($"Target: {ProjectsPresentation.FormatDate(Editor.TargetDateUtc)}")</span>
+                        <span class="cda-shell-pill cda-shell-pill--neutral">@($"Updated: {ProjectsPresentation.FormatTimestamp(LastUpdatedAtUtc)}")</span>
+                        <span class="cda-shell-pill cda-shell-pill--warning">@($"{MeaningfulOptions.Count} stack decision(s)")</span>
+                    </Cluster>
 
                     <Grid Gap="LayoutGap.Large"
                           ColumnTemplateXl="minmax(0,1.15fr) minmax(18rem,0.85fr)">

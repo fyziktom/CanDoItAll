@@ -6,7 +6,7 @@
     <Stack AlignItems="AlignItems.Center"
            JustifyContent="JustifyContent.Center"
            GapScale="LayoutGap.None"
-           Class="fixed inset-0 z-[70] p-4 sm:p-6"
+           Class="fixed inset-0 z-[70] p-3 sm:p-4 lg:p-5"
            data-testid="@TestId">
         <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm"
              @onclick="HandleBackdropCloseAsync"></div>
@@ -16,7 +16,7 @@
                  aria-modal="true"
                  aria-label="@ResolvedAriaLabel"
                  @onclick:stopPropagation="true">
-            <header class="flex flex-col gap-4 border-b border-slate-200 px-6 py-5">
+            <header class="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 xl:px-6 xl:py-5">
                 <Split Breakpoint="LayoutBreakpoint.None"
                        Gap="LayoutGap.Medium"
                        AlignItems="AlignItems.Start"
@@ -29,7 +29,7 @@
                             <div class="cda-eyebrow">@Eyebrow</div>
                         }
 
-                        <h2 class="text-2xl font-semibold tracking-tight text-slate-950">@Title</h2>
+                        <h2 class="text-xl font-semibold tracking-tight text-slate-950 xl:text-2xl">@Title</h2>
 
                         @if (!string.IsNullOrWhiteSpace(Subtitle))
                         {
@@ -58,13 +58,13 @@
                 </Split>
             </header>
 
-            <div class="flex-1 overflow-y-auto px-6 py-6">
+            <div class="flex-1 overflow-y-auto px-5 py-5 xl:px-6 xl:py-6">
                 @ChildContent
             </div>
 
             @if (Footer is not null)
             {
-                <footer class="border-t border-slate-200 bg-slate-50/90 px-6 py-4">
+                <footer class="border-t border-slate-200 bg-slate-50/90 px-5 py-4 xl:px-6">
                     @Footer
                 </footer>
             }
@@ -119,13 +119,13 @@
         var sizeCss = Size switch
         {
             ModalSize.Compact => "max-w-2xl",
-            ModalSize.Wide => "max-w-6xl",
-            ModalSize.Full => "h-[92vh] max-w-[min(96rem,100%)]",
-            _ => "max-w-4xl"
+            ModalSize.Wide => "max-w-[min(88rem,100%)]",
+            ModalSize.Full => "h-[94vh] max-w-[min(104rem,100%)]",
+            _ => "max-w-[min(72rem,100%)]"
         };
 
         return CssClassBuilder.Join(
-            "relative z-[71] flex max-h-[92vh] w-full flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/25",
+            "relative z-[71] flex max-h-[94vh] w-full flex-col overflow-hidden rounded-[1.85rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/25",
             sizeCss,
             Class);
     }

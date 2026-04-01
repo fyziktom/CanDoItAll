@@ -938,22 +938,6 @@
     color: rgba(8, 145, 178, 0.88);
 }
 
-/* Component editor modal */
-.pf-component-editor-modal {
-    width: min(100%, 56rem);
-    grid-template-rows: auto minmax(0, 1fr) auto;
-}
-
-.pf-component-editor-modal__textarea {
-    width: 100%;
-    min-height: 20rem;
-    height: 100%;
-    overflow: auto;
-    resize: none;
-    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
-    line-height: 1.55;
-}
-
 .pf-attachment-grid {
     display: grid;
     gap: 0.85rem;
@@ -1167,48 +1151,6 @@
     font-size: 0.55rem;
 }
 
-.pf-prompt-preview {
-    min-height: 24rem;
-    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
-}
-
-.pf-prompt-modal-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 420;
-    display: grid;
-    place-items: center;
-    padding: 1.5rem;
-    background: rgba(15, 23, 42, 0.46);
-    backdrop-filter: blur(10px);
-}
-
-.pf-prompt-modal {
-    position: relative;
-    display: grid;
-    gap: 1rem;
-    width: min(100%, 68rem);
-    max-height: min(88vh, 56rem);
-    padding: 1.35rem;
-    border: 1px solid rgba(148, 163, 184, 0.28);
-    border-radius: 1.5rem;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.98));
-    box-shadow: 0 30px 60px rgba(15, 23, 42, 0.24);
-}
-
-.pf-impact-modal {
-    width: min(100%, 34rem);
-    max-height: none;
-}
-
-.pf-prompt-modal__header {
-    display: flex;
-    align-items: start;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
 .pf-empty {
     padding: 1rem;
     border: 1px dashed rgba(15, 23, 42, 0.16);
@@ -1221,7 +1163,6 @@
 @media (max-width: 900px) {
     .pf-card-header,
     .pf-toolbar,
-    .pf-prompt-modal__header,
     .pf-lane-switcher__header {
         align-items: stretch;
         flex-direction: column;

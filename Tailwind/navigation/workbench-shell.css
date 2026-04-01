@@ -4,7 +4,7 @@
   }
 
   .cda-shell-frame {
-    @apply mx-auto flex min-h-screen max-w-[1840px] gap-4 px-3 py-3 sm:px-4 lg:px-5;
+    @apply mx-auto flex min-h-screen w-full max-w-[1940px] gap-3 px-3 py-3 sm:px-4 xl:px-5;
   }
 
   .cda-shell-sidebar {
@@ -72,15 +72,15 @@
   }
 
   .cda-shell-topbar {
-    @apply rounded-xl border border-white/80 bg-white/88 px-4 py-2.5 shadow-sm shadow-slate-200/40 backdrop-blur;
+    @apply rounded-xl border border-white/80 bg-white/88 px-4 py-2 shadow-sm shadow-slate-200/40 backdrop-blur;
   }
 
   .cda-shell-body-surface {
-    @apply min-w-0 rounded-[1.85rem] border border-white/80 bg-white/92 p-5 shadow-xl shadow-slate-200/60 backdrop-blur lg:p-6;
+    @apply min-w-0 rounded-[1.75rem] border border-white/80 bg-white/92 p-4 shadow-xl shadow-slate-200/60 backdrop-blur xl:p-5 2xl:p-6;
   }
 
   .cda-shell-rail {
-    @apply hidden rounded-[1.85rem] border border-white/80 bg-white/88 p-5 shadow-lg shadow-slate-200/50 backdrop-blur 2xl:block;
+    @apply hidden rounded-[1.75rem] border border-white/80 bg-white/88 p-4 shadow-lg shadow-slate-200/50 backdrop-blur 2xl:block 2xl:p-5;
   }
 
   .cda-shell-rail-collapse {

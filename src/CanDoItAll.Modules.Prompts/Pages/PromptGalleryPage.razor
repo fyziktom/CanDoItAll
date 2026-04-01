@@ -10,7 +10,7 @@
     <Header>
         <PageHeader Eyebrow="Prompt Library"
                     Title="Prompt gallery and versions"
-                    Description="Manage prompt drafts, immutable versions, collections, tags, and clone flows through one shared library layout.">
+                    Description="Manage prompt drafts, immutable versions, collections, tags, and clone flows without burying the working surface under reference content.">
             <Actions>
                 <Button Text="New prompt" Click="CreateNewAsync" />
                 <Button Text="Add collection" ButtonStyle="ButtonStyle.Light" Click="CreateCollectionAsync" />
@@ -24,60 +24,7 @@
             <SummaryTile Label="Final" Value="@prompts.Count(item => item.Status == PromptArtifactStatus.Final).ToString()" HelperText="Prompts with at least one finalized version." Tone="success" />
             <SummaryTile Label="Collections" Value="@collections.Count.ToString()" HelperText="Available prompt groupings." />
             <SummaryTile Label="Versions" Value="@prompts.Sum(item => item.VersionCount).ToString()" HelperText="Immutable prompt versions stored in the library." Tone="info" />
-            <SummaryTile Label="Components" Value="@libraryCatalog.ComponentCount.ToString()" HelperText="Imported prompt components available in the wizard." Tone="accent" />
-            <SummaryTile Label="Flows" Value="@libraryCatalog.FlowCount.ToString()" HelperText="Imported flow templates available in the wizard." Tone="info" />
-            <SummaryTile Label="Blueprints" Value="@libraryCatalog.BlueprintCount.ToString()" HelperText="Imported blueprints available in the wizard." Tone="success" />
         </SummaryTiles>
-
-        <Grid Section="true" Gap="LayoutGap.XXLarge" ColumnsXl="3">
-            <div class="cda-panel-card p-6 shadow-sm">
-                <p class="cda-eyebrow">Imported components</p>
-                <h2 class="cda-title-lg mt-2">Library groups</h2>
-                <Stack GapScale="LayoutGap.Medium"
-                       Class="mt-4">
-                    @foreach (var group in libraryCatalog.Groups.OrderBy(item => item.Order))
-                    {
-                        <div class="cda-panel-card--soft px-4 py-3">
-                            <p class="cda-copy-strong">@group.Name</p>
-                            <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@group.Purpose</p>
-                            <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{group.ComponentCount} component(s)")</p>
-                        </div>
-                    }
-                </Stack>
-            </div>
-
-            <div class="cda-panel-card p-6 shadow-sm">
-                <p class="cda-eyebrow">Imported flows</p>
-                <h2 class="cda-title-lg mt-2">Prompt flow templates</h2>
-                <Stack GapScale="LayoutGap.Medium"
-                       Class="mt-4">
-                    @foreach (var flow in libraryCatalog.Flows.OrderBy(item => item.OrderIndex))
-                    {
-                        <div class="cda-panel-card--soft px-4 py-3">
-                            <p class="cda-copy-strong">@flow.Name</p>
-                            <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@flow.Summary</p>
-                            <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{flow.AgentSequence.Count} agent step(s) · {flow.BlockKeys.Count} block(s)")</p>
-                        </div>
-                    }
-                </Stack>
-            </div>
-
-            <div class="cda-panel-card p-6 shadow-sm">
-                <p class="cda-eyebrow">Imported blueprints</p>
-                <h2 class="cda-title-lg mt-2">Prompt blueprints</h2>
-                <Stack GapScale="LayoutGap.Medium"
-                       Class="mt-4">
-                    @foreach (var blueprint in libraryCatalog.Blueprints.OrderBy(item => item.OrderIndex))
-                    {
-                        <div class="cda-panel-card--soft px-4 py-3">
-                            <p class="cda-copy-strong">@blueprint.Name</p>
-                            <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@blueprint.Guidance</p>
-                            <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{blueprint.PromptType} · flow: {blueprint.RecommendedFlowKey}")</p>
-                        </div>
-                    }
-                </Stack>
-            </div>
-        </Grid>
 
         <ListDetailShell ListPaneWidth="25rem">
             <ListHeader>
@@ -278,6 +225,73 @@
                 </EditForm>
             </DetailContent>
         </ListDetailShell>
+
+        <SectionCard Title="Imported prompt library"
+                     Description="Reference packs, flow templates, and blueprints stay close to the editor, but they no longer push the primary prompt list below the fold.">
+            <HeaderActions>
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <StatusBadge Tone="accent" Text="@($"{libraryCatalog.ComponentCount} components")" />
+                    <StatusBadge Tone="info" Text="@($"{libraryCatalog.FlowCount} flows")" />
+                    <StatusBadge Tone="success" Text="@($"{libraryCatalog.BlueprintCount} blueprints")" />
+                    <HelpPopover AriaLabel="Show imported library help"
+                                 Title="Show imported library help"
+                                 Heading="Imported library"
+                                 Body="These references stay available for prompt assembly, but the primary editing surface now takes the first-screen priority."
+                                 Tip="Use the three panels below to scan groups, flow templates, and blueprints without losing the main library editor." />
+                </Cluster>
+            </HeaderActions>
+            <ChildContent>
+                <Grid Section="true" Gap="LayoutGap.XXLarge" ColumnsXl="3">
+                    <div class="cda-panel-card h-full p-6 shadow-sm">
+                        <p class="cda-eyebrow">Imported components</p>
+                        <h2 class="cda-title-lg mt-2">Library groups</h2>
+                        <Stack GapScale="LayoutGap.Medium"
+                               Class="mt-4 max-h-[26rem] overflow-auto pr-1">
+                            @foreach (var group in libraryCatalog.Groups.OrderBy(item => item.Order))
+                            {
+                                <div class="cda-panel-card--soft px-4 py-3">
+                                    <p class="cda-copy-strong">@group.Name</p>
+                                    <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@group.Purpose</p>
+                                    <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{group.ComponentCount} component(s)")</p>
+                                </div>
+                            }
+                        </Stack>
+                    </div>
+
+                    <div class="cda-panel-card h-full p-6 shadow-sm">
+                        <p class="cda-eyebrow">Imported flows</p>
+                        <h2 class="cda-title-lg mt-2">Prompt flow templates</h2>
+                        <Stack GapScale="LayoutGap.Medium"
+                               Class="mt-4 max-h-[26rem] overflow-auto pr-1">
+                            @foreach (var flow in libraryCatalog.Flows.OrderBy(item => item.OrderIndex))
+                            {
+                                <div class="cda-panel-card--soft px-4 py-3">
+                                    <p class="cda-copy-strong">@flow.Name</p>
+                                    <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@flow.Summary</p>
+                                    <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{flow.AgentSequence.Count} agent step(s) · {flow.BlockKeys.Count} block(s)")</p>
+                                </div>
+                            }
+                        </Stack>
+                    </div>
+
+                    <div class="cda-panel-card h-full p-6 shadow-sm">
+                        <p class="cda-eyebrow">Imported blueprints</p>
+                        <h2 class="cda-title-lg mt-2">Prompt blueprints</h2>
+                        <Stack GapScale="LayoutGap.Medium"
+                               Class="mt-4 max-h-[26rem] overflow-auto pr-1">
+                            @foreach (var blueprint in libraryCatalog.Blueprints.OrderBy(item => item.OrderIndex))
+                            {
+                                <div class="cda-panel-card--soft px-4 py-3">
+                                    <p class="cda-copy-strong">@blueprint.Name</p>
+                                    <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@blueprint.Guidance</p>
+                                    <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{blueprint.PromptType} · flow: {blueprint.RecommendedFlowKey}")</p>
+                                </div>
+                            }
+                        </Stack>
+                    </div>
+                </Grid>
+            </ChildContent>
+        </SectionCard>
     </ChildContent>
 </PageScaffold>
 

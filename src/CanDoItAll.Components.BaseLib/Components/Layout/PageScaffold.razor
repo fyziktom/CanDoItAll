@@ -2,14 +2,16 @@
 <div class="@ResolveContainerClass()">
     @if (Header is not null)
     {
-        <Stack GapScale="LayoutGap.Medium">
+        <Stack GapScale="LayoutGap.Medium"
+               Class="w-full">
             @Header
         </Stack>
     }
 
     @if (Lead is not null)
     {
-        <Stack GapScale="LayoutGap.Large">
+        <Stack GapScale="LayoutGap.Large"
+               Class="w-full">
             @Lead
         </Stack>
     }
@@ -19,7 +21,7 @@
         <Grid Gap="LayoutGap.XXLarge"
               ColumnTemplate2Xl="minmax(0,1fr) 18rem">
             <Stack GapScale="LayoutGap.XXLarge"
-                   Class="min-w-0">
+                   Class="min-w-0 w-full">
                 @ChildContent
             </Stack>
 
@@ -31,7 +33,8 @@
     }
     else if (ChildContent is not null)
     {
-        <Stack GapScale="LayoutGap.XXLarge">
+        <Stack GapScale="LayoutGap.XXLarge"
+               Class="w-full">
             @ChildContent
         </Stack>
     }
@@ -62,9 +65,9 @@
             ? MaxWidthClass
             : Mode == PageScaffoldMode.FocusWorkbench
                 ? "max-w-full"
-                : "max-w-[1500px]";
+                : "max-w-[1720px] 2xl:max-w-[1820px]";
 
-        var spacingClass = Mode == PageScaffoldMode.FocusWorkbench ? "gap-3" : "gap-4";
+        var spacingClass = Mode == PageScaffoldMode.FocusWorkbench ? "gap-3" : "gap-3.5 xl:gap-4";
         return $"mx-auto flex w-full min-w-0 flex-col {spacingClass} {maxWidthClass}";
     }
 }
