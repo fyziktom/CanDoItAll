@@ -2,16 +2,18 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Security
 @using CanDoItAll.Modules.Workspace.Pages.Components
+@using Microsoft.AspNetCore.Components
 @inject WorkspaceService WorkspaceService
 @inject SecretService SecretService
+@inject NavigationManager Navigation
 
 <PageTitle>Settings</PageTitle>
 
 <PageScaffold>
     <Header>
         <PageHeader Eyebrow="Settings"
-                    Title="Workspace defaults and providers"
-                    Description="Manage workspace defaults, encrypted secrets, and provider profiles as three separate jobs instead of one long settings page." />
+                    Title="Workspace defaults, data sources, and providers"
+                    Description="Manage workspace defaults, runtime data sources, encrypted secrets, and provider profiles as separate jobs instead of one long settings page." />
     </Header>
 
     <Lead>
@@ -19,7 +21,6 @@
             <SummaryTile Label="Providers" Value="@providers.Count.ToString()" HelperText="Configured provider profiles." />
             <SummaryTile Label="Enabled" Value="@providers.Count(item => item.IsEnabled).ToString()" HelperText="Profiles currently enabled." Tone="success" />
             <SummaryTile Label="Secrets" Value="@secrets.Count.ToString()" HelperText="Stored encrypted secrets." />
-            <SummaryTile Label="Default provider" Value="@DefaultProviderLabel" HelperText="Workspace default for new prompt sessions." Tone="info" />
         </SummaryTiles>
 
         <SecondaryTabs Items="SettingsTabs" SelectedKey="@settingsTab" SelectedKeyChanged="HandleSettingsTabChanged" />
@@ -67,6 +68,10 @@
                     </StickyActionFooter>
                 </Stack>
             </EditForm>
+        }
+        else if (string.Equals(settingsTab, "data-sources", StringComparison.Ordinal))
+        {
+            <DatabaseSourcesSettingsPanel />
         }
         else if (string.Equals(settingsTab, "secrets", StringComparison.Ordinal))
         {
@@ -323,6 +328,9 @@
 </PageScaffold>
 
 @code {
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? RequestedTab { get; set; }
+
     private WorkspaceSettingsModel settingsModel = new();
     private SecretEditorModel secretModel = NewSecret();
     private ProviderProfileEditorModel providerModel = NewProvider();
@@ -338,6 +346,7 @@
     private IReadOnlyList<SecondaryTabItem> SettingsTabs =>
     [
         new("workspace", "Workspace"),
+        new("data-sources", "Data Sources"),
         new("secrets", "Secrets", secrets.Count.ToString()),
         new("providers", "Providers", providers.Count.ToString()),
         new("project-structure", "Project Structure MCP")
@@ -360,15 +369,19 @@
         .OrderBy(provider => provider.Name)
         .ToList();
 
-    private string DefaultProviderLabel => providers.FirstOrDefault(provider => provider.Id == settingsModel.DefaultProviderProfileId)?.Name ?? "None";
-
     protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    protected override void OnParametersSet()
+    {
+        ApplyRequestedTab();
+    }
 
     private async Task LoadAsync()
     {
         settingsModel = await WorkspaceService.GetSettingsAsync();
         providers = await WorkspaceService.ListProviderProfilesAsync();
         secrets = await WorkspaceService.ListSecretsAsync();
+        ApplyRequestedTab();
     }
 
     private async Task SaveSettingsAsync()
@@ -457,7 +470,34 @@
     private Task HandleSettingsTabChanged(string key)
     {
         settingsTab = key;
+        Navigation.NavigateTo(BuildSettingsRoute(key), replace: true);
         return Task.CompletedTask;
+    }
+
+    private void ApplyRequestedTab()
+    {
+        if (IsValidSettingsTab(RequestedTab))
+        {
+            settingsTab = RequestedTab!;
+            return;
+        }
+
+        if (!IsValidSettingsTab(settingsTab))
+        {
+            settingsTab = "workspace";
+        }
+    }
+
+    private static bool IsValidSettingsTab(string? key)
+    {
+        return key is "workspace" or "data-sources" or "secrets" or "providers" or "project-structure";
+    }
+
+    private static string BuildSettingsRoute(string key)
+    {
+        return string.Equals(key, "workspace", StringComparison.Ordinal)
+            ? "/settings"
+            : $"/settings?tab={Uri.EscapeDataString(key)}";
     }
 
     private void ResetSecretSearch() => secretSearch = string.Empty;

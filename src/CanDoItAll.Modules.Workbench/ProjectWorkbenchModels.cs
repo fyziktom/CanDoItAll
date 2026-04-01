@@ -197,6 +197,26 @@ public sealed record ProjectCalendarSurface(
     string PreferredView,
     string? ViewStateJson);
 
+public sealed record ProjectWorkbenchUnavailableState(
+    Guid ProjectId,
+    string Title,
+    string Description,
+    string SafeRoute);
+
+public sealed record ProjectStructureLoadResult(
+    ProjectStructureSurface? Surface,
+    ProjectWorkbenchUnavailableState? UnavailableState)
+{
+    public bool IsSuccess => Surface is not null;
+}
+
+public sealed record ProjectCalendarLoadResult(
+    ProjectCalendarSurface? Surface,
+    ProjectWorkbenchUnavailableState? UnavailableState)
+{
+    public bool IsSuccess => Surface is not null;
+}
+
 public sealed record ProjectObjectCreateRequest(
     ProjectObjectType ObjectType,
     string Title,
@@ -301,9 +321,27 @@ public sealed class ProjectWorkbenchService(
 
     public async Task<ProjectStructureSurface> GetStructureAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
+        var loadResult = await TryGetStructureAsync(projectId, cancellationToken);
+        return loadResult.Surface
+            ?? throw new InvalidOperationException($"Project '{projectId}' was not found in the active database profile.");
+    }
+
+    public async Task<ProjectStructureLoadResult> TryGetStructureAsync(Guid projectId, CancellationToken cancellationToken = default)
+    {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        var project = await dbContext.Set<Project>().FirstAsync(item => item.Id == projectId, cancellationToken);
+        var project = await dbContext.Set<Project>().FirstOrDefaultAsync(item => item.Id == projectId, cancellationToken);
+        if (project is null)
+        {
+            return new ProjectStructureLoadResult(
+                null,
+                new ProjectWorkbenchUnavailableState(
+                    projectId,
+                    "Project structure unavailable",
+                    "This project does not exist in the active database profile anymore. Return to the project list or switch back to the previous database profile.",
+                    "/projects"));
+        }
+
         await SyncGraphAsync(dbContext, projectId, cancellationToken);
 
         var nodes = await dbContext.Set<ProjectObjectRecord>()
@@ -319,19 +357,39 @@ public sealed class ProjectWorkbenchService(
         var viewState = await LoadViewStateAsync(dbContext, projectId, "structure", cancellationToken);
         var mappedNodes = MapStructureNodes(nodes, links);
 
-        return new ProjectStructureSurface(
-            project.Id,
-            project.Name,
-            mappedNodes,
-            links.Select(link => new ProjectStructureLink(link.SourceNodeKey, link.TargetNodeKey, link.LinkKind, !link.IsSystemManaged)).ToList(),
-            viewState);
+        return new ProjectStructureLoadResult(
+            new ProjectStructureSurface(
+                project.Id,
+                project.Name,
+                mappedNodes,
+                links.Select(link => new ProjectStructureLink(link.SourceNodeKey, link.TargetNodeKey, link.LinkKind, !link.IsSystemManaged)).ToList(),
+                viewState),
+            null);
     }
 
     public async Task<ProjectCalendarSurface> GetCalendarAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
+        var loadResult = await TryGetCalendarAsync(projectId, cancellationToken);
+        return loadResult.Surface
+            ?? throw new InvalidOperationException($"Project '{projectId}' was not found in the active database profile.");
+    }
+
+    public async Task<ProjectCalendarLoadResult> TryGetCalendarAsync(Guid projectId, CancellationToken cancellationToken = default)
+    {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        var project = await dbContext.Set<Project>().FirstAsync(item => item.Id == projectId, cancellationToken);
+        var project = await dbContext.Set<Project>().FirstOrDefaultAsync(item => item.Id == projectId, cancellationToken);
+        if (project is null)
+        {
+            return new ProjectCalendarLoadResult(
+                null,
+                new ProjectWorkbenchUnavailableState(
+                    projectId,
+                    "Project calendar unavailable",
+                    "This project does not exist in the active database profile anymore. Return to the project list or switch back to the previous database profile.",
+                    "/projects"));
+        }
+
         await SyncGraphAsync(dbContext, projectId, cancellationToken);
 
         var viewState = await LoadViewStateAsync(dbContext, projectId, "calendar", cancellationToken);
@@ -356,7 +414,9 @@ public sealed class ProjectWorkbenchService(
                 ResolveVisualProfile(item.ObjectType, item.ObjectSubtype, item.Status).AccentColor))
             .ToList();
 
-        return new ProjectCalendarSurface(project.Id, project.Name, events, preferredView, viewState);
+        return new ProjectCalendarLoadResult(
+            new ProjectCalendarSurface(project.Id, project.Name, events, preferredView, viewState),
+            null);
     }
 
     public async Task<ProjectStructureNode> CreateObjectAsync(Guid projectId, ProjectObjectCreateRequest request, CancellationToken cancellationToken = default)

@@ -15,7 +15,27 @@ tests: component:ProjectCalendarPageTests, e2e:workbench-calendar
 
 <PageTitle>Project Calendar</PageTitle>
 
-@if (surface is null)
+@if (unavailableState is not null)
+{
+    <PageScaffold>
+        <Header>
+            <PageHeader Eyebrow="Workbench"
+                        Title="Project calendar unavailable"
+                        Description="The requested project is not available in the active database profile." />
+        </Header>
+        <ChildContent>
+            <EmptyState Eyebrow="Switched profile"
+                        Title="@unavailableState.Title"
+                        Description="@unavailableState.Description">
+                <Actions>
+                    <Button Text="Open projects"
+                            Click="OpenUnavailableRouteAsync" />
+                </Actions>
+            </EmptyState>
+        </ChildContent>
+    </PageScaffold>
+}
+else if (surface is null)
 {
     <PageScaffold>
         <Header>
@@ -153,6 +173,7 @@ else
     private CanvasCalendarSurface? canvasSurface;
     private ProjectCalendarViewState currentViewState = ProjectCalendarViewState.Empty;
     private Guid? selectedEventId;
+    private ProjectWorkbenchUnavailableState? unavailableState;
 
     private ProjectCalendarEvent? selectedEvent => surface?.Events.FirstOrDefault(item => item.Id == selectedEventId);
     private string SelectedEventLabel => selectedEvent?.ObjectType.ToString() ?? "None";
@@ -176,10 +197,28 @@ else
 
     private async Task LoadAsync()
     {
-        surface = await ProjectWorkbenchService.GetCalendarAsync(ProjectId);
+        var loadResult = await ProjectWorkbenchService.TryGetCalendarAsync(ProjectId);
+        if (!loadResult.IsSuccess || loadResult.Surface is null)
+        {
+            unavailableState = loadResult.UnavailableState;
+            surface = null;
+            canvasSurface = null;
+            selectedEventId = null;
+            currentViewState = ProjectCalendarViewState.Empty;
+            return;
+        }
+
+        unavailableState = null;
+        surface = loadResult.Surface;
         currentViewState = ProjectCalendarStateParser.Parse(surface.ViewStateJson);
         selectedEventId ??= currentViewState.SelectedEventId ?? surface.Events.FirstOrDefault()?.Id;
         canvasSurface = ProjectCalendarAdapter.BuildSurface(surface, currentViewState with { SelectedEventId = selectedEventId });
+    }
+
+    private Task OpenUnavailableRouteAsync()
+    {
+        Navigation.NavigateTo(unavailableState?.SafeRoute ?? "/projects");
+        return Task.CompletedTask;
     }
 
     private Task HandleEventSelectedAsync(CanvasCalendarSelectionChangedEventArgs args)

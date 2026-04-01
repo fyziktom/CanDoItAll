@@ -1,8 +1,0 @@
-Phase,Subbundle,Focus,Dependencies,Validation
-01,Architecture contract and scope model,"Define semantic theme tokens, override contract, scope boundaries, and canonical cad prefix direction.",Repo inspection and inventory workbook.,Architecture document approved and source references mapped.
-02,Architecture QA challenge and repair,Stress-test the architecture as a senior QA/Tailwind review and repair weak assumptions before implementation.,01 completed.,"Explicit concerns resolved, no weak proof paths left."
-03,Tailwind theme token foundation and host,"Add shared semantic CSS variables, built-in light/dark themes, and a runtime theme host/scope in BaseLib.",02 completed.,"Tailwind build, focused component proof, runtime host working."
-04,BaseLib component tone and radius adoption,Move BaseLib primitives off hard-coded palette utilities onto semantic theme tokens and consistent radii.,03 completed.,"Build, component tests, dependent UI smoke."
-05,Module and page hotspot migration,Replace direct page/module palette classes with shared theme-aware component or semantic class usage.,04 completed.,Route matrix screenshots and hotspot delta recorded.
-06,Prefix stabilization and compatibility shims,Canonicalize shared classes on cad-* while preserving short-term compatibility for cda-* and zy-* callers.,03-05 completed.,Prefix inventory trend proves migrated canonical usage and no broken routes.
-07,Runtime theme proof and closure audit,"Prove light/dark runtime switching, review screenshots, close raw notes, and confirm Zyphonote reuse path.",01-06 completed.,Build/tests/browser proof and reuse analysis complete.

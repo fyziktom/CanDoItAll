@@ -38,7 +38,7 @@ public sealed class ProjectStructureRuntimeLauncherTests
             ProjectEnvironmentKind.DotNetWatch,
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = @"C:\repos\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj",
+                ProjectPath = @"C:\workspace\repos\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj",
                 LocalhostUrl = "https://localhost:7271"
             });
 
@@ -48,7 +48,7 @@ public sealed class ProjectStructureRuntimeLauncherTests
         Assert.NotNull(result.Plan);
         Assert.Contains("$env:ASPNETCORE_URLS = 'https://localhost:7271'", result.Plan!.StartupScript, StringComparison.Ordinal);
         Assert.Equal(
-            "dotnet watch --project 'C:\\repos\\CanDoItAll\\src\\CanDoItAll.Web\\CanDoItAll.Web.csproj' run --no-launch-profile",
+            "dotnet watch --project 'C:\\workspace\\repos\\CanDoItAll\\src\\CanDoItAll.Web\\CanDoItAll.Web.csproj' run --no-launch-profile",
             result.Plan.DisplayCommand);
     }
 
@@ -115,7 +115,9 @@ public sealed class ProjectStructureRuntimeLauncherTests
     }
 
     private static ProjectStructureRuntimeLauncher CreateSut()
-        => new(new TestWorkspacePathResolver(@"C:\workspace"), NullLogger<ProjectStructureRuntimeLauncher>.Instance);
+        => new(
+            new WorkspacePathAccessGuard(new TestWorkspacePathResolver(@"C:\workspace")),
+            NullLogger<ProjectStructureRuntimeLauncher>.Instance);
 
     private static ProjectStructureNode CreateEnvironmentNode(ProjectEnvironmentKind kind, ProjectEnvironmentMetadata metadata)
     {

@@ -23,7 +23,7 @@ public sealed class KeyboardShortcutRouterTests
         var snapshot = KeyboardShortcutRouterFactory.CreateForWorkbench(surface, SelectionModel.From(["alpha", "beta"]));
 
         Assert.Equal("Scoped", snapshot.StatePill);
-        Assert.Contains("Ctrl/Cmd+C / V clipboard", snapshot.Metrics);
+        Assert.Contains("Ctrl/Cmd+X / C / V clipboard", snapshot.Metrics);
         Assert.Contains("Selection scoped to 2", snapshot.Metrics);
     }
 
@@ -40,11 +40,11 @@ public sealed class KeyboardShortcutRouterTests
                 Summary = "Fit, help, and clipboard now share one router.",
                 StatePill = "Scoped",
                 IsEnabled = true,
-                Metrics = ["0 / +/- fit and zoom", "Ctrl/Cmd+C / V clipboard"]
+                Metrics = ["0 / +/- fit and zoom", "Ctrl/Cmd+X / C / V clipboard"]
             }));
 
         Assert.Contains("Shared keyboard routing owns zoom, help, clipboard, and selection scope", cut.Markup);
-        Assert.Contains("Ctrl/Cmd+C / V clipboard", cut.Markup);
+        Assert.Contains("Ctrl/Cmd+X / C / V clipboard", cut.Markup);
     }
 }
 

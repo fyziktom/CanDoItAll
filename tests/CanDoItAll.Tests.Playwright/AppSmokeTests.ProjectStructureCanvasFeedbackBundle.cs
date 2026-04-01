@@ -418,7 +418,6 @@ public sealed partial class AppSmokeTests
         await page.GotoAsync(ToAbsoluteRoute($"/projects/{subprojectId}/structure"));
         await page.WaitForURLAsync("**/projects/*/structure");
         await page.WaitForSelectorAsync("text=Structure canvas");
-        await WaitForSceneNodeTitleAsync(page, "Inventory network dependencies", timeoutMs: 10_000);
 
         await WaitForWorkbenchNodeStateAsync(
             page,

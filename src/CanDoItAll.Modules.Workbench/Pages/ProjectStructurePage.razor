@@ -28,7 +28,27 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
 <PageTitle>Project Structure</PageTitle>
 
-@if (surface is null || canvasSurface is null)
+@if (unavailableState is not null)
+{
+    <PageScaffold>
+        <Header>
+            <PageHeader Eyebrow="Workbench"
+                        Title="Project structure unavailable"
+                        Description="The requested project is not available in the active database profile." />
+        </Header>
+        <ChildContent>
+            <EmptyState Eyebrow="Switched profile"
+                        Title="@unavailableState.Title"
+                        Description="@unavailableState.Description">
+                <Actions>
+                    <Button Text="Open projects"
+                            Click="OpenUnavailableRouteAsync" />
+                </Actions>
+            </EmptyState>
+        </ChildContent>
+    </PageScaffold>
+}
+else if (surface is null || canvasSurface is null)
 {
     <CanvasWorkbenchStage Eyebrow="Structure canvas"
                           Title="Project structure workbench"
@@ -253,6 +273,7 @@ else
     private string localOpenFeedbackTone = "neutral";
     private Guid loadedProjectId;
     private string? pendingWorkbenchSelectionId;
+    private ProjectWorkbenchUnavailableState? unavailableState;
 
     private IReadOnlyList<CanvasWorkbenchStat> stageStats =>
     [
@@ -321,7 +342,22 @@ else
     {
         CancelPendingCanvasViewStatePersistence();
         pendingWorkbenchSelectionId = null;
-        var reloadedSurface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
+        var loadResult = await ProjectWorkbenchService.TryGetStructureAsync(ProjectId);
+        if (!loadResult.IsSuccess || loadResult.Surface is null)
+        {
+            unavailableState = loadResult.UnavailableState;
+            surface = null;
+            canvasSurface = null;
+            previewNode = null;
+            quickActionDialog = null;
+            currentViewStateJson = null;
+            selectedNodeIds = [];
+            pendingClientSelectionId = null;
+            return;
+        }
+
+        unavailableState = null;
+        var reloadedSurface = loadResult.Surface;
         var uiState = NormalizePersistedCanvasUiState(
             !string.IsNullOrWhiteSpace(currentViewStateJson)
                 ? CanvasWorkbenchUiState.Parse(currentViewStateJson)
@@ -373,6 +409,12 @@ else
         surface = reloadedSurface with { ViewStateJson = uiState.ToJson() };
         currentViewStateJson = surface.ViewStateJson;
         RefreshCanvasSurface();
+    }
+
+    private Task OpenUnavailableRouteAsync()
+    {
+        Navigation.NavigateTo(unavailableState?.SafeRoute ?? "/projects");
+        return Task.CompletedTask;
     }
 
     private async Task ApplySurfaceNodeUpdatesAsync(IReadOnlyCollection<ProjectStructureNode> updatedNodes)

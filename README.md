@@ -30,7 +30,8 @@ Notes:
 
 - The app uses Interactive Server rendering.
 - In development it exposes the runtime readiness probe at `/_dev/runtime`.
-- The default SQLite database and workspace storage live under [src/CanDoItAll.Web/.artifacts/workspace](C:/repositories/CanDoItAll/src/CanDoItAll.Web/.artifacts/workspace).
+- If no explicit `Database:Provider` / `Database:ConnectionString` override is supplied, the app resolves its active database through a control plane rooted at `%LOCALAPPDATA%\CanDoItAll\control-plane` by default.
+- On first run the app onboards a legacy SQLite database from [src/CanDoItAll.Web/.artifacts/workspace/candoitall.db](C:/repositories/CanDoItAll/src/CanDoItAll.Web/.artifacts/workspace/candoitall.db) when present; otherwise it provisions a managed SQLite profile under the control-plane root.
 
 ## Run the Development Manager
 
@@ -79,6 +80,7 @@ powershell -ExecutionPolicy Bypass -File tests\CanDoItAll.Tests.Playwright\bin\D
 
 - Workbench tab state is stored in browser local storage under `candoitall.workbench.session`.
 - The web app auto-creates its SQLite database on startup.
+- Database-profile metadata and DataProtection keys live in the control-plane root instead of the selected app database.
 - Search, activity, validation, test lab, and prompt factory data are persisted through the shared app database.
 
 ## Configuration
@@ -87,7 +89,8 @@ Useful defaults:
 
 - Web app development manager base URL: `http://127.0.0.1:6407`
 - Development tuning mode is enabled in [src/CanDoItAll.Web/appsettings.Development.json](C:/repositories/CanDoItAll/src/CanDoItAll.Web/appsettings.Development.json)
-- Database provider defaults to SQLite unless `Database:Provider` and `Database:ConnectionString` are overridden
+- Control-plane root defaults to `%LOCALAPPDATA%\CanDoItAll\control-plane` unless `ControlPlane:RootPath` is overridden
+- Explicit `Database:Provider` and `Database:ConnectionString` values still force a locked startup override for test and headless scenarios
 
 ## Current Scope
 
