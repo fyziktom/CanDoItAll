@@ -27,6 +27,14 @@ internal sealed record ProjectStructureCreateLeafDefinition(
     IReadOnlyList<CanvasWorkbenchInputField>? InputFields = null,
     IReadOnlyList<CanvasWorkbenchInputValue>? DefaultInputValues = null);
 
+public sealed record ProjectStructureBlockTypeOption(
+    string ActionId,
+    string ObjectSubtype,
+    string Label,
+    string Description,
+    string Icon,
+    string Tone);
+
 public sealed record ProjectStructureInspectorCreateGroup(
     string Key,
     string Label,
@@ -180,6 +188,9 @@ internal static partial class ProjectStructureCanvasCatalog
         "task-flow" => "Task flow block",
         "backlog" => "Backlog block",
         "server" => "Server block",
+        "computer" => "Computer block",
+        "router" => "Router block",
+        "wifi" => "WiFi block",
         _ => "Project block"
     };
 
@@ -205,6 +216,17 @@ internal static partial class ProjectStructureCanvasCatalog
             })
             .ToList();
     }
+
+    public static IReadOnlyList<ProjectStructureBlockTypeOption> BuildCommonBlockTypeOptions()
+        => ResolveBlockLeafDefinitions()
+            .Select(definition => new ProjectStructureBlockTypeOption(
+                definition.ActionId,
+                definition.ObjectSubtype,
+                definition.Label,
+                definition.Description,
+                definition.Icon,
+                definition.Tone))
+            .ToList();
 
     private static IReadOnlyList<string> BuildTopLevelMenuEntries(ProjectObjectType? sourceType) => sourceType switch
     {
@@ -304,6 +326,9 @@ internal static partial class ProjectStructureCanvasCatalog
                 "add-block-task-flow",
                 "add-block-backlog",
                 "add-block-server",
+                "add-block-computer",
+                "add-block-router",
+                "add-block-wifi",
                 "add-block-risk",
                 "add-block-compliance",
                 "add-block-support"

@@ -65,6 +65,126 @@
     </ProjectStructureOverlayDialog>
 }
 
+@if (BlockMutationDialog is not null)
+{
+    var blockDialog = BlockMutationDialog;
+    var selectedOption = blockDialog.Options.FirstOrDefault(option => string.Equals(option.ActionId, blockDialog.SelectedActionId, StringComparison.OrdinalIgnoreCase));
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@blockDialog.Title"
+                                   Kicker="Block mutation"
+                                   Title="@blockDialog.Title"
+                                   Summary="@blockDialog.Copy"
+                                   DataTestId="project-structure-block-mutation-dialog"
+                                   Close="CloseBlockMutation">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseBlockMutation" />
+            <Button Text="@blockDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Info"
+                    data-testid="project-structure-block-mutation-submit"
+                    Click="ExecuteBlockMutation" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Footer" Value="Block type" Class="cw-panel-copy" />
+                        <select class="cw-context-toolbox__search"
+                                data-testid="project-structure-block-mutation-select"
+                                value="@blockDialog.SelectedActionId"
+                                @onchange="BlockMutationSelectionChanged">
+                            @foreach (var option in blockDialog.Options)
+                            {
+                                <option value="@option.ActionId">@option.Label</option>
+                            }
+                        </select>
+                    </Stack>
+                </PanelCard>
+
+                @if (selectedOption is not null)
+                {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected type" />
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@selectedOption.Label" />
+                            <TextBlock TextStyle="TextStyle.Note" Value="@selectedOption.Description" Class="cw-panel-copy" />
+                        </Stack>
+                    </PanelCard>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(blockDialog.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @blockDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@if (SubprojectTransferDialog is not null)
+{
+    var transferDialog = SubprojectTransferDialog;
+    var moveScopeCopy = transferDialog.DescendantCount == 1
+        ? "1 descendant will move into the new subproject root."
+        : $"{transferDialog.DescendantCount} descendants will move into the new subproject root.";
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@transferDialog.Title"
+                                   Kicker="Subproject transfer"
+                                   Title="@transferDialog.Title"
+                                   Summary="@transferDialog.Copy"
+                                   DataTestId="project-structure-subproject-transfer-dialog"
+                                   Close="CloseSubprojectTransfer">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseSubprojectTransfer" />
+            <Button Text="@transferDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Info"
+                    data-testid="project-structure-subproject-transfer-submit"
+                    Click="ExecuteSubprojectTransfer" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Footer" Value="New subproject name" Class="cw-panel-copy" />
+                        <input class="cw-context-toolbox__search"
+                               type="text"
+                               data-testid="project-structure-subproject-transfer-name"
+                               value="@transferDialog.ProjectName"
+                               @oninput="SubprojectTransferNameChanged" />
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Move scope" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@moveScopeCopy"
+                                   Class="cw-panel-copy" />
+                    </Stack>
+                </PanelCard>
+
+                @if (!string.IsNullOrWhiteSpace(transferDialog.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @transferDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
 @if (QuickActionDialog is not null)
 {
     var quickActionDialog = QuickActionDialog;
@@ -180,6 +300,30 @@
 
     [Parameter]
     public EventCallback ExecuteProjectHierarchyCommand { get; set; }
+
+    [Parameter]
+    public ProjectStructureBlockMutationDialogState? BlockMutationDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseBlockMutation { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> BlockMutationSelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteBlockMutation { get; set; }
+
+    [Parameter]
+    public ProjectStructureSubprojectTransferDialogState? SubprojectTransferDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseSubprojectTransfer { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> SubprojectTransferNameChanged { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteSubprojectTransfer { get; set; }
 
     [Parameter]
     public ProjectStructureQuickActionDialogState? QuickActionDialog { get; set; }

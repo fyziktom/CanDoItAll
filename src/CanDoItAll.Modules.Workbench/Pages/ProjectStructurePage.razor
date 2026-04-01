@@ -21,6 +21,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject WorkspaceService WorkspaceService
 @inject ProviderExecutionService ProviderExecutionService
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
 <PageTitle>Project Structure</PageTitle>
@@ -56,7 +57,8 @@ else
                                  CreateActionInvoked="HandleCreateActionAsync"
                                  NodeEdited="HandleNodeEditedAsync"
                                  NodeOpened="HandleNodeOpenedAsync"
-                                 StateChanged="HandleCanvasStateChangedAsync">
+                                 StateChanged="HandleCanvasStateChangedAsync"
+                                 ClipboardRequested="HandleClipboardRequestedAsync">
                     <ToolbarLeftContent>
                         <ProjectStructureToolbarActions SelectionWindowVisible="@SelectionWindowState.IsVisible"
                                                        HealthWindowVisible="@HealthWindowState.IsVisible"
@@ -75,8 +77,8 @@ else
                                                            TestId="project-structure-toolbox-window"
                                                            AriaLabel="Project structure standard blocks toolbox"
                                                            Kicker="Standard blocks Toolbox"
-                                                           Title=""
-                                                           Summary=""
+                                                           Title="Project structure toolbox"
+                                                           Summary="Search the shared block catalog, drag the window where you need it, and keep typed creation close to the canvas."
                                                            State="@ToolboxWindowState"
                                                            StateChanged="HandleToolboxWindowStateChangedAsync"
                                                            Groups="@ToolboxCreateGroups"
@@ -133,11 +135,19 @@ else
                                                                AdvancedDetailsHelpTip="@AdvancedDetailsHelpTip" />
                             </CanvasFloatingWindow>
                         }
-                        <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
+                            <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
                             <ProjectStructureCanvasDialogs ProjectHierarchyDialog="@projectHierarchyDialog"
                                                            CloseProjectHierarchy="CloseProjectHierarchyDialog"
                                                            ProjectHierarchySelectionChanged="HandleProjectHierarchySelectionChanged"
                                                            ExecuteProjectHierarchyCommand="ExecuteProjectHierarchyCommandAsync"
+                                                           BlockMutationDialog="@blockMutationDialog"
+                                                           CloseBlockMutation="CloseBlockMutationDialog"
+                                                           BlockMutationSelectionChanged="HandleBlockMutationSelectionChanged"
+                                                           ExecuteBlockMutation="ExecuteBlockMutationAsync"
+                                                           SubprojectTransferDialog="@subprojectTransferDialog"
+                                                           CloseSubprojectTransfer="CloseSubprojectTransferDialog"
+                                                           SubprojectTransferNameChanged="HandleSubprojectTransferNameChanged"
+                                                           ExecuteSubprojectTransfer="ExecuteSubprojectTransferAsync"
                                                            QuickActionDialog="@quickActionDialog"
                                                            CloseQuickActionDialog="CloseQuickActionDialog"
                                                            ExecuteQuickAction="ExecuteQuickActionAsync"
@@ -577,6 +587,16 @@ else
 
     private async Task HandleCanvasActionAsync(string actionId, string? nodeId, double x, double y)
     {
+        if (await TryHandleCopyActionAsync(actionId, nodeId))
+        {
+            return;
+        }
+
+        if (await TryHandleNodeMutationActionAsync(actionId, nodeId))
+        {
+            return;
+        }
+
         if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition(actionId, out var definition))
         {
             await CreateObjectAsync(
@@ -1263,7 +1283,13 @@ else
             return "New note";
         }
 
-        var normalized = text.Trim();
+        var normalized = text
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault();
+        normalized = string.IsNullOrWhiteSpace(normalized)
+            ? text.Trim()
+            : normalized.Trim();
         return normalized.Length <= 64 ? normalized : $"{normalized[..61]}...";
     }
 

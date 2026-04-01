@@ -40,6 +40,57 @@ public sealed record ProjectStructureProjectHierarchyDialogState(
     };
 }
 
+public enum ProjectStructureBlockMutationDialogMode
+{
+    ChangeBlockType,
+    ConvertNoteToBlock
+}
+
+public sealed record ProjectStructureBlockMutationDialogState(
+    ProjectStructureBlockMutationDialogMode Mode,
+    string NodeId,
+    string NodeTitle,
+    IReadOnlyList<ProjectStructureBlockTypeOption> Options,
+    string SelectedActionId,
+    string Error)
+{
+    public string Title => Mode switch
+    {
+        ProjectStructureBlockMutationDialogMode.ChangeBlockType => $"Change block type for {NodeTitle}",
+        _ => $"Convert {NodeTitle} to a block"
+    };
+
+    public string Copy => Mode switch
+    {
+        ProjectStructureBlockMutationDialogMode.ChangeBlockType =>
+            "Choose the common block type that should replace the current block subtype.",
+        _ =>
+            "Choose the common block type that should replace this note while keeping its text."
+    };
+
+    public string SubmitLabel => Mode switch
+    {
+        ProjectStructureBlockMutationDialogMode.ChangeBlockType => "Change block type",
+        _ => "Convert note"
+    };
+}
+
+public sealed record ProjectStructureSubprojectTransferDialogState(
+    string SourceNodeId,
+    string SourceNodeTitle,
+    int DescendantCount,
+    string ProjectName,
+    string Error)
+{
+    public string Title => $"Move descendants from {SourceNodeTitle}";
+
+    public string Copy => DescendantCount == 1
+        ? "Create a new subproject and move the single descendant under this node into it."
+        : $"Create a new subproject and move {DescendantCount} descendants under this node into it.";
+
+    public string SubmitLabel => "Create subproject";
+}
+
 public sealed record ProjectStructureQuickActionDialogState(
     string NodeId,
     string Title,

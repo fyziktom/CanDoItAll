@@ -753,6 +753,186 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             link.Kind == ProjectObjectLinkKind.BelongsTo);
     }
 
+    [Fact]
+    public async Task ReclassifyObjectAsync_converts_notes_to_common_blocks()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var saveResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Workbench Reclassification",
+            Description = "Exercise note to common block conversion.",
+            Objective = "Persist typed block mutations.",
+            CurrentPhase = "Execution"
+        });
+
+        Assert.True(saveResult.IsSuccess);
+
+        const string noteBody = "Deploy gateway\r\nRemember WiFi coverage";
+        var created = await workbench.CreateObjectAsync(
+            saveResult.Value,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Scratch note",
+                string.Empty,
+                noteBody,
+                $"project:{saveResult.Value}",
+                320,
+                240));
+
+        var updated = await workbench.ReclassifyObjectAsync(
+            saveResult.Value,
+            created.Id,
+            new ProjectObjectReclassificationRequest(
+                ProjectObjectType.ProjectBlock,
+                "deployment",
+                "Deploy gateway",
+                string.Empty,
+                noteBody,
+                "{}"));
+
+        Assert.NotNull(updated);
+        Assert.Equal(ProjectObjectType.ProjectBlock, updated!.ObjectType);
+        Assert.Equal("deployment", updated.ObjectSubtype);
+        Assert.Equal("Deploy gateway", updated.Title);
+        Assert.Equal(noteBody, updated.Notes);
+
+        var surface = await workbench.GetStructureAsync(saveResult.Value);
+        var persistedNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, created.Id, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.ProjectBlock, persistedNode.ObjectType);
+        Assert.Equal("deployment", persistedNode.ObjectSubtype);
+        Assert.Equal("Deploy gateway", persistedNode.Title);
+        Assert.Equal(noteBody, persistedNode.Notes);
+        Assert.Equal(ProjectObjectPaletteKeys.Info, persistedNode.VisualProfile.PaletteKey);
+    }
+
+    [Fact]
+    public async Task MoveDescendantsToProjectAsync_moves_subtrees_into_the_target_project_root()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var sourceResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Source project",
+            Description = "Owns the subtree before extraction.",
+            Objective = "Move descendants into a new subproject.",
+            CurrentPhase = "Execution"
+        });
+        var targetResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Target project",
+            Description = "Receives the extracted subtree.",
+            Objective = "Receive descendants under its root.",
+            CurrentPhase = "Discovery"
+        });
+
+        Assert.True(sourceResult.IsSuccess);
+        Assert.True(targetResult.IsSuccess);
+
+        var sourceProjectId = sourceResult.Value;
+        var targetProjectId = targetResult.Value;
+        var parentBlock = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Network migration",
+                "Source branch",
+                "Parent block stays in the source project.",
+                $"project:{sourceProjectId}",
+                320,
+                180,
+                null,
+                null,
+                "computer"));
+        var childNote = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Gateway note",
+                string.Empty,
+                "Move this branch to the target project.",
+                parentBlock.Id,
+                520,
+                240));
+        var nestedTask = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Cut over DNS",
+                "Nested work",
+                "This child should keep its parent within the moved subtree.",
+                childNote.Id,
+                720,
+                300,
+                null,
+                null,
+                "task"));
+        var wifiBlock = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Guest WiFi",
+                "Subnet",
+                "Move this sibling too.",
+                parentBlock.Id,
+                560,
+                380,
+                null,
+                null,
+                "wifi"));
+        await workbench.LinkObjectsAsync(sourceProjectId, childNote.Id, wifiBlock.Id, ProjectObjectLinkKind.Uses);
+
+        var transfer = await workbench.MoveDescendantsToProjectAsync(sourceProjectId, parentBlock.Id, targetProjectId);
+
+        Assert.NotNull(transfer);
+        Assert.Equal(targetProjectId, transfer!.TargetProjectId);
+        Assert.Equal(3, transfer.MovedNodeCount);
+        Assert.Equal(2, transfer.MovedRootCount);
+
+        var sourceSurface = await workbench.GetStructureAsync(sourceProjectId);
+        Assert.Contains(sourceSurface.Nodes, node => string.Equals(node.Id, parentBlock.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(sourceSurface.Nodes, node => string.Equals(node.Id, childNote.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(sourceSurface.Nodes, node => string.Equals(node.Id, nestedTask.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(sourceSurface.Nodes, node => string.Equals(node.Id, wifiBlock.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(sourceSurface.Links, link =>
+            string.Equals(link.SourceId, childNote.Id, StringComparison.Ordinal) ||
+            string.Equals(link.TargetId, childNote.Id, StringComparison.Ordinal) ||
+            string.Equals(link.SourceId, wifiBlock.Id, StringComparison.Ordinal) ||
+            string.Equals(link.TargetId, wifiBlock.Id, StringComparison.Ordinal) ||
+            string.Equals(link.SourceId, nestedTask.Id, StringComparison.Ordinal) ||
+            string.Equals(link.TargetId, nestedTask.Id, StringComparison.Ordinal));
+
+        var targetSurface = await workbench.GetStructureAsync(targetProjectId);
+        var movedNote = Assert.Single(targetSurface.Nodes, node => string.Equals(node.Id, childNote.Id, StringComparison.Ordinal));
+        var movedTask = Assert.Single(targetSurface.Nodes, node => string.Equals(node.Id, nestedTask.Id, StringComparison.Ordinal));
+        var movedWifi = Assert.Single(targetSurface.Nodes, node => string.Equals(node.Id, wifiBlock.Id, StringComparison.Ordinal));
+        Assert.Equal(BuildProjectRootNodeKey(targetProjectId), movedNote.ParentId);
+        Assert.Equal(childNote.Id, movedTask.ParentId);
+        Assert.Equal(BuildProjectRootNodeKey(targetProjectId), movedWifi.ParentId);
+        Assert.Contains(targetSurface.Links, link =>
+            string.Equals(link.SourceId, BuildProjectRootNodeKey(targetProjectId), StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, childNote.Id, StringComparison.Ordinal) &&
+            link.IsUserAuthored);
+        Assert.Contains(targetSurface.Links, link =>
+            string.Equals(link.SourceId, BuildProjectRootNodeKey(targetProjectId), StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, wifiBlock.Id, StringComparison.Ordinal) &&
+            link.IsUserAuthored);
+        Assert.Contains(targetSurface.Links, link =>
+            string.Equals(link.SourceId, childNote.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, wifiBlock.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.Uses &&
+            link.IsUserAuthored);
+        Assert.DoesNotContain(targetSurface.Links, link =>
+            string.Equals(link.SourceId, parentBlock.Id, StringComparison.Ordinal) ||
+            string.Equals(link.TargetId, parentBlock.Id, StringComparison.Ordinal));
+    }
+
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {
         var result = await projectsService.SaveAsync(new ProjectEditorModel

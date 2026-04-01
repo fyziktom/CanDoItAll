@@ -34,7 +34,7 @@ public static class KeyboardShortcutRouterFactory
 
         if (surface.Chrome.Clipboard.IsEnabled)
         {
-            metrics.Add("Ctrl/Cmd+C / V clipboard");
+            metrics.Add("Ctrl/Cmd+X / C / V clipboard");
         }
 
         metrics.Add(selection.SelectedNodeIds.Count > 0

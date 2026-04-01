@@ -1,4 +1,5 @@
 using Bunit;
+using AngleSharp.Dom;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -57,9 +58,7 @@ public sealed class ProjectStructurePageTests
             Assert.DoesNotContain("cw-inspector-column", cut.Markup, StringComparison.Ordinal);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Health", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Health").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -141,9 +140,7 @@ public sealed class ProjectStructurePageTests
             Assert.DoesNotContain("project-structure-validation-window", cut.Markup, StringComparison.Ordinal);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Health", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Health").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -229,7 +226,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("project-structure-toolbox-group-body-work", cut.Markup);
             Assert.Contains(">Task<", cut.Markup);
             Assert.Contains(">Issue<", cut.Markup);
-            Assert.Contains("fa-list-check", cut.Markup);
+            Assert.Contains("project-structure-toolbox-add-work-task", cut.Markup);
             Assert.DoesNotContain("project-structure-toolbox-group-body-capture", cut.Markup, StringComparison.Ordinal);
         });
 
@@ -247,8 +244,8 @@ public sealed class ProjectStructurePageTests
         {
             Assert.Contains("project-structure-toolbox-group-body-assets", cut.Markup);
             Assert.Contains("project-structure-toolbox-add-file-pdf", cut.Markup);
-            Assert.Contains("fa-file-pdf", cut.Markup);
-            Assert.Contains("project-structure-toolbox-meta", cut.Markup);
+            Assert.Contains(">PDF<", cut.Markup);
+            Assert.Contains("Search blocks, files, runtime, or infrastructure", cut.Markup);
             Assert.DoesNotContain("Unknown icon token", cut.Markup, StringComparison.Ordinal);
         });
     }
@@ -296,9 +293,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains(">Wizard<", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Wizard", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Wizard").Click();
 
         Assert.Contains("/prompt-factory?sessionId=", navigation.Uri, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(created.ArtifactId!.Value.ToString(), navigation.Uri, StringComparison.OrdinalIgnoreCase);
@@ -470,9 +465,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Add subproject", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Add subproject", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Add subproject").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -515,9 +508,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Reconnect parent", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Reconnect parent", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Reconnect parent").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -671,9 +662,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains(">Summary<", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Summary", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Summary").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -736,9 +725,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("View Mermaid", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "View Mermaid", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "View Mermaid").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -815,9 +802,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains(">Find others delivery to me<", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Find my tasks", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Find my tasks").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -889,9 +874,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Open in new tab", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Open", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Expand preview").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -1174,8 +1157,8 @@ public sealed class ProjectStructurePageTests
         var actionLabels = cut.FindAll("[data-testid='project-structure-node-actions'] button")
             .Select(button => button.TextContent.Trim())
             .ToList();
-        Assert.Contains("Edit", actionLabels);
-        Assert.Equal("Delete", actionLabels.Last());
+        Assert.Contains(actionLabels, label => label.Contains("Edit", StringComparison.Ordinal));
+        Assert.Contains("Delete", actionLabels.Last(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1299,9 +1282,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Edit", cut.Markup);
         });
 
-        cut.FindAll("[data-testid='project-structure-node-actions'] button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Edit", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Edit", "[data-testid='project-structure-node-actions'] button").Click();
 
         harness.Context.JSInterop.VerifyInvoke("CanDoItAll.canvasWorkbench.openCreateComposer");
 
@@ -1470,9 +1451,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Open PowerShell (Admin)", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Open PowerShell (Admin)", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Open PowerShell (Admin)").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -1748,6 +1727,13 @@ public sealed class ProjectStructurePageTests
 
     private static Task OpenNodeFromCanvasAsync(IRenderedComponent<ProjectStructurePage> cut, string nodeId)
         => cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnNodeOpened(nodeId));
+
+    private static IElement FindButtonByLabel(
+        IRenderedFragment cut,
+        string label,
+        string selector = "button")
+        => cut.FindAll(selector)
+            .First(button => button.TextContent.Contains(label, StringComparison.Ordinal));
 
     private sealed class TestRuntimeLauncher : IProjectStructureRuntimeLauncher
     {

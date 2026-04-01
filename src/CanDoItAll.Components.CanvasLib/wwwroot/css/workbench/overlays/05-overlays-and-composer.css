@@ -1083,6 +1083,9 @@
     background: rgba(255, 255, 255, 0.86);
     color: #7c2d12;
     font-weight: 700;
+    min-height: 7.5rem;
+    resize: vertical;
+    white-space: pre-wrap;
 }
 
 .cw-note-editor__hint {

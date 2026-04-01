@@ -219,6 +219,14 @@ public sealed record ProjectObjectEditRequest(
     DateTimeOffset? EndUtc,
     string MetadataJson);
 
+public sealed record ProjectObjectReclassificationRequest(
+    ProjectObjectType TargetObjectType,
+    string TargetObjectSubtype,
+    string Title,
+    string Subtitle,
+    string Notes,
+    string MetadataJson = "{}");
+
 public sealed record ProjectObjectSeedRequest(
     ProjectObjectType ObjectType,
     string Title,
@@ -244,6 +252,11 @@ public sealed record ProjectNodeMoveRequest(
     string NodeId,
     double X,
     double Y);
+
+public sealed record ProjectStructureSubprojectTransferResult(
+    Guid TargetProjectId,
+    int MovedNodeCount,
+    int MovedRootCount);
 
 public sealed record ProjectStructureSubtreeRecompositionResult(
     string RootNodeId,
@@ -763,6 +776,160 @@ public sealed class ProjectWorkbenchService(
         node.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
         return MapStructureNode(node);
+    }
+
+    public async Task<ProjectStructureNode?> ReclassifyObjectAsync(
+        Guid projectId,
+        string nodeKey,
+        ProjectObjectReclassificationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var node = await dbContext.Set<ProjectObjectRecord>()
+            .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
+        if (node is null || !IsSupportedReclassification(node.ObjectType, request.TargetObjectType))
+        {
+            return null;
+        }
+
+        node.ObjectType = request.TargetObjectType;
+        node.ObjectSubtype = request.TargetObjectSubtype?.Trim() ?? string.Empty;
+        node.Title = string.IsNullOrWhiteSpace(request.Title) ? node.Title : request.Title.Trim();
+        node.Subtitle = request.Subtitle?.Trim() ?? string.Empty;
+        node.Notes = request.Notes?.Trim() ?? string.Empty;
+        node.MetadataJson = ResolveMetadataJson(node.ObjectType, node.ObjectSubtype, request.MetadataJson, null);
+        node.ExternalArtifactKind = node.ObjectType.ToString();
+        if (string.IsNullOrWhiteSpace(node.Route))
+        {
+            node.Route = $"/projects/{projectId}/structure";
+        }
+
+        node.UpdatedAtUtc = clock.GetUtcNow();
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return MapStructureNode(node);
+    }
+
+    public async Task<ProjectStructureSubprojectTransferResult?> MoveDescendantsToProjectAsync(
+        Guid sourceProjectId,
+        string sourceNodeKey,
+        Guid targetProjectId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(sourceNodeKey) || sourceProjectId == targetProjectId)
+        {
+            return null;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var sourceRecords = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == sourceProjectId)
+            .ToListAsync(cancellationToken);
+        if (sourceRecords.Count == 0)
+        {
+            return null;
+        }
+
+        var editableChildrenByParent = sourceRecords
+            .Where(item => !item.IsSystemManaged && !string.IsNullOrWhiteSpace(item.ParentNodeKey))
+            .GroupBy(item => item.ParentNodeKey!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+        var movedNodeKeys = new HashSet<string>(StringComparer.Ordinal);
+        var movedRootKeys = new HashSet<string>(StringComparer.Ordinal);
+        var queue = new Queue<string>();
+        queue.Enqueue(sourceNodeKey);
+
+        while (queue.Count > 0)
+        {
+            var currentNodeKey = queue.Dequeue();
+            if (!editableChildrenByParent.TryGetValue(currentNodeKey, out var children))
+            {
+                continue;
+            }
+
+            foreach (var child in children)
+            {
+                if (!movedNodeKeys.Add(child.NodeKey))
+                {
+                    continue;
+                }
+
+                if (string.Equals(child.ParentNodeKey, sourceNodeKey, StringComparison.Ordinal))
+                {
+                    movedRootKeys.Add(child.NodeKey);
+                }
+
+                queue.Enqueue(child.NodeKey);
+            }
+        }
+
+        if (movedNodeKeys.Count == 0)
+        {
+            return new ProjectStructureSubprojectTransferResult(targetProjectId, 0, 0);
+        }
+
+        var targetNodeKeys = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == targetProjectId)
+            .Select(item => item.NodeKey)
+            .ToListAsync(cancellationToken);
+        if (targetNodeKeys.Any(movedNodeKeys.Contains))
+        {
+            return null;
+        }
+
+        var targetRootNodeKey = BuildProjectRootNodeKey(targetProjectId);
+        var movedRecords = sourceRecords
+            .Where(item => movedNodeKeys.Contains(item.NodeKey))
+            .ToList();
+        var updatedAtUtc = clock.GetUtcNow();
+
+        foreach (var record in movedRecords)
+        {
+            var originalParentNodeKey = record.ParentNodeKey;
+            record.ProjectId = targetProjectId;
+            record.ParentNodeKey = movedNodeKeys.Contains(originalParentNodeKey ?? string.Empty)
+                ? originalParentNodeKey
+                : targetRootNodeKey;
+            record.Route = RewriteProjectScopedRoute(record.Route, sourceProjectId, targetProjectId);
+            record.UpdatedAtUtc = updatedAtUtc;
+        }
+
+        var linksToProcess = await dbContext.Set<ProjectObjectLinkRecord>()
+            .Where(item => item.ProjectId == sourceProjectId &&
+                (movedNodeKeys.Contains(item.SourceNodeKey) || movedNodeKeys.Contains(item.TargetNodeKey)))
+            .ToListAsync(cancellationToken);
+
+        foreach (var link in linksToProcess)
+        {
+            var hasMovedSource = movedNodeKeys.Contains(link.SourceNodeKey);
+            var hasMovedTarget = movedNodeKeys.Contains(link.TargetNodeKey);
+            if (hasMovedSource && hasMovedTarget)
+            {
+                link.ProjectId = targetProjectId;
+                continue;
+            }
+
+            dbContext.Remove(link);
+        }
+
+        foreach (var movedRootKey in movedRootKeys)
+        {
+            await UpsertLinkAsync(
+                dbContext,
+                targetProjectId,
+                targetRootNodeKey,
+                movedRootKey,
+                ResolveHierarchyLinkKind(targetProjectId, targetRootNodeKey),
+                isSystemManaged: false,
+                cancellationToken);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return new ProjectStructureSubprojectTransferResult(targetProjectId, movedNodeKeys.Count, movedRootKeys.Count);
     }
 
     public async Task<ProjectStructureNode?> UpdateObjectMetadataAsync(
@@ -1832,6 +1999,42 @@ public sealed class ProjectWorkbenchService(
         return end > start ? viewStateJson[start..end] : "month";
     }
 
+    private static bool IsSupportedReclassification(ProjectObjectType currentType, ProjectObjectType targetType)
+        => currentType switch
+        {
+            ProjectObjectType.ProjectBlock => targetType == ProjectObjectType.ProjectBlock,
+            ProjectObjectType.Note => targetType == ProjectObjectType.ProjectBlock,
+            _ => false
+        };
+
+    private static string RewriteProjectScopedRoute(string route, Guid sourceProjectId, Guid targetProjectId)
+    {
+        if (string.IsNullOrWhiteSpace(route))
+        {
+            return route;
+        }
+
+        var sourceStructureRoute = $"/projects/{sourceProjectId}/structure";
+        if (string.Equals(route, sourceStructureRoute, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"/projects/{targetProjectId}/structure";
+        }
+
+        var sourceCalendarRoute = $"/projects/{sourceProjectId}/calendar";
+        if (string.Equals(route, sourceCalendarRoute, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"/projects/{targetProjectId}/calendar";
+        }
+
+        var sourceProjectQueryRoute = $"/projects?projectId={sourceProjectId}";
+        if (string.Equals(route, sourceProjectQueryRoute, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"/projects?projectId={targetProjectId}";
+        }
+
+        return route;
+    }
+
     private static string ResolveMetadataJson(
         ProjectObjectType objectType,
         string? objectSubtype,
@@ -2047,44 +2250,46 @@ public sealed class ProjectWorkbenchService(
 
     private static ProjectObjectVisualProfile ResolveVisualProfile(ProjectObjectType objectType, string objectSubtype, string status) => objectType switch
     {
-        ProjectObjectType.ProjectRoot => new("hex", "#0f172a", "PR", "Project"),
-        ProjectObjectType.Phase => new("pill", "#2563eb", "PH", "Phase"),
-        ProjectObjectType.Milestone => new("diamond", "#d97706", "MS", "Milestone"),
+        ProjectObjectType.ProjectRoot => Profile("hex", "#0f172a", "PR", "Project", ProjectObjectPaletteKeys.Primary),
+        ProjectObjectType.Phase => Profile("pill", "#2563eb", "PH", "Phase", ProjectObjectPaletteKeys.Info),
+        ProjectObjectType.Milestone => Profile("diamond", "#d97706", "MS", "Milestone", ProjectObjectPaletteKeys.Warning),
         ProjectObjectType.ProjectBlock => ResolveProjectBlockVisualProfile(objectSubtype),
         ProjectObjectType.Meeting => objectSubtype switch
         {
-            "onsite" => new("diamond", "#d97706", "ME", "Onsite"),
-            _ => new("diamond", "#0ea5e9", "ME", "Meeting")
+            "onsite" => Profile("diamond", "#d97706", "ME", "Onsite", ProjectObjectPaletteKeys.Warning),
+            _ => Profile("diamond", "#0ea5e9", "ME", "Meeting", ProjectObjectPaletteKeys.Info)
         },
-        ProjectObjectType.Recording => new("pill", "#8b5cf6", "RC", "Recording"),
-        ProjectObjectType.Transcript => new("rect", "#14b8a6", "TR", "Transcript"),
+        ProjectObjectType.Recording => Profile("pill", "#8b5cf6", "RC", "Recording", ProjectObjectPaletteKeys.Secondary),
+        ProjectObjectType.Transcript => Profile("rect", "#14b8a6", "TR", "Transcript", ProjectObjectPaletteKeys.Success),
         ProjectObjectType.Participant => objectSubtype switch
         {
-            "hr" => new("hex", "#38bdf8", "HR", "HR"),
-            "team-block" => new("hex", "#2563eb", "TB", "Team"),
-            "team-section" => new("hex", "#1d4ed8", "TS", "Section"),
-            "freelancer" => new("hex", "#a855f7", "FR", "Freelancer"),
-            "partner" => new("hex", "#16a34a", "PA", "Partner"),
-            "ai-agent" => new("hex", "#0f766e", "AI", "AI"),
-            _ => new("hex", "#475569", "PT", "Participant")
+            "hr" => Profile("hex", "#38bdf8", "HR", "HR", ProjectObjectPaletteKeys.Info),
+            "team-block" => Profile("hex", "#2563eb", "TB", "Team", ProjectObjectPaletteKeys.Info),
+            "team-section" => Profile("hex", "#1d4ed8", "TS", "Section", ProjectObjectPaletteKeys.Info),
+            "freelancer" => Profile("hex", "#a855f7", "FR", "Freelancer", ProjectObjectPaletteKeys.Secondary),
+            "partner" => Profile("hex", "#16a34a", "PA", "Partner", ProjectObjectPaletteKeys.Success),
+            "ai-agent" => Profile("hex", "#0f766e", "AI", "AI", ProjectObjectPaletteKeys.Success),
+            _ => Profile("hex", "#475569", "PT", "Participant", ProjectObjectPaletteKeys.Primary)
         },
         ProjectObjectType.WorkItem => ResolveWorkItemVisualProfile(objectSubtype),
         ProjectObjectType.Repository => ResolveRepositoryVisualProfile(objectSubtype),
         ProjectObjectType.File => ResolveFileVisualProfile(objectSubtype),
-        ProjectObjectType.ImageAsset => new("rect", "#ec4899", "IM", "Image"),
-        ProjectObjectType.VideoAsset => new("rect", "#7c3aed", "VD", "Video"),
-        ProjectObjectType.Link => new("circle", "#38bdf8", "LN", "Link"),
-        ProjectObjectType.Connector => new("circle", "#8b5cf6", "CN", "Connector"),
+        ProjectObjectType.ImageAsset => Profile("rect", "#ec4899", "IM", "Image", ProjectObjectPaletteKeys.Danger),
+        ProjectObjectType.VideoAsset => Profile("rect", "#7c3aed", "VD", "Video", ProjectObjectPaletteKeys.Secondary),
+        ProjectObjectType.Link => Profile("circle", "#38bdf8", "LN", "Link", ProjectObjectPaletteKeys.Info),
+        ProjectObjectType.Connector => Profile("circle", "#8b5cf6", "CN", "Connector", ProjectObjectPaletteKeys.Secondary),
         ProjectObjectType.Script => ResolveScriptVisualProfile(objectSubtype),
         ProjectObjectType.Environment => ResolveEnvironmentVisualProfile(objectSubtype),
         ProjectObjectType.Infrastructure => ResolveInfrastructureVisualProfile(objectSubtype),
-        ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession => new("hex", "#0f766e", "PF", "Prompt"),
-        ProjectObjectType.PromptStep => new("pill", "#14b8a6", "ST", "Step"),
-        ProjectObjectType.ValidationRun => new("diamond", status.Contains("Approved", StringComparison.OrdinalIgnoreCase) ? "#16a34a" : "#dc2626", "VL", "Validate"),
-        ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => new("diamond", "#7c3aed", "TS", "Test"),
-        ProjectObjectType.Decision => new("hex", "#ea580c", "DC", "Decision"),
-        ProjectObjectType.SecretReference => new("shield", "#be123c", "SC", "Secret"),
-        _ => new("rect", "#475569", "NT", "Note")
+        ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession => Profile("hex", "#0f766e", "PF", "Prompt", ProjectObjectPaletteKeys.Success),
+        ProjectObjectType.PromptStep => Profile("pill", "#14b8a6", "ST", "Step", ProjectObjectPaletteKeys.Success),
+        ProjectObjectType.ValidationRun => status.Contains("Approved", StringComparison.OrdinalIgnoreCase)
+            ? Profile("diamond", "#16a34a", "VL", "Validate", ProjectObjectPaletteKeys.Success)
+            : Profile("diamond", "#dc2626", "VL", "Validate", ProjectObjectPaletteKeys.Danger),
+        ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => Profile("diamond", "#7c3aed", "TS", "Test", ProjectObjectPaletteKeys.Secondary),
+        ProjectObjectType.Decision => Profile("hex", "#ea580c", "DC", "Decision", ProjectObjectPaletteKeys.Warning),
+        ProjectObjectType.SecretReference => Profile("shield", "#be123c", "SC", "Secret", ProjectObjectPaletteKeys.Danger),
+        _ => Profile("rect", "#d97706", "NT", "Note", ProjectObjectPaletteKeys.Warning)
     };
 
     private static (double X, double Y) GetDefaultPosition(ProjectObjectType objectType, int index)
@@ -2164,94 +2369,100 @@ public sealed class ProjectWorkbenchService(
     private static ProjectObjectVisualProfile ResolveProjectBlockVisualProfile(string objectSubtype)
         => objectSubtype switch
         {
-            "feature" => new("hex", "#2563eb", "FB", "Feature"),
-            "architecture" => new("hex", "#4f46e5", "AR", "Architecture"),
-            "implementation" => new("hex", "#0f766e", "IM", "Implementation"),
-            "revision" => new("hex", "#f97316", "RB", "Revision"),
-            "testing" => new("hex", "#7c3aed", "TB", "Testing"),
-            "prompting" => new("hex", "#0f766e", "PB", "Prompting"),
-            "financial" => new("hex", "#16a34a", "FN", "Financial"),
-            "marketing" => new("hex", "#db2777", "MK", "Marketing"),
-            "research" => new("hex", "#0891b2", "RS", "Research"),
-            "delivery" => new("hex", "#d97706", "DL", "Delivery"),
-            "operations" => new("hex", "#475569", "OP", "Operations"),
-            "deployment" => new("hex", "#ea580c", "DP", "Deployment"),
-            "repos" => new("hex", "#0284c7", "RP", "Repos"),
-            "dockers" => new("hex", "#0f766e", "DK", "Dockers"),
-            "task-flow" => new("hex", "#2563eb", "TF", "Task flow"),
-            "backlog" => new("hex", "#7c3aed", "BG", "Backlog"),
-            "server" => new("hex", "#b91c1c", "SV", "Server"),
-            "risk" => new("hex", "#dc2626", "RK", "Risk"),
-            "compliance" => new("hex", "#7c2d12", "CP", "Compliance"),
-            "support" => new("hex", "#0284c7", "SP", "Support"),
-            _ => new("hex", "#334155", "BL", "Block")
+            "feature" => Profile("hex", "#2563eb", "FB", "Feature", ProjectObjectPaletteKeys.Info),
+            "architecture" => Profile("hex", "#4f46e5", "AR", "Architecture", ProjectObjectPaletteKeys.Secondary),
+            "implementation" => Profile("hex", "#0f766e", "IM", "Implementation", ProjectObjectPaletteKeys.Success),
+            "revision" => Profile("hex", "#f97316", "RB", "Revision", ProjectObjectPaletteKeys.Warning),
+            "testing" => Profile("hex", "#7c3aed", "TB", "Testing", ProjectObjectPaletteKeys.Secondary),
+            "prompting" => Profile("hex", "#0f766e", "PB", "Prompting", ProjectObjectPaletteKeys.Success),
+            "financial" => Profile("hex", "#16a34a", "FN", "Financial", ProjectObjectPaletteKeys.Success),
+            "marketing" => Profile("hex", "#db2777", "MK", "Marketing", ProjectObjectPaletteKeys.Danger),
+            "research" => Profile("hex", "#0891b2", "RS", "Research", ProjectObjectPaletteKeys.Info),
+            "delivery" => Profile("hex", "#d97706", "DL", "Delivery", ProjectObjectPaletteKeys.Warning),
+            "operations" => Profile("hex", "#475569", "OP", "Operations", ProjectObjectPaletteKeys.Neutral),
+            "deployment" => Profile("hex", "#2563eb", "DP", "Deployment", ProjectObjectPaletteKeys.Info),
+            "repos" => Profile("hex", "#0284c7", "RP", "Repos", ProjectObjectPaletteKeys.Info),
+            "dockers" => Profile("hex", "#2563eb", "DK", "Dockers", ProjectObjectPaletteKeys.Info),
+            "task-flow" => Profile("hex", "#2563eb", "TF", "Task flow", ProjectObjectPaletteKeys.Info),
+            "backlog" => Profile("hex", "#7c3aed", "BG", "Backlog", ProjectObjectPaletteKeys.Secondary),
+            "server" => Profile("hex", "#b91c1c", "SV", "Server", ProjectObjectPaletteKeys.Danger),
+            "computer" => Profile("hex", "#334155", "PC", "Computer", ProjectObjectPaletteKeys.Neutral),
+            "router" => Profile("hex", "#2563eb", "RT", "Router", ProjectObjectPaletteKeys.Info),
+            "wifi" => Profile("hex", "#0ea5e9", "WF", "WiFi", ProjectObjectPaletteKeys.Info),
+            "risk" => Profile("hex", "#dc2626", "RK", "Risk", ProjectObjectPaletteKeys.Danger),
+            "compliance" => Profile("hex", "#7c2d12", "CP", "Compliance", ProjectObjectPaletteKeys.Warning),
+            "support" => Profile("hex", "#0284c7", "SP", "Support", ProjectObjectPaletteKeys.Info),
+            _ => Profile("hex", "#334155", "BL", "Block", ProjectObjectPaletteKeys.Primary)
         };
 
     private static ProjectObjectVisualProfile ResolveWorkItemVisualProfile(string objectSubtype) => objectSubtype switch
     {
-        "task" => new("pill", "#d97706", "TK", "Task"),
-        "issue" => new("pill", "#dc2626", "IS", "Issue"),
-        "revision" => new("pill", "#8b5cf6", "RV", "Revision"),
-        "feedback" => new("pill", "#0284c7", "FB", "Feedback"),
-        "payment" => new("pill", "#16a34a", "PM", "Payment"),
-        "send" => new("pill", "#2563eb", "SD", "Send"),
-        _ => new("pill", "#475569", "WK", "Work")
+        "task" => Profile("pill", "#d97706", "TK", "Task", ProjectObjectPaletteKeys.Warning),
+        "issue" => Profile("pill", "#dc2626", "IS", "Issue", ProjectObjectPaletteKeys.Danger),
+        "revision" => Profile("pill", "#8b5cf6", "RV", "Revision", ProjectObjectPaletteKeys.Secondary),
+        "feedback" => Profile("pill", "#0284c7", "FB", "Feedback", ProjectObjectPaletteKeys.Info),
+        "payment" => Profile("pill", "#16a34a", "PM", "Payment", ProjectObjectPaletteKeys.Success),
+        "send" => Profile("pill", "#2563eb", "SD", "Send", ProjectObjectPaletteKeys.Primary),
+        _ => Profile("pill", "#475569", "WK", "Work", ProjectObjectPaletteKeys.Neutral)
     };
 
     private static ProjectObjectVisualProfile ResolveRepositoryVisualProfile(string objectSubtype) => objectSubtype switch
     {
-        "remote" => new("rect", "#0f766e", "GH", "Remote"),
-        "local" => new("rect", "#0891b2", "RE", "Local"),
-        "folder" => new("rect", "#2563eb", "FD", "Folder"),
-        _ => new("rect", "#0891b2", "RE", "Repo")
+        "remote" => Profile("rect", "#0f766e", "GH", "Remote", ProjectObjectPaletteKeys.Success),
+        "local" => Profile("rect", "#0891b2", "RE", "Local", ProjectObjectPaletteKeys.Info),
+        "folder" => Profile("rect", "#2563eb", "FD", "Folder", ProjectObjectPaletteKeys.Primary),
+        _ => Profile("rect", "#0891b2", "RE", "Repo", ProjectObjectPaletteKeys.Info)
     };
 
     private static ProjectObjectVisualProfile ResolveFileVisualProfile(string objectSubtype) => objectSubtype switch
     {
-        "pdf" => new("rect", "#dc2626", "PDF", "PDF"),
-        "excel" => new("rect", "#16a34a", "XLS", "Excel"),
-        "docx" => new("rect", "#2563eb", "DOC", "Docx"),
-        "markdown" => new("rect", "#0284c7", "MD", "Markdown"),
-        "mermaid" => new("rect", "#7c3aed", "MMD", "Mermaid"),
-        "screenshot" => new("rect", "#db2777", "SS", "Screenshot"),
-        "log" => new("rect", "#475569", "LOG", "Log"),
-        "archive" => new("rect", "#4338ca", "ZIP", "Archive"),
-        "audio" => new("rect", "#0f766e", "AUD", "Audio"),
-        "json" => new("rect", "#64748b", "JS", "JSON"),
-        "text" => new("rect", "#64748b", "TXT", "Text"),
-        _ => new("rect", "#14b8a6", "FI", "File")
+        "pdf" => Profile("rect", "#dc2626", "PDF", "PDF", ProjectObjectPaletteKeys.Danger),
+        "excel" => Profile("rect", "#16a34a", "XLS", "Excel", ProjectObjectPaletteKeys.Success),
+        "docx" => Profile("rect", "#2563eb", "DOC", "Docx", ProjectObjectPaletteKeys.Info),
+        "markdown" => Profile("rect", "#0284c7", "MD", "Markdown", ProjectObjectPaletteKeys.Info),
+        "mermaid" => Profile("rect", "#7c3aed", "MMD", "Mermaid", ProjectObjectPaletteKeys.Secondary),
+        "screenshot" => Profile("rect", "#db2777", "SS", "Screenshot", ProjectObjectPaletteKeys.Danger),
+        "log" => Profile("rect", "#475569", "LOG", "Log", ProjectObjectPaletteKeys.Neutral),
+        "archive" => Profile("rect", "#4338ca", "ZIP", "Archive", ProjectObjectPaletteKeys.Primary),
+        "audio" => Profile("rect", "#0f766e", "AUD", "Audio", ProjectObjectPaletteKeys.Success),
+        "json" => Profile("rect", "#64748b", "JS", "JSON", ProjectObjectPaletteKeys.Neutral),
+        "text" => Profile("rect", "#64748b", "TXT", "Text", ProjectObjectPaletteKeys.Neutral),
+        _ => Profile("rect", "#14b8a6", "FI", "File", ProjectObjectPaletteKeys.Info)
     };
 
     private static ProjectObjectVisualProfile ResolveScriptVisualProfile(string objectSubtype) => objectSubtype switch
     {
-        "powershell" => new("diamond", "#2563eb", "PS", "PowerShell"),
-        "console" => new("diamond", "#0f766e", "CS", "Console"),
-        "ef-migration" => new("diamond", "#d97706", "EF", "Migration"),
-        "tailwind-watch" => new("diamond", "#0ea5e9", "TW", "Tailwind"),
-        _ => new("diamond", "#475569", "SC", "Script")
+        "powershell" => Profile("diamond", "#2563eb", "PS", "PowerShell", ProjectObjectPaletteKeys.Info),
+        "console" => Profile("diamond", "#0f766e", "CS", "Console", ProjectObjectPaletteKeys.Success),
+        "ef-migration" => Profile("diamond", "#d97706", "EF", "Migration", ProjectObjectPaletteKeys.Warning),
+        "tailwind-watch" => Profile("diamond", "#0ea5e9", "TW", "Tailwind", ProjectObjectPaletteKeys.Info),
+        _ => Profile("diamond", "#475569", "SC", "Script", ProjectObjectPaletteKeys.Neutral)
     };
 
     private static ProjectObjectVisualProfile ResolveEnvironmentVisualProfile(string objectSubtype) => objectSubtype switch
     {
-        "python" => new("hex", "#16a34a", "PY", "Python"),
-        "dotnet-runtime" => new("hex", "#2563eb", ".NET", "Runtime"),
-        "dotnet-watch" => new("hex", "#0ea5e9", "DW", "Watch"),
-        "dotnet-release" => new("hex", "#d97706", "REL", "Release"),
-        _ => new("hex", "#475569", "ENV", "Environment")
+        "python" => Profile("hex", "#16a34a", "PY", "Python", ProjectObjectPaletteKeys.Success),
+        "dotnet-runtime" => Profile("hex", "#2563eb", ".NET", "Runtime", ProjectObjectPaletteKeys.Info),
+        "dotnet-watch" => Profile("hex", "#0ea5e9", "DW", "Watch", ProjectObjectPaletteKeys.Info),
+        "dotnet-release" => Profile("hex", "#d97706", "REL", "Release", ProjectObjectPaletteKeys.Warning),
+        _ => Profile("hex", "#475569", "ENV", "Environment", ProjectObjectPaletteKeys.Neutral)
     };
 
     private static ProjectObjectVisualProfile ResolveInfrastructureVisualProfile(string objectSubtype) => objectSubtype switch
     {
-        "remote-server" => new("hex", "#b91c1c", "SV", "Server"),
-        "domain" => new("hex", "#0284c7", "DNS", "Domain"),
-        "dns-record" => new("hex", "#0ea5e9", "DNS", "DNS"),
-        "docker-mode" => new("hex", "#0f766e", "DK", "Docker"),
-        "database" => new("hex", "#7c3aed", "DB", "Database"),
-        "deployment-folder" => new("hex", "#2563eb", "FD", "Folder"),
-        "key-reference" => new("hex", "#be123c", "KEY", "Key"),
-        "ai-link" => new("hex", "#0f766e", "AI", "AI"),
-        _ => new("hex", "#475569", "INF", "Infrastructure")
+        "remote-server" => Profile("hex", "#b91c1c", "SV", "Server", ProjectObjectPaletteKeys.Danger),
+        "domain" => Profile("hex", "#0284c7", "DNS", "Domain", ProjectObjectPaletteKeys.Info),
+        "dns-record" => Profile("hex", "#0ea5e9", "DNS", "DNS", ProjectObjectPaletteKeys.Info),
+        "docker-mode" => Profile("hex", "#2563eb", "DK", "Docker", ProjectObjectPaletteKeys.Info),
+        "database" => Profile("hex", "#7c3aed", "DB", "Database", ProjectObjectPaletteKeys.Secondary),
+        "deployment-folder" => Profile("hex", "#2563eb", "FD", "Folder", ProjectObjectPaletteKeys.Info),
+        "key-reference" => Profile("hex", "#be123c", "KEY", "Key", ProjectObjectPaletteKeys.Danger),
+        "ai-link" => Profile("hex", "#0f766e", "AI", "AI", ProjectObjectPaletteKeys.Success),
+        _ => Profile("hex", "#475569", "INF", "Infrastructure", ProjectObjectPaletteKeys.Neutral)
     };
+
+    private static ProjectObjectVisualProfile Profile(string shape, string accentColor, string icon, string accentBadge, string paletteKey)
+        => new(shape, accentColor, icon, accentBadge, paletteKey);
 
     private static string ResolveBlockSubtypeLabel(string objectSubtype) => objectSubtype switch
     {

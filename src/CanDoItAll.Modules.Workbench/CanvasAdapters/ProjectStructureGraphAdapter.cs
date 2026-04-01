@@ -160,7 +160,7 @@ public sealed class ProjectStructureGraphAdapter
             Y = node.Y,
             Chips = BuildHeaderChips(node),
             FooterChips = BuildFooterChips(node),
-            Annotations = ProjectStructureValidationOverlay.BuildNodeAnnotations(node).ToList(),
+            Annotations = ProjectStructureNodeAnnotationBuilder.Build(node).ToList(),
             ContextActions = actionCatalog.BuildNodeContextActions(node).ToList()
         };
     }
@@ -195,36 +195,13 @@ public sealed class ProjectStructureGraphAdapter
     private static string ResolvePalette(ProjectStructureNode node)
         => node.ProjectRole switch
         {
-            ProjectStructureProjectRole.Subproject => "sky",
-            ProjectStructureProjectRole.ParentProject => "neutral",
-            ProjectStructureProjectRole.AdditionalParentProject => "neutral",
-            _ => node.ObjectType switch
-            {
-                ProjectObjectType.Meeting => "sky",
-                ProjectObjectType.Recording or ProjectObjectType.Transcript => "accent",
-                ProjectObjectType.Participant => "primary",
-                ProjectObjectType.WorkItem => "warn",
-                ProjectObjectType.Repository or ProjectObjectType.Script or ProjectObjectType.Environment => "sky",
-                ProjectObjectType.File => ResolveFilePalette(node.ObjectSubtype),
-                ProjectObjectType.ImageAsset or ProjectObjectType.Decision => "rose",
-                ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector => "violet",
-                ProjectObjectType.Infrastructure => "danger",
-                ProjectObjectType.Milestone or ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => "amber",
-                ProjectObjectType.ValidationRun or ProjectObjectType.Note or ProjectObjectType.ProjectBlock => "mint",
-                ProjectObjectType.SecretReference => "rose",
-                _ => "neutral"
-            }
+            ProjectStructureProjectRole.Subproject => ProjectObjectPaletteKeys.Info,
+            ProjectStructureProjectRole.ParentProject => ProjectObjectPaletteKeys.Neutral,
+            ProjectStructureProjectRole.AdditionalParentProject => ProjectObjectPaletteKeys.Neutral,
+            _ => string.IsNullOrWhiteSpace(node.VisualProfile.PaletteKey)
+                ? ProjectObjectPaletteKeys.Neutral
+                : node.VisualProfile.PaletteKey
         };
-
-    private static string ResolveFilePalette(string objectSubtype) => objectSubtype switch
-    {
-        "pdf" or "screenshot" => "rose",
-        "excel" or "audio" => "mint",
-        "docx" or "markdown" => "sky",
-        "mermaid" or "archive" => "violet",
-        "text" or "json" or "log" => "amber",
-        _ => "sky"
-    };
 
     private static string BuildLeadText(ProjectStructureNode node)
         => ProjectStructureNodeDescriptor.BuildLeadText(node);

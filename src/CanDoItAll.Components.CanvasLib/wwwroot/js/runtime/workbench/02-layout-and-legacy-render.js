@@ -1418,7 +1418,7 @@
         return getWorldPoint(state, rect.left + (rect.width / 2), rect.top + (rect.height / 2));
     }
 
-    function buildClipboardPayload(state) {
+    function buildClipboardPayload(state, operation = "copy") {
         const selectedNodeIds = [...state.selectedIds];
         const selectedNodes = selectedNodeIds
             .map(nodeId => state.lookups.byId.get(nodeId))
@@ -1432,6 +1432,7 @@
             }));
 
         return {
+            operation,
             format: state.surface.chrome.clipboard.format,
             surfaceId: state.surface.surfaceId,
             capturedAtUtc: new Date().toISOString(),
@@ -1446,11 +1447,24 @@
             return;
         }
 
-        const payload = JSON.stringify(buildClipboardPayload(state));
+        const payload = JSON.stringify(buildClipboardPayload(state, "copy"));
         state.localClipboard = payload;
         void writeClipboardText(payload);
         state.dotNetRef.invokeMethodAsync("OnClipboardAction", "copy", payload);
         showStatusNotice(state, `Copied ${state.selectedIds.size} node(s)`, "accent");
+    }
+
+    function requestClipboardCut(state) {
+        const clipboard = state.surface.chrome.clipboard || {};
+        if (!clipboard.isEnabled || !clipboard.allowCopy || !clipboard.allowPaste || state.selectedIds.size === 0) {
+            return;
+        }
+
+        const payload = JSON.stringify(buildClipboardPayload(state, "cut"));
+        state.localClipboard = payload;
+        void writeClipboardText(payload);
+        state.dotNetRef.invokeMethodAsync("OnClipboardAction", "cut", payload);
+        showStatusNotice(state, `Cut ${state.selectedIds.size} node(s)`, "warn");
     }
 
     async function requestClipboardPaste(state) {
@@ -1484,7 +1498,7 @@
             return;
         }
 
-        state.dotNetRef.invokeMethodAsync("OnClipboardAction", "duplicate", JSON.stringify(buildClipboardPayload(state)));
+        state.dotNetRef.invokeMethodAsync("OnClipboardAction", "duplicate", JSON.stringify(buildClipboardPayload(state, "duplicate")));
         showStatusNotice(state, "Duplicate request sent to the workspace", "accent");
     }
 
@@ -1605,5 +1619,5 @@
         };
     }
 
-    Object.assign(shared, { getLinkAnchorPoint, getLinkRetainedKey, getLinkPathData, updateLinkElement, shouldRenderArrow, getExpandedFrameNodeIds, getFrameRetainedKey, createFrameElement, updateFrameElement, getFrameBounds, legacyRenderGroupFrames, resolveChipToneClass, createProgressMarker, resolveProgressDisplay, createProgressBadge, resolveProgressPresetBadgeOptions, resolveMarkerGlyph, createMarkerBadge, createPriorityBadge, appendNodeIndicators, renderInlineTextNode, createNodeMedia, createCompactPathButton, renderStandardNode, createRetainedNodeElement, getNodeRetainedContentKey, updateNodeElementChrome, renderNodeElementContent, buildActiveDragContext, positionFloatingOverlayWithinHost, hidePopover, legacyShowPopover, invokeAnnotationAction, renderNodeAnnotations, updateConnectorAnchorHover, getConnectorAnchorPoints, hideStatusNotice, showStatusNotice, renderEmptyStateOverlay, clearSnapGuides, legacyRenderSnapGuides, legacyRenderConnectorAnchorOverlay, getSelectionBounds, legacyRenderTransformHandlesOverlay, resolveSnapAdjustment, legacyRenderDebugDecorations, legacyBuildDiagnosticsSnapshot, renderDiagnosticsOverlay, navigateViaMinimap, resolveClipboardAnchor, buildClipboardPayload, writeClipboardText, readClipboardText, copySelectionToClipboard, requestClipboardDuplicate, toggleMinimap, toggleDiagnostics, invalidateMeasuredLayout, legacyMeasureRenderedNodeSizes, legacyScheduleNodeMeasurement, getHostPoint, worldToHostPoint, getWorldPoint });
+    Object.assign(shared, { getLinkAnchorPoint, getLinkRetainedKey, getLinkPathData, updateLinkElement, shouldRenderArrow, getExpandedFrameNodeIds, getFrameRetainedKey, createFrameElement, updateFrameElement, getFrameBounds, legacyRenderGroupFrames, resolveChipToneClass, createProgressMarker, resolveProgressDisplay, createProgressBadge, resolveProgressPresetBadgeOptions, resolveMarkerGlyph, createMarkerBadge, createPriorityBadge, appendNodeIndicators, renderInlineTextNode, createNodeMedia, createCompactPathButton, renderStandardNode, createRetainedNodeElement, getNodeRetainedContentKey, updateNodeElementChrome, renderNodeElementContent, buildActiveDragContext, positionFloatingOverlayWithinHost, hidePopover, legacyShowPopover, invokeAnnotationAction, renderNodeAnnotations, updateConnectorAnchorHover, getConnectorAnchorPoints, hideStatusNotice, showStatusNotice, renderEmptyStateOverlay, clearSnapGuides, legacyRenderSnapGuides, legacyRenderConnectorAnchorOverlay, getSelectionBounds, legacyRenderTransformHandlesOverlay, resolveSnapAdjustment, legacyRenderDebugDecorations, legacyBuildDiagnosticsSnapshot, renderDiagnosticsOverlay, navigateViaMinimap, resolveClipboardAnchor, buildClipboardPayload, writeClipboardText, readClipboardText, copySelectionToClipboard, requestClipboardCut, requestClipboardDuplicate, toggleMinimap, toggleDiagnostics, invalidateMeasuredLayout, legacyMeasureRenderedNodeSizes, legacyScheduleNodeMeasurement, getHostPoint, worldToHostPoint, getWorldPoint });
 })();

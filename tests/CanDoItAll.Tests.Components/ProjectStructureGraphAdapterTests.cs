@@ -8,7 +8,7 @@ namespace CanDoItAll.Tests.Components;
 public sealed class ProjectStructureGraphAdapterTests
 {
     [Fact]
-    public void File_nodes_use_subtype_specific_palettes()
+    public void Node_visual_profiles_drive_canvas_palettes()
     {
         var adapter = new ProjectStructureGraphAdapter();
         var actionCatalog = new ProjectStructureActionCatalogAdapter();
@@ -16,11 +16,11 @@ public sealed class ProjectStructureGraphAdapterTests
             Guid.NewGuid(),
             "Palette validation",
             [
-                CreateFileNode("file-pdf", "pdf", "#dc2626"),
-                CreateFileNode("file-excel", "excel", "#16a34a"),
-                CreateFileNode("file-docx", "docx", "#2563eb"),
-                CreateFileNode("file-mermaid", "mermaid", "#7c3aed"),
-                CreateFileNode("file-log", "log", "#475569")
+                CreateFileNode("file-pdf", "pdf", "#dc2626", ProjectObjectPaletteKeys.Danger),
+                CreateFileNode("file-excel", "excel", "#16a34a", ProjectObjectPaletteKeys.Success),
+                CreateFileNode("file-docx", "docx", "#2563eb", ProjectObjectPaletteKeys.Info),
+                CreateFileNode("file-mermaid", "mermaid", "#7c3aed", ProjectObjectPaletteKeys.Secondary),
+                CreateFileNode("file-log", "log", "#475569", ProjectObjectPaletteKeys.Neutral)
             ],
             [],
             null);
@@ -31,11 +31,11 @@ public sealed class ProjectStructureGraphAdapterTests
             new CanvasWorkbenchChrome(),
             actionCatalog);
 
-        Assert.Equal("rose", canvasSurface.Nodes.Single(node => node.Id == "file-pdf").PaletteKey);
-        Assert.Equal("mint", canvasSurface.Nodes.Single(node => node.Id == "file-excel").PaletteKey);
-        Assert.Equal("sky", canvasSurface.Nodes.Single(node => node.Id == "file-docx").PaletteKey);
-        Assert.Equal("violet", canvasSurface.Nodes.Single(node => node.Id == "file-mermaid").PaletteKey);
-        Assert.Equal("amber", canvasSurface.Nodes.Single(node => node.Id == "file-log").PaletteKey);
+        Assert.Equal(ProjectObjectPaletteKeys.Danger, canvasSurface.Nodes.Single(node => node.Id == "file-pdf").PaletteKey);
+        Assert.Equal(ProjectObjectPaletteKeys.Success, canvasSurface.Nodes.Single(node => node.Id == "file-excel").PaletteKey);
+        Assert.Equal(ProjectObjectPaletteKeys.Info, canvasSurface.Nodes.Single(node => node.Id == "file-docx").PaletteKey);
+        Assert.Equal(ProjectObjectPaletteKeys.Secondary, canvasSurface.Nodes.Single(node => node.Id == "file-mermaid").PaletteKey);
+        Assert.Equal(ProjectObjectPaletteKeys.Neutral, canvasSurface.Nodes.Single(node => node.Id == "file-log").PaletteKey);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public sealed class ProjectStructureGraphAdapterTests
         Assert.Equal("neutral", sharedParentNode.PaletteKey);
     }
 
-    private static ProjectStructureNode CreateFileNode(string id, string subtype, string accentColor)
+    private static ProjectStructureNode CreateFileNode(string id, string subtype, string accentColor, string paletteKey)
         => new(
             id,
             null,
@@ -85,7 +85,7 @@ public sealed class ProjectStructureGraphAdapterTests
             string.Empty,
             0,
             0,
-            new ProjectObjectVisualProfile("rect", accentColor, subtype.ToUpperInvariant(), subtype),
+            new ProjectObjectVisualProfile("rect", accentColor, subtype.ToUpperInvariant(), subtype, paletteKey),
             [],
             string.Empty,
             0,

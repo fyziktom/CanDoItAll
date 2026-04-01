@@ -1285,7 +1285,7 @@ public sealed partial class AppSmokeTests
         }
 
         await page.GetByTestId("project-name-input").FillAsync(projectName);
-        await page.Locator("input[name=\"editor.CurrentPhase\"]").FillAsync(phase);
+        await page.GetByTestId("project-phase-input").FillAsync(phase);
         await Task.WhenAll(
             page.WaitForURLAsync("**/projects/*/structure"),
             page.GetByRole(AriaRole.Button, new() { Name = "Save and open structure" }).ClickAsync());

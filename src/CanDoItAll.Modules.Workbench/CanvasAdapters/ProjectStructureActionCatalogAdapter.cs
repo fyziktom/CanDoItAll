@@ -15,10 +15,13 @@ public sealed class ProjectStructureActionCatalogAdapter
         var actions = new List<CanvasWorkbenchAction>
         {
             new() { ActionId = "open", Label = "Open", MenuLabel = "Open", Description = "Open the linked artifact or routed workspace.", Icon = "open", Tone = "accent" },
+            new() { ActionId = "copy-id", Label = "Copy id", MenuLabel = "Copy id", Description = "Copy this node id to the clipboard.", Icon = "copy", Tone = "ghost" },
+            new() { ActionId = "copy-subtree-ids", Label = "Copy tree ids", MenuLabel = "Copy tree", Description = "Copy this node id plus the descendant id structure.", Icon = "copy", Tone = "sky" },
             new() { ActionId = "summary", Label = "Summary", MenuLabel = "Summary", Description = "Open the hierarchical progress summary and export tools.", Icon = "summary", Tone = "sky" },
             new() { ActionId = "connect", Label = "Connect", MenuLabel = "Connect", Description = "Use the selected node as the source for a dependency link.", Icon = "link", Tone = "neutral" },
             new() { ActionId = "reconnect", Label = "Reconnect", MenuLabel = "Reconnect", Description = "Pick a new parent node for this branch explicitly.", Icon = "relink", Tone = "primary" },
             new() { ActionId = "disconnect", Label = "Disconnect", MenuLabel = "Disconnect", Description = "Move this node back to the project root without deleting it.", Icon = "unlink", Tone = "ghost" },
+            new() { ActionId = "move-descendants-to-subproject", Label = "To subproject", MenuLabel = "To subproject", Description = "Move this node's descendants into a new subproject while leaving the selected node in place.", Icon = "fork", Tone = "primary" },
             BuildProgressAction(),
             BuildMarkerAction(),
             BuildPriorityAction(),
@@ -85,6 +88,32 @@ public sealed class ProjectStructureActionCatalogAdapter
                 new CanvasWorkbenchAction { ActionId = "mark-used", Label = "Used", MenuLabel = "Used", Description = "Mark this prompt step as consumed.", Icon = "use", Tone = "mint" },
                 new CanvasWorkbenchAction { ActionId = "skip", Label = "Skip", MenuLabel = "Skip", Description = "Skip the selected prompt step.", Icon = "skip", Tone = "warn" }
             ]);
+        }
+
+        if (node.ObjectType == ProjectObjectType.ProjectBlock)
+        {
+            actions.Add(new CanvasWorkbenchAction
+            {
+                ActionId = "block:change-type",
+                Label = "Change block",
+                MenuLabel = "Change block",
+                Description = "Change this block to another common block type without recreating the node.",
+                Icon = "swap_horiz",
+                Tone = "accent"
+            });
+        }
+
+        if (node.ObjectType == ProjectObjectType.Note)
+        {
+            actions.Add(new CanvasWorkbenchAction
+            {
+                ActionId = "note:convert-to-block",
+                Label = "Convert to block",
+                MenuLabel = "Convert",
+                Description = "Convert this note into a typed common block while keeping the note text.",
+                Icon = "swap_horiz",
+                Tone = "accent"
+            });
         }
 
         actions.AddRange(ProjectStructureCanvasCatalog.BuildMenuCreateActions(node.ObjectType));
@@ -200,6 +229,24 @@ public sealed class ProjectStructureActionCatalogAdapter
                 Description = "Open the selected project route in the current tab.",
                 Icon = "open",
                 Tone = "accent"
+            },
+            new()
+            {
+                ActionId = "copy-id",
+                Label = "Copy id",
+                MenuLabel = "Copy id",
+                Description = "Copy this project node id to the clipboard.",
+                Icon = "copy",
+                Tone = "ghost"
+            },
+            new()
+            {
+                ActionId = "copy-subtree-ids",
+                Label = "Copy tree ids",
+                MenuLabel = "Copy tree",
+                Description = "Copy this project node id plus the descendant id structure.",
+                Icon = "copy",
+                Tone = "sky"
             },
             new()
             {

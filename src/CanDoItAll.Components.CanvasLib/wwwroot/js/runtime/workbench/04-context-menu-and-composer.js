@@ -496,12 +496,11 @@
 
         const shell = decorateComposerShell(state, "", "", "note");
         const noteEditor = createElement(state.document, "div", "cw-note-editor");
-        const textInput = createElement(state.document, "input", "cw-note-editor__input");
-        textInput.type = "text";
+        const textInput = createElement(state.document, "textarea", "cw-note-editor__input");
         textInput.value = options.value || "";
         textInput.placeholder = options.placeholder || state.surface.chrome.inlineNotePlaceholder || "Write note";
         noteEditor.appendChild(textInput);
-        noteEditor.appendChild(createElement(state.document, "p", "cw-note-editor__hint", "Enter saves. Escape cancels."));
+        noteEditor.appendChild(createElement(state.document, "p", "cw-note-editor__hint", "Enter saves. Shift+Enter adds a line. Escape cancels."));
         shell.card.appendChild(noteEditor);
 
         state.composer = {

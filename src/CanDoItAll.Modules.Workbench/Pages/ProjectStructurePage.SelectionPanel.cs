@@ -262,6 +262,36 @@ public partial class ProjectStructurePage
         var builder = new StringBuilder();
         AppendProjectHierarchyDialogKey(builder);
 
+        if (blockMutationDialog is not null)
+        {
+            builder.Append("|block:")
+                .Append(blockMutationDialog.Mode)
+                .Append(':')
+                .Append(blockMutationDialog.NodeId)
+                .Append(':')
+                .Append(blockMutationDialog.SelectedActionId)
+                .Append(':')
+                .Append(blockMutationDialog.Error);
+        }
+        else
+        {
+            builder.Append("|block:");
+        }
+
+        if (subprojectTransferDialog is not null)
+        {
+            builder.Append("|subproject:")
+                .Append(subprojectTransferDialog.SourceNodeId)
+                .Append(':')
+                .Append(subprojectTransferDialog.ProjectName)
+                .Append(':')
+                .Append(subprojectTransferDialog.Error);
+        }
+        else
+        {
+            builder.Append("|subproject:");
+        }
+
         if (quickActionDialog is not null)
         {
             builder.Append("|quick:")
