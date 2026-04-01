@@ -130,6 +130,15 @@
     transform: translate(calc(-50% + var(--cw-menu-x, 0px)), calc(-50% + var(--cw-menu-y, 0px))) scale(1.03);
 }
 
+.cw-context-menu__action:focus-visible,
+.cw-context-menu__action.is-keyboard-active {
+    transform: translate(calc(-50% + var(--cw-menu-x, 0px)), calc(-50% + var(--cw-menu-y, 0px))) scale(1.04);
+    box-shadow:
+        0 18px 28px rgba(15, 23, 42, 0.2),
+        0 0 0 2px rgba(250, 204, 21, 0.72);
+    outline: none;
+}
+
 .cw-context-menu__icon {
     display: grid;
     place-items: center;
@@ -140,20 +149,52 @@
 }
 
 .cw-context-menu__label {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(0.18rem * var(--cw-menu-scale, 1));
     max-width: calc(3.28rem * var(--cw-menu-scale, 1));
     overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
     font-size: 0.82rem;
     line-height: 1.02;
     letter-spacing: 0.015em;
     font-weight: 800;
 }
 
+.cw-context-menu__label-text {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.cw-context-menu__shortcut-prefix {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: calc(1.08rem * var(--cw-menu-scale, 1));
+    padding: 0 calc(0.14rem * var(--cw-menu-scale, 1));
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.18);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14) inset;
+}
+
+.cw-context-menu__shortcut-char {
+    text-decoration: underline;
+    text-decoration-thickness: 0.12em;
+    text-underline-offset: 0.12em;
+    text-decoration-color: currentColor;
+}
+
 .cw-context-menu__action.is-compact .cw-context-menu__label {
     max-width: calc(2.16rem * var(--cw-menu-scale, 1));
     font-size: 0.62rem;
+}
+
+.cw-context-menu__action.is-compact .cw-context-menu__shortcut-prefix {
+    min-width: calc(0.92rem * var(--cw-menu-scale, 1));
+    padding-inline: calc(0.1rem * var(--cw-menu-scale, 1));
 }
 
 .cw-context-menu__action.is-progress-preset .cw-context-menu__label,

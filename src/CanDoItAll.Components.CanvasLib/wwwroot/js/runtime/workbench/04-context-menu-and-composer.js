@@ -723,8 +723,12 @@
             button.dataset.actionId = action.actionId || "";
             button.dataset.layerDepth = `${options.depth || 0}`;
             button.dataset.menuSize = action.menuSize || "normal";
+            button.dataset.shortcutKey = shared.getMenuActionShortcutKey?.(action) || "";
             button.title = action.description || resolveMenuActionAriaLabel(action);
             button.setAttribute("aria-label", resolveMenuActionAriaLabel(action));
+            if (button.dataset.shortcutKey) {
+                button.setAttribute("aria-keyshortcuts", button.dataset.shortcutKey.toUpperCase());
+            }
             button.style.setProperty("--cw-menu-x", `${round(offset.x)}px`);
             button.style.setProperty("--cw-menu-y", `${round(offset.y)}px`);
             if (variant === "progress-preset") {
@@ -763,9 +767,12 @@
             button.appendChild(createMenuActionIcon(state, action));
             let label = null;
             if (variant !== "priority-preset") {
-                const labelText = resolveMenuLabel(action);
-                label = createElement(state.document, "strong", "cw-context-menu__label", labelText);
-                label.dataset.fullText = labelText;
+                label = typeof shared.buildContextMenuActionLabel === "function"
+                    ? shared.buildContextMenuActionLabel(state, action)
+                    : createElement(state.document, "strong", "cw-context-menu__label", resolveMenuLabel(action));
+                if (!label.dataset.fullText) {
+                    label.dataset.fullText = resolveMenuLabel(action);
+                }
                 button.appendChild(label);
             }
             if (action.children?.length) {
@@ -780,6 +787,7 @@
             layerState.actionEntries.set(action.actionId || `index-${index}`, {
                 action,
                 offset,
+                button,
                 options: {
                     node: options.node,
                     clientX: options.clientX,

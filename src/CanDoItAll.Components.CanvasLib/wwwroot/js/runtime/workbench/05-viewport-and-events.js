@@ -967,6 +967,10 @@
                     return;
                 }
 
+                if (shared.routeContextMenuShortcut?.(state, event)) {
+                    return;
+                }
+
                 const lowerKey = (event.key || "").toLowerCase();
                 const usesCommandModifier = event.ctrlKey || event.metaKey;
                 if (usesCommandModifier && !event.altKey) {

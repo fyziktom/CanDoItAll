@@ -55,6 +55,8 @@ public sealed class CanvasWorkbenchAction
 
     public string MenuLabel { get; set; } = string.Empty;
 
+    public string ShortcutKey { get; set; } = string.Empty;
+
     public string MenuSize { get; set; } = "normal";
 
     public string SubmenuLayout { get; set; } = string.Empty;

@@ -195,11 +195,15 @@ internal static partial class ProjectStructureCanvasCatalog
     };
 
     public static IReadOnlyList<CanvasWorkbenchAction> BuildMenuCreateActions(ProjectObjectType? sourceType)
-        => BuildTopLevelMenuEntries(sourceType)
+    {
+        var actions = BuildTopLevelMenuEntries(sourceType)
             .Select(entry => entry.StartsWith("group:", StringComparison.Ordinal)
                 ? BuildCreateGroupAction(entry["group:".Length..], sourceType)
                 : BuildCreateLeafAction(entry))
             .ToList();
+
+        return ProjectStructureActionShortcuts.Apply(actions);
+    }
 
     public static IReadOnlyList<ProjectStructureInspectorCreateGroup> BuildInspectorCreateGroups(ProjectObjectType? sourceType)
     {
@@ -211,6 +215,7 @@ internal static partial class ProjectStructureCanvasCatalog
                 var actions = ResolveGroupLeafDefinitions(groupKey, sourceType)
                     .Select(BuildCreateLeafAction)
                     .ToList();
+                ProjectStructureActionShortcuts.Apply(actions);
 
                 return new ProjectStructureInspectorCreateGroup(group.Key, group.Label, group.Description, index < 2, actions);
             })
@@ -399,6 +404,7 @@ internal static partial class ProjectStructureCanvasCatalog
             "add-video-asset" => "Video",
             "add-link" => "Link",
             "add-file" => "File",
+            "add-file-docx" => "Word",
             "add-meeting-online" => "Online",
             "add-meeting-onsite" => "Onsite",
             "add-recording" => "Recording",

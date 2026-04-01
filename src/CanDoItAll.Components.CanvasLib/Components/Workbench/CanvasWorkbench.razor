@@ -147,18 +147,100 @@
                         <button type="button" class="cw-toolbar-action" aria-label="Close help" @onclick="ToggleHelp">Close</button>
                     </div>
 
-                    <div class="cw-help-grid">
-                        <p><strong>Click</strong> selects the focused node.</p>
-                        <p><strong>Right-click</strong> opens node-aware actions.</p>
-                        <p><strong>Alt + drag</strong> draws a marquee for multi-selection.</p>
-                        <p><strong>Ctrl/Cmd + drag</strong> moves the current node set.</p>
-                        <p><strong>Drag empty space</strong> pans the scene.</p>
-                        <p><strong>Mouse wheel</strong> zooms under the pointer.</p>
-                        <p><strong>Double-click</strong> collapses groups or opens artifacts.</p>
-                        <p><strong>Ctrl/Cmd + X</strong> captures the current selection for a move-oriented paste.</p>
-                        <p><strong>Ctrl/Cmd + C</strong> copies the current selection to the shared canvas clipboard.</p>
-                        <p><strong>Ctrl/Cmd + V</strong> sends clipboard content back through the shared workbench bridge.</p>
-                        <p><strong>m, d, +, -, 0, ?, h, Escape</strong> control minimap, diagnostics, zoom, help, and selection.</p>
+                    <div class="cw-help-layout">
+                        <div class="cw-help-nav" aria-label="Canvas help pages">
+                            <button type="button"
+                                    class="@GetHelpPageButtonClass(HelpPage.Basics)"
+                                    aria-pressed="@(activeHelpPage == HelpPage.Basics)"
+                                    @onclick="@(() => SetHelpPage(HelpPage.Basics))">
+                                <strong>Basics</strong>
+                                <span>Pointer gestures, zoom, and scene movement.</span>
+                            </button>
+                            <button type="button"
+                                    class="@GetHelpPageButtonClass(HelpPage.ContextMenu)"
+                                    aria-pressed="@(activeHelpPage == HelpPage.ContextMenu)"
+                                    @onclick="@(() => SetHelpPage(HelpPage.ContextMenu))">
+                                <strong>Right-click menu</strong>
+                                <span>Layered one-letter menu shortcuts and examples.</span>
+                            </button>
+                            <button type="button"
+                                    class="@GetHelpPageButtonClass(HelpPage.Keyboard)"
+                                    aria-pressed="@(activeHelpPage == HelpPage.Keyboard)"
+                                    @onclick="@(() => SetHelpPage(HelpPage.Keyboard))">
+                                <strong>Keyboard</strong>
+                                <span>Canvas-wide shortcuts outside the menu flow.</span>
+                            </button>
+                        </div>
+
+                        <div class="cw-help-page">
+                            @if (activeHelpPage == HelpPage.Basics)
+                            {
+                                <div class="cw-help-page__header">
+                                    <p class="cw-help-page__eyebrow">Page 1</p>
+                                    <h4>Interaction vocabulary</h4>
+                                    <p class="cw-help-page__summary">Daily scene navigation and pointer-first movement across the canvas.</p>
+                                </div>
+
+                                <div class="cw-help-grid">
+                                    <p><strong>Click</strong> selects the focused node.</p>
+                                    <p><strong>Right-click</strong> opens node-aware actions.</p>
+                                    <p><strong>Alt + drag</strong> draws a marquee for multi-selection.</p>
+                                    <p><strong>Ctrl/Cmd + drag</strong> moves the current node set.</p>
+                                    <p><strong>Drag empty space</strong> pans the scene.</p>
+                                    <p><strong>Mouse wheel</strong> zooms under the pointer.</p>
+                                    <p><strong>Double-click</strong> collapses groups or opens artifacts.</p>
+                                </div>
+                            }
+                            else if (activeHelpPage == HelpPage.ContextMenu)
+                            {
+                                <div class="cw-help-page__header">
+                                    <p class="cw-help-page__eyebrow">Page 2</p>
+                                    <h4>Right-click menu</h4>
+                                    <p class="cw-help-page__summary">Press the underlined letter in the active layer. If it opens a submenu, press the next underlined letter there.</p>
+                                </div>
+
+                                <p class="cw-help-callout"><strong>Example:</strong> <strong>b</strong> opens Blocks and then <strong>d</strong> picks Delivery.</p>
+
+                                <div class="cw-help-section">
+                                    <p class="cw-help-section__title">Quick create</p>
+                                    <div class="cw-help-list">
+                                        <p><strong>b</strong> Blocks: <code>d</code> Delivery, <code>b</code> Backlog, <code>s</code> Support, <code>f</code> Feature.</p>
+                                        <p><strong>a</strong> Assets: <code>p</code> PDF, <code>e</code> Excel, <code>w</code> Word, <code>j</code> JSON, <code>t</code> Text.</p>
+                                        <p><strong>q</strong> Meetings: <code>s</code> Onsite, <code>o</code> Online. <strong>w</strong> opens Work and <code>t</code> chooses Task.</p>
+                                        <p><strong>p</strong> People, <strong>i</strong> Infrastructure, <strong>n</strong> Note, and the rest of the root layer follow the same one-letter rule.</p>
+                                    </div>
+                                </div>
+
+                                <div class="cw-help-section">
+                                    <p class="cw-help-section__title">Node actions</p>
+                                    <div class="cw-help-list">
+                                        <p><strong>m</strong> Markers: <code>q</code> Question, <code>e</code> Exclamation, plus other underlined marker choices.</p>
+                                        <p><strong>r</strong> Progress and <strong>d</strong> Priority open numeric and named follow-up shortcuts in the next layer.</p>
+                                        <p><strong>o</strong> Open, <strong>c</strong> Copy id, <strong>y</strong> Copy info, <strong>t</strong> Copy subtree ids, <strong>s</strong> Summary.</p>
+                                    </div>
+                                </div>
+
+                                <p class="cw-help-footnote">If a group is not listed here, use the underlined one-letter hint shown inside the menu item. Each sibling layer keeps those shortcuts unique.</p>
+                            }
+                            else
+                            {
+                                <div class="cw-help-page__header">
+                                    <p class="cw-help-page__eyebrow">Page 3</p>
+                                    <h4>Keyboard routing</h4>
+                                    <p class="cw-help-page__summary">Canvas-wide shortcuts that stay available when the host itself has focus.</p>
+                                </div>
+
+                                <div class="cw-help-list">
+                                    <p><strong>Tab</strong> creates a child note when the canvas host is focused.</p>
+                                    <p><strong>Enter</strong> creates a sibling note.</p>
+                                    <p><strong>Ctrl/Cmd + X</strong>, <strong>Ctrl/Cmd + C</strong>, and <strong>Ctrl/Cmd + V</strong> use the shared canvas clipboard.</p>
+                                    <p><strong>m</strong> toggles the minimap, <strong>d</strong> toggles diagnostics, and <strong>+</strong>, <strong>-</strong>, <strong>0</strong> control zoom and fit.</p>
+                                    <p><strong>?</strong> or <strong>h</strong> opens help, and <strong>Escape</strong> closes the active menu or composer before clearing selection.</p>
+                                </div>
+
+                                <p class="cw-help-footnote">When a right-click menu is open, its underlined letters win first so layered menu navigation stays fast.</p>
+                            }
+                        </div>
                     </div>
                 </div>
             </div>
@@ -296,6 +378,7 @@
     private ElementReference quickCreateButton;
     private DotNetObjectReference<CanvasWorkbench>? objectReference;
     private bool helpOpen;
+    private HelpPage activeHelpPage = HelpPage.Basics;
     private bool settingsOpen;
     private bool isMaximized;
     private int zoomPercent = 100;
@@ -465,6 +548,11 @@
     public async Task OnHelpToggled(bool isOpen)
     {
         helpOpen = isOpen;
+        if (helpOpen)
+        {
+            activeHelpPage = HelpPage.Basics;
+        }
+
         await InvokeAsync(StateHasChanged);
     }
 
@@ -473,9 +561,18 @@
         helpOpen = !helpOpen;
         if (helpOpen)
         {
+            activeHelpPage = HelpPage.Basics;
             settingsOpen = false;
         }
     }
+
+    private void SetHelpPage(HelpPage page)
+        => activeHelpPage = page;
+
+    private string GetHelpPageButtonClass(HelpPage page)
+        => page == activeHelpPage
+            ? "cw-help-nav__button is-active"
+            : "cw-help-nav__button";
 
     private void ToggleSettings()
     {
@@ -801,6 +898,13 @@
         }
 
         objectReference?.Dispose();
+    }
+
+    private enum HelpPage
+    {
+        Basics,
+        ContextMenu,
+        Keyboard
     }
 }
 
