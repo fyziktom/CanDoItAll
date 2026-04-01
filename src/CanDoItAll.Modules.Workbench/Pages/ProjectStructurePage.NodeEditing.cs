@@ -29,6 +29,7 @@ public partial class ProjectStructurePage
         }
 
         actions.Add(new ProjectStructureInspectorAction("copy-id", "Copy id", "copy", "ghost"));
+        actions.Add(new ProjectStructureInspectorAction("copy-info", "Copy info", "copy", "primary"));
         actions.Add(new ProjectStructureInspectorAction("copy-subtree-ids", "Copy tree ids", "copy", "sky"));
 
         var runtimeLaunch = RuntimeLauncher.Resolve(node);
@@ -78,6 +79,7 @@ public partial class ProjectStructurePage
         {
             new("command:open", "Open", "open", "primary"),
             new("copy-id", "Copy id", "copy", "ghost"),
+            new("copy-info", "Copy info", "copy", "primary"),
             new("copy-subtree-ids", "Copy tree ids", "copy", "sky"),
             new("summary", "Summary", "summary", "sky"),
             new("connect", "Connect selected", "link", "ghost"),
@@ -151,6 +153,7 @@ public partial class ProjectStructurePage
                 await ExecuteCommandAsync(ProjectStructureCommandKind.Test, node.Id);
                 break;
             case "copy-id":
+            case "copy-info":
             case "copy-subtree-ids":
                 await TryHandleCopyActionAsync(actionId, node.Id);
                 break;

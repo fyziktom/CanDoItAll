@@ -15,6 +15,7 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         var actions = adapter.BuildNodeContextActions(node);
 
         Assert.Contains(actions, action => action.ActionId == "wizard");
+        Assert.Contains(actions, action => action.ActionId == "copy-info");
         Assert.Contains(actions, action => action.ActionId == "progress");
         Assert.Contains(actions, action => action.ActionId == "marker");
         Assert.Contains(actions, action => action.ActionId == "priority");
@@ -52,6 +53,7 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         var actions = adapter.BuildNodeContextActions(node);
 
         Assert.Contains(actions, action => action.ActionId == "open");
+        Assert.Contains(actions, action => action.ActionId == "copy-info");
         Assert.Contains(actions, action => action.ActionId == "project:open-structure");
         Assert.Contains(actions, action => action.ActionId == "project:add-subproject");
         Assert.Contains(actions, action => action.ActionId == "project:reconnect-subproject");
