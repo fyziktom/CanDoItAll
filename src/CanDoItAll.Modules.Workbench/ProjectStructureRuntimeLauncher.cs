@@ -34,7 +34,7 @@ public sealed record ProjectStructureRuntimeLaunchResolution(ProjectStructureRun
 public sealed record ProjectStructureRuntimeLaunchResult(bool IsSuccess, string Message);
 
 public sealed class ProjectStructureRuntimeLauncher(
-    IWorkspacePathResolver workspacePathResolver,
+    IWorkspacePathAccessGuard workspacePathAccessGuard,
     ILogger<ProjectStructureRuntimeLauncher> logger) : IProjectStructureRuntimeLauncher
 {
     public bool IsAvailable => OperatingSystem.IsWindows();
@@ -124,7 +124,11 @@ public sealed class ProjectStructureRuntimeLauncher(
             return Fail("Script launch requires a working directory.");
         }
 
-        var workingDirectory = ResolvePath(metadata.WorkingDirectory);
+        if (TryResolveWorkspacePath(metadata.WorkingDirectory, "Script working directory", out var workingDirectory) is { } workingDirectoryFailure)
+        {
+            return workingDirectoryFailure;
+        }
+
         ProjectStructureRuntimeLaunchTarget? target = null;
         string? displayCommand = null;
         string displayName;
@@ -142,7 +146,11 @@ public sealed class ProjectStructureRuntimeLauncher(
         }
         else if (metadata.ScriptKind == ProjectScriptKind.PowerShell && !string.IsNullOrWhiteSpace(metadata.ScriptPath))
         {
-            var scriptPath = ResolvePath(metadata.ScriptPath, workingDirectory);
+            if (TryResolveWorkspacePath(metadata.ScriptPath, "Script path", out var scriptPath, workingDirectory) is { } scriptPathFailure)
+            {
+                return scriptPathFailure;
+            }
+
             displayCommand = JoinCommand($"& {QuotePowerShell(scriptPath)}", metadata.Arguments);
             displayName = "PowerShell script";
             target = new ProjectStructureRuntimeLaunchTarget("script path", scriptPath, false);
@@ -179,7 +187,11 @@ public sealed class ProjectStructureRuntimeLauncher(
             return Fail("Runtime launch requires a project path.");
         }
 
-        var projectPath = ResolvePath(metadata.ProjectPath);
+        if (TryResolveWorkspacePath(metadata.ProjectPath, "Project path", out var projectPath) is { } projectPathFailure)
+        {
+            return projectPathFailure;
+        }
+
         var workingDirectory = ResolveWorkingDirectoryFromProjectPath(projectPath);
         var commandParts = new List<string> { "dotnet" };
         if (isWatch)
@@ -240,7 +252,11 @@ public sealed class ProjectStructureRuntimeLauncher(
             return Fail("Python environment launch requires a provider.");
         }
 
-        var projectPath = ResolvePath(metadata.ProjectPath);
+        if (TryResolveWorkspacePath(metadata.ProjectPath, "Python project path", out var projectPath) is { } projectPathFailure)
+        {
+            return projectPathFailure;
+        }
+
         var workingDirectory = ResolveWorkingDirectoryFromProjectPath(projectPath);
         return metadata.PythonProvider.Value switch
         {
@@ -256,9 +272,23 @@ public sealed class ProjectStructureRuntimeLauncher(
 
     private ProjectStructureRuntimeLaunchResolution ResolvePythonVirtualEnvironmentPlan(string environmentName, string workingDirectory)
     {
-        var activationPath = environmentName.Trim().EndsWith(".ps1", StringComparison.OrdinalIgnoreCase)
-            ? ResolvePath(environmentName, workingDirectory)
-            : Path.Combine(ResolvePath(environmentName, workingDirectory), "Scripts", "Activate.ps1");
+        string activationPath;
+        if (environmentName.Trim().EndsWith(".ps1", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryResolveWorkspacePath(environmentName, "Python activation script path", out activationPath, workingDirectory) is { } activationFailure)
+            {
+                return activationFailure;
+            }
+        }
+        else
+        {
+            if (TryResolveWorkspacePath(environmentName, "Python environment path", out var environmentPath, workingDirectory) is { } environmentFailure)
+            {
+                return environmentFailure;
+            }
+
+            activationPath = Path.Combine(environmentPath, "Scripts", "Activate.ps1");
+        }
 
         return Success(
             CreatePlan(
@@ -305,20 +335,21 @@ public sealed class ProjectStructureRuntimeLauncher(
             target);
     }
 
-    private string ResolvePath(string value, string? basePath = null)
+    private ProjectStructureRuntimeLaunchResolution? TryResolveWorkspacePath(
+        string value,
+        string description,
+        out string resolvedPath,
+        string? basePath = null)
     {
-        var normalized = value
-            .Trim()
-            .Replace('/', Path.DirectorySeparatorChar);
-        if (Path.IsPathRooted(normalized))
+        var resolution = workspacePathAccessGuard.ResolveWorkspacePath(value, basePath);
+        if (resolution.IsSuccess)
         {
-            return Path.GetFullPath(normalized);
+            resolvedPath = resolution.FullPath;
+            return null;
         }
 
-        var root = string.IsNullOrWhiteSpace(basePath)
-            ? workspacePathResolver.ResolveWorkspaceRoot()
-            : basePath;
-        return Path.GetFullPath(Path.Combine(root, normalized));
+        resolvedPath = string.Empty;
+        return Fail($"{description} must stay inside the active workspace root.");
     }
 
     private static string ResolveWorkingDirectoryFromProjectPath(string projectPath)

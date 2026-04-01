@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using CanDoItAll.Tests.Support;
 using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright;
@@ -12,8 +13,8 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
     private Process? _process;
     private Task? _stdoutPump;
     private Task? _stderrPump;
-    private string? _workspaceRoot;
-    private string? _databaseConnectionString;
+    private CanDoItAllTestEnvironment? _testEnvironment;
+    private TestDatabaseProfile? _activeProfile;
 
     public string BaseUrl { get; } = ResolveBaseUrl();
 
@@ -21,9 +22,9 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
     public IBrowser Browser { get; private set; } = default!;
 
-    public string? DatabaseConnectionString => _databaseConnectionString;
+    public string? DatabaseConnectionString => _activeProfile?.ConnectionString;
 
-    public string? StorageWorkspaceRoot => _workspaceRoot is null ? null : Path.Combine(_workspaceRoot, "workspace");
+    public string? StorageWorkspaceRoot => _activeProfile?.WorkspaceRootPath;
 
     public async Task InitializeAsync()
     {
@@ -37,12 +38,10 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
             return;
         }
 
-        _workspaceRoot = Path.Combine(Path.GetTempPath(), "candoitall-playwright", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_workspaceRoot);
+        _testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-playwright");
+        _activeProfile = _testEnvironment.CreateManagedSqliteProfile("primary");
 
         var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-        var databasePath = Path.Combine(_workspaceRoot, "playwright.db");
-        _databaseConnectionString = $"Data Source={databasePath}";
         var processStartInfo = new ProcessStartInfo("dotnet", $"run --no-build --no-launch-profile --project src/CanDoItAll.Web --urls {BaseUrl}")
         {
             WorkingDirectory = repoRoot,
@@ -54,10 +53,13 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
         processStartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
         processStartInfo.Environment["DOTNET_ENVIRONMENT"] = "Development";
-        processStartInfo.Environment["Database__Provider"] = "Sqlite";
-        processStartInfo.Environment["Database__ConnectionString"] = _databaseConnectionString;
-        processStartInfo.Environment["Storage__WorkspaceRoot"] = Path.Combine(_workspaceRoot, "workspace");
-        processStartInfo.Environment["DevelopmentManager__TuningModeEnabled"] = "false";
+        foreach (var pair in _activeProfile.CreateEnvironmentVariables(new Dictionary<string, string?>
+        {
+            ["DevelopmentManager:TuningModeEnabled"] = "false"
+        }))
+        {
+            processStartInfo.Environment[pair.Key] = pair.Value;
+        }
 
         _process = Process.Start(processStartInfo) ?? throw new InvalidOperationException("Failed to start CanDoItAll.Web for Playwright tests.");
         _stdoutPump = PumpAsync(_process.StandardOutput);
@@ -97,18 +99,9 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
             await _stderrPump;
         }
 
-        if (_workspaceRoot is not null && Directory.Exists(_workspaceRoot))
+        if (_testEnvironment is not null)
         {
-            try
-            {
-                DeleteDirectoryWithRetry(_workspaceRoot);
-            }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
+            await _testEnvironment.DisposeAsync();
         }
     }
 
@@ -169,28 +162,6 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
             return false;
         }
     }
-
-    private static void DeleteDirectoryWithRetry(string path)
-    {
-        const int maxAttempts = 6;
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            try
-            {
-                Directory.Delete(path, recursive: true);
-                return;
-            }
-            catch (IOException) when (attempt < maxAttempts)
-            {
-                Thread.Sleep(150 * attempt);
-            }
-            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
-            {
-                Thread.Sleep(150 * attempt);
-            }
-        }
-    }
-
     private static string ResolveBaseUrl()
     {
         var configuredBaseUrl = Environment.GetEnvironmentVariable("CANDOITALL_PLAYWRIGHT_BASEURL");

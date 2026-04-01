@@ -22,8 +22,8 @@ public sealed class WorkbenchStateService(
     IOptions<WorkbenchOptions> options,
     IClock clock)
 {
-    private const int SnapshotVersion = 3;
-    private const string CompatibilityMarker = "candoitall.workbench.v3";
+    private const int SnapshotVersion = 4;
+    private const string CompatibilityMarker = "candoitall.workbench.v4";
     private const int MaxRecentTabs = 12;
 
     private readonly List<WorkbenchTabState> _tabs = [];
@@ -41,6 +41,8 @@ public sealed class WorkbenchStateService(
 
     public WorkbenchRestoreReport? LastRestoreReport { get; private set; }
 
+    public bool HasDirtyTabs => _tabs.Any(tab => tab.IsDirty);
+
     public async Task InitializeAsync(IEnumerable<WorkbenchTabState> defaultTabs, CancellationToken cancellationToken = default)
     {
         if (_initialized)
@@ -50,6 +52,17 @@ public sealed class WorkbenchStateService(
 
         var snapshot = await stateStore.LoadAsync(cancellationToken);
         var failures = new List<WorkbenchRestoreFailure>();
+
+        if (snapshot is not null &&
+            !string.IsNullOrWhiteSpace(snapshot.CompatibilityMarker) &&
+            !string.Equals(snapshot.CompatibilityMarker, CompatibilityMarker, StringComparison.Ordinal))
+        {
+            failures.Add(new WorkbenchRestoreFailure(
+                "snapshot",
+                "Workbench session",
+                "Stored workbench state was ignored because it was created by an incompatible session format."));
+            snapshot = null;
+        }
 
         if (snapshot?.Tabs.Count > 0)
         {

@@ -4,18 +4,24 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Infrastructure.Configuration
+@using CanDoItAll.Infrastructure.ControlPlane
+@using CanDoItAll.Infrastructure.Persistence
 @using CanDoItAll.Modules.Factory
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Workbench
+@using CanDoItAll.Modules.Workspace
 @using CanDoItAll.SharedKernel
 @using CanDoItAll.Web.Composition
 @using CanDoItAll.Web.Infrastructure
 @using Microsoft.AspNetCore.WebUtilities
+@using System.Text.Json
 @inject NavigationManager Navigation
 @inject Microsoft.Extensions.Options.IOptions<DevelopmentManagerOptions> DevelopmentManagerOptions
 @inject DevelopmentManagerClient DevelopmentManagerClient
 @inject TuningCoordinator TuningCoordinator
 @inject WorkbenchStateService Workbench
+@inject IDatabaseSwitchNotificationService DatabaseSwitchNotificationService
+@inject DatabaseProfileWorkspaceService DatabaseProfileWorkspaceService
 @inject ProjectsService ProjectsService
 @inject PromptFactoryService PromptFactoryService
 @inject IJSRuntime JS
@@ -50,6 +56,14 @@
           CloseBackgroundTabs="HandleCloseBackgroundAsync"
           ReopenRecentTab="HandleReopenRecentAsync">
     <TopBar>
+        @if (!string.IsNullOrWhiteSpace(databaseSwitchAlert))
+        {
+            <div class="mb-3 rounded-[1.35rem] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+                 data-testid="database-switch-alert">
+                @databaseSwitchAlert
+            </div>
+        }
+
         <Split Breakpoint="LayoutBreakpoint.None"
                Gap="LayoutGap.Medium"
                AlignItems="AlignItems.Center"
@@ -71,9 +85,34 @@
                 }
             </Cluster>
 
-            <Cluster Wrap="FlexWrap.NoWrap"
+            <Cluster Wrap="FlexWrap.Wrap"
                      Gap="LayoutGap.Small"
-                     Class="flex-shrink-0">
+                     Class="flex-shrink-0 justify-end">
+                <div class="min-w-[16rem] rounded-[1.35rem] border border-slate-200 bg-slate-50/90 px-4 py-3"
+                     data-testid="active-database-indicator">
+                    <p class="cda-eyebrow">Active database</p>
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-2">
+                        <p class="text-sm font-semibold text-slate-950">@(databaseSelection?.DisplayName ?? "Loading runtime profile")</p>
+                        @if (databaseSelection is not null)
+                        {
+                            <StatusBadge Tone="info" Text="@DescribeDatabaseProvider(databaseSelection.ProviderKind)" />
+                            @if (databaseSelection.IsRuntimeLocked)
+                            {
+                                <StatusBadge Tone="warning" Text="Config lock" />
+                            }
+                        }
+                    </Cluster>
+                    @if (!string.IsNullOrWhiteSpace(databaseSelection?.Descriptor))
+                    {
+                        <p class="mt-2 text-xs text-slate-500">@databaseSelection.Descriptor</p>
+                    }
+                </div>
+                <Button Text="Switch database"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@databaseDialogBusy"
+                        Click="OpenDatabaseDialogAsync"
+                        data-testid="database-topbar-switcher" />
                 <StatusBadge Tone="info" Text="Interactive Server" />
                 <StatusBadge Tone="success" Text="@($"Live items {OpenedProjectTabs.Count + OpenedPromptSessionTabs.Count}")" />
                 <StatusBadge Tone="neutral" Text="@($"Tabs {Workbench.Tabs.Count}")" />
@@ -249,6 +288,146 @@
     </RightRail>
 </AppShell>
 
+<Dialog IsOpen="@databaseDialogOpen"
+        Title="Database profiles"
+        Eyebrow="@(databaseDialogStartupMode ? "Startup" : "Runtime")"
+        Subtitle="@(databaseDialogStartupMode
+            ? "Continue with the resolved runtime database, switch to another saved profile, or create a fresh managed SQLite workspace."
+            : "Review the active runtime database and switch profiles without leaving the shell.")"
+        Size="ModalSize.Wide"
+        TestId="@(databaseDialogStartupMode ? "database-startup-modal" : "database-switcher-dialog")"
+        OnClose="CloseDatabaseDialogAsync">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Large">
+            @if (databaseSelection is not null)
+            {
+                <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50/90 p-4"
+                     data-testid="database-dialog-current-selection">
+                    <Split Breakpoint="LayoutBreakpoint.None"
+                           Gap="LayoutGap.Medium"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.Wrap">
+                        <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                            <p class="cda-eyebrow">Resolved profile</p>
+                            <p class="text-base font-semibold text-slate-950">@databaseSelection.DisplayName</p>
+                            <p class="text-sm leading-6 text-slate-600">@databaseSelection.Descriptor</p>
+                        </Stack>
+
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="info" Text="@DescribeDatabaseProvider(databaseSelection.ProviderKind)" />
+                            <StatusBadge Tone="neutral" Text="@DescribeDatabaseSource(databaseSelection.SourceKind)" />
+                            @if (databaseSelection.IsRuntimeLocked)
+                            {
+                                <StatusBadge Tone="warning" Text="Config lock" />
+                            }
+                        </Cluster>
+                    </Split>
+
+                    <p class="mt-3 text-xs text-slate-500">Workspace root: @databaseSelection.WorkspaceRoot</p>
+                    <p class="mt-1 text-xs text-slate-500">Selection source: @DescribeResolutionSource(databaseSelection.ResolutionSource)</p>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(databaseProfileMessage))
+            {
+                <div class="@ResolveDatabaseMessageClass()"
+                     data-testid="database-dialog-message">
+                    @databaseProfileMessage
+                </div>
+            }
+
+            @if (databaseSelection?.IsRuntimeLocked == true)
+            {
+                <div class="rounded-[1.4rem] border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
+                     data-testid="database-dialog-locked-message">
+                    Startup configuration owns the active database for this session. Continue is still safe, but switching and creating profiles are disabled until the override is removed.
+                </div>
+            }
+
+            @if (databaseProfiles.Count == 0)
+            {
+                <EmptyState Eyebrow="No saved profiles"
+                            Title="Create the first managed SQLite workspace"
+                            Description="Saved profiles appear here after they are persisted through the control plane or the Data Sources settings tab." />
+            }
+            else
+            {
+                <Stack GapScale="LayoutGap.Medium" data-testid="database-dialog-profile-list">
+                    @foreach (var profile in databaseProfiles)
+                    {
+                        <SelectionListItem Title="@profile.DisplayName"
+                                           Eyebrow="@DescribeDatabaseProvider(profile.ProviderKind)"
+                                           Meta="@DescribeDatabaseSource(profile.SourceKind)"
+                                           Summary="@profile.Descriptor"
+                                           DataTestId="@($"database-dialog-profile-row-{profile.Id:N}")"
+                                           IsSelected="@(selectedDatabaseProfileId == profile.Id)"
+                                           OnSelect="@(() => SelectDatabaseProfile(profile.Id))">
+                            <Status>
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                    @if (profile.IsActive)
+                                    {
+                                        <StatusBadge Tone="success" Text="Active" />
+                                    }
+
+                                    @if (profile.IsRuntimeLocked)
+                                    {
+                                        <StatusBadge Tone="warning" Text="Locked" />
+                                    }
+                                </Cluster>
+                            </Status>
+                        </SelectionListItem>
+                    }
+                </Stack>
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap">
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                @if (databaseDialogStartupMode)
+                {
+                    <Button Text="Continue"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@databaseDialogBusy"
+                            Click="ContinueWithCurrentDatabaseAsync"
+                            data-testid="database-startup-continue" />
+                }
+                else
+                {
+                    <Button Text="Close"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@databaseDialogBusy"
+                            Click="CloseDatabaseDialogAsync" />
+                }
+
+                <Button Text="Open Data Sources"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@databaseDialogBusy"
+                        Click="OpenDatabaseSettingsAsync"
+                        data-testid="database-startup-open-settings" />
+            </Cluster>
+
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="Create managed SQLite"
+                        ButtonStyle="ButtonStyle.Info"
+                        Disabled="@(databaseDialogBusy || !CanManageDatabases)"
+                        Click="CreateManagedSqliteAsync"
+                        data-testid="database-startup-create-managed" />
+                <Button Text="@(SelectedDialogProfileIsActive ? "Already active" : "Switch selected")"
+                        ButtonStyle="ButtonStyle.Warning"
+                        Disabled="@(databaseDialogBusy || !CanSwitchSelectedProfile)"
+                        Click="SwitchDatabaseProfileAsync"
+                        data-testid="database-startup-switch" />
+            </Cluster>
+        </Split>
+    </Footer>
+</Dialog>
+
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
@@ -271,6 +450,16 @@
     private bool tuningBusy;
     private readonly List<TuningAttachmentRequest> tuningAttachments = [];
     private DevelopmentTuningRequestResult? pendingTuningRequest;
+    private DotNetObjectReference<MainLayout>? databaseSwitchListenerReference;
+    private IReadOnlyList<DatabaseProfileSummary> databaseProfiles = [];
+    private DatabaseSelectionStateModel? databaseSelection;
+    private Guid? selectedDatabaseProfileId;
+    private bool databaseDialogOpen;
+    private bool databaseDialogStartupMode;
+    private bool databaseDialogBusy;
+    private string? databaseProfileMessage;
+    private long lastObservedDatabaseSwitchGeneration;
+    private string? databaseSwitchAlert;
 
     private string CurrentLocation => Navigation.ToBaseRelativePath(Navigation.Uri);
 
@@ -314,11 +503,24 @@
 
     private TuningSurfaceDefinition? CurrentTuningSurface => ResolveTuningSurface(CurrentUri.AbsolutePath);
 
+    private bool CanManageDatabases => databaseSelection?.IsRuntimeLocked != true;
+
+    private bool SelectedDialogProfileIsActive
+        => selectedDatabaseProfileId.HasValue &&
+           databaseSelection is not null &&
+           selectedDatabaseProfileId.Value == databaseSelection.ActiveProfileId;
+
+    private bool CanSwitchSelectedProfile
+        => CanManageDatabases &&
+           selectedDatabaseProfileId.HasValue &&
+           !SelectedDialogProfileIsActive;
+
     protected override void OnInitialized()
     {
         Navigation.LocationChanged += HandleLocationChanged;
         Workbench.Changed += HandleWorkbenchChanged;
         TuningCoordinator.Changed += HandleWorkbenchChanged;
+        DatabaseSwitchNotificationService.Changed += HandleDatabaseSwitchChanged;
         activeWorkspaceId = ResolveWorkspaceId(CurrentUri.AbsolutePath);
     }
 
@@ -344,6 +546,10 @@
             ]);
 
         await ResolveAndTrackCurrentTabAsync();
+        databaseSwitchListenerReference = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("CanDoItAll.browserState.registerDatabaseSwitchListener", databaseSwitchListenerReference);
+        await RestoreDatabaseSwitchAlertAsync();
+        await LoadDatabaseProfileUiAsync(showStartupPrompt: true);
         StateHasChanged();
     }
 
@@ -411,6 +617,122 @@
         {
             Navigation.NavigateTo(reopened.Route);
         }
+    }
+
+    private async Task LoadDatabaseProfileUiAsync(bool showStartupPrompt)
+    {
+        databaseProfiles = await DatabaseProfileWorkspaceService.ListProfilesAsync();
+        databaseSelection = await DatabaseProfileWorkspaceService.GetCurrentSelectionAsync();
+        selectedDatabaseProfileId ??= databaseSelection.ActiveProfileId;
+        if (databaseProfiles.Count > 0 &&
+            !databaseProfiles.Any(profile => profile.Id == selectedDatabaseProfileId))
+        {
+            selectedDatabaseProfileId = databaseProfiles[0].Id;
+        }
+
+        if (!showStartupPrompt)
+        {
+            return;
+        }
+
+        var dismissed = await JS.InvokeAsync<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed");
+        if (!dismissed)
+        {
+            databaseDialogStartupMode = true;
+            databaseDialogOpen = true;
+        }
+    }
+
+    private async Task OpenDatabaseDialogAsync()
+    {
+        databaseProfileMessage = null;
+        databaseDialogStartupMode = false;
+        await LoadDatabaseProfileUiAsync(showStartupPrompt: false);
+        databaseDialogOpen = true;
+    }
+
+    private void SelectDatabaseProfile(Guid profileId)
+    {
+        selectedDatabaseProfileId = profileId;
+        databaseProfileMessage = null;
+    }
+
+    private async Task ContinueWithCurrentDatabaseAsync()
+    {
+        await DismissStartupPromptIfNeededAsync();
+        databaseDialogOpen = false;
+        databaseDialogStartupMode = false;
+    }
+
+    private async Task CloseDatabaseDialogAsync()
+    {
+        await DismissStartupPromptIfNeededAsync();
+        databaseDialogOpen = false;
+        databaseDialogStartupMode = false;
+    }
+
+    private async Task OpenDatabaseSettingsAsync()
+    {
+        await DismissStartupPromptIfNeededAsync();
+        databaseDialogOpen = false;
+        databaseDialogStartupMode = false;
+        Navigation.NavigateTo("/settings?tab=data-sources");
+    }
+
+    private async Task CreateManagedSqliteAsync()
+    {
+        if (!CanManageDatabases)
+        {
+            return;
+        }
+
+        databaseDialogBusy = true;
+        databaseProfileMessage = null;
+
+        var result = await DatabaseProfileWorkspaceService.CreateManagedSqliteAndActivateAsync();
+        databaseDialogBusy = false;
+        if (result.IsFailure)
+        {
+            databaseProfileMessage = DescribeErrors(result.Errors);
+            return;
+        }
+
+        await DismissStartupPromptIfNeededAsync();
+        databaseDialogOpen = false;
+        databaseDialogStartupMode = false;
+    }
+
+    private async Task SwitchDatabaseProfileAsync()
+    {
+        if (!selectedDatabaseProfileId.HasValue || !CanSwitchSelectedProfile)
+        {
+            return;
+        }
+
+        databaseDialogBusy = true;
+        databaseProfileMessage = null;
+
+        var result = await DatabaseProfileWorkspaceService.ActivateProfileAsync(selectedDatabaseProfileId.Value);
+        databaseDialogBusy = false;
+        if (result.IsFailure)
+        {
+            databaseProfileMessage = DescribeErrors(result.Errors);
+            return;
+        }
+
+        await DismissStartupPromptIfNeededAsync();
+        databaseDialogOpen = false;
+        databaseDialogStartupMode = false;
+    }
+
+    private async Task DismissStartupPromptIfNeededAsync()
+    {
+        if (!databaseDialogStartupMode)
+        {
+            return;
+        }
+
+        await JS.InvokeVoidAsync("CanDoItAll.browserState.dismissDatabaseStartupPrompt");
     }
 
     private async Task SendTuningRequestAsync()
@@ -697,6 +1019,72 @@
         Navigation.LocationChanged -= HandleLocationChanged;
         Workbench.Changed -= HandleWorkbenchChanged;
         TuningCoordinator.Changed -= HandleWorkbenchChanged;
+        DatabaseSwitchNotificationService.Changed -= HandleDatabaseSwitchChanged;
+        databaseSwitchListenerReference?.Dispose();
+    }
+
+    [JSInvokable]
+    public Task HandleBrowserDatabaseSwitchAsync(string payload)
+    {
+        var browserMessage = DeserializeDatabaseSwitchMessage(payload);
+        if (browserMessage is null || browserMessage.Generation <= lastObservedDatabaseSwitchGeneration)
+        {
+            return Task.CompletedTask;
+        }
+
+        return HandleDatabaseSwitchAsync(browserMessage, publishToBrowser: false);
+    }
+
+    private string ResolveDatabaseMessageClass()
+    {
+        var toneClass = databaseProfileMessage?.StartsWith("Database activation requested", StringComparison.OrdinalIgnoreCase) == true
+            ? "border-sky-200 bg-sky-50 text-sky-950"
+            : "border-rose-200 bg-rose-50 text-rose-950";
+        return $"rounded-[1.35rem] border px-4 py-3 text-sm leading-6 {toneClass}";
+    }
+
+    private static string DescribeErrors(IReadOnlyList<Error> errors)
+    {
+        return string.Join(" ", errors.Select(error => error.Message));
+    }
+
+    private static string DescribeDatabaseProvider(DatabaseProviderKind providerKind)
+    {
+        return providerKind switch
+        {
+            DatabaseProviderKind.Sqlite => "SQLite",
+            DatabaseProviderKind.PostgreSql => "PostgreSQL",
+            DatabaseProviderKind.InMemory => "In-memory",
+            _ => providerKind.ToString()
+        };
+    }
+
+    private static string DescribeDatabaseSource(DatabaseProfileSourceKind sourceKind)
+    {
+        return sourceKind switch
+        {
+            DatabaseProfileSourceKind.ManagedSqlite => "Managed SQLite",
+            DatabaseProfileSourceKind.ExternalSqliteFile => "External SQLite file",
+            DatabaseProfileSourceKind.ImportedSqlite => "Imported SQLite file",
+            DatabaseProfileSourceKind.PostgresConnection => "PostgreSQL connection",
+            DatabaseProfileSourceKind.SnapshotCache => "Snapshot cache",
+            DatabaseProfileSourceKind.IpfsSnapshot => "IPFS snapshot",
+            DatabaseProfileSourceKind.InMemory => "In-memory",
+            _ => sourceKind.ToString()
+        };
+    }
+
+    private static string DescribeResolutionSource(DatabaseProfileResolutionSource resolutionSource)
+    {
+        return resolutionSource switch
+        {
+            DatabaseProfileResolutionSource.ExplicitOverride => "Explicit startup override",
+            DatabaseProfileResolutionSource.PersistedActiveProfile => "Last active profile",
+            DatabaseProfileResolutionSource.PersistedCatalogFallback => "Persisted catalog fallback",
+            DatabaseProfileResolutionSource.LegacyDiscovery => "Legacy discovery",
+            DatabaseProfileResolutionSource.AutoProvisionedManagedSqlite => "Auto-provisioned managed SQLite",
+            _ => resolutionSource.ToString()
+        };
     }
 
     private static TuningSurfaceDefinition? ResolveTuningSurface(string path)
@@ -769,9 +1157,86 @@
         return $"route:{normalized}";
     }
 
+    private void HandleDatabaseSwitchChanged(object? sender, DatabaseProfileChangedNotification notification)
+        => _ = InvokeAsync(() => HandleDatabaseSwitchAsync(
+            new BrowserDatabaseSwitchMessage(
+                notification.CurrentProfileId,
+                notification.CurrentFingerprint,
+                notification.Generation,
+                Workbench.HasDirtyTabs),
+            publishToBrowser: true));
+
+    private async Task HandleDatabaseSwitchAsync(BrowserDatabaseSwitchMessage browserMessage, bool publishToBrowser)
+    {
+        if (browserMessage.Generation <= lastObservedDatabaseSwitchGeneration)
+        {
+            return;
+        }
+
+        lastObservedDatabaseSwitchGeneration = browserMessage.Generation;
+        databaseDialogOpen = false;
+        databaseDialogStartupMode = false;
+        databaseProfileMessage = null;
+        var payload = JsonSerializer.Serialize(browserMessage);
+        if (publishToBrowser)
+        {
+            await JS.InvokeVoidAsync("CanDoItAll.browserState.publishDatabaseSwitch", payload);
+        }
+
+        await JS.InvokeVoidAsync("CanDoItAll.browserState.rememberDatabaseSwitchAlert", payload);
+        Navigation.NavigateTo(ResolveDatabaseSwitchRecoveryRoute(), forceLoad: true);
+    }
+
+    private async Task RestoreDatabaseSwitchAlertAsync()
+    {
+        var payload = await JS.InvokeAsync<string?>("CanDoItAll.browserState.consumeDatabaseSwitchAlert");
+        var browserMessage = DeserializeDatabaseSwitchMessage(payload);
+        if (browserMessage is null)
+        {
+            return;
+        }
+
+        lastObservedDatabaseSwitchGeneration = Math.Max(lastObservedDatabaseSwitchGeneration, browserMessage.Generation);
+        databaseSwitchAlert = browserMessage.HadDirtyTabs
+            ? "The active database changed and the workbench reloaded a safe route. Unsaved tab state from the previous profile was discarded."
+            : "The active database changed and the workbench reloaded a safe route for the current profile.";
+    }
+
+    private string ResolveDatabaseSwitchRecoveryRoute()
+    {
+        if (CurrentUri.AbsolutePath.EndsWith("/structure", StringComparison.OrdinalIgnoreCase) ||
+            CurrentUri.AbsolutePath.EndsWith("/calendar", StringComparison.OrdinalIgnoreCase))
+        {
+            return "/projects";
+        }
+
+        return activeWorkspaceId switch
+        {
+            "quality" => "/validation",
+            "automation" => "/automation",
+            _ => "/projects"
+        };
+    }
+
+    private static BrowserDatabaseSwitchMessage? DeserializeDatabaseSwitchMessage(string? payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<BrowserDatabaseSwitchMessage>(payload);
+    }
+
     private sealed record TuningSurfaceDefinition(string CapsuleKey, string ComponentName, string ContextSummary);
 
     private sealed record ClipboardImagePayload(string FileName, string ContentType, string ContentBase64);
+
+    private sealed record BrowserDatabaseSwitchMessage(
+        Guid CurrentProfileId,
+        string CurrentFingerprint,
+        long Generation,
+        bool HadDirtyTabs);
 }
 
 

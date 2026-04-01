@@ -25,9 +25,9 @@ public sealed class AppTabStripTests : TestContext
             .Add(component => component.MoveRight, EventCallback.Factory.Create<string>(this, value => movedRight = value))
             .Add(component => component.ToggleSleep, EventCallback.Factory.Create<string>(this, value => toggledSleep = value)));
 
-        Assert.Contains("pin", cut.Markup);
-        Assert.Contains("zZ", cut.Markup);
-        Assert.Contains("flex flex-col gap-1.5 px-1 pb-1", cut.Markup);
+        Assert.Contains("push_pin", cut.Markup);
+        Assert.Contains("bedtime", cut.Markup);
+        Assert.Contains("cda-inline-tab__actions", cut.Markup);
 
         cut.Find("button[title='Move right']").Click();
         cut.Find("button[title='Sleep/wake']").Click();

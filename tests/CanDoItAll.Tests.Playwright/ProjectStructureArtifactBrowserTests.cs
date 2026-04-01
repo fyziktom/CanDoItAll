@@ -288,12 +288,24 @@ public sealed partial class AppSmokeTests
         await CaptureLocatorAsync(summaryDialog, Path.Combine(i19Root, "01-primary-state.png"));
 
         var summaryStatusSelect = summaryDialog.Locator(".project-structure-summary-row").Filter(new() { HasText = "Capture screenshot evidence" }).Locator("select");
-        await summaryStatusSelect.SelectOptionAsync(new[] { "Blocked" });
+        await summaryStatusSelect.SelectOptionAsync(new[]
+        {
+            new SelectOptionValue
+            {
+                Label = "Blocked"
+            }
+        });
         await page.WaitForFunctionAsync(
             @"() => {
                 const row = Array.from(document.querySelectorAll('.project-structure-summary-row'))
                     .find(candidate => (candidate.textContent || '').includes('Capture screenshot evidence'));
-                return row?.querySelector('select')?.value === 'Blocked';
+                const select = row?.querySelector('select');
+                if (!(select instanceof HTMLSelectElement)) {
+                    return false;
+                }
+
+                const selectedOption = select.options[select.selectedIndex];
+                return (selectedOption?.textContent || '').trim() === 'Blocked';
             }");
         await CaptureLocatorAsync(summaryDialog, Path.Combine(i19Root, "02-secondary-state.png"));
 

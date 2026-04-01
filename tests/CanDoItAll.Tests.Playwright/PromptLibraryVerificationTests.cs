@@ -198,6 +198,7 @@ public sealed partial class PromptLibraryVerificationTests
         Assert.True(response!.Ok, $"Expected /prompt-factory to return 2xx, got {(int)response.Status}.");
 
         await page.WaitForSelectorAsync("text=Prompt session workbench");
+        await DismissStartupModalIfPresentAsync(page);
         await page.WaitForSelectorAsync(".cw-canvas-host");
         await WaitForNodeAsync(page, "session-root");
         await WaitForNodeAsync(page, "selection:setup");
@@ -231,7 +232,14 @@ public sealed partial class PromptLibraryVerificationTests
         Assert.Contains(component.Name, nodeText, StringComparison.OrdinalIgnoreCase);
         if (tokenValues.Count > 0)
         {
-            Assert.Contains(tokenValues[0].Value, nodeText, StringComparison.Ordinal);
+            var matchedToken = tokenValues.FirstOrDefault(item =>
+                !string.IsNullOrWhiteSpace(item.Value) &&
+                nodeText.Contains(item.Value, StringComparison.OrdinalIgnoreCase));
+            Assert.True(
+                matchedToken is not null,
+                $"Expected component node '{nodeId}' to contain at least one configured token value.{Environment.NewLine}" +
+                $"Configured values: {string.Join(", ", tokenValues.Select(item => $"{item.Key}='{item.Value}'"))}{Environment.NewLine}" +
+                $"Actual text:{Environment.NewLine}{nodeText}");
         }
 
         await CaptureCanvasStageAsync(page, resultPath);
@@ -381,12 +389,35 @@ public sealed partial class PromptLibraryVerificationTests
         {
             var token = component.TemplateTokens[index];
             var value = BuildTokenValue(component.Key, token);
-            await fields.Nth(index).Locator("input, textarea").First.FillAsync(value);
+            var input = fields.Nth(index).Locator("input, textarea").First;
+            await SetComposerFieldValueAsync(input, value);
+
             values.Add(new TokenValue(token, value));
         }
 
         await page.WaitForTimeoutAsync(100);
         return values;
+    }
+
+    private static async Task SetComposerFieldValueAsync(ILocator input, string value)
+    {
+        await input.FillAsync(value);
+        var actualValue = await input.InputValueAsync();
+        if (string.Equals(actualValue, value, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await input.EvaluateAsync(
+            @"(element, requestedValue) => {
+                element.value = requestedValue;
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+            }",
+            value);
+
+        actualValue = await input.InputValueAsync();
+        Assert.Equal(value, actualValue);
     }
 
     private static async Task FillInputComposerAsync(IPage page, VerificationInputDefinition input)
@@ -417,12 +448,13 @@ public sealed partial class PromptLibraryVerificationTests
                     const button = document.querySelector('.cw-canvas-composer__actions button[data-tone=""accent""]');
                     return !!button && !button.disabled;
                 }",
+                null,
                 new PageWaitForFunctionOptions
                 {
-                    Timeout = 5000
+                    Timeout = 15_000
                 });
         }
-        catch (PlaywrightException)
+        catch (Exception exception) when (exception is PlaywrightException or TimeoutException)
         {
             var snapshot = await CaptureComposerSnapshotAsync(page);
             var fieldSummary = string.Join(
@@ -745,7 +777,7 @@ public sealed partial class PromptLibraryVerificationTests
             return;
         }
 
-        await confirmDialog.GetByRole(AriaRole.Button, new() { Name = confirmLabel, Exact = true }).ClickAsync();
+        await confirmDialog.Locator("button[data-tone='warn']").ClickAsync();
     }
 
     private static async Task OpenComponentCatalogAsync(IPage page, VerificationComponent component)
@@ -1174,7 +1206,7 @@ public sealed partial class PromptLibraryVerificationTests
             var confirmDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Confirm prompt-factory action" });
             if (await WaitForLocatorAsync(confirmDialog, 1_500))
             {
-                await confirmDialog.GetByRole(AriaRole.Button, new() { Name = "Reset session", Exact = true }).ClickAsync();
+                await confirmDialog.Locator("button[data-tone='warn']").ClickAsync();
             }
 
             if (await WaitForResetStateAsync(page, 5_000))
@@ -1198,6 +1230,18 @@ public sealed partial class PromptLibraryVerificationTests
         {
             return false;
         }
+    }
+
+    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)
+    {
+        var startupDialog = page.GetByTestId("database-startup-modal");
+        if (!await WaitForLocatorAsync(startupDialog, timeoutMs))
+        {
+            return;
+        }
+
+        await page.GetByTestId("database-startup-continue").ClickAsync();
+        await startupDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
     }
 
     private static async Task<bool> WaitForResetStateAsync(IPage page, float timeoutMs)

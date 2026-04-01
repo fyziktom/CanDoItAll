@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Web\CanDoItAll.Web.csproj" />
     <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
   </ItemGroup>
