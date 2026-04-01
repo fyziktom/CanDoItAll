@@ -796,9 +796,14 @@
         min-width: 0;
     }
 
+    .cw-help-layout,
     .cw-help-grid,
     .cw-form-grid--split {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cw-help-nav {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .cw-help-overlay--settings {

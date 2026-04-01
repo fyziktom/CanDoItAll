@@ -1,4 +1,5 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.CanvasAdapters;
@@ -118,11 +119,12 @@ public sealed class ProjectStructureActionCatalogAdapter
         }
 
         actions.AddRange(ProjectStructureCanvasCatalog.BuildMenuCreateActions(node.ObjectType));
-        return actions;
+        return ProjectStructureActionShortcuts.Apply(actions);
     }
 
     public IReadOnlyList<CanvasWorkbenchAction> BuildGroupContextActions()
-        =>
+    {
+        List<CanvasWorkbenchAction> actions =
         [
             new CanvasWorkbenchAction
             {
@@ -146,6 +148,9 @@ public sealed class ProjectStructureActionCatalogAdapter
             BuildMarkerAction(),
             BuildPriorityAction()
         ];
+
+        return ProjectStructureActionShortcuts.Apply(actions);
+    }
 
     public IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions(ProjectObjectType? sourceType)
         => ProjectStructureCanvasCatalog.BuildMenuCreateActions(sourceType);
@@ -191,7 +196,7 @@ public sealed class ProjectStructureActionCatalogAdapter
         {
             "marker:none" => (string.Empty, string.Empty, string.Empty),
             "marker:question" => ("question", "sky", "Question"),
-            "marker:alert" => ("alert", "danger", "Alert"),
+            "marker:alert" => ("alert", "danger", "Exclamation"),
             "marker:thumbs-up" => ("thumbs-up", "mint", "Approved"),
             "marker:thumbs-down" => ("thumbs-down", "danger", "Rejected"),
             "marker:pause" => ("pause", "warn", "Paused"),
@@ -325,7 +330,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             actions.AddRange(ProjectStructureCanvasCatalog.BuildMenuCreateActions(node.ObjectType));
         }
 
-        return actions;
+        return ProjectStructureActionShortcuts.Apply(actions);
     }
 
     private static CanvasWorkbenchAction BuildProgressAction()
@@ -399,8 +404,8 @@ public sealed class ProjectStructureActionCatalogAdapter
         => new()
         {
             ActionId = "marker",
-            Label = "Marker",
-            MenuLabel = "Marker",
+            Label = "Markers",
+            MenuLabel = "Markers",
             Description = "Attach a fast visual note marker to the selected item or active selection.",
             Icon = "marker",
             Tone = "primary",
@@ -408,8 +413,8 @@ public sealed class ProjectStructureActionCatalogAdapter
             Children =
             [
                 new() { ActionId = "marker:none", Label = "Clear", MenuLabel = "Clear", Description = "Remove the current marker.", Icon = "marker-none", Tone = "ghost", MenuSize = "compact" },
-                new() { ActionId = "marker:question", Label = "Question", MenuLabel = "Ask", Description = "Mark this node as an open question.", Icon = "marker-question", Tone = "sky", MenuSize = "compact" },
-                new() { ActionId = "marker:alert", Label = "Alert", MenuLabel = "Warn", Description = "Mark this node as needing attention.", Icon = "marker-alert", Tone = "danger", MenuSize = "compact" },
+                new() { ActionId = "marker:question", Label = "Question", MenuLabel = "Question", Description = "Mark this node as an open question.", Icon = "marker-question", Tone = "sky", MenuSize = "compact" },
+                new() { ActionId = "marker:alert", Label = "Exclamation", MenuLabel = "Exclamation", Description = "Mark this node as needing attention.", Icon = "marker-alert", Tone = "danger", MenuSize = "compact" },
                 new() { ActionId = "marker:thumbs-up", Label = "Approved", MenuLabel = "Good", Description = "Mark this node as looking good.", Icon = "marker-thumbs-up", Tone = "mint", MenuSize = "compact" },
                 new() { ActionId = "marker:thumbs-down", Label = "Rejected", MenuLabel = "Bad", Description = "Mark this node as needing a rework or rejection.", Icon = "marker-thumbs-down", Tone = "danger", MenuSize = "compact" },
                 new() { ActionId = "marker:pause", Label = "Paused", MenuLabel = "Pause", Description = "Mark this node as paused.", Icon = "marker-pause", Tone = "warn", MenuSize = "compact" },
