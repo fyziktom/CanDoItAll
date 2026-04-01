@@ -42,3 +42,10 @@ public sealed class DevelopmentManagerOptions
 
     public string ManagerBaseUrl { get; set; } = "http://127.0.0.1:6407";
 }
+
+public sealed class ControlPlaneOptions
+{
+    public string? RootPath { get; set; }
+
+    public string? IpfsApiBaseUrl { get; set; }
+}

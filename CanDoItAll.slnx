@@ -5,6 +5,7 @@
     <Project Path="src/CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj" />
     <Project Path="src/CanDoItAll.Components.Common/CanDoItAll.Components.Common.csproj" />
     <Project Path="src/CanDoItAll.Components.Sandbox/CanDoItAll.Components.Sandbox.csproj" />
+    <Project Path="src/CanDoItAll.Composition/CanDoItAll.Composition.csproj" />
     <Project Path="src/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
     <Project Path="src/CanDoItAll.Mcp.Core/CanDoItAll.Mcp.Core.csproj" />
     <Project Path="src/CanDoItAll.Mcp.Components/CanDoItAll.Mcp.Components.csproj" />
@@ -12,6 +13,8 @@
     <Project Path="src/CanDoItAll.Mcp.LocalRuntime/CanDoItAll.Mcp.LocalRuntime.csproj" />
     <Project Path="src/CanDoItAll.Mcp.ProjectStructure/CanDoItAll.Mcp.ProjectStructure.csproj" />
     <Project Path="src/CanDoItAll.Mcp.SshOps/CanDoItAll.Mcp.SshOps.csproj" />
+    <Project Path="src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj" />
+    <Project Path="src/CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj" />
     <Project Path="src/CanDoItAll.Modules.Activity/CanDoItAll.Modules.Activity.csproj" />
     <Project Path="src/CanDoItAll.Modules.Automation/CanDoItAll.Modules.Automation.csproj" />
     <Project Path="src/CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj" />
@@ -34,6 +37,7 @@
     <Project Path="tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj" />
+    <Project Path="tests/CanDoItAll.Tests.Support/CanDoItAll.Tests.Support.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj" />
   </Folder>
   <Folder Name="/tools/">

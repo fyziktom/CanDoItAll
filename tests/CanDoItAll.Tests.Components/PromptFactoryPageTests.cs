@@ -2,6 +2,7 @@ using Bunit;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Factory.Pages;
 using CanDoItAll.Modules.Projects;
+using System.Reflection;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
@@ -91,16 +92,23 @@ public sealed class PromptFactoryPageTests
         var buildResult = await factoryService.BuildAsync(editor);
         Assert.True(buildResult.IsSuccess);
 
-        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
-        navigation.NavigateTo($"/prompt-factory?sessionId={sessionId}&preview=true");
         var cut = harness.Context.RenderComponent<PromptFactoryPage>();
+        await cut.InvokeAsync(async () =>
+        {
+            cut.Instance.SessionIdQuery = sessionId;
+            cut.Instance.ShowPromptPreviewQuery = true;
+            await cut.Instance.SetParametersAsync(ParameterView.Empty);
+        });
 
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Prompt session workbench", cut.Markup);
             Assert.Single(cut.FindAll("[data-testid='prompt-factory-prompt-modal']"));
-            Assert.Contains("Final prompt", cut.Markup);
-            Assert.Contains("# Prompt Request", cut.Markup);
+            Assert.Contains("Copy prompt", cut.Markup);
+            var promptPreviewText = (string?)typeof(PromptFactoryPage)
+                .GetField("promptPreviewText", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .GetValue(cut.Instance);
+            Assert.Equal(buildResult.Value!.GeneratedPrompt, promptPreviewText);
         });
 
         cut.FindAll("button")

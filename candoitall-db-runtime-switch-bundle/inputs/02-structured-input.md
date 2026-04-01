@@ -19,7 +19,7 @@
 ## Source Artifacts
 
 - `/mnt/data/CanDoItAll-toolbox-repair.zip`
-- `/mnt/data/work/CanDoItAll-toolbox-repair`
+- `C:\repositories\CanDoItAll`
 - `README.md`, `Program.cs`, `InfrastructureServiceCollectionExtensions.cs`, `WorkspaceStorage.cs`, `BrowserWorkspaceStateStore.cs`, `SettingsPage.razor`, `MainLayout.razor`, the five schema initializer files, and the existing test harness files listed in `inputs/01-source-artifacts.md`
 
 ## Input Coverage Signals

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -23,13 +23,13 @@
 
 ## Exact Source References
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Program.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectStructureLocalFileOpener.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectStructureRuntimeLauncher.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Factory/PromptFactoryService.Pack.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Program.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectStructureLocalFileOpener.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectStructureRuntimeLauncher.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Factory/PromptFactoryService.Pack.cs`
 
 ## Deliverables
 

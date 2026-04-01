@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -27,13 +27,13 @@
 
 ## Exact Source References
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Components/Layout/MainLayout.razor`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Program.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Infrastructure/BrowserWorkspaceStateStore.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Components/ComponentTestHarness.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Components/Layout/MainLayout.razor`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Program.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Infrastructure/BrowserWorkspaceStateStore.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/ComponentTestHarness.cs`
 
 ## Deliverables
 

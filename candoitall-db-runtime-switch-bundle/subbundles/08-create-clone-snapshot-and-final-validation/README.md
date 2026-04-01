@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -28,16 +28,18 @@
 
 ## Exact Source References
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Components/Layout/MainLayout.razor`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Program.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/docker-compose.yml`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/Search/SearchIndexing.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Security/SecurityModels.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/DatabaseProfileWorkspaceService.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Components/Layout/MainLayout.razor`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Program.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs`
+- `C:\repositories\CanDoItAll/docker-compose.yml`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Search/SearchIndexing.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Security/SecurityModels.cs`
 
 ## Deliverables
 

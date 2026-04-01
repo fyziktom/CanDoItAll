@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -25,15 +25,20 @@
 
 ## Exact Source References
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/Persistence/AppDbContext.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/Persistence/AppDbContextFactory.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Program.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Composition/ModuleAssemblies.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/Search/SearchIndexing.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Unit/DatabaseConfigurationTests.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Persistence/AppDbContext.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Persistence/DatabaseRuntimeSwitching.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Persistence/SwitchableAppDbContextFactory.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/ControlPlane/DatabaseDrivers.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/ControlPlane/DatabaseSwitchingAbstractions.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileModels.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Program.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Infrastructure/RuntimeDatabaseSwitching.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Support/TestApplicationBootstrap.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/DatabaseRuntimeSwitchingTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs`
 
 ## Deliverables
 

@@ -12,7 +12,7 @@
 
 ### Infrastructure registration
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs` binds `DatabaseOptions`, `StorageOptions`, `WorkbenchOptions`, and `DevelopmentManagerOptions`.
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs` binds `DatabaseOptions`, `StorageOptions`, `WorkbenchOptions`, and `DevelopmentManagerOptions`.
 - The same file registers `AddDbContextFactory<AppDbContext>((sp, options) => ConfigureDb(...))`.
 - `ConfigureDb(...)` currently supports:
   - `InMemory` / `Memory`
@@ -23,18 +23,18 @@
 
 ### Options/defaults
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/Configuration/AppOptions.cs` currently defaults `DatabaseOptions.Provider` to `Sqlite`.
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Configuration/AppOptions.cs` currently defaults `DatabaseOptions.Provider` to `Sqlite`.
 - `StorageOptions.WorkspaceRoot` defaults to `.artifacts/workspace`.
 - `WorkbenchOptions.BrowserStorageKey` defaults to `candoitall.workbench.session`.
 
 ### Design-time factory
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/Persistence/AppDbContextFactory.cs` creates `AppDbContext` for design-time operations based on `CANDOITALL_DATABASE_PROVIDER` and `CANDOITALL_DATABASE_CONNECTION`.
-- The design-time factory does **not** configure `AppDbContextModelRegistry` with the module assemblies listed in `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Composition/ModuleAssemblies.cs`, so migrations generated there today would not see the full modular model.
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Persistence/AppDbContextFactory.cs` creates `AppDbContext` for design-time operations based on `CANDOITALL_DATABASE_PROVIDER` and `CANDOITALL_DATABASE_CONNECTION`.
+- The design-time factory does **not** configure `AppDbContextModelRegistry` with the module assemblies listed in `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Composition/ModuleAssemblies.cs`, so migrations generated there today would not see the full modular model.
 
 ## Current Startup Behavior
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Program.cs` builds the app, resolves `IDbContextFactory<AppDbContext>`, creates a context, and executes:
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Program.cs` builds the app, resolves `IDbContextFactory<AppDbContext>`, creates a context, and executes:
   - `dbContext.Database.EnsureCreatedAsync()`
   - `WorkspaceSchemaInitializer.EnsureAsync(...)`
   - `ProjectsSchemaInitializer.EnsureAsync(...)`
@@ -55,11 +55,11 @@
 
 - No committed EF Core migration files exist in the repository.
 - The current schema authority for many module tables is a set of raw SQL initializer classes:
-  - `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workspace/WorkspaceSchemaInitializer.cs`
-  - `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Projects/ProjectsSchemaInitializer.cs`
-  - `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Factory/PromptFactorySchemaInitializer.cs`
-  - `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchSchemaInitializer.cs`
-  - `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectStructureAgentSchemaInitializer.cs`
+  - `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/WorkspaceSchemaInitializer.cs`
+  - `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Projects/ProjectsSchemaInitializer.cs`
+  - `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Factory/PromptFactorySchemaInitializer.cs`
+  - `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchSchemaInitializer.cs`
+  - `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectStructureAgentSchemaInitializer.cs`
 - Those initializers contain `if (!dbContext.Database.IsSqlite()) return;`, which means:
   - they do nothing for PostgreSQL
   - they assume SQLite is the dominant normal-path provider
@@ -68,21 +68,21 @@
 
 ## Current Storage And File-Serving State
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs` resolves one workspace root relative to `ContentRootPath` and then derives:
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs` resolves one workspace root relative to `ContentRootPath` and then derives:
   - managed files
   - exports
   - evidence
   - manager artifacts
 - `LocalFileStore` and `ManagedArtifactStore` both use the single global workspace root.
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs` and `src/CanDoItAll.Modules.Factory/PromptFactoryService.Pack.cs` save user-visible media beneath `managed-files/...`.
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectStructureLocalFileOpener.cs` and `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectStructureRuntimeLauncher.cs` resolve file paths from the active workspace root, which means switching storage roots must also update these host integrations.
-- Because `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Program.cs` binds a startup-time `PhysicalFileProvider`, per-profile storage would currently serve the **wrong** file root after a database switch.
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs` and `src/CanDoItAll.Modules.Factory/PromptFactoryService.Pack.cs` save user-visible media beneath `managed-files/...`.
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectStructureLocalFileOpener.cs` and `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectStructureRuntimeLauncher.cs` resolve file paths from the active workspace root, which means switching storage roots must also update these host integrations.
+- Because `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Program.cs` binds a startup-time `PhysicalFileProvider`, per-profile storage would currently serve the **wrong** file root after a database switch.
 
 ## Current Browser State And Workbench Restore
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Infrastructure/BrowserWorkspaceStateStore.cs` hardcodes one browser key: `candoitall.workbench.session`.
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.SharedKernel/WorkbenchTabState.cs` defines `WorkbenchSessionSnapshot`, but it does **not** include an active database profile identifier or database fingerprint.
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/WorkbenchTabState.cs` restores and persists tab state without any database-profile isolation.
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Infrastructure/BrowserWorkspaceStateStore.cs` hardcodes one browser key: `candoitall.workbench.session`.
+- `C:\repositories\CanDoItAll/src/CanDoItAll.SharedKernel/WorkbenchTabState.cs` defines `WorkbenchSessionSnapshot`, but it does **not** include an active database profile identifier or database fingerprint.
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/WorkbenchTabState.cs` restores and persists tab state without any database-profile isolation.
 - `README.md` explicitly documents that workbench tab state lives in local storage under the same global key.
 - Result: if a runtime switch were introduced today, the app would attempt to restore tabs/routes/artifact state from the wrong database.
 
@@ -95,15 +95,15 @@
 
 ### Circular secret dependency
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Security/SecurityModels.cs` stores encrypted secret records **inside the selected application database**.
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Security/SecurityModels.cs` stores encrypted secret records **inside the selected application database**.
 - A database-profile catalog therefore cannot live in that same database because PostgreSQL credentials or SQLite source metadata would become unreadable until after the database choice had already been made.
 - `IDataProtection` keys are not persisted today, which would also make cross-restart decryption of control-plane secrets unreliable.
 
 ### Stale route hazards
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs` uses `FirstAsync(item => item.Id == projectId)` in `GetStructureAsync(...)` and `GetCalendarAsync(...)`.
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs` uses `FirstAsync(item => item.Id == projectId)` in `GetStructureAsync(...)` and `GetCalendarAsync(...)`.
 - If a user is on `/projects/{id}/structure` or `/projects/{id}/calendar` and switches to a database where that project does not exist, the current implementation path will throw instead of falling back safely.
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor` and `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/Pages/ProjectCalendarPage.razor` do not currently implement a cross-database stale-route recovery flow.
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor` and `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/Pages/ProjectCalendarPage.razor` do not currently implement a cross-database stale-route recovery flow.
 
 ### Cross-circuit runtime behavior
 
@@ -140,7 +140,7 @@ Positive note:
 The current routed pages that load database-backed content include:
 
 - `/` and `/dashboard` via `src/CanDoItAll.Web/Components/Pages/Home.razor`
-- `/settings` via `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor`
+- `/settings` via `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor`
 - `/activity`
 - `/automation`
 - `/projects`
@@ -152,7 +152,7 @@ The current routed pages that load database-backed content include:
 - `/projects/{projectId}/structure`
 - `/projects/{projectId}/calendar`
 
-Global shell state lives primarily in `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Components/Layout/MainLayout.razor`, which is the correct place for:
+Global shell state lives primarily in `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Components/Layout/MainLayout.razor`, which is the correct place for:
 
 - the active-database badge
 - the global switch entry point
@@ -163,9 +163,9 @@ Global shell state lives primarily in `/mnt/data/work/CanDoItAll-toolbox-repair/
 
 ### Existing coverage
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Unit/DatabaseConfigurationTests.cs` already proves that provider selection can switch to `InMemory`.
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Unit/WorkbenchStateServiceTests.cs` already proves restore logic and snapshot compatibility markers.
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Integration/TestApplication.cs`, `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Components/ComponentTestHarness.cs`, and `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs` give reusable test entry points.
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/DatabaseConfigurationTests.cs` already proves that provider selection can switch to `InMemory`.
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/WorkbenchStateServiceTests.cs` already proves restore logic and snapshot compatibility markers.
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/TestApplication.cs`, `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/ComponentTestHarness.cs`, and `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs` give reusable test entry points.
 
 ### Current gaps
 

@@ -43,15 +43,15 @@ This initiative bundle prepares an implementation agent to turn the current star
 
 ## Validation Summary
 
-- Bundle preparation status: `Prepared`
-- Bundle readiness gate: `Passed by prepared-stage structure validator`
-- Execution status: `Ready for Codex implementation`
-- Subbundle gate review: `Complete at planning level`
-- Final closure gate: `Defined for execution phase`
-- Browser validation analytics: `Planned and pre-seeded in the execution report`
+- Bundle preparation status: `Prepared and workspace-validated`
+- Bundle readiness gate: `Passed by prepared-stage structure validator in the current workspace`
+- Execution status: `Implementation complete; subbundles 01-08 completed with real proof`
+- Subbundle gate review: `All subbundles 01-08 passed with recorded gate results and browser analytics`
+- Final closure gate: `Passed by completed-stage structure validator in the current workspace`
+- Browser validation analytics: `Subbundle 05 closed with direct HTTP managed-file proof; subbundle 06 closed with real browser stale-route and cross-tab reload proof; subbundle 07 closed with reviewed startup-modal, top-bar switcher, desktop settings, and responsive locked-mode UI proof; subbundle 08 closed with reviewed create/clone/snapshot/cross-tab evidence and a full 28-test Playwright pass. Real-node IPFS API proof stayed unavailable in this workspace, so fake-server transport proof carried the documented scope exception`
 
 ## Preparation Evidence
 
-- Prepared-stage validator target: `python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py /mnt/data/candoitall-db-runtime-switch-bundle --profile initiative --stage prepared`
+- Prepared-stage validator target: `python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py C:\repositories\CanDoItAll\candoitall-db-runtime-switch-bundle --profile initiative --stage prepared`
 - Readiness audit completed from senior QA, senior C# architect, and delivery-manager perspectives in `reviews/00-bundle-self-review.md`.
-- Environment limitation: repository analysis was static only because the current container does not have the .NET SDK available, so the bundle requires the execution agent to run the listed `dotnet` and browser proof before marking any subbundle complete.
+- Execution environment confirmation: the current workspace has the .NET 10 SDK available, and subbundles 01-04 have already been proven with real `dotnet build`, `dotnet ef`, and `dotnet test` commands. PostgreSQL-backed proof for subbundles 03-04 was completed against an ephemeral local PostgreSQL 16 cluster after Docker Desktop was found unavailable on this machine.

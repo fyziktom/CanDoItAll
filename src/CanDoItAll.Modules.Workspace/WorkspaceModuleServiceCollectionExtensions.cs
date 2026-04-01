@@ -13,6 +13,7 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.AddScoped<ProviderRegistry>();
         services.AddScoped<ProviderExecutionService>();
         services.AddScoped<WorkspaceService>();
+        services.AddScoped<DatabaseProfileWorkspaceService>();
         services.AddScoped<ProjectStructureAgentAdministrationService>();
         services.AddScoped<IProjectManagementKnowledgeProvider, StaticProjectManagementKnowledgeProvider>();
         services.AddScoped<ProjectManagementKnowledgeService>();

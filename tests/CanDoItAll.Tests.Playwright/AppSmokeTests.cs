@@ -43,20 +43,27 @@ public sealed partial class AppSmokeTests
         await page.GotoAsync($"{fixture.BaseUrl}/validation");
         await page.GotoAsync($"{fixture.BaseUrl}/test-lab");
         await page.WaitForSelectorAsync("text=Tests, evidence, and execution results");
-        await page.WaitForFunctionAsync("() => localStorage.getItem('candoitall.workbench.session')?.includes('route:test-lab') === true");
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const key = Object.keys(localStorage)
+                    .find(candidate => candidate.startsWith('candoitall.workbench.session:'));
+                return !!key && (localStorage.getItem(key) || '').includes('route:test-lab');
+            }");
 
-        var storageBeforeReload = await page.EvaluateAsync<string?>("() => localStorage.getItem('candoitall.workbench.session')");
-        Assert.NotNull(storageBeforeReload);
-        Assert.Contains("\"version\":3", storageBeforeReload, StringComparison.Ordinal);
-        Assert.Contains("route:test-lab", storageBeforeReload, StringComparison.Ordinal);
+        var storageBeforeReload = await ReadWorkbenchSessionStorageAsync(page);
+        Assert.False(string.IsNullOrWhiteSpace(storageBeforeReload.Key));
+        Assert.NotNull(storageBeforeReload.Value);
+        Assert.Contains("\"version\":4", storageBeforeReload.Value, StringComparison.Ordinal);
+        Assert.Contains("route:test-lab", storageBeforeReload.Value, StringComparison.Ordinal);
 
         await page.ReloadAsync();
         await page.WaitForSelectorAsync("text=Tests, evidence, and execution results");
 
-        var storageAfterReload = await page.EvaluateAsync<string?>("() => localStorage.getItem('candoitall.workbench.session')");
-        Assert.NotNull(storageAfterReload);
-        Assert.Contains("\"version\":3", storageAfterReload, StringComparison.Ordinal);
-        Assert.Contains("route:test-lab", storageAfterReload, StringComparison.Ordinal);
+        var storageAfterReload = await ReadWorkbenchSessionStorageAsync(page);
+        Assert.Equal(storageBeforeReload.Key, storageAfterReload.Key);
+        Assert.NotNull(storageAfterReload.Value);
+        Assert.Contains("\"version\":4", storageAfterReload.Value, StringComparison.Ordinal);
+        Assert.Contains("route:test-lab", storageAfterReload.Value, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -651,15 +658,15 @@ public sealed partial class AppSmokeTests
                     return false;
                 }
 
-                return toolbox.querySelectorAll('.cw-context-toolbox__item').length > 0 &&
-                    toolbox.querySelectorAll('.rz-fa-icon').length > 0 &&
+                return toolbox.querySelectorAll('.cda-treeview__row[data-testid^=""project-structure-toolbox-""]').length > 0 &&
+                    toolbox.querySelectorAll('.cda-material-icon').length > 0 &&
                     toolbox.querySelectorAll('.rz-icon-fallback').length === 0;
             }");
         await page.WaitForTimeoutAsync(250);
 
         var firstVisibleItemTopBeforeScroll = await page.EvaluateAsync<double>(
             @"() => {
-                const item = document.querySelector('[data-testid=""project-structure-standard-blocks-toolbox""] .cw-context-toolbox__item');
+                const item = document.querySelector('[data-testid=""project-structure-standard-blocks-toolbox""] .cda-treeview__row[data-testid^=""project-structure-toolbox-""]');
                 return item instanceof HTMLElement
                     ? item.getBoundingClientRect().top
                     : 0;
@@ -689,7 +696,7 @@ public sealed partial class AppSmokeTests
                     };
                 }
 
-                const items = Array.from(sections.querySelectorAll('.cw-context-toolbox__item'));
+                const items = Array.from(sections.querySelectorAll('.cda-treeview__row[data-testid^=""project-structure-toolbox-""]'));
                 return {
                     scrollTop: sections.scrollTop,
                     scrollHeight: sections.scrollHeight,
@@ -703,7 +710,7 @@ public sealed partial class AppSmokeTests
                     visibleLabels: items
                         .filter(item => item instanceof HTMLElement && item.getBoundingClientRect().height > 1 && item.getBoundingClientRect().width > 1)
                         .slice(0, 6)
-                        .map(item => item.querySelector('.cw-context-toolbox__item-body strong')?.textContent?.trim() ?? ''),
+                        .map(item => item.querySelector('.cda-treeview__text')?.textContent?.trim() ?? ''),
                     firstItemTop: items.length > 0 && items[0] instanceof HTMLElement ? items[0].getBoundingClientRect().top : 0,
                     windowHeight: window instanceof HTMLElement ? window.getBoundingClientRect().height : 0
                 };
@@ -726,9 +733,9 @@ public sealed partial class AppSmokeTests
                     return false;
                 }
 
-                return toolbox.querySelectorAll('.cw-context-toolbox__item').length > 0 &&
+                return toolbox.querySelectorAll('.cda-treeview__row[data-testid^=""project-structure-toolbox-""]').length > 0 &&
                     (toolbox.textContent || '').toLowerCase().includes('pdf') &&
-                    toolbox.querySelectorAll('.fa-file-pdf').length > 0;
+                    toolbox.querySelector('[data-testid=""project-structure-toolbox-add-file-pdf""]') instanceof HTMLElement;
             }");
         await toolboxWindow.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "04-toolbox-pdf-search.png") });
         await structureToolboxSearch.FillAsync(string.Empty);
@@ -765,6 +772,12 @@ public sealed partial class AppSmokeTests
         await OpenCanvasContextMenuAsync(page, rootSelector);
         await page.Mouse.MoveAsync(8, 8);
         await page.WaitForTimeoutAsync(80);
+        if (!await WaitForMenuActionAsync(page, "progress", 1_500))
+        {
+            await OpenCanvasContextMenuAsync(page, rootSelector);
+            await page.Mouse.MoveAsync(8, 8);
+            await page.WaitForTimeoutAsync(80);
+        }
         await HoverContextMenuActionAsync(page, "progress");
         Assert.True(await page.Locator(".cw-context-menu__action[data-action-id='progress'].is-submenu-loading .cw-context-menu__loading-indicator").IsVisibleAsync());
         Assert.False(await WaitForMenuActionAsync(page, "progress:10", 200), "Expected the progress submenu to stay closed during the hover-delay window.");
@@ -1018,7 +1031,11 @@ public sealed partial class AppSmokeTests
         var projectId = await CreateProjectAsync(page, "Playwright Feedback 7", "Execution");
         var projectRootId = await ReadNodeIdAsync(page, ".cw-node[data-node-id^='project:']");
         const string repositoryPath = @"C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench";
-        const string runtimeProjectPath = @"C:\repositories\pveinvoicing\src\PVEInvoicing.ServerApp\PVEInvoicing.csproj";
+        Assert.False(string.IsNullOrWhiteSpace(fixture.StorageWorkspaceRoot), "Expected the Playwright fixture to expose the workspace storage root.");
+        var runtimeProjectDirectory = Path.Combine(fixture.StorageWorkspaceRoot!, "runtime", "PVEInvoicing.ServerApp");
+        Directory.CreateDirectory(runtimeProjectDirectory);
+        var runtimeProjectPath = Path.Combine(runtimeProjectDirectory, "PVEInvoicing.csproj");
+        await File.WriteAllTextAsync(runtimeProjectPath, "<Project Sdk=\"Microsoft.NET.Sdk.Web\"></Project>");
 
         var repositoryId = await InvokeStructureCreateActionAsync(
             page,
@@ -1271,6 +1288,7 @@ public sealed partial class AppSmokeTests
     private async Task<Guid> CreateProjectAsync(IPage page, string projectName, string phase)
     {
         await page.GotoAsync($"{fixture.BaseUrl}/projects");
+        await DismissStartupModalIfPresentAsync(page);
         await page.GetByTestId("projects-new-button").WaitForAsync();
         await page.GetByTestId("projects-new-button").ClickAsync();
 
@@ -1306,7 +1324,7 @@ public sealed partial class AppSmokeTests
         var response = await page.GotoAsync($"{fixture.BaseUrl}/settings");
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected /settings to return 2xx, got {(int)response.Status}.");
-        await page.WaitForSelectorAsync("text=Workspace defaults and providers");
+        await page.WaitForSelectorAsync("text=Workspace defaults, data sources, and providers");
 
         await OpenSettingsTabAsync(page, "Secrets", "Secret vault");
         await page.GetByRole(AriaRole.Button, new() { Name = "New secret", Exact = true }).ClickAsync();
@@ -1846,7 +1864,7 @@ public sealed partial class AppSmokeTests
 
     private static async Task SelectStructureOutlineNodeAsync(IPage page, string title)
     {
-        var outlineItem = page.Locator(".project-structure-outline-list .cw-list-item")
+        var outlineItem = page.Locator(".project-structure-support-card--outline .cda-treeview__row")
             .Filter(new LocatorFilterOptions
             {
                 HasText = title
@@ -2029,8 +2047,11 @@ public sealed partial class AppSmokeTests
             {
                 if (!string.IsNullOrWhiteSpace(parentActionId))
                 {
-                    await OpenContextSubmenuAsync(page, parentActionId);
-                    await page.WaitForTimeoutAsync(120);
+                    await HoverContextMenuActionAsync(page, parentActionId);
+                    if (await WaitForMenuActionAsync(page, actionId, 1_500))
+                    {
+                        continue;
+                    }
                 }
                 else
                 {
@@ -2074,7 +2095,7 @@ public sealed partial class AppSmokeTests
 
         if (!string.IsNullOrWhiteSpace(parentActionId))
         {
-            await OpenContextSubmenuAsync(page, parentActionId);
+            await HoverContextMenuActionAsync(page, parentActionId);
             var action = page.Locator(selector).Last;
             if (await WaitForLocatorAsync(action, 1_500))
             {
@@ -2697,6 +2718,17 @@ public sealed partial class AppSmokeTests
 
         throw new InvalidOperationException($"Could not locate the repository root from '{AppContext.BaseDirectory}'.");
     }
+
+    private static Task<WorkbenchStorageState> ReadWorkbenchSessionStorageAsync(IPage page)
+        => page.EvaluateAsync<WorkbenchStorageState>(
+            @"() => {
+                const key = Object.keys(localStorage)
+                    .find(candidate => candidate.startsWith('candoitall.workbench.session:')) ?? null;
+                return {
+                    key,
+                    value: key ? localStorage.getItem(key) : null
+                };
+            }");
 
     private static void ResetDirectory(string path)
     {
@@ -4662,6 +4694,13 @@ public sealed partial class AppSmokeTests
         public string FirstTitle { get; set; } = string.Empty;
 
         public string SecondTitle { get; set; } = string.Empty;
+    }
+
+    private sealed class WorkbenchStorageState
+    {
+        public string? Key { get; set; }
+
+        public string? Value { get; set; }
     }
 
     private sealed class CanvasSubmenuMetrics

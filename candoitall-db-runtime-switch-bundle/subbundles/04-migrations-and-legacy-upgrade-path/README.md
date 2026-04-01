@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -22,16 +22,26 @@
 
 ## Exact Source References
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Infrastructure/Persistence/AppDbContextFactory.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Program.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workspace/WorkspaceSchemaInitializer.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Projects/ProjectsSchemaInitializer.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Factory/PromptFactorySchemaInitializer.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchSchemaInitializer.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectStructureAgentSchemaInitializer.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Composition/ModuleAssemblies.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Integration/TestApplication.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Components/ComponentTestHarness.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Composition/ModuleAssemblies.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Infrastructure/Persistence/SwitchableAppDbContextFactory.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Migrations.Sqlite/SqliteAppDbContextFactory.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Migrations.Sqlite/Migrations/20260401094815_InitialCreate.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Migrations.PostgreSql/PostgreSqlAppDbContextFactory.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Migrations.PostgreSql/Migrations/20260401094848_InitialCreate.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Program.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Infrastructure/DatabaseMigrationBootstrap.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Infrastructure/RuntimeDatabaseSwitching.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Composition/ModuleAssemblies.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workspace/WorkspaceSchemaInitializer.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Projects/ProjectsSchemaInitializer.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Factory/PromptFactorySchemaInitializer.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchSchemaInitializer.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectStructureAgentSchemaInitializer.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Support/TestApplicationBootstrap.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/DatabaseConfigurationTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/DatabaseMigrationIntegrationTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/ComponentTestHarness.cs`
 
 ## Deliverables
 

@@ -19,9 +19,9 @@ public sealed class CanvasFloatingWindowTests
                 .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true })
                 .Add(component => component.ChildContent, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Body</div>"))));
 
-        Assert.Contains("fa-window-minimize", cut.Markup);
-        Assert.Contains("fa-rotate-left", cut.Markup);
-        Assert.Contains("fa-eye-slash", cut.Markup);
+        Assert.Contains("minimize", cut.Markup);
+        Assert.Contains("restart_alt", cut.Markup);
+        Assert.Contains("visibility_off", cut.Markup);
         Assert.Contains("aria-label=\"Minimize window\"", cut.Markup);
         Assert.Contains("aria-label=\"Restart window position and size\"", cut.Markup);
         Assert.Contains("aria-label=\"Hide window\"", cut.Markup);
@@ -44,8 +44,8 @@ public sealed class CanvasFloatingWindowTests
                 .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true, IsMinimized = true })
                 .Add(component => component.ChildContent, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Body</div>"))));
 
-        Assert.Contains("fa-up-right-and-down-left-from-center", cut.Markup);
-        Assert.Contains("fa-eye-slash", cut.Markup);
+        Assert.Contains("open_in_full", cut.Markup);
+        Assert.Contains("visibility_off", cut.Markup);
         Assert.Contains("aria-label=\"Expand window\"", cut.Markup);
         Assert.Contains("aria-label=\"Hide window\"", cut.Markup);
         Assert.DoesNotContain(">Open<", cut.Markup, StringComparison.Ordinal);

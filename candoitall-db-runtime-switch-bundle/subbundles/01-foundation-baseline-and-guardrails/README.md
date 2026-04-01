@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -24,13 +24,13 @@
 
 ## Exact Source References
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Unit/DatabaseConfigurationTests.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Unit/WorkbenchStateServiceTests.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Integration/TestApplication.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Components/ComponentTestHarness.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/tests/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/docker-compose.yml`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/DatabaseConfigurationTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Unit/WorkbenchStateServiceTests.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Integration/TestApplication.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Components/ComponentTestHarness.cs`
+- `C:\repositories\CanDoItAll/tests/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs`
+- `C:\repositories\CanDoItAll/docker-compose.yml`
+- `C:\repositories\CanDoItAll/codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py`
 
 ## Deliverables
 

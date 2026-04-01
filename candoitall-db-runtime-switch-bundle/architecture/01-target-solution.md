@@ -207,7 +207,7 @@ The old SQLite initializer classes can remain temporarily as legacy-reconciliati
 
 ### Required shift
 
-- Replace `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Web/Program.cs` fixed `UseStaticFiles(new PhysicalFileProvider(...))` usage with a request-time managed-files endpoint or middleware that resolves the active profile storage root per request.
+- Replace `C:\repositories\CanDoItAll/src/CanDoItAll.Web/Program.cs` fixed `UseStaticFiles(new PhysicalFileProvider(...))` usage with a request-time managed-files endpoint or middleware that resolves the active profile storage root per request.
 - Replace singleton global workspace resolution with profile-aware resolution for:
   - managed files
   - exports
@@ -218,8 +218,8 @@ The old SQLite initializer classes can remain temporarily as legacy-reconciliati
 
 Update the consumers that currently assume one workspace root:
 
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectStructureLocalFileOpener.cs`
-- `/mnt/data/work/CanDoItAll-toolbox-repair/src/CanDoItAll.Modules.Workbench/ProjectStructureRuntimeLauncher.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectStructureLocalFileOpener.cs`
+- `C:\repositories\CanDoItAll/src/CanDoItAll.Modules.Workbench/ProjectStructureRuntimeLauncher.cs`
 - `LocalFileStore` / `ManagedArtifactStore`
 - any future snapshot import/export path logic
 
