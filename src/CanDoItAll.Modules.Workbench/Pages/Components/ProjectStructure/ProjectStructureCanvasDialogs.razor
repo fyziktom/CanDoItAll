@@ -15,6 +15,11 @@
                                    DataTestId="project-structure-hierarchy-dialog"
                                    Close="CloseProjectHierarchy">
         <Actions>
+            <Button Text="Create new project"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    data-testid="project-structure-hierarchy-create-project"
+                    Click="OpenProjectCreateDialog" />
             <Button Text="Cancel"
                     Variant="Variant.Text"
                     ButtonStyle="ButtonStyle.Base"
@@ -324,6 +329,9 @@
 
     [Parameter]
     public EventCallback ExecuteSubprojectTransfer { get; set; }
+
+    [Parameter]
+    public EventCallback OpenProjectCreateDialog { get; set; }
 
     [Parameter]
     public ProjectStructureQuickActionDialogState? QuickActionDialog { get; set; }

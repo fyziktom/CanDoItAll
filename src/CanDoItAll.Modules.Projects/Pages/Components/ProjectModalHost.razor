@@ -7,25 +7,37 @@
 {
     @if (IsEditorMode)
     {
-        <EditForm Model="Editor" OnValidSubmit="HandleSaveAsync">
-            <Dialog IsOpen="true"
-                    Eyebrow="Project editor"
-                    Title="@(Editor.Id.HasValue ? Editor.Name : "New project")"
-                    Subtitle="Use the editor only when you need to shape the project deeply. The main page stays dedicated to scanning cards and opening focused tabs."
-                    Size="ModalSize.Wide"
-                    ShowCloseButton="false"
-                    TestId="projects-editor-modal"
-                    OnClose="Close">
+        <div class="projects-modal-host">
+            <EditForm Model="Editor" OnValidSubmit="HandleSaveAsync">
+                <Dialog IsOpen="true"
+                        Class="projects-modal-host__dialog"
+                        Eyebrow="Project editor"
+                        Title="@(Editor.Id.HasValue ? Editor.Name : "New project")"
+                        Subtitle="Use the editor only when you need to shape the project deeply. The main page stays dedicated to scanning cards and opening focused tabs."
+                        Size="ModalSize.Wide"
+                        ShowCloseButton="false"
+                        TestId="projects-editor-modal"
+                        OnClose="Close">
                 <HeaderActions>
-                    @if (Editor.Id.HasValue)
-                    {
-                        <Button ButtonStyle="ButtonStyle.Light"
-                                Text="Back to details"
-                                Click="SwitchToOverview" />
-                    }
-                    <Button ButtonStyle="ButtonStyle.Light"
-                            Text="Close"
-                            Click="Close" />
+                    <Cluster Wrap="FlexWrap.Wrap"
+                             Gap="LayoutGap.Small"
+                             Class="projects-modal-host__header-actions">
+                        @if (Editor.Id.HasValue)
+                        {
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Text="Back to details"
+                                    Click="SwitchToOverview" />
+                        }
+
+                        <button type="button"
+                                class="projects-modal-host__close"
+                                data-testid="project-modal-close-button"
+                                aria-label="Close"
+                                title="Close"
+                                @onclick="HandleCloseAsync">
+                            <Icon Name="close" />
+                        </button>
+                    </Cluster>
                 </HeaderActions>
                 <ChildContent>
                     <Stack GapScale="LayoutGap.Large">
@@ -276,12 +288,15 @@
                         </Cluster>
                     </Split>
                 </Footer>
-            </Dialog>
-        </EditForm>
+                </Dialog>
+            </EditForm>
+        </div>
     }
     else
     {
-        <Dialog IsOpen="true"
+        <div class="projects-modal-host">
+            <Dialog IsOpen="true"
+                Class="projects-modal-host__dialog"
                 Eyebrow="Project details"
                 Title="@(string.IsNullOrWhiteSpace(Editor.Name) ? "Project overview" : Editor.Name)"
                 Subtitle="This modal keeps the overview compact. Use the focused tabs only when the work really needs structure, calendar, or a dedicated dashboard route."
@@ -290,11 +305,20 @@
                 TestId="projects-detail-modal"
                 OnClose="Close">
             <HeaderActions>
-                <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(Editor.Status)" Text="@Editor.Status.ToString()" />
-                <StatusBadge Tone="neutral" Text="@($"{Editor.Phases.Count} phase(s)")" />
-                <Button ButtonStyle="ButtonStyle.Light"
-                        Text="Close"
-                        Click="Close" />
+                <Cluster Wrap="FlexWrap.Wrap"
+                         Gap="LayoutGap.Small"
+                         Class="projects-modal-host__header-actions">
+                    <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(Editor.Status)" Text="@Editor.Status.ToString()" />
+                    <StatusBadge Tone="neutral" Text="@($"{Editor.Phases.Count} phase(s)")" />
+                    <button type="button"
+                            class="projects-modal-host__close"
+                            data-testid="project-modal-close-button"
+                            aria-label="Close"
+                            title="Close"
+                            @onclick="HandleCloseAsync">
+                        <Icon Name="close" />
+                    </button>
+                </Cluster>
             </HeaderActions>
             <ChildContent>
                 <Stack GapScale="LayoutGap.Large">
@@ -436,7 +460,8 @@
                     </Cluster>
                 </Split>
             </Footer>
-        </Dialog>
+            </Dialog>
+        </div>
     }
 }
 
@@ -542,4 +567,7 @@
         => Editor.Id.HasValue
             ? OpenCalendar.InvokeAsync(Editor.Id.Value)
             : Task.CompletedTask;
+
+    private Task HandleCloseAsync()
+        => Close.InvokeAsync();
 }

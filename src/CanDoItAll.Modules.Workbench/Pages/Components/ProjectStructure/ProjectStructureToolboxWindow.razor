@@ -19,22 +19,18 @@
                       MaxHeight="520"
                       State="@State"
                       StateChanged="StateChanged">
-                      <div>
-
-    <Stack GapScale="LayoutGap.Medium"
-           Class="cw-context-toolbox project-structure-toolbox"
-           data-testid="project-structure-standard-blocks-toolbox">
-
-            <Stack Orientation="Orientation.Horizontal" Gap="1rem">
-                <Pill Tone="PillTone.Info" Text="@SourceLabel" />
-                <Pill Tone="PillTone.Label" Text="@($"{ItemCount} items")" />
-            </Stack>
+    <div class="project-structure-toolbox"
+         data-testid="project-structure-standard-blocks-toolbox">
+        <Stack Orientation="Orientation.Horizontal" Gap="1rem">
+            <Pill Tone="PillTone.Info" Text="@SourceLabel" />
+            <Pill Tone="PillTone.Label" Text="@($"{ItemCount} items")" />
+        </Stack>
 
         <TextBox Value="@SearchText"
                  ValueChanged="SearchTextChanged"
                  Placeholder="Search blocks, files, runtime, or infrastructure"
                  Immediate="true"
-                 Class="project-structure-toolbox__search" />
+                 Class="project-structure-toolbox__search w-full" />
 
         @if (Groups.Count == 0)
         {
@@ -48,16 +44,16 @@
         else
         {
             <div class="project-structure-toolbox__body">
-                <TreeView Items="@TreeNodes"
-                          Style="TreeViewStyle.Workbench"
-                          AriaLabel="Project structure toolbox groups"
-                          OnSelect="HandleNodeSelectedAsync"
-                          OnToggle="OnToggleGroup"
-                          Class="project-structure-toolbox__sections" />
+                <div class="project-structure-toolbox__sections">
+                    <TreeView Items="@TreeNodes"
+                              Style="TreeViewStyle.Workbench"
+                              AriaLabel="Project structure toolbox groups"
+                              OnSelect="HandleNodeSelectedAsync"
+                              OnToggle="OnToggleGroup"
+                              Class="w-full" />
+                </div>
             </div>
         }
-    </Stack>
-    
     </div>
 </CanvasFloatingWindow>
 

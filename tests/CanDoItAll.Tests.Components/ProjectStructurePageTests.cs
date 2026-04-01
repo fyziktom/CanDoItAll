@@ -487,6 +487,128 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Canvas_context_action_can_open_add_subproject_dialog_for_project_nodes()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+
+        var currentProjectId = await CreateProjectAsync(projectsService, "Context action parent");
+        var availableChildProjectId = await CreateProjectAsync(projectsService, "Context action child");
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, currentProjectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Context action parent structure", cut.Markup);
+        });
+
+        await InvokeCanvasContextActionAsync(cut, BuildProjectRootNodeKey(currentProjectId), "project:add-subproject");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-hierarchy-dialog", cut.Markup);
+            Assert.Contains("Create new project", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-hierarchy-project-select']").Change(availableChildProjectId.ToString());
+        cut.Find("[data-testid='project-structure-hierarchy-submit']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Context action child is now visible under Context action parent.", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task Add_subproject_dialog_filters_out_direct_children_and_parent_projects()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+
+        var currentProjectId = await CreateProjectAsync(projectsService, "Current project");
+        var directChildProjectId = await CreateProjectAsync(projectsService, "Direct child");
+        var remainingProjectId = await CreateProjectAsync(projectsService, "Remaining project");
+
+        Assert.True((await projectsService.AddSubprojectAsync(currentProjectId, directChildProjectId)).IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, currentProjectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Direct child", cut.Markup);
+        });
+
+        await InvokeCanvasContextActionAsync(cut, BuildProjectRootNodeKey(currentProjectId), "project:add-subproject");
+
+        cut.WaitForAssertion(() =>
+        {
+            var options = ReadHierarchyProjectOptions(cut);
+            Assert.DoesNotContain(options, option => option.Value == directChildProjectId.ToString());
+            Assert.Contains(options, option => option.Value == remainingProjectId.ToString());
+        });
+
+        await InvokeCanvasContextActionAsync(cut, BuildProjectChildNodeKey(directChildProjectId), "project:add-subproject");
+
+        cut.WaitForAssertion(() =>
+        {
+            var options = ReadHierarchyProjectOptions(cut);
+            Assert.DoesNotContain(options, option => option.Value == currentProjectId.ToString());
+            Assert.Contains(options, option => option.Value == remainingProjectId.ToString());
+        });
+    }
+
+    [Fact]
+    public async Task Hierarchy_dialog_can_create_a_project_and_refresh_the_candidate_list()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+
+        var currentProjectId = await CreateProjectAsync(projectsService, "Current project");
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, currentProjectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Current project structure", cut.Markup);
+        });
+
+        await InvokeCanvasContextActionAsync(cut, BuildProjectRootNodeKey(currentProjectId), "project:add-subproject");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-hierarchy-dialog", cut.Markup);
+            Assert.Contains("Create new project", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-hierarchy-create-project']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("projects-editor-modal", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-name-input']").Change("Created from hierarchy");
+        cut.Find("[data-testid='project-save-button']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-hierarchy-dialog", cut.Markup);
+            var options = ReadHierarchyProjectOptions(cut);
+            Assert.Contains(options, option => string.Equals(option.Label, "Created from hierarchy", StringComparison.Ordinal));
+        });
+
+        cut.Find("[data-testid='project-structure-hierarchy-submit']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Created from hierarchy is now visible under Current project.", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Selected_subproject_can_reconnect_parent_from_the_selection_panel()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -1734,6 +1856,16 @@ public sealed class ProjectStructurePageTests
         string selector = "button")
         => cut.FindAll(selector)
             .First(button => button.TextContent.Contains(label, StringComparison.Ordinal));
+
+    private static Task InvokeCanvasContextActionAsync(IRenderedComponent<ProjectStructurePage> cut, string nodeId, string actionId)
+        => cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnContextAction(nodeId, actionId, 0, 0));
+
+    private static IReadOnlyList<(string Value, string Label)> ReadHierarchyProjectOptions(IRenderedComponent<ProjectStructurePage> cut)
+        => cut.FindAll("[data-testid='project-structure-hierarchy-project-select'] option")
+            .Select(option => (option.GetAttribute("value") ?? string.Empty, option.TextContent.Trim()))
+            .Where(option => !string.IsNullOrWhiteSpace(option.Item1))
+            .Select(option => (Value: option.Item1, Label: option.Item2))
+            .ToList();
 
     private sealed class TestRuntimeLauncher : IProjectStructureRuntimeLauncher
     {

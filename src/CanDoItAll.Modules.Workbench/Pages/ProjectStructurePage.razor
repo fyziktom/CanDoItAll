@@ -11,11 +11,13 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
+@using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.Modules.Workbench.CanvasAdapters
 @using CanDoItAll.Modules.Workspace
 @using CanDoItAll.SharedKernel
 @inject ProjectsService ProjectsService
 @inject ProjectWorkbenchService ProjectWorkbenchService
+@inject IProjectWorkbenchSeedService ProjectWorkbenchSeedService
 @inject IProjectStructureLocalFileOpener LocalFileOpener
 @inject IProjectStructureRuntimeLauncher RuntimeLauncher
 @inject WorkspaceService WorkspaceService
@@ -148,6 +150,7 @@ else
                                                            CloseSubprojectTransfer="CloseSubprojectTransferDialog"
                                                            SubprojectTransferNameChanged="HandleSubprojectTransferNameChanged"
                                                            ExecuteSubprojectTransfer="ExecuteSubprojectTransferAsync"
+                                                           OpenProjectCreateDialog="OpenProjectCreateDialogAsync"
                                                            QuickActionDialog="@quickActionDialog"
                                                            CloseQuickActionDialog="CloseQuickActionDialog"
                                                            ExecuteQuickAction="ExecuteQuickActionAsync"
@@ -192,6 +195,34 @@ else
                                     CloseMermaidViewer="CloseMermaidViewer"
                                     ResolveTranscriptActionLabel="ResolveTranscriptActionLabel" />
 </ProjectStructureDeferredSurface>
+
+<ProjectModalHost IsOpen="@showProjectCreateModal"
+                  IsEditorMode="true"
+                  Editor="@projectCreateEditor"
+                  StarterObjects="@projectCreateStarterObjects"
+                  StarterObjectKinds="@ProjectCreateStarterObjectKinds"
+                  ProjectSummaries="@projectCreateProjectSummaries"
+                  WizardStep="@projectCreateWizardStep"
+                  WizardSteps="@ProjectCreateWizardSteps"
+                  WizardTabs="@ProjectCreateWizardTabs"
+                  Message="@projectCreateMessage"
+                  IsErrorMessage="@IsProjectCreateErrorMessage"
+                  Close="CloseProjectCreateDialogAsync"
+                  SwitchToOverview="IgnoreProjectCreateModeChangeAsync"
+                  SwitchToEditor="IgnoreProjectCreateModeChangeAsync"
+                  WizardTabChanged="HandleProjectCreateWizardTabChangedAsync"
+                  AddPhase="AddProjectCreatePhaseAsync"
+                  RemovePhase="RemoveProjectCreatePhaseAsync"
+                  AddStarterObject="AddProjectCreateStarterObject"
+                  RemoveStarterObject="RemoveProjectCreateStarterObject"
+                  PreviousStep="PreviousProjectCreateStep"
+                  NextStep="NextProjectCreateStep"
+                  Save="SaveProjectCreateAsync"
+                  SaveAndOpenStructure="SaveProjectCreateAndOpenStructureAsync"
+                  Delete="DeleteProjectCreateAsync"
+                  OpenProjectDashboard="OpenProjectCreateDashboardAsync"
+                  OpenStructure="OpenStructure"
+                  OpenCalendar="OpenCalendar" />
 
 @code {
     private const string SelectionWindowKey = "project-structure.selection";
