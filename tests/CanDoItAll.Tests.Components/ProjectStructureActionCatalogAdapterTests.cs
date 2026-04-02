@@ -270,6 +270,7 @@ public sealed class ProjectStructureActionCatalogAdapterTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0,
             ProjectRole: projectRole,
             RelatedProjectId: relatedProjectId,

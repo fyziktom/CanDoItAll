@@ -36,6 +36,7 @@ public sealed class CanvasAdapterTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0);
         var noteNode = new ProjectStructureNode(
             "note-1",
@@ -61,6 +62,7 @@ public sealed class CanvasAdapterTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0);
 
         var surface = new ProjectStructureSurface(
@@ -123,6 +125,7 @@ public sealed class CanvasAdapterTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0);
         var siblingNode = sourceNode with { Id = "sibling" };
         var request = new CanvasWorkbenchCreateActionRequest(

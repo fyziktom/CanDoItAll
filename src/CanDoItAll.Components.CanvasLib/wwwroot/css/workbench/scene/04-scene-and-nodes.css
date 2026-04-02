@@ -562,6 +562,13 @@
     height: calc(1.82rem * var(--cw-menu-scale, 1));
 }
 
+.cw-context-menu__action.is-marker-preset .cw-node__badge--menu {
+    font-size: calc(1.72rem * var(--cw-menu-scale, 1));
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+}
+
 .cw-context-menu__action.is-progress-preset .cw-node__progress--menu::after {
     inset: calc(0.27rem * var(--cw-menu-scale, 1));
 }
@@ -625,6 +632,11 @@
 .cw-node__marker.tone-primary {
     background: rgba(226, 232, 240, 0.98);
     color: #0f172a;
+}
+
+.cw-node__marker-overflow {
+    font-size: 0.72rem;
+    letter-spacing: -0.04em;
 }
 
 .cw-node__priority {

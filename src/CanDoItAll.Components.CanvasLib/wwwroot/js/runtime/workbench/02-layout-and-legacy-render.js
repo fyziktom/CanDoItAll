@@ -413,16 +413,78 @@
         }
     }
 
-    function createMarkerBadge(state, node) {
-        const glyph = resolveMarkerGlyph(node?.markerIcon);
+    function resolveNodeMarkers(node) {
+        const markers = [];
+        const seen = new Set();
+        const pushMarker = marker => {
+            const icon = (marker?.icon || "").trim().toLowerCase();
+            if (!icon || seen.has(icon)) {
+                return;
+            }
+
+            seen.add(icon);
+            markers.push({
+                icon,
+                tone: (marker?.tone || "accent").trim().toLowerCase(),
+                label: (marker?.label || icon).trim()
+            });
+        };
+
+        if (Array.isArray(node?.markers)) {
+            for (const marker of node.markers) {
+                pushMarker(marker);
+            }
+        }
+
+        if (markers.length === 0 && node?.markerIcon) {
+            pushMarker({
+                icon: node.markerIcon,
+                tone: node.markerTone,
+                label: node.markerLabel
+            });
+        }
+
+        return markers;
+    }
+
+    function createMarkerBadgeElement(state, marker, extraClass) {
+        const glyph = resolveMarkerGlyph(marker?.icon);
         if (!glyph) {
             return null;
         }
 
-        const tone = (node?.markerTone || "accent").toLowerCase();
-        const badge = createElement(state.document, "span", `cw-node__badge cw-node__marker tone-${tone}`, glyph);
-        badge.title = node?.markerLabel || "Marker";
+        const tone = (marker?.tone || "accent").toLowerCase();
+        const badge = createElement(state.document, "span", `cw-node__badge cw-node__marker tone-${tone}${extraClass ? ` ${extraClass}` : ""}`, glyph);
+        badge.title = marker?.label || "Marker";
         return badge;
+    }
+
+    function createMarkerBadge(state, node) {
+        const markers = resolveNodeMarkers(node);
+        return markers.length === 0
+            ? null
+            : createMarkerBadgeElement(state, markers[0], "");
+    }
+
+    function createMarkerBadges(state, node, maxVisible) {
+        const markers = resolveNodeMarkers(node);
+        if (markers.length === 0) {
+            return [];
+        }
+
+        const limit = Math.max(1, maxVisible || 3);
+        const badges = markers
+            .slice(0, limit)
+            .map(marker => createMarkerBadgeElement(state, marker, ""))
+            .filter(Boolean);
+        const overflowCount = markers.length - limit;
+        if (overflowCount > 0) {
+            const overflowBadge = createElement(state.document, "span", "cw-node__badge cw-node__marker tone-primary cw-node__marker-overflow", `+${overflowCount}`);
+            overflowBadge.title = `${overflowCount} more markers`;
+            badges.push(overflowBadge);
+        }
+
+        return badges;
     }
 
     function createPriorityBadge(state, node) {
@@ -453,8 +515,7 @@
         });
         progressBadge.addEventListener("dblclick", openProgressMetadata);
         container.appendChild(progressBadge);
-        const markerBadge = createMarkerBadge(state, node);
-        if (markerBadge) {
+        for (const markerBadge of createMarkerBadges(state, node, 3)) {
             container.appendChild(markerBadge);
         }
 
@@ -471,7 +532,7 @@
         surface.appendChild(createElement(state.document, "p", "cw-note-node__text", noteText));
         renderNodeAnnotations(state, node, surface);
 
-        if (node.statusPill || node.progressMode || node.markerIcon || node.priority > 0) {
+        if (node.statusPill || node.progressMode || resolveNodeMarkers(node).length > 0 || node.priority > 0) {
             const meta = createElement(state.document, "div", "cw-note-node__meta");
             appendNodeIndicators(state, node, meta);
             if (node.statusPill) {
@@ -1619,5 +1680,5 @@
         };
     }
 
-    Object.assign(shared, { getLinkAnchorPoint, getLinkRetainedKey, getLinkPathData, updateLinkElement, shouldRenderArrow, getExpandedFrameNodeIds, getFrameRetainedKey, createFrameElement, updateFrameElement, getFrameBounds, legacyRenderGroupFrames, resolveChipToneClass, createProgressMarker, resolveProgressDisplay, createProgressBadge, resolveProgressPresetBadgeOptions, resolveMarkerGlyph, createMarkerBadge, createPriorityBadge, appendNodeIndicators, renderInlineTextNode, createNodeMedia, createCompactPathButton, renderStandardNode, createRetainedNodeElement, getNodeRetainedContentKey, updateNodeElementChrome, renderNodeElementContent, buildActiveDragContext, positionFloatingOverlayWithinHost, hidePopover, legacyShowPopover, invokeAnnotationAction, renderNodeAnnotations, updateConnectorAnchorHover, getConnectorAnchorPoints, hideStatusNotice, showStatusNotice, renderEmptyStateOverlay, clearSnapGuides, legacyRenderSnapGuides, legacyRenderConnectorAnchorOverlay, getSelectionBounds, legacyRenderTransformHandlesOverlay, resolveSnapAdjustment, legacyRenderDebugDecorations, legacyBuildDiagnosticsSnapshot, renderDiagnosticsOverlay, navigateViaMinimap, resolveClipboardAnchor, buildClipboardPayload, writeClipboardText, readClipboardText, copySelectionToClipboard, requestClipboardCut, requestClipboardDuplicate, toggleMinimap, toggleDiagnostics, invalidateMeasuredLayout, legacyMeasureRenderedNodeSizes, legacyScheduleNodeMeasurement, getHostPoint, worldToHostPoint, getWorldPoint });
+    Object.assign(shared, { getLinkAnchorPoint, getLinkRetainedKey, getLinkPathData, updateLinkElement, shouldRenderArrow, getExpandedFrameNodeIds, getFrameRetainedKey, createFrameElement, updateFrameElement, getFrameBounds, legacyRenderGroupFrames, resolveChipToneClass, createProgressMarker, resolveProgressDisplay, createProgressBadge, resolveProgressPresetBadgeOptions, resolveMarkerGlyph, resolveNodeMarkers, createMarkerBadge, createMarkerBadges, createPriorityBadge, appendNodeIndicators, renderInlineTextNode, createNodeMedia, createCompactPathButton, renderStandardNode, createRetainedNodeElement, getNodeRetainedContentKey, updateNodeElementChrome, renderNodeElementContent, buildActiveDragContext, positionFloatingOverlayWithinHost, hidePopover, legacyShowPopover, invokeAnnotationAction, renderNodeAnnotations, updateConnectorAnchorHover, getConnectorAnchorPoints, hideStatusNotice, showStatusNotice, renderEmptyStateOverlay, clearSnapGuides, legacyRenderSnapGuides, legacyRenderConnectorAnchorOverlay, getSelectionBounds, legacyRenderTransformHandlesOverlay, resolveSnapAdjustment, legacyRenderDebugDecorations, legacyBuildDiagnosticsSnapshot, renderDiagnosticsOverlay, navigateViaMinimap, resolveClipboardAnchor, buildClipboardPayload, writeClipboardText, readClipboardText, copySelectionToClipboard, requestClipboardCut, requestClipboardDuplicate, toggleMinimap, toggleDiagnostics, invalidateMeasuredLayout, legacyMeasureRenderedNodeSizes, legacyScheduleNodeMeasurement, getHostPoint, worldToHostPoint, getWorldPoint });
 })();

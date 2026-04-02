@@ -50,11 +50,14 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Inspector", cut.Markup);
             Assert.Contains("Health", cut.Markup);
             Assert.Contains("Blocks", cut.Markup);
+            Assert.Contains("Signals", cut.Markup);
             Assert.Contains("project-structure-selection-window", cut.Markup);
             Assert.DoesNotContain("cw-minimap", cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain("project-structure-validation-window", cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain("project-structure-toolbox-window", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("project-structure-signals-window", cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain("project-structure-standard-blocks-toolbox", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("project-structure-signals-toolbox", cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain("cw-inspector-column", cut.Markup, StringComparison.Ordinal);
         });
 
@@ -74,6 +77,18 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("project-structure-standard-blocks-toolbox", cut.Markup);
             Assert.Contains("Project structure toolbox", cut.Markup);
             Assert.Contains("Search the shared block catalog, drag the window where you need it", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-signals-toggle']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-signals-window", cut.Markup);
+            Assert.Contains("project-structure-signals-toolbox", cut.Markup);
+            Assert.Contains("Signals toolbox", cut.Markup);
+            Assert.Contains("Markers", cut.Markup);
+            Assert.Contains("Progress", cut.Markup);
+            Assert.Contains("Priority", cut.Markup);
         });
     }
 
@@ -146,7 +161,7 @@ public sealed class ProjectStructurePageTests
         {
             var windows = cut.FindComponents<CanvasFloatingWindow>();
             var healthWindow = Assert.Single(windows, candidate => string.Equals(candidate.Instance.TestId, "project-structure-validation-window", StringComparison.Ordinal));
-            Assert.Equal(462d, healthWindow.Instance.State.Left);
+            Assert.Equal(866d, healthWindow.Instance.State.Left);
             Assert.True(healthWindow.Instance.State.IsVisible);
         });
     }

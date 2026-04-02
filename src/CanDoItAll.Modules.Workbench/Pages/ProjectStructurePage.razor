@@ -85,11 +85,13 @@ else
                         <ProjectStructureToolbarActions SelectionWindowVisible="@SelectionWindowState.IsVisible"
                                                        HealthWindowVisible="@HealthWindowState.IsVisible"
                                                        ToolboxWindowVisible="@ToolboxWindowState.IsVisible"
+                                                       SignalsWindowVisible="@SignalsWindowState.IsVisible"
                                                        CanRecomposeSelectedBranch="@CanRecomposeSelectedBranch"
                                                        IsSubtreeRecompositionInProgress="@isSubtreeRecompositionInProgress"
                                                        ToggleSelectionWindow="ToggleSelectionWindowAsync"
                                                        ToggleHealthWindow="ToggleHealthWindowAsync"
                                                        ToggleToolboxWindow="ToggleToolboxWindowAsync"
+                                                       ToggleSignalsWindow="ToggleSignalsWindowAsync"
                                                        RecomposeBranch="RecomposeSelectedBranchAsync" />
                     </ToolbarLeftContent>
                     <OverlayContent>
@@ -121,6 +123,23 @@ else
                                                                 SummaryState="@canvasValidationOverlay"
                                                                 CanValidateSelected="@(selectedNode is not null && canvasValidationOverlay.SelectedIssueCount > 0)"
                                                                 ValidateSelected="RunSelectedValidationAsync" />
+                        }
+                        @if (SignalsWindowState.IsVisible)
+                        {
+                            <ProjectStructureSignalsWindow WindowId="@SignalsWindowKey"
+                                                           TestId="project-structure-signals-window"
+                                                           AriaLabel="Project structure node signals"
+                                                           Kicker="Node signals"
+                                                           Title="Signals toolbox"
+                                                           Summary="Keep markers, progress, and priority close to the current selection without reopening the right-click menu every time."
+                                                           State="@SignalsWindowState"
+                                                           StateChanged="HandleSignalsWindowStateChangedAsync"
+                                                           Sections="@SignalsWindowSections"
+                                                           CanApplySignals="@CanApplySignals"
+                                                           SelectionLabel="@SignalsSelectionLabel"
+                                                           SelectionHint="@SignalsSelectionHint"
+                                                           DefaultWidth="@SignalsWindowDefaultWidth"
+                                                           OnApplyAction="HandleSignalsToolboxActionAsync" />
                         }
                         @if (SelectionWindowState.IsVisible)
                         {
@@ -248,9 +267,11 @@ else
     private const string SelectionWindowKey = "project-structure.selection";
     private const string HealthWindowKey = "project-structure.health";
     private const double ToolboxWindowDefaultWidth = 430;
+    private const double SignalsWindowDefaultWidth = 388;
     private const double DefaultCanvasWindowMargin = 16;
     private const double DefaultCanvasWindowGap = 16;
-    private const double HealthWindowDefaultLeft = ToolboxWindowDefaultWidth + DefaultCanvasWindowMargin + DefaultCanvasWindowGap;
+    private const double SignalsWindowDefaultLeft = ToolboxWindowDefaultWidth + DefaultCanvasWindowMargin + DefaultCanvasWindowGap;
+    private const double HealthWindowDefaultLeft = SignalsWindowDefaultLeft + SignalsWindowDefaultWidth + DefaultCanvasWindowGap;
 
     [Parameter]
     public Guid ProjectId { get; set; }
@@ -1000,7 +1021,9 @@ else
             return;
         }
 
-        var updatedNodes = await ProjectWorkbenchService.UpdateObjectMarkerDetailedAsync(ProjectId, nodeIds, markerIcon, markerTone, markerLabel);
+        var updatedNodes = string.IsNullOrWhiteSpace(markerIcon)
+            ? await ProjectWorkbenchService.ClearObjectMarkersDetailedAsync(ProjectId, nodeIds)
+            : await ProjectWorkbenchService.AddObjectMarkerDetailedAsync(ProjectId, nodeIds, markerIcon, markerTone, markerLabel);
         await ApplySurfaceNodeUpdatesAsync(updatedNodes);
     }
 
@@ -1231,6 +1254,7 @@ else
             SelectionWindowKey => ResolveWindowState(key),
             HealthWindowKey => ResolveHealthWindowState(),
             ToolboxWindowKey => ResolveToolboxWindowState(),
+            SignalsWindowKey => ResolveSignalsWindowState(),
             _ => ResolveWindowState(key)
         };
 
@@ -1375,7 +1399,13 @@ else
         => node.Priority > 0 ? $"P{node.Priority}" : "None";
 
     private static string ResolveMarkerLabel(ProjectStructureNode node)
-        => string.IsNullOrWhiteSpace(node.MarkerLabel) ? "None" : node.MarkerLabel;
+        => node.Markers.Count switch
+        {
+            0 => string.IsNullOrWhiteSpace(node.MarkerLabel) ? "None" : node.MarkerLabel,
+            1 => node.Markers[0].Label,
+            <= 3 => string.Join(", ", node.Markers.Select(marker => marker.Label)),
+            _ => $"{string.Join(", ", node.Markers.Take(3).Select(marker => marker.Label))} +{node.Markers.Count - 3}"
+        };
 
     private static string ResolveAttachmentKindLabel(ProjectStructureNode node)
         => ResolveAttachmentPreviewKind(node) switch

@@ -42,6 +42,8 @@ public sealed class CanvasWorkbenchNode
 
     public string MarkerLabel { get; set; } = string.Empty;
 
+    public List<CanvasWorkbenchMarker> Markers { get; set; } = [];
+
     public int Priority { get; set; }
 
     public bool IsRequired { get; set; }
@@ -114,4 +116,13 @@ public sealed class CanvasWorkbenchAnnotation
     public string Icon { get; set; } = string.Empty;
 
     public string ActionId { get; set; } = string.Empty;
+}
+
+public sealed class CanvasWorkbenchMarker
+{
+    public string Icon { get; set; } = string.Empty;
+
+    public string Tone { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
 }

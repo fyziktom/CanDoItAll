@@ -184,7 +184,19 @@ public sealed class ProjectObjectMetadataEnvelope
     public ProjectInfrastructureMetadata? Infrastructure { get; set; }
 
     public ProjectLinkMetadata? Link { get; set; }
+
+    public ProjectMarkerSetMetadata? MarkerSet { get; set; }
 }
+
+public sealed class ProjectMarkerSetMetadata
+{
+    public List<ProjectNodeMarker> Markers { get; set; } = [];
+}
+
+public sealed record ProjectNodeMarker(
+    string Icon,
+    string Tone,
+    string Label);
 
 public sealed class ProjectMeetingMetadata
 {
@@ -491,6 +503,84 @@ public static class ProjectObjectMetadataSerializer
 
     public static string Serialize(ProjectObjectMetadataEnvelope? metadata)
         => JsonSerializer.Serialize(metadata ?? new ProjectObjectMetadataEnvelope(), SerializerOptions);
+
+    public static ProjectNodeMarker? NormalizeMarker(string? icon, string? tone, string? label)
+    {
+        var normalizedIcon = icon?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedIcon))
+        {
+            return null;
+        }
+
+        var normalizedTone = string.IsNullOrWhiteSpace(tone)
+            ? "accent"
+            : tone.Trim().ToLowerInvariant();
+        var normalizedLabel = string.IsNullOrWhiteSpace(label)
+            ? normalizedIcon
+            : label.Trim();
+        return new ProjectNodeMarker(normalizedIcon, normalizedTone, normalizedLabel);
+    }
+
+    public static IReadOnlyList<ProjectNodeMarker> ResolveMarkers(
+        ProjectObjectMetadataEnvelope? metadata,
+        string? legacyMarkerIcon,
+        string? legacyMarkerTone,
+        string? legacyMarkerLabel)
+    {
+        var markers = NormalizeMarkers(metadata?.MarkerSet?.Markers);
+        if (markers.Count > 0)
+        {
+            return markers;
+        }
+
+        var legacyMarker = NormalizeMarker(legacyMarkerIcon, legacyMarkerTone, legacyMarkerLabel);
+        return legacyMarker is null ? [] : [legacyMarker];
+    }
+
+    public static IReadOnlyList<ProjectNodeMarker> NormalizeMarkers(IEnumerable<ProjectNodeMarker>? markers)
+    {
+        if (markers is null)
+        {
+            return [];
+        }
+
+        var ordered = new List<ProjectNodeMarker>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var marker in markers)
+        {
+            var normalized = NormalizeMarker(marker?.Icon, marker?.Tone, marker?.Label);
+            if (normalized is null)
+            {
+                continue;
+            }
+
+            if (!seen.Add(normalized.Icon))
+            {
+                continue;
+            }
+
+            ordered.Add(normalized);
+        }
+
+        return ordered;
+    }
+
+    public static void SetMarkers(ProjectObjectMetadataEnvelope metadata, IEnumerable<ProjectNodeMarker>? markers)
+    {
+        var normalized = NormalizeMarkers(markers);
+        metadata.MarkerSet = normalized.Count == 0
+            ? null
+            : new ProjectMarkerSetMetadata
+            {
+                Markers = normalized.ToList()
+            };
+    }
+
+    public static ProjectNodeMarker? ResolvePrimaryMarker(IEnumerable<ProjectNodeMarker>? markers)
+    {
+        var normalized = NormalizeMarkers(markers);
+        return normalized.Count == 0 ? null : normalized[^1];
+    }
 
     public static string ValidateAndSerialize(ProjectObjectType objectType, string objectSubtype, string? metadataJson)
     {

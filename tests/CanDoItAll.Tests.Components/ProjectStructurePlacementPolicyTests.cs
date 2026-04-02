@@ -106,6 +106,7 @@ public sealed class ProjectStructurePlacementPolicyTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0);
 }
 

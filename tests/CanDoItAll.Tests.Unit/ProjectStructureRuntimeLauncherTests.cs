@@ -165,6 +165,7 @@ public sealed class ProjectStructureRuntimeLauncherTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0,
             null,
             null,

@@ -25,6 +25,14 @@
             title="Show or hide the standard blocks toolbox"
             Click="ToggleToolboxWindow" />
 
+    <Button Text="Signals"
+            Variant="Variant.Text"
+            ButtonStyle="ButtonStyle.Base"
+            Class="@ResolveToolbarButtonCssClass(SignalsWindowVisible)"
+            data-testid="project-structure-signals-toggle"
+            title="Show or hide the node signals toolbox"
+            Click="ToggleSignalsWindow" />
+
     <Button Text="@(IsSubtreeRecompositionInProgress ? "Recomposing" : "Recompose")"
             Variant="Variant.Text"
             ButtonStyle="ButtonStyle.Base"
@@ -46,6 +54,9 @@
     public bool ToolboxWindowVisible { get; set; }
 
     [Parameter]
+    public bool SignalsWindowVisible { get; set; }
+
+    [Parameter]
     public bool CanRecomposeSelectedBranch { get; set; }
 
     [Parameter]
@@ -59,6 +70,9 @@
 
     [Parameter]
     public EventCallback ToggleToolboxWindow { get; set; }
+
+    [Parameter]
+    public EventCallback ToggleSignalsWindow { get; set; }
 
     [Parameter]
     public EventCallback RecomposeBranch { get; set; }

@@ -387,6 +387,78 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
+    public async Task Signals_window_can_stack_multiple_markers_on_the_selected_node()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithCreateCounter);
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var createCounter = harness.Context.Services.GetRequiredService<DbContextCreateCounter>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Signals marker stack");
+        var node = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Signals target",
+                "Marker stacking",
+                "Verify that the floating signals window can add more than one marker.",
+                $"project:{projectId}",
+                540,
+                320,
+                null,
+                null,
+                "task"));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, node.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Signals", cut.Markup));
+        cut.Find("[data-testid='project-structure-signals-toggle']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-signals-window", cut.Markup);
+            Assert.Contains("project-structure-signals-action-marker-question", cut.Markup);
+            Assert.Contains("project-structure-signals-action-marker-risk", cut.Markup);
+        });
+
+        createCounter.Reset();
+        cut.Find("[data-testid='project-structure-signals-action-marker-question']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var updatedNode = Assert.Single(canvasWorkbench.Instance.Surface.Nodes, item => string.Equals(item.Id, node.Id, StringComparison.Ordinal));
+            Assert.Equal("question", updatedNode.MarkerIcon);
+            Assert.Single(updatedNode.Markers);
+            Assert.Equal("question", updatedNode.Markers[0].Icon);
+        });
+        Assert.Equal(1, createCounter.CreateCount);
+
+        createCounter.Reset();
+        cut.Find("[data-testid='project-structure-signals-action-marker-risk']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var updatedNode = Assert.Single(canvasWorkbench.Instance.Surface.Nodes, item => string.Equals(item.Id, node.Id, StringComparison.Ordinal));
+            Assert.Equal("risk", updatedNode.MarkerIcon);
+            Assert.Equal(2, updatedNode.Markers.Count);
+            Assert.Contains(updatedNode.Markers, marker => string.Equals(marker.Icon, "question", StringComparison.Ordinal));
+            Assert.Contains(updatedNode.Markers, marker => string.Equals(marker.Icon, "risk", StringComparison.Ordinal));
+        });
+        Assert.Equal(1, createCounter.CreateCount);
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        var persistedNode = Assert.Single(persistedSurface.Nodes, item => string.Equals(item.Id, node.Id, StringComparison.Ordinal));
+        Assert.Equal("risk", persistedNode.MarkerIcon);
+        Assert.Equal(2, persistedNode.Markers.Count);
+        Assert.Contains(persistedNode.Markers, marker => string.Equals(marker.Icon, "question", StringComparison.Ordinal));
+        Assert.Contains(persistedNode.Markers, marker => string.Equals(marker.Icon, "risk", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Clipboard_cut_and_paste_moves_selected_subtree_without_structure_reload()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

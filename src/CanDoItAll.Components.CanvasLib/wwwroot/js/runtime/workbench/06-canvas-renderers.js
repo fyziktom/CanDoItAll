@@ -860,6 +860,107 @@
         return display.title;
     }
 
+    function resolveCanvasNodeMarkers(node) {
+        const markers = [];
+        const seen = new Set();
+        const pushMarker = marker => {
+            const icon = (marker?.icon || "").trim().toLowerCase();
+            if (!icon || seen.has(icon)) {
+                return;
+            }
+
+            seen.add(icon);
+            markers.push({
+                icon,
+                tone: (marker?.tone || "accent").trim().toLowerCase(),
+                label: (marker?.label || icon).trim()
+            });
+        };
+
+        if (Array.isArray(node?.markers)) {
+            for (const marker of node.markers) {
+                pushMarker(marker);
+            }
+        }
+
+        if (markers.length === 0 && node?.markerIcon) {
+            pushMarker({
+                icon: node.markerIcon,
+                tone: node.markerTone,
+                label: node.markerLabel
+            });
+        }
+
+        return markers;
+    }
+
+    function resolveMarkerToneAccentColor(tone, fallbackAccent) {
+        switch ((tone || "").toLowerCase()) {
+            case "sky":
+                return "#38bdf8";
+            case "mint":
+                return "#10b981";
+            case "warn":
+                return "#f97316";
+            case "danger":
+                return "#e11d48";
+            case "primary":
+                return "#0f172a";
+            case "ghost":
+                return "#94a3b8";
+            case "accent":
+            default:
+                return fallbackAccent || "#8b5cf6";
+        }
+    }
+
+    function drawCanvasMarkerBadges(context, state, node, accent, paletteStyle, startLeft, top, badgeSize, badgeGap, maxVisible, direction, meta) {
+        const markers = resolveCanvasNodeMarkers(node);
+        meta.markerText = markers.map(marker => marker.label).join(", ");
+        if (markers.length === 0) {
+            return startLeft;
+        }
+
+        let cursor = startLeft;
+        const limit = Math.max(1, maxVisible || 3);
+        for (const marker of markers.slice(0, limit)) {
+            const bounds = direction === "left"
+                ? buildRect(cursor - badgeSize, top, badgeSize, badgeSize)
+                : buildRect(cursor, top, badgeSize, badgeSize);
+            drawCanvasBadgePill(
+                context,
+                bounds,
+                resolveMarkerGlyph(marker.icon),
+                hexToRgba(resolveMarkerToneAccentColor(marker.tone, accent), 0.12),
+                paletteStyle.subtleStroke,
+                paletteStyle.subtleText,
+                Math.max(8, 9.5 * state.ui.zoom));
+            cursor = direction === "left"
+                ? bounds.left - badgeGap
+                : bounds.right + badgeGap;
+        }
+
+        const overflowCount = markers.length - limit;
+        if (overflowCount > 0) {
+            const bounds = direction === "left"
+                ? buildRect(cursor - badgeSize, top, badgeSize, badgeSize)
+                : buildRect(cursor, top, badgeSize, badgeSize);
+            drawCanvasBadgePill(
+                context,
+                bounds,
+                `+${overflowCount}`,
+                paletteStyle.subtleFill,
+                paletteStyle.subtleStroke,
+                paletteStyle.subtleText,
+                Math.max(7.5, 8.8 * state.ui.zoom));
+            cursor = direction === "left"
+                ? bounds.left - badgeGap
+                : bounds.right + badgeGap;
+        }
+
+        return cursor;
+    }
+
     function drawCanvasAnnotationBadges(context, state, node, startX, y, maxWidth, baseFontSize) {
         const annotations = Array.isArray(node?.annotations) ? node.annotations : [];
         const results = [];
@@ -1000,20 +1101,7 @@
         });
         badgeLeft = indicatorBounds.right + badgeGap;
 
-        const markerGlyph = resolveMarkerGlyph(node?.markerIcon);
-        meta.markerText = markerGlyph;
-        if (markerGlyph) {
-            const markerBounds = buildRect(badgeLeft, badgeTop, badgeSize, badgeSize);
-            drawCanvasBadgePill(
-                context,
-                markerBounds,
-                markerGlyph,
-                hexToRgba(resolveNodeAccentColor({ accentColor: node?.markerTone === "danger" ? "#dc2626" : accent }), 0.1),
-                paletteStyle.subtleStroke,
-                paletteStyle.subtleText,
-                Math.max(8, 9.5 * state.ui.zoom));
-            badgeLeft = markerBounds.right + badgeGap;
-        }
+        badgeLeft = drawCanvasMarkerBadges(context, state, node, accent, paletteStyle, badgeLeft, badgeTop, badgeSize, badgeGap, 3, "right", meta);
 
         if (node.priority > 0) {
             meta.priorityText = `${node.priority}`;
@@ -1100,20 +1188,7 @@
         });
         rightCursor = progressBounds.left - badgeGap;
 
-        const markerGlyph = resolveMarkerGlyph(node?.markerIcon);
-        meta.markerText = markerGlyph;
-        if (markerGlyph) {
-            const markerBounds = buildRect(rightCursor - badgeSize, cursorY, badgeSize, badgeSize);
-            drawCanvasBadgePill(
-                context,
-                markerBounds,
-                markerGlyph,
-                hexToRgba(resolveNodeAccentColor({ accentColor: node?.markerTone === "danger" ? "#dc2626" : accent }), 0.1),
-                paletteStyle.subtleStroke,
-                paletteStyle.subtleText,
-                Math.max(8, 9.5 * state.ui.zoom));
-            rightCursor = markerBounds.left - badgeGap;
-        }
+        rightCursor = drawCanvasMarkerBadges(context, state, node, accent, paletteStyle, rightCursor, cursorY, badgeSize, badgeGap, 3, "left", meta);
 
         if (node.priority > 0) {
             meta.priorityText = `${node.priority}`;

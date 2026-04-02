@@ -56,6 +56,7 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0,
             null,
             null,

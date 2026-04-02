@@ -1,0 +1,115 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.CanvasLib
+
+<CanvasFloatingWindow WindowId="@WindowId"
+                      TestId="@TestId"
+                      AriaLabel="@AriaLabel"
+                      Kicker="@Kicker"
+                      Title="@Title"
+                      Summary="@Summary"
+                      BodyClass="project-structure-signals-window__body"
+                      DefaultPlacement="top-left"
+                      DefaultWidth="@DefaultWidth"
+                      DefaultHeight="470"
+                      MinWidth="320"
+                      MinHeight="260"
+                      MaxWidth="520"
+                      MaxHeight="620"
+                      State="@State"
+                      StateChanged="StateChanged">
+    <div class="project-structure-signals-window"
+         data-testid="project-structure-signals-toolbox">
+        <div class="project-structure-signals-window__header">
+            <Pill Tone="PillTone.Info" Text="@SelectionLabel" />
+            <Pill Tone="PillTone.Label" Text="@SelectionHint" />
+        </div>
+
+        @if (!CanApplySignals)
+        {
+            <PanelCard Class="project-structure-signals-window__empty">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="Select a node to apply signals." />
+                    <TextBlock TextStyle="TextStyle.Note" Value="Markers, progress, and priority controls will light up here once the current selection is clear." />
+                </Stack>
+            </PanelCard>
+        }
+        else
+        {
+            <div class="project-structure-signals-window__sections">
+                @foreach (var signalSection in Sections)
+                {
+                    <section class="project-structure-signals-window__section"
+                             data-testid="@($"project-structure-signals-section-{signalSection.Key}")">
+                        <div class="project-structure-signals-window__section-copy">
+                            <strong>@signalSection.Label</strong>
+                            <p>@signalSection.Description</p>
+                        </div>
+
+                        <div class="project-structure-signals-window__grid">
+                            @foreach (var action in signalSection.Actions)
+                            {
+                                <button type="button"
+                                        class="project-structure-signal-tile tone-@action.Tone @(action.IsActive ? "is-active" : string.Empty)"
+                                        data-testid="@ResolveActionTestId(action)"
+                                        aria-pressed="@action.IsActive"
+                                        title="@action.Description"
+                                        @onclick="@(() => OnApplyAction.InvokeAsync(action.ActionId))">
+                                    <span class="project-structure-signal-tile__badge" aria-hidden="true">@action.Glyph</span>
+                                    <span class="project-structure-signal-tile__label">@action.Label</span>
+                                </button>
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+        }
+    </div>
+</CanvasFloatingWindow>
+
+@code {
+    [Parameter, EditorRequired]
+    public string WindowId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string TestId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Kicker { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Summary { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public CanvasWorkbenchWindowState State { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<CanvasWorkbenchWindowState> StateChanged { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProjectStructureSignalSection> Sections { get; set; } = [];
+
+    [Parameter]
+    public bool CanApplySignals { get; set; }
+
+    [Parameter]
+    public string SelectionLabel { get; set; } = string.Empty;
+
+    [Parameter]
+    public string SelectionHint { get; set; } = string.Empty;
+
+    [Parameter]
+    public double DefaultWidth { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<string> OnApplyAction { get; set; }
+
+    private static string ResolveActionTestId(ProjectStructureSignalActionTile action)
+        => $"project-structure-signals-action-{action.ActionId.Replace(":", "-", StringComparison.Ordinal)}";
+}
