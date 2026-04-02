@@ -29,10 +29,8 @@
                 <Cluster Gap="LayoutGap.Small"
                          Class="min-w-0">
                     <Pill Tone="PillTone.Info"
-                          Token="ACT"
                           Text="@($"{ProjectSummaries.Count(project => project.Status == ProjectStatus.Active)} active")" />
                     <Pill Tone="PillTone.Neutral"
-                          Token="DRF"
                           Text="@($"{ProjectSummaries.Count(project => project.Status == ProjectStatus.Draft)} draft")" />
                     <Pill Tone="PillTone.Warn"
                           Token="UPD"
@@ -48,13 +46,13 @@
 
                 <Cluster JustifyContent="JustifyContent.End">
                     <Button Class="h-9 px-3"
-                            Token="+"
+                            Icon="add"
                             Text="New"
                             data-testid="projects-new-button"
                             Click="OpenNewProject" />
                     <Button ButtonStyle="ButtonStyle.Light"
                             Class="h-9 px-3"
-                            Token="DB"
+                            Icon="dashboard"
                             Text="Dashboard"
                             Click="NavigateHome" />
                     <HelpPopover RootClass="pf-help-popover flex items-center"
