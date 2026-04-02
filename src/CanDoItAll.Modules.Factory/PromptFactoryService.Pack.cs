@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Factory;
 
@@ -64,6 +65,7 @@ public sealed partial class PromptFactoryService
         MediaRoute = draft.MediaRoute?.Trim() ?? string.Empty,
         MediaContentType = draft.MediaContentType?.Trim() ?? string.Empty,
         MediaOriginalFileName = draft.MediaOriginalFileName?.Trim() ?? string.Empty,
+        StorageObjectReferenceJson = draft.StorageObjectReferenceJson?.Trim() ?? string.Empty,
         MetadataJson = draft.MetadataJson?.Trim() ?? string.Empty
     };
 
@@ -105,12 +107,25 @@ public sealed partial class PromptFactoryService
         };
         var safeFileName = $"{SanitizeSlug(Path.GetFileNameWithoutExtension(uploadedFile.FileName))}-{Guid.NewGuid():N}{safeExtension}";
         var relativePath = Path.Combine("managed-files", category, safeFileName).Replace('\\', '/');
-        await fileStore.SaveBytesAsync(relativePath, bytes, cancellationToken);
+        var contentType = uploadedFile.ContentType?.Trim() ?? "application/octet-stream";
+        var contentKind = StorageContentClassifier.Resolve(contentType, uploadedFile.FileName);
+        var placement = await storagePlacementService.PlaceAsync(
+            new StoragePlacementRequest(
+                Path.GetFileName(uploadedFile.FileName),
+                contentType,
+                bytes,
+                StorageUsagePurpose.PromptAttachment,
+                contentKind,
+                RelativePathHint: relativePath,
+                PreviewRequired: StorageContentClassifier.SupportsInlinePreview(contentKind)),
+            cancellationToken);
+        var storageObjectReference = placement.WriteResult.Reference;
 
-        normalized.MediaRelativePath = relativePath;
-        normalized.MediaRoute = $"/{relativePath}";
-        normalized.MediaContentType = uploadedFile.ContentType?.Trim() ?? "application/octet-stream";
+        normalized.MediaRelativePath = placement.RelativePath;
+        normalized.MediaRoute = placement.Route;
+        normalized.MediaContentType = storageObjectReference.ContentType;
         normalized.MediaOriginalFileName = Path.GetFileName(uploadedFile.FileName);
+        normalized.StorageObjectReferenceJson = StorageJson.SerializeReference(storageObjectReference);
         return normalized;
     }
 

@@ -1,3 +1,4 @@
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
@@ -27,6 +28,7 @@ public sealed record ProjectStructureSelectionDetailState(
     string PriorityLabel,
     string MarkerLabel,
     IReadOnlyList<ProjectStructureSelectionBadgePresentation> BadgePresentations,
+    StorageSummaryModel? StorageSummary,
     ProjectStructureAttachmentPreviewCardState? AttachmentPreview,
     bool HasMermaidViewer,
     IReadOnlyList<ProjectStructureInspectorActionItem> Actions,

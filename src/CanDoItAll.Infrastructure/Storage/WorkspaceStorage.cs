@@ -2,6 +2,7 @@ using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using System.Text;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
@@ -177,31 +178,41 @@ public sealed class WorkspacePathAccessGuard(IWorkspacePathResolver resolver) : 
     }
 }
 
-public sealed class LocalFileStore(IWorkspacePathAccessGuard pathAccessGuard) : IFileStore
+public sealed class LocalFileStore(
+    IWorkspacePathAccessGuard pathAccessGuard,
+    IStorageCatalogService catalogService,
+    IStorageDriverRegistry driverRegistry) : IFileStore, IStorageCompatibilityFileStoreAdapter
 {
     public async Task<string> SaveTextAsync(string relativePath, string content, CancellationToken cancellationToken = default)
     {
         var fullPath = ResolveWorkspacePath(relativePath);
-        var directory = Path.GetDirectoryName(fullPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        await File.WriteAllTextAsync(fullPath, content, cancellationToken);
+        var (storage, driver) = await ResolveFileSystemDriverAsync(cancellationToken);
+        await driver.SaveAsync(
+            storage,
+            new StorageWriteRequest(
+                Path.GetFileName(relativePath),
+                "text/plain",
+                Encoding.UTF8.GetBytes(content),
+                StorageUsagePurpose.Unknown,
+                StorageContentKind.Text,
+                RelativePathHint: relativePath),
+            cancellationToken);
         return fullPath;
     }
 
     public async Task<string> SaveBytesAsync(string relativePath, byte[] content, CancellationToken cancellationToken = default)
     {
         var fullPath = ResolveWorkspacePath(relativePath);
-        var directory = Path.GetDirectoryName(fullPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        await File.WriteAllBytesAsync(fullPath, content, cancellationToken);
+        var (storage, driver) = await ResolveFileSystemDriverAsync(cancellationToken);
+        await driver.SaveAsync(
+            storage,
+            new StorageWriteRequest(
+                Path.GetFileName(relativePath),
+                "application/octet-stream",
+                content,
+                StorageUsagePurpose.Unknown,
+                RelativePathHint: relativePath),
+            cancellationToken);
         return fullPath;
     }
 
@@ -213,7 +224,17 @@ public sealed class LocalFileStore(IWorkspacePathAccessGuard pathAccessGuard) : 
             return null;
         }
 
-        return await File.ReadAllTextAsync(fullPath, cancellationToken);
+        var (storage, driver) = await ResolveFileSystemDriverAsync(cancellationToken);
+        await using var stream = await driver.OpenReadAsync(
+            storage,
+            new StorageObjectReference(
+                storage.Id,
+                StorageProviderKind.FileSystem,
+                StorageLocatorKind.RelativePath,
+                relativePath.Replace('\\', '/').TrimStart('/')),
+            cancellationToken);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: false);
+        return await reader.ReadToEndAsync(cancellationToken);
     }
 
     private string ResolveWorkspacePath(string relativePath)
@@ -226,9 +247,15 @@ public sealed class LocalFileStore(IWorkspacePathAccessGuard pathAccessGuard) : 
 
         return resolution.FullPath;
     }
+
+    private async Task<(StorageCatalogRecord Storage, IStorageDriver Driver)> ResolveFileSystemDriverAsync(CancellationToken cancellationToken)
+    {
+        var storage = await catalogService.EnsureBootstrapFileSystemStorageAsync(cancellationToken);
+        return (storage, driverRegistry.Resolve(StorageProviderKind.FileSystem));
+    }
 }
 
-public sealed class ManagedArtifactStore(IFileStore fileStore) : IManagedArtifactStore
+public sealed class ManagedArtifactStore(IFileStore fileStore) : IManagedArtifactStore, IStorageCompatibilityArtifactStoreAdapter
 {
     public string GetRelativePath(string category, string fileName) => Path.Combine("managed-files", category, fileName);
 

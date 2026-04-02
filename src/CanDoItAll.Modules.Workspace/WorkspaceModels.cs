@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Modules.Security;
 using Microsoft.EntityFrameworkCore;
@@ -139,11 +140,13 @@ public sealed class ProviderProfileEditorModel
 
 public sealed record ProviderHealthResult(bool Success, string Message);
 
-public sealed class WorkspaceService(
+public sealed partial class WorkspaceService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
     SecretService secretService,
     ProviderRegistry providerRegistry,
+    IStorageCatalogService storageCatalogService,
+    IStorageDriverRegistry storageDriverRegistry,
     IActivityStream activityStream)
 {
     public async Task<WorkspaceSettingsModel> GetSettingsAsync(CancellationToken cancellationToken = default)

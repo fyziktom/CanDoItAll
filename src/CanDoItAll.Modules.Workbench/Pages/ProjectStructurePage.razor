@@ -14,6 +14,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.Modules.Workbench.CanvasAdapters
 @using CanDoItAll.Modules.Workspace
+@using CanDoItAll.Infrastructure.Storage
 @using CanDoItAll.SharedKernel
 @inject ProjectsService ProjectsService
 @inject ProjectWorkbenchService ProjectWorkbenchService
@@ -363,7 +364,11 @@ else
     {
         CancelPendingCanvasViewStatePersistence();
         pendingWorkbenchSelectionId = null;
-        var loadResult = await ProjectWorkbenchService.TryGetStructureAsync(ProjectId);
+        var loadStructureTask = ProjectWorkbenchService.TryGetStructureAsync(ProjectId);
+        var loadStorageCatalogTask = WorkspaceService.ListStorageCatalogAsync();
+        await Task.WhenAll(loadStructureTask, loadStorageCatalogTask);
+        storageCatalog = loadStorageCatalogTask.Result;
+        var loadResult = loadStructureTask.Result;
         if (!loadResult.IsSuccess || loadResult.Surface is null)
         {
             unavailableState = loadResult.UnavailableState;
@@ -1452,15 +1457,17 @@ else
     private static bool HasManagedAttachment(ProjectStructureNode? node)
         => node is not null &&
             !string.IsNullOrWhiteSpace(node.Route) &&
-            (!string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
-             node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase));
+            (!string.IsNullOrWhiteSpace(node.StorageObjectReferenceJson) ||
+             !string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
+             node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase) ||
+             node.Route.StartsWith("/storage/objects/", StringComparison.OrdinalIgnoreCase));
 
     private static bool CanRenderAttachmentPreview(ProjectStructureNode? node)
         => ResolveAttachmentPreviewKind(node) is not AttachmentPreviewKind.None;
 
     private static AttachmentPreviewKind ResolveAttachmentPreviewKind(ProjectStructureNode? node)
     {
-        if (!HasManagedAttachment(node))
+        if (!HasManagedAttachment(node) || !SupportsInlinePreview(node))
         {
             return AttachmentPreviewKind.None;
         }
@@ -1503,6 +1510,24 @@ else
         }
 
         return ResolveAttachmentExtension(node) is ".pdf" or ".txt" or ".md" or ".json" or ".xml" or ".csv" or ".log" or ".yaml" or ".yml";
+    }
+
+    private static bool SupportsInlinePreview(ProjectStructureNode? node)
+    {
+        if (node is null)
+        {
+            return false;
+        }
+
+        if (StorageJson.TryParseReference(node.StorageObjectReferenceJson, out var reference) &&
+            reference is not null)
+        {
+            return reference.ProviderKind != StorageProviderKind.Ftp;
+        }
+
+        return !string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
+               node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase) ||
+               node.Route.StartsWith("/storage/objects/", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveAttachmentContentType(ProjectStructureNode node)

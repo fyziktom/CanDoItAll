@@ -117,6 +117,18 @@ public sealed class ProjectStructureLocalFileOpener(
 
     private static string ResolveRelativePath(ProjectStructureNode node)
     {
+        if (StorageJson.TryParseReference(node.StorageObjectReferenceJson, out var storageReference) &&
+            storageReference is not null &&
+            storageReference.ProviderKind == StorageProviderKind.FileSystem &&
+            storageReference.LocatorKind == StorageLocatorKind.RelativePath &&
+            !string.IsNullOrWhiteSpace(storageReference.Locator))
+        {
+            return storageReference.Locator
+                .Trim()
+                .Replace('/', Path.DirectorySeparatorChar)
+                .TrimStart(Path.DirectorySeparatorChar);
+        }
+
         if (!string.IsNullOrWhiteSpace(node.MediaRelativePath))
         {
             return node.MediaRelativePath

@@ -122,6 +122,7 @@ public partial class ProjectStructurePage
     private ProjectStructureSelectionDetailState BuildSelectionDetailState(ProjectStructureNode node)
     {
         var attachmentPreview = BuildAttachmentPreviewCardState(node);
+        var storageSummary = BuildSelectionStorageSummary(node);
         var actions = ResolveInspectorActions(node)
             .Select(action => new ProjectStructureInspectorActionItem(
                 action.ActionId,
@@ -140,6 +141,7 @@ public partial class ProjectStructurePage
             ResolvePriorityLabel(node),
             ResolveMarkerLabel(node),
             SelectedNodeBadgePresentations,
+            storageSummary,
             attachmentPreview,
             HasMermaidViewer(node),
             actions,
@@ -223,6 +225,10 @@ public partial class ProjectStructurePage
             .Append(selectedDetail.WorkflowFeedbackTone)
             .Append('|')
             .Append(selectedDetail.ShowAdvancedDetails)
+            .Append('|')
+            .Append(selectedDetail.StorageSummary?.Title ?? string.Empty)
+            .Append('|')
+            .Append(selectedDetail.StorageSummary?.Description ?? string.Empty)
             .Append('|')
             .Append(selectedDetail.AttachmentPreview?.DisplayName ?? string.Empty)
             .Append('|')

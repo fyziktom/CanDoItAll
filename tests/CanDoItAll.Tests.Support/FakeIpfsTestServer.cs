@@ -52,6 +52,12 @@ public sealed class FakeIpfsTestServer : IAsyncDisposable
         var application = builder.Build();
 
         application.MapPost("/api/v0/add", (Delegate)((HttpContext context) => HandleAddAsync(context, blocks)));
+        application.MapMethods("/api/v0/version", ["GET", "POST"], () => TypedResults.Json(new
+        {
+            Version = "0.0.0-test",
+            Commit = "fake",
+            Repo = "test"
+        }));
         application.MapMethods("/api/v0/cat", ["GET", "POST"], (Delegate)((HttpContext context) => HandleCat(context, blocks)));
         application.MapPost("/api/v0/pin/add", (Delegate)((HttpContext context) => HandlePinAdd(context, blocks, pinnedCids)));
         application.MapGet("/ipfs/{cid}", (string cid) => ResolveBytesResult(cid, blocks));

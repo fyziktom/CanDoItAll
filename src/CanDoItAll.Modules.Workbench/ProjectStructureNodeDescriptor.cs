@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -114,6 +115,12 @@ internal static class ProjectStructureNodeDescriptor
                 }
 
                 AddIfValue(facts, "Source", metadata.File?.SourceHint);
+                if (StorageJson.TryParseReference(node.StorageObjectReferenceJson, out var storageReference) &&
+                    storageReference is not null)
+                {
+                    AddIfValue(facts, "Storage", StoragePresentation.DescribeProvider(storageReference.ProviderKind));
+                    AddIfValue(facts, "Locator", StoragePresentation.DescribeLocator(storageReference.LocatorKind));
+                }
                 break;
             case ProjectObjectType.Script:
                 AddIfValue(facts, "Command", metadata.Script?.Command);
@@ -135,6 +142,8 @@ internal static class ProjectStructureNodeDescriptor
                 AddIfValue(facts, "Provider", metadata.Infrastructure?.ProviderName);
                 AddIfValue(facts, "Domain", metadata.Infrastructure?.DomainName);
                 AddIfValue(facts, "DB", metadata.Infrastructure?.DatabaseType);
+                AddIfValue(facts, "Purpose", ResolveStoragePurposeLabel(metadata.Infrastructure?.StoragePurpose));
+                AddIfValue(facts, "Path", metadata.Infrastructure?.StoragePathPrefix);
                 AddIfValue(facts, "AI", HumanizeEnum(metadata.Infrastructure?.AiReferenceKind));
                 break;
             case ProjectObjectType.Link:
@@ -228,6 +237,13 @@ internal static class ProjectStructureNodeDescriptor
             .Replace("ai", "AI", StringComparison.OrdinalIgnoreCase)
             .Replace('-', ' ')
             .Replace('_', ' ');
+    }
+
+    private static string ResolveStoragePurposeLabel(string? storagePurpose)
+    {
+        return Enum.TryParse<StorageUsagePurpose>(storagePurpose, true, out var parsedPurpose)
+            ? StoragePresentation.DescribeUsagePurpose(parsedPurpose)
+            : string.Empty;
     }
 
     private static string Shorten(string? value, int maxLength)

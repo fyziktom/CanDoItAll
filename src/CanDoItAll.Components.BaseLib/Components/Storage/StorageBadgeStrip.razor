@@ -1,0 +1,16 @@
+@namespace CanDoItAll.Components.BaseLib
+
+@if (Badges.Count > 0)
+{
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        @foreach (var badge in Badges)
+        {
+            <StatusBadge Tone="@badge.Tone" Text="@badge.Text" />
+        }
+    </Cluster>
+}
+
+@code {
+    [Parameter]
+    public IReadOnlyList<StorageSummaryBadge> Badges { get; set; } = [];
+}

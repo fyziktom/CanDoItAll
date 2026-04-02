@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -128,6 +129,7 @@ public sealed class DatabaseSnapshotService(
     IAppDatabaseBootstrapper bootstrapper,
     ISwitchableAppDbContextFactory dbContextFactory,
     IControlPlanePathResolver controlPlanePathResolver,
+    IStorageTransferPipeline storageTransferPipeline,
     IOptions<ControlPlaneOptions> controlPlaneOptions,
     IClock clock,
     ILogger<DatabaseSnapshotService> logger) : IDatabaseSnapshotService
@@ -359,7 +361,10 @@ public sealed class DatabaseSnapshotService(
                 });
             }
 
-            var storageFolders = CopyStorageFolders(sourceProfile.Profile.Storage.WorkspaceRoot, workingRoot);
+            var storageFolders = await CopyStorageFoldersAsync(
+                sourceProfile.Profile.Storage.WorkspaceRoot,
+                workingRoot,
+                cancellationToken);
             var appliedMigration = (await dbContext.Database.GetAppliedMigrationsAsync(cancellationToken)).LastOrDefault();
             var manifest = new DatabaseSnapshotManifest
             {
@@ -444,7 +449,10 @@ public sealed class DatabaseSnapshotService(
             await ExecuteNonQueryAsync(connection, "pragma foreign_keys = on;", cancellationToken);
         }
 
-        RestoreStorageFolders(extractionRoot, targetProfile.Profile.Storage.WorkspaceRoot);
+        await RestoreStorageFoldersAsync(
+            extractionRoot,
+            targetProfile.Profile.Storage.WorkspaceRoot,
+            cancellationToken);
     }
 
     private async Task<string> UploadSnapshotToIpfsAsync(string packagePath, CancellationToken cancellationToken)
@@ -676,31 +684,39 @@ public sealed class DatabaseSnapshotService(
             ?? throw new InvalidOperationException($"The snapshot table payload '{relativePath}' is invalid.");
     }
 
-    private static List<string> CopyStorageFolders(string workspaceRoot, string workingRoot)
+    private async Task<List<string>> CopyStorageFoldersAsync(
+        string workspaceRoot,
+        string workingRoot,
+        CancellationToken cancellationToken)
     {
-        var copiedFolders = new List<string>();
-
-        foreach (var folder in ProfileScopedStorageFolders)
+        var copiedFolders = ProfileScopedStorageFolders
+            .Where(folder => Directory.Exists(Path.Combine(workspaceRoot, folder)))
+            .ToList();
+        if (copiedFolders.Count == 0)
         {
-            var sourcePath = Path.Combine(workspaceRoot, folder);
-            if (!Directory.Exists(sourcePath))
-            {
-                continue;
-            }
-
-            var destinationPath = Path.Combine(workingRoot, "storage", folder);
-            CopyDirectory(sourcePath, destinationPath);
-            copiedFolders.Add(folder);
+            return [];
         }
 
+        var items = BuildStorageTransferItems(
+            workspaceRoot,
+            string.Empty,
+            "storage",
+            copiedFolders);
+        await ExecuteStorageFolderTransferAsync(
+            workspaceRoot,
+            workingRoot,
+            items,
+            cancellationToken);
         return copiedFolders;
     }
 
-    private static void RestoreStorageFolders(string extractionRoot, string workspaceRoot)
+    private async Task RestoreStorageFoldersAsync(
+        string extractionRoot,
+        string workspaceRoot,
+        CancellationToken cancellationToken)
     {
         foreach (var folder in ProfileScopedStorageFolders)
         {
-            var sourcePath = Path.Combine(extractionRoot, "storage", folder);
             var destinationPath = Path.Combine(workspaceRoot, folder);
 
             if (Directory.Exists(destinationPath))
@@ -708,34 +724,158 @@ public sealed class DatabaseSnapshotService(
                 Directory.Delete(destinationPath, recursive: true);
             }
 
-            if (Directory.Exists(sourcePath))
+            Directory.CreateDirectory(destinationPath);
+        }
+
+        var foldersToRestore = ProfileScopedStorageFolders
+            .Where(folder => Directory.Exists(Path.Combine(extractionRoot, "storage", folder)))
+            .ToList();
+        if (foldersToRestore.Count == 0)
+        {
+            return;
+        }
+
+        var items = BuildStorageTransferItems(
+            extractionRoot,
+            "storage",
+            string.Empty,
+            foldersToRestore);
+        await ExecuteStorageFolderTransferAsync(
+            extractionRoot,
+            workspaceRoot,
+            items,
+            cancellationToken);
+    }
+
+    private async Task ExecuteStorageFolderTransferAsync(
+        string sourceRoot,
+        string targetRoot,
+        IReadOnlyList<StorageTransferItem> items,
+        CancellationToken cancellationToken)
+    {
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        var sourceStorage = CreateFileSystemTransferStorage(sourceRoot, canWrite: false);
+        var targetStorage = CreateFileSystemTransferStorage(targetRoot, canWrite: true);
+        var transferOptions = new StorageTransferOptions(
+            MaxConcurrency: 4,
+            MaxAttempts: 2,
+            VerifyTargetContent: true,
+            ProgressCallback: (progress, _) =>
             {
-                CopyDirectory(sourcePath, destinationPath);
-            }
-            else
-            {
-                Directory.CreateDirectory(destinationPath);
-            }
+                logger.LogDebug(
+                    "Snapshot storage transfer progress {Completed}/{Total}. Item={SourcePath} -> {TargetPath}. Success={IsSuccess}.",
+                    progress.CompletedCount,
+                    progress.TotalCount,
+                    progress.CurrentItem.SourcePath,
+                    progress.CurrentItem.TargetPath,
+                    progress.CurrentItem.IsSuccess);
+                return ValueTask.CompletedTask;
+            });
+
+        var result = await storageTransferPipeline.ExecuteAsync(
+            new StorageTransferManifest(
+                null,
+                null,
+                items,
+                sourceStorage,
+                targetStorage,
+                transferOptions),
+            cancellationToken);
+        if (result.FailureCount > 0)
+        {
+            var failureMessages = string.Join(
+                " | ",
+                result.Items
+                    .Where(item => !item.IsSuccess)
+                    .Select(item => $"{item.SourcePath} -> {item.TargetPath}: {item.Message}"));
+            throw new InvalidOperationException($"Snapshot storage transfer failed: {failureMessages}");
         }
     }
 
-    private static void CopyDirectory(string sourcePath, string destinationPath)
+    private static List<StorageTransferItem> BuildStorageTransferItems(
+        string rootPath,
+        string sourcePrefix,
+        string targetPrefix,
+        IReadOnlyList<string> folders)
     {
-        Directory.CreateDirectory(destinationPath);
+        var items = new List<StorageTransferItem>();
 
-        foreach (var directory in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+        foreach (var folder in folders)
         {
-            var relativePath = Path.GetRelativePath(sourcePath, directory);
-            Directory.CreateDirectory(Path.Combine(destinationPath, relativePath));
+            var sourceBasePath = string.IsNullOrWhiteSpace(sourcePrefix)
+                ? Path.Combine(rootPath, folder)
+                : Path.Combine(rootPath, sourcePrefix, folder);
+            if (!Directory.Exists(sourceBasePath))
+            {
+                continue;
+            }
+
+            foreach (var file in Directory.GetFiles(sourceBasePath, "*", SearchOption.AllDirectories))
+            {
+                var relativeFilePath = Path.GetRelativePath(sourceBasePath, file).Replace('\\', '/');
+                var sourcePath = CombineStoragePath(sourcePrefix, folder, relativeFilePath);
+                var targetPath = CombineStoragePath(targetPrefix, folder, relativeFilePath);
+
+                items.Add(new StorageTransferItem(
+                    sourcePath,
+                    targetPath,
+                    "application/octet-stream",
+                    ResolveStorageUsagePurpose(folder)));
+            }
         }
 
-        foreach (var file in Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories))
+        return items;
+    }
+
+    private static StorageCatalogRecord CreateFileSystemTransferStorage(string rootPath, bool canWrite)
+    {
+        var capabilityMask = StorageCapability.Read |
+                             StorageCapability.Download |
+                             StorageCapability.BatchTransfer |
+                             StorageCapability.ConnectionTest;
+        if (canWrite)
         {
-            var relativePath = Path.GetRelativePath(sourcePath, file);
-            var destinationFilePath = Path.Combine(destinationPath, relativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(destinationFilePath)!);
-            File.Copy(file, destinationFilePath, overwrite: true);
+            capabilityMask |= StorageCapability.Write |
+                              StorageCapability.Delete |
+                              StorageCapability.MutableUpdate |
+                              StorageCapability.BatchFolderUpload;
         }
+
+        return new StorageCatalogRecord
+        {
+            Id = Guid.NewGuid(),
+            Name = canWrite ? "Snapshot transfer target" : "Snapshot transfer source",
+            ProviderKind = StorageProviderKind.FileSystem,
+            ConnectionMode = StorageConnectionMode.Local,
+            EndpointOrRoot = rootPath,
+            CapabilityMask = capabilityMask,
+            HealthStatus = StorageHealthStatus.Healthy,
+            IsEnabled = true,
+            IsReadOnly = !canWrite
+        };
+    }
+
+    private static string CombineStoragePath(string prefix, string folder, string relativePath)
+    {
+        var segments = new[] { prefix, folder, relativePath }
+            .Where(segment => !string.IsNullOrWhiteSpace(segment))
+            .Select(segment => segment.Trim().Trim('/'));
+        return string.Join('/', segments);
+    }
+
+    private static StorageUsagePurpose ResolveStorageUsagePurpose(string folder)
+    {
+        return folder switch
+        {
+            "managed-files" => StorageUsagePurpose.ProjectAsset,
+            "exports" => StorageUsagePurpose.WorkspaceExport,
+            "evidence" => StorageUsagePurpose.Evidence,
+            _ => StorageUsagePurpose.Unknown
+        };
     }
 
     private static string QuoteTableIdentifier(string? schema, string tableName)

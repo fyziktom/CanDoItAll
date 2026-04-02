@@ -1,4 +1,5 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.CanvasAdapters;
@@ -227,7 +228,7 @@ public sealed class ProjectStructureGraphAdapter
 
     private static (string Kind, string PreviewUrl) ResolveMediaPresentation(ProjectStructureNode node)
     {
-        if (string.IsNullOrWhiteSpace(node.MediaRelativePath) || string.IsNullOrWhiteSpace(node.Route))
+        if (string.IsNullOrWhiteSpace(node.Route) || !SupportsInlinePreview(node))
         {
             return (string.Empty, string.Empty);
         }
@@ -238,6 +239,23 @@ public sealed class ProjectStructureGraphAdapter
             ProjectObjectType.VideoAsset => ("video", node.Route),
             _ => (string.Empty, string.Empty)
         };
+    }
+
+    private static bool SupportsInlinePreview(ProjectStructureNode node)
+    {
+        if (TryResolveStorageReference(node, out var reference) && reference is not null)
+        {
+            return reference.ProviderKind != StorageProviderKind.Ftp;
+        }
+
+        return !string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
+               node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase) ||
+               node.Route.StartsWith("/storage/objects/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryResolveStorageReference(ProjectStructureNode node, out StorageObjectReference? reference)
+    {
+        return StorageJson.TryParseReference(node.StorageObjectReferenceJson, out reference);
     }
 
     private static List<CanvasWorkbenchChip> BuildHeaderChips(ProjectStructureNode node)

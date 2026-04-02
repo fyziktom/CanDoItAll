@@ -83,6 +83,16 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IDbContextFactory<AppDbContext>>(serviceProvider => serviceProvider.GetRequiredService<ISwitchableAppDbContextFactory>());
         services.AddSingleton<IWorkspacePathResolver, WorkspacePathResolver>();
         services.AddSingleton<IWorkspacePathAccessGuard, WorkspacePathAccessGuard>();
+        services.AddSingleton<IStorageCatalogService, StorageCatalogService>();
+        services.AddSingleton<IStorageDriver, FileSystemStorageDriver>();
+        services.AddSingleton<IStorageDriver, IpfsStorageDriver>();
+        services.AddSingleton<IStorageDriver, FtpStorageDriver>();
+        services.AddSingleton<IStorageDriverRegistry, StorageDriverRegistry>();
+        services.AddSingleton<IStorageRoutingService, DefaultStorageRoutingService>();
+        services.AddSingleton<IStorageConnectionTestService, StorageConnectionTestService>();
+        services.AddSingleton<IStorageAccessService, StorageAccessService>();
+        services.AddSingleton<IStoragePlacementService, StoragePlacementService>();
+        services.AddSingleton<IStorageTransferPipeline, StorageTransferPipeline>();
         services.AddScoped<IFileStore, LocalFileStore>();
         services.AddScoped<IManagedArtifactStore, ManagedArtifactStore>();
         services.AddSingleton<IBackgroundJobQueue, InMemoryBackgroundJobQueue>();

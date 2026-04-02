@@ -113,6 +113,91 @@ public sealed class ManagedFilesStorageIntegrationTests
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task StorageObjects_preview_endpoint_serves_managed_file_reference_tokens()
+    {
+        await using var host = await ManagedFilesTestHost.CreateAsync();
+
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var artifactStore = scope.ServiceProvider.GetRequiredService<IManagedArtifactStore>();
+        var relativePath = artifactStore.GetRelativePath("route-proof", "alpha.txt").Replace('\\', '/');
+        await artifactStore.SaveTextAsync("route-proof", "alpha.txt", "preview-alpha");
+
+        var reference = StorageJson.CreateLegacyManagedFileReference(
+            relativePath,
+            "text/plain",
+            "alpha.txt",
+            "preview-alpha".Length);
+
+        var response = await host.Client.GetAsync(StorageJson.BuildPreviewUrl(reference));
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("preview-alpha", await response.Content.ReadAsStringAsync());
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task StorageObjects_download_endpoint_serves_ipfs_gateway_references()
+    {
+        await using var server = await FakeIpfsTestServer.StartAsync();
+        await using var host = await ManagedFilesTestHost.CreateAsync();
+        var cid = await server.StoreTextAsync("ipfs-download");
+        var reference = new StorageObjectReference(
+            null,
+            StorageProviderKind.Ipfs,
+            StorageLocatorKind.ContentAddress,
+            cid,
+            "proof.txt",
+            "text/plain",
+            "ipfs-download".Length,
+            server.CreateGatewayUri(cid).ToString());
+
+        var response = await host.Client.GetAsync(StorageJson.BuildDownloadUrl(reference));
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("ipfs-download", await response.Content.ReadAsStringAsync());
+        Assert.Contains("proof.txt", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName ?? string.Empty, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Storage_connection_test_service_updates_ipfs_storage_health()
+    {
+        await using var server = await FakeIpfsTestServer.StartAsync();
+        await using var host = await ManagedFilesTestHost.CreateAsync();
+
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var catalogService = scope.ServiceProvider.GetRequiredService<IStorageCatalogService>();
+        var connectionTestService = scope.ServiceProvider.GetRequiredService<IStorageConnectionTestService>();
+        var storage = await catalogService.SaveAsync(new StorageCatalogRecord
+        {
+            Name = "IPFS integration test",
+            ProviderKind = StorageProviderKind.Ipfs,
+            ConnectionMode = StorageConnectionMode.Remote,
+            EndpointOrRoot = server.ApiBaseUri.ToString(),
+            CapabilityMask = StorageCapability.Read |
+                             StorageCapability.Write |
+                             StorageCapability.Download |
+                             StorageCapability.InlinePreview |
+                             StorageCapability.DirectUrl |
+                             StorageCapability.BatchFolderUpload |
+                             StorageCapability.BatchTransfer |
+                             StorageCapability.ConnectionTest,
+            ConfigJson = StorageJson.SerializeProviderConfiguration(new StorageProviderConfiguration
+            {
+                GatewayBaseUrl = server.GatewayBaseUri.ToString()
+            })
+        });
+
+        var result = await connectionTestService.TestAsync(storage.Id);
+        var updatedStorage = await catalogService.GetAsync(storage.Id);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.NotNull(updatedStorage);
+        Assert.Equal(StorageHealthStatus.Healthy, updatedStorage!.HealthStatus);
+        Assert.True(updatedStorage.CapabilityMask.HasFlag(StorageCapability.ConnectionTest));
+        Assert.Contains("responded successfully", updatedStorage.LastHealthMessage, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 internal sealed class ManagedFilesTestHost : IAsyncDisposable

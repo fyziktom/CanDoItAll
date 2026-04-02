@@ -1,4 +1,5 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -172,6 +173,7 @@ internal static partial class ProjectStructureCanvasCatalog
         new("add-infrastructure-docker", ProjectObjectType.Infrastructure, "docker-mode", "infrastructure", "Docker", "Track Docker mode and proxy provider without burying them in notes.", "docker", "mint", "Docker", "Docker", "Compose stack", "Environment", "Host or repo", "Notes", "Any container context", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("dockerMode", "Docker")]), Field("dockerMode", "Mode", "select", "Compose or swarm", true, DockerModeOptions), Field("proxyProvider", "Proxy provider", "text", "Traefik")], [DefaultValue("infrastructureKind", "dockerMode")]),
         new("add-infrastructure-database", ProjectObjectType.Infrastructure, "database", "infrastructure", "Database", "Track database type and connection reference as typed infrastructure.", "database", "primary", "Database", "Database", "PostgreSQL", "Environment", "Host or service", "Notes", "Any schema or migration context", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("database", "Database")]), Field("databaseType", "Database type", "select", "Choose database", true, DatabaseTypeOptions), Field("connectionReference", "Connection reference", "text", "Server=...;Database=..."), Field("secretRef", "Secret reference", "select", "Optional secret")], [DefaultValue("infrastructureKind", "database")]),
         new("add-infrastructure-folder", ProjectObjectType.Infrastructure, "deployment-folder", "infrastructure", "Deployment folder", "Track deployment folders explicitly on the infrastructure subtree.", "folder", "primary", "Deployment folder", "Folder", "/srv/app/current", "Environment", "Host or service", "Notes", "Any mount or sync context", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("deploymentFolder", "Deployment folder")]), Field("folderPath", "Folder path", "text", "/srv/app/current", true)], [DefaultValue("infrastructureKind", "deploymentFolder")]),
+        new("add-infrastructure-storage", ProjectObjectType.Infrastructure, "storage-system", "infrastructure", "Storage", "Track workspace storage lanes, usage purpose, and path ownership as typed infrastructure.", "storage", "mint", "Storage lane", "Storage", "Project assets lane", "Purpose", "Storage role or owner", "Notes", "What this storage lane supports", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("storageSystem", "Storage")]), Field("storageCatalogId", "Storage catalog", "select", "Choose storage target", true), Field("storagePurpose", "Usage purpose", "select", "Choose purpose", true, StoragePurposeOptions), Field("storagePathPrefix", "Path prefix", "text", "projects/demo/assets"), Field("connectionReference", "Connection reference", "text", "/storage/assets")], [DefaultValue("infrastructureKind", "storageSystem"), DefaultValue("storagePurpose", nameof(StorageUsagePurpose.ProjectAsset))]),
         new("add-infrastructure-key", ProjectObjectType.Infrastructure, "key-reference", "infrastructure", "Key reference", "Track a key or secret reference without storing the secret itself.", "key", "danger", "Key reference", "Key", "Deployment key", "Owner", "Who owns this key", "Notes", "Usage context", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("keyReference", "Key reference")]), Field("connectionReference", "Reference", "text", "GitHub Actions secret", true), Field("secretRef", "Secret reference", "select", "Optional secret")], [DefaultValue("infrastructureKind", "keyReference")]),
         new("add-infrastructure-ai", ProjectObjectType.Infrastructure, "ai-link", "infrastructure", "AI link", "Track AI conversations and local LLM references as typed infrastructure nodes.", "ai", "accent", "AI link", "Reference", "ChatGPT design review", "Owner", "Project or operator", "Notes", "Why this AI reference matters", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("aiLink", "AI link")]), Field("aiReferenceKind", "Reference kind", "select", "Choose AI reference", true, AiReferenceOptions), Field("aiReferenceUrl", "Reference URL", "url", "https://..."), Field("providerName", "Tool", "text", "ChatGPT / Codex / Ollama")], [DefaultValue("infrastructureKind", "aiLink")])
     ];
@@ -258,6 +260,18 @@ internal static partial class ProjectStructureCanvasCatalog
         Option("localLlm", "Local LLM")
     ];
 
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> StoragePurposeOptions =
+    [
+        Option(nameof(StorageUsagePurpose.ProjectAsset), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.ProjectAsset)),
+        Option(nameof(StorageUsagePurpose.PromptAttachment), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.PromptAttachment)),
+        Option(nameof(StorageUsagePurpose.PromptExport), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.PromptExport)),
+        Option(nameof(StorageUsagePurpose.Evidence), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.Evidence)),
+        Option(nameof(StorageUsagePurpose.RecordingMedia), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.RecordingMedia)),
+        Option(nameof(StorageUsagePurpose.SnapshotPackage), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.SnapshotPackage)),
+        Option(nameof(StorageUsagePurpose.ReleasePackage), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.ReleasePackage)),
+        Option(nameof(StorageUsagePurpose.DeploymentMirror), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.DeploymentMirror))
+    ];
+
     private static IReadOnlyList<ProjectStructureCreateLeafDefinition> ResolveMeetingLeafDefinitions()
         => ResolveLeafDefinitions("add-meeting-online", "add-meeting-onsite", "add-recording", "add-transcript");
 
@@ -289,6 +303,7 @@ internal static partial class ProjectStructureCanvasCatalog
             "add-infrastructure-docker",
             "add-infrastructure-database",
             "add-infrastructure-folder",
+            "add-infrastructure-storage",
             "add-infrastructure-key",
             "add-infrastructure-ai");
 
@@ -470,6 +485,7 @@ internal static partial class ProjectStructureCanvasCatalog
             "docker-mode" => "Docker",
             "database" => "Database",
             "deployment-folder" => "Deployment folder",
+            "storage-system" => "Storage",
             "key-reference" => "Key reference",
             "ai-link" => "AI link",
             _ => "Infrastructure"

@@ -48,12 +48,37 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
         }
     }
 
+    [Fact]
+    public void CanOpen_uses_the_storage_reference_when_available()
+    {
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("local-file-opener");
+
+        try
+        {
+            var managedFilePath = Path.Combine(workspaceRoot, "managed-files", "proof", "alpha.txt");
+            Directory.CreateDirectory(Path.GetDirectoryName(managedFilePath)!);
+            File.WriteAllText(managedFilePath, "alpha");
+
+            var sut = CreateSut(workspaceRoot);
+            var node = CreateNode(
+                mediaRelativePath: string.Empty,
+                storageObjectReferenceJson: StorageJson.SerializeReference(
+                    StorageJson.CreateLegacyManagedFileReference("proof/alpha.txt", "text/plain", "alpha.txt")));
+
+            Assert.True(sut.CanOpen(node));
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
     private static ProjectStructureLocalFileOpener CreateSut(string workspaceRoot)
         => new(
             new WorkspacePathAccessGuard(new TestWorkspacePathResolver(workspaceRoot)),
             NullLogger<ProjectStructureLocalFileOpener>.Instance);
 
-    private static ProjectStructureNode CreateNode(string mediaRelativePath)
+    private static ProjectStructureNode CreateNode(string mediaRelativePath, string storageObjectReferenceJson = "")
         => new(
             "node-1",
             "project:1",
@@ -82,7 +107,8 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
             0,
             null,
             null,
-            string.Empty);
+            string.Empty,
+            storageObjectReferenceJson);
 
     private sealed class TestWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
     {

@@ -165,6 +165,9 @@ internal static class ProjectStructureNodeEditor
                 metadata.Infrastructure.DatabaseType = ResolveString(inputValues, submittedKeys, "databaseType", metadata.Infrastructure.DatabaseType);
                 metadata.Infrastructure.ConnectionReference = ResolveString(inputValues, submittedKeys, "connectionReference", metadata.Infrastructure.ConnectionReference);
                 metadata.Infrastructure.FolderPath = ResolveString(inputValues, submittedKeys, "folderPath", metadata.Infrastructure.FolderPath);
+                metadata.Infrastructure.StorageCatalogId = ResolveNullableGuid(inputValues, submittedKeys, "storageCatalogId", metadata.Infrastructure.StorageCatalogId);
+                metadata.Infrastructure.StoragePurpose = ResolveString(inputValues, submittedKeys, "storagePurpose", metadata.Infrastructure.StoragePurpose);
+                metadata.Infrastructure.StoragePathPrefix = ResolveString(inputValues, submittedKeys, "storagePathPrefix", metadata.Infrastructure.StoragePathPrefix);
                 metadata.Infrastructure.AiReferenceKind = ResolveNullableEnum(inputValues, submittedKeys, "aiReferenceKind", metadata.Infrastructure.AiReferenceKind);
                 metadata.Infrastructure.AiReferenceUrl = ResolveString(inputValues, submittedKeys, "aiReferenceUrl", metadata.Infrastructure.AiReferenceUrl);
                 break;
@@ -247,6 +250,9 @@ internal static class ProjectStructureNodeEditor
             "databaseType" => metadata.Infrastructure?.DatabaseType ?? string.Empty,
             "connectionReference" => metadata.Infrastructure?.ConnectionReference ?? string.Empty,
             "folderPath" => metadata.Infrastructure?.FolderPath ?? string.Empty,
+            "storageCatalogId" => metadata.Infrastructure?.StorageCatalogId?.ToString("D") ?? string.Empty,
+            "storagePurpose" => metadata.Infrastructure?.StoragePurpose ?? string.Empty,
+            "storagePathPrefix" => metadata.Infrastructure?.StoragePathPrefix ?? string.Empty,
             "aiReferenceKind" => ToCamelCaseToken(metadata.Infrastructure?.AiReferenceKind),
             "aiReferenceUrl" => metadata.Infrastructure?.AiReferenceUrl ?? string.Empty,
             _ => string.Empty
@@ -310,6 +316,17 @@ internal static class ProjectStructureNodeEditor
         => !submittedKeys.Contains(key)
             ? currentValue
             : inputValues.TryGetValue(key, out var value) && decimal.TryParse(value, out var parsed)
+                ? parsed
+                : null;
+
+    private static Guid? ResolveNullableGuid(
+        IReadOnlyDictionary<string, string> inputValues,
+        IReadOnlySet<string> submittedKeys,
+        string key,
+        Guid? currentValue)
+        => !submittedKeys.Contains(key)
+            ? currentValue
+            : inputValues.TryGetValue(key, out var value) && Guid.TryParse(value, out var parsed)
                 ? parsed
                 : null;
 
@@ -415,6 +432,7 @@ internal static class ProjectStructureNodeEditor
         "docker-mode" => ProjectInfrastructureKind.DockerMode,
         "database" => ProjectInfrastructureKind.Database,
         "deployment-folder" => ProjectInfrastructureKind.DeploymentFolder,
+        "storage-system" => ProjectInfrastructureKind.StorageSystem,
         "key-reference" => ProjectInfrastructureKind.KeyReference,
         "ai-link" => ProjectInfrastructureKind.AiLink,
         _ => ProjectInfrastructureKind.RemoteServer

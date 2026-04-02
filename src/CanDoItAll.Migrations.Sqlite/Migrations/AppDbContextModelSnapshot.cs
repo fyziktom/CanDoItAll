@@ -112,6 +112,159 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.ToTable("Infrastructure_SearchDocuments", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Infrastructure.Storage.StorageCatalogRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CapabilityMask")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ConfigJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ConnectionMode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CredentialSecretId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("EndpointOrRoot")
+                        .IsRequired()
+                        .HasMaxLength(1200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("HealthStatus")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsReadOnly")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsSystemDefault")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastHealthMessage")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LastTestedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProviderKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("ProviderKind", "IsEnabled");
+
+                    b.ToTable("Storage_Catalog", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Infrastructure.Storage.StorageRoutingRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AlternativeStorageIdsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ContentKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("EditIntent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("MaximumContentLength")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MimePattern")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("MinimumContentLength")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NodeKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PreferredStorageId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("PreviewRequired")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("PublishIntent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RequiredCapabilities")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ScopeKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UsagePurpose")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScopeKind", "ProjectId", "NodeKey", "Priority", "PreferredStorageId");
+
+                    b.ToTable("Storage_RoutingRules", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Activity.ActivityEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1372,6 +1525,10 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StorageObjectReferenceJson")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Subtitle")
