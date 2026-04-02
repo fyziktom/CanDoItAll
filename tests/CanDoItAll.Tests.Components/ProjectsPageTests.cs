@@ -43,6 +43,31 @@ public sealed class ProjectsPageTests
     }
 
     [Fact]
+    public async Task Project_overview_modal_explains_that_header_uses_saved_project_name()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var projectId = await CreateProjectAsync(projectsService, "Explained Project");
+
+        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var projectCard = cut.FindAll("[data-testid='project-card']")
+            .Single(card => card.TextContent.Contains("Explained Project", StringComparison.Ordinal));
+
+        projectCard.QuerySelector("[data-testid='project-card-details-button']")!.Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var modal = cut.Find("[data-testid='projects-detail-modal']");
+
+            Assert.Contains("Explained Project", modal.TextContent);
+            Assert.Contains("This header uses the saved project name.", modal.TextContent);
+            Assert.Contains("Edit name and details", modal.TextContent);
+        });
+
+        Assert.NotEqual(Guid.Empty, projectId);
+    }
+
+    [Fact]
     public async Task Filters_direct_subprojects_of_the_selected_project()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

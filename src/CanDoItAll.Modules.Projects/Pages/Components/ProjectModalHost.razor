@@ -317,8 +317,8 @@
                     <HelpPopover AriaLabel="Show project overview help"
                                  Title="Show project overview help"
                                  Heading="Project overview"
-                                 Body="This modal is the compact inspection surface. Use it to review the project, decide what to do next, and open the dashboard, structure, or calendar only when the work needs a larger surface."
-                                 Tip="Use Edit project when the project shape itself needs to change." />
+                                 Body="This modal is the compact inspection surface. The header and related project tabs use the saved project name. Use it to review the project, decide what to do next, and open the dashboard, structure, or calendar only when the work needs a larger surface."
+                                 Tip="Use Edit name and details when the project record itself needs to change." />
                     <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(Editor.Status)" Text="@Editor.Status.ToString()" />
                     <StatusBadge Tone="neutral" Text="@($"{Editor.Phases.Count} phase(s)")" />
                     <button type="button"
@@ -341,6 +341,10 @@
                         <span class="cda-shell-pill cda-shell-pill--warning">@($"{MeaningfulOptions.Count} stack decision(s)")</span>
                     </Cluster>
 
+                    <p class="text-sm leading-6 text-slate-600">
+                        This header uses the saved project name. Use Edit name and details when you want to rename the project.
+                    </p>
+
                     <Grid Gap="LayoutGap.Large"
                           ColumnTemplateXl="minmax(0,1.15fr) minmax(18rem,0.85fr)">
                         <SurfaceCard>
@@ -356,7 +360,7 @@
                             <Grid Gap="LayoutGap.Medium"
                                   Class="mt-4">
                                 <Button Class="w-full"
-                                        Text="Edit project"
+                                        Text="Edit name and details"
                                         Click="SwitchToEditor" />
                                 <Button ButtonStyle="ButtonStyle.Light"
                                         Class="w-full"

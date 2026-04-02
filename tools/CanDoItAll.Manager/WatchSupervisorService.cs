@@ -258,32 +258,10 @@ public sealed class WatchSupervisorService(
             startInfo.ArgumentList.Add(argument);
         }
 
-        startInfo.Environment["DOTNET_WATCH_SUPPRESS_EMOJIS"] = "1";
-        startInfo.Environment["DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH"] = "1";
-        startInfo.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "0";
-        if (_options.WatchDisableAppHost)
-        {
-            startInfo.Environment["UseAppHost"] = "false";
-        }
-
-        if (_options.WatchDisableSharedCompilation)
-        {
-            startInfo.Environment["UseSharedCompilation"] = "false";
-        }
-
-        if (_options.WatchDetailedErrorsEnabled)
-        {
-            startInfo.Environment["DetailedErrors"] = "true";
-            startInfo.Environment["ASPNETCORE_DETAILEDERRORS"] = "true";
-        }
-
         ClearInheritedAspNetEnvironment(startInfo);
-        startInfo.Environment["ASPNETCORE_ENVIRONMENT"] = ResolveWatchEnvironmentName();
-        startInfo.Environment["DOTNET_ENVIRONMENT"] = ResolveWatchEnvironmentName();
-        var watchUrls = WorkspaceRuntimeProcessTools.BuildWatchUrlsEnvironmentValue(_options);
-        if (!string.IsNullOrWhiteSpace(watchUrls))
+        foreach (var variable in WorkspaceRuntimeProcessTools.BuildWatchEnvironmentVariables(_options, ResolveWatchEnvironmentName()))
         {
-            startInfo.Environment["ASPNETCORE_URLS"] = watchUrls;
+            startInfo.Environment[variable.Key] = variable.Value;
         }
 
         using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };

@@ -16,9 +16,11 @@ builder.Services.AddSingleton<CapsuleCatalogService>();
 builder.Services.AddSingleton<ICapsuleCatalogService>(serviceProvider => serviceProvider.GetRequiredService<CapsuleCatalogService>());
 builder.Services.AddSingleton<WatchSupervisorService>();
 builder.Services.AddSingleton<IWatchSupervisor>(serviceProvider => serviceProvider.GetRequiredService<WatchSupervisorService>());
+builder.Services.AddSingleton<TailwindWatchSupervisorService>();
 builder.Services.AddSingleton<ITuningExecutionAdapter, LocalProcessTuningExecutionAdapter>();
 builder.Services.AddSingleton<TuningRequestService>();
 builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<WatchSupervisorService>());
+builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<TailwindWatchSupervisorService>());
 builder.Services.AddHostedService<CapsuleRefreshService>();
 
 var app = builder.Build();
@@ -28,7 +30,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.MapGet("/", (HttpContext httpContext, ManagerSessionService session, WatchSupervisorService watch, CapsuleCatalogService capsules, IConfiguration configuration) =>
+app.MapGet("/", (HttpContext httpContext, ManagerSessionService session, WatchSupervisorService watch, TailwindWatchSupervisorService tailwind, CapsuleCatalogService capsules, IConfiguration configuration) =>
 {
     var options = configuration.GetSection("Manager").Get<ManagerOptions>() ?? new ManagerOptions();
     var workspaceRoot = ManagerStatusResponseFactory.ResolveWorkspaceRoot(AppContext.BaseDirectory, options);
@@ -39,6 +41,7 @@ app.MapGet("/", (HttpContext httpContext, ManagerSessionService session, WatchSu
         workspaceRoot,
         watchProjectPath,
         watch.GetStatus(),
+        tailwind.GetStatus(),
         options,
         $"{httpContext.Request.Scheme}://{httpContext.Request.Host}");
     var html = ManagerDashboardPage.Render(
@@ -49,7 +52,7 @@ app.MapGet("/", (HttpContext httpContext, ManagerSessionService session, WatchSu
     return Results.Content(html, "text/html; charset=utf-8");
 });
 
-app.MapGet("/api/status", (HttpContext httpContext, ManagerSessionService session, WatchSupervisorService watch, IConfiguration configuration) =>
+app.MapGet("/api/status", (HttpContext httpContext, ManagerSessionService session, WatchSupervisorService watch, TailwindWatchSupervisorService tailwind, IConfiguration configuration) =>
 {
     var options = configuration.GetSection("Manager").Get<ManagerOptions>() ?? new ManagerOptions();
     var workspaceRoot = ManagerStatusResponseFactory.ResolveWorkspaceRoot(AppContext.BaseDirectory, options);
@@ -60,6 +63,7 @@ app.MapGet("/api/status", (HttpContext httpContext, ManagerSessionService sessio
         workspaceRoot,
         watchProjectPath,
         watch.GetStatus(),
+        tailwind.GetStatus(),
         options,
         $"{httpContext.Request.Scheme}://{httpContext.Request.Host}");
 
@@ -69,6 +73,8 @@ app.MapGet("/api/status", (HttpContext httpContext, ManagerSessionService sessio
 
 app.MapGet("/api/watch/status", (WatchSupervisorService watchSupervisor) => Results.Ok(watchSupervisor.GetStatus()));
 app.MapGet("/api/watch/logs", (int? take, WatchSupervisorService watchSupervisor) => Results.Ok(watchSupervisor.GetLogs(take ?? 200)));
+app.MapGet("/api/tailwind/status", (TailwindWatchSupervisorService tailwindSupervisor) => Results.Ok(tailwindSupervisor.GetStatus()));
+app.MapGet("/api/tailwind/logs", (int? take, TailwindWatchSupervisorService tailwindSupervisor) => Results.Ok(tailwindSupervisor.GetLogs(take ?? 200)));
 app.MapGet("/api/watch/wait-ready", async (long? afterEventId, int? timeoutMs, WatchSupervisorService watchSupervisor, CancellationToken cancellationToken) =>
 {
     var result = await watchSupervisor.WaitForReadyAsync(afterEventId ?? 0, TimeSpan.FromMilliseconds(timeoutMs ?? 90_000), cancellationToken);

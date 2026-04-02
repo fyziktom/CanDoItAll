@@ -13,8 +13,8 @@
                Gap="LayoutGap.Large"
                AlignItems="AlignItems.Start"
                JustifyContent="JustifyContent.SpaceBetween">
-            <Stack GapScale="LayoutGap.Small"
-                   Class="min-w-0 flex-1">
+            <Stack GapScale="LayoutGap.Small" Orientation="Orientation.Horizontal"
+                   Class="min-w-0 flex-1 w-full">
                 <Cluster Class="min-w-0">
                     <h2 class="text-lg font-semibold tracking-tight text-slate-950">Portfolio board</h2>
                     <StatusBadge Tone="info" Text="@($"{FilteredProjectSummaries.Count} visible")" />
@@ -44,27 +44,28 @@
                                  Heading="Latest updated project"
                                  Body="@LatestUpdatedProjectHelper" />
                 </Cluster>
-            </Stack>
+           
 
-            <Cluster JustifyContent="JustifyContent.End">
-                <Button Class="h-9 px-3"
-                        Token="+"
-                        Text="New"
-                        data-testid="projects-new-button"
-                        Click="OpenNewProject" />
-                <Button ButtonStyle="ButtonStyle.Light"
-                        Class="h-9 px-3"
-                        Token="DB"
-                        Text="Dashboard"
-                        Click="NavigateHome" />
-                <HelpPopover RootClass="pf-help-popover flex items-center"
-                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
-                             AriaLabel="Show project relationship filter help"
-                             Title="Show project relationship filter help"
-                             Heading="Project relationship filter"
-                             Body="@HierarchyFilterHelper"
-                             Tip="Pick a project first, then narrow to parents, subprojects, or related items." />
-            </Cluster>
+                <Cluster JustifyContent="JustifyContent.End">
+                    <Button Class="h-9 px-3"
+                            Token="+"
+                            Text="New"
+                            data-testid="projects-new-button"
+                            Click="OpenNewProject" />
+                    <Button ButtonStyle="ButtonStyle.Light"
+                            Class="h-9 px-3"
+                            Token="DB"
+                            Text="Dashboard"
+                            Click="NavigateHome" />
+                    <HelpPopover RootClass="pf-help-popover flex items-center"
+                                 ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                                 AriaLabel="Show project relationship filter help"
+                                 Title="Show project relationship filter help"
+                                 Heading="Project relationship filter"
+                                 Body="@HierarchyFilterHelper"
+                                 Tip="Pick a project first, then narrow to parents, subprojects, or related items." />
+                </Cluster>
+            </Stack>
         </Split>
 
         <Toolbar Class="rounded-[1.35rem] border border-slate-200/90 bg-slate-50/85 p-3 shadow-none">
@@ -184,14 +185,14 @@
                         <CardActions Secondary="true" Class="mt-4 border-white/70">
                             <Cluster>
                                 <Button Class="h-9 px-3"
-                                        Token="VIEW"
-                                        Text="View"
+                                        Icon="visibility"
+                                        Text=""
                                         data-testid="project-card-details-button"
                                         Click="@(() => OpenProjectPreview.InvokeAsync(project.Id))" />
                                 <Button ButtonStyle="ButtonStyle.Light"
                                         Class="h-9 px-3"
-                                        Token="SUB"
-                                        Text="Subprojects"
+                                        Icon="subdirectory_arrow_right"
+                                        Text=""
                                         data-testid="project-card-subprojects-button"
                                         Click="@(() => OpenHierarchyModal.InvokeAsync(project.Id))" />
                             </Cluster>
@@ -199,21 +200,21 @@
                                 <Button ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Class="cda-button--quick"
-                                        Token="DB"
+                                        Icon="dashboard"
                                         title="Open dashboard tab"
                                         aria-label="Open dashboard tab"
                                         Click="@(() => OpenProjectDashboard.InvokeAsync(project.Id))" />
                                 <Button ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Class="cda-button--quick"
-                                        Token="ST"
+                                        Icon="account_tree"
                                         title="Open structure"
                                         aria-label="Open structure"
                                         Click="@(() => OpenStructure.InvokeAsync(project.Id))" />
                                 <Button ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Class="cda-button--quick"
-                                        Token="CAL"
+                                        Icon="calendar_month"
                                         title="Open calendar"
                                         aria-label="Open calendar"
                                         Click="@(() => OpenCalendar.InvokeAsync(project.Id))" />

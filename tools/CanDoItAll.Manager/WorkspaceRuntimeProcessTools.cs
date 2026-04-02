@@ -63,6 +63,56 @@ public static class WorkspaceRuntimeProcessTools
         return urls.Count == 0 ? null : string.Join(';', urls);
     }
 
+    public static IReadOnlyDictionary<string, string> BuildWatchEnvironmentVariables(ManagerOptions options, string environmentName)
+    {
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["DOTNET_WATCH_SUPPRESS_EMOJIS"] = "1",
+            ["ASPNETCORE_ENVIRONMENT"] = environmentName,
+            ["DOTNET_ENVIRONMENT"] = environmentName
+        };
+
+        if (options.WatchSuppressBrowserRefresh)
+        {
+            variables["DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH"] = "1";
+        }
+
+        if (options.WatchDisableBuildServers)
+        {
+            variables["DOTNET_CLI_USE_MSBUILD_SERVER"] = "0";
+        }
+
+        if (options.WatchDisableAppHost)
+        {
+            variables["UseAppHost"] = "false";
+        }
+
+        if (options.WatchDisableSharedCompilation)
+        {
+            variables["UseSharedCompilation"] = "false";
+        }
+
+        if (options.WatchDetailedErrorsEnabled)
+        {
+            variables["DetailedErrors"] = "true";
+            variables["ASPNETCORE_DETAILEDERRORS"] = "true";
+        }
+
+        var watchUrls = BuildWatchUrlsEnvironmentValue(options);
+        if (!string.IsNullOrWhiteSpace(watchUrls))
+        {
+            variables["ASPNETCORE_URLS"] = watchUrls;
+        }
+
+        return variables;
+    }
+
+    public static IReadOnlyList<string> BuildTailwindWatchArgumentList()
+        => ["run", "tailwind:watch"];
+
+    public static string ResolveNpmCommand()
+        => OperatingSystem.IsWindows() ? "npm.cmd" : "npm";
+
     public static IReadOnlyList<string> GetExplicitWatchUrls(ManagerOptions options)
         => options.WatchUrls
             .Where(url => !string.IsNullOrWhiteSpace(url))
