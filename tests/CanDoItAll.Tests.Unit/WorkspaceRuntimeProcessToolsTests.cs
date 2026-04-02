@@ -214,11 +214,46 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     }
 
     [Fact]
-    public void BuildTailwindWatchArgumentList_uses_root_script()
+    public void BuildTailwindWatchArgumentList_targets_input_and_output_files()
     {
-        var arguments = WorkspaceRuntimeProcessTools.BuildTailwindWatchArgumentList();
+        var arguments = WorkspaceRuntimeProcessTools.BuildTailwindWatchArgumentList(
+            @"C:\repos\CanDoItAll\Tailwind\input.css",
+            @"C:\repos\CanDoItAll\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css");
 
-        Assert.Equal(["run", "tailwind:watch"], arguments);
+        Assert.Equal(
+            [
+                "-i",
+                @"C:\repos\CanDoItAll\Tailwind\input.css",
+                "-o",
+                @"C:\repos\CanDoItAll\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css",
+                "--watch=always"
+            ],
+            arguments);
+    }
+
+    [Fact]
+    public void BuildTailwindBuildArgumentList_targets_input_and_output_files_without_watch_mode()
+    {
+        var arguments = WorkspaceRuntimeProcessTools.BuildTailwindBuildArgumentList(
+            @"Tailwind\input.css",
+            @"..\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css");
+
+        Assert.Equal(
+            [
+                "-i",
+                @"Tailwind\input.css",
+                "-o",
+                @"..\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css"
+            ],
+            arguments);
+    }
+
+    [Fact]
+    public void ResolveTailwindCliPath_points_to_workspace_local_binary()
+    {
+        var path = WorkspaceRuntimeProcessTools.ResolveTailwindCliPath(@"C:\repos\CanDoItAll\Tailwind");
+
+        Assert.EndsWith(@"Tailwind\node_modules\.bin\tailwindcss.cmd", path, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]

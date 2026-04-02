@@ -107,11 +107,24 @@ public static class WorkspaceRuntimeProcessTools
         return variables;
     }
 
-    public static IReadOnlyList<string> BuildTailwindWatchArgumentList()
-        => ["run", "tailwind:watch"];
+    public static string ResolveTailwindCliPath(string tailwindWorkspacePath)
+        => Path.Combine(
+            tailwindWorkspacePath,
+            "node_modules",
+            ".bin",
+            OperatingSystem.IsWindows() ? "tailwindcss.cmd" : "tailwindcss");
+
+    public static IReadOnlyList<string> BuildTailwindBuildArgumentList(string inputPath, string outputPath)
+        => ["-i", inputPath, "-o", outputPath];
+
+    public static IReadOnlyList<string> BuildTailwindWatchArgumentList(string inputPath, string outputPath)
+        => ["-i", inputPath, "-o", outputPath, "--watch=always"];
 
     public static string ResolveNpmCommand()
         => OperatingSystem.IsWindows() ? "npm.cmd" : "npm";
+
+    public static string ResolvePowerShellCommand()
+        => OperatingSystem.IsWindows() ? "powershell" : "pwsh";
 
     public static IReadOnlyList<string> GetExplicitWatchUrls(ManagerOptions options)
         => options.WatchUrls

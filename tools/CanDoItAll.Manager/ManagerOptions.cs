@@ -12,6 +12,10 @@ public sealed class ManagerOptions
 
     public string TailwindOutputPath { get; set; } = "src\\CanDoItAll.Components.BaseLib\\wwwroot\\css\\output.css";
 
+    public string[] TailwindContentWatchPaths { get; set; } = ["src\\CanDoItAll.Components.BaseLib"];
+
+    public int TailwindWatchDebounceMilliseconds { get; set; } = 150;
+
     public string WatchLaunchProfile { get; set; } = "https";
 
     public string[] WatchUrls { get; set; } = [];
