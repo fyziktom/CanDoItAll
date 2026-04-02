@@ -27,10 +27,7 @@ public sealed partial class AppSmokeTests
         var storageRoot = Path.Combine(fixture.StorageWorkspaceRoot!, "storage-driver-proof", "assets-lane");
         var uploadedNodeTitle = "Architecture evidence PDF";
         var storageNodeTitle = "Project assets lane";
-        var uploadedFile = BuildUploadedFile(
-            "architecture-evidence.pdf",
-            "application/pdf",
-            "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF");
+        var uploadedFile = BuildValidPreviewPdf("architecture-evidence.pdf");
 
         Directory.CreateDirectory(storageRoot);
 
@@ -249,6 +246,19 @@ public sealed partial class AppSmokeTests
     {
         await page.Locator(".cw-canvas-composer__actions .cw-button[data-tone='accent']").ClickAsync();
         await page.WaitForFunctionAsync("() => !document.querySelector('.cw-canvas-composer.is-dialog')");
+    }
+
+    private static FilePayload BuildValidPreviewPdf(string fileName)
+    {
+        const string previewPdfBase64 =
+            "JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkc1szIDAgUl0+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgMzAwIDE0NF0vQ29udGVudHMgNCAwIFIvUmVzb3VyY2VzPDwvRm9udDw8L0YxIDUgMCBSPj4+Pj4+ZW5kb2JqCjQgMCBvYmo8PC9MZW5ndGggNzQ+PnN0cmVhbQpCVCAvRjEgMTggVGYgMzYgOTIgVGQgKEZlZWRiYWNrIDggUERGIHZhbGlkYXRpb24gYXNzZXQpIFRqIEVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iajw8L1R5cGUvRm9udC9TdWJ0eXBlL1R5cGUxL0Jhc2VGb250L0hlbHZldGljYT4+ZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0MSAwMDAwMCBuIAowMDAwMDAwMzY1IDAwMDAwIG4gCnRyYWlsZXI8PC9Sb290IDEgMCBSL1NpemUgNj4+CnN0YXJ0eHJlZgo0MzUKJSVFT0YK";
+
+        return new FilePayload
+        {
+            Name = fileName,
+            MimeType = "application/pdf",
+            Buffer = Convert.FromBase64String(previewPdfBase64)
+        };
     }
 
     private static void DeleteFileIfExists(string path)

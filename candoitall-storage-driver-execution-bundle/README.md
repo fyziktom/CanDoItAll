@@ -43,12 +43,13 @@ This bundle is a coordination and execution package for `candoitall-storage-driv
 
 - Bundle preparation status: `Ready`
 - Bundle readiness gate: `Passed with validate_bundle.py --stage prepared`
-- Execution status: `Not started`
-- Subbundle gate review: `Planned per phase`
-- Final closure gate: `Pending execution`
-- Browser validation analytics: `Planned and required`
+- Execution status: `Completed`
+- Subbundle gate review: `Completed; see reviews/01-execution-report.md`
+- Final closure gate: `Passed with validate_bundle.py --stage completed`
+- Browser validation analytics: `Captured with explicit external blocker notes`
 
 ## Prepared-Stage Evidence
 
 - Validator evidence: `evidence/01-prepared-validator-output.txt`
 - Workbook render review: `evidence/02-workbook-render-review.md`
+- Completed-stage validator evidence: `evidence/02-completed-validator-output.txt`
