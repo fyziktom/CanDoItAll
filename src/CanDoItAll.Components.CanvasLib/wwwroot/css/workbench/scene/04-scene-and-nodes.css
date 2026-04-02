@@ -820,8 +820,8 @@
     position: absolute;
     left: 0;
     top: 0;
-    width: var(--cw-orbit-size, 0px);
-    height: var(--cw-orbit-size, 0px);
+    width: var(--cw-orbit-width, var(--cw-orbit-size, 0px));
+    height: var(--cw-orbit-height, var(--cw-orbit-size, 0px));
     transform: translate(calc(-50% + var(--cw-orbit-x, 0px)), calc(-50% + var(--cw-orbit-y, 0px)));
     border-radius: 999px;
 }
