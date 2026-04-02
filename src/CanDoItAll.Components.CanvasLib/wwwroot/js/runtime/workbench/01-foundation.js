@@ -439,6 +439,7 @@
                 childNoteActionId: surface?.chrome?.childNoteActionId || "",
                 siblingNoteActionId: surface?.chrome?.siblingNoteActionId || "",
                 inlineNotePlaceholder: surface?.chrome?.inlineNotePlaceholder || "Write note",
+                collapseOnDoubleClick: surface?.chrome?.collapseOnDoubleClick !== false,
                 hintText: surface?.chrome?.hintText || "",
                 emptyStateKicker: surface?.chrome?.emptyStateKicker || "Canvas",
                 emptyStateTitle: surface?.chrome?.emptyStateTitle || "No nodes yet",

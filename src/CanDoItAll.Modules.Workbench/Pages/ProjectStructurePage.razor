@@ -525,6 +525,7 @@ else
                 ChildNoteActionId = "add-note",
                 SiblingNoteActionId = "add-note",
                 InlineNotePlaceholder = "Write note",
+                CollapseOnDoubleClick = false,
                 QuickCreateActions = BuildQuickCreateActions().ToList(),
                 GroupContextActions = actionCatalog.BuildGroupContextActions().ToList()
             },
@@ -636,14 +637,13 @@ else
     private Task HandleNodeOpenedAsync(string nodeId)
     {
         var node = ResolveNode(nodeId);
-        if (node?.ProjectRole is ProjectStructureProjectRole.Subproject or
-            ProjectStructureProjectRole.ParentProject or
-            ProjectStructureProjectRole.AdditionalParentProject)
+        if (node is null)
         {
-            return OpenProjectStructureInNewTabAsync(node);
+            return Task.CompletedTask;
         }
 
-        return ExecuteCommandAsync(ProjectStructureCommandKind.Open, nodeId, allowQuickActionDialog: true);
+        OpenQuickActionDialog(node);
+        return InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleContextActionAsync(CanvasWorkbenchContextActionRequest request)

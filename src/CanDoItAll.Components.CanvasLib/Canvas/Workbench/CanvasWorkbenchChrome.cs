@@ -22,6 +22,8 @@ public sealed class CanvasWorkbenchChrome
 
     public string InlineNotePlaceholder { get; set; } = "Write note";
 
+    public bool CollapseOnDoubleClick { get; set; } = true;
+
     public List<CanvasWorkbenchAction> QuickCreateActions { get; set; } = [];
 
     public List<CanvasWorkbenchAction> GroupContextActions { get; set; } = [];

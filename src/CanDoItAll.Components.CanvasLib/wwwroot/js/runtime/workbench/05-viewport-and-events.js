@@ -755,12 +755,13 @@
         publishSelection(state);
         publishState(state);
 
-        if (node.isInlineTextNode) {
+        const collapseOnDoubleClick = state?.surface?.chrome?.collapseOnDoubleClick !== false;
+        if (collapseOnDoubleClick && node.isInlineTextNode) {
             openExistingNoteEditor(state, node);
             return;
         }
 
-        if (node.isCollapsible) {
+        if (collapseOnDoubleClick && node.isCollapsible) {
             toggleCollapse(state, node.id);
             return;
         }
@@ -908,17 +909,7 @@
                     return;
                 }
 
-                if (targetNode.isInlineTextNode) {
-                    openExistingNoteEditor(state, targetNode);
-                    return;
-                }
-
-                if (targetNode.isCollapsible) {
-                    toggleCollapse(state, targetNode.id);
-                    return;
-                }
-
-                state.dotNetRef.invokeMethodAsync("OnNodeOpened", targetNode.id);
+                handleNodeDoubleActivation(state, targetNode);
             },
             wheel: event => {
                 event.preventDefault();

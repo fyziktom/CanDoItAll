@@ -190,7 +190,7 @@ public sealed partial class AppSmokeTests
     }
 
     [Fact]
-    public async Task Structure_canvas_supports_inline_note_creation_editing_and_context_create_dialogs()
+    public async Task Structure_canvas_supports_inline_note_creation_quick_actions_and_context_create_dialogs()
     {
         await using var context = await fixture.Browser.NewContextAsync();
         var page = await context.NewPageAsync();
@@ -304,16 +304,18 @@ public sealed partial class AppSmokeTests
         await page.WaitForSelectorAsync("text=Second child note");
         await AssertNoCanvasNodeOverlapsAsync(page, "after chained child-note creation");
 
-        noteEditor = await OpenExistingInlineNoteEditorAsync(page, ".cw-node:has-text('Second child note')");
-        await noteEditor.FillAsync("Edited child note");
-        await noteEditor.PressAsync("Enter");
-        await page.WaitForFunctionAsync("() => !document.querySelector('.cw-note-editor__input')");
-        await page.WaitForSelectorAsync("text=Edited child note");
-        await WaitForSceneNodeTitleAsync(page, "Edited child note", selectedOnly: true);
-        var editedNoteId = (await ReadCanvasFocusStateAsync(page)).SelectedId;
-        Assert.False(string.IsNullOrWhiteSpace(editedNoteId), "Expected the edited inline note to stay selected.");
+        await OpenNodeQuickActionsAsync(page, ".cw-node:has-text('Second child note')");
+        var quickActionDialog = page.GetByTestId("project-structure-node-quick-actions");
+        await quickActionDialog.WaitForAsync();
+        var editQuickAction = page.GetByTestId("project-structure-quick-action-edit");
+        await editQuickAction.WaitForAsync();
+        Assert.Contains("Edit", await editQuickAction.TextContentAsync(), StringComparison.Ordinal);
+        await quickActionDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
 
-        var nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Edited child note')");
+        var editedNoteId = await ResolveCanvasNodeIdAsync(page, ".cw-node:has-text('Second child note')");
+        Assert.False(string.IsNullOrWhiteSpace(editedNoteId), "Expected the second child note to stay addressable after opening quick actions.");
+
+        var nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Second child note')");
         Assert.Contains(nodeLabels, label => label.Contains("Progress", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(nodeLabels, label => label.Contains("Marker", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(nodeLabels, label => label.Contains("Priority", StringComparison.OrdinalIgnoreCase));
@@ -336,12 +338,7 @@ public sealed partial class AppSmokeTests
                 node.ProgressTitle.Contains("30%", StringComparison.Ordinal)),
             "progress badge metadata for edited child note");
 
-        var progressCenter = await ReadCanvasHotZoneCenterAsync(page, "node-progress", nodeId: editedNoteId);
-        await page.Mouse.DblClickAsync((float)progressCenter.X, (float)progressCenter.Y);
-        await page.Locator(".cw-context-menu__action[data-action-id='progress:100']").WaitForAsync();
-        await page.Keyboard.PressAsync("Escape");
-
-        nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Edited child note')");
+        nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Second child note')");
         Assert.Contains(nodeLabels, label => label.Contains("Marker", StringComparison.OrdinalIgnoreCase));
         await page.Locator(".cw-context-menu__action[data-action-id='marker']").WaitForAsync();
         await OpenContextSubmenuAsync(page, "marker");
@@ -356,7 +353,7 @@ public sealed partial class AppSmokeTests
                 string.Equals(node.MarkerText, "$", StringComparison.Ordinal)),
             "marker badge metadata for edited child note");
 
-        nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Edited child note')");
+        nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Second child note')");
         Assert.Contains(nodeLabels, label => label.Contains("Priority", StringComparison.OrdinalIgnoreCase));
         await page.Locator(".cw-context-menu__action[data-action-id='priority']").WaitForAsync();
         await OpenContextSubmenuAsync(page, "priority");

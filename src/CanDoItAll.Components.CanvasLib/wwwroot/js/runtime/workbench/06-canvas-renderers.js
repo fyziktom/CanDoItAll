@@ -1336,8 +1336,13 @@
             Math.max(8, 9.5 * state.ui.zoom));
 
         if (node.isCollapsible) {
-            const collapseSize = Math.max(18, 22 * state.ui.zoom);
-            const collapseBounds = buildRect(hostBounds.right - padding - collapseSize, hostBounds.bottom - padding - collapseSize, collapseSize, collapseSize);
+            const collapseSize = Math.max(16, 18 * state.ui.zoom);
+            const connectorAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, node, "right"));
+            const collapseBounds = buildRect(
+                connectorAnchor.x - (collapseSize / 2),
+                connectorAnchor.y - (collapseSize / 2),
+                collapseSize,
+                collapseSize);
             drawCanvasBadgePill(
                 context,
                 collapseBounds,

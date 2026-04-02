@@ -856,17 +856,7 @@
                     return;
                 }
 
-                if (targetNode.isInlineTextNode) {
-                    openExistingNoteEditor(state, targetNode);
-                    return;
-                }
-
-                if (targetNode.isCollapsible) {
-                    toggleCollapse(state, targetNode.id);
-                    return;
-                }
-
-                void requestNodeOpen(state, targetNode.id, { focusNodeIntoView: false });
+                handleNodeDoubleActivation(state, targetNode);
             },
             wheel: event => {
                 event.preventDefault();
