@@ -13,6 +13,15 @@ namespace CanDoItAll.Mcp.Components.Catalog;
 public sealed class ComponentCatalogService
 {
     private static readonly Regex ComponentReferenceRegex = new(@"<(?<name>[A-Z][A-Za-z0-9_]*)\b", RegexOptions.Compiled);
+    private static readonly IReadOnlyList<string> CanvasLibStylesheets =
+    [
+        "_content/CanDoItAll.Components.CanvasLib/css/workbench/shell/01-layout-and-shell.css",
+        "_content/CanDoItAll.Components.CanvasLib/css/workbench/chrome/02-toolbar-and-windows.css",
+        "_content/CanDoItAll.Components.CanvasLib/css/workbench/panels/03-help-settings-and-preview.css",
+        "_content/CanDoItAll.Components.CanvasLib/css/workbench/scene/04-scene-and-nodes.css",
+        "_content/CanDoItAll.Components.CanvasLib/css/workbench/overlays/05-overlays-and-composer.css",
+        "_content/CanDoItAll.Components.CanvasLib/css/workbench/responsive/06-motion-and-responsive.css"
+    ];
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> CssNotesByComponent = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
     {
         ["Button"] =
@@ -32,7 +41,7 @@ public sealed class ComponentCatalogService
         ],
         ["CanvasWorkbench"] =
         [
-            "Uses `_content/CanDoItAll.Components.CanvasLib/canvas-workbench.css` plus the typed `CanvasThemeTokenPack` theme vocabulary.",
+            "Uses the shared CanvasLib workbench stylesheets exposed by `<CanvasLibHeadAssets />` under `_content/CanDoItAll.Components.CanvasLib/css/workbench/...` plus the typed `CanvasThemeTokenPack` theme vocabulary.",
             "Toolbar, floating windows, preview cards, and diagnostics share the same `cw-*` token space."
         ],
         ["CanvasCalendar"] =
@@ -56,7 +65,7 @@ public sealed class ComponentCatalogService
         ],
         ["CanvasLib"] =
         [
-            "CanvasLib components render against `_content/CanDoItAll.Components.CanvasLib/canvas-workbench.css`.",
+            "CanvasLib components render against the shared workbench stylesheets exposed by `<CanvasLibHeadAssets />`.",
             "Canvas surfaces also use the typed `CanvasThemeTokenPack` so runtime and preview assets stay aligned."
         ]
     };
@@ -152,7 +161,7 @@ public sealed class ComponentCatalogService
         var resolvedComponent = ResolveComponent(component);
         var stylesheets = resolvedComponent.Library switch
         {
-            "CanvasLib" => new[] { "_content/CanDoItAll.Components.CanvasLib/canvas-workbench.css" },
+            "CanvasLib" => CanvasLibStylesheets,
             _ => new[] { "_content/CanDoItAll.Components.BaseLib/css/output.css" }
         };
 

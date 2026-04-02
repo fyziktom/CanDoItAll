@@ -1,12 +1,13 @@
 @namespace CanDoItAll.Components.BaseLib
-<Stack GapScale="LayoutGap.Large">
-    <Split Breakpoint="LayoutBreakpoint.Lg"
-           Gap="LayoutGap.Medium"
+<Stack GapScale="LayoutGap.Medium">
+    <Split Breakpoint="LayoutBreakpoint.Md"
+           Gap="LayoutGap.Small"
            AlignItems="AlignItems.Start"
            JustifyContent="JustifyContent.SpaceBetween">
-        <Stack GapScale="LayoutGap.Tiny">
+        <Stack GapScale="LayoutGap.Tiny"
+               Class="min-w-0">
             <Cluster>
-                <h2 class="text-lg font-semibold text-slate-950">@Title</h2>
+                <h2 class="text-base font-semibold text-slate-950 xl:text-lg">@Title</h2>
                 @if (!string.IsNullOrWhiteSpace(Count))
                 {
                     <Pill Tone="PillTone.Label" Text="@Count" />
@@ -15,7 +16,7 @@
 
             @if (!string.IsNullOrWhiteSpace(Description))
             {
-                <p class="text-sm leading-6 text-slate-600">@Description</p>
+                <p class="max-w-3xl text-sm leading-5 text-slate-600">@Description</p>
             }
         </Stack>
 
