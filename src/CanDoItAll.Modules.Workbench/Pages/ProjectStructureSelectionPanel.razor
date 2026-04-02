@@ -105,8 +105,8 @@ else if (State.SelectedNode is not null)
 {
     var selectedNode = State.SelectedNode;
 
-    <div class="space-y-4">
-        <div class="cw-panel-card project-structure-selected-card">
+        <div class="space-y-4">
+            <div class="cw-panel-card project-structure-selected-card">
             <p class="cw-panel-kicker">@selectedNode.Kicker</p>
             <h3 class="cw-panel-title">@selectedNode.Title</h3>
             <p class="cw-panel-copy">@selectedNode.LeadText</p>
@@ -158,6 +158,12 @@ else if (State.SelectedNode is not null)
                 </div>
             </div>
         </div>
+
+        @if (selectedNode.StorageSummary is not null)
+        {
+            <StorageSummaryCard Model="@selectedNode.StorageSummary"
+                                data-testid="project-structure-storage-summary" />
+        }
 
         @if (selectedNode.AttachmentPreview is not null)
         {

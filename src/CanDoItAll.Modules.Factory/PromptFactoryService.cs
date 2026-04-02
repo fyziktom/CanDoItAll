@@ -18,7 +18,7 @@ kind: service
 name: PromptFactoryService
 summary: Builds prompt sessions from centralized blueprints, flow templates, shared blocks, project context, provider settings, and prompt-library pack state.
 owns: prompt-build-sessions, prompt-run nodes, prompt export/send flows, prompt-library import
-deps: AppDbContext, ProjectsService, ResourcesService, WorkspaceService, ProviderExecutionService, PromptsService, IManagedArtifactStore, IFileStore, PromptLibraryPackLoader, IBackgroundJobTracker
+deps: AppDbContext, ProjectsService, ResourcesService, WorkspaceService, ProviderExecutionService, PromptsService, IStoragePlacementService, PromptLibraryPackLoader, IBackgroundJobTracker
 risks: missing-provider, stale-resource-selection, weak-defaults, missing-pack-files
 tests: unit:PromptFactoryServiceTests, integration:PromptFactoryPersistenceTests
 inputs: PromptFactoryEditorModel
@@ -31,8 +31,7 @@ public sealed partial class PromptFactoryService(
     WorkspaceService workspaceService,
     ProviderExecutionService providerExecutionService,
     PromptsService promptsService,
-    IManagedArtifactStore managedArtifactStore,
-    IFileStore fileStore,
+    IStoragePlacementService storagePlacementService,
     PromptLibraryPackLoader promptLibraryPackLoader,
     IBackgroundJobTracker backgroundJobTracker,
     IActivityStream activityStream,
@@ -692,18 +691,29 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
         try
         {
             var fileName = $"prompt-{build.Value!.SessionId ?? Guid.NewGuid():N}.md";
-            var fullPath = await managedArtifactStore.SaveTextAsync("exports", fileName, build.Value.GeneratedPrompt, cancellationToken);
+            var content = System.Text.Encoding.UTF8.GetBytes(build.Value.GeneratedPrompt);
+            var placement = await storagePlacementService.PlaceAsync(
+                new StoragePlacementRequest(
+                    fileName,
+                    "text/markdown",
+                    content,
+                    StorageUsagePurpose.PromptExport,
+                    StorageContentKind.Markdown,
+                    build.Value.ProjectId,
+                    RelativePathHint: Path.Combine("managed-files", "exports", fileName).Replace('\\', '/'),
+                    PreviewRequired: true),
+                cancellationToken);
             await backgroundJobTracker.MarkSucceededAsync(jobId, cancellationToken);
             await activityStream.RecordAsync(new ActivityWriteRequest(
                 "factory",
                 "export",
                 "Exported prompt session",
-                fullPath,
+                placement.Location,
                 ProjectId: build.Value.ProjectId,
                 ArtifactKind: "prompt-session",
                 ArtifactId: build.Value.SessionId,
                 Route: $"/prompt-factory?sessionId={build.Value.SessionId}"), cancellationToken);
-            return Result<string>.Success(fullPath);
+            return Result<string>.Success(placement.Location);
         }
         catch (Exception ex)
         {

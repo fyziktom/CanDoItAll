@@ -1,6 +1,7 @@
 using Bunit;
 using AngleSharp.Dom;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
@@ -15,6 +16,72 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructurePageTests
 {
+    [Fact]
+    public async Task Storage_infrastructure_nodes_render_workspace_storage_summary_in_selection_panel() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var workspaceService = harness.Context.Services.GetRequiredService<WorkspaceService>();
+        var storageRoot = Path.Combine(harness.ActiveProfile.WorkspaceRootPath, "storage", "component-assets");
+        Directory.CreateDirectory(storageRoot);
+
+        var storageSave = await workspaceService.SaveStorageAsync(new StorageCatalogEditorModel {
+            Name = "Project assets storage",
+            ProviderKind = StorageProviderKind.FileSystem,
+            ConnectionMode = StorageConnectionMode.Local,
+            EndpointOrRoot = storageRoot,
+            DisplayOrder = 10,
+            DefaultPurposes = [StorageUsagePurpose.ProjectAsset]
+        });
+
+        Assert.True(storageSave.IsSuccess, string.Join(" | ", storageSave.Errors.Select(error => error.Message)));
+
+        var projectId = await CreateProjectAsync(projectsService, "Storage summary project");
+        var metadata = new ProjectObjectMetadataEnvelope {
+            Infrastructure = new ProjectInfrastructureMetadata {
+                InfrastructureKind = ProjectInfrastructureKind.StorageSystem,
+                StorageCatalogId = storageSave.Value,
+                StoragePurpose = nameof(StorageUsagePurpose.ProjectAsset),
+                StoragePathPrefix = "projects/component-tests/assets",
+                ConnectionReference = "/storage/assets"
+            }
+        };
+
+        await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Infrastructure,
+                "Project assets lane",
+                "Storage infrastructure",
+                "Routes editable assets through the workspace storage catalog.",
+                $"project:{projectId}",
+                460,
+                260,
+                null,
+                null,
+                "storage-system",
+                null,
+                ProjectObjectMetadataSerializer.Serialize(metadata)));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => {
+            Assert.Contains("Project assets lane", cut.Markup);
+        });
+
+        FindButtonByLabel(cut, "Project assets lane").Click();
+
+        cut.WaitForAssertion(() => {
+            Assert.Contains("project-structure-storage-summary", cut.Markup);
+            Assert.Contains("Project assets storage", cut.Markup);
+            Assert.Contains("Project assets", cut.Markup);
+            Assert.Contains("projects/component-tests/assets", cut.Markup);
+            Assert.Contains("/storage/assets", cut.Markup);
+            Assert.Contains("File system", cut.Markup);
+        });
+    }
+
     [Fact]
     public async Task Renders_selection_window_and_toolbar_toggles_without_stage_inspector_column()
     {
@@ -1415,7 +1482,7 @@ public sealed class ProjectStructurePageTests
 
         var advancedDetails = cut.Find("[data-testid='project-structure-advanced-details']");
         Assert.DoesNotContain("Kind", advancedDetails.TextContent, StringComparison.Ordinal);
-        Assert.Empty(cut.FindAll("[data-testid='project-structure-node-facts']"));
+        Assert.Contains("project-structure-storage-summary", cut.Markup);
 
         var excelBadge = cut.Find("[data-testid='project-structure-selection-badge-excel']");
         Assert.Equal("FileExcel", excelBadge.GetAttribute("data-badge-style"));

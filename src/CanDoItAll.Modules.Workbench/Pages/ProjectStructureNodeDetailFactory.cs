@@ -1,4 +1,5 @@
 using System.Reflection;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
@@ -32,6 +33,13 @@ internal static class ProjectStructureNodeDetailFactory
         AddIfValue(items, "Location", $"{Math.Round(node.X)}, {Math.Round(node.Y)}");
         AddIfValue(items, "Start", node.StartUtc?.ToLocalTime().ToString("g"));
         AddIfValue(items, "End", node.EndUtc?.ToLocalTime().ToString("g"));
+        if (StorageJson.TryParseReference(node.StorageObjectReferenceJson, out var storageReference) &&
+            storageReference is not null)
+        {
+            AddIfValue(items, "Storage provider", StoragePresentation.DescribeProvider(storageReference.ProviderKind));
+            AddIfValue(items, "Storage locator", StoragePresentation.DescribeLocator(storageReference.LocatorKind));
+            AddIfValue(items, "Storage route", storageReference.Route);
+        }
         return items;
     }
 

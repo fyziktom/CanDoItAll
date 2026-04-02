@@ -1,6 +1,7 @@
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -400,15 +401,22 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                     "application/pdf",
                     Convert.ToBase64String("%PDF-1.4 release checklist"u8.ToArray()))));
 
-        Assert.StartsWith("/managed-files/project-media/files/", created.Route, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith("/storage/objects/preview?ref=", created.Route, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("release-checklist.pdf", created.MediaOriginalFileName);
         Assert.Equal("application/pdf", created.MediaContentType);
+        Assert.True(StorageJson.TryParseReference(created.StorageObjectReferenceJson, out var createdReference));
+        Assert.NotNull(createdReference);
+        Assert.Equal(StorageProviderKind.FileSystem, createdReference!.ProviderKind);
+        Assert.Equal(created.MediaRelativePath, createdReference.Locator);
 
         var surface = await workbench.GetStructureAsync(saveResult.Value);
         var fileNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
         Assert.Equal(created.Route, fileNode.Route);
         Assert.Equal("release-checklist.pdf", fileNode.MediaOriginalFileName);
         Assert.Equal("application/pdf", fileNode.MediaContentType);
+        Assert.True(StorageJson.TryParseReference(fileNode.StorageObjectReferenceJson, out var nodeReference));
+        Assert.NotNull(nodeReference);
+        Assert.Equal(StorageProviderKind.FileSystem, nodeReference!.ProviderKind);
         Assert.Contains("Uploaded", fileNode.Badges);
     }
 

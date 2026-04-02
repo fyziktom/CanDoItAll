@@ -48,7 +48,13 @@ public sealed class LocalFileStorageTests
     }
 
     private static LocalFileStore CreateSut(string workspaceRoot)
-        => new(new WorkspacePathAccessGuard(new TestWorkspacePathResolver(workspaceRoot)));
+    {
+        var workspacePathResolver = new TestWorkspacePathResolver(workspaceRoot);
+        return new LocalFileStore(
+            new WorkspacePathAccessGuard(workspacePathResolver),
+            new TestStorageCatalogService(workspaceRoot),
+            new StorageDriverRegistry([new FileSystemStorageDriver(workspacePathResolver)]));
+    }
 
     private sealed class TestWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
     {
@@ -61,5 +67,47 @@ public sealed class LocalFileStorageTests
         public string ResolveEvidenceRoot() => Path.Combine(workspaceRoot, "evidence");
 
         public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, ".artifacts");
+    }
+
+    private sealed class TestStorageCatalogService(string workspaceRoot) : IStorageCatalogService
+    {
+        private readonly StorageCatalogRecord _storage = new()
+        {
+            EndpointOrRoot = workspaceRoot,
+            IsSystemDefault = true,
+            ProviderKind = StorageProviderKind.FileSystem,
+            CapabilityMask =
+                StorageCapability.Read |
+                StorageCapability.Write |
+                StorageCapability.Delete |
+                StorageCapability.Download |
+                StorageCapability.InlinePreview |
+                StorageCapability.OpenLocally |
+                StorageCapability.MutableUpdate |
+                StorageCapability.BatchFolderUpload |
+                StorageCapability.BatchTransfer |
+                StorageCapability.ConnectionTest
+        };
+
+        public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<StorageCatalogRecord>>([_storage]);
+
+        public Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+            => Task.FromResult(_storage.Id == id ? _storage : null);
+
+        public Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_storage);
+
+        public Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
+            => Task.FromResult(record);
+
+        public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<StorageRoutingRule>>([]);
+
+        public Task<StorageRoutingRule> SaveRuleAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default)
+            => Task.FromResult(rule);
     }
 }

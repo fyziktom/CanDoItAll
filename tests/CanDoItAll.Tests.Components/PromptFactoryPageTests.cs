@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Factory.Pages;
 using CanDoItAll.Modules.Projects;
@@ -11,6 +12,86 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class PromptFactoryPageTests
 {
+    [Fact]
+    public async Task Assembly_inputs_panel_renders_storage_context_for_saved_session_attachments()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var factoryService = harness.Context.Services.GetRequiredService<PromptFactoryService>();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Storage Attachment Project";
+        project.Description = "Prompt factory storage summary coverage";
+        project.Objective = "Show attachment storage context in the assembly lane";
+        project.CurrentPhase = "Assembly";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+
+        var sessionId = await factoryService.CreateBlankProjectSessionAsync(saveResult.Value, "Storage attachment session", "assembly");
+        var editor = await factoryService.GetEditorAsync(sessionId);
+        editor.WizardStepIndex = 2;
+        editor.SessionAttachments.Add(new PromptSessionAttachmentSummary
+        {
+            Kind = "file",
+            Title = "Release archive",
+            Subtitle = "Bundled artifact",
+            Notes = "Stored in the shared workspace file-system lane.",
+            MediaOriginalFileName = "release.zip",
+            MediaContentType = "application/zip",
+            MediaRoute = "/storage/objects/download?ref=test",
+            StorageObjectReferenceJson = StorageJson.SerializeReference(new StorageObjectReference(
+                Guid.NewGuid(),
+                StorageProviderKind.FileSystem,
+                StorageLocatorKind.RelativePath,
+                "artifacts/releases/release.zip",
+                "release.zip",
+                "application/zip",
+                2048,
+                "/storage/objects/download?ref=test"))
+        });
+
+        var saveSession = await factoryService.SaveSessionStateAsync(editor);
+        Assert.True(saveSession.IsSuccess, string.Join(" | ", saveSession.Errors.Select(error => error.Message)));
+
+        var cut = harness.Context.RenderComponent<PromptFactoryPage>();
+        await cut.InvokeAsync(async () =>
+        {
+            cut.Instance.SessionIdQuery = sessionId;
+            await cut.Instance.SetParametersAsync(ParameterView.Empty);
+        });
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Storage attachment session", cut.Markup);
+        });
+
+        cut.FindAll("button")
+            .First(button => string.Equals(button.TextContent.Trim(), "Open Assembly tab", StringComparison.Ordinal))
+            .Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Build from a compact context pack instead of another long page", cut.Markup);
+        });
+
+        cut.FindAll("button[role='tab']")
+            .First(button => string.Equals(button.TextContent.Trim(), "Inputs", StringComparison.Ordinal))
+            .Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Files, images, notes, and links attached to the session", cut.Markup);
+            Assert.Contains("Storage context", cut.Markup);
+            Assert.Contains("release.zip", cut.Markup);
+            Assert.Contains("File system", cut.Markup);
+            Assert.Contains("Relative path", cut.Markup);
+            Assert.Contains("artifacts/releases/release.zip", cut.Markup);
+            Assert.Contains("/storage/objects/download?ref=test", cut.Markup);
+            Assert.Contains("application/zip", cut.Markup);
+        });
+    }
+
     [Fact]
     public async Task Page_renders_canvas_history_controls_and_inspector_workflow_steps()
     {

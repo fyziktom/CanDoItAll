@@ -89,6 +89,7 @@ public partial class ProjectStructurePage
             "meetingRef" => BuildNodeOptions(ProjectObjectType.Meeting),
             "recordingRef" => BuildNodeOptions(ProjectObjectType.Recording),
             "secretRef" => BuildNodeOptions(ProjectObjectType.SecretReference),
+            "storageCatalogId" => BuildStorageCatalogOptions(),
             _ => null
         };
 

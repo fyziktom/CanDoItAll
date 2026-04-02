@@ -109,6 +109,7 @@ public enum ProjectInfrastructureKind
     ProxyProvider,
     Database,
     DeploymentFolder,
+    StorageSystem,
     KeyReference,
     AiLink
 }
@@ -460,10 +461,18 @@ public sealed class ProjectInfrastructureMetadata
     [ProjectStructurePreviewField("Folder path", 210)]
     public string FolderPath { get; set; } = string.Empty;
 
-    [ProjectStructurePreviewField("AI reference kind", 220)]
+    public Guid? StorageCatalogId { get; set; }
+
+    [ProjectStructurePreviewField("Storage purpose", 220)]
+    public string StoragePurpose { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Storage path prefix", 230)]
+    public string StoragePathPrefix { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("AI reference kind", 240)]
     public ProjectAiReferenceKind? AiReferenceKind { get; set; }
 
-    [ProjectStructurePreviewField("AI reference URL", 230)]
+    [ProjectStructurePreviewField("AI reference URL", 250)]
     public string AiReferenceUrl { get; set; } = string.Empty;
 }
 

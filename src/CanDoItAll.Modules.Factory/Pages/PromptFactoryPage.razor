@@ -1588,6 +1588,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                             <div class="pf-attachment-grid">
                                 @foreach (var attachment in VisibleSessionAttachments)
                                 {
+                                    var storageSummary = BuildAttachmentStorageSummary(attachment);
                                     <article class="pf-attachment-card" data-kind="@ResolveAttachmentVisualKind(attachment)">
                                         <div class="pf-attachment-card__header">
                                             <strong>@ResolveAttachmentDisplayTitle(attachment)</strong>
@@ -1595,6 +1596,10 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                         </div>
                                         <p>@ResolveAttachmentLeadText(attachment)</p>
                                         <small>@ResolveAttachmentDisplaySubtitle(attachment)</small>
+                                        @if (storageSummary is not null)
+                                        {
+                                            <StorageSummaryCard Model="@storageSummary" />
+                                        }
                                     </article>
                                 }
                             </div>

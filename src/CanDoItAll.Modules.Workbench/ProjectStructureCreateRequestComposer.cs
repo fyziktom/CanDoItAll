@@ -158,6 +158,9 @@ internal static class ProjectStructureCreateRequestComposer
                     DatabaseType = GetValue(inputValues, "databaseType"),
                     ConnectionReference = GetValue(inputValues, "connectionReference"),
                     FolderPath = GetValue(inputValues, "folderPath"),
+                    StorageCatalogId = ParseGuid(inputValues, "storageCatalogId"),
+                    StoragePurpose = GetValue(inputValues, "storagePurpose"),
+                    StoragePathPrefix = GetValue(inputValues, "storagePathPrefix"),
                     AiReferenceKind = TryParseNullableEnum<ProjectAiReferenceKind>(inputValues, "aiReferenceKind"),
                     AiReferenceUrl = GetValue(inputValues, "aiReferenceUrl"),
                     SecretReferenceArtifactId = ParseNodeGuid(inputValues, "secretRef")
@@ -245,6 +248,9 @@ internal static class ProjectStructureCreateRequestComposer
             ? parsed
             : null;
 
+    private static Guid? ParseGuid(IReadOnlyDictionary<string, string> inputValues, string key)
+        => inputValues.TryGetValue(key, out var value) && Guid.TryParse(value, out var parsed) ? parsed : null;
+
     private static TEnum ParseEnum<TEnum>(IReadOnlyDictionary<string, string> inputValues, string key, TEnum fallback)
         where TEnum : struct, Enum
         => inputValues.TryGetValue(key, out var value) && Enum.TryParse<TEnum>(value, true, out var parsed) ? parsed : fallback;
@@ -320,6 +326,7 @@ internal static class ProjectStructureCreateRequestComposer
         "docker-mode" => ProjectInfrastructureKind.DockerMode,
         "database" => ProjectInfrastructureKind.Database,
         "deployment-folder" => ProjectInfrastructureKind.DeploymentFolder,
+        "storage-system" => ProjectInfrastructureKind.StorageSystem,
         "key-reference" => ProjectInfrastructureKind.KeyReference,
         "ai-link" => ProjectInfrastructureKind.AiLink,
         _ => ProjectInfrastructureKind.RemoteServer

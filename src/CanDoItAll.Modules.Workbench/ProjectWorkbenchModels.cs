@@ -40,6 +40,7 @@ public sealed class ProjectObjectRecord : IProjectObject
     public string MediaRelativePath { get; set; } = string.Empty;
     public string MediaContentType { get; set; } = string.Empty;
     public string MediaOriginalFileName { get; set; } = string.Empty;
+    public string StorageObjectReferenceJson { get; set; } = string.Empty;
     public string ProgressMode { get; set; } = string.Empty;
     public int ProgressPercent { get; set; } = -1;
     public string MarkerIcon { get; set; } = string.Empty;
@@ -74,6 +75,7 @@ internal sealed class ProjectObjectRecordConfiguration : IEntityTypeConfiguratio
         builder.Property(item => item.MediaRelativePath).HasMaxLength(800);
         builder.Property(item => item.MediaContentType).HasMaxLength(160);
         builder.Property(item => item.MediaOriginalFileName).HasMaxLength(260);
+        builder.Property(item => item.StorageObjectReferenceJson).HasColumnType("TEXT");
         builder.Property(item => item.ProgressMode).HasMaxLength(32);
         builder.Property(item => item.MarkerIcon).HasMaxLength(80);
         builder.Property(item => item.MarkerTone).HasMaxLength(40);
@@ -166,6 +168,7 @@ public sealed record ProjectStructureNode(
     DateTimeOffset? StartUtc = null,
     DateTimeOffset? EndUtc = null,
     string MetadataJson = "{}",
+    string StorageObjectReferenceJson = "",
     ProjectStructureProjectRole ProjectRole = ProjectStructureProjectRole.None,
     Guid? RelatedProjectId = null,
     int ParentProjectCount = 0);
@@ -289,7 +292,8 @@ internal sealed record SavedMediaDescriptor(
     string Route,
     string ContentType,
     string OriginalFileName,
-    string ArtifactKind);
+    string ArtifactKind,
+    string StorageObjectReferenceJson);
 
 /* codex-capsule
 kind: service
@@ -305,7 +309,7 @@ outputs: ProjectStructureSurface, ProjectCalendarSurface, ArtifactReference
 public sealed class ProjectWorkbenchService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
-    IFileStore fileStore,
+    IStoragePlacementService storagePlacementService,
     PromptFactoryService promptFactoryService) : IProjectWorkbenchSeedService
 {
     private const string ProjectRootNodePrefix = "project:";
@@ -458,6 +462,7 @@ public sealed class ProjectWorkbenchService(
             MediaRelativePath = media?.RelativePath ?? string.Empty,
             MediaContentType = media?.ContentType ?? string.Empty,
             MediaOriginalFileName = media?.OriginalFileName ?? string.Empty,
+            StorageObjectReferenceJson = media?.StorageObjectReferenceJson ?? string.Empty,
             ProgressMode = "progress",
             ProgressPercent = 0,
             MetadataJson = metadataJson,
@@ -1594,14 +1599,28 @@ public sealed class ProjectWorkbenchService(
         };
         var relativePath = Path.Combine("managed-files", category, projectId.ToString("N"), safeFileName)
             .Replace('\\', '/');
-        await fileStore.SaveBytesAsync(relativePath, bytes, cancellationToken);
+        var contentKind = StorageContentClassifier.Resolve(media.ContentType, media.FileName);
+        var placement = await storagePlacementService.PlaceAsync(
+            new StoragePlacementRequest(
+                media.FileName,
+                media.ContentType,
+                bytes,
+                StorageUsagePurpose.ProjectAsset,
+                contentKind,
+                projectId,
+                RelativePathHint: relativePath,
+                PreviewRequired: StorageContentClassifier.SupportsInlinePreview(contentKind)),
+            cancellationToken);
+        var storageObjectReference = placement.WriteResult.Reference;
+        var storageReference = StorageJson.SerializeReference(storageObjectReference);
 
         return new SavedMediaDescriptor(
-            relativePath,
-            $"/{relativePath}",
-            media.ContentType,
+            placement.RelativePath,
+            placement.Route,
+            storageObjectReference.ContentType,
             media.FileName,
-            objectType.ToString());
+            objectType.ToString(),
+            storageReference);
     }
 
     private async Task SyncGraphAsync(AppDbContext dbContext, Guid projectId, CancellationToken cancellationToken)
@@ -2481,6 +2500,7 @@ public sealed class ProjectWorkbenchService(
             record.StartUtc,
             record.EndUtc,
             metadataJson,
+            record.StorageObjectReferenceJson,
             projectRole,
             relatedProjectId,
             parentProjectCount);
@@ -2710,6 +2730,7 @@ public sealed class ProjectWorkbenchService(
         "docker-mode" => Profile("hex", "#2563eb", "DK", "Docker", ProjectObjectPaletteKeys.Info),
         "database" => Profile("hex", "#7c3aed", "DB", "Database", ProjectObjectPaletteKeys.Secondary),
         "deployment-folder" => Profile("hex", "#2563eb", "FD", "Folder", ProjectObjectPaletteKeys.Info),
+        "storage-system" => Profile("hex", "#0f766e", "ST", "Storage", ProjectObjectPaletteKeys.Success),
         "key-reference" => Profile("hex", "#be123c", "KEY", "Key", ProjectObjectPaletteKeys.Danger),
         "ai-link" => Profile("hex", "#0f766e", "AI", "AI", ProjectObjectPaletteKeys.Success),
         _ => Profile("hex", "#475569", "INF", "Infrastructure", ProjectObjectPaletteKeys.Neutral)

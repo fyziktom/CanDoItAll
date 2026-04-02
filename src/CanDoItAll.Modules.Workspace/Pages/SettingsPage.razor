@@ -73,6 +73,10 @@
         {
             <DatabaseSourcesSettingsPanel />
         }
+        else if (string.Equals(settingsTab, "storage", StringComparison.Ordinal))
+        {
+            <StorageSettingsPanel />
+        }
         else if (string.Equals(settingsTab, "secrets", StringComparison.Ordinal))
         {
             <ListDetailShell ListPaneWidth="24rem">
@@ -347,6 +351,7 @@
     [
         new("workspace", "Workspace"),
         new("data-sources", "Data Sources"),
+        new("storage", "Storage"),
         new("secrets", "Secrets", secrets.Count.ToString()),
         new("providers", "Providers", providers.Count.ToString()),
         new("project-structure", "Project Structure MCP")
@@ -490,7 +495,7 @@
 
     private static bool IsValidSettingsTab(string? key)
     {
-        return key is "workspace" or "data-sources" or "secrets" or "providers" or "project-structure";
+        return key is "workspace" or "data-sources" or "storage" or "secrets" or "providers" or "project-structure";
     }
 
     private static string BuildSettingsRoute(string key)
