@@ -75,7 +75,7 @@ public sealed partial class AppSmokeTests
     }
 
     [Fact]
-    public async Task Project_structure_note_nodes_open_quick_actions_on_double_click()
+    public async Task Project_structure_note_nodes_open_quick_actions_on_double_click_and_expose_side_aware_collapse_button()
     {
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
@@ -90,13 +90,18 @@ public sealed partial class AppSmokeTests
         var page = await context.NewPageAsync();
         await CreateProjectAsync(page, "Playwright Note Quick Actions", "Validation");
 
+        const string noteTitle = "Quick action note";
+        const string childNodeTitle = "Quick action child";
         var noteEditor = await OpenInlineNoteEditorAsync(page);
-        await noteEditor.FillAsync("Quick action note");
+        await noteEditor.FillAsync(noteTitle);
         await noteEditor.PressAsync("Enter");
         await page.WaitForFunctionAsync("() => !document.querySelector('.cw-note-editor__input')");
-        await page.WaitForSelectorAsync("text=Quick action note");
+        await page.WaitForSelectorAsync($"text={noteTitle}");
+        var noteNodeId = await ResolveCanvasNodeIdAsync(page, $".cw-node:has-text('{noteTitle}')");
+        Assert.False(string.IsNullOrWhiteSpace(noteNodeId), "Expected the quick action note node id to resolve.");
+        var noteSelector = SelectorForNodeId(noteNodeId!);
 
-        await OpenNodeQuickActionsAsync(page, ".cw-node:has-text('Quick action note')");
+        await OpenNodeQuickActionsAsync(page, noteSelector);
         var quickActionDialog = page.GetByTestId("project-structure-node-quick-actions");
         await quickActionDialog.WaitForAsync();
         await page.GetByTestId("project-structure-quick-action-edit").WaitForAsync();
@@ -107,9 +112,63 @@ public sealed partial class AppSmokeTests
                 const nodes = host?.__canvasWorkbenchState?.surface?.nodes || [];
                 return nodes.some(node => node?.title === expectedTitle);
             }",
-            "Quick action note");
+            noteTitle);
 
         await quickActionDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
         await page.WaitForFunctionAsync("() => !document.querySelector('[data-testid=\"project-structure-node-quick-actions\"]')");
+
+        var childNodeId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-feature",
+            noteNodeId!,
+            noteNodeId,
+            childNodeTitle,
+            "Note child",
+            "Validate the note collapse control.");
+
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            childNodeId,
+            node => string.Equals(node.Title, childNodeTitle, StringComparison.Ordinal),
+            "child block appears beneath the note node");
+
+        var noteCenter = await ResolveCanvasNodeCenterAsync(page, noteSelector);
+        var noteCollapseHotZone = await ReadCanvasHotZoneCenterAsync(page, "node-collapse", nodeId: noteNodeId);
+        Assert.InRange(noteCollapseHotZone.Y - noteCenter.Y, -40d, 40d);
+
+        var noteSnapshot = await ReadSceneNodeSnapshotAsync(page, noteNodeId!);
+        var childSnapshot = await ReadSceneNodeSnapshotAsync(page, childNodeId);
+        var desiredChildLeft = noteSnapshot.Left - Math.Max(childSnapshot.Width + 160d, 280d);
+        var childDeltaX = (float)(desiredChildLeft - childSnapshot.Left);
+        await DragCanvasNodeAsync(page, childNodeId, childDeltaX, -36f);
+        await WaitForSceneSnapshotAsync(
+            page,
+            snapshot =>
+            {
+                var parent = Array.Find(snapshot.Nodes, node => string.Equals(node.Id, noteNodeId, StringComparison.Ordinal));
+                var child = Array.Find(snapshot.Nodes, node => string.Equals(node.Id, childNodeId, StringComparison.Ordinal));
+                return parent is not null &&
+                    child is not null &&
+                    child.Right <= parent.Left - 40d;
+            },
+            "child note moved to the left of the parent note");
+
+        noteCenter = await ResolveCanvasNodeCenterAsync(page, noteSelector);
+        noteCollapseHotZone = await ReadCanvasHotZoneCenterAsync(page, "node-collapse", nodeId: noteNodeId);
+        Assert.True(
+            noteCollapseHotZone.X <= noteCenter.X - 8d,
+            $"Expected the note collapse hot zone to move to the left edge after the child moved left, but hot zone x={noteCollapseHotZone.X} and note center x={noteCenter.X}.");
+
+        await ToggleCanvasNodeCollapseAsync(page, noteSelector);
+        await WaitForSceneSnapshotAsync(
+            page,
+            snapshot => snapshot.Nodes.All(node => !string.Equals(node.Title, childNodeTitle, StringComparison.Ordinal)),
+            "child node is hidden from the note connector button");
+
+        await ToggleCanvasNodeCollapseAsync(page, noteSelector);
+        await WaitForSceneSnapshotAsync(
+            page,
+            snapshot => snapshot.Nodes.Any(node => string.Equals(node.Title, childNodeTitle, StringComparison.Ordinal)),
+            "child node is restored from the note connector button");
     }
 }

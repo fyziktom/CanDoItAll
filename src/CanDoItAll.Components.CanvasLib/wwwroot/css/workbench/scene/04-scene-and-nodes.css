@@ -812,20 +812,39 @@
 
 .cw-node__collapse {
     position: absolute;
-    right: -0.82rem;
     top: 50%;
     width: 1.65rem;
     height: 1.65rem;
     border: 0;
+    padding: 0;
     border-radius: 999px;
     background: linear-gradient(135deg, color-mix(in srgb, var(--cw-node-accent, #0ea5e9) 82%, white), var(--cw-node-accent, #0ea5e9));
     color: #fff;
     box-shadow: 0 10px 18px color-mix(in srgb, var(--cw-node-accent, #0ea5e9) 24%, transparent);
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-size: 0.82rem;
     font-weight: 800;
-    transform: translateY(-50%);
-    z-index: 3;
+    line-height: 1;
+    right: 0;
+    transform: translate(50%, -50%);
+    z-index: 4;
+}
+
+.cw-node[data-collapse-side="left"] .cw-node__collapse,
+.cw-node__collapse[data-side="left"] {
+    left: 0;
+    right: auto;
+    transform: translate(-50%, -50%);
+}
+
+.cw-node[data-collapse-side="right"] .cw-node__collapse,
+.cw-node__collapse[data-side="right"] {
+    left: auto;
+    right: 0;
+    transform: translate(50%, -50%);
 }
 
 .cw-context-menu {

@@ -80,6 +80,87 @@
         };
     }
 
+    function getCollapseAnchorTargets(state, node) {
+        if (!state?.surface || !node?.id) {
+            return [];
+        }
+
+        const surfaceNodes = Array.isArray(state.surface.nodes) ? state.surface.nodes : [];
+        const directChildren = surfaceNodes.filter(candidate => candidate?.parentId === node.id && candidate.id !== node.id);
+        if (directChildren.length > 0) {
+            return directChildren;
+        }
+
+        const nodeLookup = state.lookups?.byId;
+        const surfaceLinks = Array.isArray(state.surface.links) ? state.surface.links : [];
+        const seen = new Set();
+        const fallbackTargets = [];
+        for (const link of surfaceLinks) {
+            if (!link || link.sourceId !== node.id || !link.targetId || seen.has(link.targetId)) {
+                continue;
+            }
+
+            const target = nodeLookup?.get?.(link.targetId) || null;
+            if (!target) {
+                continue;
+            }
+
+            seen.add(link.targetId);
+            fallbackTargets.push(target);
+        }
+
+        return fallbackTargets;
+    }
+
+    function resolveCollapseAnchorInfo(state, node) {
+        const position = getNodePosition(state, node);
+        const size = getNodeSize(state, node);
+        const targets = getCollapseAnchorTargets(state, node);
+        let side = "right";
+        if (targets.length > 0) {
+            let rightCount = 0;
+            let leftCount = 0;
+            let rightDistance = 0;
+            let leftDistance = 0;
+
+            for (const target of targets) {
+                const targetPosition = getNodePosition(state, target);
+                const deltaX = targetPosition.x - position.x;
+                if (deltaX < 0) {
+                    leftCount += 1;
+                    leftDistance += Math.abs(deltaX);
+                    continue;
+                }
+
+                rightCount += 1;
+                rightDistance += Math.abs(deltaX);
+            }
+
+            if (leftCount > 0 && rightCount === 0) {
+                side = "left";
+            }
+            else if (rightCount > 0 && leftCount === 0) {
+                side = "right";
+            }
+            else if (leftCount !== rightCount) {
+                side = rightCount > leftCount ? "right" : "left";
+            }
+            else if (leftDistance !== rightDistance) {
+                side = rightDistance >= leftDistance ? "right" : "left";
+            }
+        }
+
+        return {
+            side,
+            world: {
+                x: side === "right"
+                    ? position.x + (size.width / 2)
+                    : position.x - (size.width / 2),
+                y: position.y
+            }
+        };
+    }
+
     function getLinkRetainedKey(link, index) {
         if (link?.sourceId || link?.targetId || link?.kind) {
             return `${link?.sourceId || ""}|${link?.targetId || ""}|${link?.kind || ""}|${link?.isUserAuthored ? "1" : "0"}`;
@@ -541,6 +622,7 @@
             surface.appendChild(meta);
         }
 
+        appendCollapseButton(state, node, surface);
         nodeElement.appendChild(surface);
     }
 
@@ -631,6 +713,25 @@
         return button;
     }
 
+    function appendCollapseButton(state, node, surface) {
+        if (!node?.isCollapsible) {
+            return;
+        }
+
+        const isCollapsed = state.collapsedIds.has(node.id);
+        const collapse = createElement(state.document, "button", "cw-node__collapse", isCollapsed ? "+" : "-");
+        collapse.type = "button";
+        collapse.dataset.nodeId = node.id;
+        collapse.setAttribute("aria-label", isCollapsed ? "Show child nodes" : "Hide child nodes");
+        collapse.addEventListener("pointerdown", event => event.stopPropagation());
+        collapse.addEventListener("pointerup", event => event.stopPropagation());
+        collapse.addEventListener("click", event => {
+            event.stopPropagation();
+            toggleCollapse(state, node.id);
+        });
+        surface.appendChild(collapse);
+    }
+
     function renderStandardNode(state, node, nodeElement) {
         const surface = createElement(state.document, "div", "cw-node__surface");
         const header = createElement(state.document, "div", "cw-node__header");
@@ -715,20 +816,21 @@
         footer.appendChild(footerRight);
         surface.appendChild(footer);
 
-        if (node.isCollapsible) {
-            const collapse = createElement(state.document, "button", "cw-node__collapse", state.collapsedIds.has(node.id) ? "+" : "-");
-            collapse.type = "button";
-            collapse.dataset.nodeId = node.id;
-            collapse.addEventListener("pointerdown", event => event.stopPropagation());
-            collapse.addEventListener("pointerup", event => event.stopPropagation());
-            collapse.addEventListener("click", event => {
-                event.stopPropagation();
-                toggleCollapse(state, node.id);
-            });
-            surface.appendChild(collapse);
+        appendCollapseButton(state, node, surface);
+        nodeElement.appendChild(surface);
+    }
+
+    function syncNodeCollapseAffordance(state, node, nodeElement) {
+        const collapse = nodeElement.querySelector(".cw-node__collapse");
+        if (!node?.isCollapsible || !collapse) {
+            delete nodeElement.dataset.collapseSide;
+            return;
         }
 
-        nodeElement.appendChild(surface);
+        const anchor = resolveCollapseAnchorInfo(state, node);
+        nodeElement.dataset.collapseSide = anchor.side;
+        collapse.dataset.side = anchor.side;
+        collapse.setAttribute("aria-label", state.collapsedIds.has(node.id) ? "Show child nodes" : "Hide child nodes");
     }
 
     function createRetainedNodeElement(state, nodeId) {
@@ -788,16 +890,20 @@
         if (state.collapsedIds.has(node.id)) {
             nodeElement.classList.add("is-collapsed");
         }
+
+        syncNodeCollapseAffordance(state, node, nodeElement);
     }
 
     function renderNodeElementContent(state, node, nodeElement) {
         clear(nodeElement);
         if (node.isInlineTextNode) {
             renderInlineTextNode(state, node, nodeElement);
-            return;
+        }
+        else {
+            renderStandardNode(state, node, nodeElement);
         }
 
-        renderStandardNode(state, node, nodeElement);
+        syncNodeCollapseAffordance(state, node, nodeElement);
     }
 
     function buildActiveDragContext(state) {
@@ -1680,5 +1786,5 @@
         };
     }
 
-    Object.assign(shared, { getLinkAnchorPoint, getLinkRetainedKey, getLinkPathData, updateLinkElement, shouldRenderArrow, getExpandedFrameNodeIds, getFrameRetainedKey, createFrameElement, updateFrameElement, getFrameBounds, legacyRenderGroupFrames, resolveChipToneClass, createProgressMarker, resolveProgressDisplay, createProgressBadge, resolveProgressPresetBadgeOptions, resolveMarkerGlyph, resolveNodeMarkers, createMarkerBadge, createMarkerBadges, createPriorityBadge, appendNodeIndicators, renderInlineTextNode, createNodeMedia, createCompactPathButton, renderStandardNode, createRetainedNodeElement, getNodeRetainedContentKey, updateNodeElementChrome, renderNodeElementContent, buildActiveDragContext, positionFloatingOverlayWithinHost, hidePopover, legacyShowPopover, invokeAnnotationAction, renderNodeAnnotations, updateConnectorAnchorHover, getConnectorAnchorPoints, hideStatusNotice, showStatusNotice, renderEmptyStateOverlay, clearSnapGuides, legacyRenderSnapGuides, legacyRenderConnectorAnchorOverlay, getSelectionBounds, legacyRenderTransformHandlesOverlay, resolveSnapAdjustment, legacyRenderDebugDecorations, legacyBuildDiagnosticsSnapshot, renderDiagnosticsOverlay, navigateViaMinimap, resolveClipboardAnchor, buildClipboardPayload, writeClipboardText, readClipboardText, copySelectionToClipboard, requestClipboardCut, requestClipboardDuplicate, toggleMinimap, toggleDiagnostics, invalidateMeasuredLayout, legacyMeasureRenderedNodeSizes, legacyScheduleNodeMeasurement, getHostPoint, worldToHostPoint, getWorldPoint });
+    Object.assign(shared, { getLinkAnchorPoint, resolveCollapseAnchorInfo, getLinkRetainedKey, getLinkPathData, updateLinkElement, shouldRenderArrow, getExpandedFrameNodeIds, getFrameRetainedKey, createFrameElement, updateFrameElement, getFrameBounds, legacyRenderGroupFrames, resolveChipToneClass, createProgressMarker, resolveProgressDisplay, createProgressBadge, resolveProgressPresetBadgeOptions, resolveMarkerGlyph, resolveNodeMarkers, createMarkerBadge, createMarkerBadges, createPriorityBadge, appendNodeIndicators, renderInlineTextNode, createNodeMedia, createCompactPathButton, renderStandardNode, createRetainedNodeElement, getNodeRetainedContentKey, updateNodeElementChrome, renderNodeElementContent, buildActiveDragContext, positionFloatingOverlayWithinHost, hidePopover, legacyShowPopover, invokeAnnotationAction, renderNodeAnnotations, updateConnectorAnchorHover, getConnectorAnchorPoints, hideStatusNotice, showStatusNotice, renderEmptyStateOverlay, clearSnapGuides, legacyRenderSnapGuides, legacyRenderConnectorAnchorOverlay, getSelectionBounds, legacyRenderTransformHandlesOverlay, resolveSnapAdjustment, legacyRenderDebugDecorations, legacyBuildDiagnosticsSnapshot, renderDiagnosticsOverlay, navigateViaMinimap, resolveClipboardAnchor, buildClipboardPayload, writeClipboardText, readClipboardText, copySelectionToClipboard, requestClipboardCut, requestClipboardDuplicate, toggleMinimap, toggleDiagnostics, invalidateMeasuredLayout, legacyMeasureRenderedNodeSizes, legacyScheduleNodeMeasurement, getHostPoint, worldToHostPoint, getWorldPoint });
 })();
