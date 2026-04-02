@@ -17,7 +17,8 @@
                    Class="min-w-0 flex-1 w-full">
                 <Cluster Class="min-w-0">
                     <h2 class="text-lg font-semibold tracking-tight text-slate-950">Portfolio board</h2>
-                    <StatusBadge Tone="info" Text="@($"{FilteredProjectSummaries.Count} visible")" />
+                    <Pill Tone="PillTone.Info"
+                          Text="@($"{FilteredProjectSummaries.Count} visible")" />
                     <HelpPopover RootClass="pf-help-popover pf-help-popover--header"
                                  ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
                                  AriaLabel="Show portfolio board help"

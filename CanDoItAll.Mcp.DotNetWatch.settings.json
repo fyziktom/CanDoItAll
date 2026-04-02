@@ -103,7 +103,10 @@
     "ForceKillAfterMs": 5000,
     "CleanupStaleManagedProcessesOnStartup": true,
     "RegistryPath": ".mcp-state/process-registry.json",
-    "UsePollingFileWatcher": false
+    "UsePollingFileWatcher": false,
+    "WatchSuppressBrowserRefresh": false,
+    "TailwindAutoDetect": true,
+    "TailwindWatchDebounceMilliseconds": 150
   },
   "Waits": {
     "DefaultAppWaitTimeoutMs": 300000,

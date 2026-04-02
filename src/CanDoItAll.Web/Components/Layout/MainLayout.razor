@@ -101,11 +101,17 @@
                                 <StatusBadge Tone="warning" Text="Config lock" />
                             }
                         }
+                        @if (!string.IsNullOrWhiteSpace(databaseSelection?.Descriptor))
+                        {
+                            <HelpPopover RootClass="pf-help-popover flex items-center"
+                                         ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                                         AriaLabel="Show db details"
+                                         Title="Show db details"
+                                         Heading="Description"
+                                         Body="@databaseSelection.Descriptor" />
+                        }
+                    
                     </Cluster>
-                    @if (!string.IsNullOrWhiteSpace(databaseSelection?.Descriptor))
-                    {
-                        <p class="mt-2 text-xs text-slate-500">@databaseSelection.Descriptor</p>
-                    }
                 </div>
                 <Button Text="Switch database"
                         ButtonStyle="ButtonStyle.Light"
