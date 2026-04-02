@@ -397,8 +397,19 @@
         return normalizeMenuActionScale(state?.ui?.menuActionScale);
     }
 
+    function normalizeContextMenuLayout(layout) {
+        return (layout || "").trim().toLowerCase();
+    }
+
+    function isHiveLayout(layout) {
+        const normalizedLayout = normalizeContextMenuLayout(layout);
+        return normalizedLayout === "hive" ||
+            normalizedLayout === "compact-hive" ||
+            normalizedLayout === "compact-ring";
+    }
+
     function isCompactHiveLayout(layout) {
-        const normalizedLayout = (layout || "").toLowerCase();
+        const normalizedLayout = normalizeContextMenuLayout(layout);
         return normalizedLayout === "compact-hive" || normalizedLayout === "compact-ring";
     }
 
@@ -425,15 +436,15 @@
         const scale = getMenuScale(state);
         switch (resolveMenuActionVariant(action)) {
             case "progress-preset":
-                return { halfWidth: round(39 * scale), halfHeight: round(34 * scale) };
+                return { halfWidth: round(32 * scale), halfHeight: round(28 * scale) };
             case "marker-preset":
-                return { halfWidth: round(41 * scale), halfHeight: round(35 * scale) };
+                return { halfWidth: round(32 * scale), halfHeight: round(28 * scale) };
             case "priority-preset":
-                return { halfWidth: round(31 * scale), halfHeight: round(27 * scale) };
+                return { halfWidth: round(25 * scale), halfHeight: round(22 * scale) };
             case "compact":
-                return { halfWidth: round(29 * scale), halfHeight: round(25 * scale) };
+                return { halfWidth: round(25 * scale), halfHeight: round(22 * scale) };
             default:
-                return { halfWidth: round(46 * scale), halfHeight: round(40 * scale) };
+                return { halfWidth: round(35 * scale), halfHeight: round(31 * scale) };
         }
     }
 
@@ -596,7 +607,7 @@
 
         if (iconKey.startsWith("marker-")) {
             const markerIcon = iconKey.substring("marker-".length);
-            const markerBadge = createElement(state.document, "span", `cw-node__badge cw-node__marker tone-${(action?.tone || "accent").toLowerCase()} cw-node__badge--menu`, resolveMarkerGlyph(markerIcon) || "\u2736");
+            const markerBadge = createElement(state.document, "span", `cw-node__badge cw-node__marker tone-${(action?.tone || "accent").toLowerCase()} cw-node__badge--menu text-xl`, resolveMarkerGlyph(markerIcon) || "\u2736");
             iconContainer.appendChild(markerBadge);
             return iconContainer;
         }
@@ -660,18 +671,17 @@
 
         const directions = [
             { q: 1, r: 0 },
-            { q: 1, r: -1 },
-            { q: 0, r: -1 },
-            { q: -1, r: 0 },
+            { q: 0, r: 1 },
             { q: -1, r: 1 },
-            { q: 0, r: 1 }
+            { q: -1, r: 0 },
+            { q: 0, r: -1 },
+            { q: 1, r: -1 }
         ];
         const coordinates = [];
         for (let ring = 1; coordinates.length < count; ring++) {
-            let q = -ring;
-            let r = ring;
-            for (let directionIndex = 0; directionIndex < directions.length && coordinates.length < count; directionIndex++) {
-                const direction = directions[directionIndex];
+            let q = 0;
+            let r = -ring;
+            for (const direction of directions) {
                 for (let step = 0; step < ring && coordinates.length < count; step++) {
                     coordinates.push({ q, r });
                     q += direction.q;
@@ -683,7 +693,7 @@
         return coordinates;
     }
 
-    function getCompactHiveOffsets(state, actions) {
+    function getCompactHiveOffsets(state, actions, layout) {
         if (!actions?.length) {
             return [];
         }
@@ -696,9 +706,13 @@
             maxHalfHeight = Math.max(maxHalfHeight, metrics.halfHeight);
         });
 
-        const size = Math.max(maxHalfWidth + 7, round(((maxHalfHeight + 6) / Math.sqrt(3)) * 2));
-        const horizontalStep = size * 2.1;
-        const verticalStep = Math.max(maxHalfHeight * 2 + 24, size * 2.32);
+        const scale = getMenuScale(state);
+        const horizontalPadding = round((isCompactHiveLayout(layout) ? 6 : 8) * scale);
+        const verticalPadding = round((isCompactHiveLayout(layout) ? 4 : 6) * scale);
+        const hexHeight = Math.max((maxHalfHeight * 2) + verticalPadding, round(((maxHalfWidth * 2) + horizontalPadding) * 0.8660254));
+        const hexWidth = Math.max((maxHalfWidth * 2) + horizontalPadding, round(hexHeight / 0.8660254));
+        const horizontalStep = round(hexWidth * 0.75);
+        const verticalStep = round(hexHeight);
         return buildCompactHiveCoordinates(actions.length).map(coordinate => ({
             x: round(coordinate.q * horizontalStep),
             y: round((coordinate.r + (coordinate.q / 2)) * verticalStep)
@@ -706,8 +720,8 @@
     }
 
     function resolveContextMenuOffsets(state, actions, baseRadius, ringStep, layout) {
-        if (isCompactHiveLayout(layout)) {
-            return getCompactHiveOffsets(state, actions);
+        if (isHiveLayout(layout)) {
+            return getCompactHiveOffsets(state, actions, layout);
         }
 
         return getRadialOffsets(actions.length, baseRadius, ringStep);
@@ -731,21 +745,23 @@
         return Math.max(0, Math.round(safeBottom - hostRect.top + 12));
     }
 
-    function getContextMenuLayerBounds(state, originOffset, offsets, radius, actions) {
+    function getContextMenuLayerBounds(state, originOffset, offsets, radius, actions, layout) {
         const coreHalf = 38;
         const coreLabelAllowance = 30;
-        const padding = 16;
+        const padding = isHiveLayout(layout) ? 12 : 16;
         const bounds = {
-            minX: originOffset.x - radius,
-            maxX: originOffset.x + radius,
-            minY: originOffset.y - radius,
-            maxY: originOffset.y + radius
+            minX: originOffset.x - coreHalf,
+            maxX: originOffset.x + coreHalf,
+            minY: originOffset.y - coreHalf,
+            maxY: originOffset.y + coreHalf + coreLabelAllowance
         };
 
-        bounds.minX = Math.min(bounds.minX, originOffset.x - coreHalf);
-        bounds.maxX = Math.max(bounds.maxX, originOffset.x + coreHalf);
-        bounds.minY = Math.min(bounds.minY, originOffset.y - coreHalf);
-        bounds.maxY = Math.max(bounds.maxY, originOffset.y + coreHalf + coreLabelAllowance);
+        if (!(offsets || []).length && radius > coreHalf) {
+            bounds.minX = Math.min(bounds.minX, originOffset.x - radius);
+            bounds.maxX = Math.max(bounds.maxX, originOffset.x + radius);
+            bounds.minY = Math.min(bounds.minY, originOffset.y - radius);
+            bounds.maxY = Math.max(bounds.maxY, originOffset.y + radius);
+        }
 
         for (let index = 0; index < (offsets || []).length; index++) {
             const offset = offsets[index];
@@ -801,10 +817,10 @@
         };
     }
 
-    function positionContextMenu(state, center, offsets, actions) {
+    function positionContextMenu(state, center, offsets, actions, layout) {
         const hostRect = state.host.getBoundingClientRect();
         const radius = getContextMenuOrbitRadius(state, offsets || [], actions || []);
-        const bounds = getContextMenuLayerBounds(state, { x: 0, y: 0 }, offsets || [], radius, actions || []);
+        const bounds = getContextMenuLayerBounds(state, { x: 0, y: 0 }, offsets || [], radius, actions || [], layout);
         const safeTop = resolveContextMenuSafeTop(state);
         const x = round(clamp(center.x, -bounds.minX, Math.max(-bounds.minX, hostRect.width - bounds.maxX)));
         const y = round(clamp(center.y, safeTop - bounds.minY, Math.max(safeTop - bounds.minY, hostRect.height - bounds.maxY)));
@@ -848,6 +864,13 @@
                 localPoint.x <= (layerState.bounds.maxX + 12) &&
                 localPoint.y >= (layerState.bounds.minY - 12) &&
                 localPoint.y <= (layerState.bounds.maxY + 12);
+        }
+
+        if (layerState.bounds && isHiveLayout(layerState.layout)) {
+            return localPoint.x >= (layerState.bounds.minX - 18) &&
+                localPoint.x <= (layerState.bounds.maxX + 18) &&
+                localPoint.y >= (layerState.bounds.minY - 18) &&
+                localPoint.y <= (layerState.bounds.maxY + 18);
         }
 
         const dx = localPoint.x - layerState.originOffset.x;
@@ -913,8 +936,8 @@
 
     function resolveSubmenuOrigin(parentLayer, offset, layout) {
         const length = Math.hypot(offset.x, offset.y) || 1;
-        const outwardDistance = isCompactHiveLayout(layout)
-            ? Math.max(112, round(parentLayer.radius * 0.34))
+        const outwardDistance = isHiveLayout(layout)
+            ? Math.max(84, round(parentLayer.radius * 0.24))
             : Math.max(108, round(parentLayer.radius * 0.34));
         return {
             x: round(parentLayer.originOffset.x + offset.x + ((offset.x / length) * outwardDistance)),
@@ -1005,8 +1028,8 @@
         };
     }
 
-    function clampLayerOriginToHost(state, originOffset, offsets, radius, actions) {
-        const bounds = getContextMenuLayerBounds(state, originOffset, offsets || [], radius, actions || []);
+    function clampLayerOriginToHost(state, originOffset, offsets, radius, actions, layout) {
+        const bounds = getContextMenuLayerBounds(state, originOffset, offsets || [], radius, actions || [], layout);
         const shift = clampLayerBoundsToHost(state, bounds);
         return {
             x: round(originOffset.x + shift.x),
@@ -1069,6 +1092,7 @@
                 element: layer,
                 panel,
                 mode: "panel",
+                layout: normalizeContextMenuLayout(options.layout),
                 originOffset: options.originOffset,
                 bounds: getToolboxPanelBounds(options.originOffset, panelSize),
                 radius: 0,
@@ -1080,13 +1104,15 @@
 
         const layer = createElement(state.document, "div", `cw-context-menu__layer ${options.depth > 0 ? "is-submenu" : "is-root"}`);
         layer.style.zIndex = `${options.depth + 1}`;
+        const layout = normalizeContextMenuLayout(options.layout);
+        const layoutClass = isHiveLayout(layout) ? "is-hive" : "is-radial";
 
-        const backdrop = createElement(state.document, "div", `cw-context-menu__backdrop ${options.depth > 0 ? "is-submenu" : "is-root"}`);
+        const backdrop = createElement(state.document, "div", `cw-context-menu__backdrop ${options.depth > 0 ? "is-submenu" : "is-root"} ${layoutClass}`);
         backdrop.style.setProperty("--cw-orbit-x", `${options.originOffset.x}px`);
         backdrop.style.setProperty("--cw-orbit-y", `${options.originOffset.y}px`);
         layer.appendChild(backdrop);
 
-        const orbit = createElement(state.document, "div", `cw-context-menu__orbit ${options.depth > 0 ? "is-submenu" : "is-root"}`);
+        const orbit = createElement(state.document, "div", `cw-context-menu__orbit ${options.depth > 0 ? "is-submenu" : "is-root"} ${layoutClass}`);
         orbit.style.setProperty("--cw-orbit-x", `${options.originOffset.x}px`);
         orbit.style.setProperty("--cw-orbit-y", `${options.originOffset.y}px`);
         orbit.addEventListener("pointerdown", event => event.stopPropagation());
@@ -1103,12 +1129,42 @@
             backdrop,
             orbit,
             mode: "orbit",
+            layout,
             originOffset: options.originOffset,
+            bounds: null,
             radius: 0,
             ownerActionId: options.ownerActionId || "",
             ownerDepth: typeof options.ownerDepth === "number" ? options.ownerDepth : -1,
             actionEntries: new Map()
         };
+    }
+
+    function syncContextMenuLayerShellGeometry(layerState) {
+        if (!layerState || layerState.mode === "panel" || !layerState.orbit) {
+            return;
+        }
+
+        const halfWidth = layerState.bounds
+            ? Math.max(52, round(Math.max(
+                layerState.originOffset.x - layerState.bounds.minX,
+                layerState.bounds.maxX - layerState.originOffset.x)))
+            : round(layerState.radius || 0);
+        const halfHeight = layerState.bounds
+            ? Math.max(52, round(Math.max(
+                layerState.originOffset.y - layerState.bounds.minY,
+                layerState.bounds.maxY - layerState.originOffset.y)))
+            : round(layerState.radius || 0);
+        const width = halfWidth * 2;
+        const height = halfHeight * 2;
+
+        layerState.orbit.style.setProperty("--cw-orbit-size", `${Math.max(width, height)}px`);
+        layerState.orbit.style.setProperty("--cw-orbit-width", `${width}px`);
+        layerState.orbit.style.setProperty("--cw-orbit-height", `${height}px`);
+        if (layerState.backdrop) {
+            layerState.backdrop.style.setProperty("--cw-orbit-size", `${Math.max(width, height)}px`);
+            layerState.backdrop.style.setProperty("--cw-orbit-width", `${width}px`);
+            layerState.backdrop.style.setProperty("--cw-orbit-height", `${height}px`);
+        }
     }
 
     function shiftContextMenuLayerOrigin(layerState, deltaX, deltaY) {
@@ -1127,6 +1183,15 @@
             const panelSize = getToolboxPanelSize();
             layerState.bounds = getToolboxPanelBounds(layerState.originOffset, panelSize);
             return;
+        }
+
+        if (layerState.bounds) {
+            layerState.bounds = {
+                minX: round(layerState.bounds.minX + deltaX),
+                maxX: round(layerState.bounds.maxX + deltaX),
+                minY: round(layerState.bounds.minY + deltaY),
+                maxY: round(layerState.bounds.maxY + deltaY)
+            };
         }
 
         layerState.backdrop.style.setProperty("--cw-orbit-x", `${layerState.originOffset.x}px`);
@@ -1215,5 +1280,5 @@
         state.dotNetRef.invokeMethodAsync("OnNodeEdited", JSON.stringify(payload));
     }
 
-    Object.assign(shared, { hitTestNode, hitTestFrameHandle, hitTestProgressBadge, isOverlayTarget, applyFullTextTooltip, reconcileSelection, applySelection, selectSingleNode, publishSelection, clearViewportStateCommit, createSerializedStateSnapshot, invokeStateChanged, publishState, publishStateNow, scheduleViewportStateCommit, publishNodesMoved, setSelection, toggleSelection, toggleCollapse, clearContextMenu, closeComposer, ensureHostFocus, deferHostFocus, resolveComposerAnchor, layoutComposer, render, getContextActions, isCreateAction, buildCreateRequest, resolveMenuLabel, getMenuScale, isCompactHiveLayout, resolveMenuActionVariant, getActionMetrics, applyProgressPresetTone, fitContextMenuLabel, resolveActionGlyph, createMenuActionIcon, resolveMenuActionAriaLabel, getRadialOffsets, buildCompactHiveCoordinates, getCompactHiveOffsets, resolveContextMenuOffsets, resolveContextMenuSafeTop, getContextMenuLayerBounds, clampLayerBoundsToHost, positionContextMenu, getContextMenuOrbitRadius, getContextMenuLocalPoint, isPointInContextMenuLayer, closeContextMenuLayersFrom, syncContextMenuLayers, resolveSubmenuOrigin, ensureSubmenuLoadingIndicator, clearSubmenuLoadingIndicator, cancelPendingContextSubmenu, scheduleContextSubmenuOpen, clampLayerOriginToHost, getToolboxPanelSize, getToolboxPanelBounds, clampToolboxPanelOriginToHost, resolveToolboxPanelOrigin, createContextMenuLayer, shiftContextMenuLayerOrigin, nudgeContextMenuLayerIntoVisibleHost, resolveQuickCreateSourceNode, submitCreateRequest, submitNodeEdit });
+    Object.assign(shared, { hitTestNode, hitTestFrameHandle, hitTestProgressBadge, isOverlayTarget, applyFullTextTooltip, reconcileSelection, applySelection, selectSingleNode, publishSelection, clearViewportStateCommit, createSerializedStateSnapshot, invokeStateChanged, publishState, publishStateNow, scheduleViewportStateCommit, publishNodesMoved, setSelection, toggleSelection, toggleCollapse, clearContextMenu, closeComposer, ensureHostFocus, deferHostFocus, resolveComposerAnchor, layoutComposer, render, getContextActions, isCreateAction, buildCreateRequest, resolveMenuLabel, getMenuScale, normalizeContextMenuLayout, isHiveLayout, isCompactHiveLayout, resolveMenuActionVariant, getActionMetrics, applyProgressPresetTone, fitContextMenuLabel, resolveActionGlyph, createMenuActionIcon, resolveMenuActionAriaLabel, getRadialOffsets, buildCompactHiveCoordinates, getCompactHiveOffsets, resolveContextMenuOffsets, resolveContextMenuSafeTop, getContextMenuLayerBounds, clampLayerBoundsToHost, positionContextMenu, getContextMenuOrbitRadius, getContextMenuLocalPoint, isPointInContextMenuLayer, closeContextMenuLayersFrom, syncContextMenuLayers, resolveSubmenuOrigin, ensureSubmenuLoadingIndicator, clearSubmenuLoadingIndicator, cancelPendingContextSubmenu, scheduleContextSubmenuOpen, clampLayerOriginToHost, getToolboxPanelSize, getToolboxPanelBounds, clampToolboxPanelOriginToHost, resolveToolboxPanelOrigin, createContextMenuLayer, syncContextMenuLayerShellGeometry, shiftContextMenuLayerOrigin, nudgeContextMenuLayerIntoVisibleHost, resolveQuickCreateSourceNode, submitCreateRequest, submitNodeEdit });
 })();

@@ -147,6 +147,77 @@ public sealed class ProjectStructureActionCatalogAdapterTests
     }
 
     [Fact]
+    public void Note_context_actions_start_with_the_standard_hive_first_ring()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode("note", ProjectObjectType.Note, "Note", 0, 0);
+
+        var actions = adapter.BuildNodeContextActions(node);
+
+        Assert.Equal(
+            new[]
+            {
+                "group-blocks",
+                "group-assets",
+                "group-work",
+                "progress",
+                "marker",
+                "note:convert-to-block"
+            },
+            actions.Take(6).Select(action => action.ActionId).ToArray());
+    }
+
+    [Fact]
+    public void Prompt_flow_context_actions_use_wizard_as_the_primary_first_ring_slot()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode("flow", ProjectObjectType.PromptFlow, "Flow", 0, 0);
+
+        var actions = adapter.BuildNodeContextActions(node);
+
+        Assert.Equal(
+            new[]
+            {
+                "group-blocks",
+                "group-assets",
+                "group-work",
+                "progress",
+                "marker",
+                "wizard"
+            },
+            actions.Take(6).Select(action => action.ActionId).ToArray());
+    }
+
+    [Fact]
+    public void Project_nodes_use_structure_as_the_primary_first_ring_slot()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode(
+            "project-child:11111111-1111-1111-1111-111111111111",
+            ProjectObjectType.ProjectRoot,
+            "Project child",
+            0,
+            0,
+            projectRole: ProjectStructureProjectRole.Subproject,
+            relatedProjectId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            parentProjectCount: 2);
+
+        var actions = adapter.BuildNodeContextActions(node);
+
+        Assert.Equal(
+            new[]
+            {
+                "group-blocks",
+                "group-assets",
+                "group-work",
+                "progress",
+                "marker",
+                "project:open-structure"
+            },
+            actions.Take(6).Select(action => action.ActionId).ToArray());
+    }
+
+    [Fact]
     public void Additional_parent_project_nodes_remain_read_only()
     {
         var adapter = new ProjectStructureActionCatalogAdapter();
@@ -199,6 +270,7 @@ public sealed class ProjectStructureActionCatalogAdapterTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0,
             ProjectRole: projectRole,
             RelatedProjectId: relatedProjectId,

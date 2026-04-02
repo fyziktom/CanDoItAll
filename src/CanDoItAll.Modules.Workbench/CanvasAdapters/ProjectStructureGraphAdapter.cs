@@ -143,6 +143,14 @@ public sealed class ProjectStructureGraphAdapter
             MarkerIcon = node.MarkerIcon,
             MarkerTone = node.MarkerTone,
             MarkerLabel = node.MarkerLabel,
+            Markers = node.Markers
+                .Select(marker => new CanvasWorkbenchMarker
+                {
+                    Icon = marker.Icon,
+                    Tone = marker.Tone,
+                    Label = marker.Label
+                })
+                .ToList(),
             Priority = node.Priority,
             IsRequired = node.ObjectType is ProjectObjectType.ProjectRoot or ProjectObjectType.Phase or ProjectObjectType.PromptSession,
             IsCollapsible = hasChildren,

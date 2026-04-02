@@ -562,8 +562,32 @@
     height: calc(1.82rem * var(--cw-menu-scale, 1));
 }
 
+.cw-context-menu__action.is-progress-preset .cw-node__progress--menu {
+    width: calc(2.24rem * var(--cw-menu-scale, 1));
+    height: calc(2.24rem * var(--cw-menu-scale, 1));
+}
+
+.cw-context-menu__action.is-marker-preset .cw-node__badge--menu {
+    font-size: calc(1.72rem * var(--cw-menu-scale, 1));
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+}
+
 .cw-context-menu__action.is-progress-preset .cw-node__progress--menu::after {
-    inset: calc(0.27rem * var(--cw-menu-scale, 1));
+    inset: calc(0.2rem * var(--cw-menu-scale, 1));
+}
+
+.cw-context-menu__action.is-progress-preset .cw-node__progress--menu .cw-node__progress-center {
+    font-size: calc(0.72rem * var(--cw-menu-scale, 1));
+    line-height: 0.96;
+    font-weight: 900;
+    letter-spacing: -0.07em;
+    font-variant-numeric: tabular-nums;
+}
+
+.cw-context-menu__action.is-progress-preset .cw-node__progress--menu.has-long-text .cw-node__progress-center {
+    font-size: calc(0.58rem * var(--cw-menu-scale, 1));
 }
 
 .cw-node__badge {
@@ -625,6 +649,11 @@
 .cw-node__marker.tone-primary {
     background: rgba(226, 232, 240, 0.98);
     color: #0f172a;
+}
+
+.cw-node__marker-overflow {
+    font-size: 0.72rem;
+    letter-spacing: -0.04em;
 }
 
 .cw-node__priority {
@@ -820,8 +849,8 @@
     position: absolute;
     left: 0;
     top: 0;
-    width: var(--cw-orbit-size, 0px);
-    height: var(--cw-orbit-size, 0px);
+    width: var(--cw-orbit-width, var(--cw-orbit-size, 0px));
+    height: var(--cw-orbit-height, var(--cw-orbit-size, 0px));
     transform: translate(calc(-50% + var(--cw-orbit-x, 0px)), calc(-50% + var(--cw-orbit-y, 0px)));
     border-radius: 999px;
 }

@@ -119,7 +119,7 @@ public sealed class ProjectStructureActionCatalogAdapter
         }
 
         actions.AddRange(ProjectStructureCanvasCatalog.BuildMenuCreateActions(node.ObjectType));
-        return ProjectStructureActionShortcuts.Apply(actions);
+        return ProjectStructureActionShortcuts.Apply(ProjectStructureMenuComposition.OrderNodeContextActions(node, actions));
     }
 
     public IReadOnlyList<CanvasWorkbenchAction> BuildGroupContextActions()
@@ -330,7 +330,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             actions.AddRange(ProjectStructureCanvasCatalog.BuildMenuCreateActions(node.ObjectType));
         }
 
-        return ProjectStructureActionShortcuts.Apply(actions);
+        return ProjectStructureActionShortcuts.Apply(ProjectStructureMenuComposition.OrderNodeContextActions(node, actions));
     }
 
     private static CanvasWorkbenchAction BuildProgressAction()

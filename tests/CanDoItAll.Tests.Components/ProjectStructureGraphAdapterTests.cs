@@ -132,6 +132,7 @@ public sealed class ProjectStructureGraphAdapterTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0);
 
     private static ProjectStructureNode CreateProjectNode(
@@ -162,6 +163,7 @@ public sealed class ProjectStructureGraphAdapterTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0,
             ProjectRole: projectRole,
             RelatedProjectId: Guid.Parse("11111111-1111-1111-1111-111111111111"));

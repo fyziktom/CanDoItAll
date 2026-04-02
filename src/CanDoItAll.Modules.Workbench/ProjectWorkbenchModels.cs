@@ -161,6 +161,7 @@ public sealed record ProjectStructureNode(
     string MarkerIcon,
     string MarkerTone,
     string MarkerLabel,
+    IReadOnlyList<ProjectNodeMarker> Markers,
     int Priority,
     DateTimeOffset? StartUtc = null,
     DateTimeOffset? EndUtc = null,
@@ -317,6 +318,15 @@ public sealed class ProjectWorkbenchService(
         ActiveProject,
         Subproject,
         RelatedParent
+    }
+
+    private enum ProjectMarkerMutationMode
+    {
+        ReplaceAll,
+        Add,
+        Remove,
+        Toggle,
+        ClearAll
     }
 
     public async Task<ProjectStructureSurface> GetStructureAsync(Guid projectId, CancellationToken cancellationToken = default)
@@ -1128,6 +1138,84 @@ public sealed class ProjectWorkbenchService(
         string markerTone,
         string markerLabel,
         CancellationToken cancellationToken = default)
+        => await UpdateObjectMarkersDetailedAsync(
+            projectId,
+            nodeKeys,
+            markerIcon,
+            markerTone,
+            markerLabel,
+            ProjectMarkerMutationMode.ReplaceAll,
+            cancellationToken);
+
+    public async Task<IReadOnlyList<ProjectStructureNode>> AddObjectMarkerDetailedAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string markerIcon,
+        string markerTone,
+        string markerLabel,
+        CancellationToken cancellationToken = default)
+        => await UpdateObjectMarkersDetailedAsync(
+            projectId,
+            nodeKeys,
+            markerIcon,
+            markerTone,
+            markerLabel,
+            ProjectMarkerMutationMode.Add,
+            cancellationToken);
+
+    public async Task<IReadOnlyList<ProjectStructureNode>> ToggleObjectMarkerDetailedAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string markerIcon,
+        string markerTone,
+        string markerLabel,
+        CancellationToken cancellationToken = default)
+        => await UpdateObjectMarkersDetailedAsync(
+            projectId,
+            nodeKeys,
+            markerIcon,
+            markerTone,
+            markerLabel,
+            ProjectMarkerMutationMode.Toggle,
+            cancellationToken);
+
+    public async Task<IReadOnlyList<ProjectStructureNode>> RemoveObjectMarkerDetailedAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string markerIcon,
+        string markerTone,
+        string markerLabel,
+        CancellationToken cancellationToken = default)
+        => await UpdateObjectMarkersDetailedAsync(
+            projectId,
+            nodeKeys,
+            markerIcon,
+            markerTone,
+            markerLabel,
+            ProjectMarkerMutationMode.Remove,
+            cancellationToken);
+
+    public async Task<IReadOnlyList<ProjectStructureNode>> ClearObjectMarkersDetailedAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        CancellationToken cancellationToken = default)
+        => await UpdateObjectMarkersDetailedAsync(
+            projectId,
+            nodeKeys,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            ProjectMarkerMutationMode.ClearAll,
+            cancellationToken);
+
+    private async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectMarkersDetailedAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string markerIcon,
+        string markerTone,
+        string markerLabel,
+        ProjectMarkerMutationMode mutationMode,
+        CancellationToken cancellationToken = default)
     {
         if (nodeKeys.Count == 0)
         {
@@ -1145,16 +1233,25 @@ public sealed class ProjectWorkbenchService(
         var nodes = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == projectId && normalizedKeys.Contains(item.NodeKey))
             .ToListAsync(cancellationToken);
-        var normalizedIcon = markerIcon?.Trim() ?? string.Empty;
-        var normalizedTone = markerTone?.Trim() ?? string.Empty;
-        var normalizedLabel = markerLabel?.Trim() ?? string.Empty;
+        var normalizedMarker = ProjectObjectMetadataSerializer.NormalizeMarker(markerIcon, markerTone, markerLabel);
         var updatedAtUtc = clock.GetUtcNow();
 
         foreach (var node in nodes)
         {
-            node.MarkerIcon = normalizedIcon;
-            node.MarkerTone = normalizedTone;
-            node.MarkerLabel = normalizedLabel;
+            var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
+            var existingMarkers = ProjectObjectMetadataSerializer.ResolveMarkers(metadata, node.MarkerIcon, node.MarkerTone, node.MarkerLabel);
+            var updatedMarkers = mutationMode switch
+            {
+                ProjectMarkerMutationMode.ReplaceAll => normalizedMarker is null ? [] : [normalizedMarker],
+                ProjectMarkerMutationMode.Add => AddMarker(existingMarkers, normalizedMarker),
+                ProjectMarkerMutationMode.Remove => RemoveMarker(existingMarkers, normalizedMarker),
+                ProjectMarkerMutationMode.Toggle => ToggleMarker(existingMarkers, normalizedMarker),
+                ProjectMarkerMutationMode.ClearAll => [],
+                _ => existingMarkers
+            };
+            ProjectObjectMetadataSerializer.SetMarkers(metadata, updatedMarkers);
+            node.MetadataJson = ProjectObjectMetadataSerializer.Serialize(metadata);
+            ApplyPrimaryMarker(node, updatedMarkers);
             node.UpdatedAtUtc = updatedAtUtc;
         }
 
@@ -1170,6 +1267,97 @@ public sealed class ProjectWorkbenchService(
         string markerLabel,
         CancellationToken cancellationToken = default)
         => (await UpdateObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken)).Count;
+
+    public async Task<int> AddObjectMarkerAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string markerIcon,
+        string markerTone,
+        string markerLabel,
+        CancellationToken cancellationToken = default)
+        => (await AddObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken)).Count;
+
+    public async Task<int> ToggleObjectMarkerAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string markerIcon,
+        string markerTone,
+        string markerLabel,
+        CancellationToken cancellationToken = default)
+        => (await ToggleObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken)).Count;
+
+    public async Task<int> RemoveObjectMarkerAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string markerIcon,
+        string markerTone,
+        string markerLabel,
+        CancellationToken cancellationToken = default)
+        => (await RemoveObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken)).Count;
+
+    public async Task<int> ClearObjectMarkersAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        CancellationToken cancellationToken = default)
+        => (await ClearObjectMarkersDetailedAsync(projectId, nodeKeys, cancellationToken)).Count;
+
+    private static IReadOnlyList<ProjectNodeMarker> AddMarker(
+        IReadOnlyList<ProjectNodeMarker> existingMarkers,
+        ProjectNodeMarker? marker)
+    {
+        if (marker is null)
+        {
+            return existingMarkers;
+        }
+
+        var updated = existingMarkers
+            .Where(existing => !string.Equals(existing.Icon, marker.Icon, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        updated.Add(marker);
+        return updated;
+    }
+
+    private static IReadOnlyList<ProjectNodeMarker> ToggleMarker(
+        IReadOnlyList<ProjectNodeMarker> existingMarkers,
+        ProjectNodeMarker? marker)
+    {
+        if (marker is null)
+        {
+            return existingMarkers;
+        }
+
+        var hasMarker = existingMarkers.Any(existing => string.Equals(existing.Icon, marker.Icon, StringComparison.OrdinalIgnoreCase));
+        if (hasMarker)
+        {
+            return existingMarkers
+                .Where(existing => !string.Equals(existing.Icon, marker.Icon, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        return AddMarker(existingMarkers, marker);
+    }
+
+    private static IReadOnlyList<ProjectNodeMarker> RemoveMarker(
+        IReadOnlyList<ProjectNodeMarker> existingMarkers,
+        ProjectNodeMarker? marker)
+    {
+        if (marker is null)
+        {
+            return existingMarkers;
+        }
+
+        return existingMarkers
+            .Where(existing => !string.Equals(existing.Icon, marker.Icon, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private static void ApplyPrimaryMarker(ProjectObjectRecord node, IReadOnlyList<ProjectNodeMarker> markers)
+    {
+        var primaryMarker = ProjectObjectMetadataSerializer.ResolvePrimaryMarker(markers);
+        node.MarkerIcon = primaryMarker?.Icon ?? string.Empty;
+        node.MarkerTone = primaryMarker?.Tone ?? string.Empty;
+        node.MarkerLabel = primaryMarker?.Label ?? string.Empty;
+    }
 
     public async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectPriorityDetailedAsync(
         Guid projectId,
@@ -2259,6 +2447,11 @@ public sealed class ProjectWorkbenchService(
                 break;
         }
 
+        var metadataJson = string.IsNullOrWhiteSpace(record.MetadataJson) ? "{}" : record.MetadataJson;
+        var metadata = ProjectObjectMetadataSerializer.Parse(metadataJson);
+        var markers = ProjectObjectMetadataSerializer.ResolveMarkers(metadata, record.MarkerIcon, record.MarkerTone, record.MarkerLabel);
+        var primaryMarker = ProjectObjectMetadataSerializer.ResolvePrimaryMarker(markers);
+
         return new ProjectStructureNode(
             record.NodeKey,
             record.ParentNodeKey,
@@ -2280,13 +2473,14 @@ public sealed class ProjectWorkbenchService(
             badges,
             string.IsNullOrWhiteSpace(record.ProgressMode) ? string.Empty : NormalizeProgressMode(record.ProgressMode),
             record.ProgressPercent,
-            record.MarkerIcon,
-            record.MarkerTone,
-            record.MarkerLabel,
+            primaryMarker?.Icon ?? string.Empty,
+            primaryMarker?.Tone ?? string.Empty,
+            primaryMarker?.Label ?? string.Empty,
+            markers,
             record.Priority,
             record.StartUtc,
             record.EndUtc,
-            string.IsNullOrWhiteSpace(record.MetadataJson) ? "{}" : record.MetadataJson,
+            metadataJson,
             projectRole,
             relatedProjectId,
             parentProjectCount);
@@ -2295,16 +2489,16 @@ public sealed class ProjectWorkbenchService(
     private static string ResolveSubtypeBadge(ProjectObjectType objectType, string objectSubtype) => objectType switch
     {
         ProjectObjectType.ProjectBlock => ResolveBlockSubtypeLabel(objectSubtype),
-        ProjectObjectType.Meeting => ProjectStructureCanvasCatalog.ResolveNodeLabel(new ProjectStructureNode(string.Empty, null, ProjectObjectType.Meeting, objectSubtype, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, null, string.Empty, string.Empty, string.Empty, 0, 0, new ProjectObjectVisualProfile("rect", "#0f172a", "NT", "Note"), [], string.Empty, 0, string.Empty, string.Empty, string.Empty, 0)),
+        ProjectObjectType.Meeting => ProjectStructureCanvasCatalog.ResolveNodeLabel(new ProjectStructureNode(string.Empty, null, ProjectObjectType.Meeting, objectSubtype, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, null, string.Empty, string.Empty, string.Empty, 0, 0, new ProjectObjectVisualProfile("rect", "#0f172a", "NT", "Note"), [], string.Empty, 0, string.Empty, string.Empty, string.Empty, [], 0)),
         ProjectObjectType.Participant => objectSubtype switch
         {
             "team-block" => "Team block",
             "team-section" => "Team section",
             "ai-agent" => "AI agent",
-            _ => ProjectStructureCanvasCatalog.ResolveNodeLabel(new ProjectStructureNode(string.Empty, null, ProjectObjectType.Participant, objectSubtype, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, null, string.Empty, string.Empty, string.Empty, 0, 0, new ProjectObjectVisualProfile("rect", "#0f172a", "NT", "Note"), [], string.Empty, 0, string.Empty, string.Empty, string.Empty, 0))
+            _ => ProjectStructureCanvasCatalog.ResolveNodeLabel(new ProjectStructureNode(string.Empty, null, ProjectObjectType.Participant, objectSubtype, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, null, string.Empty, string.Empty, string.Empty, 0, 0, new ProjectObjectVisualProfile("rect", "#0f172a", "NT", "Note"), [], string.Empty, 0, string.Empty, string.Empty, string.Empty, [], 0))
         },
         ProjectObjectType.WorkItem or ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.Script or ProjectObjectType.Environment or ProjectObjectType.Infrastructure
-            => ProjectStructureCanvasCatalog.ResolveNodeLabel(new ProjectStructureNode(string.Empty, null, objectType, objectSubtype, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, null, string.Empty, string.Empty, string.Empty, 0, 0, new ProjectObjectVisualProfile("rect", "#0f172a", "NT", "Note"), [], string.Empty, 0, string.Empty, string.Empty, string.Empty, 0)),
+            => ProjectStructureCanvasCatalog.ResolveNodeLabel(new ProjectStructureNode(string.Empty, null, objectType, objectSubtype, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, null, string.Empty, string.Empty, string.Empty, 0, 0, new ProjectObjectVisualProfile("rect", "#0f172a", "NT", "Note"), [], string.Empty, 0, string.Empty, string.Empty, string.Empty, [], 0)),
         _ => objectSubtype
     };
 

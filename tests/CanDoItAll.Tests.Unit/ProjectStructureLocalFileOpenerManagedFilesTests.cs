@@ -78,6 +78,7 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0,
             null,
             null,
