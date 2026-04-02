@@ -98,6 +98,9 @@
     function decorateComposerShell(state, title, kicker, variant) {
         const composer = createElement(state.document, "div", `cw-canvas-composer ${variant ? `is-${variant}` : ""}`);
         composer.addEventListener("pointerdown", event => event.stopPropagation());
+        composer.addEventListener("wheel", event => {
+            event.stopPropagation();
+        }, { passive: true });
         composer.addEventListener("keydown", event => {
             if (event.key === "Escape") {
                 event.preventDefault();

@@ -562,6 +562,11 @@
     height: calc(1.82rem * var(--cw-menu-scale, 1));
 }
 
+.cw-context-menu__action.is-progress-preset .cw-node__progress--menu {
+    width: calc(2.24rem * var(--cw-menu-scale, 1));
+    height: calc(2.24rem * var(--cw-menu-scale, 1));
+}
+
 .cw-context-menu__action.is-marker-preset .cw-node__badge--menu {
     font-size: calc(1.72rem * var(--cw-menu-scale, 1));
     line-height: 1;
@@ -570,7 +575,19 @@
 }
 
 .cw-context-menu__action.is-progress-preset .cw-node__progress--menu::after {
-    inset: calc(0.27rem * var(--cw-menu-scale, 1));
+    inset: calc(0.2rem * var(--cw-menu-scale, 1));
+}
+
+.cw-context-menu__action.is-progress-preset .cw-node__progress--menu .cw-node__progress-center {
+    font-size: calc(0.72rem * var(--cw-menu-scale, 1));
+    line-height: 0.96;
+    font-weight: 900;
+    letter-spacing: -0.07em;
+    font-variant-numeric: tabular-nums;
+}
+
+.cw-context-menu__action.is-progress-preset .cw-node__progress--menu.has-long-text .cw-node__progress-center {
+    font-size: calc(0.58rem * var(--cw-menu-scale, 1));
 }
 
 .cw-node__badge {
