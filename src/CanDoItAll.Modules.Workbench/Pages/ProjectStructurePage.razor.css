@@ -88,11 +88,21 @@
 }
 
 .project-structure-page ::deep .project-structure-toolbar-toggle {
-    width: auto !important;
-    min-width: 0;
-    max-width: 9rem;
+    width: 2.55rem !important;
+    min-width: 2.55rem;
+    max-width: 2.55rem;
     flex: 0 0 auto;
-    white-space: nowrap;
+    padding-inline: 0 !important;
+    justify-content: center;
+}
+
+.project-structure-page ::deep .project-structure-toolbar-toggle .rz-icon,
+.project-structure-page ::deep .project-structure-toolbar-toggle .rz-icon-fallback {
+    font-size: 1rem;
+}
+
+.project-structure-page ::deep .project-structure-toolbar-toggle .rz-button-text {
+    display: none;
 }
 
 .project-structure-page ::deep .project-structure-toolbar-toggle.is-active {

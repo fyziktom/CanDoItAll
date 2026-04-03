@@ -5,74 +5,86 @@
          Class="project-structure-toolbar-windows">
     <Cluster Gap="LayoutGap.XSmall"
              Class="project-structure-toolbar-tools">
-        <Button Text="Select"
-                Icon="arrow_selector_tool"
+        <Button Icon="arrow_selector_tool"
+                aria-label="Select"
+                title="Select: use the normal select and move tool"
                 Variant="Variant.Text"
                 ButtonStyle="ButtonStyle.Base"
                 Style="@ToolbarToggleStyle"
                 Class="@ResolveToolbarButtonCssClass(string.Equals(ActiveTool, SelectTool, StringComparison.Ordinal))"
                 data-testid="project-structure-toolbar-tool-select"
-                title="Use the normal select and move tool"
                 Click="SelectToolClicked" />
 
-        <Button Text="Dependency"
-                Icon="start"
+        <Button Icon="call_split"
+                aria-label="Dependency"
+                title="Dependency: connect the selected node to a prerequisite"
                 Variant="Variant.Text"
                 ButtonStyle="ButtonStyle.Base"
                 Style="@ToolbarToggleStyle"
                 Class="@ResolveToolbarButtonCssClass(string.Equals(ActiveTool, DependencyTool, StringComparison.Ordinal))"
                 data-testid="project-structure-toolbar-tool-dependency"
-                title="Click another node to say the selected node depends on it"
                 Disabled="@(!CanUseDependencyTool)"
                 Click="DependencyToolClicked" />
 
-        <Button Text="Delete"
-                Icon="delete"
+        <Button Icon="delete"
+                aria-label="Delete"
+                title="Delete: remove a node or dependency link"
                 Variant="Variant.Text"
                 ButtonStyle="ButtonStyle.Base"
                 Style="@ToolbarToggleStyle"
                 Class="@ResolveToolbarButtonCssClass(string.Equals(ActiveTool, DeleteTool, StringComparison.Ordinal))"
                 data-testid="project-structure-toolbar-tool-delete"
-                title="Hover a node or dependency and click to delete it"
                 Click="DeleteToolClicked" />
     </Cluster>
 
-    <Button Text="Inspector"
+    <Button Icon="visibility"
+            aria-label="Inspector"
+            title="Inspector: show or hide the selection panel"
             Variant="Variant.Text"
             ButtonStyle="ButtonStyle.Base"
+            Style="@ToolbarToggleStyle"
             Class="@ResolveToolbarButtonCssClass(SelectionWindowVisible)"
-            title="Show or hide the selection panel"
+            data-testid="project-structure-inspector-toggle"
             Click="ToggleSelectionWindow" />
 
-    <Button Text="Health"
+    <Button Icon="assessment"
+            aria-label="Health"
+            title="Health: show or hide canvas diagnostics"
             Variant="Variant.Text"
             ButtonStyle="ButtonStyle.Base"
+            Style="@ToolbarToggleStyle"
             Class="@ResolveToolbarButtonCssClass(HealthWindowVisible)"
-            title="Show or hide canvas health"
+            data-testid="project-structure-health-toggle"
             Click="ToggleHealthWindow" />
 
-    <Button Text="Blocks"
+    <Button Icon="dashboard"
+            aria-label="Blocks"
+            title="Blocks: show or hide the standard blocks toolbox"
             Variant="Variant.Text"
             ButtonStyle="ButtonStyle.Base"
+            Style="@ToolbarToggleStyle"
             Class="@ResolveToolbarButtonCssClass(ToolboxWindowVisible)"
             data-testid="project-structure-toolbox-toggle"
-            title="Show or hide the standard blocks toolbox"
             Click="ToggleToolboxWindow" />
 
-    <Button Text="Signals"
+    <Button Icon="notifications_active"
+            aria-label="Signals"
+            title="Signals: show or hide the node signals toolbox"
             Variant="Variant.Text"
             ButtonStyle="ButtonStyle.Base"
+            Style="@ToolbarToggleStyle"
             Class="@ResolveToolbarButtonCssClass(SignalsWindowVisible)"
             data-testid="project-structure-signals-toggle"
-            title="Show or hide the node signals toolbox"
             Click="ToggleSignalsWindow" />
 
-    <Button Text="@(IsSubtreeRecompositionInProgress ? "Recomposing" : "Recompose")"
+    <Button Icon="shuffle"
+            aria-label="Recompose"
+            title="@(IsSubtreeRecompositionInProgress ? "Recompose: redistributing the selected branch" : "Recompose: redistribute descendants under the selected node")"
             Variant="Variant.Text"
             ButtonStyle="ButtonStyle.Base"
-            Class="cw-toolbar-action"
+            Style="@ToolbarToggleStyle"
+            Class="cw-toolbar-action cw-toolbar-action--icon project-structure-toolbar-toggle project-structure-toolbar-toggle--icon"
             data-testid="project-structure-recompose-toolbar-button"
-            title="Redistribute descendants under the selected node without changing relationships."
             Disabled="@(!CanRecomposeSelectedBranch)"
             Click="RecomposeBranch" />
 </Cluster>
@@ -130,12 +142,12 @@
     [Parameter]
     public EventCallback RecomposeBranch { get; set; }
 
-    private const string ToolbarToggleStyle = "width:auto;max-width:9rem;flex:0 0 auto;";
+    private const string ToolbarToggleStyle = "width:2.55rem;min-width:2.55rem;max-width:2.55rem;flex:0 0 auto;padding-inline:0;";
 
     private string ResolveToolbarButtonCssClass(bool isActive)
     {
         return isActive
-            ? "cw-toolbar-action project-structure-toolbar-toggle is-active"
-            : "cw-toolbar-action project-structure-toolbar-toggle";
+            ? "cw-toolbar-action cw-toolbar-action--icon project-structure-toolbar-toggle project-structure-toolbar-toggle--icon is-active"
+            : "cw-toolbar-action cw-toolbar-action--icon project-structure-toolbar-toggle project-structure-toolbar-toggle--icon";
     }
 }

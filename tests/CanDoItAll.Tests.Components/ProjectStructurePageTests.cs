@@ -2097,7 +2097,10 @@ public sealed class ProjectStructurePageTests
         string label,
         string selector = "button")
         => cut.FindAll(selector)
-            .First(button => button.TextContent.Contains(label, StringComparison.Ordinal));
+            .First(button =>
+                button.TextContent.Contains(label, StringComparison.Ordinal)
+                || (button.GetAttribute("title")?.Contains(label, StringComparison.Ordinal) ?? false)
+                || (button.GetAttribute("aria-label")?.Contains(label, StringComparison.Ordinal) ?? false));
 
     private static Task InvokeCanvasContextActionAsync(IRenderedComponent<ProjectStructurePage> cut, string nodeId, string actionId)
         => cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnContextAction(nodeId, actionId, 0, 0));
