@@ -327,9 +327,8 @@
     var rect = this.canvas.getBoundingClientRect();
     if (this.resizeTarget) {
       var targetRect = this.resizeTarget.getBoundingClientRect();
-      var isPlaceholderSize = rect.width <= 1 || rect.height <= 1;
       var targetIsVisible = targetRect.width > 1 && targetRect.height > 1;
-      if (((rect.width <= 0 || rect.height <= 0) || isPlaceholderSize) && targetIsVisible) {
+      if (targetIsVisible) {
         rect = targetRect;
       }
     }

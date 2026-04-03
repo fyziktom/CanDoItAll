@@ -6,6 +6,7 @@ public static class MaterialIconCatalog
     {
         ["ai"] = "smart_toy",
         ["arch"] = "design_services",
+        ["arrow_selector_tool"] = "near_me",
         ["asset"] = "folder_open",
         ["assure"] = "fact_check",
         ["audio"] = "audiotrack",

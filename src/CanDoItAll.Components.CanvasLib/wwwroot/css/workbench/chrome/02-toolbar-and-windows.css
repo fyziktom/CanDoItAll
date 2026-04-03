@@ -4,7 +4,7 @@
     z-index: 600;
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 1rem;
     padding: 0.55rem 0.7rem;
     border-radius: 1.3rem;
@@ -13,7 +13,7 @@
     box-shadow: 0 18px 34px rgba(15, 23, 42, 0.12);
     backdrop-filter: blur(14px);
     pointer-events: none;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .cw-workbench-shell.is-maximized .cw-toolbar {
@@ -34,22 +34,29 @@
     display: flex;
     gap: 0.55rem;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     min-width: 0;
     pointer-events: auto;
 }
 
 .cw-toolbar-group--left {
-    flex: 1 1 18rem;
+    flex: 1 1 auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
 }
 
 .cw-toolbar-group--utility {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     justify-content: flex-end;
 }
 
 .cw-workbench-shell.is-maximized .cw-toolbar-group--left {
-    flex-basis: 22rem;
+    flex-basis: auto;
+}
+
+.cw-toolbar-group--left::-webkit-scrollbar {
+    display: none;
 }
 
 .cw-toolbar-action,

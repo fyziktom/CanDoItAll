@@ -69,13 +69,15 @@
     display: flex;
     align-items: center;
     gap: 0.45rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-width: max-content;
 }
 
 .project-structure-page ::deep .project-structure-toolbar-tools {
     display: flex;
     align-items: center;
     flex: 0 0 auto;
+    flex-wrap: nowrap;
     padding-right: 0.3rem;
     margin-right: 0.15rem;
     border-right: 1px solid rgba(148, 163, 184, 0.22);
