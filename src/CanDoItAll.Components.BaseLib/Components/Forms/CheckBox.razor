@@ -4,6 +4,7 @@
 
 <input type="checkbox"
        @attributes='BuildAttributes(ResolveCssClass())'
+       aria-labelledby="@ResolveLabelledBy()"
        name="@Name"
        disabled="@Disabled"
        checked="@ResolveIsChecked()"
@@ -28,6 +29,9 @@
 
     [Parameter]
     public InputLook Look { get; set; } = InputLook.Default;
+
+    [CascadingParameter(Name = "FormFieldLabelId")]
+    public string? FormFieldLabelId { get; set; }
 
     private bool ResolveIsChecked()
     {
@@ -83,6 +87,15 @@
             _ => "rz-checkbox h-4 w-4 rounded border-slate-300 text-indigo-600"
         };
     }
+
+    private string? ResolveLabelledBy()
+        => HasExplicitAccessibleName() ? null : FormFieldLabelId;
+
+    private bool HasExplicitAccessibleName()
+        => AdditionalAttributes is not null
+            && AdditionalAttributes.Keys.Any(key =>
+                string.Equals(key, "aria-label", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, "aria-labelledby", StringComparison.OrdinalIgnoreCase));
 }
 
 
