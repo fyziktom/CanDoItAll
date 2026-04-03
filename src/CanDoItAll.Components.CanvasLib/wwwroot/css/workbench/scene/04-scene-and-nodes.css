@@ -100,9 +100,11 @@
 }
 
 .cw-node[data-family="root"] .cw-node__surface {
-    background: linear-gradient(145deg, #111827, #0f172a);
-    color: #fff;
-    border-color: rgba(20, 184, 166, 0.42);
+    border-width: 1.5px;
+    border-color: color-mix(in srgb, var(--cw-node-accent, #7c3aed) 30%, white);
+    box-shadow:
+        0 26px 42px color-mix(in srgb, var(--cw-node-accent, #7c3aed) 16%, rgba(15, 23, 42, 0.18)),
+        var(--cw-node-surface-shadow);
 }
 
 .cw-node[data-palette="primary"] {
@@ -166,6 +168,15 @@
     --cw-node-surface-border: rgba(148, 163, 184, 0.48);
     --cw-node-surface-shadow: 0 18px 30px rgba(71, 85, 105, 0.1);
     --cw-node-surface-text: #0f172a;
+}
+
+.cw-node[data-palette]:not([data-palette="primary"]):not([data-palette="secondary"]):not([data-palette="success"]):not([data-palette="info"]):not([data-palette="warning"]):not([data-palette="danger"]):not([data-palette="neutral"]) {
+    --cw-node-surface-bg: color-mix(in srgb, var(--cw-node-accent, #7c3aed) 16%, white);
+    --cw-node-surface-bg-soft: color-mix(in srgb, var(--cw-node-accent, #7c3aed) 24%, white);
+    --cw-node-surface-overlay: color-mix(in srgb, var(--cw-node-accent, #7c3aed) 12%, transparent);
+    --cw-node-surface-border: color-mix(in srgb, var(--cw-node-accent, #7c3aed) 36%, white);
+    --cw-node-surface-shadow: 0 20px 32px color-mix(in srgb, var(--cw-node-accent, #7c3aed) 14%, rgba(15, 23, 42, 0.08));
+    --cw-node-surface-text: color-mix(in srgb, var(--cw-node-accent, #7c3aed) 72%, #0f172a);
 }
 
 .cw-node.is-selected .cw-node__surface {

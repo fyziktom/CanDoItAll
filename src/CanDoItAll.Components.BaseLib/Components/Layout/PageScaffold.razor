@@ -3,6 +3,7 @@
     @if (Header is not null)
     {
         <Stack GapScale="LayoutGap.Medium"
+               AlignItems="AlignItems.Stretch"
                Class="w-full">
             @Header
         </Stack>
@@ -11,6 +12,7 @@
     @if (Lead is not null)
     {
         <Stack GapScale="LayoutGap.Large"
+               AlignItems="AlignItems.Stretch"
                Class="w-full">
             @Lead
         </Stack>
@@ -21,6 +23,7 @@
         <Grid Gap="LayoutGap.XXLarge"
               ColumnTemplate2Xl="minmax(0,1fr) 18rem">
             <Stack GapScale="LayoutGap.XXLarge"
+                   AlignItems="AlignItems.Stretch"
                    Class="min-w-0 w-full">
                 @ChildContent
             </Stack>
@@ -34,6 +37,7 @@
     else if (ChildContent is not null)
     {
         <Stack GapScale="LayoutGap.XXLarge"
+               AlignItems="AlignItems.Stretch"
                Class="w-full">
             @ChildContent
         </Stack>

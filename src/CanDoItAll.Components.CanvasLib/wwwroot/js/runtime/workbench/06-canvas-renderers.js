@@ -136,12 +136,98 @@
         return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
     }
 
+    function parseColorChannels(color) {
+        if (typeof color !== "string" || color.trim().length === 0) {
+            return { red: 124, green: 58, blue: 237 };
+        }
+
+        const normalized = color.trim();
+        if (normalized.startsWith("rgba(") || normalized.startsWith("rgb(")) {
+            const values = normalized
+                .replace(/rgba?\(/i, "")
+                .replace(")", "")
+                .split(",")
+                .map(token => Number.parseFloat(token.trim()));
+            if (values.length >= 3 &&
+                Number.isFinite(values[0]) &&
+                Number.isFinite(values[1]) &&
+                Number.isFinite(values[2])) {
+                return {
+                    red: clamp(Math.round(values[0]), 0, 255),
+                    green: clamp(Math.round(values[1]), 0, 255),
+                    blue: clamp(Math.round(values[2]), 0, 255)
+                };
+            }
+        }
+
+        const hex = normalized.replace("#", "");
+        if (hex.length === 3 || hex.length === 6) {
+            const expanded = hex.length === 3
+                ? hex.split("").map(token => `${token}${token}`).join("")
+                : hex;
+            const red = Number.parseInt(expanded.substring(0, 2), 16);
+            const green = Number.parseInt(expanded.substring(2, 4), 16);
+            const blue = Number.parseInt(expanded.substring(4, 6), 16);
+            if (Number.isFinite(red) && Number.isFinite(green) && Number.isFinite(blue)) {
+                return { red, green, blue };
+            }
+        }
+
+        return { red: 124, green: 58, blue: 237 };
+    }
+
+    function mixColorChannels(base, target, ratio) {
+        const normalizedRatio = clamp(ratio, 0, 1);
+        return {
+            red: Math.round(base.red + ((target.red - base.red) * normalizedRatio)),
+            green: Math.round(base.green + ((target.green - base.green) * normalizedRatio)),
+            blue: Math.round(base.blue + ((target.blue - base.blue) * normalizedRatio))
+        };
+    }
+
+    function rgbaFromChannels(channels, alpha) {
+        return `rgba(${channels.red}, ${channels.green}, ${channels.blue}, ${alpha})`;
+    }
+
+    function buildAccentPalette(accent, isSelected) {
+        const accentChannels = parseColorChannels(accent);
+        const whiteMix = ratio => mixColorChannels(accentChannels, { red: 255, green: 255, blue: 255 }, ratio);
+        const darkMix = ratio => mixColorChannels(accentChannels, { red: 15, green: 23, blue: 42 }, ratio);
+
+        return {
+            surfaceFill: rgbaFromChannels(whiteMix(0.84), 0.98),
+            surfaceStroke: rgbaFromChannels(whiteMix(isSelected ? 0.08 : 0.36), 0.92),
+            surfaceShadow: rgbaFromChannels(accentChannels, 0.16),
+            labelText: rgbaFromChannels(darkMix(0.12), 0.72),
+            titleText: rgbaFromChannels(darkMix(0.22), 0.96),
+            secondaryText: rgbaFromChannels(darkMix(0.16), 0.84),
+            iconFill: rgbaFromChannels(whiteMix(0.94), 0.84),
+            iconStroke: rgbaFromChannels(whiteMix(0.6), 0.42),
+            iconText: rgbaFromChannels(darkMix(0.12), 0.95),
+            subtleFill: rgbaFromChannels(whiteMix(0.97), 0.86),
+            subtleStroke: rgbaFromChannels(whiteMix(0.68), 0.44),
+            subtleText: rgbaFromChannels(darkMix(0.18), 0.88),
+            progressTrack: rgbaFromChannels(accentChannels, 0.22),
+            progressText: rgbaFromChannels(darkMix(0.18), 0.88)
+        };
+    }
+
     function resolveNodeAccentColor(node) {
         if (typeof node?.accentColor === "string" && node.accentColor.trim().length > 0) {
             return node.accentColor.trim();
         }
 
         switch ((node?.paletteKey || "").toLowerCase()) {
+            case "violet":
+                return "#7c3aed";
+            case "mint":
+                return "#10b981";
+            case "sky":
+                return "#0ea5e9";
+            case "amber":
+                return "#f59e0b";
+            case "rose":
+                return "#e11d48";
             case "success":
                 return "#059669";
             case "warning":
@@ -294,7 +380,7 @@
             }
         };
 
-        return palettes[paletteKey] || palettes.neutral;
+        return palettes[paletteKey] || buildAccentPalette(accent, isSelected);
     }
 
     function resolveAnchorRect(anchor) {
