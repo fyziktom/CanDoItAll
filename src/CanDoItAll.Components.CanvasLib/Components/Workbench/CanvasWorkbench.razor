@@ -498,7 +498,16 @@
 
     [JSInvokable]
     public Task OnContextAction(string? nodeId, string actionId, double x, double y)
-        => ContextActionRequested.InvokeAsync(new CanvasWorkbenchContextActionRequest(nodeId, actionId, x, y));
+        => DispatchContextActionAsync(new CanvasWorkbenchContextActionRequest(nodeId, actionId, x, y));
+
+    [JSInvokable]
+    public Task OnContextActionRequest(string requestJson)
+    {
+        var request = Deserialize<CanvasWorkbenchContextActionRequest>(requestJson);
+        return request is null
+            ? Task.CompletedTask
+            : DispatchContextActionAsync(request);
+    }
 
     [JSInvokable]
     public Task OnCreateAction(string requestJson)
@@ -776,10 +785,14 @@
             {
                 surface.SurfaceId,
                 surface.Mode,
+                surface.DependencySourceId,
                 surface.Nodes,
                 surface.Links,
                 surface.Chrome
             });
+
+    private Task DispatchContextActionAsync(CanvasWorkbenchContextActionRequest request)
+        => ContextActionRequested.InvokeAsync(request);
 
     private string ResolveNodeLabel(string nodeId)
     {
@@ -868,6 +881,17 @@
             ? nodeIds[0]
             : primaryNodeId;
         await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.selectNodes", host, nodeIds, resolvedPrimaryNodeId);
+    }
+
+    public async Task<IReadOnlyList<string>> GetSelectedNodeIdsAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return Surface.UiState.SelectedNodeIds;
+        }
+
+        var stateJson = await JsRuntime.InvokeAsync<string>("CanDoItAll.canvasWorkbench.getState", host);
+        return CanvasWorkbenchUiState.Parse(stateJson).SelectedNodeIds;
     }
 
     public async Task<string?> CaptureImageAsync()

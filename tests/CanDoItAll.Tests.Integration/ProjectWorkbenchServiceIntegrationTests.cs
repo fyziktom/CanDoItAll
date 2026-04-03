@@ -265,6 +265,61 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task CreateAndUpdateObjectAsync_persists_duration_seconds_for_custom_nodes()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projects, "Duration persistence");
+        var startUtc = new DateTimeOffset(2026, 4, 2, 9, 0, 0, TimeSpan.Zero);
+
+        var created = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Timed note",
+                string.Empty,
+                "Seed duration through the workbench service.",
+                $"project:{projectId}",
+                420,
+                280,
+                startUtc,
+                null,
+                null,
+                null,
+                null,
+                5400));
+
+        Assert.Equal(startUtc, created.StartUtc);
+        Assert.Equal(startUtc.AddMinutes(90), created.EndUtc);
+        Assert.Equal(5400, created.DurationSeconds);
+
+        var updated = await workbench.UpdateObjectAsync(
+            projectId,
+            created.Id,
+            new ProjectObjectEditRequest(
+                "Timed note updated",
+                string.Empty,
+                "Adjust the prepared duration value.",
+                startUtc.AddHours(1),
+                null,
+                created.MetadataJson,
+                7200));
+
+        Assert.NotNull(updated);
+        Assert.Equal(startUtc.AddHours(1), updated!.StartUtc);
+        Assert.Equal(startUtc.AddHours(3), updated.EndUtc);
+        Assert.Equal(7200, updated.DurationSeconds);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var persistedNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+        Assert.Equal(7200, persistedNode.DurationSeconds);
+        Assert.Equal(startUtc.AddHours(3), persistedNode.EndUtc);
+    }
+
+    [Fact]
     public async Task CreateObjectAsync_links_prompt_flow_nodes_to_blank_prompt_sessions()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -815,6 +870,58 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.Equal("Deploy gateway", persistedNode.Title);
         Assert.Equal(noteBody, persistedNode.Notes);
         Assert.Equal(ProjectObjectPaletteKeys.Info, persistedNode.VisualProfile.PaletteKey);
+    }
+
+    [Fact]
+    public async Task UnlinkObjectsAsync_removes_user_authored_dependency_links()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projects, "Dependency unlink");
+        var prerequisite = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Prepared note",
+                string.Empty,
+                "A note can act as a dependency too.",
+                $"project:{projectId}",
+                360,
+                240));
+        var dependent = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Execute work",
+                string.Empty,
+                "Blocked until the note is done.",
+                $"project:{projectId}",
+                640,
+                360,
+                null,
+                null,
+                "task"));
+
+        await workbench.LinkObjectsAsync(projectId, dependent.Id, prerequisite.Id, ProjectObjectLinkKind.DependsOn);
+
+        var beforeUnlink = await workbench.GetStructureAsync(projectId);
+        Assert.Contains(beforeUnlink.Links, link =>
+            string.Equals(link.SourceId, dependent.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, prerequisite.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.DependsOn);
+
+        var removed = await workbench.UnlinkObjectsAsync(projectId, dependent.Id, prerequisite.Id, ProjectObjectLinkKind.DependsOn);
+
+        Assert.True(removed);
+
+        var afterUnlink = await workbench.GetStructureAsync(projectId);
+        Assert.DoesNotContain(afterUnlink.Links, link =>
+            string.Equals(link.SourceId, dependent.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, prerequisite.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.DependsOn);
     }
 
     [Fact]

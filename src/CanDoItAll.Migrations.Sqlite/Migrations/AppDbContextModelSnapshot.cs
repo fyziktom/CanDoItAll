@@ -1425,6 +1425,9 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTimeOffset?>("EndUtc")
                         .HasColumnType("TEXT");
 

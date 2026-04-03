@@ -945,6 +945,90 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Export_gantt_creates_mermaid_file_with_dependency_order_and_default_duration()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Dependency Gantt Export");
+        var feature = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Execution feature",
+                "Delivery branch",
+                "Use this node as the summary root.",
+                $"project:{projectId}",
+                520,
+                240,
+                null,
+                null,
+                "feature"));
+
+        var dependencyNote = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Architect dependency note",
+                "Prerequisite note",
+                "A note can still block a downstream task.",
+                feature.Id,
+                760,
+                340));
+
+        var deliveryTask = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Ship canvas dependency flow",
+                "Implementation task",
+                "Create the dependency UX and delete mode.",
+                feature.Id,
+                780,
+                420,
+                null,
+                null,
+                "task",
+                null,
+                null,
+                7200));
+
+        await workbenchService.LinkObjectsAsync(projectId, deliveryTask.Id, dependencyNote.Id, ProjectObjectLinkKind.DependsOn);
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, feature.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Execution feature", cut.Markup);
+            Assert.Contains(">Summary<", cut.Markup);
+        });
+
+        FindButtonByLabel(cut, "Summary").Click();
+        cut.WaitForAssertion(() => Assert.Contains("Export Gantt", cut.Markup));
+
+        FindButtonByLabel(cut, "Export Gantt").Click();
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("was exported as a Mermaid Gantt node.", cut.Markup));
+
+        var updatedSurface = await workbenchService.GetStructureAsync(projectId);
+        var exportedNode = Assert.Single(
+            updatedSurface.Nodes,
+            node => node.ObjectType == ProjectObjectType.File &&
+                    string.Equals(node.ObjectSubtype, "mermaid", StringComparison.Ordinal) &&
+                    string.Equals(node.ParentId, feature.Id, StringComparison.Ordinal));
+
+        Assert.Equal("Execution feature gantt", exportedNode.Title);
+        Assert.Contains(">[Unscheduled] Architect dependency note (Draft) :task2, ", exportedNode.Notes, StringComparison.Ordinal);
+        Assert.Contains(">Ship canvas dependency flow (Draft) :task3, after task2, 2h", exportedNode.Notes, StringComparison.Ordinal);
+        Assert.Contains("task2, 202", exportedNode.Notes, StringComparison.Ordinal);
+        Assert.Contains(", 1h", exportedNode.Notes, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Selected_mermaid_nodes_open_viewer_modal_with_detected_diagram_type()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

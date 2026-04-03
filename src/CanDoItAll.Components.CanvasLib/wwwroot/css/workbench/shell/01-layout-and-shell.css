@@ -218,6 +218,14 @@ body.cw-body-lock {
     --cw-menu-scale: 1;
 }
 
+.cw-canvas-host[data-workbench-mode="dependency"] {
+    cursor: crosshair;
+}
+
+.cw-canvas-host[data-workbench-mode="delete"] {
+    cursor: default;
+}
+
 .cw-stage-surface:has(.cw-canvas-composer) .cw-canvas-host {
     z-index: 32;
 }

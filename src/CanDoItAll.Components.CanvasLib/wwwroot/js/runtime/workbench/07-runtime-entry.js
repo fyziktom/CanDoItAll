@@ -66,6 +66,17 @@
                 renderCanvasStandardNode(surface.context, state, node, hostBounds, accent, detailMode, meta);
             }
 
+            if (resolveSurfaceMode(state) === "delete" && state.hoveredDeleteNodeId === node.id) {
+                drawRoundedPanel(
+                    surface.context,
+                    buildRect(hostBounds.left - 4, hostBounds.top - 4, hostBounds.width + 8, hostBounds.height + 8),
+                    Math.max(16, 22 * state.ui.zoom),
+                    "rgba(254, 226, 226, 0.12)",
+                    "rgba(220, 38, 38, 0.92)",
+                    Math.max(2, 3 * state.ui.zoom),
+                    "");
+            }
+
             state.sceneGeometry.nodes.set(node.id, buildCanvasSnapshotBounds(hostBounds, node, meta));
             nextEntries.set(node.id, {
                 contentKey: getNodeRetainedContentKey(node, state.collapsedIds.has(node.id))
@@ -176,6 +187,9 @@
 
         state.anchorLayer.innerHTML = "";
         state.anchorLayer.style.opacity = "1";
+        if (resolveSurfaceMode(state) === "delete") {
+            return;
+        }
         const anchors = state.surface.chrome.connectorAnchors || {};
         if (!anchors.isEnabled) {
             return;
@@ -592,6 +606,7 @@
     function buildWorkbench(state) {
         clear(state.host);
         state.host.classList.add("cw-workbench");
+        syncWorkbenchMode(state);
         syncMenuScaleCss(state);
 
         const backdrop = createElement(state.document, "div", "cw-workbench__backdrop");
@@ -711,6 +726,167 @@
         resize(state);
     }
 
+    function resolveSurfaceMode(state) {
+        return state?.surface?.mode || "authoring";
+    }
+
+    function isDeleteMode(state) {
+        return resolveSurfaceMode(state) === "delete";
+    }
+
+    function isDependencyMode(state) {
+        return resolveSurfaceMode(state) === "dependency";
+    }
+
+    function syncWorkbenchMode(state) {
+        if (!state?.host?.dataset) {
+            return;
+        }
+
+        state.host.dataset.workbenchMode = resolveSurfaceMode(state);
+    }
+
+    function updatePointerHostPoint(state, event) {
+        const hostRect = state.host?.getBoundingClientRect?.();
+        if (!hostRect) {
+            state.pointerHostPoint = null;
+            return null;
+        }
+
+        const isWithinHost = event.clientX >= hostRect.left &&
+            event.clientX <= hostRect.right &&
+            event.clientY >= hostRect.top &&
+            event.clientY <= hostRect.bottom;
+        state.pointerHostPoint = isWithinHost
+            ? getHostPoint(state, event.clientX, event.clientY)
+            : null;
+        return state.pointerHostPoint;
+    }
+
+    function dispatchContextActionRequest(state, request) {
+        if (!state?.dotNetRef?.invokeMethodAsync) {
+            return;
+        }
+
+        void state.dotNetRef.invokeMethodAsync("OnContextActionRequest", JSON.stringify(request));
+    }
+
+    function distancePointToSegment(pointX, pointY, startX, startY, endX, endY) {
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        if (Math.abs(deltaX) <= 0.001 && Math.abs(deltaY) <= 0.001) {
+            return Math.hypot(pointX - startX, pointY - startY);
+        }
+
+        const segmentLengthSquared = (deltaX * deltaX) + (deltaY * deltaY);
+        const projected = clamp(
+            (((pointX - startX) * deltaX) + ((pointY - startY) * deltaY)) / segmentLengthSquared,
+            0,
+            1);
+        const projectionX = startX + (projected * deltaX);
+        const projectionY = startY + (projected * deltaY);
+        return Math.hypot(pointX - projectionX, pointY - projectionY);
+    }
+
+    function cubicBezierPoint(link, t) {
+        const inverse = 1 - t;
+        const inverseSquared = inverse * inverse;
+        const inverseCubed = inverseSquared * inverse;
+        const tSquared = t * t;
+        const tCubed = tSquared * t;
+        return {
+            x: (inverseCubed * link.startPoint.x) +
+                (3 * inverseSquared * t * link.controlPoint1.x) +
+                (3 * inverse * tSquared * link.controlPoint2.x) +
+                (tCubed * link.endPoint.x),
+            y: (inverseCubed * link.startPoint.y) +
+                (3 * inverseSquared * t * link.controlPoint1.y) +
+                (3 * inverse * tSquared * link.controlPoint2.y) +
+                (tCubed * link.endPoint.y)
+        };
+    }
+
+    function isPointNearRenderedLink(link, pointX, pointY) {
+        if (!link?.bounds) {
+            return false;
+        }
+
+        const margin = 12;
+        if (pointX < (link.bounds.left - margin) ||
+            pointX > (link.bounds.right + margin) ||
+            pointY < (link.bounds.top - margin) ||
+            pointY > (link.bounds.bottom + margin)) {
+            return false;
+        }
+
+        let previous = link.startPoint;
+        const segments = 18;
+        for (let index = 1; index <= segments; index += 1) {
+            const current = cubicBezierPoint(link, index / segments);
+            if (distancePointToSegment(pointX, pointY, previous.x, previous.y, current.x, current.y) <= 10) {
+                return true;
+            }
+
+            previous = current;
+        }
+
+        return false;
+    }
+
+    function hitTestRenderedLink(state, pointX, pointY) {
+        const renderedLinks = state.renderedLinks || [];
+        for (let index = renderedLinks.length - 1; index >= 0; index -= 1) {
+            const link = renderedLinks[index];
+            if (isPointNearRenderedLink(link, pointX, pointY)) {
+                return link;
+            }
+        }
+
+        return null;
+    }
+
+    function resolveDeleteModeHitTarget(state, event) {
+        const point = updatePointerHostPoint(state, event);
+        if (!point) {
+            return null;
+        }
+
+        const sceneHit = getSceneHitAtPoint(state, point.x, point.y);
+        const targetNode = resolveHitNode(state, sceneHit);
+        if (targetNode) {
+            return {
+                targetKind: "node",
+                nodeId: targetNode.id
+            };
+        }
+
+        const targetLink = hitTestRenderedLink(state, point.x, point.y);
+        if (targetLink) {
+            return {
+                targetKind: "link",
+                link: targetLink
+            };
+        }
+
+        return null;
+    }
+
+    function updateDeleteHoverState(state, event) {
+        const hitTarget = resolveDeleteModeHitTarget(state, event);
+        const nextNodeId = hitTarget?.targetKind === "node" ? hitTarget.nodeId : null;
+        const nextLinkKey = hitTarget?.targetKind === "link" ? hitTarget.link.key : null;
+        if ((state.hoveredDeleteNodeId || null) === nextNodeId &&
+            (state.hoveredDeleteLinkKey || null) === nextLinkKey) {
+            return hitTarget;
+        }
+
+        state.hoveredDeleteNodeId = nextNodeId;
+        state.hoveredDeleteLinkKey = nextLinkKey;
+        clearScenePopoverHover(state);
+        render(state);
+        return hitTarget;
+    }
+
     function attachEvents(state) {
         state.handlers = {
             pointerDown: event => {
@@ -726,6 +902,7 @@
                 cancelViewportAnimation(state);
                 ensureHostFocus(state);
                 deferHostFocus(state);
+                updatePointerHostPoint(state, event);
 
                 if (event.button === 2) {
                     return;
@@ -737,6 +914,34 @@
                 }
 
                 const hitTarget = getSceneHitAtEvent(state, event);
+                if (isDeleteMode(state) && event.button === 0) {
+                    const deleteTarget = updateDeleteHoverState(state, event);
+                    if (deleteTarget?.targetKind === "node") {
+                        dispatchContextActionRequest(state, {
+                            nodeId: deleteTarget.nodeId,
+                            actionId: "delete",
+                            x: 0,
+                            y: 0,
+                            targetKind: "node"
+                        });
+                        return;
+                    }
+
+                    if (deleteTarget?.targetKind === "link") {
+                        dispatchContextActionRequest(state, {
+                            nodeId: deleteTarget.link.targetId,
+                            actionId: "delete-link",
+                            x: 0,
+                            y: 0,
+                            targetKind: "link",
+                            linkSourceId: deleteTarget.link.sourceId,
+                            linkTargetId: deleteTarget.link.targetId,
+                            linkKind: deleteTarget.link.kind
+                        });
+                        return;
+                    }
+                }
+
                 if (hitTarget?.type === "node-path" && event.button === 0) {
                     state.pathCopyState = {
                         nodeId: hitTarget.nodeId,
@@ -772,6 +977,19 @@
                 }
 
                 if (targetNode) {
+                    const dependencySourceId = state.surface?.dependencySourceId || "";
+                    if (isDependencyMode(state) &&
+                        event.button === 0 &&
+                        dependencySourceId &&
+                        dependencySourceId !== targetNode.id) {
+                        startDragForNodeIds(state, event, [targetNode.id], {
+                            kind: "dependency-drag",
+                            sourceNodeId: dependencySourceId,
+                            targetNodeId: targetNode.id
+                        });
+                        return;
+                    }
+
                     const isMultiToggle = (event.ctrlKey || event.metaKey) && event.shiftKey;
                     if (event.button === 0 &&
                         !event.altKey &&
@@ -807,10 +1025,19 @@
                 startPan(state, event);
             },
             pointerMove: event => {
+                updatePointerHostPoint(state, event);
                 if (!state.interaction) {
                     syncContextMenuLayers(state, event);
+                    if (isDeleteMode(state)) {
+                        updateDeleteHoverState(state, event);
+                        return;
+                    }
+
                     if (!isOverlayTarget(event.target)) {
                         syncSceneHoverState(state, event);
+                        if (isDependencyMode(state)) {
+                            render(state);
+                        }
                     }
                     return;
                 }
@@ -818,6 +1045,7 @@
                 switch (state.interaction.kind) {
                     case "drag":
                     case "frame-drag":
+                    case "dependency-drag":
                         updateDrag(state, event);
                         break;
                     case "pan":
@@ -833,8 +1061,13 @@
                 void finishCanvasInteraction(state);
             },
             blur: () => {
+                state.pointerHostPoint = null;
+                state.hoveredDeleteNodeId = null;
+                state.hoveredDeleteLinkKey = null;
+                state.hoveredNodeId = null;
                 clearScenePopoverHover(state);
                 void finishCanvasInteraction(state);
+                render(state);
             },
             doubleClick: event => {
                 if (state.recentDoubleActivationAt && (Date.now() - state.recentDoubleActivationAt) <= 340) {
@@ -1071,7 +1304,25 @@
     function collectSceneSnapshot(state) {
         return {
             rendererMode: "canvas",
+            mode: resolveSurfaceMode(state),
+            dependencySourceId: state.surface?.dependencySourceId || "",
             nodes: [...(state.sceneGeometry?.nodes?.values?.() || [])],
+            links: (state.renderedLinks || []).map(link => ({
+                key: link.key || "",
+                sourceId: link.sourceId || "",
+                targetId: link.targetId || "",
+                kind: link.kind || "",
+                midPoint: link.midPoint || null,
+                bounds: link.bounds || null
+            })),
+            previewLink: state.previewLink
+                ? {
+                    sourceId: state.previewLink.sourceId || "",
+                    targetId: state.previewLink.targetId || "",
+                    midPoint: state.previewLink.midPoint || null,
+                    bounds: state.previewLink.bounds || null
+                }
+                : null,
             frames: [...(state.renderedFrames?.entries?.() || [])].map(([frameId, entry]) => ({
                 frameId,
                 label: entry?.frame?.label || "Group border",
@@ -1091,6 +1342,14 @@
                 frameId: entry.metadata?.frameId || "",
                 bounds: entry.bounds
             })),
+            hoveredDeleteNodeId: state.hoveredDeleteNodeId || "",
+            hoveredDeleteLinkKey: state.hoveredDeleteLinkKey || "",
+            pointerHostPoint: state.pointerHostPoint
+                ? {
+                    x: round(state.pointerHostPoint.x),
+                    y: round(state.pointerHostPoint.y)
+                }
+                : null,
             minimap: state.minimapMetrics
                 ? {
                     width: round(state.minimapMetrics.width),
@@ -1211,7 +1470,7 @@
     }
 
     function simulatePointerDrag(state, request) {
-        if (!state?.handlers?.pointerDown || !state?.handlers?.pointerMove) {
+        if (!state?.handlers?.pointerDown || !state?.handlers?.pointerMove || !state?.handlers?.pointerUp) {
             return false;
         }
 
@@ -1239,37 +1498,10 @@
         deferHostFocus(state);
 
         const startEvent = createSyntheticPointerEvent(state, startClientX, startClientY, request);
-        if (request?.frameId) {
-            const renderedFrame = state.renderedFrames?.get?.(request.frameId);
-            if (!renderedFrame?.nodeIds?.length) {
-                return false;
-            }
-
-            startDragForNodeIds(state, startEvent, renderedFrame.nodeIds, {
-                kind: "frame-drag",
-                frameId: request.frameId
-            });
-        }
-        else {
-            const nodeId = request?.nodeId || "";
-            if (!nodeId || !state.lookups?.byId?.has?.(nodeId)) {
-                return false;
-            }
-
-            const shouldDragSelection = !!(request?.ctrlKey || request?.metaKey) &&
-                state.selectedIds.size > 1 &&
-                state.selectedIds.has(nodeId);
-            if (!shouldDragSelection) {
-                ensureSelectedForDrag(state, nodeId);
-            }
-
-            startDragForNodeIds(state, startEvent, shouldDragSelection ? [...state.selectedIds] : [nodeId], {
-                kind: "drag"
-            });
-        }
+        state.handlers.pointerDown(startEvent);
 
         if (!state.interaction) {
-            return false;
+            return true;
         }
 
         for (let stepIndex = 1; stepIndex <= stepCount; stepIndex += 1) {
@@ -1480,6 +1712,7 @@
                 refresh,
                 buildWorkbench,
                 attachEvents,
+                syncWorkbenchMode,
                 setMaximized,
                 exportImageData,
                 disposeState: disposeWorkbenchState

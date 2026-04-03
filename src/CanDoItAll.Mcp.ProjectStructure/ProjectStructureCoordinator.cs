@@ -21,6 +21,8 @@ public interface IProjectStructureCoordinator
 
     Task<ProjectStructureChecklistResponse> GetChecklistAsync(Guid projectId, ProjectStructureChecklistRequest request, CancellationToken cancellationToken = default);
 
+    Task<ProjectStructureDependencyResponse> GetDependenciesAsync(Guid projectId, ProjectStructureDependencyQueryRequest request, CancellationToken cancellationToken = default);
+
     Task<ProjectStructureNodeSummary> CreateNodeAsync(Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes, CancellationToken cancellationToken = default);
 
     Task<ProjectStructureNodeSummary> UpdateNodeAsync(Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes, CancellationToken cancellationToken = default);
@@ -107,6 +109,14 @@ public sealed class ProjectStructureCoordinator(
     {
         return httpClient.PostAsync<ProjectStructureChecklistRequest, ProjectStructureChecklistResponse>(
             $"/api/project-structure-mcp/projects/{projectId}/checklists/query",
+            request,
+            cancellationToken: cancellationToken);
+    }
+
+    public Task<ProjectStructureDependencyResponse> GetDependenciesAsync(Guid projectId, ProjectStructureDependencyQueryRequest request, CancellationToken cancellationToken = default)
+    {
+        return httpClient.PostAsync<ProjectStructureDependencyQueryRequest, ProjectStructureDependencyResponse>(
+            $"/api/project-structure-mcp/projects/{projectId}/dependencies/query",
             request,
             cancellationToken: cancellationToken);
     }
@@ -266,6 +276,7 @@ public sealed class ProjectStructureCoordinator(
             node.MediaRelativePath,
             node.MediaContentType,
             node.X,
-            node.Y);
+            node.Y,
+            node.DurationSeconds);
     }
 }

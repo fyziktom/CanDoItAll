@@ -266,6 +266,214 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
+    public async Task Toolbar_tools_switch_surface_modes_and_preserve_frozen_dependency_source()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Toolbar mode project");
+        var noteNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Selected note",
+                "Toolbar source",
+                "Use this note as the dependency source.",
+                $"project:{projectId}",
+                420,
+                240));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, noteNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Selected note", cut.Markup);
+            Assert.NotNull(cut.Find("[data-testid='project-structure-toolbar-tool-select']"));
+            Assert.NotNull(cut.Find("[data-testid='project-structure-toolbar-tool-dependency']"));
+            Assert.NotNull(cut.Find("[data-testid='project-structure-toolbar-tool-delete']"));
+            Assert.Equal("authoring", canvasWorkbench.Instance.Surface.Mode);
+            Assert.True(string.IsNullOrWhiteSpace(canvasWorkbench.Instance.Surface.DependencySourceId));
+        });
+
+        cut.Find("[data-testid='project-structure-toolbar-tool-dependency']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("dependency", canvasWorkbench.Instance.Surface.Mode);
+            Assert.Equal(noteNode.Id, canvasWorkbench.Instance.Surface.DependencySourceId);
+            Assert.Contains("Dependency tool:", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-toolbar-tool-delete']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("delete", canvasWorkbench.Instance.Surface.Mode);
+            Assert.True(string.IsNullOrWhiteSpace(canvasWorkbench.Instance.Surface.DependencySourceId));
+            Assert.Contains("Delete tool:", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-toolbar-tool-select']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("authoring", canvasWorkbench.Instance.Surface.Mode);
+            Assert.True(string.IsNullOrWhiteSpace(canvasWorkbench.Instance.Surface.DependencySourceId));
+        });
+    }
+
+    [Fact]
+    public async Task Dependency_context_requests_create_and_delete_persisted_links_for_note_nodes()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Dependency mutation project");
+        var dependentNote = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Dependent note",
+                "Simple note",
+                "This note should wait on another node.",
+                $"project:{projectId}",
+                420,
+                240));
+        var prerequisiteTask = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Prerequisite task",
+                "Foundation",
+                "Finish this before the note can proceed.",
+                $"project:{projectId}",
+                690,
+                260,
+                null,
+                null,
+                "task"));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, dependentNote.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Dependent note", cut.Markup);
+            Assert.Contains("Prerequisite task", cut.Markup);
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                prerequisiteTask.Id,
+                "dependency:create",
+                0,
+                0,
+                "node",
+                dependentNote.Id,
+                prerequisiteTask.Id,
+                ProjectObjectLinkKind.DependsOn.ToString()))));
+
+        cut.WaitForAssertion(() => Assert.Contains("The dependency link was added.", cut.Markup));
+
+        var surfaceWithDependency = await workbenchService.GetStructureAsync(projectId);
+        Assert.Contains(surfaceWithDependency.Links, link =>
+            string.Equals(link.SourceId, dependentNote.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, prerequisiteTask.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.DependsOn);
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                prerequisiteTask.Id,
+                "delete-link",
+                0,
+                0,
+                "link",
+                dependentNote.Id,
+                prerequisiteTask.Id,
+                ProjectObjectLinkKind.DependsOn.ToString()))));
+
+        cut.WaitForAssertion(() => Assert.Contains("The dependency link was deleted.", cut.Markup));
+
+        var surfaceWithoutDependency = await workbenchService.GetStructureAsync(projectId);
+        Assert.DoesNotContain(surfaceWithoutDependency.Links, link =>
+            string.Equals(link.SourceId, dependentNote.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, prerequisiteTask.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.DependsOn);
+    }
+
+    [Fact]
+    public async Task Delete_prompt_mentions_connected_nodes_when_multiple_dependency_links_touch_the_target()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Delete prompt project");
+        var centralNote = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Central note",
+                "Dependency hub",
+                "This node is connected to multiple prerequisites.",
+                $"project:{projectId}",
+                460,
+                240));
+        var prerequisiteOne = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Prerequisite one",
+                "Connected node",
+                "First visible prerequisite.",
+                $"project:{projectId}",
+                720,
+                180));
+        var prerequisiteTwo = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Prerequisite two",
+                "Connected node",
+                "Second visible prerequisite.",
+                $"project:{projectId}",
+                720,
+                320));
+
+        await workbenchService.LinkObjectsAsync(projectId, centralNote.Id, prerequisiteOne.Id, ProjectObjectLinkKind.DependsOn);
+        await workbenchService.LinkObjectsAsync(projectId, centralNote.Id, prerequisiteTwo.Id, ProjectObjectLinkKind.DependsOn);
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, centralNote.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Central note", cut.Markup));
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextAction(centralNote.Id, "delete", 0, 0));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Delete node", cut.Markup);
+        });
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        Assert.Contains(persistedSurface.Nodes, node => string.Equals(node.Id, centralNote.Id, StringComparison.Ordinal));
+        Assert.Equal(2, persistedSurface.Links.Count(link =>
+            string.Equals(link.SourceId, centralNote.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.DependsOn));
+    }
+
+    [Fact]
     public async Task Status_marker_priority_and_progress_mutations_patch_surface_without_structure_reload()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithCreateCounter);

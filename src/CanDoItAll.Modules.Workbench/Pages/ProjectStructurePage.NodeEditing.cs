@@ -170,7 +170,7 @@ public partial class ProjectStructurePage
                 await OpenReconnectSubprojectDialogAsync(node);
                 break;
             case "connect":
-                EnableLinkMode();
+                await EnterDependencyModeAsync(node.Id);
                 break;
             case "reconnect":
                 await BeginReconnectAsync(node.Id);

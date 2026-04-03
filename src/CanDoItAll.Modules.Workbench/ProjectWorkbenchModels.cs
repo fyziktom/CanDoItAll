@@ -53,6 +53,7 @@ public sealed class ProjectObjectRecord : IProjectObject
     public double PositionY { get; set; }
     public DateTimeOffset? StartUtc { get; set; }
     public DateTimeOffset? EndUtc { get; set; }
+    public int? DurationSeconds { get; set; }
     public bool IsSystemManaged { get; set; }
     public DateTimeOffset CreatedAtUtc { get; set; }
     public DateTimeOffset UpdatedAtUtc { get; set; }
@@ -171,7 +172,8 @@ public sealed record ProjectStructureNode(
     string StorageObjectReferenceJson = "",
     ProjectStructureProjectRole ProjectRole = ProjectStructureProjectRole.None,
     Guid? RelatedProjectId = null,
-    int ParentProjectCount = 0);
+    int ParentProjectCount = 0,
+    int? DurationSeconds = null);
 
 public sealed record ProjectStructureLink(string SourceId, string TargetId, ProjectObjectLinkKind Kind, bool IsUserAuthored);
 
@@ -233,7 +235,8 @@ public sealed record ProjectObjectCreateRequest(
     DateTimeOffset? EndUtc = null,
     string? ObjectSubtype = null,
     ProjectObjectMediaPayload? Media = null,
-    string? MetadataJson = null);
+    string? MetadataJson = null,
+    int? DurationSeconds = null);
 
 public sealed record ProjectObjectEditRequest(
     string Title,
@@ -241,7 +244,8 @@ public sealed record ProjectObjectEditRequest(
     string Notes,
     DateTimeOffset? StartUtc,
     DateTimeOffset? EndUtc,
-    string MetadataJson);
+    string MetadataJson,
+    int? DurationSeconds = null);
 
 public sealed record ProjectObjectReclassificationRequest(
     ProjectObjectType TargetObjectType,
@@ -259,7 +263,8 @@ public sealed record ProjectObjectSeedRequest(
     DateTimeOffset? StartUtc = null,
     DateTimeOffset? EndUtc = null,
     string? ObjectSubtype = null,
-    string? MetadataJson = null);
+    string? MetadataJson = null,
+    int? DurationSeconds = null);
 
 public sealed record ProjectObjectMediaPayload(
     string FileName,
@@ -446,6 +451,8 @@ public sealed class ProjectWorkbenchService(
         var route = media?.Route ?? $"/projects/{projectId}/structure";
         var artifactKind = media?.ArtifactKind ?? request.ObjectType.ToString();
         var metadataJson = ResolveMetadataJson(request.ObjectType, request.ObjectSubtype, request.MetadataJson, media);
+        var resolvedEndUtc = ResolveEndUtc(request.StartUtc, request.EndUtc, request.DurationSeconds);
+        var normalizedDurationSeconds = NormalizeDurationSeconds(request.DurationSeconds, request.StartUtc, resolvedEndUtc);
 
         var record = new ProjectObjectRecord
         {
@@ -470,7 +477,8 @@ public sealed class ProjectWorkbenchService(
             PositionX = position.Item1,
             PositionY = position.Item2,
             StartUtc = request.StartUtc,
-            EndUtc = request.EndUtc ?? request.StartUtc?.AddHours(1),
+            EndUtc = resolvedEndUtc,
+            DurationSeconds = normalizedDurationSeconds,
             CreatedAtUtc = clock.GetUtcNow(),
             UpdatedAtUtc = clock.GetUtcNow()
         };
@@ -512,6 +520,8 @@ public sealed class ProjectWorkbenchService(
             index++;
             var nodeKey = $"custom:{Guid.NewGuid():N}";
             var position = GetDefaultPosition(seed.ObjectType, existingCount + index);
+            var resolvedEndUtc = ResolveEndUtc(seed.StartUtc, seed.EndUtc, seed.DurationSeconds);
+            var normalizedDurationSeconds = NormalizeDurationSeconds(seed.DurationSeconds, seed.StartUtc, resolvedEndUtc);
             await dbContext.Set<ProjectObjectRecord>().AddAsync(new ProjectObjectRecord
             {
                 ProjectId = projectId,
@@ -531,7 +541,8 @@ public sealed class ProjectWorkbenchService(
                 PositionX = position.Item1,
                 PositionY = position.Item2,
                 StartUtc = seed.StartUtc,
-                EndUtc = seed.EndUtc ?? seed.StartUtc?.AddHours(1),
+                EndUtc = resolvedEndUtc,
+                DurationSeconds = normalizedDurationSeconds,
                 CreatedAtUtc = clock.GetUtcNow(),
                 UpdatedAtUtc = clock.GetUtcNow()
             }, cancellationToken);
@@ -545,7 +556,7 @@ public sealed class ProjectWorkbenchService(
     async Task IProjectWorkbenchSeedService.SeedProjectObjectsAsync(Guid projectId, IReadOnlyCollection<ProjectObjectSeedDraft> seeds, CancellationToken cancellationToken)
         => await SeedProjectObjectsAsync(
             projectId,
-            seeds.Select(seed => new ProjectObjectSeedRequest(seed.ObjectType, seed.Title, seed.Subtitle, seed.Notes, seed.StartUtc, seed.EndUtc, null)).ToList(),
+            seeds.Select(seed => new ProjectObjectSeedRequest(seed.ObjectType, seed.Title, seed.Subtitle, seed.Notes, seed.StartUtc, seed.EndUtc, null, null, seed.DurationSeconds)).ToList(),
             cancellationToken);
 
     public async Task LinkObjectsAsync(Guid projectId, string sourceNodeKey, string targetNodeKey, ProjectObjectLinkKind linkKind, CancellationToken cancellationToken = default)
@@ -554,6 +565,34 @@ public sealed class ProjectWorkbenchService(
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await UpsertLinkAsync(dbContext, projectId, sourceNodeKey, targetNodeKey, linkKind, isSystemManaged: false, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<bool> UnlinkObjectsAsync(
+        Guid projectId,
+        string sourceNodeKey,
+        string targetNodeKey,
+        ProjectObjectLinkKind linkKind,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var link = await dbContext.Set<ProjectObjectLinkRecord>()
+            .FirstOrDefaultAsync(item =>
+                item.ProjectId == projectId &&
+                item.SourceNodeKey == sourceNodeKey &&
+                item.TargetNodeKey == targetNodeKey &&
+                item.LinkKind == linkKind &&
+                !item.IsSystemManaged,
+                cancellationToken);
+        if (link is null)
+        {
+            return false;
+        }
+
+        dbContext.Remove(link);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<ProjectStructureNode?> ReparentObjectAsync(
@@ -846,7 +885,8 @@ public sealed class ProjectWorkbenchService(
         node.Subtitle = request.Subtitle?.Trim() ?? string.Empty;
         node.Notes = request.Notes?.Trim() ?? string.Empty;
         node.StartUtc = request.StartUtc;
-        node.EndUtc = request.EndUtc;
+        node.EndUtc = ResolveEndUtc(request.StartUtc, request.EndUtc, request.DurationSeconds);
+        node.DurationSeconds = NormalizeDurationSeconds(request.DurationSeconds, node.StartUtc, node.EndUtc);
         node.MetadataJson = ResolveMetadataJson(node.ObjectType, node.ObjectSubtype, request.MetadataJson, null);
         node.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -1702,6 +1742,10 @@ public sealed class ProjectWorkbenchService(
             PositionY = 120 + (index * 180),
             StartUtc = phase.StartDateUtc.HasValue ? new DateTimeOffset(DateTime.SpecifyKind(phase.StartDateUtc.Value, DateTimeKind.Utc)) : null,
             EndUtc = phase.EndDateUtc.HasValue ? new DateTimeOffset(DateTime.SpecifyKind(phase.EndDateUtc.Value, DateTimeKind.Utc)) : null,
+            DurationSeconds = NormalizeDurationSeconds(
+                null,
+                phase.StartDateUtc.HasValue ? new DateTimeOffset(DateTime.SpecifyKind(phase.StartDateUtc.Value, DateTimeKind.Utc)) : null,
+                phase.EndDateUtc.HasValue ? new DateTimeOffset(DateTime.SpecifyKind(phase.EndDateUtc.Value, DateTimeKind.Utc)) : null),
             IsSystemManaged = true,
             CreatedAtUtc = project.CreatedAtUtc,
             UpdatedAtUtc = clock.GetUtcNow()
@@ -1786,6 +1830,7 @@ public sealed class ProjectWorkbenchService(
             PositionY = 580 + (index * 120),
             StartUtc = validation.UpdatedAtUtc,
             EndUtc = validation.UpdatedAtUtc.AddHours(1),
+            DurationSeconds = 3600,
             IsSystemManaged = true,
             CreatedAtUtc = validation.CreatedAtUtc,
             UpdatedAtUtc = clock.GetUtcNow()
@@ -1808,6 +1853,7 @@ public sealed class ProjectWorkbenchService(
             PositionY = 620 + (index * 140),
             StartUtc = testPlan.UpdatedAtUtc,
             EndUtc = testPlan.UpdatedAtUtc.AddHours(1),
+            DurationSeconds = 3600,
             IsSystemManaged = true,
             CreatedAtUtc = testPlan.CreatedAtUtc,
             UpdatedAtUtc = clock.GetUtcNow()
@@ -1853,6 +1899,7 @@ public sealed class ProjectWorkbenchService(
                 existing.ParentNodeKey = expectedNode.ParentNodeKey;
                 existing.StartUtc = expectedNode.StartUtc;
                 existing.EndUtc = expectedNode.EndUtc;
+                existing.DurationSeconds = expectedNode.DurationSeconds;
                 existing.IsSystemManaged = true;
                 existing.UpdatedAtUtc = clock.GetUtcNow();
                 if (existing.PositionX == default && existing.PositionY == default)
@@ -1903,6 +1950,42 @@ public sealed class ProjectWorkbenchService(
         => string.IsNullOrWhiteSpace(parentNodeKey)
             ? BuildProjectRootNodeKey(projectId)
             : parentNodeKey.Trim();
+
+    private static DateTimeOffset? ResolveEndUtc(DateTimeOffset? startUtc, DateTimeOffset? endUtc, int? durationSeconds)
+    {
+        if (endUtc.HasValue || !startUtc.HasValue)
+        {
+            return endUtc;
+        }
+
+        var effectiveDurationSeconds = durationSeconds.GetValueOrDefault(3600);
+        return effectiveDurationSeconds > 0
+            ? startUtc.Value.AddSeconds(effectiveDurationSeconds)
+            : startUtc.Value.AddHours(1);
+    }
+
+    private static int? NormalizeDurationSeconds(int? requestedDurationSeconds, DateTimeOffset? startUtc, DateTimeOffset? endUtc)
+    {
+        if (requestedDurationSeconds.HasValue)
+        {
+            return requestedDurationSeconds.Value > 0
+                ? requestedDurationSeconds.Value
+                : null;
+        }
+
+        if (!startUtc.HasValue || !endUtc.HasValue)
+        {
+            return null;
+        }
+
+        return CalculateDurationSeconds(startUtc.Value, endUtc.Value);
+    }
+
+    private static int CalculateDurationSeconds(DateTimeOffset startUtc, DateTimeOffset endUtc)
+    {
+        var totalSeconds = Math.Abs((endUtc - startUtc).TotalSeconds);
+        return Math.Max(1, (int)Math.Round(totalSeconds, MidpointRounding.AwayFromZero));
+    }
 
     private static ProjectObjectLinkKind ResolveHierarchyLinkKind(Guid projectId, string parentNodeKey)
         => string.Equals(parentNodeKey, BuildProjectRootNodeKey(projectId), StringComparison.Ordinal)
@@ -2503,7 +2586,8 @@ public sealed class ProjectWorkbenchService(
             record.StorageObjectReferenceJson,
             projectRole,
             relatedProjectId,
-            parentProjectCount);
+            parentProjectCount,
+            record.DurationSeconds);
     }
 
     private static string ResolveSubtypeBadge(ProjectObjectType objectType, string objectSubtype) => objectType switch

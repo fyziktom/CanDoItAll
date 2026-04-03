@@ -391,6 +391,7 @@
         return {
             surfaceId: surface?.surfaceId || "canvas-surface",
             mode: surface?.mode || "authoring",
+            dependencySourceId: surface?.dependencySourceId || "",
             nodes: Array.isArray(surface?.nodes) ? surface.nodes.map(node => ({
                 ...node,
                 x: typeof node.x === "number" ? node.x : 120,

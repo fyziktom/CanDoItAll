@@ -6,6 +6,8 @@ public sealed class CanvasWorkbenchSurface
 
     public string Mode { get; set; } = "authoring";
 
+    public string DependencySourceId { get; set; } = string.Empty;
+
     public List<CanvasWorkbenchNode> Nodes { get; set; } = [];
 
     public List<CanvasWorkbenchLink> Links { get; set; } = [];

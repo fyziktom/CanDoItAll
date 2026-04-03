@@ -1430,6 +1430,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset?>("EndUtc")
                         .HasColumnType("timestamp with time zone");
 

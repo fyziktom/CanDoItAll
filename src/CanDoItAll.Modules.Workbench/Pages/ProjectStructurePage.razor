@@ -87,8 +87,13 @@ else
                                                        HealthWindowVisible="@HealthWindowState.IsVisible"
                                                        ToolboxWindowVisible="@ToolboxWindowState.IsVisible"
                                                        SignalsWindowVisible="@SignalsWindowState.IsVisible"
+                                                       ActiveTool="@canvasToolMode"
+                                                       CanUseDependencyTool="@(selectedNode is not null)"
                                                        CanRecomposeSelectedBranch="@CanRecomposeSelectedBranch"
                                                        IsSubtreeRecompositionInProgress="@isSubtreeRecompositionInProgress"
+                                                       SelectToolClicked="SelectCanvasToolAsync"
+                                                       DependencyToolClicked="EnableLinkModeAsync"
+                                                       DeleteToolClicked="EnableDeleteModeAsync"
                                                        ToggleSelectionWindow="ToggleSelectionWindowAsync"
                                                        ToggleHealthWindow="ToggleHealthWindowAsync"
                                                        ToggleToolboxWindow="ToggleToolboxWindowAsync"
@@ -265,6 +270,13 @@ else
                   OpenCalendar="OpenCalendar" />
 
 @code {
+    private static class CanvasAuthoringMode
+    {
+        public const string Select = "authoring";
+        public const string Dependency = "dependency";
+        public const string Delete = "delete";
+    }
+
     private const string SelectionWindowKey = "project-structure.selection";
     private const string HealthWindowKey = "project-structure.health";
     private const double ToolboxWindowDefaultWidth = 430;
@@ -284,6 +296,7 @@ else
     private readonly ProjectStructureGraphAdapter graphAdapter = new();
     private readonly ProjectStructurePlacementPolicy placementPolicy = new();
     private List<string> selectedNodeIds = [];
+    private string canvasToolMode = CanvasAuthoringMode.Select;
     private string? linkModeSourceId;
     private string? currentViewStateJson;
     private const int CanvasViewStatePersistDelayMs = 420;
@@ -353,6 +366,7 @@ else
             loadedProjectId = ProjectId;
             currentViewStateJson = null;
             selectedNodeIds = [];
+            canvasToolMode = CanvasAuthoringMode.Select;
             linkModeSourceId = null;
             pendingClientSelectionId = null;
         }
@@ -520,7 +534,7 @@ else
             uiState,
             new CanvasWorkbenchChrome
             {
-                HintText = "Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.",
+                HintText = ResolveCanvasHintText(),
                 FocusActionLabel = "Focus root",
                 ChildNoteActionId = "add-note",
                 SiblingNoteActionId = "add-note",
@@ -530,6 +544,8 @@ else
                 GroupContextActions = actionCatalog.BuildGroupContextActions().ToList()
             },
             actionCatalog);
+        canvasSurface.Mode = canvasToolMode;
+        canvasSurface.DependencySourceId = linkModeSourceId ?? string.Empty;
     }
 
     private async Task HandleSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
@@ -548,16 +564,6 @@ else
             !string.IsNullOrWhiteSpace(args.PrimaryNodeId))
         {
             await HandleReconnectSelectionAsync(args.PrimaryNodeId);
-            return;
-        }
-
-        if (!string.IsNullOrWhiteSpace(linkModeSourceId) &&
-            !string.IsNullOrWhiteSpace(args.PrimaryNodeId) &&
-            !string.Equals(linkModeSourceId, args.PrimaryNodeId, StringComparison.Ordinal))
-        {
-            await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, linkModeSourceId, args.PrimaryNodeId, ProjectObjectLinkKind.DependsOn);
-            linkModeSourceId = null;
-            await ReloadSurfaceAsync(args.PrimaryNodeId);
             return;
         }
 
@@ -647,7 +653,20 @@ else
     }
 
     private async Task HandleContextActionAsync(CanvasWorkbenchContextActionRequest request)
-        => await HandleCanvasActionAsync(request.ActionId, request.NodeId, request.X, request.Y);
+    {
+        switch (request.ActionId)
+        {
+            case "dependency:create":
+                await CreateDependencyAsync(request.LinkSourceId, request.NodeId ?? request.LinkTargetId);
+                break;
+            case "delete-link":
+                await DeleteDependencyAsync(request.LinkSourceId, request.LinkTargetId, request.LinkKind);
+                break;
+            default:
+                await HandleCanvasActionAsync(request.ActionId, request.NodeId, request.X, request.Y);
+                break;
+        }
+    }
 
     private async Task HandleCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
     {
@@ -758,7 +777,7 @@ else
                 }
                 break;
             case "connect":
-                linkModeSourceId = nodeId;
+                await EnterDependencyModeAsync(nodeId);
                 break;
             case "reconnect":
                 await BeginReconnectAsync(nodeId);
@@ -916,12 +935,11 @@ else
 
     private async Task SelectNodeAsync(string nodeId)
     {
-        if (!string.IsNullOrWhiteSpace(linkModeSourceId) &&
+        if (IsDependencyMode &&
+            !string.IsNullOrWhiteSpace(linkModeSourceId) &&
             !string.Equals(linkModeSourceId, nodeId, StringComparison.Ordinal))
         {
-            await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, linkModeSourceId, nodeId, ProjectObjectLinkKind.DependsOn);
-            linkModeSourceId = null;
-            await ReloadSurfaceAsync(nodeId);
+            await CreateDependencyAsync(linkModeSourceId, nodeId);
             return;
         }
 
@@ -983,8 +1001,90 @@ else
         await PersistCurrentViewStateAsync();
     }
 
-    private void EnableLinkMode()
-        => linkModeSourceId = selectedNode?.Id;
+    private Task SelectCanvasToolAsync()
+    {
+        reconnectNodeId = null;
+        return SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
+    }
+
+    private Task EnableDeleteModeAsync()
+    {
+        reconnectNodeId = null;
+        return SetCanvasToolModeAsync(CanvasAuthoringMode.Delete);
+    }
+
+    private async Task EnableLinkModeAsync()
+    {
+        var selectedNodeId = await ResolveCurrentSelectedNodeIdAsync();
+        await EnterDependencyModeAsync(selectedNodeId);
+    }
+
+    private async Task EnterDependencyModeAsync(string? sourceNodeId = null)
+    {
+        var resolvedSourceNodeId = sourceNodeId ?? selectedNode?.Id;
+        if (string.IsNullOrWhiteSpace(resolvedSourceNodeId))
+        {
+            return;
+        }
+
+        reconnectNodeId = null;
+        linkModeSourceId = resolvedSourceNodeId;
+        await SetCanvasToolModeAsync(CanvasAuthoringMode.Dependency, keepDependencySource: true);
+    }
+
+    private async Task<string?> ResolveCurrentSelectedNodeIdAsync()
+    {
+        if (workbenchRef is not null)
+        {
+            var liveSelectedNodeIds = (await workbenchRef.GetSelectedNodeIdsAsync())
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            if (liveSelectedNodeIds.Count > 0)
+            {
+                selectedNodeIds = liveSelectedNodeIds;
+                return selectedNodeIds[0];
+            }
+        }
+
+        return selectedNodeIds.FirstOrDefault();
+    }
+
+    private async Task CreateDependencyAsync(string? sourceNodeId, string? targetNodeId)
+    {
+        if (string.IsNullOrWhiteSpace(sourceNodeId) ||
+            string.IsNullOrWhiteSpace(targetNodeId) ||
+            string.Equals(sourceNodeId, targetNodeId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, sourceNodeId, targetNodeId, ProjectObjectLinkKind.DependsOn);
+        workflowFeedback = "The dependency link was added.";
+        workflowFeedbackTone = "mint";
+        await SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
+        await ReloadSurfaceAsync(sourceNodeId);
+    }
+
+    private async Task SetCanvasToolModeAsync(string mode, bool keepDependencySource = false)
+    {
+        canvasToolMode = mode;
+        if (!string.Equals(canvasToolMode, CanvasAuthoringMode.Dependency, StringComparison.Ordinal) && !keepDependencySource)
+        {
+            linkModeSourceId = null;
+        }
+
+        RefreshCanvasSurface();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string ResolveCanvasHintText()
+        => canvasToolMode switch
+        {
+            CanvasAuthoringMode.Dependency => "Dependency tool: drag normally to move nodes, or click a second node to say the selected node depends on it.",
+            CanvasAuthoringMode.Delete => "Delete tool: hover a node or dependency arrow to highlight it, then click to delete. Connected branches may ask for confirmation.",
+            _ => "Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions."
+        };
 
     private IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions()
         => actionCatalog.BuildQuickCreateActions(selectedNode?.ObjectType);

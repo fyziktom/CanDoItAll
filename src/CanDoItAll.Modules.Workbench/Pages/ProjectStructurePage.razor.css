@@ -72,6 +72,12 @@
     flex-wrap: wrap;
 }
 
+.project-structure-toolbar-tools {
+    padding-right: 0.3rem;
+    margin-right: 0.15rem;
+    border-right: 1px solid rgba(148, 163, 184, 0.22);
+}
+
 .project-structure-toolbar-toggle.is-active {
     border-color: rgba(37, 99, 235, 0.24);
     background: rgba(239, 246, 255, 0.92);

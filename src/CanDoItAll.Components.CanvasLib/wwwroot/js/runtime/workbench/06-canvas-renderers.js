@@ -723,50 +723,152 @@
         }
     }
 
-    function drawCanvasLink(context, link, startPoint, endPoint) {
+    function sampleCubicBezierPoint(startPoint, controlPoint1, controlPoint2, endPoint, t) {
+        const inverse = 1 - t;
+        const inverseSquared = inverse * inverse;
+        const inverseCubed = inverseSquared * inverse;
+        const tSquared = t * t;
+        const tCubed = tSquared * t;
+        return {
+            x: (inverseCubed * startPoint.x) +
+                (3 * inverseSquared * t * controlPoint1.x) +
+                (3 * inverse * tSquared * controlPoint2.x) +
+                (tCubed * endPoint.x),
+            y: (inverseCubed * startPoint.y) +
+                (3 * inverseSquared * t * controlPoint1.y) +
+                (3 * inverse * tSquared * controlPoint2.y) +
+                (tCubed * endPoint.y)
+        };
+    }
+
+    function buildCanvasLinkGeometry(startPoint, endPoint) {
         const controlOffset = Math.max(56, Math.abs(endPoint.x - startPoint.x) * 0.38);
         const sourceSide = endPoint.x >= startPoint.x ? 1 : -1;
         const targetSide = sourceSide === 1 ? -1 : 1;
+        const controlPoint1 = {
+            x: startPoint.x + (controlOffset * sourceSide),
+            y: startPoint.y
+        };
+        const controlPoint2 = {
+            x: endPoint.x + (controlOffset * targetSide),
+            y: endPoint.y
+        };
+        const midPoint = sampleCubicBezierPoint(startPoint, controlPoint1, controlPoint2, endPoint, 0.5);
+        const padding = 12;
+        const minX = Math.min(startPoint.x, controlPoint1.x, controlPoint2.x, endPoint.x) - padding;
+        const minY = Math.min(startPoint.y, controlPoint1.y, controlPoint2.y, endPoint.y) - padding;
+        const maxX = Math.max(startPoint.x, controlPoint1.x, controlPoint2.x, endPoint.x) + padding;
+        const maxY = Math.max(startPoint.y, controlPoint1.y, controlPoint2.y, endPoint.y) + padding;
+        return {
+            startPoint: {
+                x: round(startPoint.x),
+                y: round(startPoint.y)
+            },
+            endPoint: {
+                x: round(endPoint.x),
+                y: round(endPoint.y)
+            },
+            controlPoint1: {
+                x: round(controlPoint1.x),
+                y: round(controlPoint1.y)
+            },
+            controlPoint2: {
+                x: round(controlPoint2.x),
+                y: round(controlPoint2.y)
+            },
+            midPoint: {
+                x: round(midPoint.x),
+                y: round(midPoint.y)
+            },
+            bounds: {
+                left: round(minX),
+                top: round(minY),
+                width: round(maxX - minX),
+                height: round(maxY - minY),
+                right: round(maxX),
+                bottom: round(maxY)
+            }
+        };
+    }
+
+    function resolveCanvasLinkStyle(link, options) {
+        if (options?.isHovered) {
+            return {
+                stroke: "rgba(239, 68, 68, 0.94)",
+                arrowFill: "rgba(220, 38, 38, 0.96)",
+                lineWidth: 4,
+                lineDash: []
+            };
+        }
+
+        if (options?.isPreview) {
+            return {
+                stroke: "rgba(124, 58, 237, 0.92)",
+                arrowFill: "rgba(109, 40, 217, 0.96)",
+                lineWidth: 3,
+                lineDash: [10, 6]
+            };
+        }
+
+        if (link?.isUserAuthored) {
+            return {
+                stroke: "rgba(14, 165, 233, 0.82)",
+                arrowFill: "rgba(14, 165, 233, 0.88)",
+                lineWidth: 3,
+                lineDash: [12, 8]
+            };
+        }
+
+        return {
+            stroke: "rgba(100, 116, 139, 0.44)",
+            arrowFill: "rgba(100, 116, 139, 0.58)",
+            lineWidth: 2,
+            lineDash: []
+        };
+    }
+
+    function drawCanvasLink(context, link, startPoint, endPoint, options) {
+        const geometry = buildCanvasLinkGeometry(startPoint, endPoint);
+        const style = resolveCanvasLinkStyle(link, options);
         context.save();
         context.beginPath();
-        context.moveTo(startPoint.x, startPoint.y);
+        context.moveTo(geometry.startPoint.x, geometry.startPoint.y);
         context.bezierCurveTo(
-            startPoint.x + (controlOffset * sourceSide),
-            startPoint.y,
-            endPoint.x + (controlOffset * targetSide),
-            endPoint.y,
-            endPoint.x,
-            endPoint.y);
-        context.lineWidth = link.isUserAuthored ? 3 : 2;
+            geometry.controlPoint1.x,
+            geometry.controlPoint1.y,
+            geometry.controlPoint2.x,
+            geometry.controlPoint2.y,
+            geometry.endPoint.x,
+            geometry.endPoint.y);
+        context.lineWidth = style.lineWidth;
         context.lineCap = "round";
-        context.strokeStyle = link.isUserAuthored
-            ? "rgba(14, 165, 233, 0.82)"
-            : "rgba(100, 116, 139, 0.44)";
-        if (link.isUserAuthored) {
-            context.setLineDash([12, 8]);
+        context.strokeStyle = style.stroke;
+        if (style.lineDash.length) {
+            context.setLineDash(style.lineDash);
         }
         context.stroke();
         context.restore();
 
-        if (!shouldRenderArrow(link)) {
-            return;
+        if (!shouldRenderArrow(link) && !options?.isPreview && !options?.forceArrow) {
+            return geometry;
         }
 
-        const angle = Math.atan2(endPoint.y - startPoint.y, endPoint.x - startPoint.x);
-        const arrowLength = 10;
+        const angle = Math.atan2(
+            geometry.endPoint.y - geometry.controlPoint2.y,
+            geometry.endPoint.x - geometry.controlPoint2.x);
+        const arrowLength = options?.isPreview ? 12 : 10;
         context.save();
-        context.translate(endPoint.x, endPoint.y);
+        context.translate(geometry.endPoint.x, geometry.endPoint.y);
         context.rotate(angle);
         context.beginPath();
         context.moveTo(0, 0);
         context.lineTo(-arrowLength, 4);
         context.lineTo(-arrowLength, -4);
         context.closePath();
-        context.fillStyle = link.isUserAuthored
-            ? "rgba(14, 165, 233, 0.88)"
-            : "rgba(100, 116, 139, 0.58)";
+        context.fillStyle = style.arrowFill;
         context.fill();
         context.restore();
+        return geometry;
     }
 
     function renderLinks(state, visibleNodes) {
@@ -776,6 +878,8 @@
         }
 
         surface.clear();
+        state.renderedLinks = [];
+        state.previewLink = null;
         const visible = new Set((visibleNodes || []).map(node => node.id));
         const nextEntries = new Map();
         let renderedLinkCount = 0;
@@ -797,17 +901,98 @@
             const targetSide = sourceSide === "right" ? "left" : "right";
             const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, source, sourceSide));
             const targetAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, target, targetSide));
-            drawCanvasLink(surface.context, link, sourceAnchor, targetAnchor);
             const retainedKey = getLinkRetainedKey(link, index);
+            const geometry = drawCanvasLink(surface.context, link, sourceAnchor, targetAnchor, {
+                key: retainedKey,
+                isHovered: state.surface?.mode === "delete" && state.hoveredDeleteLinkKey === retainedKey
+            });
             nextEntries.set(retainedKey, {
                 signature: JSON.stringify({
                     sourceId: link.sourceId,
                     targetId: link.targetId,
                     kind: link.kind || "",
-                    flow: !!link.isUserAuthored
+                    flow: !!link.isUserAuthored,
+                    hovered: state.hoveredDeleteLinkKey === retainedKey
                 })
             });
+            state.renderedLinks.push({
+                key: retainedKey,
+                sourceId: link.sourceId,
+                targetId: link.targetId,
+                kind: link.kind || "",
+                isUserAuthored: !!link.isUserAuthored,
+                startPoint: geometry.startPoint,
+                endPoint: geometry.endPoint,
+                controlPoint1: geometry.controlPoint1,
+                controlPoint2: geometry.controlPoint2,
+                midPoint: geometry.midPoint,
+                bounds: geometry.bounds
+            });
             renderedLinkCount += 1;
+        }
+
+        const dependencySourceId = state.surface?.dependencySourceId || "";
+        if (state.surface?.mode === "dependency" &&
+            dependencySourceId &&
+            visible.has(dependencySourceId) &&
+            state.lookups.byId.has(dependencySourceId)) {
+            const previewSource = state.lookups.byId.get(dependencySourceId);
+            const hoveredTargetId = state.hoveredNodeId &&
+                state.hoveredNodeId !== dependencySourceId &&
+                visible.has(state.hoveredNodeId)
+                ? state.hoveredNodeId
+                : null;
+            const previewLink = {
+                sourceId: dependencySourceId,
+                targetId: hoveredTargetId || "",
+                kind: "DependsOn",
+                isUserAuthored: true
+            };
+
+            if (hoveredTargetId && state.lookups.byId.has(hoveredTargetId)) {
+                const previewTarget = state.lookups.byId.get(hoveredTargetId);
+                const sourcePosition = getNodePosition(state, previewSource);
+                const targetPosition = getNodePosition(state, previewTarget);
+                const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
+                const targetSide = sourceSide === "right" ? "left" : "right";
+                const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewSource, sourceSide));
+                const targetAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewTarget, targetSide));
+                const previewGeometry = drawCanvasLink(surface.context, previewLink, sourceAnchor, targetAnchor, {
+                    isPreview: true,
+                    forceArrow: true
+                });
+                state.previewLink = {
+                    sourceId: dependencySourceId,
+                    targetId: hoveredTargetId,
+                    startPoint: previewGeometry.startPoint,
+                    endPoint: previewGeometry.endPoint,
+                    controlPoint1: previewGeometry.controlPoint1,
+                    controlPoint2: previewGeometry.controlPoint2,
+                    midPoint: previewGeometry.midPoint,
+                    bounds: previewGeometry.bounds
+                };
+            }
+            else if (state.pointerHostPoint) {
+                const previewSourceBounds = projectSceneBounds(state, getNodeSceneBounds(state, previewSource));
+                const sourceSide = state.pointerHostPoint.x >= (previewSourceBounds.left + (previewSourceBounds.width / 2))
+                    ? "right"
+                    : "left";
+                const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewSource, sourceSide));
+                const previewGeometry = drawCanvasLink(surface.context, previewLink, sourceAnchor, state.pointerHostPoint, {
+                    isPreview: true,
+                    forceArrow: true
+                });
+                state.previewLink = {
+                    sourceId: dependencySourceId,
+                    targetId: null,
+                    startPoint: previewGeometry.startPoint,
+                    endPoint: previewGeometry.endPoint,
+                    controlPoint1: previewGeometry.controlPoint1,
+                    controlPoint2: previewGeometry.controlPoint2,
+                    midPoint: previewGeometry.midPoint,
+                    bounds: previewGeometry.bounds
+                };
+            }
         }
 
         reconcileRetainedLayer(

@@ -3,6 +3,37 @@
 
 <Cluster Gap="LayoutGap.Small"
          Class="project-structure-toolbar-windows">
+    <Cluster Gap="LayoutGap.XSmall"
+             Class="project-structure-toolbar-tools">
+        <Button Text="Select"
+                Icon="arrow_selector_tool"
+                Variant="Variant.Text"
+                ButtonStyle="ButtonStyle.Base"
+                Class="@ResolveToolbarButtonCssClass(string.Equals(ActiveTool, SelectTool, StringComparison.Ordinal))"
+                data-testid="project-structure-toolbar-tool-select"
+                title="Use the normal select and move tool"
+                Click="SelectToolClicked" />
+
+        <Button Text="Dependency"
+                Icon="start"
+                Variant="Variant.Text"
+                ButtonStyle="ButtonStyle.Base"
+                Class="@ResolveToolbarButtonCssClass(string.Equals(ActiveTool, DependencyTool, StringComparison.Ordinal))"
+                data-testid="project-structure-toolbar-tool-dependency"
+                title="Click another node to say the selected node depends on it"
+                Disabled="@(!CanUseDependencyTool)"
+                Click="DependencyToolClicked" />
+
+        <Button Text="Delete"
+                Icon="delete"
+                Variant="Variant.Text"
+                ButtonStyle="ButtonStyle.Base"
+                Class="@ResolveToolbarButtonCssClass(string.Equals(ActiveTool, DeleteTool, StringComparison.Ordinal))"
+                data-testid="project-structure-toolbar-tool-delete"
+                title="Hover a node or dependency and click to delete it"
+                Click="DeleteToolClicked" />
+    </Cluster>
+
     <Button Text="Inspector"
             Variant="Variant.Text"
             ButtonStyle="ButtonStyle.Base"
@@ -44,6 +75,10 @@
 </Cluster>
 
 @code {
+    private const string SelectTool = "authoring";
+    private const string DependencyTool = "dependency";
+    private const string DeleteTool = "delete";
+
     [Parameter]
     public bool SelectionWindowVisible { get; set; }
 
@@ -55,6 +90,12 @@
 
     [Parameter]
     public bool SignalsWindowVisible { get; set; }
+
+    [Parameter]
+    public string ActiveTool { get; set; } = SelectTool;
+
+    [Parameter]
+    public bool CanUseDependencyTool { get; set; }
 
     [Parameter]
     public bool CanRecomposeSelectedBranch { get; set; }
@@ -73,6 +114,15 @@
 
     [Parameter]
     public EventCallback ToggleSignalsWindow { get; set; }
+
+    [Parameter]
+    public EventCallback SelectToolClicked { get; set; }
+
+    [Parameter]
+    public EventCallback DependencyToolClicked { get; set; }
+
+    [Parameter]
+    public EventCallback DeleteToolClicked { get; set; }
 
     [Parameter]
     public EventCallback RecomposeBranch { get; set; }

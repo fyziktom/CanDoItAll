@@ -8,7 +8,11 @@ public sealed record CanvasWorkbenchContextActionRequest(
     string? NodeId,
     string ActionId,
     double X,
-    double Y);
+    double Y,
+    string TargetKind = "node",
+    string? LinkSourceId = null,
+    string? LinkTargetId = null,
+    string? LinkKind = null);
 
 public sealed record CanvasWorkbenchCreateActionRequest(
     string ActionId,

@@ -13,7 +13,9 @@ public sealed record ProjectStructureSummaryNode(
     int Depth,
     DateTimeOffset? StartUtc,
     DateTimeOffset? EndUtc,
-    IReadOnlyList<ProjectStructureSummaryNode> Children);
+    IReadOnlyList<ProjectStructureSummaryNode> Children,
+    int? DurationSeconds = null,
+    IReadOnlyList<string>? DependencyNodeIds = null);
 
 public sealed record ProjectStructureSummary(
     ProjectStructureSummaryNode Root,
@@ -28,12 +30,14 @@ internal static class ProjectStructureSummaryBuilder
 {
     public static ProjectStructureSummary Build(ProjectStructureSurface surface, ProjectStructureNode rootNode)
     {
+        var dependencyAnalysis = ProjectStructureDependencyAnalyzer.Build(surface);
+        var dependencyByNodeId = dependencyAnalysis.Nodes.ToDictionary(item => item.Node.Id, StringComparer.Ordinal);
         var childrenByParent = surface.Nodes
             .Where(node => !string.IsNullOrWhiteSpace(node.ParentId))
             .GroupBy(node => node.ParentId!, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
         var rows = new List<ProjectStructureSummaryNode>();
-        var root = BuildNode(rootNode, depth: 0, childrenByParent, rows);
+        var root = BuildNode(rootNode, depth: 0, childrenByParent, dependencyByNodeId, rows);
 
         return new ProjectStructureSummary(
             root,
@@ -49,8 +53,10 @@ internal static class ProjectStructureSummaryBuilder
         ProjectStructureNode node,
         int depth,
         IReadOnlyDictionary<string, List<ProjectStructureNode>> childrenByParent,
+        IReadOnlyDictionary<string, ProjectStructureDependencyNodeAnalysis> dependencyByNodeId,
         List<ProjectStructureSummaryNode> rows)
     {
+        dependencyByNodeId.TryGetValue(node.Id, out var dependencyAnalysis);
         var summaryNode = new ProjectStructureSummaryNode(
             node.Id,
             node.Title,
@@ -60,13 +66,15 @@ internal static class ProjectStructureSummaryBuilder
             depth,
             node.StartUtc,
             node.EndUtc,
-            []);
+            [],
+            dependencyAnalysis?.DurationSeconds ?? node.DurationSeconds,
+            dependencyAnalysis?.ExplicitDependencyIds ?? []);
         rows.Add(summaryNode);
         var children = childrenByParent.TryGetValue(node.Id, out var descendants)
             ? descendants
                 .OrderBy(child => child.Y)
                 .ThenBy(child => child.X)
-                .Select(child => BuildNode(child, depth + 1, childrenByParent, rows))
+                .Select(child => BuildNode(child, depth + 1, childrenByParent, dependencyByNodeId, rows))
                 .ToList()
             : [];
         return summaryNode with { Children = children };
@@ -118,10 +126,14 @@ internal static class ProjectStructureSummaryExporter
     public static string BuildMermaidGantt(ProjectStructureSummary summary, DateOnly anchorDate)
     {
         var builder = new StringBuilder();
+        var taskIdsByNodeId = summary.Rows
+            .Select((row, index) => (row.NodeId, TaskId: $"task{index + 1}"))
+            .ToDictionary(item => item.NodeId, item => item.TaskId, StringComparer.Ordinal);
+        var syntheticCursor = new DateTimeOffset(anchorDate.Year, anchorDate.Month, anchorDate.Day, 9, 0, 0, TimeSpan.Zero);
         builder.AppendLine("gantt");
         builder.AppendLine($"    title {SanitizeMermaidText(summary.Root.Title)} progress summary");
-        builder.AppendLine("    dateFormat YYYY-MM-DD");
-        builder.AppendLine("    axisFormat %m-%d");
+        builder.AppendLine("    dateFormat YYYY-MM-DD HH:mm:ss");
+        builder.AppendLine("    axisFormat %m-%d %H:%M");
         builder.AppendLine("    excludes weekends");
 
         var currentSection = string.Empty;
@@ -136,10 +148,20 @@ internal static class ProjectStructureSummaryExporter
                 builder.AppendLine($"    section {SanitizeMermaidText(section)}");
             }
 
-            var (startDate, durationDays, usesSyntheticDates) = ResolveTaskSchedule(row, anchorDate, rowIndex);
+            var taskId = taskIdsByNodeId[row.NodeId];
+            var dependencyTaskIds = (row.DependencyNodeIds ?? [])
+                .Where(taskIdsByNodeId.ContainsKey)
+                .Select(dependencyNodeId => taskIdsByNodeId[dependencyNodeId])
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            var (startAtUtc, durationToken, usesSyntheticDates) = ResolveTaskSchedule(row, dependencyTaskIds, syntheticCursor);
+            if (usesSyntheticDates && !row.StartUtc.HasValue && dependencyTaskIds.Count == 0)
+            {
+                syntheticCursor = startAtUtc.AddSeconds(row.DurationSeconds.GetValueOrDefault(3600));
+            }
+
             var stateToken = ResolveMermaidState(row.Status);
-            var taskId = $"task{rowIndex}";
-            var labelPrefix = usesSyntheticDates ? "[Undated] " : string.Empty;
+            var labelPrefix = usesSyntheticDates ? "[Unscheduled] " : string.Empty;
             var label = $"{Indent(row.Depth)}{labelPrefix}{row.Title} ({row.Status})";
 
             builder.Append("    ");
@@ -153,10 +175,18 @@ internal static class ProjectStructureSummaryExporter
 
             builder.Append(taskId);
             builder.Append(", ");
-            builder.Append(startDate.ToString("yyyy-MM-dd"));
+            if (dependencyTaskIds.Count > 0 && !row.StartUtc.HasValue)
+            {
+                builder.Append("after ");
+                builder.Append(string.Join(' ', dependencyTaskIds));
+            }
+            else
+            {
+                builder.Append(startAtUtc.ToString("yyyy-MM-dd HH:mm:ss"));
+            }
+
             builder.Append(", ");
-            builder.Append(durationDays);
-            builder.AppendLine("d");
+            builder.AppendLine(durationToken);
         }
 
         return builder.ToString().TrimEnd();
@@ -175,6 +205,8 @@ internal static class ProjectStructureSummaryExporter
                 "Progress",
                 "Start",
                 "End",
+                "Duration",
+                "Dependencies",
                 "Children"
             }
         };
@@ -189,6 +221,8 @@ internal static class ProjectStructureSummaryExporter
                 row.ProgressLabel,
                 row.StartUtc?.ToString("yyyy-MM-dd HH:mm") ?? string.Empty,
                 row.EndUtc?.ToString("yyyy-MM-dd HH:mm") ?? string.Empty,
+                FormatDurationForWorksheet(row.DurationSeconds),
+                ((row.DependencyNodeIds ?? []).Count).ToString(),
                 row.Children.Count.ToString()
             ]));
 
@@ -205,25 +239,20 @@ internal static class ProjectStructureSummaryExporter
         return stream.ToArray();
     }
 
-    private static (DateOnly StartDate, int DurationDays, bool UsesSyntheticDates) ResolveTaskSchedule(
+    private static (DateTimeOffset StartAtUtc, string DurationToken, bool UsesSyntheticDates) ResolveTaskSchedule(
         ProjectStructureSummaryNode row,
-        DateOnly anchorDate,
-        int index)
+        IReadOnlyList<string> dependencyTaskIds,
+        DateTimeOffset syntheticCursor)
     {
-        var hasExplicitDates = row.StartUtc.HasValue && row.EndUtc.HasValue;
-        var startDate = row.StartUtc.HasValue
-            ? DateOnly.FromDateTime(row.StartUtc.Value.UtcDateTime)
-            : anchorDate.AddDays(index - 1);
-        var endDate = row.EndUtc.HasValue
-            ? DateOnly.FromDateTime(row.EndUtc.Value.UtcDateTime)
-            : startDate.AddDays(Math.Max(1, row.Children.Count));
-        if (endDate < startDate)
+        var durationSeconds = Math.Max(1, row.DurationSeconds.GetValueOrDefault(3600));
+        if (row.StartUtc.HasValue)
         {
-            (startDate, endDate) = (endDate, startDate);
+            return (row.StartUtc.Value, FormatMermaidDuration(durationSeconds), false);
         }
 
-        var durationDays = Math.Max(1, endDate.DayNumber - startDate.DayNumber + 1);
-        return (startDate, durationDays, !hasExplicitDates);
+        return dependencyTaskIds.Count > 0
+            ? (DateTimeOffset.MinValue, FormatMermaidDuration(durationSeconds), false)
+            : (syntheticCursor, FormatMermaidDuration(durationSeconds), true);
     }
 
     private static string ResolveSection(ProjectStructureSummaryNode row, string rootTitle)
@@ -261,6 +290,31 @@ internal static class ProjectStructureSummaryExporter
         }
 
         return string.Empty;
+    }
+
+    private static string FormatMermaidDuration(int durationSeconds)
+    {
+        if (durationSeconds % 3600 == 0)
+        {
+            return $"{durationSeconds / 3600}h";
+        }
+
+        if (durationSeconds % 60 == 0)
+        {
+            return $"{durationSeconds / 60}m";
+        }
+
+        return $"{durationSeconds}s";
+    }
+
+    private static string FormatDurationForWorksheet(int? durationSeconds)
+    {
+        if (!durationSeconds.HasValue || durationSeconds.Value <= 0)
+        {
+            return string.Empty;
+        }
+
+        return TimeSpan.FromSeconds(durationSeconds.Value).ToString();
     }
 
     private static string BuildContentTypesXml()

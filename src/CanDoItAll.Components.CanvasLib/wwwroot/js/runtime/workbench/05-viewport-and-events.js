@@ -85,6 +85,8 @@
             nodeIds: draggedNodes,
             startPositions,
             frameId: options?.frameId || null,
+            sourceNodeId: options?.sourceNodeId || null,
+            targetNodeId: options?.targetNodeId || null,
             dragContext: null
         };
         clearSnapGuides(state);
@@ -198,9 +200,27 @@
         switch (interaction.kind) {
             case "drag":
             case "frame-drag":
+            case "dependency-drag":
                 if (interaction.moved) {
                     await publishNodesMoved(state, interaction.nodeIds);
                     publishState(state);
+                }
+                else if (interaction.kind === "dependency-drag" &&
+                    interaction.sourceNodeId &&
+                    interaction.targetNodeId &&
+                    state.dotNetRef?.invokeMethodAsync) {
+                    await state.dotNetRef.invokeMethodAsync(
+                        "OnContextActionRequest",
+                        JSON.stringify({
+                            nodeId: interaction.targetNodeId,
+                            actionId: "dependency:create",
+                            x: 0,
+                            y: 0,
+                            targetKind: "node",
+                            linkSourceId: interaction.sourceNodeId,
+                            linkTargetId: interaction.targetNodeId,
+                            linkKind: "DependsOn"
+                        }));
                 }
                 break;
             case "pan":
@@ -1109,6 +1129,11 @@
             measureLayoutFrame: 0,
             snapGuides: [],
             hoveredNodeId: null,
+            hoveredDeleteNodeId: null,
+            hoveredDeleteLinkKey: null,
+            pointerHostPoint: null,
+            renderedLinks: [],
+            previewLink: null,
             popover: null,
             popoverTitle: null,
             popoverBody: null,
@@ -1153,7 +1178,13 @@
         state.ui = state.surface.uiState;
         workbenchInternals.stateStore.reconcileSelection(state);
         state.collapsedIds = toCollapsedSet(state.ui.collapsedNodeIds);
+        state.pointerHostPoint = null;
+        state.hoveredDeleteNodeId = null;
+        state.hoveredDeleteLinkKey = null;
+        state.renderedLinks = [];
+        state.previewLink = null;
         syncMenuScaleCss(state);
+        workbenchInternals.runtime.syncWorkbenchMode?.(state);
         invalidateMeasuredLayout(state);
         workbenchInternals.overlayRenderer.clearContextMenu(state);
         workbenchInternals.overlayRenderer.hidePopover(state);
