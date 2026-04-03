@@ -328,6 +328,69 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
+    public async Task Canvas_tool_mode_callback_returns_dependency_and_delete_modes_to_select()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Escape tool reset project");
+        var noteNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Reset source",
+                "Escape test",
+                "Selected note for Escape tool reset coverage.",
+                $"project:{projectId}",
+                420,
+                240));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, noteNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Reset source", cut.Markup));
+
+        cut.Find("[data-testid='project-structure-toolbar-tool-dependency']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("dependency", canvasWorkbench.Instance.Surface.Mode);
+            Assert.Equal(noteNode.Id, canvasWorkbench.Instance.Surface.DependencySourceId);
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(null, "tool-mode:select", 0, 0, "canvas"))));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("authoring", canvasWorkbench.Instance.Surface.Mode);
+            Assert.True(string.IsNullOrWhiteSpace(canvasWorkbench.Instance.Surface.DependencySourceId));
+            Assert.Contains("Click to select", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-toolbar-tool-delete']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("delete", canvasWorkbench.Instance.Surface.Mode);
+            Assert.Contains("Delete tool:", cut.Markup);
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(null, "tool-mode:select", 0, 0, "canvas"))));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("authoring", canvasWorkbench.Instance.Surface.Mode);
+            Assert.Contains("Click to select", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Dependency_context_requests_create_and_delete_persisted_links_for_note_nodes()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

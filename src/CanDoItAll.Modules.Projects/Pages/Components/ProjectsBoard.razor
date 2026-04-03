@@ -217,6 +217,15 @@
                                         title="Open calendar"
                                         aria-label="Open calendar"
                                         Click="@(() => OpenCalendar.InvokeAsync(project.Id))" />
+                                <Button ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Class="cda-button--quick"
+                                        Icon="timeline"
+                                        Text="Gantt"
+                                        title="Open Mermaid Gantt"
+                                        aria-label="Open Mermaid Gantt"
+                                        data-testid="project-card-gantt-button"
+                                        Click="@(() => OpenGanttPreview.InvokeAsync(project.Id))" />
                             </Cluster>
                         </CardActions>
                     </article>
@@ -289,6 +298,9 @@
 
     [Parameter]
     public EventCallback<Guid> OpenCalendar { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenGanttPreview { get; set; }
 
     private string ProjectSearchProxy
     {

@@ -746,6 +746,27 @@
         state.host.dataset.workbenchMode = resolveSurfaceMode(state);
     }
 
+    function setWorkbenchToolMode(state, mode) {
+        if (!state?.surface) {
+            return;
+        }
+
+        const normalizedMode = mode === "delete" || mode === "dependency"
+            ? mode
+            : "authoring";
+        state.surface.mode = normalizedMode;
+        if (normalizedMode !== "dependency") {
+            state.surface.dependencySourceId = "";
+        }
+
+        if (normalizedMode !== "delete") {
+            state.hoveredDeleteNodeId = null;
+            state.hoveredDeleteLinkKey = null;
+        }
+
+        syncWorkbenchMode(state);
+    }
+
     function updatePointerHostPoint(state, event) {
         const hostRect = state.host?.getBoundingClientRect?.();
         if (!hostRect) {
@@ -1121,21 +1142,36 @@
             keyDown: event => {
                 const target = event.target;
                 const tagName = target?.tagName?.toLowerCase?.() || "";
-                const isCanvasKeyTarget = !target ||
+                const isWorkbenchKeyTarget = !target ||
                     target === state.document.body ||
                     target === state.document.documentElement ||
-                    state.host.contains(target);
-                if (!isCanvasKeyTarget) {
-                    return;
-                }
+                    state.host.contains(target) ||
+                    !!target?.closest?.(".cw-workbench-shell");
 
                 const isEditable = tagName === "input" || tagName === "textarea" || target?.isContentEditable;
                 if (isEditable) {
                     if (event.key === "Escape") {
                         event.preventDefault();
                         closeComposer(state);
+                        if (resolveSurfaceMode(state) !== "authoring") {
+                            setWorkbenchToolMode(state, "authoring");
+                            dispatchContextActionRequest(state, {
+                                nodeId: null,
+                                actionId: "tool-mode:select",
+                                x: 0,
+                                y: 0,
+                                targetKind: "canvas"
+                            });
+                        }
+
+                        render(state);
+                        ensureHostFocus(state);
                     }
 
+                    return;
+                }
+
+                if (!isWorkbenchKeyTarget) {
                     return;
                 }
 
@@ -1211,11 +1247,24 @@
                     case "Escape":
                         event.preventDefault();
                         {
+                            const activeMode = resolveSurfaceMode(state);
                             const hadContextMenu = state.contextMenu?.style.display !== "none";
                             const hadComposer = !!state.composer;
                             clearContextMenu(state);
                             closeComposer(state);
-                            if (!hadContextMenu && !hadComposer) {
+                            if (activeMode !== "authoring") {
+                                setWorkbenchToolMode(state, "authoring");
+                                render(state);
+                                ensureHostFocus(state);
+                                dispatchContextActionRequest(state, {
+                                    nodeId: null,
+                                    actionId: "tool-mode:select",
+                                    x: 0,
+                                    y: 0,
+                                    targetKind: "canvas"
+                                });
+                            }
+                            else if (!hadContextMenu && !hadComposer) {
                                 setSelection(state, [], true);
                             }
                             else {
@@ -1736,7 +1785,11 @@
                     workbenchInternals.sceneLayout.resize(state);
                     render(state);
                 });
-                state.resizeObserver.observe(host);
+                const resizeTargets = [host, state.shell, host.closest(".cw-stage-surface")]
+                    .filter((target, index, collection) => !!target && collection.indexOf(target) === index);
+                for (const target of resizeTargets) {
+                    state.resizeObserver.observe(target);
+                }
             }
 
             host.__canvasWorkbenchState = state;

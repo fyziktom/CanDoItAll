@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -14,6 +15,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureChecklistService>();
         services.AddScoped<ProjectStructureImportService>();
         services.AddScoped<ProjectStructureAgentService>();
+        services.AddScoped<IProjectGanttPreviewService, ProjectGanttPreviewService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();
         services.AddScoped<IProjectWorkbenchSeedService>(serviceProvider => serviceProvider.GetRequiredService<ProjectWorkbenchService>());

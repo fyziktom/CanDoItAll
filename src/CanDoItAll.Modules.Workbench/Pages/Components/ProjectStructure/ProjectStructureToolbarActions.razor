@@ -9,6 +9,7 @@
                 Icon="arrow_selector_tool"
                 Variant="Variant.Text"
                 ButtonStyle="ButtonStyle.Base"
+                Style="@ToolbarToggleStyle"
                 Class="@ResolveToolbarButtonCssClass(string.Equals(ActiveTool, SelectTool, StringComparison.Ordinal))"
                 data-testid="project-structure-toolbar-tool-select"
                 title="Use the normal select and move tool"
@@ -18,6 +19,7 @@
                 Icon="start"
                 Variant="Variant.Text"
                 ButtonStyle="ButtonStyle.Base"
+                Style="@ToolbarToggleStyle"
                 Class="@ResolveToolbarButtonCssClass(string.Equals(ActiveTool, DependencyTool, StringComparison.Ordinal))"
                 data-testid="project-structure-toolbar-tool-dependency"
                 title="Click another node to say the selected node depends on it"
@@ -28,6 +30,7 @@
                 Icon="delete"
                 Variant="Variant.Text"
                 ButtonStyle="ButtonStyle.Base"
+                Style="@ToolbarToggleStyle"
                 Class="@ResolveToolbarButtonCssClass(string.Equals(ActiveTool, DeleteTool, StringComparison.Ordinal))"
                 data-testid="project-structure-toolbar-tool-delete"
                 title="Hover a node or dependency and click to delete it"
@@ -126,6 +129,8 @@
 
     [Parameter]
     public EventCallback RecomposeBranch { get; set; }
+
+    private const string ToolbarToggleStyle = "width:auto;max-width:9rem;flex:0 0 auto;";
 
     private string ResolveToolbarButtonCssClass(bool isActive)
     {

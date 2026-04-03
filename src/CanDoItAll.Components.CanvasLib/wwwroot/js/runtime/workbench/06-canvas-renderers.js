@@ -810,6 +810,15 @@
             };
         }
 
+        if (isDependencyLink(link)) {
+            return {
+                stroke: "rgba(37, 99, 235, 0.94)",
+                arrowFill: "rgba(29, 78, 216, 0.98)",
+                lineWidth: 3.35,
+                lineDash: []
+            };
+        }
+
         if (link?.isUserAuthored) {
             return {
                 stroke: "rgba(14, 165, 233, 0.82)",
@@ -825,6 +834,59 @@
             lineWidth: 2,
             lineDash: []
         };
+    }
+
+    function isDependencyLink(link) {
+        const kind = (link?.kind || "").toLowerCase();
+        return kind === "dependson" || kind === "dependency";
+    }
+
+    function sampleBezierPoint(startPoint, controlPoint1, controlPoint2, endPoint, t) {
+        const inverse = 1 - t;
+        const inverseSquared = inverse * inverse;
+        const inverseCubed = inverseSquared * inverse;
+        const tSquared = t * t;
+        const tCubed = tSquared * t;
+
+        return {
+            x: (inverseCubed * startPoint.x) +
+                (3 * inverseSquared * t * controlPoint1.x) +
+                (3 * inverse * tSquared * controlPoint2.x) +
+                (tCubed * endPoint.x),
+            y: (inverseCubed * startPoint.y) +
+                (3 * inverseSquared * t * controlPoint1.y) +
+                (3 * inverse * tSquared * controlPoint2.y) +
+                (tCubed * endPoint.y)
+        };
+    }
+
+    function sampleBezierTangent(startPoint, controlPoint1, controlPoint2, endPoint, t) {
+        const inverse = 1 - t;
+        const inverseSquared = inverse * inverse;
+        const tSquared = t * t;
+
+        return {
+            x: (3 * inverseSquared * (controlPoint1.x - startPoint.x)) +
+                (6 * inverse * t * (controlPoint2.x - controlPoint1.x)) +
+                (3 * tSquared * (endPoint.x - controlPoint2.x)),
+            y: (3 * inverseSquared * (controlPoint1.y - startPoint.y)) +
+                (6 * inverse * t * (controlPoint2.y - controlPoint1.y)) +
+                (3 * tSquared * (endPoint.y - controlPoint2.y))
+        };
+    }
+
+    function drawCanvasArrowHead(context, point, angle, fillStyle, length, halfWidth) {
+        context.save();
+        context.translate(point.x, point.y);
+        context.rotate(angle);
+        context.beginPath();
+        context.moveTo(0, 0);
+        context.lineTo(-length, halfWidth);
+        context.lineTo(-length, -halfWidth);
+        context.closePath();
+        context.fillStyle = fillStyle;
+        context.fill();
+        context.restore();
     }
 
     function drawCanvasLink(context, link, startPoint, endPoint, options) {
@@ -856,18 +918,29 @@
         const angle = Math.atan2(
             geometry.endPoint.y - geometry.controlPoint2.y,
             geometry.endPoint.x - geometry.controlPoint2.x);
-        const arrowLength = options?.isPreview ? 12 : 10;
-        context.save();
-        context.translate(geometry.endPoint.x, geometry.endPoint.y);
-        context.rotate(angle);
-        context.beginPath();
-        context.moveTo(0, 0);
-        context.lineTo(-arrowLength, 4);
-        context.lineTo(-arrowLength, -4);
-        context.closePath();
-        context.fillStyle = style.arrowFill;
-        context.fill();
-        context.restore();
+        const dependencyLink = isDependencyLink(link);
+        const arrowLength = options?.isPreview ? 14 : dependencyLink ? 12 : 10;
+        const arrowHalfWidth = options?.isPreview ? 5 : dependencyLink ? 4.75 : 4;
+        drawCanvasArrowHead(context, geometry.endPoint, angle, style.arrowFill, arrowLength, arrowHalfWidth);
+
+        if (dependencyLink && !options?.isPreview) {
+            const midT = 0.58;
+            const midPoint = sampleBezierPoint(
+                geometry.startPoint,
+                geometry.controlPoint1,
+                geometry.controlPoint2,
+                geometry.endPoint,
+                midT);
+            const tangent = sampleBezierTangent(
+                geometry.startPoint,
+                geometry.controlPoint1,
+                geometry.controlPoint2,
+                geometry.endPoint,
+                midT);
+            const midAngle = Math.atan2(tangent.y, tangent.x);
+            drawCanvasArrowHead(context, midPoint, midAngle, style.arrowFill, 10, 4);
+        }
+
         return geometry;
     }
 

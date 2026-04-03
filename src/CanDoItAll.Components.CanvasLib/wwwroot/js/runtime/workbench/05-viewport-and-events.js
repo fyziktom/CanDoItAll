@@ -488,6 +488,24 @@
         state.containingBlockOverride = null;
     }
 
+    function schedulePostLayoutResize(state, resizeSurface) {
+        if (typeof window.requestAnimationFrame !== "function") {
+            resizeSurface(state);
+            render(state);
+            return;
+        }
+
+        window.requestAnimationFrame(() => {
+            resizeSurface(state);
+            render(state);
+
+            window.requestAnimationFrame(() => {
+                resizeSurface(state);
+                render(state);
+            });
+        });
+    }
+
     function setMaximized(state, isMaximized) {
         cancelViewportAnimation(state);
         state.ui.isMaximized = !!isMaximized;
@@ -507,6 +525,7 @@
         const resizeSurface = workbenchInternals.sceneLayout?.resize || legacyResize;
         resizeSurface(state);
         render(state);
+        schedulePostLayoutResize(state, resizeSurface);
     }
 
     function fitView(state) {

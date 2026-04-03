@@ -235,7 +235,7 @@
                                     <p><strong>Enter</strong> creates a sibling note.</p>
                                     <p><strong>Ctrl/Cmd + X</strong>, <strong>Ctrl/Cmd + C</strong>, and <strong>Ctrl/Cmd + V</strong> use the shared canvas clipboard.</p>
                                     <p><strong>m</strong> toggles the minimap, <strong>d</strong> toggles diagnostics, and <strong>+</strong>, <strong>-</strong>, <strong>0</strong> control zoom and fit.</p>
-                                    <p><strong>?</strong> or <strong>h</strong> opens help, and <strong>Escape</strong> closes the active menu or composer before clearing selection.</p>
+                                    <p><strong>?</strong> or <strong>h</strong> opens help, and <strong>Escape</strong> returns to Select mode before clearing selection.</p>
                                 </div>
 
                                 <p class="cw-help-footnote">When a right-click menu is open, its underlined letters win first so layered menu navigation stays fast.</p>
@@ -595,12 +595,14 @@
     private async Task ToggleMaximizeAsync()
     {
         isMaximized = !isMaximized;
+        await InvokeAsync(StateHasChanged);
         if (sceneHost.IsInitialized)
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
         }
 
         await PublishUiStateAsync();
+        await Task.Yield();
         if (sceneHost.IsInitialized)
         {
             await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.resize", host);

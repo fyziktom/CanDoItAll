@@ -656,6 +656,9 @@ else
     {
         switch (request.ActionId)
         {
+            case "tool-mode:select":
+                await SelectCanvasToolAsync();
+                break;
             case "dependency:create":
                 await CreateDependencyAsync(request.LinkSourceId, request.NodeId ?? request.LinkTargetId);
                 break;
