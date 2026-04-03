@@ -1,1 +1,0 @@
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\candoitall-storage-driver-execution-bundle

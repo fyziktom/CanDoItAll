@@ -1,0 +1,437 @@
+{
+  "bundle_name": "CanDoItAll CRM / HR Final Codex Bundle",
+  "module_name": "CanDoItAll.Modules.CrmHr",
+  "route_root": "/crm-hr",
+  "user_story_count": 120,
+  "subbundle_count": 13,
+  "required_item_files": [
+    "README.md",
+    "SPECIFICATION.md",
+    "FILE_REFERENCES.md",
+    "IMPLEMENTATION_PROMPT.md",
+    "VALIDATION_PROMPT.md",
+    "ACCEPTANCE_CRITERIA.md",
+    "CHECKLIST.md",
+    "ASCII_LAYOUTS.md",
+    "SCREENSHOT_REQUIREMENTS.md"
+  ],
+  "waves": {
+    "Wave A": [
+      "B01",
+      "B02"
+    ],
+    "Wave B": [
+      "B03",
+      "B06",
+      "B09"
+    ],
+    "Wave C": [
+      "B10",
+      "B04"
+    ],
+    "Wave D": [
+      "B05",
+      "B07",
+      "B08"
+    ],
+    "Wave E": [
+      "B11",
+      "B12",
+      "B13"
+    ]
+  },
+  "items": [
+    {
+      "id": "B01",
+      "title": "Foundation: unified party domain, schema, and module skeleton",
+      "folder": "07_ITEMS/B01_foundation_unified_party_domain",
+      "phase": "Wave A",
+      "dependencies": [],
+      "routes": [],
+      "stories": [
+        "DIR-01",
+        "DIR-02",
+        "DIR-04",
+        "DIR-05",
+        "DIR-16",
+        "DIR-17",
+        "DIR-18",
+        "DIR-19",
+        "DIR-20",
+        "X-05",
+        "X-08",
+        "X-09",
+        "X-14"
+      ]
+    },
+    {
+      "id": "B02",
+      "title": "Directory shell, navigation, routes, and core BaseLib pages",
+      "folder": "07_ITEMS/B02_directory_shell_navigation_and_core_pages",
+      "phase": "Wave A",
+      "dependencies": [
+        "B01"
+      ],
+      "routes": [
+        "/crm-hr",
+        "/crm-hr/directory",
+        "/crm-hr/crm",
+        "/crm-hr/workforce",
+        "/crm-hr/recruiting",
+        "/crm-hr/agents",
+        "/crm-hr/assignments"
+      ],
+      "stories": [
+        "DIR-03",
+        "DIR-14",
+        "DIR-15",
+        "CRM-18",
+        "CRM-19",
+        "HR-35",
+        "AI-08",
+        "X-01",
+        "X-04",
+        "X-13"
+      ]
+    },
+    {
+      "id": "B03",
+      "title": "Contact points, addresses, relationships, org structure, import/export, and duplicate merge",
+      "folder": "07_ITEMS/B03_contact_points_addresses_relationships_and_dedup",
+      "phase": "Wave B",
+      "dependencies": [
+        "B01",
+        "B02"
+      ],
+      "routes": [
+        "/crm-hr/directory"
+      ],
+      "stories": [
+        "DIR-06",
+        "DIR-07",
+        "DIR-08",
+        "DIR-09",
+        "DIR-10",
+        "DIR-11",
+        "DIR-12",
+        "DIR-13",
+        "HR-29",
+        "HR-30",
+        "X-12"
+      ]
+    },
+    {
+      "id": "B04",
+      "title": "CRM accounts, contacts, stakeholders, interaction journal, and follow-ups",
+      "folder": "07_ITEMS/B04_crm_accounts_contacts_interactions_and_followups",
+      "phase": "Wave C",
+      "dependencies": [
+        "B01",
+        "B02",
+        "B03"
+      ],
+      "routes": [
+        "/crm-hr/crm",
+        "/crm-hr/directory"
+      ],
+      "stories": [
+        "CRM-01",
+        "CRM-02",
+        "CRM-03",
+        "CRM-04",
+        "CRM-05",
+        "CRM-11",
+        "CRM-12",
+        "CRM-14",
+        "CRM-17",
+        "CRM-20",
+        "CRM-21",
+        "CRM-22",
+        "CRM-23",
+        "DIR-14"
+      ]
+    },
+    {
+      "id": "B05",
+      "title": "Opportunities, pipeline, stage history, and project conversion",
+      "folder": "07_ITEMS/B05_opportunities_pipeline_and_project_conversion",
+      "phase": "Wave D",
+      "dependencies": [
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "B10"
+      ],
+      "routes": [
+        "/crm-hr/crm"
+      ],
+      "stories": [
+        "CRM-06",
+        "CRM-07",
+        "CRM-08",
+        "CRM-09",
+        "CRM-10",
+        "CRM-13",
+        "CRM-15",
+        "CRM-16",
+        "CRM-18",
+        "CRM-24",
+        "PRJ-11"
+      ]
+    },
+    {
+      "id": "B06",
+      "title": "HR workforce structure, worker profiles, and delivery units",
+      "folder": "07_ITEMS/B06_hr_workforce_structure_profiles_and_delivery_units",
+      "phase": "Wave B",
+      "dependencies": [
+        "B01",
+        "B02",
+        "B03"
+      ],
+      "routes": [
+        "/crm-hr/workforce"
+      ],
+      "stories": [
+        "HR-01",
+        "HR-02",
+        "HR-03",
+        "HR-04",
+        "HR-05",
+        "HR-06",
+        "HR-16",
+        "HR-17",
+        "HR-29",
+        "HR-30",
+        "HR-34",
+        "HR-36",
+        "DIR-16"
+      ]
+    },
+    {
+      "id": "B07",
+      "title": "Skills, capacity, staffing requests, bench management, and allocations",
+      "folder": "07_ITEMS/B07_skills_capacity_staffing_and_allocations",
+      "phase": "Wave D",
+      "dependencies": [
+        "B01",
+        "B02",
+        "B03",
+        "B06",
+        "B10"
+      ],
+      "routes": [
+        "/crm-hr/assignments",
+        "/crm-hr/workforce"
+      ],
+      "stories": [
+        "HR-07",
+        "HR-08",
+        "HR-09",
+        "HR-10",
+        "HR-11",
+        "HR-12",
+        "HR-13",
+        "HR-14",
+        "HR-15",
+        "HR-18",
+        "HR-31",
+        "HR-32",
+        "HR-33",
+        "HR-35",
+        "PRJ-14"
+      ]
+    },
+    {
+      "id": "B08",
+      "title": "Recruitment pipeline, interviews, onboarding, and offboarding",
+      "folder": "07_ITEMS/B08_recruitment_onboarding_and_offboarding",
+      "phase": "Wave D",
+      "dependencies": [
+        "B01",
+        "B02",
+        "B03",
+        "B06"
+      ],
+      "routes": [
+        "/crm-hr/recruiting"
+      ],
+      "stories": [
+        "HR-19",
+        "HR-20",
+        "HR-21",
+        "HR-22",
+        "HR-23",
+        "HR-24",
+        "HR-25",
+        "HR-26",
+        "HR-27",
+        "X-15"
+      ]
+    },
+    {
+      "id": "B09",
+      "title": "AI agent profiles, provider bindings, capabilities, and governance",
+      "folder": "07_ITEMS/B09_ai_agent_profiles_provider_bindings_and_governance",
+      "phase": "Wave B",
+      "dependencies": [
+        "B01",
+        "B02",
+        "B03"
+      ],
+      "routes": [
+        "/crm-hr/agents",
+        "/crm-hr/directory"
+      ],
+      "stories": [
+        "AI-01",
+        "AI-02",
+        "AI-03",
+        "AI-04",
+        "AI-06",
+        "AI-07",
+        "AI-08",
+        "DIR-01",
+        "DIR-02"
+      ]
+    },
+    {
+      "id": "B10",
+      "title": "Project and Workbench party assignment integration",
+      "folder": "07_ITEMS/B10_project_and_workbench_party_assignment_integration",
+      "phase": "Wave C",
+      "dependencies": [
+        "B01",
+        "B02",
+        "B03",
+        "B06",
+        "B09"
+      ],
+      "routes": [
+        "/projects",
+        "/projects/{ProjectId}/structure",
+        "/projects/{ProjectId}/calendar",
+        "/crm-hr/assignments"
+      ],
+      "stories": [
+        "PRJ-01",
+        "PRJ-02",
+        "PRJ-03",
+        "PRJ-04",
+        "PRJ-05",
+        "PRJ-06",
+        "PRJ-07",
+        "PRJ-08",
+        "PRJ-09",
+        "PRJ-10",
+        "PRJ-15",
+        "PRJ-16",
+        "CRM-22",
+        "HR-14",
+        "HR-15",
+        "HR-31",
+        "AI-05"
+      ]
+    },
+    {
+      "id": "B11",
+      "title": "Cross-module integration with search, activity, resources, validation, test lab, and automation",
+      "folder": "07_ITEMS/B11_cross_module_search_activity_validation_testlab_resources_and_automation",
+      "phase": "Wave E",
+      "dependencies": [
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "B05",
+        "B06",
+        "B07",
+        "B08",
+        "B09",
+        "B10"
+      ],
+      "routes": [
+        "/activity",
+        "/resources",
+        "/validation",
+        "/test-lab",
+        "/automation",
+        "/crm-hr"
+      ],
+      "stories": [
+        "DIR-14",
+        "DIR-15",
+        "CRM-20",
+        "PRJ-12",
+        "PRJ-13",
+        "X-02",
+        "X-03",
+        "X-08",
+        "X-15"
+      ]
+    },
+    {
+      "id": "B12",
+      "title": "Security, privacy, audit, and safe lifecycle controls",
+      "folder": "07_ITEMS/B12_security_privacy_audit_and_safe_lifecycle_controls",
+      "phase": "Wave E",
+      "dependencies": [
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "B06",
+        "B08",
+        "B11"
+      ],
+      "routes": [
+        "/crm-hr",
+        "/crm-hr/directory",
+        "/crm-hr/workforce"
+      ],
+      "stories": [
+        "DIR-18",
+        "DIR-19",
+        "HR-28",
+        "X-09",
+        "X-10",
+        "X-11"
+      ]
+    },
+    {
+      "id": "B13",
+      "title": "Validation hardening, rollout, migration rehearsal, and regression suite",
+      "folder": "07_ITEMS/B13_validation_rollout_and_regression_suite",
+      "phase": "Wave E",
+      "dependencies": [
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "B05",
+        "B06",
+        "B07",
+        "B08",
+        "B09",
+        "B10",
+        "B11",
+        "B12"
+      ],
+      "routes": [
+        "/crm-hr",
+        "/projects",
+        "/activity",
+        "/resources",
+        "/validation",
+        "/test-lab"
+      ],
+      "stories": [
+        "X-06",
+        "X-07",
+        "X-13",
+        "X-16"
+      ]
+    }
+  ]
+}
