@@ -26,6 +26,14 @@ B01, B02, B03, B04, B10
 
 - `/crm-hr/crm`
 
+## Execution status
+
+- Implemented on `2026-04-03` after reconciling the preserved architect package with newer CRM/HR home behavior, B10 project-party integration, and the current opportunity editor structure.
+- `/crm-hr/crm` now contains a real opportunity workspace with board columns, stage-aware editing, filters, partner-linked parties, lost-reason capture, stage history, and project conversion for won opportunities.
+- The CRM service now persists richer opportunity context and converts won opportunities into project context without dropping party assignments.
+- `/crm-hr` now surfaces open pipeline preview items only; closure browser proof reflects that live contract by keeping a dedicated open opportunity for the home preview.
+- Closure proof is recorded in `C:\repositories\CanDoItAll\CanDoItAll_CrmHr_CodexBundle_Final\reviews\01-execution-report.md` and browser evidence is stored under `C:\repositories\CanDoItAll\evidence\crm-hr\b05\`.
+
 ## Done when
 
 - Opportunities can move across stages and stage history is recorded.

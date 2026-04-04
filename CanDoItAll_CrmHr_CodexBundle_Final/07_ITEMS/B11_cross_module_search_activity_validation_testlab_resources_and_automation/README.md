@@ -29,6 +29,13 @@ B01, B02, B03, B04, B05, B06, B07, B08, B09, B10
 - `/automation`
 - `/crm-hr`
 
+## Execution status
+
+- Implemented on `2026-04-04` after reconciling the preserved architect package with the live repo’s newer search, activity, project-party, and automation contracts.
+- `/activity` now shows CRM-HR-originated activity and safe search results that open the current CRM-HR routes, `/crm-hr/directory` now surfaces party activity plus project assignments, and `/automation` now exposes CRM-HR reminder-style signals through a shared automation-provider contract.
+- `/resources`, `/validation`, and `/test-lab` now load current project-party options and persist owner, maintainer, and responsible-party links through the shipped B10 bridge instead of direct cross-module coupling.
+- Closure proof is recorded in `C:\repositories\CanDoItAll\CanDoItAll_CrmHr_CodexBundle_Final\reviews\01-execution-report.md` and browser evidence is stored under `C:\repositories\CanDoItAll\evidence\crm-hr\b11\`.
+
 ## Done when
 
 - CRM/HR entities appear in global search where safe.

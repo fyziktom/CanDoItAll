@@ -31,3 +31,11 @@ B01, B02, B03
 - AI agent detail shows capabilities, owner, execution mode, and review state.
 - The same AI agent can later be used by project integration flows.
 - No duplicate provider registry is introduced.
+
+## Execution note (2026-04-03)
+
+- Live repo repair changed one important assumption from the preserved architect package: there is no dedicated `PartyRoleKind.AiAgent`.
+- Implemented contract:
+  - AI agent identity is represented by `PartyType.AiAgent`.
+  - Human stewards are stamped with `PartyRoleKind.AiSteward` when assigned as an owner.
+  - Provider binding reuses the existing Workspace `ProviderProfile` registry and storage.

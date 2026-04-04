@@ -1,68 +1,46 @@
-# CanDoItAll CRM / HR — Final Codex bundle
+# CanDoItAll CRM / HR Bundle Workflow Overlay
 
-This bundle is an execution-grade implementation package for adding a **merged CRM / HR module** into the CanDoItAll app.
+This bundle now includes a workflow-aligned execution overlay for the preserved architect package. The original uppercase directories remain intact as source material; the lowercase directories are the repair layer used by the validator and execution workflow.
 
-The bundle assumes the new module is named **`CanDoItAll.Modules.CrmHr`**, while its internal domain is built around a **unified Party model** so the same real-world actor can be reused across CRM, HR, Projects, Workbench, Resources, Validation, Test Lab, and AI-agent workflows.
+## Mission
 
-## Why this bundle exists
+Ship a merged CRM/HR module that introduces a reusable Party-centered domain, BaseLib-first CRM/HR routes, and safe project/workbench linkage without breaking current participant, dependency, storage, or AI-profile contracts.
 
-The repository already contains a **project-local participant / CRM-lite concept** inside Workbench. That is no longer enough for the requested scope. This bundle upgrades the concept into a real shared module without breaking the existing project structure model.
+## Bundle Layout
 
-The design explicitly supports all of these at the same time:
+- `inputs/` workflow entry points and preserved source-artifact index
+- `analysis/` live repo observations plus repair assumptions and risks
+- `requirements/` normalized, current-repo-aware requirements
+- `architecture/` target-solution summary updated for live contracts
+- `plan/` executable phase order and dependency map
+- `traceability/` workflow overlay mapped back to the legacy story ledger
+- `shared-prompts/` reusable implementation and QA guardrails
+- `subbundles/` execution-ready subbundle contracts for B01 through B13
+- `reviews/` readiness audit and execution report
+- `scripts/` workflow validator compatible with prepared and completed stages
+- Legacy preserved source package: `00_INPUTS` through `08_QA`
 
-- people
-- companies
-- organization units / delivery units
-- contractors and freelancers
-- customers, partners, and vendors
-- candidates
-- AI agents
+## Recommended Execution Order
 
-## Bundle contents
+1. `subbundles/01-foundation-unified-party-domain-schema-and-module-skeleton`
+2. `subbundles/02-directory-shell-navigation-routes-and-core-baselib-pages`
+3. `subbundles/03-contact-points-addresses-relationships-org-structure-import-export-and-duplicate-merge`
+4. `subbundles/04-crm-accounts-contacts-stakeholders-interaction-journal-and-follow-ups`
+5. `subbundles/06-hr-workforce-structure-worker-profiles-and-delivery-units`
+6. `subbundles/09-ai-agent-profiles-provider-bindings-capabilities-and-governance`
+7. `subbundles/10-project-and-workbench-party-assignment-integration`
+8. `subbundles/05-opportunities-pipeline-stage-history-and-project-conversion`
+9. `subbundles/07-skills-capacity-staffing-requests-bench-management-and-allocations`
+10. `subbundles/08-recruitment-pipeline-interviews-onboarding-and-offboarding`
+11. `subbundles/11-cross-module-integration-with-search-activity-resources-validation-test-lab-and-automation`
+12. `subbundles/12-security-privacy-audit-and-safe-lifecycle-controls`
+13. `subbundles/13-validation-hardening-rollout-migration-rehearsal-and-regression-suite`
 
-- `00_INPUTS/` — original request and repo context
-- `01_ANALYSIS/` — verified current-state findings and CRM/HR touchpoints in CanDoItAll
-- `02_REQUIREMENTS/` — enterprise user-story catalog, CanDoItAll mapping, business-director review, scope rules
-- `03_ARCHITECTURE/` — target architecture, data model, route/UI design, integrations, privacy model
-- `04_PLAN/` — phase plan, mermaid gantt, dependency map, risks, and phase gates
-- `05_TRACEABILITY/` — story catalog, traceability matrix, manifest, and bundle validator
-- `06_SHARED_PROMPTS/` — master implementation and validation prompts plus Playwright/screenshot protocols
-- `07_ITEMS/` — implementation subbundles with detailed instructions, file references, ASCII layouts, and acceptance criteria
-- `08_QA/` — final QA inspector review and sign-off
+## Validation Summary
 
-## Bundle counts
-
-- Enterprise CRM/HR user stories: **120**
-- Implementation subbundles: **13**
-- Execution waves: **5**
-- Required documents per subbundle: **9**
-
-## Mandatory design rules
-
-1. **One unified Party root.** Do not split CRM people and HR people into separate registries.
-2. **BaseLib only for UI.** Do not import canvas-specific components into the CRM/HR module.
-3. **Workbench participants stay alive.** They become project-side projections or references to central parties, not an abandoned concept.
-4. **Search and activity are first-class.** CRM/HR entities must appear in global search and timeline history.
-5. **Sensitive data is handled deliberately.** Confidential HR notes and broad search indexing are not the same thing.
-6. **UI work is not complete without screenshots and semantic review.**
-7. **Project integration is not optional.** The module must solve customer / partner / delivery-unit / person / AI-agent assignment inside Projects and Workbench.
-
-## Recommended reading order
-
-1. `03_ARCHITECTURE/TARGET_ARCHITECTURE.md`
-2. `02_REQUIREMENTS/SCOPE_AND_NON_FUNCTIONAL_DECISIONS.md`
-3. `02_REQUIREMENTS/ENTERPRISE_USER_STORY_CATALOG.md`
-4. `01_ANALYSIS/CRM_HR_TOUCHPOINT_MAP.md`
-5. `04_PLAN/IMPLEMENTATION_SEQUENCE.md`
-6. `07_ITEMS/` in dependency order
-
-## Final quality bar
-
-The bundle is complete only when:
-
-- all user stories are traceable,
-- all subbundle acceptance criteria pass,
-- automated tests pass at the appropriate level,
-- Playwright validation is executed,
-- screenshots are captured and semantically reviewed,
-- the project/workbench integration truly uses the new unified Party model.
+- Bundle preparation status: `Ready for execution`
+- Bundle readiness gate: `Passed after workflow repair on 2026-04-03`
+- Execution status: `Completed; B01 through B10 completed with recorded proof on 2026-04-03, and B11 through B13 completed with recorded proof on 2026-04-04`
+- Subbundle gate review: `B01 through B13 have closure gates passed`
+- Final closure gate: `Passed on 2026-04-04 after completed-stage validation`
+- Browser validation analytics: `Recorded for B02 through B13`

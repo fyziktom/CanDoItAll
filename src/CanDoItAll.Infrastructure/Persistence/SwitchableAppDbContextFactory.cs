@@ -2,6 +2,7 @@ using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using System.Reflection;
 
 namespace CanDoItAll.Infrastructure.Persistence;
 
@@ -143,6 +144,8 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
 {
     public AppDbContext CreateDbContext(string[] args)
     {
+        ConfigureModuleAssemblies();
+
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
         var databaseOptions = BuildDatabaseOptions();
         AppDbContextOptionsConfigurator.Configure(optionsBuilder, databaseOptions, Directory.GetCurrentDirectory());
@@ -156,5 +159,31 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
             Provider = Environment.GetEnvironmentVariable("CANDOITALL_DATABASE_PROVIDER") ?? "Sqlite",
             ConnectionString = Environment.GetEnvironmentVariable("CANDOITALL_DATABASE_CONNECTION")
         };
+    }
+
+    private static void ConfigureModuleAssemblies()
+    {
+        var compositionAssembly = AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(assembly => string.Equals(assembly.GetName().Name, "CanDoItAll.Composition", StringComparison.Ordinal))
+            ?? TryLoadCompositionAssembly();
+        var moduleAssembliesField = compositionAssembly?.GetType("CanDoItAll.Composition.ModuleAssemblies", throwOnError: false)
+            ?.GetField("All", BindingFlags.Public | BindingFlags.Static);
+
+        if (moduleAssembliesField?.GetValue(null) is Assembly[] moduleAssemblies && moduleAssemblies.Length > 0)
+        {
+            AppDbContextModelRegistry.ConfigureAssemblies(moduleAssemblies);
+        }
+    }
+
+    private static Assembly? TryLoadCompositionAssembly()
+    {
+        try
+        {
+            return Assembly.Load("CanDoItAll.Composition");
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

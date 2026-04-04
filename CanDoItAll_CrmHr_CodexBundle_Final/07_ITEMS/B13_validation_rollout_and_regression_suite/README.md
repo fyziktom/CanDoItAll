@@ -24,6 +24,13 @@ B01, B02, B03, B04, B05, B06, B07, B08, B09, B10, B11, B12
 - `/validation`
 - `/test-lab`
 
+## Execution status
+
+- Implemented on `2026-04-04` as the final CRM-HR closure gate over the current live repo.
+- The final gate reused the shipped phase-specific component and integration suites and added one dedicated Playwright regression pass for the final route set instead of duplicating a second full test pyramid.
+- Closure exposed and fixed one live regression in the old shell smoke: B12 introduced a second `Open directory` button on the home page, so the final gate added explicit home-page test ids and updated the smoke to target the intended header action.
+- Final rollout and rollback rehearsal notes are recorded in `C:\repositories\CanDoItAll\CanDoItAll_CrmHr_CodexBundle_Final\reviews\02-rollout-and-rollback-notes.md`, and browser evidence is stored under `C:\repositories\CanDoItAll\evidence\crm-hr\b13\`.
+
 ## Done when
 
 - Component, integration, and Playwright tests exist for the final CRM/HR surface.

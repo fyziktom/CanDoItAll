@@ -91,6 +91,38 @@
                         }
                     </InputSelect>
                 </PrefixedField>
+                <PrefixedField Prefix="REL"
+                               Suffix="V"
+                               PrefixPaddingRem="3.1"
+                               SuffixPaddingRem="2.25"
+                               StackOnMobile="true"
+                               Class="min-w-0">
+                    <InputSelect @bind-Value="RelatedPartyCategoryFilterProxy"
+                                 class="cda-input cda-input--toolbar h-10 appearance-none"
+                                 data-testid="project-related-party-category-filter">
+                        <option value="">Any relationship</option>
+                        @foreach (var category in Enum.GetValues<ProjectPartyPortfolioCategory>())
+                        {
+                            <option value="@category.ToString()">@ResolveCategoryLabel(category)</option>
+                        }
+                    </InputSelect>
+                </PrefixedField>
+                <PrefixedField Prefix="PARTY"
+                               Suffix="V"
+                               PrefixPaddingRem="4.2"
+                               SuffixPaddingRem="2.25"
+                               StackOnMobile="true"
+                               Class="min-w-0">
+                    <InputSelect @bind-Value="RelatedPartyValueFilterProxy"
+                                 class="cda-input cda-input--toolbar h-10 appearance-none"
+                                 data-testid="project-related-party-value-filter">
+                        <option value="">Any party</option>
+                        @foreach (var value in AvailableRelatedPartyValues)
+                        {
+                            <option value="@value">@value</option>
+                        }
+                    </InputSelect>
+                </PrefixedField>
                 <PrefixedField Prefix="PROJECT"
                                Suffix="V"
                                PrefixPaddingRem="4.9"
@@ -169,6 +201,37 @@
                                     <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(project.Status)" Text="@project.Status.ToString()" />
                                 </Split>
                                 <p class="mt-2 text-sm leading-5 text-slate-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : project.CurrentPhase)</p>
+                                @if (!string.IsNullOrWhiteSpace(project.PrimaryCustomerName) ||
+                                     !string.IsNullOrWhiteSpace(project.PrimaryDeliveryUnitName) ||
+                                     !string.IsNullOrWhiteSpace(project.PrimaryOwnerName))
+                                {
+                                    <div class="mt-3 space-y-1.5 text-sm text-slate-600"
+                                         data-testid="project-card-related-parties">
+                                        @if (!string.IsNullOrWhiteSpace(project.PrimaryCustomerName))
+                                        {
+                                            <p><span class="font-semibold text-slate-800">Customer:</span> @project.PrimaryCustomerName</p>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(project.PrimaryDeliveryUnitName))
+                                        {
+                                            <p><span class="font-semibold text-slate-800">Delivery unit:</span> @project.PrimaryDeliveryUnitName</p>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(project.PrimaryOwnerName))
+                                        {
+                                            <p><span class="font-semibold text-slate-800">Owner:</span> @project.PrimaryOwnerName</p>
+                                        }
+                                    </div>
+                                }
+                                @if ((project.RelatedParties?.Count ?? 0) > 0)
+                                {
+                                    <Cluster Gap="LayoutGap.XSmall"
+                                             Class="mt-3">
+                                        @foreach (var item in project.RelatedParties!.Take(4))
+                                        {
+                                            <Pill Tone="@(item.IsPrimary ? PillTone.Info : PillTone.Neutral)"
+                                                  Text="@($"{item.Label}: {item.DisplayName}")" />
+                                        }
+                                    </Cluster>
+                                }
                             </div>
                         </Cluster>
 
@@ -255,6 +318,21 @@
     public EventCallback<string> StatusFilterChanged { get; set; }
 
     [Parameter]
+    public string RelatedPartyCategoryFilter { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> RelatedPartyCategoryFilterChanged { get; set; }
+
+    [Parameter]
+    public string RelatedPartyValueFilter { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> RelatedPartyValueFilterChanged { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<string> AvailableRelatedPartyValues { get; set; } = [];
+
+    [Parameter]
     public string HierarchyFilterProjectId { get; set; } = string.Empty;
 
     [Parameter]
@@ -314,6 +392,18 @@
         set => _ = StatusFilterChanged.InvokeAsync(value);
     }
 
+    private string RelatedPartyCategoryFilterProxy
+    {
+        get => RelatedPartyCategoryFilter;
+        set => _ = RelatedPartyCategoryFilterChanged.InvokeAsync(value);
+    }
+
+    private string RelatedPartyValueFilterProxy
+    {
+        get => RelatedPartyValueFilter;
+        set => _ = RelatedPartyValueFilterChanged.InvokeAsync(value);
+    }
+
     private string HierarchyFilterProjectIdProxy
     {
         get => HierarchyFilterProjectId;
@@ -324,5 +414,15 @@
     {
         get => HierarchyFilterMode;
         set => _ = HierarchyFilterModeChanged.InvokeAsync(value);
+    }
+
+    private static string ResolveCategoryLabel(ProjectPartyPortfolioCategory category)
+    {
+        return category switch
+        {
+            ProjectPartyPortfolioCategory.DeliveryUnit => "Delivery unit",
+            ProjectPartyPortfolioCategory.AiAgent => "AI agent",
+            _ => category.ToString()
+        };
     }
 }

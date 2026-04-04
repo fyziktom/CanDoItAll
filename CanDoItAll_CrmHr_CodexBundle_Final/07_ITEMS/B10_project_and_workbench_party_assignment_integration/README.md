@@ -35,6 +35,13 @@ B01, B02, B03, B06, B09
 - `/projects/{ProjectId}/calendar`
 - `/crm-hr/assignments`
 
+## Execution status
+
+- Implemented on `2026-04-03` after reconciling the preserved architect package with the live repo’s newer module boundaries, workbench metadata contracts, and selection behavior.
+- The shipped solution uses a project-owned party-integration bridge implemented by CRM-HR so Projects can surface related parties without introducing a reverse module dependency.
+- `/crm-hr/assignments` is now a real assignment workspace, `/projects` shows relationship context and filters, and `/projects/{ProjectId}/structure` supports central-party participant, meeting, and work-item assignment flows while preserving project-local participants.
+- Closure proof is recorded in `C:\repositories\CanDoItAll\CanDoItAll_CrmHr_CodexBundle_Final\reviews\01-execution-report.md` and browser evidence is stored under `C:\repositories\CanDoItAll\evidence\crm-hr\b10\`.
+
 ## Done when
 
 - Projects show primary related parties on list or detail surfaces.

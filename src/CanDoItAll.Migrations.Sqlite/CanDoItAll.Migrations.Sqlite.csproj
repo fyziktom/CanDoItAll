@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.Composition\CanDoItAll.Composition.csproj" />
     <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
   </ItemGroup>
 
   <ItemGroup>

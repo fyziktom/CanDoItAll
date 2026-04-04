@@ -1,0 +1,228 @@
+<FormSection Title="Skills and certifications"
+             Description="Maintain searchable skill coverage, proficiency, and qualification notes on the shared workforce party instead of hiding staffing fit in free text.">
+    <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+        <SurfaceCard>
+            <p class="cda-eyebrow">Skill assignment</p>
+            <h3 class="mt-1 text-lg font-semibold text-slate-950">Attach a skill to this profile</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">
+                Proficiency and certification details are included in workforce search so staffing can find the right people or units quickly.
+            </p>
+
+            @if (SkillCatalog.Count == 0)
+            {
+                <div class="mt-4 rounded-[1.2rem] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-700">
+                    Create at least one skill definition before attaching skills to the workforce profile.
+                </div>
+            }
+            else
+            {
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
+                    <FormField Text="Skill">
+                        <InputSelect @bind-Value="SkillDraft.SkillId"
+                                     class="cda-input"
+                                     data-testid="crmhr-skill-skill-id">
+                            <option value="@Guid.Empty">Choose a skill</option>
+                            @foreach (var skill in SkillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name))
+                            {
+                                <option value="@skill.Id">@skill.Name (@skill.Category)</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+                    <FormField Text="Proficiency">
+                        <InputSelect @bind-Value="SkillDraft.Proficiency"
+                                     class="cda-input"
+                                     data-testid="crmhr-skill-proficiency">
+                            @foreach (var proficiency in Enum.GetValues<SkillProficiencyLevel>())
+                            {
+                                <option value="@proficiency">@proficiency</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
+                    <FormField Text="Years">
+                        <InputNumber @bind-Value="SkillDraft.YearsExperience"
+                                     class="cda-input"
+                                     data-testid="crmhr-skill-years" />
+                    </FormField>
+                    <FormField Text="Certification">
+                        <InputText @bind-Value="SkillDraft.CertificationStatus"
+                                   class="cda-input"
+                                   data-testid="crmhr-skill-certification" />
+                    </FormField>
+                    <FormField Text="Last validated">
+                        <InputDate @bind-Value="SkillDraft.LastValidatedOn"
+                                   class="cda-input"
+                                   data-testid="crmhr-skill-validated-on" />
+                    </FormField>
+                </Grid>
+
+                <div class="mt-4">
+                    <FormField Text="Notes">
+                        <InputTextArea @bind-Value="SkillDraft.Notes"
+                                       class="cda-input min-h-[7rem]"
+                                       data-testid="crmhr-skill-notes" />
+                    </FormField>
+                </div>
+
+                <Cluster Gap="LayoutGap.Small" Class="mt-4">
+                    <Button Text="Save skill"
+                            Click="SavePartySkill"
+                            data-testid="crmhr-skill-save-button" />
+                </Cluster>
+            }
+        </SurfaceCard>
+
+        <SurfaceCard Soft="true">
+            <p class="cda-eyebrow">Skill dictionary</p>
+            <h3 class="mt-1 text-lg font-semibold text-slate-950">Add a reusable skill definition</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">
+                Keep the catalog small and intentional so staffing search stays strongly typed and consistent across workforce and project routes.
+            </p>
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
+                <FormField Text="Skill name">
+                    <InputText @bind-Value="SkillDefinitionDraft.Name"
+                               class="cda-input"
+                               data-testid="crmhr-skill-definition-name" />
+                </FormField>
+                <FormField Text="Category">
+                    <InputText @bind-Value="SkillDefinitionDraft.Category"
+                               class="cda-input"
+                               data-testid="crmhr-skill-definition-category" />
+                </FormField>
+            </Grid>
+
+            <div class="mt-4">
+                <FormField Text="Description">
+                    <InputTextArea @bind-Value="SkillDefinitionDraft.Description"
+                                   class="cda-input min-h-[7rem]"
+                                   data-testid="crmhr-skill-definition-description" />
+                </FormField>
+            </div>
+
+            <label class="mt-4 inline-flex items-center gap-2 text-sm text-slate-700">
+                <InputCheckbox @bind-Value="SkillDefinitionDraft.IsActive"
+                               data-testid="crmhr-skill-definition-active" />
+                <span>Active skill</span>
+            </label>
+
+            <Cluster Gap="LayoutGap.Small" Class="mt-4">
+                <Button Text="Save skill definition"
+                        Click="SaveSkillDefinition"
+                        data-testid="crmhr-skill-definition-save-button" />
+            </Cluster>
+        </SurfaceCard>
+    </Grid>
+
+    <div class="mt-6">
+        <Split Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween">
+            <div>
+                <p class="cda-eyebrow">Current coverage</p>
+                <h3 class="mt-1 text-lg font-semibold text-slate-950">@Skills.Count skill record(s)</h3>
+            </div>
+        </Split>
+
+        @if (Skills.Count == 0)
+        {
+            <div class="mt-4">
+                <EmptyState Eyebrow="No skills yet"
+                            Title="Attach the first skill"
+                            Description="Skill records start driving staffing search as soon as this profile gets at least one catalog-backed skill." />
+            </div>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                @foreach (var skill in Skills)
+                {
+                    <PanelCard data-testid="crmhr-skill-item">
+                        <Split Gap="LayoutGap.Medium"
+                               AlignItems="AlignItems.Start"
+                               JustifyContent="JustifyContent.SpaceBetween">
+                            <div class="min-w-0 space-y-1">
+                                <p class="text-base font-semibold text-slate-950">@skill.SkillName</p>
+                                <p class="text-sm text-slate-600">@BuildMeta(skill)</p>
+                                @if (!string.IsNullOrWhiteSpace(skill.Notes))
+                                {
+                                    <p class="text-sm leading-6 text-slate-600">@skill.Notes</p>
+                                }
+                            </div>
+                            <Cluster Gap="LayoutGap.Small">
+                                <StatusBadge Tone="@ResolveProficiencyTone(skill.Proficiency)"
+                                             Text="@skill.Proficiency.ToString()" />
+                                <Button Text="Delete"
+                                        ButtonStyle="ButtonStyle.Danger"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => DeletePartySkill.InvokeAsync(skill.Id))"
+                                        data-testid="crmhr-skill-delete-button" />
+                            </Cluster>
+                        </Split>
+                    </PanelCard>
+                }
+            </Stack>
+        }
+    </div>
+</FormSection>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<SkillCatalogItemModel> SkillCatalog { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<PartySkillItemModel> Skills { get; set; } = [];
+
+    [Parameter]
+    public PartySkillEditorModel SkillDraft { get; set; } = new();
+
+    [Parameter]
+    public SkillDefinitionEditorModel SkillDefinitionDraft { get; set; } = new();
+
+    [Parameter]
+    public EventCallback SavePartySkill { get; set; }
+
+    [Parameter]
+    public EventCallback SaveSkillDefinition { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> DeletePartySkill { get; set; }
+
+    private static string BuildMeta(PartySkillItemModel skill)
+    {
+        var parts = new List<string>
+        {
+            skill.SkillCategory
+        };
+
+        if (skill.YearsExperience > 0)
+        {
+            parts.Add($"{skill.YearsExperience}y experience");
+        }
+
+        if (!string.IsNullOrWhiteSpace(skill.CertificationStatus))
+        {
+            parts.Add(skill.CertificationStatus);
+        }
+
+        if (skill.LastValidatedOn.HasValue)
+        {
+            parts.Add($"Validated {skill.LastValidatedOn.Value:yyyy-MM-dd}");
+        }
+
+        return string.Join(" / ", parts);
+    }
+
+    private static string ResolveProficiencyTone(SkillProficiencyLevel proficiency)
+    {
+        return proficiency switch
+        {
+            SkillProficiencyLevel.Expert => "success",
+            SkillProficiencyLevel.Strong => "primary",
+            SkillProficiencyLevel.Working => "info",
+            _ => "warning"
+        };
+    }
+}

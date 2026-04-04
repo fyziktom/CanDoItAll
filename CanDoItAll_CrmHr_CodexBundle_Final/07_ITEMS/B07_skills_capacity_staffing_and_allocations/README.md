@@ -1,5 +1,9 @@
 # B07 — Skills, capacity, staffing requests, bench management, and allocations
 
+## Status
+
+- `Completed on 2026-04-03`
+
 ## Purpose
 
 Implement skill catalog handling, proficiency, certifications, availability blocks, staffing requests, project allocations, bench views, and demand-versus-capacity reporting.
@@ -37,3 +41,17 @@ B01, B02, B03, B06, B10
 - Staffing requests can be created with role, skills, dates, and allocation.
 - Allocations affect capacity views and conflict callouts appear.
 - Project-linked allocations are visible from both HR and project context.
+
+## Execution Notes
+
+- `/crm-hr/workforce` now owns skill-matrix and capacity-block editing for people and delivery units, including proficiency-aware search terms, bench and overload summary cards, and project-linked conflict visibility.
+- `/crm-hr/assignments` now owns staffing-request entry, demand summary, candidate search, and allocation editing, with project allocations persisted through the shared B10 `ProjectPartyAssignment` path instead of a parallel CRM-HR-only store.
+- Closure exposed provider-specific ordering limits under SQLite, so staffing, capacity, and project-allocation ordering now happens after materialization while preserving the intended visible sort order.
+
+## Proof Captured
+
+- `dotnet build C:\repositories\CanDoItAll\CanDoItAll.slnx -v minimal`
+- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "CrmHrWorkforcePageTests|AssignmentsPageTests" -v minimal`
+- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "StaffingAllocationIntegrationTests|ProjectPartyAssignmentIntegrationTests" -v minimal`
+- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter StaffingFlowTests -v minimal`
+- Browser artifacts: `C:\repositories\CanDoItAll\evidence\crm-hr\b07\crm-hr-assignments-b07-desktop.png`, `C:\repositories\CanDoItAll\evidence\crm-hr\b07\crm-hr-assignments-b07-tablet.png`, `C:\repositories\CanDoItAll\evidence\crm-hr\b07\crm-hr-workforce-b07-desktop.png`, `C:\repositories\CanDoItAll\evidence\crm-hr\b07\crm-hr-workforce-b07-tablet.png`

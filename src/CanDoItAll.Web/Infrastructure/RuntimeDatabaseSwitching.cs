@@ -1,5 +1,6 @@
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -42,6 +43,7 @@ public sealed class AppDatabaseBootstrapper(
 
         await LegacySqliteMigrationBootstrap.PrepareAsync(dbContext, logger, cancellationToken);
         await dbContext.Database.MigrateAsync(cancellationToken);
+        await CrmHrSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
     }
 }
 

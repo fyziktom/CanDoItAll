@@ -1,0 +1,38 @@
+<FormSection Title="Next action"
+             Description="Capture the follow-up commitment explicitly so overdue work is visible on the CRM surface instead of hiding in notes.">
+    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+        <div>
+            <label class="cda-field-label">Next action</label>
+            <InputText @bind-Value="Model.NextActionText"
+                       class="cda-input"
+                       data-testid="crmhr-next-action-text" />
+        </div>
+        <div>
+            <label class="cda-field-label">Owner</label>
+            <InputSelect @bind-Value="Model.NextActionOwnerPartyId"
+                         class="cda-input"
+                         data-testid="crmhr-next-action-owner">
+                <option value="">Select owner</option>
+                @foreach (var option in OwnerOptions)
+                {
+                    <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
+                }
+            </InputSelect>
+        </div>
+    </Grid>
+
+    <div class="mt-5 max-w-sm">
+        <label class="cda-field-label">Due on</label>
+        <InputDate @bind-Value="Model.NextActionDueOn"
+                   class="cda-input"
+                   data-testid="crmhr-next-action-due-on" />
+    </div>
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired]
+    public CrmInteractionEditorModel Model { get; set; } = new();
+
+    [Parameter]
+    public IReadOnlyList<PartyOptionModel> OwnerOptions { get; set; } = [];
+}

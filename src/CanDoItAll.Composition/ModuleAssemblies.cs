@@ -1,6 +1,7 @@
 using System.Reflection;
 using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.Automation;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Prompts;
@@ -19,6 +20,7 @@ public static class ModuleAssemblies
     [
         typeof(ActivityModuleAssemblyMarker).Assembly,
         typeof(AutomationModuleAssemblyMarker).Assembly,
+        typeof(CrmHrModuleAssemblyMarker).Assembly,
         typeof(FactoryModuleAssemblyMarker).Assembly,
         typeof(ProjectsModuleAssemblyMarker).Assembly,
         typeof(PromptsModuleAssemblyMarker).Assembly,

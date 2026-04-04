@@ -1,0 +1,149 @@
+@inject PartyDirectoryManagementService ManagementService
+
+<SurfaceCard Soft="true">
+    <Split Gap="LayoutGap.Large"
+           AlignItems="AlignItems.Start"
+           JustifyContent="JustifyContent.SpaceBetween">
+        <Stack GapScale="LayoutGap.Small">
+            <p class="cda-eyebrow">Bulk import and export</p>
+            <h2 class="text-lg font-semibold text-slate-950">CSV stewardship tools</h2>
+            <p class="text-sm leading-6 text-slate-600">
+                Export the current filtered party list, or paste CSV rows for preview-first import with explicit validation and duplicate warnings.
+            </p>
+        </Stack>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Refresh export"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Click="RefreshExportAsync"
+                    data-testid="crmhr-export-refresh" />
+            <Button Text="Preview import"
+                    ButtonStyle="ButtonStyle.Info"
+                    Size="ButtonSize.Small"
+                    Click="PreviewImportAsync"
+                    data-testid="crmhr-import-preview-button" />
+            <Button Text="Apply import"
+                    ButtonStyle="ButtonStyle.Success"
+                    Size="ButtonSize.Small"
+                    Click="ApplyImportAsync"
+                    Disabled="@(preview is null || preview.ReadyRowCount == 0)"
+                    data-testid="crmhr-import-apply-button" />
+        </Cluster>
+    </Split>
+
+    @if (!string.IsNullOrWhiteSpace(statusMessage))
+    {
+        <div class="mt-4">
+            <StatusBadge Tone="@statusTone" Text="@statusMessage" />
+        </div>
+    }
+
+    <Grid Gap="LayoutGap.Large" ColumnsLg="2" Class="mt-5">
+        <div>
+            <label class="cda-field-label">Export preview</label>
+            <InputTextArea @bind-Value="exportText"
+                           class="cda-input cda-input--textarea min-h-40"
+                           readonly
+                           data-testid="crmhr-export-textarea" />
+        </div>
+        <div>
+            <label class="cda-field-label">Import CSV</label>
+            <InputTextArea @bind-Value="importText"
+                           class="cda-input cda-input--textarea min-h-40"
+                           placeholder="DisplayName,PartyType,LifecycleStatus,ExternalCode,..."
+                           data-testid="crmhr-import-textarea" />
+        </div>
+    </Grid>
+
+    @if (preview is not null)
+    {
+        <Stack GapScale="LayoutGap.Medium" Class="mt-5">
+            <p class="cda-eyebrow">Import preview</p>
+            <p class="text-sm leading-6 text-slate-600">@($"{preview.ReadyRowCount} ready row(s), {preview.BlockingRowCount} blocking row(s).")</p>
+
+            @foreach (var row in preview.Rows)
+            {
+                <div class="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4" data-testid="crmhr-import-row">
+                    <Split Gap="LayoutGap.Small"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-slate-950">Row @row.RowNumber: @row.Party.DisplayName</p>
+                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@row.Party.PartyType / @row.Party.LifecycleStatus</p>
+                            @if (row.Messages.Count > 0)
+                            {
+                                <p class="mt-2 text-sm leading-6 text-rose-700">@string.Join(" ", row.Messages)</p>
+                            }
+                            @if (row.DuplicateCandidates.Count > 0)
+                            {
+                                <p class="mt-2 text-sm leading-6 text-amber-700">Duplicates: @string.Join(", ", row.DuplicateCandidates.Select(item => item.DisplayName))</p>
+                            }
+                        </div>
+                        <StatusBadge Tone="@(row.CanImport ? "success" : "warning")"
+                                     Text="@(row.CanImport ? "Ready" : "Blocked")" />
+                    </Split>
+                </div>
+            }
+        </Stack>
+    }
+</SurfaceCard>
+
+@code {
+    private PartyCsvImportPreviewModel? preview;
+    private string exportText = string.Empty;
+    private string importText = string.Empty;
+    private string? statusMessage;
+    private string statusTone = "neutral";
+
+    [Parameter]
+    public IReadOnlyList<Guid> ExportPartyIds { get; set; } = [];
+
+    [Parameter]
+    public EventCallback ImportApplied { get; set; }
+
+    private async Task RefreshExportAsync()
+    {
+        exportText = await ManagementService.ExportPartiesCsvAsync(ExportPartyIds);
+        statusMessage = $"Export refreshed for {ExportPartyIds.Count} party row(s).";
+        statusTone = "info";
+    }
+
+    private async Task PreviewImportAsync()
+    {
+        var result = await ManagementService.PreviewImportAsync(importText);
+        if (result.IsFailure || result.Value is null)
+        {
+            preview = null;
+            statusMessage = string.Join(" ", result.Errors.Select(item => item.Message));
+            statusTone = "danger";
+            return;
+        }
+
+        preview = result.Value;
+        statusMessage = $"Preview prepared for {preview.Rows.Count} row(s).";
+        statusTone = "info";
+    }
+
+    private async Task ApplyImportAsync()
+    {
+        if (preview is null)
+        {
+            return;
+        }
+
+        var result = await ManagementService.ApplyImportAsync(preview.Rows, "crm-hr-ui");
+        if (result.IsFailure)
+        {
+            statusMessage = string.Join(" ", result.Errors.Select(item => item.Message));
+            statusTone = "danger";
+            return;
+        }
+
+        importText = string.Empty;
+        preview = null;
+        statusMessage = $"Imported {result.Value} party row(s).";
+        statusTone = "success";
+        await RefreshExportAsync();
+        await ImportApplied.InvokeAsync();
+    }
+}

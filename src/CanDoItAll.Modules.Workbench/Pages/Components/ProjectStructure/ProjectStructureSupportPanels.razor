@@ -68,7 +68,8 @@
                 Icon = ResolveOutlineIcon(node),
                 Tooltip = $"{ProjectStructureCanvasCatalog.ResolveNodeLabel(node)} - {node.Status}",
                 IsSelected = SelectedNodeIds.Contains(node.Id, StringComparer.Ordinal),
-                BadgeText = node.Status
+                BadgeText = node.Status,
+                DataTestId = BuildOutlineNodeTestId(node.Id)
             })
             .ToList();
 
@@ -126,5 +127,19 @@
             "audio" => "audio",
             _ => "file"
         };
+    }
+
+    private static string BuildOutlineNodeTestId(string nodeId)
+    {
+        var buffer = new char[nodeId.Length];
+        for (var index = 0; index < nodeId.Length; index++)
+        {
+            var character = nodeId[index];
+            buffer[index] = char.IsLetterOrDigit(character)
+                ? char.ToLowerInvariant(character)
+                : '-';
+        }
+
+        return $"project-structure-outline-node-{new string(buffer)}";
     }
 }

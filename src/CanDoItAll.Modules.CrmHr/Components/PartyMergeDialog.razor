@@ -1,0 +1,84 @@
+@if (Candidate is not null)
+{
+    <Dialog IsOpen="@IsOpen"
+            Title="Merge duplicate party"
+            Eyebrow="CRM / HR"
+            Subtitle="The current editor party remains the surviving record. Related history is reassigned before the duplicate is removed."
+            Size="ModalSize.Medium"
+            TestId="crmhr-merge-dialog"
+            OnClose="HandleCloseAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Large">
+                <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                    <p class="cda-eyebrow">Surviving record</p>
+                    <p class="mt-2 text-base font-semibold text-slate-950">@CurrentPartyDisplayName</p>
+                </div>
+
+                <div class="rounded-[1.25rem] border border-amber-200 bg-amber-50/80 px-4 py-4">
+                    <p class="cda-eyebrow">Duplicate candidate</p>
+                    <p class="mt-2 text-base font-semibold text-slate-950">@Candidate.DisplayName</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">@Candidate.PartyType / @Candidate.LifecycleStatus</p>
+                    @if (!string.IsNullOrWhiteSpace(Candidate.Summary))
+                    {
+                        <p class="mt-3 text-sm leading-6 text-slate-700">@Candidate.Summary</p>
+                    }
+                    <p class="mt-3 text-sm leading-6 text-slate-700">Reasons: @string.Join(", ", Candidate.MatchReasons)</p>
+                </div>
+
+                <div>
+                    <label class="cda-field-label">Merge note</label>
+                    <InputTextArea @bind-Value="mergeReason"
+                                   class="cda-input cda-input--textarea min-h-24"
+                                   data-testid="crmhr-merge-reason" />
+                </div>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Split Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween">
+                <p class="text-sm leading-6 text-slate-600">Merge removes the duplicate party after references, contacts, addresses, and relationships are consolidated.</p>
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Cancel"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="HandleCloseAsync" />
+                    <Button Text="Merge duplicate"
+                            ButtonStyle="ButtonStyle.Warning"
+                            Click="HandleConfirmAsync"
+                            data-testid="crmhr-merge-confirm" />
+                </Cluster>
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    private string mergeReason = string.Empty;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public string CurrentPartyDisplayName { get; set; } = string.Empty;
+
+    [Parameter]
+    public PartyDuplicateCandidateModel? Candidate { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnConfirm { get; set; }
+
+    private async Task HandleCloseAsync()
+    {
+        mergeReason = string.Empty;
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task HandleConfirmAsync()
+    {
+        await OnConfirm.InvokeAsync(mergeReason.Trim());
+        mergeReason = string.Empty;
+    }
+}

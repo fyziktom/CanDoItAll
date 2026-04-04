@@ -4,6 +4,7 @@ using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.Automation;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Prompts;
@@ -62,6 +63,7 @@ public static class TestApplicationBootstrap
         services.AddTestLabModule();
         services.AddActivityModule();
         services.AddAutomationModule();
+        services.AddCrmHrModule();
     }
 
     public static async Task<ServiceProvider> BuildServiceProviderAsync(

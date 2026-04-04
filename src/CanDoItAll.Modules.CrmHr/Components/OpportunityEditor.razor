@@ -1,0 +1,369 @@
+<EditForm Model="Model" OnValidSubmit="HandleSaveAsync">
+    <Stack GapScale="LayoutGap.Large">
+        <FormSection Title="Opportunity editor"
+                     Description="Keep stage, value, owner, partner context, and project handoff on one durable CRM record.">
+            <Actions>
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="New opportunity"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="HandleStartNewAsync"
+                            data-testid="crmhr-opportunity-new-button" />
+                    <Button Text="Save opportunity"
+                            Type="submit"
+                            Disabled="@IsBusy"
+                            data-testid="crmhr-opportunity-save-button" />
+                    <Button Text="Convert to project"
+                            ButtonStyle="ButtonStyle.Info"
+                            Disabled="@(!CanConvert)"
+                            Click="HandleOpenConversionAsync"
+                            data-testid="crmhr-opportunity-convert-button" />
+                    @if (Model.LinkedProjectId.HasValue)
+                    {
+                        <Button Text="Open linked project"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="HandleOpenLinkedProjectAsync"
+                                data-testid="crmhr-opportunity-open-project" />
+                    }
+                </Cluster>
+            </Actions>
+            <ChildContent>
+                <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                    <div class="lg:col-span-2">
+                        <label class="cda-field-label">Opportunity title</label>
+                        <InputText @bind-Value="Model.Title"
+                                   class="cda-input"
+                                   data-testid="crmhr-opportunity-title" />
+                    </div>
+                    <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                        <p class="cda-eyebrow">Account context</p>
+                        <p class="mt-2 text-sm font-semibold text-slate-950">@AccountDisplayName</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Relationship stage: @RelationshipStageLabel</p>
+                    </div>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Large" ColumnsLg="4" Class="mt-5">
+                    <div>
+                        <label class="cda-field-label">Stage</label>
+                        <InputSelect @bind-Value="Model.Stage"
+                                     class="cda-input"
+                                     data-testid="crmhr-opportunity-stage">
+                            @foreach (var stage in Enum.GetValues<OpportunityStage>())
+                            {
+                                <option value="@stage">@stage</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Source</label>
+                        <InputSelect @bind-Value="Model.OpportunitySource"
+                                     class="cda-input"
+                                     data-testid="crmhr-opportunity-source">
+                            @foreach (var source in Enum.GetValues<OpportunitySource>())
+                            {
+                                <option value="@source">@source</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Owner</label>
+                        <InputSelect @bind-Value="Model.OwnerPartyId"
+                                     class="cda-input"
+                                     data-testid="crmhr-opportunity-owner">
+                            <option value="@Guid.Empty">Select owner</option>
+                            @foreach (var option in OwnerOptions)
+                            {
+                                <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Delivery unit</label>
+                        <InputSelect @bind-Value="Model.DeliveryUnitPartyId"
+                                     class="cda-input"
+                                     data-testid="crmhr-opportunity-delivery-unit">
+                            <option value="">Select delivery unit</option>
+                            @foreach (var option in DeliveryUnitOptions)
+                            {
+                                <option value="@option.Id">@option.DisplayName</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Large" ColumnsLg="4" Class="mt-5">
+                    <div>
+                        <label class="cda-field-label">Currency</label>
+                        <InputText @bind-Value="Model.CurrencyCode"
+                                   class="cda-input"
+                                   data-testid="crmhr-opportunity-currency" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Amount</label>
+                        <InputNumber @bind-Value="Model.Amount"
+                                     class="cda-input"
+                                     data-testid="crmhr-opportunity-amount" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Probability %</label>
+                        <InputNumber @bind-Value="Model.ProbabilityPercent"
+                                     class="cda-input"
+                                     data-testid="crmhr-opportunity-probability" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Expected close</label>
+                        <InputDate @bind-Value="Model.ExpectedCloseOn"
+                                   class="cda-input"
+                                   data-testid="crmhr-opportunity-close-date" />
+                    </div>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Large" ColumnsLg="2" Class="mt-5">
+                    <div>
+                        <label class="cda-field-label">Summary</label>
+                        <InputTextArea @bind-Value="Model.Summary"
+                                       class="cda-input min-h-[9rem]"
+                                       data-testid="crmhr-opportunity-summary" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Notes</label>
+                        <InputTextArea @bind-Value="Model.Notes"
+                                       class="cda-input min-h-[9rem]"
+                                       data-testid="crmhr-opportunity-notes" />
+                    </div>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Large" ColumnsLg="3" Class="mt-5">
+                    <div>
+                        <label class="cda-field-label">Stage note</label>
+                        <InputTextArea @bind-Value="Model.StageNotes"
+                                       class="cda-input min-h-[7rem]"
+                                       data-testid="crmhr-opportunity-stage-notes" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Competitor</label>
+                        <InputText @bind-Value="Model.CompetitorName"
+                                   class="cda-input"
+                                   data-testid="crmhr-opportunity-competitor" />
+                        @if (Model.Stage == OpportunityStage.Lost)
+                        {
+                            <div class="mt-4">
+                                <label class="cda-field-label">Lost reason</label>
+                                <InputTextArea @bind-Value="Model.LostReason"
+                                               class="cda-input min-h-[7rem]"
+                                               data-testid="crmhr-opportunity-lost-reason" />
+                            </div>
+                        }
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Partner contribution</label>
+                        <InputTextArea @bind-Value="Model.PartnerContributionSummary"
+                                       class="cda-input min-h-[7rem]"
+                                       data-testid="crmhr-opportunity-partner-contribution" />
+                        @if (!string.IsNullOrWhiteSpace(LinkedProjectName))
+                        {
+                            <div class="mt-4 rounded-[1.25rem] border border-emerald-200 bg-emerald-50/70 px-4 py-4">
+                                <p class="cda-eyebrow">Linked project</p>
+                                <p class="mt-2 text-sm font-semibold text-slate-950">@LinkedProjectName</p>
+                            </div>
+                        }
+                    </div>
+                </Grid>
+            </ChildContent>
+        </FormSection>
+
+        <FormSection Title="Pursuit parties"
+                     Description="Keep partner, sponsor, billing, and technical contacts explicit instead of hiding them in notes.">
+            <Actions>
+                <Button Text="Add linked party"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="HandleAddPartyLinkAsync"
+                        data-testid="crmhr-opportunity-party-add" />
+            </Actions>
+            <ChildContent>
+                @if (Model.Parties.Count == 0)
+                {
+                    <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+                        No explicit opportunity parties yet.
+                    </div>
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Medium">
+                        @for (var index = 0; index < Model.Parties.Count; index++)
+                        {
+                            var rowIndex = index;
+                            var partyLink = Model.Parties[index];
+
+                            <PanelCard Soft="true">
+                                <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
+                                    <div class="lg:col-span-2">
+                                        <label class="cda-field-label">Party</label>
+                                        <InputSelect @bind-Value="partyLink.PartyId"
+                                                     class="cda-input"
+                                                     data-testid="@($"crmhr-opportunity-party-{rowIndex}")">
+                                            <option value="@Guid.Empty">Select party</option>
+                                            @foreach (var option in PartyOptions)
+                                            {
+                                                <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Role</label>
+                                        <InputSelect @bind-Value="partyLink.Role"
+                                                     class="cda-input"
+                                                     data-testid="@($"crmhr-opportunity-party-role-{rowIndex}")">
+                                            @foreach (var role in PartyRoleOptions)
+                                            {
+                                                <option value="@role">@ResolvePartyRoleLabel(role)</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="flex items-end justify-end">
+                                        <Button Text="Remove"
+                                                ButtonStyle="ButtonStyle.Danger"
+                                                Size="ButtonSize.Small"
+                                                Click="@(() => RemovePartyLink.InvokeAsync(rowIndex))"
+                                                data-testid="@($"crmhr-opportunity-party-remove-{rowIndex}")" />
+                                    </div>
+                                </Grid>
+                            </PanelCard>
+                        }
+                    </Stack>
+                }
+            </ChildContent>
+        </FormSection>
+
+        <FormSection Title="Stage history"
+                     Description="Recent movement stays visible so stalled or reopened opportunities are obvious.">
+            <ChildContent>
+                @if (StageHistory.Count == 0)
+                {
+                    <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+                        Save the opportunity once to start recording stage history.
+                    </div>
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Small">
+                        @foreach (var historyItem in StageHistory)
+                        {
+                            <div class="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4"
+                                 data-testid="crmhr-opportunity-history-item">
+                                <Split Gap="LayoutGap.Medium"
+                                       AlignItems="AlignItems.Start"
+                                       JustifyContent="JustifyContent.SpaceBetween">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-semibold text-slate-950">@historyItem.Stage</p>
+                                        <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@historyItem.ChangedBy</p>
+                                        @if (!string.IsNullOrWhiteSpace(historyItem.Notes))
+                                        {
+                                            <p class="mt-2 text-sm leading-6 text-slate-600">@historyItem.Notes</p>
+                                        }
+                                    </div>
+                                    <StatusBadge Tone="neutral" Text="@historyItem.ChangedAtUtc.LocalDateTime.ToString("yyyy-MM-dd HH:mm")" />
+                                </Split>
+                            </div>
+                        }
+                    </Stack>
+                }
+            </ChildContent>
+        </FormSection>
+    </Stack>
+</EditForm>
+
+@code {
+    private static readonly IReadOnlyList<OpportunityPartyRole> PartyRoleOptions =
+    [
+        OpportunityPartyRole.Partner,
+        OpportunityPartyRole.Sponsor,
+        OpportunityPartyRole.TechnicalContact,
+        OpportunityPartyRole.BillingContact,
+        OpportunityPartyRole.DeliveryLead,
+        OpportunityPartyRole.Stakeholder
+    ];
+
+    [Parameter, EditorRequired]
+    public CrmOpportunityEditorModel Model { get; set; } = new();
+
+    [Parameter]
+    public string AccountDisplayName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string RelationshipStageLabel { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<PartyOptionModel> OwnerOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<PartyOptionModel> DeliveryUnitOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<PartyOptionModel> PartyOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<OpportunityStageHistoryItemModel> StageHistory { get; set; } = [];
+
+    [Parameter]
+    public string LinkedProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool CanConvert { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback Save { get; set; }
+
+    [Parameter]
+    public EventCallback StartNewOpportunity { get; set; }
+
+    [Parameter]
+    public EventCallback AddPartyLink { get; set; }
+
+    [Parameter]
+    public EventCallback<int> RemovePartyLink { get; set; }
+
+    [Parameter]
+    public EventCallback OpenConversion { get; set; }
+
+    [Parameter]
+    public EventCallback OpenLinkedProject { get; set; }
+
+    private Task HandleSaveAsync()
+    {
+        return Save.InvokeAsync();
+    }
+
+    private Task HandleStartNewAsync()
+    {
+        return StartNewOpportunity.InvokeAsync();
+    }
+
+    private Task HandleAddPartyLinkAsync()
+    {
+        return AddPartyLink.InvokeAsync();
+    }
+
+    private Task HandleOpenConversionAsync()
+    {
+        return OpenConversion.InvokeAsync();
+    }
+
+    private Task HandleOpenLinkedProjectAsync()
+    {
+        return OpenLinkedProject.InvokeAsync();
+    }
+
+    private static string ResolvePartyRoleLabel(OpportunityPartyRole role)
+    {
+        return role switch
+        {
+            OpportunityPartyRole.TechnicalContact => "Technical contact",
+            OpportunityPartyRole.BillingContact => "Billing contact",
+            OpportunityPartyRole.DeliveryLead => "Delivery lead",
+            _ => role.ToString()
+        };
+    }
+}
