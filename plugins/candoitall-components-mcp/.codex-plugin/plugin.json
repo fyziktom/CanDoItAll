@@ -1,0 +1,32 @@
+{
+  "name": "candoitall-components-mcp",
+  "version": "0.1.0",
+  "description": "Attach the CanDoItAll components MCP so Codex can choose shared components and layout primitives before adding custom structural CSS.",
+  "author": {
+    "name": "CanDoItAll"
+  },
+  "license": "Proprietary",
+  "keywords": [
+    "candoitall",
+    "components",
+    "layout",
+    "mcp",
+    "blazor"
+  ],
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "CanDoItAll Components MCP",
+    "shortDescription": "Shared component guidance and layout examples",
+    "longDescription": "Use the CanDoItAll components MCP to inspect BaseLib and CanvasLib components, retrieve layout guidance, review curated sandbox routes, and mirror real usage examples from product Razor files before inventing custom structural CSS.",
+    "developerName": "CanDoItAll",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Choose CanDoItAll shared components and layout primitives before adding custom structural CSS."
+    ],
+    "brandColor": "#0F766E"
+  }
+}

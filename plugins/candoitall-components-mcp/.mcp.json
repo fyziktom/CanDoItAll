@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "candoitall_components": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "../../src/CanDoItAll.Mcp.Components/CanDoItAll.Mcp.Components.csproj",
+        "--",
+        "--settings",
+        "../../CanDoItAll.Mcp.Components.settings.json"
+      ],
+      "cwd": "../../"
+    }
+  }
+}

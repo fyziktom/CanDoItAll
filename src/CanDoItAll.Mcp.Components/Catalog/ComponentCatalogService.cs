@@ -13,6 +13,7 @@ namespace CanDoItAll.Mcp.Components.Catalog;
 public sealed class ComponentCatalogService
 {
     private static readonly Regex ComponentReferenceRegex = new(@"<(?<name>[A-Z][A-Za-z0-9_]*)\b", RegexOptions.Compiled);
+    private static readonly Regex RouteDirectiveRegex = new(@"^\s*@page\s+""(?<route>[^""]+)""", RegexOptions.Compiled);
     private static readonly IReadOnlyList<string> CanvasLibStylesheets =
     [
         "_content/CanDoItAll.Components.CanvasLib/css/workbench/shell/01-layout-and-shell.css",
@@ -68,6 +69,132 @@ public sealed class ComponentCatalogService
             "CanvasLib components render against the shared workbench stylesheets exposed by `<CanvasLibHeadAssets />`.",
             "Canvas surfaces also use the typed `CanvasThemeTokenPack` so runtime and preview assets stay aligned."
         ]
+    };
+    private static readonly IReadOnlyDictionary<string, ComponentGuidanceDocument> GuidanceByComponent = new Dictionary<string, ComponentGuidanceDocument>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Grid"] = new(
+            [
+                "Page and section shells that need explicit tracks.",
+                "Responsive layouts that should be driven by `Columns*`, `Rows*`, or `ColumnTemplate*` parameters."
+            ],
+            [
+                "Simple one-dimensional flows that `Stack` already expresses cleanly."
+            ],
+            [
+                "Prefer `Columns*`, `Rows*`, and `ColumnTemplate*` before raw CSS grid utilities.",
+                "Use `Gap`, `ColumnGap`, `RowGap`, `AlignItems`, and `JustifyContent` before adding wrapper markup.",
+                "Let child `Row` components inherit the parent track variables when the same-row content should collapse with the parent grid."
+            ]),
+        ["Row"] = new(
+            [
+                "Nested layout bands inside a `Grid`.",
+                "Same-row groups that need their own track count or need to collapse responsively."
+            ],
+            [
+                "Simple horizontal button groups or inline content that `Stack` already handles."
+            ],
+            [
+                "`Row` spans the available grid width and can inherit the parent grid track model automatically.",
+                "Use `Columns*` or `ColumnTemplate*` on the row only when that row needs a different track model than its parent.",
+                "Use responsive `ColumnsSm` and `ColumnsMd` on the row when sibling columns should wrap under each other."
+            ]),
+        ["Column"] = new(
+            [
+                "Content cells inside a `Row`.",
+                "Leaf layout containers that need local flex alignment plus a grid placement."
+            ],
+            [
+                "Standalone page shells where `Stack`, `SectionCard`, or `Grid` would express the intent more clearly."
+            ],
+            [
+                "Treat `Column` as both a grid item and a local flex container.",
+                "Use `Orientation`, `Gap`, `AlignItems`, and `JustifyContent` instead of ad-hoc flex wrappers.",
+                "Use `Size*` only when the row is using span-based sizing; otherwise let inherited track definitions place the column."
+            ]),
+        ["Stack"] = new(
+            [
+                "One-dimensional vertical or horizontal flows.",
+                "Grouped copy, pill rows, action clusters, and compact sidebars."
+            ],
+            [
+                "Two-dimensional layouts that need explicit tracks across breakpoints."
+            ],
+            [
+                "Reach for `Stack` first when the structure is linear.",
+                "When a panel starts needing left/right regions or breakpoint-driven track changes, move to `Grid` or `Row` plus `Column`.",
+                "Use `GapScale`, `Wrap`, `AlignItems`, and `JustifyContent` before custom flex classes."
+            ]),
+        ["FormRow"] = new(
+            [
+                "Standard paired or evenly split form fields.",
+                "Form surfaces that should follow the shared label and spacing rhythm."
+            ],
+            [
+                "Complex asymmetric layouts where `Grid` or `Row` provides clearer control."
+            ],
+            [
+                "Use `FormRow` for common field pairings before creating a custom form wrapper.",
+                "Combine `FormRow` with `FormField` so label, helper text, and control spacing stay inside BaseLib."
+            ]),
+        ["SectionHead"] = new(
+            [
+                "Section titles, lead copy, and compact header blocks above a panel."
+            ],
+            [
+                "Decorative hero shells that should be handled by page-level layout components."
+            ],
+            [
+                "Use `SectionHead` to keep heading rhythm consistent before adding panel-local typography markup.",
+                "Let `SectionHead` own the section introduction so the panel body can focus on content."
+            ]),
+        ["StatsGrid"] = new(
+            [
+                "Dashboard-style metric rows and summary tiles."
+            ],
+            [
+                "Arbitrary card mosaics with mixed content density."
+            ],
+            [
+                "Use `StatsGrid` when the content is truly metric-first.",
+                "If the cards become multi-purpose sections, switch back to `Grid` plus panel components."
+            ])
+    };
+    private static readonly IReadOnlyDictionary<string, ComponentGuidanceDocument> DefaultGuidanceByLibrary = new Dictionary<string, ComponentGuidanceDocument>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["BaseLib"] = new(
+            [
+                "Shared app structure and interactive UI surfaces."
+            ],
+            [
+                "Page-local structural CSS when the shared component parameters already express the intent."
+            ],
+            [
+                "Prefer component parameters, variants, and layout primitives before custom structural classes.",
+                "Use sandbox and product examples to mirror established composition patterns."
+            ]),
+        ["CanvasLib"] = new(
+            [
+                "Workbench, canvas, and runtime preview surfaces."
+            ],
+            [
+                "Generic page shells that should stay in BaseLib."
+            ],
+            [
+                "Keep runtime and preview surfaces aligned with the shared canvas contracts and token pack."
+            ])
+    };
+    private static readonly IReadOnlySet<string> ConsumerProjectExclusions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "CanDoItAll.ComponentKit",
+        "CanDoItAll.Components.BaseLib",
+        "CanDoItAll.Components.CanvasLib",
+        "CanDoItAll.Components.Common",
+        "CanDoItAll.Mcp.Components",
+        "CanDoItAll.Mcp.Core",
+        "CanDoItAll.Mcp.DotNetWatch",
+        "CanDoItAll.Mcp.LocalRuntime",
+        "CanDoItAll.Mcp.ProjectStructure",
+        "CanDoItAll.Mcp.SshOps"
     };
 
     private readonly Lazy<ComponentCatalogIndex> index;
@@ -147,6 +274,21 @@ public sealed class ComponentCatalogService
             .ToArray();
 
         return new ComponentExamplesData(resolvedComponent.Name, examples);
+    }
+
+    public ComponentUsageExamplesData GetUsageExamples(string component, int limit = 10)
+    {
+        var resolvedComponent = ResolveComponent(component);
+        var usageExamples = index.Value.UsageExamplesByComponent.TryGetValue(resolvedComponent.Name, out var matches)
+            ? matches
+            : [];
+
+        return new ComponentUsageExamplesData(
+            resolvedComponent.Name,
+            usageExamples.Count,
+            usageExamples
+                .Take(Math.Clamp(limit, 1, 50))
+                .ToArray());
     }
 
     public IReadOnlyList<ComponentGroupDocument> GetGroups()
@@ -253,15 +395,17 @@ public sealed class ComponentCatalogService
             .Select(item => GetComponentName(item.Type))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+        var usageExamplesByComponent = BuildConsumerUsageExamples(workspaceRoot, componentNames);
+
         var components = componentTypes
-            .Select(item => BuildComponentDocument(item.Library, item.Type, examples, groupLookup, componentNames))
+            .Select(item => BuildComponentDocument(item.Library, item.Type, examples, groupLookup, componentNames, usageExamplesByComponent))
             .ToArray();
 
         var canvasContracts = BuildCanvasContracts();
 
         _ = sandboxRoot;
 
-        return new ComponentCatalogIndex(components, examples, groups, canvasContracts);
+        return new ComponentCatalogIndex(components, examples, groups, canvasContracts, usageExamplesByComponent);
     }
 
     private static IReadOnlyList<ComponentGroupDocument> BuildGroups()
@@ -325,7 +469,8 @@ public sealed class ComponentCatalogService
         Type type,
         IReadOnlyList<ComponentExampleDocument> examples,
         IReadOnlyDictionary<string, ComponentGroupDocument> groupLookup,
-        IReadOnlySet<string> componentNames)
+        IReadOnlySet<string> componentNames,
+        IReadOnlyDictionary<string, IReadOnlyList<ComponentUsageExampleDocument>> usageExamplesByComponent)
     {
         var componentName = GetComponentName(type);
         var sourcePath = ResolveSourcePath(library.SourceRoot, componentName);
@@ -351,6 +496,10 @@ public sealed class ComponentCatalogService
         var dependencyNames = DiscoverDependencies(sourceText, componentNames, componentName);
         var (parameters, events) = BuildParameterDocuments(type);
         var cssNotes = BuildCssNotes(componentName, library.Name);
+        var guidance = BuildGuidance(componentName, library.Name);
+        var usageExamples = usageExamplesByComponent.TryGetValue(componentName, out var matches)
+            ? matches
+            : [];
 
         return new ComponentDocument(
             componentName,
@@ -364,7 +513,10 @@ public sealed class ComponentCatalogService
             dependencyNames,
             parameters,
             events,
-            cssNotes);
+            cssNotes,
+            guidance,
+            usageExamples.Count,
+            usageExamples.Take(5).ToArray());
     }
 
     private static IReadOnlyList<CanvasContractDocument> BuildCanvasContracts()
@@ -478,6 +630,85 @@ public sealed class ComponentCatalogService
         return DefaultCssNotesByLibrary.TryGetValue(library, out var defaultNotes)
             ? defaultNotes
             : [];
+    }
+
+    private static ComponentGuidanceDocument BuildGuidance(string componentName, string library)
+    {
+        if (GuidanceByComponent.TryGetValue(componentName, out var guidance))
+        {
+            return guidance;
+        }
+
+        return DefaultGuidanceByLibrary.TryGetValue(library, out var defaultGuidance)
+            ? defaultGuidance
+            : new ComponentGuidanceDocument([], [], []);
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<ComponentUsageExampleDocument>> BuildConsumerUsageExamples(
+        string workspaceRoot,
+        IReadOnlySet<string> componentNames)
+    {
+        var usageLookup = new Dictionary<string, List<ComponentUsageExampleDocument>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var consumerRoot in DiscoverConsumerRoots(workspaceRoot))
+        {
+            foreach (var filePath in Directory.EnumerateFiles(consumerRoot.RootPath, "*.razor", SearchOption.AllDirectories))
+            {
+                if (IsGeneratedPath(filePath))
+                {
+                    continue;
+                }
+
+                var lines = File.ReadAllLines(filePath);
+                var route = ResolveRoute(lines);
+
+                for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+                {
+                    var line = lines[lineIndex];
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        continue;
+                    }
+
+                    foreach (Match match in ComponentReferenceRegex.Matches(line))
+                    {
+                        var componentName = match.Groups["name"].Value;
+                        if (!componentNames.Contains(componentName))
+                        {
+                            continue;
+                        }
+
+                        if (!usageLookup.TryGetValue(componentName, out var examples))
+                        {
+                            examples = [];
+                            usageLookup[componentName] = examples;
+                        }
+
+                        examples.Add(new ComponentUsageExampleDocument(
+                            consumerRoot.SourceKind,
+                            consumerRoot.ProjectName,
+                            filePath,
+                            lineIndex + 1,
+                            TruncateSnippet(line.Trim()),
+                            route));
+                    }
+                }
+            }
+        }
+
+        return usageLookup.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<ComponentUsageExampleDocument>)pair.Value
+                .GroupBy(
+                    example => $"{example.Project}|{example.FilePath}|{example.LineNumber}|{example.Snippet}|{example.Route}",
+                    StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .OrderBy(example => GetSourcePriority(example.SourceKind))
+                .ThenBy(example => example.Project, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(example => example.FilePath, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(example => example.LineNumber)
+                .ToArray(),
+            StringComparer.OrdinalIgnoreCase);
     }
 
     private static string ResolveSourcePath(string sourceRoot, string componentName)
@@ -610,6 +841,9 @@ public sealed class ComponentCatalogService
         score += ScoreText(component.FullName, query, exactBoost: 85, containsBoost: 35, tokenBoost: 8);
         score += ScoreText(component.Summary, query, exactBoost: 20, containsBoost: 18, tokenBoost: 6);
         score += ScoreText(string.Join(' ', component.Tags), query, exactBoost: 15, containsBoost: 12, tokenBoost: 5);
+        score += ScoreText(string.Join(' ', component.Guidance.UseFor), query, exactBoost: 18, containsBoost: 14, tokenBoost: 5);
+        score += ScoreText(string.Join(' ', component.Guidance.AvoidFor), query, exactBoost: 10, containsBoost: 8, tokenBoost: 3);
+        score += ScoreText(string.Join(' ', component.Guidance.CompositionRules), query, exactBoost: 18, containsBoost: 14, tokenBoost: 5);
 
         foreach (var parameter in component.Parameters)
         {
@@ -713,7 +947,80 @@ public sealed class ComponentCatalogService
         return route.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? route.Trim('/');
     }
 
+    private static IReadOnlyList<ConsumerSourceDescriptor> DiscoverConsumerRoots(string workspaceRoot)
+    {
+        var srcRoot = Path.Combine(workspaceRoot, "src");
+        if (!Directory.Exists(srcRoot))
+        {
+            return [];
+        }
+
+        return Directory.EnumerateDirectories(srcRoot)
+            .Select(rootPath => new ConsumerSourceDescriptor(
+                Path.GetFileName(rootPath),
+                ResolveSourceKind(Path.GetFileName(rootPath)),
+                rootPath))
+            .Where(descriptor => !ConsumerProjectExclusions.Contains(descriptor.ProjectName))
+            .Where(descriptor => Directory.EnumerateFiles(descriptor.RootPath, "*.razor", SearchOption.AllDirectories).Any(filePath => !IsGeneratedPath(filePath)))
+            .OrderBy(descriptor => GetSourcePriority(descriptor.SourceKind))
+            .ThenBy(descriptor => descriptor.ProjectName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static string ResolveSourceKind(string projectName)
+    {
+        return projectName switch
+        {
+            "CanDoItAll.Web" => "product",
+            "CanDoItAll.Components.Sandbox" => "sandbox",
+            _ when projectName.StartsWith("CanDoItAll.Modules.", StringComparison.OrdinalIgnoreCase) => "module",
+            _ when projectName.StartsWith("CanDoItAll.Components", StringComparison.OrdinalIgnoreCase) => "shared",
+            _ => "consumer"
+        };
+    }
+
+    private static int GetSourcePriority(string sourceKind)
+    {
+        return sourceKind switch
+        {
+            "product" => 0,
+            "module" => 1,
+            "sandbox" => 2,
+            "shared" => 3,
+            _ => 4
+        };
+    }
+
+    private static string? ResolveRoute(IReadOnlyList<string> lines)
+    {
+        foreach (var line in lines)
+        {
+            var match = RouteDirectiveRegex.Match(line);
+            if (match.Success)
+            {
+                return match.Groups["route"].Value;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsGeneratedPath(string filePath)
+    {
+        return filePath.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+               filePath.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string TruncateSnippet(string snippet)
+    {
+        return snippet.Length <= 220
+            ? snippet
+            : $"{snippet[..217]}...";
+    }
+
     private sealed record LibraryDescriptor(string Name, Assembly Assembly, string SourceRoot);
+
+    private sealed record ConsumerSourceDescriptor(string ProjectName, string SourceKind, string RootPath);
 
     private sealed record SearchScore(double Score, IReadOnlyList<string> MatchedParameters);
 }
