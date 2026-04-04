@@ -1,0 +1,1222 @@
+{
+  "meta": {
+    "bundle_name": "CanDoItAll canonical architecture review bundle v2",
+    "repo_name": "CanDoItAll-crm-hr-module",
+    "review_date": "2026-04-04",
+    "baseline_bundle": "candoitall-canonical-architecture-review-bundle",
+    "baseline_repo": "CanDoItAll-canvas-drawing-refactor",
+    "skillset_name": "candoitall-codex-architecture-review-skillset",
+    "dotnet_blocked": true,
+    "inventory_current": {
+      "csproj_count": 42,
+      "cs_file_count": 599,
+      "razor_file_count": 337
+    },
+    "inventory_previous": {
+      "csproj_count": 41,
+      "cs_file_count": 539,
+      "razor_file_count": 304
+    },
+    "inventory_delta": {
+      "csproj": 1,
+      "cs": 60,
+      "razor": 33,
+      "manager_markers": 19,
+      "god_service_markers": 0
+    }
+  },
+  "severity_counts": {
+    "Critical": 3,
+    "High": 10,
+    "Medium": 2
+  },
+  "phase_counts": {
+    "Phase 2": 3,
+    "Phase 3": 4,
+    "Phase 1": 3,
+    "Phase 0": 3,
+    "Phase 4": 2
+  },
+  "findings": [
+    {
+      "id": "ACR-005",
+      "severity": "Critical",
+      "skill_source": "feature-block-architecture-review",
+      "category": "Invariant drift",
+      "title": "Workbench reparent flow lacks explicit cycle and parent invariants",
+      "problem_summary": "Projects module rejects hierarchy cycles, but workbench reparent flow updates parent/link data without a visible equivalent invariant guard for node graph cycles or self-parenting.",
+      "evidence": [
+        "src/CanDoItAll.Modules.Projects/ProjectModels.cs:748-795 ValidateHierarchyConnectionAsync rejects self-parent and descendant cycles for project hierarchy",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:598-643 ReparentObjectAsync mutates parent/link state without visible cycle validation",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:1949-1952 NormalizeEditableParentNodeKey only normalizes null/whitespace"
+      ],
+      "root_cause": "Invariant logic exists in one canonical area but was not promoted into a shared structure mutation policy for workbench node reparenting.",
+      "remediation_goal": "Centralize graph mutation invariants in ProjectStructureInvariantService and enforce them on create/reparent/link/move operations with dedicated tests.",
+      "stabilize_when": "Now",
+      "validation_strategy": "Add failing tests for self-parent, descendant-parent, cross-project edge violations, and illegal kind-to-kind relations before refactor; make them green through one invariant service.",
+      "prospective_recheck": "Prospective pass if every mutation entry point routes through the invariant service and tests cover cycle cases.",
+      "qa_status": "Pass",
+      "phase": "Phase 0",
+      "dependencies_notes": "Depends on ACR-011. Interacts with ACR-003 and ACR-004.",
+      "why_now": "This is a graph-integrity issue that can silently poison later refactors and agent mutations.",
+      "deliverables": [
+        "ProjectStructureInvariantService (or equivalent)",
+        "Reparent/link/create guardrail tests for graph cycles and illegal parents",
+        "Shared invariant checks across UI, MCP, and service entry points"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureAgentService.cs",
+        "tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests|FullyQualifiedName~ProjectStructureAgentIntegrationTests|FullyQualifiedName~ProjectsServiceIntegrationTests\""
+      ],
+      "guardrails": [
+        "Do not rely on UI constraints alone.",
+        "Do not leave separate mutation entry points with different invariant logic."
+      ],
+      "acceptance": [
+        "Self-parent and descendant-parent attempts are rejected consistently.",
+        "Cross-project or illegal relation moves are rejected consistently.",
+        "All mutation entry points use the same invariant service."
+      ],
+      "subbundle_slug": "workbench-reparent-flow-lacks-explicit-cycle-and-parent-invariants",
+      "subbundle_path": "subbundles/ACR-005-workbench-reparent-flow-lacks-explicit-cycle-and-parent-invariants"
+    },
+    {
+      "id": "ACR-011",
+      "severity": "High",
+      "skill_source": "canonical-model-review",
+      "category": "Testability drift",
+      "title": "Core canonical-invariant and projection-equivalence tests are missing",
+      "problem_summary": "The repo has meaningful tests, but it lacks a dedicated ring that protects truth ownership, relation invariants, node-kind registry behavior, node-assignment integrity, node-evolution history, and multi-projection equivalence during architectural stabilization.",
+      "evidence": [
+        "tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs contains workbench mutation/projection tests, but no visible reparent-cycle rejection coverage",
+        "tests/CanDoItAll.Tests.Integration/ProjectPartyAssignmentIntegrationTests.cs:23-66 covers positive project/node assignment persistence, but not orphan node keys, mismatched projects, or illegal node-kind roles",
+        "tests/CanDoItAll.Tests.Components/CrossModuleResponsiblePartyPageTests.cs:29-53 and 68-116 cover positive round-trips, but not ownership divergence or canonical-source enforcement"
+      ],
+      "root_cause": "Existing tests grew around current behavior, not around the future canonical contracts now needed for stabilization work.",
+      "remediation_goal": "Create an architectural test ring for invariants, relation policy, assembled graph equivalence, cache non-authoritativeness, node-assignment integrity, and node-evolution history.",
+      "stabilize_when": "Now",
+      "validation_strategy": "Add failing characterization and invariant tests before refactor; keep them green throughout each phase.",
+      "prospective_recheck": "Prospective pass if each remediation phase lands with new guardrail tests before broad refactors.",
+      "qa_status": "Pass",
+      "phase": "Phase 0",
+      "dependencies_notes": "Foundational for every other finding.",
+      "why_now": "Without this test ring, the next waves of canonical refactor will be guesswork.",
+      "deliverables": [
+        "Architectural guardrail test ring",
+        "Invariant tests, registry tests, actor-assignment integrity tests, projection-equivalence tests, node-evolution history tests"
+      ],
+      "likely_files": [
+        "tests/CanDoItAll.Tests.Integration/*",
+        "tests/CanDoItAll.Tests.Unit/*",
+        "tests/CanDoItAll.Tests.Components/*"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj"
+      ],
+      "guardrails": [
+        "Do not wait until after big refactors to add the guardrail tests.",
+        "Do not count positive happy-path UI tests as sufficient canonical-model coverage."
+      ],
+      "acceptance": [
+        "Every major stabilization phase adds or updates guardrail tests before code churn.",
+        "The bundle can be executed phase-by-phase with increasing confidence rather than one risky big bang."
+      ],
+      "subbundle_slug": "core-canonical-invariant-and-projection-equivalence-tests-are-missing",
+      "subbundle_path": "subbundles/ACR-011-core-canonical-invariant-and-projection-equivalence-tests-are-missing"
+    },
+    {
+      "id": "ACR-013",
+      "severity": "High",
+      "skill_source": "feature-block-architecture-review",
+      "category": "Invariant drift",
+      "title": "Node-scoped CRM/HR assignments use a soft NodeKey reference without canonical integrity checks",
+      "problem_summary": "ProjectPartyAssignment stores NodeKey as a plain string and SaveAssignmentAsync validates only project and party existence. There is no visible check that the referenced node exists, belongs to the same project, or allows the requested role.",
+      "evidence": [
+        "src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs:413-427 ProjectPartyAssignment stores NodeKey as a string",
+        "src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs:668-683 configuration indexes NodeKey but does not enforce canonical node integrity",
+        "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs:4421-4500 SaveAssignmentAsync validates project/party, then upserts by ProjectId/PartyId/AssignmentKind/NodeKey without validating node existence or kind policy",
+        "tests/CanDoItAll.Tests.Integration/ProjectPartyAssignmentIntegrationTests.cs:40-48 uses an arbitrary node key string ('work-item-alpha') as a valid node-scoped assignment input"
+      ],
+      "root_cause": "The generic project-party bridge was built before a canonical node reference validator and actor-role policy existed.",
+      "remediation_goal": "Validate node-scoped assignments against the canonical graph or node carrier before persistence; reject orphan node keys, mismatched project scope, and illegal role-kind combinations. Consider a stronger target reference over time.",
+      "stabilize_when": "Now",
+      "validation_strategy": "Add failing tests for orphan node keys, wrong-project node keys, and disallowed node-kind role assignments before refactor; make them green via one validator.",
+      "prospective_recheck": "Prospective pass if node-scoped assignments cannot be saved unless the target node exists in the same project and the role is allowed for that node kind.",
+      "qa_status": "Pass",
+      "phase": "Phase 0",
+      "dependencies_notes": "Depends on ACR-011. Full role validation depends on ACR-003; minimal existence/project validation can start immediately.",
+      "why_now": "This is the most direct CRM/HR integrity hole introduced by the new module.",
+      "deliverables": [
+        "Node-scoped assignment validator",
+        "Guardrail tests for orphan/mismatched/disallowed assignments",
+        "Explicit policy for node-scoped versus project-scoped assignments"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs",
+        "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs",
+        "src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs",
+        "tests/CanDoItAll.Tests.Integration/ProjectPartyAssignmentIntegrationTests.cs"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectPartyAssignmentIntegrationTests|FullyQualifiedName~CrmHrCrossModuleIntegrationTests\""
+      ],
+      "guardrails": [
+        "Do not silently auto-create or auto-assume missing nodes from NodeKey strings.",
+        "Do not accept a string FK without runtime validation once node-scoped assignments are first-class."
+      ],
+      "acceptance": [
+        "Node-scoped assignments fail fast when node keys are missing, cross-project, or role-incompatible.",
+        "Tests prove project-scoped and node-scoped assignments are distinguished correctly."
+      ],
+      "subbundle_slug": "node-scoped-crm-hr-assignments-use-a-soft-nodekey-reference-without-cano",
+      "subbundle_path": "subbundles/ACR-013-node-scoped-crm-hr-assignments-use-a-soft-nodekey-reference-without-cano"
+    },
+    {
+      "id": "ACR-012",
+      "severity": "Critical",
+      "skill_source": "canonical-model-review",
+      "category": "Source-of-truth drift",
+      "title": "Party responsibility truth is duplicated across node metadata, assignment tables, and module-local fields",
+      "problem_summary": "CRM/HR responsibility is now stored in more than one editable place. Participant, meeting, and work-item flows write both node metadata and project-party assignments, while Resources, Validation, and TestLab also store module-local responsible-party fields.",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs:250-257, 293-305, 330-351, 370-405 save both metadata and ProjectPartyAssignment rows",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchMetadata.cs:296-299 and 331-334 store LinkedPartyId / AssigneePartyId inside node metadata",
+        "src/CanDoItAll.Modules.Resources/ResourceModels.cs:84-92 stores OwnerPartyId / MaintainerPartyId",
+        "src/CanDoItAll.Modules.Validation/ValidationModels.cs:50-58 stores ResponsiblePartyId",
+        "src/CanDoItAll.Modules.TestLab/TestLabModels.cs:18-25 stores ResponsiblePartyId"
+      ],
+      "root_cause": "CRM/HR integration added reusable party semantics without first establishing one canonical actor-assignment owner across node-scoped and module-scoped responsibility.",
+      "remediation_goal": "Choose one canonical owner for cross-cutting actor responsibility. Recommended direction: canonical ActorAssignment model with explicit scopes; node metadata keeps only display/cache data if needed, and module-local fields become derived mirrors or migrate later.",
+      "stabilize_when": "Now",
+      "validation_strategy": "Add tests proving there is only one writable source for node-scoped responsibility, and verify that module-level mirrors do not drift from the canonical assignment owner.",
+      "prospective_recheck": "Prospective pass if participant/meeting/work-item party edits change one canonical assignment owner and any metadata/module-local display fields are derived or mirrored one-way only.",
+      "qa_status": "Pass with caution",
+      "phase": "Phase 1",
+      "dependencies_notes": "Depends on ACR-003 and ACR-011. Enables ACR-013 and ACR-015. Strongly coupled with ACR-014.",
+      "why_now": "People, agents, and partners are now first-class project actors. Duplicated writable responsibility truth is a direct threat to agentic coordination and auditability.",
+      "deliverables": [
+        "Canonical actor-assignment owner with explicit scope model",
+        "Decision on which existing fields become derived, cached, or deprecated",
+        "Migration/backfill plan for node metadata and module-local responsibility mirrors"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchMetadata.cs",
+        "src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs",
+        "src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs",
+        "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs",
+        "src/CanDoItAll.Modules.Resources/ResourceModels.cs",
+        "src/CanDoItAll.Modules.Validation/ValidationModels.cs",
+        "src/CanDoItAll.Modules.TestLab/TestLabModels.cs",
+        "tests/CanDoItAll.Tests.Integration/*"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectPartyAssignmentIntegrationTests|FullyQualifiedName~CrmHrCrossModuleIntegrationTests\"",
+        "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~CrossModuleResponsiblePartyPageTests\""
+      ],
+      "guardrails": [
+        "Do not leave node metadata IDs and assignment rows independently editable.",
+        "Do not introduce a hidden second mirror while removing the first one."
+      ],
+      "acceptance": [
+        "Node-scoped responsibility has one canonical writable owner.",
+        "Module-local responsible-party fields have an explicit ownership rule (derived mirror or authoritative until migrated).",
+        "No UI flow writes both metadata IDs and assignment rows as independent truths."
+      ],
+      "subbundle_slug": "party-responsibility-truth-is-duplicated-across-node-metadata-assignment",
+      "subbundle_path": "subbundles/ACR-012-party-responsibility-truth-is-duplicated-across-node-metadata-assignment"
+    },
+    {
+      "id": "ACR-003",
+      "severity": "High",
+      "skill_source": "canonical-model-review",
+      "category": "Naming / concept drift",
+      "title": "Type and subtype semantics are weak and partly owned by the UI catalog",
+      "problem_summary": "ProjectObjectType is broad, subtypes are strings, metadata validation is shallow, and the canvas catalog carries substantial semantic truth about participants, work items, decisions, and other node kinds. CRM/HR role semantics are partly inferred from subtype strings rather than a canonical registry.",
+      "evidence": [
+        "src/CanDoItAll.SharedKernel/ProjectObjectContracts.cs:3-44 broad enums exist but no canonical kind registry",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureCanvasCatalog.cs:6-28 and ProjectStructureCanvasCatalog.RichDefinitions.cs:132-144 UI create definitions encode semantic defaults and field sets",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchMetadata.cs:625-660 metadata validation only checks broad family/type alignment",
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs:466-474 participant role is inferred from subtype strings"
+      ],
+      "root_cause": "Type semantics grew through UI creation and metadata family needs instead of a central domain registry.",
+      "remediation_goal": "Introduce a canonical NodeKindRegistry that defines allowed facets, transitions, relation policy, actor role policy, time semantics, execution semantics, and UI descriptors from one place.",
+      "stabilize_when": "Now",
+      "validation_strategy": "Registry tests; one semantic source for UI/MCP/import/compiler classification; smoke tests that UI catalogs are generated from registry definitions.",
+      "prospective_recheck": "Prospective pass if all type/subtype decisions flow through registry lookups and the UI becomes a consumer, not the semantic owner, of node kinds.",
+      "qa_status": "Pass",
+      "phase": "Phase 1",
+      "dependencies_notes": "Foundational for ACR-001, ACR-002, ACR-004, ACR-005, ACR-012, ACR-013, and ACR-014.",
+      "why_now": "Party assignments, typed transitions, and agentic rules all become unstable until node kind semantics are canonical.",
+      "deliverables": [
+        "NodeKindRegistry with definition objects per kind/subtype",
+        "Transition policy (e.g. note -> task / decision / block) owned by the registry",
+        "Actor role policy per node kind",
+        "UI catalog generated from registry or clearly derived from it"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.SharedKernel/ProjectObjectContracts.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureCanvasCatalog.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureCanvasCatalog.RichDefinitions.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchMetadata.cs",
+        "tests/CanDoItAll.Tests.Unit/*NodeKind*"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter \"FullyQualifiedName~NodeKind|FullyQualifiedName~ProjectObjectMetadata\""
+      ],
+      "guardrails": [
+        "Do not let the registry become a dumping ground for UI-only strings or runtime flags.",
+        "Do not preserve subtype string inference as the hidden real owner after introducing the registry."
+      ],
+      "acceptance": [
+        "There is one canonical place to answer allowed relations, actor roles, and transitions for a node kind.",
+        "UI creation definitions can be derived from registry semantics.",
+        "Subtype-driven role inference is removed or routed through the registry."
+      ],
+      "subbundle_slug": "type-and-subtype-semantics-are-weak-and-partly-owned-by-the-ui-catalog",
+      "subbundle_path": "subbundles/ACR-003-type-and-subtype-semantics-are-weak-and-partly-owned-by-the-ui-catalog"
+    },
+    {
+      "id": "ACR-004",
+      "severity": "High",
+      "skill_source": "canonical-model-review",
+      "category": "Boundary drift",
+      "title": "Relation semantics are blurred and hierarchy is stored twice",
+      "problem_summary": "ParentNodeKey and hierarchy link rows both describe parentage, while dependency analysis folds ancestry into prerequisites and inverse blocking semantics. As CRM/HR links and critical-path logic grow, blurred graph semantics become more dangerous.",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:441-502 CreateObjectAsync writes ParentNodeKey and UpsertLinkAsync",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:598-643 ReparentObjectAsync updates ParentNodeKey and recreates link rows",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:1990-1993 ResolveHierarchyLinkKind maps hierarchy through generic link kinds",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureDependencyAnalysis.cs:81-125 prerequisites include ancestors, explicit DependsOn, and inverse Blocks"
+      ],
+      "root_cause": "Tree placement, dependency edges, and execution semantics evolved together without a strict relation taxonomy and one canonical hierarchy owner.",
+      "remediation_goal": "Choose one canonical hierarchy owner for workbench-authored nodes, model dependency/association edges explicitly, and define a relation policy matrix by node kind.",
+      "stabilize_when": "Now",
+      "validation_strategy": "Relation invariant tests, graph cycle tests, and projection tests proving hierarchy and dependency semantics remain distinct.",
+      "prospective_recheck": "Prospective pass if hierarchy, dependency, and association edges have separate canonical meanings and storage owners.",
+      "qa_status": "Pass",
+      "phase": "Phase 1",
+      "dependencies_notes": "Foundational for ACR-001, ACR-002, ACR-005, ACR-006, and ACR-014.",
+      "why_now": "Without explicit relation taxonomy, critical-path analysis, actor assignment scope, and graph assembly will continue to blur different meanings.",
+      "deliverables": [
+        "Canonical hierarchy owner (e.g. NodeCarrier.ParentNodeKey or a dedicated containment record)",
+        "Explicit non-hierarchy NodeRelation model for DependsOn/Blocks/Uses/etc.",
+        "Relation policy matrix by node kind"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureDependencyAnalysis.cs",
+        "src/CanDoItAll.SharedKernel/ProjectObjectContracts.cs",
+        "tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests|FullyQualifiedName~ProjectsServiceIntegrationTests\""
+      ],
+      "guardrails": [
+        "Do not keep hierarchy duplicated in both a parent field and a writable generic relation table.",
+        "Do not let dependency analysis infer semantics that should be explicit edges."
+      ],
+      "acceptance": [
+        "Hierarchy and non-hierarchy relations have separate canonical meanings.",
+        "A node move updates one canonical hierarchy owner.",
+        "Dependency analysis no longer needs to guess which edges are structural versus executional."
+      ],
+      "subbundle_slug": "relation-semantics-are-blurred-and-hierarchy-is-stored-twice",
+      "subbundle_path": "subbundles/ACR-004-relation-semantics-are-blurred-and-hierarchy-is-stored-twice"
+    },
+    {
+      "id": "ACR-001",
+      "severity": "Critical",
+      "skill_source": "canonical-model-review",
+      "category": "Source-of-truth drift",
+      "title": "Persisted system-managed workbench graph acts as a parallel truth",
+      "problem_summary": "ProjectWorkbenchService still synchronizes Projects, Resources, Factory, Validation, and TestLab canonical entities into persisted ProjectObjectRecord / ProjectObjectLinkRecord rows, and structure/calendar/Gantt reads still flow through that synced copy. The new CRM/HR overlays would now stack on top of a graph that is already a parallel truth.",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:348-438 structure and calendar reads call SyncGraphAsync before reading workbench records",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:1666-1943 SyncGraphAsync assembles expected nodes/links from Project, ProjectPhase, ProjectResource, PromptRun, PromptRunNode, ValidationRun, TestPlan, and ProjectHierarchyLink and persists them",
+        "src/CanDoItAll.Modules.Workbench/ProjectGanttPreviewService.cs:10-17 Gantt preview is built from workbench structure output"
+      ],
+      "root_cause": "A convenience projection cache gradually became the effective read model and therefore a second authoritative graph.",
+      "remediation_goal": "Introduce one assembled canonical graph for reads and projections, built from upstream canonical owners + workbench-owned custom nodes + canonical actor assignments/facets. If a persisted cache remains, mark it explicitly non-authoritative.",
+      "stabilize_when": "Now",
+      "validation_strategy": "Add assembled-graph equivalence tests for structure/calendar/Gantt and actor overlays; prove any retained cache rebuild is lossless; verify system-managed rows are no longer authoritative.",
+      "prospective_recheck": "Prospective pass if structure/calendar/Gantt consume CanonicalGraphAssembler output instead of persisted synced rows and actor overlays are attached during graph assembly, not by mutating the synced copy.",
+      "qa_status": "Pass with caution",
+      "phase": "Phase 2",
+      "dependencies_notes": "Depends on ACR-003, ACR-004, ACR-011, and the actor-assignment ownership work in ACR-012/ACR-013. Strongly coupled with ACR-006 and ACR-009.",
+      "why_now": "Every new CRM/HR-linked responsibility, schedule, or agent action will compound the cost of keeping a second persisted graph truthful.",
+      "deliverables": [
+        "CanonicalGraphAssembler (or equivalent) with explicit AssembledProjectGraph output",
+        "Clear distinction between upstream canonical nodes and workbench-owned custom nodes/facets",
+        "Read surfaces updated so structure/calendar/Gantt no longer rely on persisted system-managed graph rows as truth",
+        "Optional cache explicitly marked non-authoritative if retained"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectGanttPreviewService.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureSummaryBuilder.cs",
+        "src/CanDoItAll.Modules.Projects/*",
+        "src/CanDoItAll.Modules.Resources/*",
+        "src/CanDoItAll.Modules.Factory/*",
+        "src/CanDoItAll.Modules.Validation/*",
+        "src/CanDoItAll.Modules.TestLab/*",
+        "tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests|FullyQualifiedName~ProjectPartyAssignmentIntegrationTests|FullyQualifiedName~CrmHrCrossModuleIntegrationTests\""
+      ],
+      "guardrails": [
+        "Do not migrate every upstream module into workbench-owned truth in this phase.",
+        "Do not let a cache or DTO become the new write model.",
+        "Keep actor assignments attached through explicit graph assembly, not through ad hoc metadata rewrites."
+      ],
+      "acceptance": [
+        "Structure, calendar, and Gantt can be built from one assembled graph without reading persisted system-managed rows as truth.",
+        "If a cache remains, deleting/rebuilding it does not change canonical outcomes.",
+        "Actor overlays and cross-module party context are derived from canonical owners, not from duplicated synced records."
+      ],
+      "subbundle_slug": "persisted-system-managed-workbench-graph-acts-as-a-parallel-truth",
+      "subbundle_path": "subbundles/ACR-001-persisted-system-managed-workbench-graph-acts-as-a-parallel-truth"
+    },
+    {
+      "id": "ACR-006",
+      "severity": "High",
+      "skill_source": "canonical-model-review",
+      "category": "Projection drift",
+      "title": "Calendar and Gantt are projections over a persisted projection",
+      "problem_summary": "Calendar and Gantt do not build directly from canonical owners; they depend on workbench structure output that itself depends on SyncGraphAsync. CRM/HR-linked scheduling and ownership overlays would therefore be computed over a projection chain rather than one graph truth.",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:396-438 calendar read path depends on SyncGraphAsync and workbench records",
+        "src/CanDoItAll.Modules.Workbench/ProjectGanttPreviewService.cs:10-17 Gantt preview uses workbench structure",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:2552-2590 structure node mapping mixes metadata, signals, routes, storage, and schedule info"
+      ],
+      "root_cause": "Convenient reuse of one persisted structure DTO turned projections into chained read models.",
+      "remediation_goal": "Create separate structure, calendar, timeline/Gantt, and summary builders that consume one assembled canonical graph plus explicit workbench overlays.",
+      "stabilize_when": "Before next feature wave",
+      "validation_strategy": "Projection-equivalence tests, golden files for Gantt/Calendar, and proof that projection builders are side-effect free.",
+      "prospective_recheck": "Prospective pass if builders read from the same assembled graph and no projection becomes a write model.",
+      "qa_status": "Pass with caution",
+      "phase": "Phase 2",
+      "dependencies_notes": "Depends on ACR-001, ACR-003, ACR-004, and ACR-011.",
+      "why_now": "Time semantics and critical-path reasoning should not depend on chained projections once CRM/HR ownership overlays and note evolution become central.",
+      "deliverables": [
+        "StructureProjectionBuilder",
+        "CalendarProjectionBuilder",
+        "Timeline/GanttProjectionBuilder",
+        "Projection equivalence tests over one assembled graph"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectGanttPreviewService.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureSummaryBuilder.cs",
+        "tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests|FullyQualifiedName~ProjectPartyAssignmentIntegrationTests\""
+      ],
+      "guardrails": [
+        "Do not let calendar or Gantt become hidden write models.",
+        "Do not embed ad hoc actor-resolution logic in each builder."
+      ],
+      "acceptance": [
+        "Structure, calendar, and Gantt are all derived from one assembled graph.",
+        "Schedule, dependency, and assignment overlays are consistent across all projection builders."
+      ],
+      "subbundle_slug": "calendar-and-gantt-are-projections-over-a-persisted-projection",
+      "subbundle_path": "subbundles/ACR-006-calendar-and-gantt-are-projections-over-a-persisted-projection"
+    },
+    {
+      "id": "ACR-014",
+      "severity": "High",
+      "skill_source": "feature-block-architecture-review",
+      "category": "Lifecycle drift",
+      "title": "Node reclassification and typed lifecycle history are insufficient for note→task/decision evolution",
+      "problem_summary": "The product workflow starts with fast brainstorming notes that later become structured tasks, decisions, or other typed nodes. Current reclassification mutates the same row in place, only supports note→block / block→block, and does not preserve typed transition history.",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:896-927 ReclassifyObjectAsync mutates the same ProjectObjectRecord in place",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:2352-2358 IsSupportedReclassification only allows ProjectBlock->ProjectBlock and Note->ProjectBlock",
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeMutations.cs:12-17 and 107-125 UI currently exposes note→block and block-type change only",
+        "User clarification captured in inputs/02-user-clarifications.md: the core workflow is brainstorming via simple nodes that later become richer typed blocks/tasks/decisions, and preserving that reasoning history matters"
+      ],
+      "root_cause": "Node lifecycle was modeled as a simple type mutation rather than a first-class transition/facet history over a stable node carrier.",
+      "remediation_goal": "Keep node identity stable, preserve brainstorming history, and model typed evolution through facet activation/invalidation or node-kind transition history rather than destructive in-place mutation.",
+      "stabilize_when": "Before next feature wave",
+      "validation_strategy": "Add transition tests for note→task, note→decision, and note→block; verify history survives; verify assignments and spatial semantics are preserved or transformed by policy.",
+      "prospective_recheck": "Prospective pass if a brainstorm node can evolve into a task/decision/block without losing node identity, rationale history, or semantically meaningful position/marker context.",
+      "qa_status": "Pass with caution",
+      "phase": "Phase 2",
+      "dependencies_notes": "Depends on ACR-003, ACR-008, ACR-011, and should coordinate with ACR-012.",
+      "why_now": "This is a core product behavior, not a peripheral feature. If it stays under-modeled, every later AI/compiler flow will fight the data model.",
+      "deliverables": [
+        "Node-kind transition policy",
+        "Node transition/facet history model",
+        "Migration path for current in-place reclassification"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs",
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeMutations.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureCanvasCatalog.cs",
+        "tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs",
+        "tests/CanDoItAll.Tests.Unit/*"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests\"",
+        "dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter \"FullyQualifiedName~NodeTransition|FullyQualifiedName~Facet\""
+      ],
+      "guardrails": [
+        "Do not solve this by deleting/recreating nodes and losing identity by default.",
+        "Do not lose semantic X/Y, markers, or actor assignments during type evolution unless policy explicitly says so."
+      ],
+      "acceptance": [
+        "A brainstorm node can evolve into a richer typed node while keeping a stable identity and transition history.",
+        "The transition matrix is registry-owned and test-backed.",
+        "Assignments and spatial semantics are handled explicitly during transition."
+      ],
+      "subbundle_slug": "node-reclassification-and-typed-lifecycle-history-are-insufficient-for-n",
+      "subbundle_path": "subbundles/ACR-014-node-reclassification-and-typed-lifecycle-history-are-insufficient-for-n"
+    },
+    {
+      "id": "ACR-002",
+      "severity": "High",
+      "skill_source": "canonical-model-review",
+      "category": "Boundary drift",
+      "title": "ProjectObjectRecord is an overloaded universal box",
+      "problem_summary": "One record mixes node carrier truth, spatial semantics, schedule, markers, route, artifact binding, storage/media references, and metadata-driven subtype payloads. With CRM/HR, the same box also becomes the anchor for party assignment metadata.",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:26-60 ProjectObjectRecord contains domain, spatial, schedule, storage, route, and signal fields in one type",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:143-176 ProjectStructureNode exposes many mixed concerns from one source record",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchMetadata.cs:165-190 metadata envelope packs multiple optional families",
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs:240-406 party integration writes CRM/HR-linked metadata back into the same node payload"
+      ],
+      "root_cause": "Fast feature waves were absorbed by one universal node record instead of stable companion concepts and typed facets.",
+      "remediation_goal": "Keep Node as the stable workbench-authored carrier, but split schedule, spatial-semantic state, signals, attachment/storage bindings, and typed facet data into clearly owned companion records or facet tables.",
+      "stabilize_when": "Before next feature wave",
+      "validation_strategy": "Migration tests for the record split, serialization round-trips, and mutation tests proving each concern is edited through the correct owner.",
+      "prospective_recheck": "Prospective pass if a stable NodeCarrier remains, semantically meaningful X/Y and marker sets stay canonical, and extension/facet data moves out of the universal box.",
+      "qa_status": "Pass with caution",
+      "phase": "Phase 3",
+      "dependencies_notes": "Depends on ACR-003 and ACR-004. Informs ACR-008 and ACR-014. Simplifies ACR-009.",
+      "why_now": "Without a thinner node carrier, every new typed block or cross-module relation continues to inflate one class and one table.",
+      "deliverables": [
+        "Stable NodeCarrier record/table with minimal canonical workbench-owned identity",
+        "Dedicated companion/facet models for schedule, spatial-semantic state, signals, artifacts, and storage/media",
+        "Clear ownership document for which fields remain canonical on the node carrier"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchMetadata.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureNodeDescriptor.cs",
+        "tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs",
+        "tests/CanDoItAll.Tests.Unit/*"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests\"",
+        "dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter \"FullyQualifiedName~Node|FullyQualifiedName~Facet|FullyQualifiedName~Metadata\""
+      ],
+      "guardrails": [
+        "Do not demote semantically meaningful X/Y and semantic markers to disposable UI state.",
+        "Do not keep multiple writable copies of the same schedule/signal/assignment fact.",
+        "Prefer compatibility shims over a big-bang table rewrite."
+      ],
+      "acceptance": [
+        "NodeCarrier no longer mixes route/storage/media/signal/schedule/facet payloads into one universal record.",
+        "Spatial semantics remain canonical where the product requires them.",
+        "Typed facet data can evolve without inflating the node carrier again."
+      ],
+      "subbundle_slug": "projectobjectrecord-is-an-overloaded-universal-box",
+      "subbundle_path": "subbundles/ACR-002-projectobjectrecord-is-an-overloaded-universal-box"
+    },
+    {
+      "id": "ACR-008",
+      "severity": "High",
+      "skill_source": "canonical-model-review",
+      "category": "Boundary drift",
+      "title": "Spatial semantics are canonical, but marker ownership is duplicated and under-modeled",
+      "problem_summary": "X/Y position and semantic markers are clearly important to the product, but marker state is still written through both dedicated columns and metadata. The model also needs a sharper split between canonical spatial-semantic state and ephemeral canvas UI state.",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:52-53 ProjectObjectRecord stores PositionX / PositionY",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:143-176 ProjectStructureNode exposes X, Y, legacy marker columns, and marker collections together",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchMetadata.cs:557-616 metadata serializer resolves marker sets and primary marker",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:1399-1404 ApplyPrimaryMarker writes legacy marker columns from the marker set",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:113-130 ProjectWorkbenchViewStateRecord keeps separate viewport/state JSON, showing that some UI state is already distinct"
+      ],
+      "root_cause": "The system correctly kept spatial data near nodes, but signal semantics and view semantics never received a dedicated canonical model boundary.",
+      "remediation_goal": "Model spatial semantics explicitly as canonical node-owned data (carrier or spatial facet), keep semantic marker sets as the single writable owner, and keep viewport/selection/expanded state in view-state persistence only.",
+      "stabilize_when": "Later in current stabilization wave",
+      "validation_strategy": "Signal/spatial mutation tests and migration assertions proving marker edits round-trip through one owner while view-state remains separate.",
+      "prospective_recheck": "Prospective pass if semantic X/Y and markers remain canonical, but only one writable marker owner exists and ephemeral canvas state stays in view-state records.",
+      "qa_status": "Pass with caution",
+      "phase": "Phase 3",
+      "dependencies_notes": "Depends on ACR-002 and should inform ACR-014 because typed evolution must preserve spatial semantics.",
+      "why_now": "This is the point where the updated bundle corrects an important assumption: X/Y and semantic markers are not merely cosmetic, so the refactor seam must separate semantic space from ephemeral UI—not from the domain.",
+      "deliverables": [
+        "Explicit canonical spatial-semantic ownership",
+        "Single writable semantic marker owner",
+        "Clear boundary document for what remains in view state"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchMetadata.cs",
+        "tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs",
+        "tests/CanDoItAll.Tests.Unit/*"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests\"",
+        "dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter \"FullyQualifiedName~Marker|FullyQualifiedName~ViewState\""
+      ],
+      "guardrails": [
+        "Do not move X/Y into disposable UI-only persistence if they carry project semantics.",
+        "Do not keep marker truth duplicated across metadata and legacy columns once the new owner exists."
+      ],
+      "acceptance": [
+        "Semantic X/Y and marker data survive node evolution and projection rebuilds.",
+        "Only one writable owner exists for semantic markers.",
+        "Viewport/selection state remains outside canonical node truth."
+      ],
+      "subbundle_slug": "spatial-semantics-are-canonical-but-marker-ownership-is-duplicated-and-u",
+      "subbundle_path": "subbundles/ACR-008-spatial-semantics-are-canonical-but-marker-ownership-is-duplicated-and-u"
+    },
+    {
+      "id": "ACR-015",
+      "severity": "High",
+      "skill_source": "canonical-model-review",
+      "category": "Boundary drift",
+      "title": "Cross-module responsibility model is fragmented and lacks one canonical actor-assignment owner",
+      "problem_summary": "Resources, Validation, TestLab, project-party assignments, and workbench node metadata each represent responsibility in their own way. There is no explicit ownership matrix for who owns project-level, node-level, and module-level actor assignments.",
+      "evidence": [
+        "src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs:62-119 defines a generic project-party assignment contract with optional NodeKey",
+        "src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs:413-427 defines ProjectPartyAssignment with project-, opportunity-, phase-, and node-scoped fields",
+        "src/CanDoItAll.Modules.Resources/ResourceModels.cs:84-92, src/CanDoItAll.Modules.Validation/ValidationModels.cs:50-58, and src/CanDoItAll.Modules.TestLab/TestLabModels.cs:18-25 store responsibility directly inside module aggregates",
+        "tests/CanDoItAll.Tests.Integration/CrmHrCrossModuleIntegrationTests.cs:186-255 demonstrate positive round-trip behavior across these modules, but not a canonical ownership rule"
+      ],
+      "root_cause": "CRM/HR integration correctly broadened project actor semantics, but did so via multiple local representations before one cross-module actor-assignment model was fixed.",
+      "remediation_goal": "Define one canonical ActorAssignment model plus an ownership matrix for project-, node-, and module-scoped responsibility. Module-local fields either become derived mirrors or remain authoritative only until their migration phase is complete.",
+      "stabilize_when": "Before next feature wave",
+      "validation_strategy": "Add canonical-ownership tests and migration tests proving which layer owns each responsibility fact and how mirrors stay consistent.",
+      "prospective_recheck": "Prospective pass if every responsibility fact can answer one question clearly: who owns it canonically, who only mirrors it, and who only projects it?",
+      "qa_status": "Pass with caution",
+      "phase": "Phase 3",
+      "dependencies_notes": "Depends on ACR-012 and ACR-013. Influenced by ACR-003 and ACR-014.",
+      "why_now": "As soon as people, agents, delivery units, and partners become reusable actors across modules, responsibility modeling becomes an architectural spine, not just CRM data.",
+      "deliverables": [
+        "Actor-assignment scope model and ownership matrix",
+        "Migration/backfill plan for module-local mirrors",
+        "Explicit documentation for canonical vs mirrored responsibility fields"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs",
+        "src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs",
+        "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs",
+        "src/CanDoItAll.Modules.Resources/ResourceModels.cs",
+        "src/CanDoItAll.Modules.Validation/ValidationModels.cs",
+        "src/CanDoItAll.Modules.TestLab/TestLabModels.cs",
+        "tests/CanDoItAll.Tests.Integration/CrmHrCrossModuleIntegrationTests.cs"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~CrmHrCrossModuleIntegrationTests|FullyQualifiedName~ProjectPartyAssignmentIntegrationTests\""
+      ],
+      "guardrails": [
+        "Do not leave the ownership matrix implicit in page code or service trivia.",
+        "Do not migrate every module field in one risky big bang; use explicit mirrors if needed."
+      ],
+      "acceptance": [
+        "Project-, node-, and module-scoped responsibility have explicit canonical owners.",
+        "Mirrored fields are documented and test-backed until they can be removed or fully derived."
+      ],
+      "subbundle_slug": "cross-module-responsibility-model-is-fragmented-and-lacks-one-canonical",
+      "subbundle_path": "subbundles/ACR-015-cross-module-responsibility-model-is-fragmented-and-lacks-one-canonical"
+    },
+    {
+      "id": "ACR-007",
+      "severity": "Medium",
+      "skill_source": "canonical-model-review",
+      "category": "Integration drift",
+      "title": "Route, artifact binding, and storage/media concerns leak into node truth",
+      "problem_summary": "Route strings are rewritten during project moves and storage/media references live inside the main node record, making navigation and attachment concerns look canonical even though they are transport/integration concerns.",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:1005-1013 MoveDescendantsToProjectAsync rewrites Route",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:26-60 ProjectObjectRecord includes route and file/media references",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:2552-2590 structure mapping exposes route/storage concerns directly"
+      ],
+      "root_cause": "Convenient transport/navigation fields were stored with node truth instead of separate attachment/navigation models.",
+      "remediation_goal": "Create typed artifact bindings and attachment/media models; compute routes through resolvers instead of persisting them as canonical node truth.",
+      "stabilize_when": "Later in current stabilization wave",
+      "validation_strategy": "Attachment binding tests, route resolver tests, and project move tests proving routes are recomputed rather than rewritten as canonical data.",
+      "prospective_recheck": "Prospective pass if route becomes derived and attachment bindings are explicitly typed.",
+      "qa_status": "Pass",
+      "phase": "Phase 3",
+      "dependencies_notes": "Easier after ACR-002 and ACR-014 define the node/facet seam.",
+      "why_now": "This concern is not the first blocker, but it becomes harder to extract after more facet and actor metadata is added to nodes.",
+      "deliverables": [
+        "Typed artifact binding model",
+        "Route resolver",
+        "Attachment/media companion model"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchMetadata.cs",
+        "tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests\""
+      ],
+      "guardrails": [
+        "Do not break existing open/download routes without compatibility shims.",
+        "Do not move storage concerns into UI components."
+      ],
+      "acceptance": [
+        "Routes are derived or resolved, not rewritten as canonical truth on project moves.",
+        "Attachment and storage bindings are typed and separately owned."
+      ],
+      "subbundle_slug": "route-artifact-binding-and-storage-media-concerns-leak-into-node-truth",
+      "subbundle_path": "subbundles/ACR-007-route-artifact-binding-and-storage-media-concerns-leak-into-node-truth"
+    },
+    {
+      "id": "ACR-009",
+      "severity": "High",
+      "skill_source": "architecture-drift-audit",
+      "category": "Dependency drift",
+      "title": "ProjectWorkbenchService is an oversized orchestration hotspot",
+      "problem_summary": "A 2900+ line service owns graph sync, CRUD, transfer, media save, view state, command translation, DTO mapping, and now indirectly participates in party integration flows, making safe change difficult.",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs:314-2931 ProjectWorkbenchService spans graph sync, mutations, view state, mapping, and helper logic",
+        "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs depends on ProjectWorkbenchService + ProjectPartyIntegrationBridge for one cohesive workflow",
+        "inventory: Modules.Workbench is referenced by Web, Composition, MCP.ProjectStructure, Tests.Support, Tests.Unit, Tests.Components, and CRM/HR-adjacent pages"
+      ],
+      "root_cause": "Wave-by-wave growth concentrated orchestration into one central service rather than layered collaborators.",
+      "remediation_goal": "Split graph assembly, mutation invariants, projection builders, attachment/media handling, typed-facet lifecycle, and view-state handling into focused services behind a thin façade.",
+      "stabilize_when": "Before next feature wave",
+      "validation_strategy": "Characterization tests around façade behavior, constructor dependency shrinkage, and targeted tests for extracted collaborators.",
+      "prospective_recheck": "Prospective pass if the service reduces to orchestration over smaller collaborators and no collaborator mixes unrelated roles.",
+      "qa_status": "Pass with caution",
+      "phase": "Phase 4",
+      "dependencies_notes": "Execute after the semantic seams from ACR-001/002/003/004/012/014 exist; avoid cosmetic extraction first.",
+      "why_now": "This service is the main amplifier of all other architectural drift; it should be reduced after—not before—the canonical seams are real.",
+      "deliverables": [
+        "Thin façade for ProjectWorkbenchService or equivalent orchestration root",
+        "Extracted graph assembly / invariant / projection / facet lifecycle collaborators"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs",
+        "src/CanDoItAll.Modules.Workbench/*",
+        "tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests|FullyQualifiedName~ProjectPartyAssignmentIntegrationTests\""
+      ],
+      "guardrails": [
+        "Do not split the service cosmetically without real ownership boundaries.",
+        "Do not move business rules into Blazor pages or DTO mappers."
+      ],
+      "acceptance": [
+        "Hotspot service line count and dependency surface shrink materially.",
+        "Extracted collaborators own coherent responsibilities and are independently testable."
+      ],
+      "subbundle_slug": "projectworkbenchservice-is-an-oversized-orchestration-hotspot",
+      "subbundle_path": "subbundles/ACR-009-projectworkbenchservice-is-an-oversized-orchestration-hotspot"
+    },
+    {
+      "id": "ACR-010",
+      "severity": "Medium",
+      "skill_source": "architecture-drift-audit",
+      "category": "Runtime / operational drift",
+      "title": "Lease scope granularity does not match mutation granularity",
+      "problem_summary": "Scope kinds include ProjectNode, but many agent mutation flows still take project-wide leases, which may over-serialize work and obscure future permission boundaries.",
+      "evidence": [
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureAgentContracts.cs:26-74 defines Project and ProjectNode lease scopes",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureLeaseService.cs:197-222 project-scoped acquisition helper still dominates current flow",
+        "Previous bundle and current static scan did not find a broad rollout of node-level scope selection in mutation entry points"
+      ],
+      "root_cause": "The runtime safety model was introduced conservatively before mutation invariants and canonical ownership were stable enough for finer-grained locks.",
+      "remediation_goal": "Define a mutation-to-scope policy matrix and progressively move safe node-level mutations to narrower scopes with telemetry and tests.",
+      "stabilize_when": "Later",
+      "validation_strategy": "Concurrency tests, lease contention telemetry, and authorization tests for node/project/repo-branch scope selection.",
+      "prospective_recheck": "Prospective pass if scope selection aligns with mutation semantics and remains conservative where invariants require broader locks.",
+      "qa_status": "Pass",
+      "phase": "Phase 4",
+      "dependencies_notes": "Defer until ACR-005 and ACR-011 are implemented and the graph mutation rules are stable.",
+      "why_now": "Relevant for multi-agent future, but not the first canonical-model blocker.",
+      "deliverables": [
+        "Lease scope policy matrix",
+        "Telemetry around lease contention",
+        "Selective node-scope adoption"
+      ],
+      "likely_files": [
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureAgentContracts.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureLeaseService.cs",
+        "src/CanDoItAll.Modules.Workbench/ProjectStructureAgentService.cs",
+        "tests/CanDoItAll.Tests.Integration/*"
+      ],
+      "test_commands": [
+        "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectStructureAgent|FullyQualifiedName~Lease\""
+      ],
+      "guardrails": [
+        "Do not narrow lease scopes before invariants are centrally enforced.",
+        "Prefer conservative correctness over optimistic concurrency in early phases."
+      ],
+      "acceptance": [
+        "Mutation scope choice is explicit and test-backed.",
+        "Node-level scopes are used only where the invariant model can support them safely."
+      ],
+      "subbundle_slug": "lease-scope-granularity-does-not-match-mutation-granularity",
+      "subbundle_path": "subbundles/ACR-010-lease-scope-granularity-does-not-match-mutation-granularity"
+    }
+  ],
+  "canonical_concepts": [
+    {
+      "concept": "Workbench-authored node carrier",
+      "current_kind": "Mixed-role canonical-ish entity",
+      "current_owner": "ProjectObjectRecord in Workbench",
+      "problem": "Owns identity, text, route, storage/media, marker legacy columns, XY, schedule, metadata envelope, and parent key all at once.",
+      "target_kind": "Canonical entity + typed facets",
+      "target_owner": "NodeCarrier + companion facet records in Workbench"
+    },
+    {
+      "concept": "Node kind semantics",
+      "current_kind": "Split semantics",
+      "current_owner": "ProjectObjectType enum + subtype strings + metadata families + UI catalog branches",
+      "problem": "Allowed relations, actor roles, transitions, and schedule semantics are not centrally owned.",
+      "target_kind": "Canonical policy/definition",
+      "target_owner": "NodeKindRegistry / NodeKindDefinition"
+    },
+    {
+      "concept": "Containment hierarchy",
+      "current_kind": "Mixed canonical relation",
+      "current_owner": "ParentNodeKey + hierarchy-like links in ProjectObjectLinkRecord",
+      "problem": "Hierarchy semantics are stored twice and then partly reinterpreted as dependency semantics.",
+      "target_kind": "Canonical relation",
+      "target_owner": "One containment owner (NodeCarrier parent or dedicated containment table)"
+    },
+    {
+      "concept": "Non-hierarchy edges",
+      "current_kind": "Generic relation table",
+      "current_owner": "ProjectObjectLinkRecord",
+      "problem": "DependsOn / Blocks / BelongsTo / Contains are blurred in one table without explicit policy matrix.",
+      "target_kind": "Canonical relation",
+      "target_owner": "Explicit NodeEdge / DependencyEdge policy-owned relation model"
+    },
+    {
+      "concept": "Spatial semantics",
+      "current_kind": "Under-modeled canonical data",
+      "current_owner": "PositionX/PositionY on ProjectObjectRecord; markers split between columns and metadata",
+      "problem": "X/Y matter semantically, but marker ownership is duplicated and mixed with legacy compatibility.",
+      "target_kind": "Canonical companion",
+      "target_owner": "NodeSpatialSemanticState + NodeMarkerSet (or equivalent)"
+    },
+    {
+      "concept": "Typed work item/meeting/participant details",
+      "current_kind": "Metadata family payload",
+      "current_owner": "ProjectObjectMetadataEnvelope JSON",
+      "problem": "Typed details are opaque, weakly validated, and partly duplicated in CRM/HR assignment records.",
+      "target_kind": "Typed facet / extension",
+      "target_owner": "NodeFacet_* records with registry-driven validation"
+    },
+    {
+      "concept": "Project/node actor assignment",
+      "current_kind": "Duplicated relation",
+      "current_owner": "CrmHr ProjectPartyAssignment + node metadata fields + module-local responsible-party fields",
+      "problem": "The same responsibility truth is written in multiple places with different lifecycles and no single owner.",
+      "target_kind": "Canonical cross-cutting relation",
+      "target_owner": "ProjectActorAssignment ownership matrix + scoped adapters"
+    },
+    {
+      "concept": "Party directory / actor identity",
+      "current_kind": "Canonical external identity source",
+      "current_owner": "CrmHr party directory / AI agent profile models",
+      "problem": "Good identity source, but node-level links currently re-store names and IDs in metadata.",
+      "target_kind": "Canonical entity",
+      "target_owner": "CrmHr identity models + read-only lookups from node scopes"
+    },
+    {
+      "concept": "Module-native aggregates",
+      "current_kind": "Canonical entities",
+      "current_owner": "Projects / Resources / Factory / Validation / TestLab",
+      "problem": "Workbench currently copies them into persisted system-managed rows instead of assembling from source.",
+      "target_kind": "Canonical entities",
+      "target_owner": "Stay in native modules; exposed through graph assembly"
+    },
+    {
+      "concept": "Assembled project graph",
+      "current_kind": "Implicit synced copy",
+      "current_owner": "SyncGraphAsync + persisted ProjectObjectRecord/Link rows",
+      "problem": "Projection cache became effective read truth.",
+      "target_kind": "Derived read model / projection",
+      "target_owner": "CanonicalGraphAssembler output"
+    },
+    {
+      "concept": "Gantt / calendar / summary surfaces",
+      "current_kind": "Projection over projection",
+      "current_owner": "Workbench structure output",
+      "problem": "They consume a synced copy instead of one assembled graph.",
+      "target_kind": "Derived projections",
+      "target_owner": "Projection builders over AssembledProjectGraph"
+    },
+    {
+      "concept": "View state",
+      "current_kind": "UI state",
+      "current_owner": "ProjectWorkbenchViewStateRecord",
+      "problem": "This separation is mostly healthy and should stay separate from canonical spatial semantics.",
+      "target_kind": "UI state",
+      "target_owner": "ViewState owner only"
+    },
+    {
+      "concept": "LLM/compiler output / embeddings / future vectors",
+      "current_kind": "Future derived analytics",
+      "current_owner": "Not yet implemented",
+      "problem": "Must remain proposals / derived semantics, never primary truth.",
+      "target_kind": "Derived analytics / proposal layer",
+      "target_owner": "Knowledge compiler + semantic index above canonical model"
+    }
+  ],
+  "truth_map": [
+    [
+      "Node identity",
+      "ProjectObjectRecord.NodeKey + ProjectId",
+      "System-managed rows duplicate upstream nodes",
+      "Stable Workbench NodeCarrier identity for workbench-authored nodes; external projections assembled on read",
+      "Keep node as the stable carrier for brainstorming and typed evolution."
+    ],
+    [
+      "Node type semantics",
+      "Enum + subtype strings + UI catalog + metadata family",
+      "UI definitions and subtype branching own semantics",
+      "NodeKindRegistry",
+      "One place must declare allowed transitions, relations, actor roles, time semantics, and UI descriptors."
+    ],
+    [
+      "Hierarchy",
+      "ParentNodeKey and relation rows",
+      "Hierarchy stored twice; parent chain reused in dependency analysis",
+      "Single containment owner",
+      "Containment is not the same as dependency."
+    ],
+    [
+      "Dependencies",
+      "Generic link table + dependency analysis heuristics",
+      "Ancestors treated as prerequisites",
+      "Explicit dependency edge model",
+      "Critical path logic must be based on explicit edges/policies."
+    ],
+    [
+      "Spatial semantics",
+      "PositionX/PositionY on node; markers duplicated",
+      "Marker columns and marker metadata both present",
+      "Spatial semantic owner + marker owner",
+      "X/Y and semantic markers are canonical because the mindmap itself carries meaning."
+    ],
+    [
+      "Work-item assignee",
+      "Metadata.WorkItem.AssigneePartyId/Name and ProjectPartyAssignment rows",
+      "Two writable truths",
+      "Canonical scoped actor-assignment owner",
+      "Metadata should not be the authority for live assignments."
+    ],
+    [
+      "Meeting participants",
+      "Metadata.Meeting.RelatedParties and ProjectPartyAssignment rows",
+      "Two writable truths",
+      "Canonical scoped actor-assignment owner",
+      "Names can be projected, but membership should have one owner."
+    ],
+    [
+      "Participant directory link",
+      "Metadata.Participant.LinkedPartyId/Name and ProjectPartyAssignment rows",
+      "Identity link and assignment rows are mixed",
+      "Canonical node-to-actor link (or scoped assignment role)",
+      "A participant node should link to one actor/party through a canonical relation."
+    ],
+    [
+      "Resource/test/validation responsibility",
+      "Module-local ResponsiblePartyId / OwnerPartyId fields",
+      "No shared ownership matrix across modules",
+      "Explicit ownership matrix + adapters",
+      "Do not erase module-native truth blindly; stabilize ownership first."
+    ],
+    [
+      "Structure/calendar/Gantt",
+      "Workbench persisted synced rows",
+      "Projection acting as truth",
+      "Projection builders over assembled graph",
+      "Deleting a cache must never change canonical outcomes."
+    ]
+  ],
+  "feature_classification": [
+    [
+      "src/CanDoItAll.SharedKernel/ProjectObjectContracts.cs",
+      "Domain-core contract",
+      "Owns top-level object/link enumerations but not the full semantic policy."
+    ],
+    [
+      "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs",
+      "Mixed-role application + persistence hotspot",
+      "Currently mixes canonical-like data, persistence schema, mutation workflows, and projection read assembly."
+    ],
+    [
+      "src/CanDoItAll.Modules.Workbench/ProjectWorkbenchMetadata.cs",
+      "Typed facet payload helper / validation helper",
+      "Currently acts as JSON family serializer and partial validator; should shrink once typed facets exist."
+    ],
+    [
+      "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs",
+      "UI workflow + boundary hotspot",
+      "Writes both node metadata and CRM/HR assignment rows, creating duplicated truth."
+    ],
+    [
+      "src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs",
+      "Cross-module contract",
+      "Good seam, but NodeKey scope is too soft and unconstrained."
+    ],
+    [
+      "src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs",
+      "Canonical identity / assignment persistence",
+      "Party directory is strong; node-scoped assignment storage needs stronger scope semantics."
+    ],
+    [
+      "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs",
+      "Application service hotspot",
+      "Validates project + party existence but not node existence/project/kind compatibility."
+    ],
+    [
+      "src/CanDoItAll.Modules.Resources/ResourceModels.cs",
+      "Module-native canonical aggregate",
+      "Owns resource-specific responsibility fields today."
+    ],
+    [
+      "src/CanDoItAll.Modules.Validation/ValidationModels.cs",
+      "Module-native canonical aggregate",
+      "Owns validation-run responsibility today."
+    ],
+    [
+      "src/CanDoItAll.Modules.TestLab/TestLabModels.cs",
+      "Module-native canonical aggregate",
+      "Owns test-plan responsibility today."
+    ],
+    [
+      "src/CanDoItAll.Modules.Workbench/ProjectStructureCanvasCatalog.RichDefinitions.cs",
+      "UI projection / authoring catalog",
+      "Currently owns too much semantic meaning for participant and work-item subtypes."
+    ],
+    [
+      "src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeMutations.cs",
+      "UI workflow",
+      "Only supports note→block or block→block; does not cover the intended note→task/decision lifecycle."
+    ]
+  ],
+  "node_evolution": [
+    [
+      "Simple brainstorm note",
+      "Node of type Note with text only",
+      "Workbench-native NodeCarrier with note/simple kind",
+      "None or NoteFacet",
+      "Keep stable NodeId/NodeKey, title/body, XY, markers, parent, explicit edges"
+    ],
+    [
+      "Promote brainstorm to task",
+      "UI only supports note→ProjectBlock",
+      "Registry-driven transition Note → WorkItem.Task",
+      "Create active WorkItemFacet, retire NoteFacet if needed, record NodeTransitionHistory",
+      "Preserve spatial semantics; preserve links; optionally retain original note body as history snapshot"
+    ],
+    [
+      "Promote brainstorm to decision",
+      "Not supported",
+      "Registry-driven transition Note → Decision",
+      "Create DecisionFacet + transition record",
+      "Preserve same node identity so the thought trajectory stays analyzable"
+    ],
+    [
+      "Convert task to decision or back",
+      "Not modeled",
+      "Allowed/disallowed by NodeKindRegistry",
+      "Retire/create facets, never destructive delete/recreate by default",
+      "Actor assignments are preserved, remapped, or dropped by explicit transition policy"
+    ],
+    [
+      "Bind participant node to real person/agent/partner",
+      "Metadata + assignment duplication",
+      "Canonical node-to-actor link or scoped assignment role",
+      "Represent stable identity link without duplicating live truth in metadata",
+      "Display names become projection data"
+    ],
+    [
+      "Meeting participant edits",
+      "Metadata.RelatedParties + assignment rows",
+      "Canonical multi-actor link set on meeting scope",
+      "Meeting facet reads projected participant names",
+      "Meeting node stays stable; links change independently"
+    ],
+    [
+      "Cross-module external projection node",
+      "Persisted workbench system-managed row",
+      "Assembled external projection node",
+      "No reclassification by default; create derived workbench follow-up node if needed",
+      "Protect external canonical aggregates from accidental mutation through graph editing"
+    ]
+  ],
+  "hotspots": [
+    [
+      "ProjectWorkbenchModels.cs",
+      "2931 lines; sync, read, write, projection, media, transfer, metadata, links",
+      "ACR-001, ACR-002, ACR-004, ACR-005, ACR-006, ACR-008, ACR-009, ACR-010, ACR-014",
+      "Core hotspot"
+    ],
+    [
+      "ProjectWorkbenchMetadata.cs",
+      "869 lines; JSON family model, marker normalization, partial validation",
+      "ACR-003, ACR-008, ACR-012, ACR-014",
+      "Semantic hotspot"
+    ],
+    [
+      "ProjectStructurePage.PartyIntegration.cs",
+      "505 lines; UI writes metadata and assignment rows",
+      "ACR-012, ACR-013, ACR-015",
+      "Boundary hotspot"
+    ],
+    [
+      "CrmHrServices.cs",
+      "4704 lines overall; assignment save only checks project/party existence",
+      "ACR-013, ACR-015",
+      "Cross-module integrity hotspot"
+    ],
+    [
+      "ProjectStructureCanvasCatalog.RichDefinitions.cs",
+      "UI authoring catalog includes participant/work item semantics",
+      "ACR-003, ACR-014",
+      "UI-owned semantics hotspot"
+    ],
+    [
+      "Resource/Validation/TestLab responsibility fields",
+      "Module-local owner/responsible IDs fragment responsibility truth",
+      "ACR-012, ACR-015",
+      "Cross-module drift hotspot"
+    ]
+  ],
+  "validation_commands": [
+    [
+      "Environment preflight",
+      "dotnet --info",
+      "Must succeed in the real Codex/.NET environment; blocked in this container.",
+      "Required"
+    ],
+    [
+      "Solution build",
+      "dotnet build CanDoItAll.sln",
+      "No compile errors after each phase.",
+      "Required"
+    ],
+    [
+      "Invariant tests",
+      "dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter \"FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests|FullyQualifiedName~ProjectPartyAssignmentIntegrationTests|FullyQualifiedName~CrmHrCrossModuleIntegrationTests\"",
+      "Phase 0-3 targeted guardrails pass.",
+      "Required"
+    ],
+    [
+      "Component/UI tests",
+      "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter \"FullyQualifiedName~CrossModuleResponsiblePartyPageTests\"",
+      "UI flows still bind to the canonical owner.",
+      "Required"
+    ],
+    [
+      "Playwright smoke for CRM/HR + structure",
+      "dotnet test tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --filter \"FullyQualifiedName~CrmHrCrossModuleFlowTests|FullyQualifiedName~ProjectPartyAssignmentFlowTests|FullyQualifiedName~DatabaseSwitchWorkbenchPlaywrightTests\"",
+      "Cross-module UI/graph behavior works end-to-end.",
+      "Recommended"
+    ],
+    [
+      "Static skill backcheck",
+      "Re-run $canonical-model-review, $feature-block-architecture-review, and $architecture-drift-audit after each phase.",
+      "Findings should close or reduce as expected.",
+      "Required"
+    ]
+  ],
+  "adrs": [
+    [
+      "ADR-001",
+      "Node remains the stable canonical carrier for workbench-authored graph thinking",
+      "Do not demote node to a mere view. Preserve stable node identity across brainstorming, refinement, and typed transitions."
+    ],
+    [
+      "ADR-002",
+      "Assembled canonical graph replaces persisted system-managed graph truth",
+      "External/module-native aggregates remain canonical in their own modules and are assembled into the graph on read."
+    ],
+    [
+      "ADR-003",
+      "NodeKindRegistry owns kind semantics, transitions, relation policy, actor policy, and UI descriptors",
+      "Subtype strings and UI catalogs may not be the source of truth."
+    ],
+    [
+      "ADR-004",
+      "Containment, dependency, and association semantics are separate concepts",
+      "Do not encode hierarchy twice or treat ancestor chain as generic dependency by default."
+    ],
+    [
+      "ADR-005",
+      "Canonical actor-assignment ownership matrix",
+      "Project-scoped and node-scoped responsibility must have one owner; module-native aggregate responsibility gets an explicit ownership matrix during migration."
+    ],
+    [
+      "ADR-006",
+      "Spatial semantics are canonical; viewport state is not",
+      "XY layout and semantic markers remain meaningful domain-adjacent data; zoom/pan/selection stay in view state."
+    ],
+    [
+      "ADR-007",
+      "Stable node identity with typed facet history",
+      "Note→task/decision/etc. is modeled as a transition on the same node plus facet lifecycle/history, not destructive replacement."
+    ]
+  ],
+  "phase_plan": {
+    "Phase 0": {
+      "goal": "Install guardrails before more semantic change.",
+      "findings": [
+        "ACR-005",
+        "ACR-011",
+        "ACR-013"
+      ],
+      "gate": "Cycle rejection, node-scope integrity, and missing invariant tests must be in place before semantic refactors."
+    },
+    "Phase 1": {
+      "goal": "Define semantics and ownership.",
+      "findings": [
+        "ACR-003",
+        "ACR-004",
+        "ACR-012"
+      ],
+      "gate": "Node kinds, relation semantics, and node-scoped actor truth must have one clear owner before graph reassembly."
+    },
+    "Phase 2": {
+      "goal": "Rebuild read model and lifecycle around the clarified semantics.",
+      "findings": [
+        "ACR-001",
+        "ACR-006",
+        "ACR-014"
+      ],
+      "gate": "Assembled graph, projections, and note→typed transitions must work from the clarified canonical model."
+    },
+    "Phase 3": {
+      "goal": "Decompose overloaded node and complete cross-module ownership seams.",
+      "findings": [
+        "ACR-002",
+        "ACR-007",
+        "ACR-008",
+        "ACR-015"
+      ],
+      "gate": "Node carrier/facets, spatial semantics, artifact/storage separation, and actor ownership matrix are stabilized."
+    },
+    "Phase 4": {
+      "goal": "Reduce orchestration and concurrency friction after semantics are stable.",
+      "findings": [
+        "ACR-009",
+        "ACR-010"
+      ],
+      "gate": "Service decomposition and lease narrowing happen only after truth boundaries stop moving."
+    }
+  }
+}
