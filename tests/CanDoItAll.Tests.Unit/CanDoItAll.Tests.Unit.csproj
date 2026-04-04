@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj" />
     <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
   </ItemGroup>
 

@@ -3,6 +3,7 @@
 @inherits StyledComponentBase
 
 <select @attributes='BuildAttributes(ResolveCssClass())'
+        aria-labelledby="@ResolveLabelledBy()"
         value="@ResolveSelectedKey()"
         disabled="@Disabled"
         @onchange="OnChangedAsync"
@@ -49,6 +50,9 @@
 
     [Parameter]
     public InputLook Look { get; set; } = InputLook.Default;
+
+    [CascadingParameter(Name = "FormFieldLabelId")]
+    public string? FormFieldLabelId { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -170,6 +174,15 @@
             _ => "rz-select w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
         };
     }
+
+    private string? ResolveLabelledBy()
+        => HasExplicitAccessibleName() ? null : FormFieldLabelId;
+
+    private bool HasExplicitAccessibleName()
+        => AdditionalAttributes is not null
+            && AdditionalAttributes.Keys.Any(key =>
+                string.Equals(key, "aria-label", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, "aria-labelledby", StringComparison.OrdinalIgnoreCase));
 }
 
 

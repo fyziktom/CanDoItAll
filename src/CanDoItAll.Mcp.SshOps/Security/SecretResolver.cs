@@ -7,7 +7,7 @@ public sealed class SecretResolver
 {
     public string ResolveRequired(string environmentVariableName)
     {
-        var value = Environment.GetEnvironmentVariable(environmentVariableName);
+        var value = ResolveScopedEnvironmentVariable(environmentVariableName);
         if (string.IsNullOrWhiteSpace(value))
         {
             throw new ToolInvocationException("TargetNotConfigured", $"Environment variable '{environmentVariableName}' is required but not set.");
@@ -20,7 +20,7 @@ public sealed class SecretResolver
     {
         return string.IsNullOrWhiteSpace(environmentVariableName)
             ? null
-            : Environment.GetEnvironmentVariable(environmentVariableName);
+            : ResolveScopedEnvironmentVariable(environmentVariableName);
     }
 
     public string? ResolvePrivateKey(AuthOptions auth)
@@ -54,5 +54,22 @@ public sealed class SecretResolver
     public string? ResolvePassword(AuthOptions auth)
     {
         return ResolveOptional(auth.PasswordEnv);
+    }
+
+    private static string? ResolveScopedEnvironmentVariable(string environmentVariableName)
+    {
+        var processValue = Environment.GetEnvironmentVariable(environmentVariableName);
+        if (!string.IsNullOrWhiteSpace(processValue))
+        {
+            return processValue;
+        }
+
+        var userValue = Environment.GetEnvironmentVariable(environmentVariableName, EnvironmentVariableTarget.User);
+        if (!string.IsNullOrWhiteSpace(userValue))
+        {
+            return userValue;
+        }
+
+        return Environment.GetEnvironmentVariable(environmentVariableName, EnvironmentVariableTarget.Machine);
     }
 }

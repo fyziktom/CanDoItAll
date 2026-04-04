@@ -4,6 +4,7 @@
 @if (Immediate)
 {
     <textarea @attributes='BuildAttributes(ResolveCssClass())'
+              aria-labelledby="@ResolveLabelledBy()"
               placeholder="@Placeholder"
               readonly="@ReadOnly"
               disabled="@Disabled"
@@ -13,6 +14,7 @@
 else
 {
     <textarea @attributes='BuildAttributes(ResolveCssClass())'
+              aria-labelledby="@ResolveLabelledBy()"
               placeholder="@Placeholder"
               readonly="@ReadOnly"
               disabled="@Disabled"
@@ -48,6 +50,9 @@ else
     [Parameter]
     public InputLook Look { get; set; } = InputLook.Default;
 
+    [CascadingParameter(Name = "FormFieldLabelId")]
+    public string? FormFieldLabelId { get; set; }
+
     private async Task OnChangedAsync(ChangeEventArgs args)
     {
         var next = args.Value?.ToString();
@@ -64,6 +69,15 @@ else
             _ => "rz-input w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
         };
     }
+
+    private string? ResolveLabelledBy()
+        => HasExplicitAccessibleName() ? null : FormFieldLabelId;
+
+    private bool HasExplicitAccessibleName()
+        => AdditionalAttributes is not null
+            && AdditionalAttributes.Keys.Any(key =>
+                string.Equals(key, "aria-label", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, "aria-labelledby", StringComparison.OrdinalIgnoreCase));
 }
 
 

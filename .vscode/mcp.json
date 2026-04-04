@@ -1,13 +1,54 @@
 {
-    "servers":  {
-                    "candoitall_projectstructure":  {
-                                                        "args":  [
-                                                                     "--settings",
-                                                                     "${workspaceFolder}\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
-                                                                 ],
-                                                        "command":  "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\20260329-024613\\CanDoItAll.Mcp.ProjectStructure.exe",
-                                                        "cwd":  "${workspaceFolder}",
-                                                        "type":  "stdio"
-                                                    }
-                }
+  "servers": {
+    "candoitall_dotnetwatch": {
+      "type": "stdio",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\tools\\CanDoItAll.Mcp.DotNetWatch\\Start-CanDoItAllDotNetWatchMcp.ps1",
+        "-RepoRoot",
+        "${workspaceFolder}",
+        "-Configuration",
+        "Release",
+        "-SettingsPath",
+        "${workspaceFolder}\\CanDoItAll.Mcp.DotNetWatch.settings.json"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    "candoitall_sshops": {
+      "type": "stdio",
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.SshOps\\current\\CanDoItAll.Mcp.SshOps.exe",
+      "args": [
+        "--settings",
+        "${workspaceFolder}\\CanDoItAll.Mcp.SshOps.settings.json"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    "candoitall_projectstructure": {
+      "type": "stdio",
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\20260403-193110\\CanDoItAll.Mcp.ProjectStructure.exe",
+      "args": [
+        "--settings",
+        "${workspaceFolder}\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
+    },
+    "tailwindcss": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "tailwindcss-mcp@latest"
+      ]
+    }
+  }
 }

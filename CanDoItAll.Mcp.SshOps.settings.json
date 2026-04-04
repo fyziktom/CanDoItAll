@@ -54,9 +54,9 @@
   "Targets": [
     {
       "Name": "rpi3-test",
-      "Host": "10.190.32.143",
+      "Host": "192.168.0.191",
       "Port": 22,
-      "User": "pi",
+      "User": "rpi",
       "Sudo": {
         "Mode": "sudo-n",
         "Command": "sudo -n"
@@ -66,7 +66,7 @@
       },
       "HostKeyVerification": {
         "Mode": "fingerprintSha256",
-        "Value": "SHA256:4+ZMz+d0UnVPYr0nbBq7rcCyf65FILJmG3K+E1t9jxM"
+        "Value": "SHA256:WPx5mLR4Z0P7xhg9Z1gpWDTqkNL2pS1dQjoeuFSM1qw"
       },
       "Paths": {
         "RemoteStateRoot": "/home/pi/candoitall/.mcp-state",
@@ -88,10 +88,10 @@
         "ResolverName": "local-selfsigned"
       },
       "Validation": {
-        "PublicAppHost": "10.190.32.143",
+        "PublicAppHost": "192.168.0.191",
         "DefaultHealthPath": "/health",
         "CertificateDomains": [
-          "10.190.32.143"
+          "192.168.0.191"
         ]
       },
       "Guards": {
