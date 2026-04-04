@@ -1,0 +1,19 @@
+review_kind: canonical-model-review
+scope: ""
+scores:
+  source_of_truth_integrity: null
+  boundary_clarity: null
+  invariant_enforcement: null
+  projection_discipline: null
+  integration_isolation: null
+  runtime_state_separation: null
+  ai_policy_separation: null
+  testable_architecture: null
+  change_safety: null
+  overall_stability: null
+findings:
+  critical: []
+  high: []
+  medium: []
+  low: []
+  open_questions: []

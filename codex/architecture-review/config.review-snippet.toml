@@ -1,0 +1,7 @@
+# Optional project-level Codex config snippet for architecture reviews.
+# Merge this into .codex/config.toml if helpful.
+
+[agents]
+max_threads = 4
+max_depth = 1
+job_max_runtime_seconds = 1200

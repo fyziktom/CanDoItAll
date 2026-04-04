@@ -12,6 +12,9 @@ It includes these custom skills:
 - `candoitall-watch-playwright-loop`
 - `candoitall-dotnetwatch-setup`
 - `candoitall-frontend-theme`
+- `canonical-model-review`
+- `feature-block-architecture-review`
+- `architecture-drift-audit`
 
 It also depends on these public sibling skills:
 
@@ -53,3 +56,4 @@ powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skil
 - The bundle skill pack now includes explicit readiness, subbundle-gate, and final-closure validators.
 - Large-screen validation comes first: maximize the browser window or fill the available desktop work area, capture a screenshot, review it, then continue to narrower widths.
 - `imagegen` is a planning aid only when UI direction is unclear; it does not replace shipped browser proof.
+- The repo also ships architecture review helper docs in `codex/architecture-review` and optional repo-local custom agents in `.codex/agents`.
