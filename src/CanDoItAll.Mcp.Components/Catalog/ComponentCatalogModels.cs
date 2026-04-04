@@ -4,7 +4,8 @@ public sealed record ComponentCatalogIndex(
     IReadOnlyList<ComponentDocument> Components,
     IReadOnlyList<ComponentExampleDocument> Examples,
     IReadOnlyList<ComponentGroupDocument> Groups,
-    IReadOnlyList<CanvasContractDocument> CanvasContracts);
+    IReadOnlyList<CanvasContractDocument> CanvasContracts,
+    IReadOnlyDictionary<string, IReadOnlyList<ComponentUsageExampleDocument>> UsageExamplesByComponent);
 
 public sealed record ComponentDocument(
     string Name,
@@ -18,7 +19,15 @@ public sealed record ComponentDocument(
     IReadOnlyList<string> DependencyNames,
     IReadOnlyList<ComponentParameterDocument> Parameters,
     IReadOnlyList<ComponentEventDocument> Events,
-    IReadOnlyList<string> CssNotes);
+    IReadOnlyList<string> CssNotes,
+    ComponentGuidanceDocument Guidance,
+    int UsageExampleCount,
+    IReadOnlyList<ComponentUsageExampleDocument> UsageExamples);
+
+public sealed record ComponentGuidanceDocument(
+    IReadOnlyList<string> UseFor,
+    IReadOnlyList<string> AvoidFor,
+    IReadOnlyList<string> CompositionRules);
 
 public sealed record ComponentParameterDocument(
     string Name,
@@ -79,6 +88,19 @@ public sealed record ComponentSearchHit(
 public sealed record ComponentExamplesData(
     string ComponentName,
     IReadOnlyList<ComponentExampleDocument> Examples);
+
+public sealed record ComponentUsageExampleDocument(
+    string SourceKind,
+    string Project,
+    string FilePath,
+    int LineNumber,
+    string Snippet,
+    string? Route);
+
+public sealed record ComponentUsageExamplesData(
+    string ComponentName,
+    int TotalMatches,
+    IReadOnlyList<ComponentUsageExampleDocument> UsageExamples);
 
 public sealed record ComponentCssTokensData(
     string ComponentName,

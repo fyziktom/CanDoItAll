@@ -97,6 +97,12 @@ else
     public LayoutGap? RowGap { get; set; }
 
     [Parameter]
+    public AlignItems AlignItems { get; set; } = AlignItems.Stretch;
+
+    [Parameter]
+    public JustifyContent JustifyContent { get; set; } = JustifyContent.Start;
+
+    [Parameter]
     public bool Section { get; set; }
 
     [Parameter]
@@ -105,7 +111,7 @@ else
     private string ResolveCssClass()
     {
         return BuildClass(
-            "grid min-w-0 [&>*]:min-w-0 [gap:var(--cda-grid-gap)] [column-gap:var(--cda-grid-column-gap)] [row-gap:var(--cda-grid-row-gap)]",
+            "min-w-0 [&>*]:min-w-0 [gap:var(--cda-grid-gap)] [column-gap:var(--cda-grid-column-gap)] [row-gap:var(--cda-grid-row-gap)] [align-items:var(--cda-grid-align)] [justify-content:var(--cda-grid-justify)]",
             "[grid-template-columns:var(--cda-grid-columns)]",
             HasResponsiveColumns(ColumnsSm, ColumnTemplateSm) ? "sm:[grid-template-columns:var(--cda-grid-columns-sm)]" : null,
             HasResponsiveColumns(ColumnsMd, ColumnTemplateMd) ? "md:[grid-template-columns:var(--cda-grid-columns-md)]" : null,
@@ -127,9 +133,13 @@ else
 
         var styles = new List<string>
         {
+            "display:grid",
             $"--cda-grid-gap:{LayoutValueResolver.ResolveGap(Gap)}",
             $"--cda-grid-column-gap:{LayoutValueResolver.ResolveGap(columnGap)}",
             $"--cda-grid-row-gap:{LayoutValueResolver.ResolveGap(rowGap)}",
+            $"--cda-grid-align:{LayoutValueResolver.ResolveAlignValue(AlignItems)}",
+            $"--cda-grid-justify:{LayoutValueResolver.ResolveJustifyValue(JustifyContent)}",
+            "--cda-grid-default-column-span:1",
             "--cda-grid-columns:minmax(0,1fr)"
         };
 

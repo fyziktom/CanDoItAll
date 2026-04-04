@@ -139,6 +139,7 @@ public static class SandboxCatalogRegistry
         CreateExample("layout-happy", SandboxGroupKey.Layout, "Page scaffold", SandboxScenarioKey.HappyPath, "Page-level composition with header, lead, rail, and section blocks.", ["page"], "PageScaffold", "PageHeader", "SectionCard"),
         CreateExample("layout-dense", SandboxGroupKey.Layout, "Dense workspace layout", SandboxScenarioKey.DenseContent, "Split layout that uses wider desktop space deliberately.", ["dense"], "PageScaffold", "FormSection", "StickyActionFooter"),
         CreateExample("layout-empty", SandboxGroupKey.Layout, "No records in view", SandboxScenarioKey.EmptyState, "Layout shell with an empty workspace region.", ["empty"], "PageScaffold", "EmptyState"),
+        CreateCustomExample("layout-composition", SandboxGroupKey.Layout, "Layout composition lab", "/groups/layout/composition", SandboxScenarioKey.HappyPath, "Compare Stack, Grid, and Row/Column versions of the same analytics control panel.", ["comparison", "responsive", "layout"], "Stack", "Grid", "Row", "Column", "FormRow"),
         CreateExample("data-display-happy", SandboxGroupKey.DataDisplay, "Summary and list views", SandboxScenarioKey.HappyPath, "Cards, summaries, and list rows for stable data display.", ["lists"], "Card", "SelectionListItem", "SummaryTiles"),
         CreateExample("data-display-dense", SandboxGroupKey.DataDisplay, "Dense data review", SandboxScenarioKey.DenseContent, "Metadata-heavy summaries and compact item rows.", ["dense", "metadata"], "SelectionListItem", "StatusBadge"),
         CreateExample("data-display-empty", SandboxGroupKey.DataDisplay, "No results", SandboxScenarioKey.EmptyState, "Shared empty display state for list-style data.", ["empty"], "EmptyState"),
@@ -182,6 +183,27 @@ public static class SandboxCatalogRegistry
         var group = GetGroup(groupKey);
         var route = $"{group.Route}?scenario={scenario.ToSlug()}";
 
+        return new SandboxExampleDefinition(
+            id,
+            groupKey,
+            title,
+            route,
+            scenario,
+            summary,
+            tags,
+            componentNames);
+    }
+
+    private static SandboxExampleDefinition CreateCustomExample(
+        string id,
+        SandboxGroupKey groupKey,
+        string title,
+        string route,
+        SandboxScenarioKey scenario,
+        string summary,
+        IReadOnlyList<string> tags,
+        params string[] componentNames)
+    {
         return new SandboxExampleDefinition(
             id,
             groupKey,

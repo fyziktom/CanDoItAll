@@ -308,9 +308,12 @@ function Update-VsCodeMcpConfig {
         [Parameter(Mandatory = $true)]
         [string]$WorkspaceFolderToken,
         [Parameter(Mandatory = $true)]
+        [string]$ComponentsCommandPath,
+        [Parameter(Mandatory = $true)]
         [string]$ProjectStructureCommandPath
     )
 
+    $escapedComponentsCommandPath = $ComponentsCommandPath.Replace("\", "\\")
     $escapedProjectStructureCommandPath = $ProjectStructureCommandPath.Replace("\", "\\")
     $json = @"
 {
@@ -339,6 +342,15 @@ function Update-VsCodeMcpConfig {
       "args": [
         "--settings",
         "$WorkspaceFolderToken\\CanDoItAll.Mcp.SshOps.settings.json"
+      ],
+      "cwd": "$WorkspaceFolderToken"
+    },
+    "candoitall_components": {
+      "type": "stdio",
+      "command": "$WorkspaceFolderToken\\$escapedComponentsCommandPath",
+      "args": [
+        "--settings",
+        "$WorkspaceFolderToken\\CanDoItAll.Mcp.Components.settings.json"
       ],
       "cwd": "$WorkspaceFolderToken"
     },
@@ -379,6 +391,8 @@ function Update-CodexConfig {
         [Parameter(Mandatory = $true)]
         [string]$SshOpsEntrypoint,
         [Parameter(Mandatory = $true)]
+        [string]$ComponentsEntrypoint,
+        [Parameter(Mandatory = $true)]
         [string]$ProjectStructureEntrypoint
     )
 
@@ -389,6 +403,7 @@ function Update-CodexConfig {
 
     $escapedRepoRoot = $RepoRoot.Replace("\", "\\")
     $escapedSshOpsEntrypoint = $SshOpsEntrypoint.Replace("\", "\\")
+    $escapedComponentsEntrypoint = $ComponentsEntrypoint.Replace("\", "\\")
     $escapedProjectStructureEntrypoint = $ProjectStructureEntrypoint.Replace("\", "\\")
 
     $dotNetWatchSection = @"
@@ -426,6 +441,19 @@ tool_timeout_sec = 1800
 enabled = true
 "@
 
+    $componentsSection = @"
+[mcp_servers.candoitall_components]
+command = "$escapedComponentsEntrypoint"
+cwd = "$escapedRepoRoot"
+args = [
+  "--settings",
+  "$escapedRepoRoot\\CanDoItAll.Mcp.Components.settings.json"
+]
+startup_timeout_sec = 45
+tool_timeout_sec = 1800
+enabled = true
+"@
+
     $projectStructureSection = @"
 [mcp_servers.candoitall_projectstructure]
 command = "$escapedProjectStructureEntrypoint"
@@ -441,6 +469,7 @@ enabled = true
 
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_dotnetwatch" -SectionContent $dotNetWatchSection
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_sshops" -SectionContent $sshOpsSection
+    Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_components" -SectionContent $componentsSection
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_projectstructure" -SectionContent $projectStructureSection
 }
 
@@ -566,6 +595,8 @@ $dotNetWatchSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll
 $projectStructureProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.ProjectStructure\CanDoItAll.Mcp.ProjectStructure.csproj")
 $projectStructureSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.ProjectStructure.settings.local.json")
 $projectStructureExampleSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.ProjectStructure.settings.example.json")
+$componentsProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj")
+$componentsSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.Components.settings.json")
 $sshOpsProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj")
 $sshOpsSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.SshOps.settings.json")
 $managerProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj")
@@ -574,6 +605,7 @@ $repoSkillRoot = Resolve-AbsolutePath (Join-Path $RepoRoot "codex\skills")
 $userSkillRoot = Resolve-AbsolutePath (Join-Path $env:USERPROFILE ".codex\skills")
 $installRoot = Resolve-AbsolutePath (Join-Path $RepoRoot ".artifacts\mcp-installs")
 $projectStructureInstallRoot = New-VersionedInstallPath -InstallBasePath (Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.ProjectStructure"))
+$componentsInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.Components\current")
 $sshOpsInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.SshOps\current")
 $managerInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Manager\current")
 $trayInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.DotNetWatch.Tray\current")
@@ -584,6 +616,8 @@ $startupShortcutPath = Resolve-AbsolutePath (Join-Path $env:APPDATA "Microsoft\W
 $desktopShortcutPath = Resolve-AbsolutePath (Join-Path ([Environment]::GetFolderPath("DesktopDirectory")) "CanDoItAll DotNetWatch Tray.lnk")
 $globalBackendCatalogDirectory = Resolve-AbsolutePath (Join-Path $env:LOCALAPPDATA "CanDoItAll.Mcp.DotNetWatch\backend-catalog")
 $installOwnedCompanionProcessNeedles = @(
+    "CanDoItAll.Mcp.Components.exe",
+    "CanDoItAll.Mcp.Components.dll",
     "CanDoItAll.Mcp.SshOps.exe",
     "CanDoItAll.Mcp.SshOps.dll",
     "CanDoItAll.Manager.exe",
@@ -632,6 +666,7 @@ if (-not (Test-Path -LiteralPath $shadowManifestPath)) {
 }
 
 Publish-ReleaseArtifact -ProjectPath $projectStructureProjectPath -OutputPath $projectStructureInstallRoot
+Publish-ReleaseArtifact -ProjectPath $componentsProjectPath -OutputPath $componentsInstallRoot
 Publish-ReleaseArtifact -ProjectPath $sshOpsProjectPath -OutputPath $sshOpsInstallRoot
 Publish-ReleaseArtifact -ProjectPath $managerProjectPath -OutputPath $managerInstallRoot
 Publish-ReleaseArtifact -ProjectPath $trayProjectPath -OutputPath $trayInstallRoot
@@ -641,6 +676,8 @@ Ensure-ProjectStructureSettings -SettingsPath $projectStructureSettingsPath -Exa
 $shadowManifest = Get-Content -LiteralPath $shadowManifestPath -Raw | ConvertFrom-Json
 $projectStructureEntrypoint = Get-PreferredEntrypoint -DirectoryPath $projectStructureInstallRoot -AssemblyName "CanDoItAll.Mcp.ProjectStructure"
 $projectStructureWorkspaceEntrypoint = Get-RelativePathPortable -BasePath $RepoRoot -TargetPath $projectStructureEntrypoint
+$componentsEntrypoint = Get-PreferredEntrypoint -DirectoryPath $componentsInstallRoot -AssemblyName "CanDoItAll.Mcp.Components"
+$componentsWorkspaceEntrypoint = Get-RelativePathPortable -BasePath $RepoRoot -TargetPath $componentsEntrypoint
 $sshOpsEntrypoint = Get-PreferredEntrypoint -DirectoryPath $sshOpsInstallRoot -AssemblyName "CanDoItAll.Mcp.SshOps"
 $managerEntrypoint = Get-PreferredEntrypoint -DirectoryPath $managerInstallRoot -AssemblyName "CanDoItAll.Manager"
 $trayEntrypoint = Get-PreferredEntrypoint -DirectoryPath $trayInstallRoot -AssemblyName "CanDoItAll.Mcp.DotNetWatch.Tray"
@@ -691,6 +728,12 @@ $installManifest = @{
         installRoot = $projectStructureInstallRoot
         entrypointPath = $projectStructureEntrypoint
     }
+    components = @{
+        configuration = "Release"
+        settingsPath = $componentsSettingsPath
+        installRoot = $componentsInstallRoot
+        entrypointPath = $componentsEntrypoint
+    }
     sshOps = @{
         configuration = "Release"
         settingsPath = $sshOpsSettingsPath
@@ -725,17 +768,18 @@ Write-Status "Wrote install manifest to $manifestPath"
 
 if (-not $SkipVsCodeConfig.IsPresent) {
     Write-Status "Updating VS Code MCP config"
-    Update-VsCodeMcpConfig -Path $vscodeMcpPath -WorkspaceFolderToken '${workspaceFolder}' -ProjectStructureCommandPath $projectStructureWorkspaceEntrypoint
+    Update-VsCodeMcpConfig -Path $vscodeMcpPath -WorkspaceFolderToken '${workspaceFolder}' -ComponentsCommandPath $componentsWorkspaceEntrypoint -ProjectStructureCommandPath $projectStructureWorkspaceEntrypoint
 }
 
 if (-not $SkipUserConfig.IsPresent) {
     Write-Status "Updating Codex config"
-    Update-CodexConfig -Path $UserConfigPath -SshOpsEntrypoint $sshOpsEntrypoint -ProjectStructureEntrypoint $projectStructureEntrypoint
+    Update-CodexConfig -Path $UserConfigPath -SshOpsEntrypoint $sshOpsEntrypoint -ComponentsEntrypoint $componentsEntrypoint -ProjectStructureEntrypoint $projectStructureEntrypoint
 }
 
 Write-Status "Resetup completed."
 Write-Status "DotNetWatch shadow DLL: $($shadowManifest.shadowDllPath)"
 Write-Status "ProjectStructure entrypoint: $projectStructureEntrypoint"
+Write-Status "Components entrypoint: $componentsEntrypoint"
 Write-Status "SshOps entrypoint: $sshOpsEntrypoint"
 Write-Status "Manager entrypoint: $managerEntrypoint"
 Write-Status "Tray entrypoint: $trayEntrypoint"
