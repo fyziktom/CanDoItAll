@@ -8,3 +8,5 @@
 | `RQ-04` | `02-context-menu-links-and-dependencies` | connection / dependency proof and screenshots |
 | `RQ-05` | `03-conditional-repairs-and-closure` | scoped code changes if needed plus rerun proof |
 | `RQ-06` | `03-conditional-repairs-and-closure` | browser analytics, raw-note closure, completed validator |
+| `RQ-07` | `04-layout-overlap-and-recomposition-repair` | reproduced overlap, code repair, and persisted recomposition proof |
+| `RQ-08` | `04-layout-overlap-and-recomposition-repair` | screenshot review before and after reload plus explicit flow assessment |

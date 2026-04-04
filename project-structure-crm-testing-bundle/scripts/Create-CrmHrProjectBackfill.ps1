@@ -5,7 +5,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Token,
 
-    [string]$OutputPath = "C:\repositories\CanDoItAll\artifacts\project-structure-crm-testing\created-plan.json"
+    [string]$OutputPath = "C:\repositories\CanDoItAll\artifacts\project-structure-crm-testing\created-plan.json",
+
+    [string]$SqliteDatabasePath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -546,4 +548,11 @@ $result = [ordered]@{
 }
 
 $result | ConvertTo-Json -Depth 64 | Set-Content -Encoding utf8 -Path $OutputPath
-$result | ConvertTo-Json -Depth 64
+
+if (-not [string]::IsNullOrWhiteSpace($SqliteDatabasePath) -and (Test-Path $SqliteDatabasePath)) {
+    $repairScriptPath = Join-Path $PSScriptRoot "Repair-CrmHrAiAgents.ps1"
+    $repairOutputPath = Join-Path (Split-Path -Parent $OutputPath) "crm-ai-agent-repair.json"
+    & $repairScriptPath -DatabasePath $SqliteDatabasePath -CreatedPlanPath $OutputPath -OutputPath $repairOutputPath | Out-Null
+}
+
+Get-Content -Raw $OutputPath

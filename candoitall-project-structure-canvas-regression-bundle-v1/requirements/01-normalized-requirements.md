@@ -6,3 +6,5 @@
 - `RQ-04`: The structure canvas must be tested through real MCP interactions for links, dependencies, and nearby graph behaviors.
 - `RQ-05`: Any discovered regression must be routed into scoped repair work and revalidated before closure.
 - `RQ-06`: The bundle must close with screenshot-backed browser analytics and completed-stage validation.
+- `RQ-07`: Overlapping or exploded project-structure layouts must be repairable through a logical recomposition path instead of being left as unreadable saved state.
+- `RQ-08`: The repaired layout must persist on reload and remain readable when judged as a real project mindmap, not only as a raw collision-free geometry output.

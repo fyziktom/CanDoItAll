@@ -13,6 +13,7 @@
 - Source CRM/HR bundle B01-B13 scope
 - Umbrella project plus subproject split
 - AI-agent participant ownership
+- CRM AI-agent directory identities, profiles, and canonical work-item bindings for the B04 AI lane
 
 ## Prerequisites
 
@@ -35,6 +36,7 @@
 - Split subprojects for the delivered workstreams
 - Overview roadmap structure plus detailed subproject structures
 - AI-agent participant nodes and task assignments
+- Matching CRM AI-agent parties and profiles for the B04 planning lane
 
 ## Dependency Impact
 
@@ -46,6 +48,7 @@
 - Confirm all major bundle areas are represented
 - Confirm subproject hierarchy exists
 - Confirm assigned AI-agent ownership is visible on targeted work items
+- Confirm the CRM module exposes the same B04 AI agents as first-class directory records
 - Confirm dependency or sequencing information is preserved where it matters
 
 ## Implementation Steps
@@ -55,13 +58,14 @@
 - Import or create overview roadmap nodes for the umbrella surface
 - Import or create detailed work structures inside selected subprojects
 - Add AI-agent participant nodes and assign relevant work items
+- Create matching CRM AI-agent parties and profiles, then bind the lane and work items through canonical project-party assignments
 - Query structure and analytics to confirm creation success
 
 ## Do Not Do
 
 - Do not rerun the original implementation bundle
 - Do not dump every node into one unreadable canvas
-- Do not leave AI ownership only in prose notes
+- Do not leave AI ownership only in prose notes or local-only participant nodes
 
 ## Acceptance Checklist
 
@@ -69,6 +73,7 @@
 - Subprojects exist and are connected
 - B01-B13 scope is represented strongly enough to control delivery
 - AI-agent participants and assignments are present
+- B04 AI agents are visible in CRM / HR Agents with profile metadata and canonical task bindings
 - At least one dependency-oriented surface exists
 
 ## Proof Required

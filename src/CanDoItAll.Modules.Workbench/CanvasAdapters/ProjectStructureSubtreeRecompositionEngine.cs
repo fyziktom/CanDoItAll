@@ -9,6 +9,7 @@ internal static class ProjectStructureSubtreeRecompositionEngine
 {
     private const double FullTurn = Math.PI * 2d;
     private const double TopAngle = -Math.PI / 2d;
+    private const double BottomAngle = Math.PI / 2d;
     private const double LevelGap = 92d;
     private const double ParentChildGap = 60d;
     private const double RadialPushStep = 28d;
@@ -18,7 +19,7 @@ internal static class ProjectStructureSubtreeRecompositionEngine
     private const double BranchBubblePadding = 44d;
     private const double FirstLayerSeparationGap = 72d;
     private const double SectorUsageRatio = 0.76d;
-    private const double SingleBranchSectorSpan = Math.PI * 1.5d;
+    private const double SingleBranchSectorSpan = Math.PI * 0.85d;
     private const double PositionEpsilon = 0.5d;
 
     public static ProjectStructureSubtreeRecompositionPlan? Recompose(
@@ -86,7 +87,7 @@ internal static class ProjectStructureSubtreeRecompositionEngine
         for (var index = 0; index < rootChildren.Count; index++)
         {
             var child = rootChildren[index];
-            var centerAngle = TopAngle + (clockStep * index);
+            var centerAngle = ResolveFirstLayerCenterAngle(rootChildren.Count, clockStep, index);
             angleByNodeId[child.Id] = centerAngle;
             AssignAnglesWithinSector(
                 child,
@@ -470,6 +471,16 @@ internal static class ProjectStructureSubtreeRecompositionEngine
         }
 
         return clockStep * SectorUsageRatio;
+    }
+
+    private static double ResolveFirstLayerCenterAngle(int firstLayerCount, double clockStep, int index)
+    {
+        if (firstLayerCount <= 1)
+        {
+            return BottomAngle;
+        }
+
+        return TopAngle + (clockStep * index);
     }
 
     private static NodeSize ResolveNodeSize(ProjectStructureNode node)
