@@ -851,16 +851,31 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    private Task HandleNodeOpenedAsync(string nodeId)
+    private async Task HandleNodeOpenedAsync(string nodeId)
     {
         var node = ResolveNode(nodeId);
         if (node is null)
         {
-            return Task.CompletedTask;
+            return;
+        }
+
+        if (CanOpenRelatedProjectStructure(node))
+        {
+            CloseQuickActionDialog();
+            await OpenProjectStructureInNewTabAsync(node);
+            return;
+        }
+
+        if (CanRenderAttachmentPreview(node))
+        {
+            CloseQuickActionDialog();
+            OpenAttachmentPreview(node);
+            await InvokeAsync(StateHasChanged);
+            return;
         }
 
         OpenQuickActionDialog(node);
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleContextActionAsync(CanvasWorkbenchContextActionRequest request)

@@ -77,13 +77,12 @@
             data-testid="project-structure-signals-toggle"
             Click="ToggleSignalsWindow" />
 
-    <Button Icon="shuffle"
+    <Button Text="Recompose"
             aria-label="Recompose"
             title="@(IsSubtreeRecompositionInProgress ? "Recompose: redistributing the selected branch" : "Recompose: redistribute descendants under the selected node")"
             Variant="Variant.Text"
             ButtonStyle="ButtonStyle.Base"
-            Style="@ToolbarToggleStyle"
-            Class="cw-toolbar-action cw-toolbar-action--icon project-structure-toolbar-toggle project-structure-toolbar-toggle--icon"
+            Class="cw-toolbar-action project-structure-toolbar-recompose"
             data-testid="project-structure-recompose-toolbar-button"
             Disabled="@(!CanRecomposeSelectedBranch)"
             Click="RecomposeBranch" />

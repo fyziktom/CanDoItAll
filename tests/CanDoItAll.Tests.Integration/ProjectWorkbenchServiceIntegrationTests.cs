@@ -549,6 +549,74 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task CreateObjectAsync_rejects_unknown_parent_keys_and_ReparentObjectAsync_rejects_hierarchy_cycles()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var saveResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Workbench Guardrails",
+            Description = "Exercise explicit parent validation and cycle rejection.",
+            Objective = "Reject invalid parent mutations.",
+            CurrentPhase = "Execution"
+        });
+
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Orphan note",
+                string.Empty,
+                "Should reject missing parents.",
+                "custom:missing-parent",
+                320,
+                220)));
+
+        var parent = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Parent",
+                string.Empty,
+                "Cycle root.",
+                null,
+                420,
+                260));
+        var child = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Child",
+                string.Empty,
+                "Cycle child.",
+                parent.Id,
+                640,
+                340));
+        var grandchild = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Grandchild",
+                string.Empty,
+                "Cycle leaf.",
+                child.Id,
+                860,
+                420,
+                null,
+                null,
+                "task"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => workbench.ReparentObjectAsync(projectId, child.Id, child.Id));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => workbench.ReparentObjectAsync(projectId, parent.Id, grandchild.Id));
+    }
+
+    [Fact]
     public async Task ReparentObjectAsync_moves_nodes_and_DeleteObjectAsync_removes_descendants_and_links()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -637,6 +705,66 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             string.Equals(link.TargetId, child.Id, StringComparison.Ordinal) ||
             string.Equals(link.SourceId, grandchild.Id, StringComparison.Ordinal) ||
             string.Equals(link.TargetId, grandchild.Id, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task LinkObjectsAsync_rejects_cross_project_edges_and_hierarchy_link_kinds()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var firstProjectResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Workbench Edge Guardrails A",
+            Description = "First project for edge validation.",
+            Objective = "Reject cross-project links.",
+            CurrentPhase = "Execution"
+        });
+        var secondProjectResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Workbench Edge Guardrails B",
+            Description = "Second project for edge validation.",
+            Objective = "Reject invalid hierarchy links.",
+            CurrentPhase = "Execution"
+        });
+
+        Assert.True(firstProjectResult.IsSuccess);
+        Assert.True(secondProjectResult.IsSuccess);
+
+        var firstNode = await workbench.CreateObjectAsync(
+            firstProjectResult.Value,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "First project node",
+                string.Empty,
+                "Source node.",
+                null,
+                320,
+                220));
+        var secondNode = await workbench.CreateObjectAsync(
+            secondProjectResult.Value,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Second project node",
+                string.Empty,
+                "Target node.",
+                null,
+                420,
+                220));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => workbench.LinkObjectsAsync(
+            firstProjectResult.Value,
+            firstNode.Id,
+            secondNode.Id,
+            ProjectObjectLinkKind.DependsOn));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => workbench.LinkObjectsAsync(
+            firstProjectResult.Value,
+            firstNode.Id,
+            firstNode.Id,
+            ProjectObjectLinkKind.Contains));
     }
 
     [Fact]

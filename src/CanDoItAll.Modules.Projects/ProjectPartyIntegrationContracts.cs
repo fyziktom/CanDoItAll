@@ -118,6 +118,20 @@ public sealed class ProjectPartyAssignmentUpsertRequest
     public string Notes { get; set; } = string.Empty;
 }
 
+public sealed record ProjectNodeScopeResolution(
+    bool ExistsInProject,
+    bool ExistsInOtherProject,
+    ProjectObjectType? ObjectType,
+    string ObjectSubtype);
+
+public interface IProjectNodeScopeBridge
+{
+    Task<ProjectNodeScopeResolution> ResolveAsync(
+        Guid projectId,
+        string nodeKey,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IProjectPartyIntegrationBridge
 {
     Task<IReadOnlyDictionary<Guid, ProjectPortfolioPartyContext>> GetPortfolioContextsAsync(
@@ -147,6 +161,17 @@ public interface IProjectPartyIntegrationBridge
     Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
         ProjectPartyQuickCreateRequest request,
         CancellationToken cancellationToken = default);
+}
+
+internal sealed class NoopProjectNodeScopeBridge : IProjectNodeScopeBridge
+{
+    public Task<ProjectNodeScopeResolution> ResolveAsync(
+        Guid projectId,
+        string nodeKey,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new ProjectNodeScopeResolution(false, false, null, string.Empty));
+    }
 }
 
 internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrationBridge

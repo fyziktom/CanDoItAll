@@ -8,6 +8,7 @@ using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright;
 
+[Collection(PlaywrightCollection.Name)]
 public sealed class DatabaseSwitchWorkbenchPlaywrightTests
 {
     [Fact]

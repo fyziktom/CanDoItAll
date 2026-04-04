@@ -71,10 +71,11 @@
             <div class="projects-board__filters">
                 <PrefixedField Prefix="FIND"
                                Class="min-w-0">
-                    <InputText @bind-Value="ProjectSearchProxy"
-                               @bind-Value:event="oninput"
-                               class="cda-input cda-input--toolbar h-10"
-                               placeholder="Search by name or current phase" />
+                    <input value="@ProjectSearch"
+                           @oninput="HandleProjectSearchInput"
+                           class="cda-input cda-input--toolbar h-10"
+                           placeholder="Search by name or current phase"
+                           data-testid="projects-search-input" />
                 </PrefixedField>
                 <PrefixedField Prefix="STATUS"
                                Suffix="V"
@@ -384,6 +385,11 @@
     {
         get => ProjectSearch;
         set => _ = ProjectSearchChanged.InvokeAsync(value);
+    }
+
+    private Task HandleProjectSearchInput(ChangeEventArgs args)
+    {
+        return ProjectSearchChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
     }
 
     private string StatusFilterProxy

@@ -1,5 +1,7 @@
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
@@ -73,6 +75,133 @@ public sealed class ProjectPartyAssignmentIntegrationTests
 
         var options = await bridge.ListPartyOptionsAsync(projectId);
         Assert.Contains(options, item => item.PartyId == createdParty!.PartyId && item.PartyTypeLabel == "AI agent");
+    }
+
+    [Fact]
+    public async Task Bridge_rejects_missing_and_cross_project_canonical_node_assignments()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+
+        var firstProjectId = await CreateProjectAsync(projectsService, "Canonical assignment A");
+        var secondProjectId = await CreateProjectAsync(projectsService, "Canonical assignment B");
+        var assigneeId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Willa Worker");
+        var foreignWorkItem = await workbench.CreateObjectAsync(
+            secondProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Foreign work item",
+                string.Empty,
+                "Belongs to another project.",
+                null,
+                420,
+                240,
+                null,
+                null,
+                "task"));
+
+        var missingNodeResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = firstProjectId,
+            PartyId = assigneeId,
+            Role = ProjectPartyAssignmentRole.WorkItemAssignee,
+            NodeKey = "custom:missing-work-item",
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.False(missingNodeResult.IsSuccess);
+        Assert.Contains(missingNodeResult.Errors, error => error.Code == "crmhr.project-assignment.node-not-found");
+
+        var foreignNodeResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = firstProjectId,
+            PartyId = assigneeId,
+            Role = ProjectPartyAssignmentRole.WorkItemAssignee,
+            NodeKey = foreignWorkItem.Id,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.False(foreignNodeResult.IsSuccess);
+        Assert.Contains(foreignNodeResult.Errors, error => error.Code == "crmhr.project-assignment.node-project-mismatch");
+    }
+
+    [Fact]
+    public async Task Bridge_rejects_disallowed_canonical_node_role_combinations()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Canonical role policy");
+        var participantId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Mina Meeting");
+        var workItemAssigneeId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Ari Assignee");
+        var noteNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Loose note",
+                string.Empty,
+                "Not a meeting or work item.",
+                null,
+                420,
+                260));
+        var meetingNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Meeting,
+                "Stand-up",
+                string.Empty,
+                "Meeting node.",
+                null,
+                680,
+                260));
+
+        var invalidMeetingRole = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = participantId,
+            Role = ProjectPartyAssignmentRole.MeetingParticipant,
+            NodeKey = noteNode.Id,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.False(invalidMeetingRole.IsSuccess);
+        Assert.Contains(invalidMeetingRole.Errors, error => error.Code == "crmhr.project-assignment.node-role-not-allowed");
+
+        var validMeetingRole = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = participantId,
+            Role = ProjectPartyAssignmentRole.MeetingParticipant,
+            NodeKey = meetingNode.Id,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(validMeetingRole.IsSuccess);
+
+        var invalidWorkItemRole = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = workItemAssigneeId,
+            Role = ProjectPartyAssignmentRole.WorkItemAssignee,
+            NodeKey = meetingNode.Id,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.False(invalidWorkItemRole.IsSuccess);
+        Assert.Contains(invalidWorkItemRole.Errors, error => error.Code == "crmhr.project-assignment.node-role-not-allowed");
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)

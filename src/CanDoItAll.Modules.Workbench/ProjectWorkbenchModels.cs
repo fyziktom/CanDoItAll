@@ -317,6 +317,7 @@ public sealed class ProjectWorkbenchService(
     IStoragePlacementService storagePlacementService,
     PromptFactoryService promptFactoryService) : IProjectWorkbenchSeedService
 {
+    private static readonly ProjectStructureInvariantService InvariantService = new();
     private const string ProjectRootNodePrefix = "project:";
     private const string ProjectChildNodePrefix = "project-child:";
     private const string ProjectRelatedParentNodePrefix = "project-related-parent:";
@@ -442,8 +443,13 @@ public sealed class ProjectWorkbenchService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        var existingCount = await dbContext.Set<ProjectObjectRecord>().CountAsync(item => item.ProjectId == projectId && !item.IsSystemManaged, cancellationToken);
         var normalizedParentNodeKey = NormalizeEditableParentNodeKey(projectId, request.ParentNodeKey);
+        var existingNodes = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == projectId)
+            .ToListAsync(cancellationToken);
+        InvariantService.ValidateParentAssignment(projectId, $"pending:{Guid.NewGuid():N}", normalizedParentNodeKey, existingNodes);
+
+        var existingCount = existingNodes.Count(item => !item.IsSystemManaged);
         var position = request.X.HasValue && request.Y.HasValue
             ? (request.X.Value, request.Y.Value)
             : GetDefaultPosition(request.ObjectType, existingCount + 1);
@@ -563,6 +569,10 @@ public sealed class ProjectWorkbenchService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var existingNodes = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == projectId)
+            .ToListAsync(cancellationToken);
+        InvariantService.ValidateUserAuthoredLink(projectId, sourceNodeKey, targetNodeKey, linkKind, existingNodes);
         await UpsertLinkAsync(dbContext, projectId, sourceNodeKey, targetNodeKey, linkKind, isSystemManaged: false, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
@@ -603,6 +613,9 @@ public sealed class ProjectWorkbenchService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var existingNodes = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == projectId)
+            .ToListAsync(cancellationToken);
         var node = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
         if (node is null)
@@ -615,6 +628,8 @@ public sealed class ProjectWorkbenchService(
         {
             return MapStructureNode(node);
         }
+
+        InvariantService.ValidateParentAssignment(projectId, node.NodeKey, normalizedParentNodeKey, existingNodes);
 
         var parentLinks = await dbContext.Set<ProjectObjectLinkRecord>()
             .Where(item => item.ProjectId == projectId &&
