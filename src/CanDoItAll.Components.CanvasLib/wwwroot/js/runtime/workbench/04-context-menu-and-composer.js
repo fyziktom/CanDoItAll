@@ -307,7 +307,15 @@
                                         "text";
             }
 
-            input.value = inputValueLookup.get(field.key) || "";
+            let inputValue = inputValueLookup.get(field.key) || "";
+            if (isSelect && !inputValue && field.isRequired) {
+                const selectableOptions = Array.from(input.options).filter(option => !!option.value);
+                if (selectableOptions.length === 1) {
+                    inputValue = selectableOptions[0].value;
+                }
+            }
+
+            input.value = inputValue;
             if (!isSelect) {
                 input.placeholder = field.placeholder || "";
             }

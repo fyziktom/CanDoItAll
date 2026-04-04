@@ -350,7 +350,7 @@ public sealed partial class AppSmokeTests
             page,
             snapshot => snapshot.Nodes.Any(node =>
                 string.Equals(node.Id, editedNoteId, StringComparison.Ordinal) &&
-                string.Equals(node.MarkerText, "$", StringComparison.Ordinal)),
+                string.Equals(node.MarkerText, "Budget", StringComparison.Ordinal)),
             "marker badge metadata for edited child note");
 
         nodeLabels = await OpenCanvasContextMenuAsync(page, ".cw-node:has-text('Second child note')");
@@ -829,7 +829,7 @@ public sealed partial class AppSmokeTests
             page,
             snapshot => snapshot.Nodes.Any(node =>
                 string.Equals(node.Id, rootNodeId, StringComparison.Ordinal) &&
-                string.Equals(node.MarkerText, "$", StringComparison.Ordinal)),
+                string.Equals(node.MarkerText, "Budget", StringComparison.Ordinal)),
             "root marker badge metadata");
 
         await OpenCanvasContextMenuAsync(page, rootSelector);
