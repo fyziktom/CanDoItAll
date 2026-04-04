@@ -704,6 +704,9 @@ IProjectPartyIntegrationBridge projectPartyIntegrationBridge) : IProjectWorkbenc
             .Where(item => item.ProjectId == projectId &&
                 (keysToDelete.Contains(item.SourceNodeKey) || keysToDelete.Contains(item.TargetNodeKey)))
             .ToListAsync(cancellationToken);
+        var linkSnapshots = linksToDelete
+            .Select(CloneProjectObjectLinkRecord)
+            .ToList();
         if (linksToDelete.Count > 0)
         {
             dbContext.RemoveRange(linksToDelete);
@@ -712,12 +715,37 @@ IProjectPartyIntegrationBridge projectPartyIntegrationBridge) : IProjectWorkbenc
         var recordsToDelete = records
             .Where(item => !item.IsSystemManaged && keysToDelete.Contains(item.NodeKey))
             .ToList();
+        var recordSnapshots = recordsToDelete
+            .Select(CloneProjectObjectRecord)
+            .ToList();
         dbContext.RemoveRange(recordsToDelete);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await projectPartyIntegrationBridge.DeleteAssignmentsForNodesAsync(
-            projectId,
-            keysToDelete.ToList(),
-            cancellationToken);
+
+        try
+        {
+            await projectPartyIntegrationBridge.DeleteAssignmentsForNodesAsync(
+                projectId,
+                keysToDelete.Select(key => new ProjectNodeReference(key)).ToList(),
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                await RestoreDeletedSubtreeAsync(recordSnapshots, linkSnapshots, cancellationToken);
+            }
+            catch (Exception compensationEx)
+            {
+                throw new InvalidOperationException(
+                    "Deleting the subtree failed during canonical assignment reconciliation and Workbench rollback also failed.",
+                    new AggregateException(ex, compensationEx));
+            }
+
+            throw new InvalidOperationException(
+                "Deleting the subtree failed during canonical assignment reconciliation. The Workbench subtree was restored.",
+                ex);
+        }
+
         return recordsToDelete.Count;
     }
 
@@ -1020,6 +1048,9 @@ IProjectPartyIntegrationBridge projectPartyIntegrationBridge) : IProjectWorkbenc
         var movedRecords = sourceRecords
             .Where(item => movedNodeKeys.Contains(item.NodeKey))
             .ToList();
+        var movedRecordSnapshots = movedRecords
+            .Select(CloneProjectObjectRecord)
+            .ToList();
         var updatedAtUtc = clock.GetUtcNow();
 
         foreach (var record in movedRecords)
@@ -1037,6 +1068,9 @@ IProjectPartyIntegrationBridge projectPartyIntegrationBridge) : IProjectWorkbenc
             .Where(item => item.ProjectId == sourceProjectId &&
                 (movedNodeKeys.Contains(item.SourceNodeKey) || movedNodeKeys.Contains(item.TargetNodeKey)))
             .ToListAsync(cancellationToken);
+        var linkSnapshots = linksToProcess
+            .Select(CloneProjectObjectLinkRecord)
+            .ToList();
 
         foreach (var link in linksToProcess)
         {
@@ -1064,12 +1098,249 @@ IProjectPartyIntegrationBridge projectPartyIntegrationBridge) : IProjectWorkbenc
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await projectPartyIntegrationBridge.MoveAssignmentsToProjectAsync(
-            sourceProjectId,
-            movedNodeKeys.ToList(),
-            targetProjectId,
-            cancellationToken);
+
+        try
+        {
+            await projectPartyIntegrationBridge.MoveAssignmentsToProjectAsync(
+                sourceProjectId,
+                movedNodeKeys.Select(key => new ProjectNodeReference(key)).ToList(),
+                targetProjectId,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                await RestoreMovedDescendantsAsync(
+                    sourceProjectId,
+                    targetProjectId,
+                    movedRecordSnapshots,
+                    linkSnapshots,
+                    movedRootKeys,
+                    cancellationToken);
+            }
+            catch (Exception compensationEx)
+            {
+                throw new InvalidOperationException(
+                    "Moving descendants failed during canonical assignment reconciliation and Workbench rollback also failed.",
+                    new AggregateException(ex, compensationEx));
+            }
+
+            throw new InvalidOperationException(
+                "Moving descendants failed during canonical assignment reconciliation. The Workbench subtree move was rolled back.",
+                ex);
+        }
+
         return new ProjectStructureSubprojectTransferResult(targetProjectId, movedNodeKeys.Count, movedRootKeys.Count);
+    }
+
+    private async Task RestoreDeletedSubtreeAsync(
+        IReadOnlyList<ProjectObjectRecord> recordSnapshots,
+        IReadOnlyList<ProjectObjectLinkRecord> linkSnapshots,
+        CancellationToken cancellationToken)
+    {
+        if (recordSnapshots.Count == 0 && linkSnapshots.Count == 0)
+        {
+            return;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var recordIds = recordSnapshots.Select(item => item.Id).ToList();
+        var existingRecordIds = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => recordIds.Contains(item.Id))
+            .Select(item => item.Id)
+            .ToListAsync(cancellationToken);
+        var existingRecordIdSet = existingRecordIds.ToHashSet();
+        foreach (var snapshot in recordSnapshots)
+        {
+            if (existingRecordIdSet.Contains(snapshot.Id))
+            {
+                continue;
+            }
+
+            dbContext.Set<ProjectObjectRecord>().Add(CloneProjectObjectRecord(snapshot));
+        }
+
+        var linkIds = linkSnapshots.Select(item => item.Id).ToList();
+        var existingLinkIds = await dbContext.Set<ProjectObjectLinkRecord>()
+            .Where(item => linkIds.Contains(item.Id))
+            .Select(item => item.Id)
+            .ToListAsync(cancellationToken);
+        var existingLinkIdSet = existingLinkIds.ToHashSet();
+        foreach (var snapshot in linkSnapshots)
+        {
+            if (existingLinkIdSet.Contains(snapshot.Id))
+            {
+                continue;
+            }
+
+            dbContext.Set<ProjectObjectLinkRecord>().Add(CloneProjectObjectLinkRecord(snapshot));
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task RestoreMovedDescendantsAsync(
+        Guid sourceProjectId,
+        Guid targetProjectId,
+        IReadOnlyList<ProjectObjectRecord> recordSnapshots,
+        IReadOnlyList<ProjectObjectLinkRecord> linkSnapshots,
+        IReadOnlyCollection<string> movedRootKeys,
+        CancellationToken cancellationToken)
+    {
+        if (recordSnapshots.Count == 0)
+        {
+            return;
+        }
+
+        var movedNodeKeys = recordSnapshots
+            .Select(item => item.NodeKey)
+            .ToHashSet(StringComparer.Ordinal);
+        var targetRootNodeKey = BuildProjectRootNodeKey(targetProjectId);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var currentMovedRecords = await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => movedNodeKeys.Contains(item.NodeKey))
+            .ToListAsync(cancellationToken);
+        var snapshotsByNodeKey = recordSnapshots.ToDictionary(item => item.NodeKey, StringComparer.Ordinal);
+        foreach (var currentRecord in currentMovedRecords)
+        {
+            if (!snapshotsByNodeKey.TryGetValue(currentRecord.NodeKey, out var snapshot))
+            {
+                continue;
+            }
+
+            RestoreProjectObjectRecord(currentRecord, snapshot);
+        }
+
+        var existingMovedNodeKeys = currentMovedRecords
+            .Select(item => item.NodeKey)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var snapshot in recordSnapshots)
+        {
+            if (existingMovedNodeKeys.Contains(snapshot.NodeKey))
+            {
+                continue;
+            }
+
+            dbContext.Set<ProjectObjectRecord>().Add(CloneProjectObjectRecord(snapshot));
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var currentRelevantLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+            .Where(item =>
+                (item.ProjectId == sourceProjectId || item.ProjectId == targetProjectId) &&
+                (movedNodeKeys.Contains(item.SourceNodeKey) ||
+                 movedNodeKeys.Contains(item.TargetNodeKey) ||
+                 (item.ProjectId == targetProjectId &&
+                  string.Equals(item.SourceNodeKey, targetRootNodeKey, StringComparison.Ordinal) &&
+                  movedRootKeys.Contains(item.TargetNodeKey))))
+            .ToListAsync(cancellationToken);
+        if (currentRelevantLinks.Count > 0)
+        {
+            dbContext.RemoveRange(currentRelevantLinks);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        foreach (var snapshot in linkSnapshots)
+        {
+            dbContext.Set<ProjectObjectLinkRecord>().Add(CloneProjectObjectLinkRecord(snapshot));
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static ProjectObjectRecord CloneProjectObjectRecord(ProjectObjectRecord record)
+    {
+        return new ProjectObjectRecord
+        {
+            Id = record.Id,
+            ProjectId = record.ProjectId,
+            NodeKey = record.NodeKey,
+            ObjectType = record.ObjectType,
+            Title = record.Title,
+            Subtitle = record.Subtitle,
+            Status = record.Status,
+            Notes = record.Notes,
+            Route = record.Route,
+            ExternalArtifactKind = record.ExternalArtifactKind,
+            ExternalArtifactId = record.ExternalArtifactId,
+            ObjectSubtype = record.ObjectSubtype,
+            MediaRelativePath = record.MediaRelativePath,
+            MediaContentType = record.MediaContentType,
+            MediaOriginalFileName = record.MediaOriginalFileName,
+            StorageObjectReferenceJson = record.StorageObjectReferenceJson,
+            ProgressMode = record.ProgressMode,
+            ProgressPercent = record.ProgressPercent,
+            MarkerIcon = record.MarkerIcon,
+            MarkerTone = record.MarkerTone,
+            MarkerLabel = record.MarkerLabel,
+            Priority = record.Priority,
+            MetadataJson = record.MetadataJson,
+            ParentNodeKey = record.ParentNodeKey,
+            PositionX = record.PositionX,
+            PositionY = record.PositionY,
+            StartUtc = record.StartUtc,
+            EndUtc = record.EndUtc,
+            DurationSeconds = record.DurationSeconds,
+            IsSystemManaged = record.IsSystemManaged,
+            CreatedAtUtc = record.CreatedAtUtc,
+            UpdatedAtUtc = record.UpdatedAtUtc
+        };
+    }
+
+    private static void RestoreProjectObjectRecord(ProjectObjectRecord current, ProjectObjectRecord snapshot)
+    {
+        current.ProjectId = snapshot.ProjectId;
+        current.NodeKey = snapshot.NodeKey;
+        current.ObjectType = snapshot.ObjectType;
+        current.Title = snapshot.Title;
+        current.Subtitle = snapshot.Subtitle;
+        current.Status = snapshot.Status;
+        current.Notes = snapshot.Notes;
+        current.Route = snapshot.Route;
+        current.ExternalArtifactKind = snapshot.ExternalArtifactKind;
+        current.ExternalArtifactId = snapshot.ExternalArtifactId;
+        current.ObjectSubtype = snapshot.ObjectSubtype;
+        current.MediaRelativePath = snapshot.MediaRelativePath;
+        current.MediaContentType = snapshot.MediaContentType;
+        current.MediaOriginalFileName = snapshot.MediaOriginalFileName;
+        current.StorageObjectReferenceJson = snapshot.StorageObjectReferenceJson;
+        current.ProgressMode = snapshot.ProgressMode;
+        current.ProgressPercent = snapshot.ProgressPercent;
+        current.MarkerIcon = snapshot.MarkerIcon;
+        current.MarkerTone = snapshot.MarkerTone;
+        current.MarkerLabel = snapshot.MarkerLabel;
+        current.Priority = snapshot.Priority;
+        current.MetadataJson = snapshot.MetadataJson;
+        current.ParentNodeKey = snapshot.ParentNodeKey;
+        current.PositionX = snapshot.PositionX;
+        current.PositionY = snapshot.PositionY;
+        current.StartUtc = snapshot.StartUtc;
+        current.EndUtc = snapshot.EndUtc;
+        current.DurationSeconds = snapshot.DurationSeconds;
+        current.IsSystemManaged = snapshot.IsSystemManaged;
+        current.CreatedAtUtc = snapshot.CreatedAtUtc;
+        current.UpdatedAtUtc = snapshot.UpdatedAtUtc;
+    }
+
+    private static ProjectObjectLinkRecord CloneProjectObjectLinkRecord(ProjectObjectLinkRecord link)
+    {
+        return new ProjectObjectLinkRecord
+        {
+            Id = link.Id,
+            ProjectId = link.ProjectId,
+            SourceNodeKey = link.SourceNodeKey,
+            TargetNodeKey = link.TargetNodeKey,
+            LinkKind = link.LinkKind,
+            IsSystemManaged = link.IsSystemManaged,
+            CreatedAtUtc = link.CreatedAtUtc
+        };
     }
 
     public async Task<ProjectStructureNode?> UpdateObjectMetadataAsync(

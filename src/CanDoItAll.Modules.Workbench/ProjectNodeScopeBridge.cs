@@ -9,14 +9,10 @@ internal sealed class ProjectNodeScopeBridge(IDbContextFactory<AppDbContext> dbC
 {
     public async Task<ProjectNodeScopeResolution> ResolveAsync(
         Guid projectId,
-        string nodeKey,
+        ProjectNodeReference nodeReference,
         CancellationToken cancellationToken = default)
     {
-        var normalizedNodeKey = nodeKey?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(normalizedNodeKey))
-        {
-            return new ProjectNodeScopeResolution(false, false, null, string.Empty);
-        }
+        var normalizedNodeKey = nodeReference.NodeKey;
 
         if (string.Equals(normalizedNodeKey, $"project:{projectId}", StringComparison.Ordinal))
         {

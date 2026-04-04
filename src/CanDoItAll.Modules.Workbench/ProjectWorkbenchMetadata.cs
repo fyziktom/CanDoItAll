@@ -194,15 +194,6 @@ public sealed class ProjectMarkerSetMetadata
     public List<ProjectNodeMarker> Markers { get; set; } = [];
 }
 
-public sealed class ProjectLinkedPartyReference
-{
-    public Guid PartyId { get; set; }
-
-    public string DisplayName { get; set; } = string.Empty;
-
-    public string PartyTypeLabel { get; set; } = string.Empty;
-}
-
 public sealed record ProjectNodeMarker(
     string Icon,
     string Tone,
@@ -225,10 +216,9 @@ public sealed class ProjectMeetingMetadata
     [ProjectStructurePreviewField("Map URL", 50)]
     public string MapUrl { get; set; } = string.Empty;
 
-    public List<ProjectLinkedPartyReference> RelatedParties { get; set; } = [];
-
+    [JsonPropertyName("relatedPartyNames")]
     [ProjectStructurePreviewField("Parties", 60)]
-    public string RelatedPartyNames { get; set; } = string.Empty;
+    public string RelatedPartySummary { get; set; } = string.Empty;
 
     public List<Guid> ParticipantIds { get; set; } = [];
 }
@@ -293,10 +283,9 @@ public sealed class ProjectParticipantMetadata
     [ProjectStructurePreviewField("Phone", 50)]
     public string Phone { get; set; } = string.Empty;
 
-    public Guid? LinkedPartyId { get; set; }
-
+    [JsonPropertyName("linkedPartyName")]
     [ProjectStructurePreviewField("Directory party", 60)]
-    public string LinkedPartyName { get; set; } = string.Empty;
+    public string LinkedPartyDisplayName { get; set; } = string.Empty;
 
     public Guid? ParentParticipantArtifactId { get; set; }
 }
@@ -328,10 +317,9 @@ public sealed class ProjectWorkItemMetadata
     [ProjectStructurePreviewField("Due", 70)]
     public DateTimeOffset? DueUtc { get; set; }
 
-    public Guid? AssigneePartyId { get; set; }
-
+    [JsonPropertyName("assigneePartyName")]
     [ProjectStructurePreviewField("Assignee party", 80)]
-    public string AssigneePartyName { get; set; } = string.Empty;
+    public string AssigneePartyDisplayName { get; set; } = string.Empty;
 }
 
 public sealed class ProjectRepositoryMetadata

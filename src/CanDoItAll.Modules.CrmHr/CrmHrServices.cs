@@ -4509,7 +4509,7 @@ public sealed class ProjectPartyIntegrationService(
 
     public async Task<Result> ReplaceNodeAssignmentsAsync(
         Guid projectId,
-        string nodeKey,
+        ProjectNodeReference nodeReference,
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
         CancellationToken cancellationToken = default)
@@ -4522,11 +4522,7 @@ public sealed class ProjectPartyIntegrationService(
             return Result.Failure(Error.Validation("Project is required.", "crmhr.project-assignment.project-required"));
         }
 
-        var normalizedNodeKey = nodeKey?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(normalizedNodeKey))
-        {
-            return Result.Failure(Error.Validation("A node is required for this assignment.", "crmhr.project-assignment.node-required"));
-        }
+        var normalizedNodeKey = nodeReference.NodeKey;
 
         var targetRoleSet = targetRoles
             .Distinct()
@@ -4687,10 +4683,10 @@ public sealed class ProjectPartyIntegrationService(
 
     public async Task DeleteAssignmentsForNodesAsync(
         Guid projectId,
-        IReadOnlyCollection<string> nodeKeys,
+        IReadOnlyCollection<ProjectNodeReference> nodeReferences,
         CancellationToken cancellationToken = default)
     {
-        var normalizedNodeKeys = NormalizeNodeKeys(nodeKeys);
+        var normalizedNodeKeys = NormalizeNodeKeys(nodeReferences);
         if (projectId == Guid.Empty || normalizedNodeKeys.Count == 0)
         {
             return;
@@ -4711,11 +4707,11 @@ public sealed class ProjectPartyIntegrationService(
 
     public async Task MoveAssignmentsToProjectAsync(
         Guid sourceProjectId,
-        IReadOnlyCollection<string> nodeKeys,
+        IReadOnlyCollection<ProjectNodeReference> nodeReferences,
         Guid targetProjectId,
         CancellationToken cancellationToken = default)
     {
-        var normalizedNodeKeys = NormalizeNodeKeys(nodeKeys);
+        var normalizedNodeKeys = NormalizeNodeKeys(nodeReferences);
         if (sourceProjectId == Guid.Empty ||
             targetProjectId == Guid.Empty ||
             sourceProjectId == targetProjectId ||
@@ -4905,7 +4901,10 @@ public sealed class ProjectPartyIntegrationService(
             return Error.Validation("A node is required for this assignment.", "crmhr.project-assignment.node-required");
         }
 
-        var nodeScope = await projectNodeScopeBridge.ResolveAsync(projectId, nodeKey, cancellationToken);
+        var nodeScope = await projectNodeScopeBridge.ResolveAsync(
+            projectId,
+            new ProjectNodeReference(nodeKey),
+            cancellationToken);
         if (!nodeScope.ExistsInProject)
         {
             return nodeScope.ExistsInOtherProject
@@ -4992,11 +4991,10 @@ public sealed class ProjectPartyIntegrationService(
             : null;
     }
 
-    private static List<string> NormalizeNodeKeys(IReadOnlyCollection<string> nodeKeys)
+    private static List<string> NormalizeNodeKeys(IReadOnlyCollection<ProjectNodeReference> nodeReferences)
     {
-        return nodeKeys
-            .Where(nodeKey => !string.IsNullOrWhiteSpace(nodeKey))
-            .Select(nodeKey => nodeKey.Trim())
+        return nodeReferences
+            .Select(nodeReference => nodeReference.NodeKey)
             .Distinct(StringComparer.Ordinal)
             .ToList();
     }

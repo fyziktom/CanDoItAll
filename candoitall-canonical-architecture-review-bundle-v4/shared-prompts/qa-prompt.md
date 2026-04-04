@@ -1,0 +1,1 @@
+Validate the next-wave canonical-model stabilization bundle with targeted build, component, integration, and Playwright proof. Focus on failure handling, structure-page party flows, projection summaries, and honest bundle closure.

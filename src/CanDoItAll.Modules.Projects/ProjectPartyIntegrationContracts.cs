@@ -118,6 +118,22 @@ public sealed class ProjectPartyAssignmentUpsertRequest
     public string Notes { get; set; } = string.Empty;
 }
 
+public readonly record struct ProjectNodeReference
+{
+    public ProjectNodeReference(string nodeKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(nodeKey);
+        NodeKey = nodeKey.Trim();
+    }
+
+    public string NodeKey { get; }
+
+    public override string ToString()
+    {
+        return NodeKey;
+    }
+}
+
 public sealed record ProjectNodeScopeResolution(
     bool ExistsInProject,
     bool ExistsInOtherProject,
@@ -128,7 +144,7 @@ public interface IProjectNodeScopeBridge
 {
     Task<ProjectNodeScopeResolution> ResolveAsync(
         Guid projectId,
-        string nodeKey,
+        ProjectNodeReference nodeReference,
         CancellationToken cancellationToken = default);
 }
 
@@ -156,7 +172,7 @@ public interface IProjectPartyIntegrationBridge
 
     Task<Result> ReplaceNodeAssignmentsAsync(
         Guid projectId,
-        string nodeKey,
+        ProjectNodeReference nodeReference,
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
         CancellationToken cancellationToken = default);
@@ -167,12 +183,12 @@ public interface IProjectPartyIntegrationBridge
 
     Task DeleteAssignmentsForNodesAsync(
         Guid projectId,
-        IReadOnlyCollection<string> nodeKeys,
+        IReadOnlyCollection<ProjectNodeReference> nodeReferences,
         CancellationToken cancellationToken = default);
 
     Task MoveAssignmentsToProjectAsync(
         Guid sourceProjectId,
-        IReadOnlyCollection<string> nodeKeys,
+        IReadOnlyCollection<ProjectNodeReference> nodeReferences,
         Guid targetProjectId,
         CancellationToken cancellationToken = default);
 
@@ -185,7 +201,7 @@ internal sealed class NoopProjectNodeScopeBridge : IProjectNodeScopeBridge
 {
     public Task<ProjectNodeScopeResolution> ResolveAsync(
         Guid projectId,
-        string nodeKey,
+        ProjectNodeReference nodeReference,
         CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new ProjectNodeScopeResolution(false, false, null, string.Empty));
@@ -233,7 +249,7 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
 
     public Task<Result> ReplaceNodeAssignmentsAsync(
         Guid projectId,
-        string nodeKey,
+        ProjectNodeReference nodeReference,
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
         CancellationToken cancellationToken = default)
@@ -252,7 +268,7 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
 
     public Task DeleteAssignmentsForNodesAsync(
         Guid projectId,
-        IReadOnlyCollection<string> nodeKeys,
+        IReadOnlyCollection<ProjectNodeReference> nodeReferences,
         CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
@@ -260,7 +276,7 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
 
     public Task MoveAssignmentsToProjectAsync(
         Guid sourceProjectId,
-        IReadOnlyCollection<string> nodeKeys,
+        IReadOnlyCollection<ProjectNodeReference> nodeReferences,
         Guid targetProjectId,
         CancellationToken cancellationToken = default)
     {

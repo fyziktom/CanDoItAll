@@ -73,7 +73,7 @@ internal static class ProjectStructureNodeDescriptor
                 AddIfValue(facts, "Repeat", HumanizeEnum(metadata.Meeting?.RepeatCadence));
                 AddIfValue(facts, "Join", metadata.Meeting?.MeetingUrl);
                 AddIfValue(facts, "Address", metadata.Meeting?.Address);
-                AddIfValue(facts, "Parties", metadata.Meeting?.RelatedPartyNames);
+                AddIfValue(facts, "Parties", metadata.Meeting?.RelatedPartySummary);
                 break;
             case ProjectObjectType.Recording:
                 AddIfValue(facts, "Source", metadata.Recording?.RecordingSource);
@@ -92,7 +92,7 @@ internal static class ProjectStructureNodeDescriptor
                 AddIfValue(facts, "Org", metadata.Participant?.Organization);
                 AddIfValue(facts, "Email", metadata.Participant?.Email);
                 AddIfValue(facts, "Phone", metadata.Participant?.Phone);
-                AddIfValue(facts, "Directory", metadata.Participant?.LinkedPartyName);
+                AddIfValue(facts, "Directory", metadata.Participant?.LinkedPartyDisplayName);
                 break;
             case ProjectObjectType.WorkItem:
                 AddIfValue(facts, "Kind", HumanizeEnum(metadata.WorkItem?.WorkItemKind));
@@ -102,7 +102,7 @@ internal static class ProjectStructureNodeDescriptor
                 AddIfValue(facts, "Amount", metadata.WorkItem?.Amount.HasValue == true
                     ? $"{metadata.WorkItem.Amount:0.##} {metadata.WorkItem.CurrencyCode}".Trim()
                     : string.Empty);
-                AddIfValue(facts, "Party", metadata.WorkItem?.AssigneePartyName);
+                AddIfValue(facts, "Party", metadata.WorkItem?.AssigneePartyDisplayName);
                 break;
             case ProjectObjectType.Repository:
                 AddIfValue(facts, "Mode", HumanizeToken(node.ObjectSubtype));

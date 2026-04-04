@@ -1260,6 +1260,73 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task DeleteObjectAsync_restores_workbench_subtree_when_assignment_cleanup_fails()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var partyDirectory = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var failingWorkbench = CreateWorkbenchService(
+            scope.ServiceProvider,
+            new ThrowingProjectPartyIntegrationBridge(bridge, failDeleteForNodes: true, failMoveForNodes: false));
+
+        var projectId = await CreateProjectAsync(projects, "Delete compensation");
+        var participantPartyId = await CreatePartyAsync(partyDirectory, PartyType.Person, "Delete compensation owner");
+        var parentBlock = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Delete branch",
+                string.Empty,
+                "Rollback should restore this subtree.",
+                $"project:{projectId}",
+                360,
+                220,
+                null,
+                null,
+                "implementation"));
+        var participantNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Participant,
+                "Delete participant",
+                string.Empty,
+                "Child node should remain after compensation.",
+                parentBlock.Id,
+                560,
+                260,
+                null,
+                null,
+                "freelancer"));
+
+        Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = participantPartyId,
+            Role = ProjectPartyAssignmentRole.TeamMember,
+            NodeKey = participantNode.Id,
+            IsPrimary = true,
+            Source = "integration-tests"
+        })).IsSuccess);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            failingWorkbench.DeleteObjectAsync(projectId, parentBlock.Id));
+
+        Assert.Contains("restored", exception.Message, StringComparison.OrdinalIgnoreCase);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        Assert.Contains(surface.Nodes, node => string.Equals(node.Id, parentBlock.Id, StringComparison.Ordinal));
+        Assert.Contains(surface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
+
+        var assignments = await bridge.ListAssignmentsDetailedAsync(projectId);
+        Assert.Contains(assignments, item =>
+            string.Equals(item.NodeKey, participantNode.Id, StringComparison.Ordinal) &&
+            item.PartyId == participantPartyId);
+    }
+
+    [Fact]
     public async Task MoveDescendantsToProjectAsync_moves_canonical_node_assignments_into_target_project()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -1353,6 +1420,80 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             item.Role == ProjectPartyAssignmentRole.WorkItemAssignee);
     }
 
+    [Fact]
+    public async Task MoveDescendantsToProjectAsync_restores_workbench_state_when_assignment_transfer_fails()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var partyDirectory = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var failingWorkbench = CreateWorkbenchService(
+            scope.ServiceProvider,
+            new ThrowingProjectPartyIntegrationBridge(bridge, failDeleteForNodes: false, failMoveForNodes: true));
+
+        var sourceProjectId = await CreateProjectAsync(projects, "Move compensation source");
+        var targetProjectId = await CreateProjectAsync(projects, "Move compensation target");
+        var participantPartyId = await CreatePartyAsync(partyDirectory, PartyType.Person, "Move compensation owner");
+
+        var parentBlock = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Move branch",
+                string.Empty,
+                "Parent block stays put when compensation runs.",
+                $"project:{sourceProjectId}",
+                360,
+                220,
+                null,
+                null,
+                "implementation"));
+        var participantNode = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Participant,
+                "Move participant",
+                string.Empty,
+                "Moved child should return to source project after compensation.",
+                parentBlock.Id,
+                560,
+                260,
+                null,
+                null,
+                "freelancer"));
+
+        Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = sourceProjectId,
+            PartyId = participantPartyId,
+            Role = ProjectPartyAssignmentRole.TeamMember,
+            NodeKey = participantNode.Id,
+            IsPrimary = true,
+            Source = "integration-tests"
+        })).IsSuccess);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            failingWorkbench.MoveDescendantsToProjectAsync(sourceProjectId, parentBlock.Id, targetProjectId));
+
+        Assert.Contains("canonical assignment reconciliation", exception.Message, StringComparison.OrdinalIgnoreCase);
+
+        var sourceSurface = await workbench.GetStructureAsync(sourceProjectId);
+        Assert.Contains(sourceSurface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
+
+        var targetSurface = await workbench.GetStructureAsync(targetProjectId);
+        Assert.DoesNotContain(targetSurface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
+
+        var sourceAssignments = await bridge.ListAssignmentsDetailedAsync(sourceProjectId);
+        Assert.Contains(sourceAssignments, item =>
+            string.Equals(item.NodeKey, participantNode.Id, StringComparison.Ordinal) &&
+            item.PartyId == participantPartyId);
+
+        var targetAssignments = await bridge.ListAssignmentsDetailedAsync(targetProjectId);
+        Assert.DoesNotContain(targetAssignments, item => string.Equals(item.NodeKey, participantNode.Id, StringComparison.Ordinal));
+    }
+
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {
         var result = await projectsService.SaveAsync(new ProjectEditorModel
@@ -1382,6 +1523,104 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         return result.Value;
     }
 
+    private static ProjectWorkbenchService CreateWorkbenchService(
+        IServiceProvider serviceProvider,
+        IProjectPartyIntegrationBridge bridge)
+    {
+        return new ProjectWorkbenchService(
+            serviceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>(),
+            serviceProvider.GetRequiredService<IClock>(),
+            serviceProvider.GetRequiredService<IStoragePlacementService>(),
+            serviceProvider.GetRequiredService<PromptFactoryService>(),
+            bridge);
+    }
+
     private static string BuildProjectRootNodeKey(Guid projectId)
         => $"project:{projectId}";
+
+    private sealed class ThrowingProjectPartyIntegrationBridge(
+        IProjectPartyIntegrationBridge inner,
+        bool failDeleteForNodes,
+        bool failMoveForNodes) : IProjectPartyIntegrationBridge
+    {
+        public Task<IReadOnlyDictionary<Guid, ProjectPortfolioPartyContext>> GetPortfolioContextsAsync(
+            IReadOnlyCollection<Guid> projectIds,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.GetPortfolioContextsAsync(projectIds, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<ProjectPartyOption>> ListPartyOptionsAsync(
+            Guid projectId,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.ListPartyOptionsAsync(projectId, cancellationToken);
+        }
+
+        public Task<ProjectPartyOption?> GetPartyOptionAsync(
+            Guid partyId,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.GetPartyOptionAsync(partyId, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedAsync(
+            Guid projectId,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.ListAssignmentsDetailedAsync(projectId, cancellationToken);
+        }
+
+        public Task<Result<Guid>> SaveAssignmentAsync(
+            ProjectPartyAssignmentUpsertRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.SaveAssignmentAsync(request, cancellationToken);
+        }
+
+        public Task<Result> ReplaceNodeAssignmentsAsync(
+            Guid projectId,
+            ProjectNodeReference nodeReference,
+            IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
+            IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.ReplaceNodeAssignmentsAsync(projectId, nodeReference, desiredAssignments, targetRoles, cancellationToken);
+        }
+
+        public Task DeleteAssignmentAsync(
+            Guid assignmentId,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.DeleteAssignmentAsync(assignmentId, cancellationToken);
+        }
+
+        public Task DeleteAssignmentsForNodesAsync(
+            Guid projectId,
+            IReadOnlyCollection<ProjectNodeReference> nodeReferences,
+            CancellationToken cancellationToken = default)
+        {
+            return failDeleteForNodes
+                ? Task.FromException(new InvalidOperationException("Simulated canonical delete failure."))
+                : inner.DeleteAssignmentsForNodesAsync(projectId, nodeReferences, cancellationToken);
+        }
+
+        public Task MoveAssignmentsToProjectAsync(
+            Guid sourceProjectId,
+            IReadOnlyCollection<ProjectNodeReference> nodeReferences,
+            Guid targetProjectId,
+            CancellationToken cancellationToken = default)
+        {
+            return failMoveForNodes
+                ? Task.FromException(new InvalidOperationException("Simulated canonical move failure."))
+                : inner.MoveAssignmentsToProjectAsync(sourceProjectId, nodeReferences, targetProjectId, cancellationToken);
+        }
+
+        public Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
+            ProjectPartyQuickCreateRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.CreatePartyAsync(request, cancellationToken);
+        }
+    }
 }

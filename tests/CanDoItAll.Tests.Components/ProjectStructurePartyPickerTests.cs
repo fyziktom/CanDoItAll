@@ -73,8 +73,7 @@ public sealed class ProjectStructurePartyPickerTests
         });
 
         var metadata = await ReadParticipantMetadataAsync(workbenchService, projectId, participantNode.Id);
-        Assert.Equal(partyId, metadata.LinkedPartyId);
-        Assert.Equal("Linked Freelancer", metadata.LinkedPartyName);
+        Assert.Equal("Linked Freelancer", metadata.LinkedPartyDisplayName);
         Assert.Contains(await bridge.ListAssignmentsDetailedAsync(projectId), item => item.NodeKey == participantNode.Id && item.PartyId == partyId);
 
         cut.Find("[data-testid='project-structure-participant-local-only']").Change(true);
@@ -86,7 +85,7 @@ public sealed class ProjectStructurePartyPickerTests
         });
 
         metadata = await ReadParticipantMetadataAsync(workbenchService, projectId, participantNode.Id);
-        Assert.Null(metadata.LinkedPartyId);
+        Assert.Equal(string.Empty, metadata.LinkedPartyDisplayName);
         Assert.DoesNotContain(await bridge.ListAssignmentsDetailedAsync(projectId), item => item.NodeKey == participantNode.Id);
     }
 
@@ -174,8 +173,8 @@ public sealed class ProjectStructurePartyPickerTests
         });
 
         var meetingMetadata = await ReadMeetingMetadataAsync(workbenchService, projectId, meetingNode.Id);
-        Assert.Contains("Meeting Customer", meetingMetadata.RelatedPartyNames);
-        Assert.Contains("Meeting Owner", meetingMetadata.RelatedPartyNames);
+        Assert.Contains("Meeting Customer", meetingMetadata.RelatedPartySummary);
+        Assert.Contains("Meeting Owner", meetingMetadata.RelatedPartySummary);
 
         cut.FindAll("button")
             .First(button => button.TextContent.Contains("Prepare recap", StringComparison.Ordinal))
@@ -193,8 +192,7 @@ public sealed class ProjectStructurePartyPickerTests
         });
 
         var workItemMetadata = await ReadWorkItemMetadataAsync(workbenchService, projectId, workItemNode.Id);
-        Assert.Equal(ownerId, workItemMetadata.AssigneePartyId);
-        Assert.Equal("Meeting Owner", workItemMetadata.AssigneePartyName);
+        Assert.Equal("Meeting Owner", workItemMetadata.AssigneePartyDisplayName);
         Assert.Contains(await bridge.ListAssignmentsDetailedAsync(projectId), item => item.NodeKey == workItemNode.Id && item.Role == ProjectPartyAssignmentRole.WorkItemAssignee);
     }
 
@@ -327,8 +325,7 @@ public sealed class ProjectStructurePartyPickerTests
         });
 
         var participantMetadata = await ReadParticipantMetadataAsync(workbenchService, projectId, participantNode.Id);
-        Assert.Equal(participantPartyId, participantMetadata.LinkedPartyId);
-        Assert.Equal("Canonical Participant", participantMetadata.LinkedPartyName);
+        Assert.Equal("Canonical Participant", participantMetadata.LinkedPartyDisplayName);
 
         cut.FindAll("button")
             .First(button => button.TextContent.Contains("Stale meeting node", StringComparison.Ordinal))
@@ -344,8 +341,8 @@ public sealed class ProjectStructurePartyPickerTests
         });
 
         var meetingMetadata = await ReadMeetingMetadataAsync(workbenchService, projectId, meetingNode.Id);
-        Assert.Contains("Canonical Meeting Customer", meetingMetadata.RelatedPartyNames);
-        Assert.Contains("Canonical Meeting Owner", meetingMetadata.RelatedPartyNames);
+        Assert.Contains("Canonical Meeting Customer", meetingMetadata.RelatedPartySummary);
+        Assert.Contains("Canonical Meeting Owner", meetingMetadata.RelatedPartySummary);
 
         cut.FindAll("button")
             .First(button => button.TextContent.Contains("Stale work item node", StringComparison.Ordinal))
@@ -361,8 +358,7 @@ public sealed class ProjectStructurePartyPickerTests
         });
 
         var workItemMetadata = await ReadWorkItemMetadataAsync(workbenchService, projectId, workItemNode.Id);
-        Assert.Equal(workItemPartyId, workItemMetadata.AssigneePartyId);
-        Assert.Equal("Canonical Work Owner", workItemMetadata.AssigneePartyName);
+        Assert.Equal("Canonical Work Owner", workItemMetadata.AssigneePartyDisplayName);
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)

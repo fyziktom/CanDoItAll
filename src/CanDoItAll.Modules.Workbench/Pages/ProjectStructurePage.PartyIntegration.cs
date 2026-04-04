@@ -255,8 +255,7 @@ public partial class ProjectStructurePage
                     return;
                 }
 
-                metadata.Participant.LinkedPartyId = null;
-                metadata.Participant.LinkedPartyName = string.Empty;
+                metadata.Participant.LinkedPartyDisplayName = string.Empty;
                 await SaveNodeMetadataAsync(selectedNode, metadata);
                 SetPartyEditorMessage("Participant kept project-local only.", "neutral");
                 return;
@@ -269,8 +268,7 @@ public partial class ProjectStructurePage
                 return;
             }
 
-            metadata.Participant.LinkedPartyId = option.PartyId;
-            metadata.Participant.LinkedPartyName = option.DisplayName;
+            metadata.Participant.LinkedPartyDisplayName = option.DisplayName;
             metadata.Participant.Email = option.PrimaryEmail;
             metadata.Participant.Phone = option.PrimaryPhone;
             if (string.IsNullOrWhiteSpace(metadata.Participant.Organization))
@@ -350,15 +348,7 @@ public partial class ProjectStructurePage
                 return;
             }
 
-            metadata.Meeting.RelatedParties = selectedOptions
-                .Select(option => new ProjectLinkedPartyReference
-                {
-                    PartyId = option.PartyId,
-                    DisplayName = option.DisplayName,
-                    PartyTypeLabel = option.PartyTypeLabel
-                })
-                .ToList();
-            metadata.Meeting.RelatedPartyNames = string.Join(", ", selectedOptions.Select(option => option.DisplayName));
+            metadata.Meeting.RelatedPartySummary = string.Join(", ", selectedOptions.Select(option => option.DisplayName));
             await SaveNodeMetadataAsync(selectedNode, metadata);
             SetPartyEditorMessage("Meeting parties saved.", "mint");
         }
@@ -387,8 +377,7 @@ public partial class ProjectStructurePage
                     return;
                 }
 
-                metadata.WorkItem.AssigneePartyId = null;
-                metadata.WorkItem.AssigneePartyName = string.Empty;
+                metadata.WorkItem.AssigneePartyDisplayName = string.Empty;
                 await SaveNodeMetadataAsync(selectedNode, metadata);
                 SetPartyEditorMessage("Central work-item assignee cleared.", "neutral");
                 return;
@@ -419,8 +408,7 @@ public partial class ProjectStructurePage
                 return;
             }
 
-            metadata.WorkItem.AssigneePartyId = option.PartyId;
-            metadata.WorkItem.AssigneePartyName = option.DisplayName;
+            metadata.WorkItem.AssigneePartyDisplayName = option.DisplayName;
             await SaveNodeMetadataAsync(selectedNode, metadata);
             SetPartyEditorMessage("Work-item assignee saved.", "mint");
         }
@@ -450,7 +438,7 @@ public partial class ProjectStructurePage
     {
         var result = await ProjectPartyIntegrationBridge.ReplaceNodeAssignmentsAsync(
             ProjectId,
-            nodeKey,
+            new ProjectNodeReference(nodeKey),
             desiredAssignments,
             targetRoles);
         if (result.IsFailure)
