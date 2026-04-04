@@ -154,8 +154,26 @@ public interface IProjectPartyIntegrationBridge
         ProjectPartyAssignmentUpsertRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<Result> ReplaceNodeAssignmentsAsync(
+        Guid projectId,
+        string nodeKey,
+        IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
+        IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
+        CancellationToken cancellationToken = default);
+
     Task DeleteAssignmentAsync(
         Guid assignmentId,
+        CancellationToken cancellationToken = default);
+
+    Task DeleteAssignmentsForNodesAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        CancellationToken cancellationToken = default);
+
+    Task MoveAssignmentsToProjectAsync(
+        Guid sourceProjectId,
+        IReadOnlyCollection<string> nodeKeys,
+        Guid targetProjectId,
         CancellationToken cancellationToken = default);
 
     Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
@@ -213,8 +231,37 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
             "projects.party-integration-unavailable")));
     }
 
+    public Task<Result> ReplaceNodeAssignmentsAsync(
+        Guid projectId,
+        string nodeKey,
+        IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
+        IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(Result.Failure(Error.Failure(
+            "Project-party integration is not available.",
+            "projects.party-integration-unavailable")));
+    }
+
     public Task DeleteAssignmentAsync(
         Guid assignmentId,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAssignmentsForNodesAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task MoveAssignmentsToProjectAsync(
+        Guid sourceProjectId,
+        IReadOnlyCollection<string> nodeKeys,
+        Guid targetProjectId,
         CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;

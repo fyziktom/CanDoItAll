@@ -144,7 +144,6 @@ public partial class ProjectStructurePage
         {
             partyEditorOptions = await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(ProjectId);
             projectPartyAssignments = await ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(ProjectId);
-            var metadata = ProjectObjectMetadataSerializer.Parse(selectedNode.MetadataJson);
             partyEditor = new ProjectStructurePartyEditorState
             {
                 QuickCreate = new ProjectPartyQuickCreateRequest
@@ -157,17 +156,17 @@ public partial class ProjectStructurePage
             switch (selectedNode.ObjectType)
             {
                 case ProjectObjectType.Participant:
-                    partyEditor.SelectedPartyId = metadata.Participant?.LinkedPartyId;
-                    partyEditor.KeepProjectLocalOnly = metadata.Participant?.LinkedPartyId is null;
+                    partyEditor.SelectedPartyId = ResolvePrimaryNodeAssignment(selectedNode.Id, ResolveNodeAssignmentRoles(selectedNode))?.PartyId;
+                    partyEditor.KeepProjectLocalOnly = !partyEditor.SelectedPartyId.HasValue;
                     break;
                 case ProjectObjectType.Meeting:
-                    foreach (var item in metadata.Meeting?.RelatedParties ?? [])
+                    foreach (var item in ResolveNodeAssignments(selectedNode.Id, [ProjectPartyAssignmentRole.MeetingParticipant]))
                     {
                         partyEditor.SelectedMeetingPartyIds.Add(item.PartyId);
                     }
                     break;
                 case ProjectObjectType.WorkItem:
-                    partyEditor.SelectedPartyId = metadata.WorkItem?.AssigneePartyId;
+                    partyEditor.SelectedPartyId = ResolvePrimaryNodeAssignment(selectedNode.Id, [ProjectPartyAssignmentRole.WorkItemAssignee])?.PartyId;
                     break;
             }
         }
@@ -251,10 +250,14 @@ public partial class ProjectStructurePage
             metadata.Participant ??= new ProjectParticipantMetadata();
             if (partyEditor.KeepProjectLocalOnly || !partyEditor.SelectedPartyId.HasValue)
             {
+                if (!await ReplaceNodeAssignmentsAsync(selectedNode.Id, [], ResolveNodeAssignmentRoles(selectedNode)))
+                {
+                    return;
+                }
+
                 metadata.Participant.LinkedPartyId = null;
                 metadata.Participant.LinkedPartyName = string.Empty;
                 await SaveNodeMetadataAsync(selectedNode, metadata);
-                await ReplaceNodeAssignmentsAsync(selectedNode.Id, [], ResolveNodeAssignmentRoles(selectedNode));
                 SetPartyEditorMessage("Participant kept project-local only.", "neutral");
                 return;
             }
@@ -275,6 +278,24 @@ public partial class ProjectStructurePage
                 metadata.Participant.Organization = option.PartyTypeLabel;
             }
 
+            if (!await ReplaceNodeAssignmentsAsync(
+                    selectedNode.Id,
+                    [
+                        new ProjectPartyAssignmentUpsertRequest
+                        {
+                            ProjectId = ProjectId,
+                            PartyId = option.PartyId,
+                            Role = ResolveParticipantRole(selectedNode),
+                            NodeKey = selectedNode.Id,
+                            IsPrimary = true,
+                            Source = "project-structure"
+                        }
+                    ],
+                    ResolveNodeAssignmentRoles(selectedNode)))
+            {
+                return;
+            }
+
             var updatedNode = await ProjectWorkbenchService.UpdateObjectAsync(
                 ProjectId,
                 selectedNode.Id,
@@ -290,20 +311,6 @@ public partial class ProjectStructurePage
                 await ApplySurfaceNodeUpdatesAsync([updatedNode]);
             }
 
-            await ReplaceNodeAssignmentsAsync(
-                selectedNode.Id,
-                [
-                    new ProjectPartyAssignmentUpsertRequest
-                    {
-                        ProjectId = ProjectId,
-                        PartyId = option.PartyId,
-                        Role = ResolveParticipantRole(selectedNode),
-                        NodeKey = selectedNode.Id,
-                        IsPrimary = true,
-                        Source = "project-structure"
-                    }
-                ],
-                ResolveNodeAssignmentRoles(selectedNode));
             SetPartyEditorMessage("Participant linked to the directory.", "mint");
         }
         finally
@@ -327,6 +334,22 @@ public partial class ProjectStructurePage
             var selectedOptions = partyEditorOptions
                 .Where(option => partyEditor.SelectedMeetingPartyIds.Contains(option.PartyId))
                 .ToList();
+            if (!await ReplaceNodeAssignmentsAsync(
+                    selectedNode.Id,
+                    selectedOptions.Select((option, index) => new ProjectPartyAssignmentUpsertRequest
+                    {
+                        ProjectId = ProjectId,
+                        PartyId = option.PartyId,
+                        Role = ProjectPartyAssignmentRole.MeetingParticipant,
+                        NodeKey = selectedNode.Id,
+                        IsPrimary = index == 0,
+                        Source = "project-structure"
+                    }).ToList(),
+                    [ProjectPartyAssignmentRole.MeetingParticipant]))
+            {
+                return;
+            }
+
             metadata.Meeting.RelatedParties = selectedOptions
                 .Select(option => new ProjectLinkedPartyReference
                 {
@@ -337,18 +360,6 @@ public partial class ProjectStructurePage
                 .ToList();
             metadata.Meeting.RelatedPartyNames = string.Join(", ", selectedOptions.Select(option => option.DisplayName));
             await SaveNodeMetadataAsync(selectedNode, metadata);
-            await ReplaceNodeAssignmentsAsync(
-                selectedNode.Id,
-                selectedOptions.Select((option, index) => new ProjectPartyAssignmentUpsertRequest
-                {
-                    ProjectId = ProjectId,
-                    PartyId = option.PartyId,
-                    Role = ProjectPartyAssignmentRole.MeetingParticipant,
-                    NodeKey = selectedNode.Id,
-                    IsPrimary = index == 0,
-                    Source = "project-structure"
-                }).ToList(),
-                [ProjectPartyAssignmentRole.MeetingParticipant]);
             SetPartyEditorMessage("Meeting parties saved.", "mint");
         }
         finally
@@ -371,10 +382,14 @@ public partial class ProjectStructurePage
             metadata.WorkItem ??= new ProjectWorkItemMetadata();
             if (!partyEditor.SelectedPartyId.HasValue)
             {
+                if (!await ReplaceNodeAssignmentsAsync(selectedNode.Id, [], [ProjectPartyAssignmentRole.WorkItemAssignee]))
+                {
+                    return;
+                }
+
                 metadata.WorkItem.AssigneePartyId = null;
                 metadata.WorkItem.AssigneePartyName = string.Empty;
                 await SaveNodeMetadataAsync(selectedNode, metadata);
-                await ReplaceNodeAssignmentsAsync(selectedNode.Id, [], [ProjectPartyAssignmentRole.WorkItemAssignee]);
                 SetPartyEditorMessage("Central work-item assignee cleared.", "neutral");
                 return;
             }
@@ -386,23 +401,27 @@ public partial class ProjectStructurePage
                 return;
             }
 
+            if (!await ReplaceNodeAssignmentsAsync(
+                    selectedNode.Id,
+                    [
+                        new ProjectPartyAssignmentUpsertRequest
+                        {
+                            ProjectId = ProjectId,
+                            PartyId = option.PartyId,
+                            Role = ProjectPartyAssignmentRole.WorkItemAssignee,
+                            NodeKey = selectedNode.Id,
+                            IsPrimary = true,
+                            Source = "project-structure"
+                        }
+                    ],
+                    [ProjectPartyAssignmentRole.WorkItemAssignee]))
+            {
+                return;
+            }
+
             metadata.WorkItem.AssigneePartyId = option.PartyId;
             metadata.WorkItem.AssigneePartyName = option.DisplayName;
             await SaveNodeMetadataAsync(selectedNode, metadata);
-            await ReplaceNodeAssignmentsAsync(
-                selectedNode.Id,
-                [
-                    new ProjectPartyAssignmentUpsertRequest
-                    {
-                        ProjectId = ProjectId,
-                        PartyId = option.PartyId,
-                        Role = ProjectPartyAssignmentRole.WorkItemAssignee,
-                        NodeKey = selectedNode.Id,
-                        IsPrimary = true,
-                        Source = "project-structure"
-                    }
-                ],
-                [ProjectPartyAssignmentRole.WorkItemAssignee]);
             SetPartyEditorMessage("Work-item assignee saved.", "mint");
         }
         finally
@@ -424,26 +443,46 @@ public partial class ProjectStructurePage
         }
     }
 
-    private async Task ReplaceNodeAssignmentsAsync(
+    private async Task<bool> ReplaceNodeAssignmentsAsync(
         string nodeKey,
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyList<ProjectPartyAssignmentRole> targetRoles)
     {
-        foreach (var existingAssignment in projectPartyAssignments
-                     .Where(item =>
-                         string.Equals(item.NodeKey, nodeKey, StringComparison.Ordinal) &&
-                         targetRoles.Contains(item.Role))
-                     .ToList())
+        var result = await ProjectPartyIntegrationBridge.ReplaceNodeAssignmentsAsync(
+            ProjectId,
+            nodeKey,
+            desiredAssignments,
+            targetRoles);
+        if (result.IsFailure)
         {
-            await ProjectPartyIntegrationBridge.DeleteAssignmentAsync(existingAssignment.Id);
-        }
-
-        foreach (var desiredAssignment in desiredAssignments)
-        {
-            await ProjectPartyIntegrationBridge.SaveAssignmentAsync(desiredAssignment);
+            SetPartyEditorMessage(
+                result.Errors.FirstOrDefault()?.Message ?? "Unable to save the canonical party assignments.",
+                "danger");
+            return false;
         }
 
         projectPartyAssignments = await ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(ProjectId);
+        return true;
+    }
+
+    private IReadOnlyList<ProjectPartyAssignmentDetail> ResolveNodeAssignments(
+        string nodeKey,
+        IReadOnlyList<ProjectPartyAssignmentRole> roles)
+    {
+        return projectPartyAssignments
+            .Where(item =>
+                string.Equals(item.NodeKey, nodeKey, StringComparison.Ordinal) &&
+                roles.Contains(item.Role))
+            .OrderByDescending(item => item.IsPrimary)
+            .ThenBy(item => item.PartyDisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private ProjectPartyAssignmentDetail? ResolvePrimaryNodeAssignment(
+        string nodeKey,
+        IReadOnlyList<ProjectPartyAssignmentRole> roles)
+    {
+        return ResolveNodeAssignments(nodeKey, roles).FirstOrDefault();
     }
 
     private static IReadOnlyList<ProjectPartyAssignmentRole> ResolveNodeAssignmentRoles(ProjectStructureNode node)

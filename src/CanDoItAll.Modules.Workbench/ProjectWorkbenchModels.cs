@@ -312,10 +312,11 @@ inputs: project id, command requests, graph mutations
 outputs: ProjectStructureSurface, ProjectCalendarSurface, ArtifactReference
 */
 public sealed class ProjectWorkbenchService(
-    IDbContextFactory<AppDbContext> dbContextFactory,
-    IClock clock,
-    IStoragePlacementService storagePlacementService,
-    PromptFactoryService promptFactoryService) : IProjectWorkbenchSeedService
+IDbContextFactory<AppDbContext> dbContextFactory,
+IClock clock,
+IStoragePlacementService storagePlacementService,
+PromptFactoryService promptFactoryService,
+IProjectPartyIntegrationBridge projectPartyIntegrationBridge) : IProjectWorkbenchSeedService
 {
     private static readonly ProjectStructureInvariantService InvariantService = new();
     private const string ProjectRootNodePrefix = "project:";
@@ -713,6 +714,10 @@ public sealed class ProjectWorkbenchService(
             .ToList();
         dbContext.RemoveRange(recordsToDelete);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await projectPartyIntegrationBridge.DeleteAssignmentsForNodesAsync(
+            projectId,
+            keysToDelete.ToList(),
+            cancellationToken);
         return recordsToDelete.Count;
     }
 
@@ -1059,6 +1064,11 @@ public sealed class ProjectWorkbenchService(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await projectPartyIntegrationBridge.MoveAssignmentsToProjectAsync(
+            sourceProjectId,
+            movedNodeKeys.ToList(),
+            targetProjectId,
+            cancellationToken);
         return new ProjectStructureSubprojectTransferResult(targetProjectId, movedNodeKeys.Count, movedRootKeys.Count);
     }
 

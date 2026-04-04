@@ -4507,6 +4507,170 @@ public sealed class ProjectPartyIntegrationService(
         return Result<Guid>.Success(entity.Id);
     }
 
+    public async Task<Result> ReplaceNodeAssignmentsAsync(
+        Guid projectId,
+        string nodeKey,
+        IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
+        IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(desiredAssignments);
+        ArgumentNullException.ThrowIfNull(targetRoles);
+
+        if (projectId == Guid.Empty)
+        {
+            return Result.Failure(Error.Validation("Project is required.", "crmhr.project-assignment.project-required"));
+        }
+
+        var normalizedNodeKey = nodeKey?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedNodeKey))
+        {
+            return Result.Failure(Error.Validation("A node is required for this assignment.", "crmhr.project-assignment.node-required"));
+        }
+
+        var targetRoleSet = targetRoles
+            .Distinct()
+            .ToHashSet();
+        if (targetRoleSet.Count == 0)
+        {
+            return desiredAssignments.Count == 0
+                ? Result.Success()
+                : Result.Failure(Error.Validation(
+                    "At least one assignment role must be supplied.",
+                    "crmhr.project-assignment.target-roles-required"));
+        }
+
+        if (desiredAssignments.Any(item => !targetRoleSet.Contains(item.Role)))
+        {
+            return Result.Failure(Error.Validation(
+                "Desired assignments included a role outside the replacement scope.",
+                "crmhr.project-assignment.target-role-mismatch"));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var projectExists = await dbContext.Set<Project>()
+            .AnyAsync(item => item.Id == projectId, cancellationToken);
+        if (!projectExists)
+        {
+            return Result.Failure(Error.Validation("Project was not found.", "crmhr.project-assignment.project-not-found"));
+        }
+
+        var desiredPartyIds = desiredAssignments
+            .Select(item => item.PartyId)
+            .Distinct()
+            .ToList();
+        if (desiredPartyIds.Any(id => id == Guid.Empty))
+        {
+            return Result.Failure(Error.Validation("Party is required.", "crmhr.project-assignment.party-required"));
+        }
+
+        if (desiredPartyIds.Count > 0)
+        {
+            var existingPartyIds = await dbContext.Set<Party>()
+                .Where(item => desiredPartyIds.Contains(item.Id))
+                .Select(item => item.Id)
+                .ToListAsync(cancellationToken);
+            var existingPartyIdSet = existingPartyIds.ToHashSet();
+            if (desiredPartyIds.Any(id => !existingPartyIdSet.Contains(id)))
+            {
+                return Result.Failure(Error.Validation("Party was not found.", "crmhr.project-assignment.party-not-found"));
+            }
+        }
+
+        foreach (var desiredAssignment in desiredAssignments)
+        {
+            if (desiredAssignment.ProjectId != Guid.Empty && desiredAssignment.ProjectId != projectId)
+            {
+                return Result.Failure(Error.Validation(
+                    "Desired assignments must target the same project.",
+                    "crmhr.project-assignment.project-mismatch"));
+            }
+
+            var assignmentNodeKey = desiredAssignment.NodeKey?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(assignmentNodeKey) &&
+                !string.Equals(assignmentNodeKey, normalizedNodeKey, StringComparison.Ordinal))
+            {
+                return Result.Failure(Error.Validation(
+                    "Desired assignments must target the same node.",
+                    "crmhr.project-assignment.node-mismatch"));
+            }
+
+            var nodeScopeError = await ValidateNodeScopeAsync(
+                desiredAssignment.Role,
+                projectId,
+                normalizedNodeKey,
+                cancellationToken);
+            if (nodeScopeError is not null)
+            {
+                return Result.Failure(nodeScopeError);
+            }
+        }
+
+        var targetAssignmentKinds = targetRoleSet
+            .Select(MapRole)
+            .Distinct()
+            .ToList();
+        var existingAssignments = await dbContext.Set<ProjectPartyAssignment>()
+            .Where(item =>
+                item.ProjectId == projectId &&
+                item.NodeKey == normalizedNodeKey &&
+                targetAssignmentKinds.Contains(item.AssignmentKind))
+            .ToListAsync(cancellationToken);
+        if (existingAssignments.Count > 0)
+        {
+            dbContext.RemoveRange(existingAssignments);
+        }
+
+        var desiredAssignmentItems = desiredAssignments
+            .Select((request, index) => new
+            {
+                Request = request,
+                Index = index,
+                AssignmentKind = MapRole(request.Role)
+            })
+            .ToList();
+        var explicitPrimaryKinds = desiredAssignmentItems
+            .Where(item => item.Request.IsPrimary)
+            .Select(item => item.AssignmentKind)
+            .ToHashSet();
+        var emittedPrimaryKinds = new HashSet<ProjectPartyAssignmentKind>();
+
+        foreach (var desiredAssignment in desiredAssignmentItems.OrderBy(item => item.Index))
+        {
+            var isPrimary = desiredAssignment.Request.IsPrimary;
+            if (emittedPrimaryKinds.Contains(desiredAssignment.AssignmentKind))
+            {
+                isPrimary = false;
+            }
+            else if (!explicitPrimaryKinds.Contains(desiredAssignment.AssignmentKind))
+            {
+                isPrimary = true;
+            }
+
+            if (isPrimary)
+            {
+                emittedPrimaryKinds.Add(desiredAssignment.AssignmentKind);
+            }
+
+            dbContext.Set<ProjectPartyAssignment>().Add(new ProjectPartyAssignment
+            {
+                ProjectId = projectId,
+                PartyId = desiredAssignment.Request.PartyId,
+                AssignmentKind = desiredAssignment.AssignmentKind,
+                NodeKey = normalizedNodeKey,
+                IsPrimary = isPrimary,
+                AllocationPercent = desiredAssignment.Request.AllocationPercent,
+                StartsAtUtc = ToUtcDate(desiredAssignment.Request.StartsOn),
+                EndsAtUtc = ToUtcDate(desiredAssignment.Request.EndsOn),
+                Source = string.IsNullOrWhiteSpace(desiredAssignment.Request.Source) ? "crm-hr-ui" : desiredAssignment.Request.Source.Trim(),
+                Notes = desiredAssignment.Request.Notes?.Trim() ?? string.Empty
+            });
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+
     public async Task DeleteAssignmentAsync(Guid assignmentId, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -4518,6 +4682,78 @@ public sealed class ProjectPartyIntegrationService(
         }
 
         dbContext.Set<ProjectPartyAssignment>().Remove(entity);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteAssignmentsForNodesAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedNodeKeys = NormalizeNodeKeys(nodeKeys);
+        if (projectId == Guid.Empty || normalizedNodeKeys.Count == 0)
+        {
+            return;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var assignments = await dbContext.Set<ProjectPartyAssignment>()
+            .Where(item => item.ProjectId == projectId && normalizedNodeKeys.Contains(item.NodeKey))
+            .ToListAsync(cancellationToken);
+        if (assignments.Count == 0)
+        {
+            return;
+        }
+
+        dbContext.RemoveRange(assignments);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task MoveAssignmentsToProjectAsync(
+        Guid sourceProjectId,
+        IReadOnlyCollection<string> nodeKeys,
+        Guid targetProjectId,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedNodeKeys = NormalizeNodeKeys(nodeKeys);
+        if (sourceProjectId == Guid.Empty ||
+            targetProjectId == Guid.Empty ||
+            sourceProjectId == targetProjectId ||
+            normalizedNodeKeys.Count == 0)
+        {
+            return;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var targetProjectExists = await dbContext.Set<Project>()
+            .AnyAsync(item => item.Id == targetProjectId, cancellationToken);
+        if (!targetProjectExists)
+        {
+            throw new InvalidOperationException($"Target project '{targetProjectId}' was not found for assignment transfer.");
+        }
+
+        var staleTargetAssignments = await dbContext.Set<ProjectPartyAssignment>()
+            .Where(item => item.ProjectId == targetProjectId && normalizedNodeKeys.Contains(item.NodeKey))
+            .ToListAsync(cancellationToken);
+        if (staleTargetAssignments.Count > 0)
+        {
+            dbContext.RemoveRange(staleTargetAssignments);
+        }
+
+        var assignmentsToMove = await dbContext.Set<ProjectPartyAssignment>()
+            .Where(item => item.ProjectId == sourceProjectId && normalizedNodeKeys.Contains(item.NodeKey))
+            .ToListAsync(cancellationToken);
+        if (assignmentsToMove.Count == 0)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        foreach (var assignment in assignmentsToMove)
+        {
+            assignment.ProjectId = targetProjectId;
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -4754,5 +4990,14 @@ public sealed class ProjectPartyIntegrationService(
         return value.HasValue
             ? new DateTimeOffset(value.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             : null;
+    }
+
+    private static List<string> NormalizeNodeKeys(IReadOnlyCollection<string> nodeKeys)
+    {
+        return nodeKeys
+            .Where(nodeKey => !string.IsNullOrWhiteSpace(nodeKey))
+            .Select(nodeKey => nodeKey.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
     }
 }
