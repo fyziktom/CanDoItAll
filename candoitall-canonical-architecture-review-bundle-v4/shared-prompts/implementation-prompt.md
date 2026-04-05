@@ -1,1 +1,0 @@
-Implement the next-wave canonical-model stabilization bundle only. Keep changes minimal, strongly typed, and directly tied to the remaining review findings: lifecycle compensation, typed node references on the Workbench bridge, projection-only metadata cleanup, and explicit architecture guardrails.
