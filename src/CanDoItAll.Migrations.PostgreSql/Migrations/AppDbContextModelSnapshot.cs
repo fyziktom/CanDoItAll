@@ -2284,7 +2284,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("ResourceKind")
+                    b.Property<int?>("ResourceKind")
                         .HasColumnType("integer");
 
                     b.Property<int>("Sensitivity")
@@ -2821,11 +2821,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("ProjectObjectId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ReferenceId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("ReferenceId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
-                    b.Property<int>("ReferenceKind")
-                        .HasColumnType("integer");
+                    b.Property<string>("ReferenceKind")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
 
                     b.HasKey("Id");
 
@@ -2889,46 +2893,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<DateTimeOffset?>("EndUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("ExternalArtifactId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ExternalArtifactKind")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsSystemManaged")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("MarkerIcon")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
-
-                    b.Property<string>("MarkerLabel")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<string>("MarkerTone")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)");
 
                     b.Property<string>("MarkersJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<string>("MediaContentType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("MediaOriginalFileName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("MediaRelativePath")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("MetadataJson")
                         .IsRequired()
@@ -2975,10 +2945,6 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Route")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<DateTimeOffset?>("StartUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -2986,10 +2952,6 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
-
-                    b.Property<string>("StorageObjectReferenceJson")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Subtitle")
                         .IsRequired()
@@ -3232,6 +3194,122 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Workbench_ViewStates", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandAuditRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid>("ConnectorCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DetailsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EventKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectorCommandId", "CreatedAtUtc");
+
+                    b.ToTable("Workspace_ConnectorCommandAudits", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ApprovalState")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CommandKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ConnectorPluginKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastError")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "CreatedAtUtc");
+
+                    b.HasIndex("Status", "ApprovalState", "NextAttemptAtUtc");
+
+                    b.HasIndex("ProjectId", "ConnectorPluginKey", "CommandKey", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("Workspace_ConnectorCommands", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Workspace.ProjectStructureAgentProfileRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3405,7 +3483,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("ProviderKind")
+                    b.Property<int?>("ProviderKind")
                         .HasColumnType("integer");
 
                     b.Property<bool>("SupportsStreaming")
@@ -3482,6 +3560,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
                         .WithMany()
                         .HasForeignKey("ProjectObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandAuditRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Workspace.ConnectorCommandRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectorCommandId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

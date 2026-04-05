@@ -37,9 +37,6 @@ public sealed partial class ProjectObjectRecord : IProjectObject
     public string ObjectSubtype { get; set; } = string.Empty;
     public string ProgressMode { get; set; } = string.Empty;
     public int ProgressPercent { get; set; } = -1;
-    public string MarkerIcon { get; set; } = string.Empty;
-    public string MarkerTone { get; set; } = string.Empty;
-    public string MarkerLabel { get; set; } = string.Empty;
     public string MarkersJson { get; set; } = "[]";
     public int Priority { get; set; }
     public string MetadataJson { get; set; } = "{}";
@@ -57,7 +54,7 @@ public sealed partial class ProjectObjectRecord : IProjectObject
     internal ProjectNodeBindingState Binding { get; set; } = ProjectNodeBindingState.Empty;
 
     [NotMapped]
-    internal ProjectNodeReferenceSet NodeReferences { get; set; } = ProjectNodeReferenceSet.Empty;
+    internal ProjectNodeReferenceCollection NodeReferences { get; set; } = ProjectNodeReferenceCollection.Empty;
 }
 
 internal sealed class ProjectObjectRecordConfiguration : IEntityTypeConfiguration<ProjectObjectRecord>
@@ -73,9 +70,6 @@ internal sealed class ProjectObjectRecordConfiguration : IEntityTypeConfiguratio
         builder.Property(item => item.Notes).HasColumnType("TEXT");
         builder.Property(item => item.ObjectSubtype).HasMaxLength(120);
         builder.Property(item => item.ProgressMode).HasMaxLength(32);
-        builder.Property(item => item.MarkerIcon).HasMaxLength(80);
-        builder.Property(item => item.MarkerTone).HasMaxLength(40);
-        builder.Property(item => item.MarkerLabel).HasMaxLength(120);
         builder.Property(item => item.MarkersJson).HasColumnType("TEXT");
         builder.Property(item => item.MetadataJson).HasColumnType("TEXT");
         builder.Property(item => item.ParentNodeKey).HasMaxLength(160);
@@ -172,7 +166,7 @@ public sealed record ProjectStructureNode(
     Guid? RelatedProjectId = null,
     int ParentProjectCount = 0,
     int? DurationSeconds = null,
-    ProjectNodeReferenceSet? NodeReferences = null);
+    ProjectNodeReferenceCollection? NodeReferences = null);
 
 public sealed record ProjectStructureLink(string SourceId, string TargetId, ProjectObjectLinkKind Kind, bool IsUserAuthored);
 
@@ -236,7 +230,7 @@ public sealed record ProjectObjectCreateRequest(
     ProjectObjectMediaPayload? Media = null,
     string? MetadataJson = null,
     int? DurationSeconds = null,
-    ProjectNodeReferenceSet? NodeReferences = null);
+    ProjectNodeReferenceCollection? NodeReferences = null);
 
 public sealed record ProjectObjectEditRequest(
     string Title,
@@ -246,7 +240,7 @@ public sealed record ProjectObjectEditRequest(
     DateTimeOffset? EndUtc,
     string MetadataJson,
     int? DurationSeconds = null,
-    ProjectNodeReferenceSet? NodeReferences = null);
+    ProjectNodeReferenceCollection? NodeReferences = null);
 
 public sealed record ProjectObjectReclassificationRequest(
     ProjectObjectType TargetObjectType,
@@ -458,7 +452,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 media?.ContentType ?? string.Empty,
                 media?.OriginalFileName ?? string.Empty,
                 media?.StorageObjectReferenceJson ?? string.Empty),
-            NodeReferences = request.NodeReferences ?? ProjectNodeReferenceSet.Empty,
+            NodeReferences = request.NodeReferences ?? ProjectNodeReferenceCollection.Empty,
             MarkersJson = "[]"
         };
 
@@ -605,7 +599,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         {
             return null;
         }
-        await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, [node], cancellationToken);
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
 
         node.Title = string.IsNullOrWhiteSpace(title) ? node.Title : title.Trim();
         node.Subtitle = subtitle?.Trim() ?? string.Empty;
@@ -631,7 +625,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         {
             return null;
         }
-        await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, [node], cancellationToken);
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
 
         node.Title = string.IsNullOrWhiteSpace(request.Title) ? node.Title : request.Title.Trim();
         node.Subtitle = request.Subtitle?.Trim() ?? string.Empty;
@@ -676,7 +670,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         string metadataJson,
         string? notes = null,
         string? status = null,
-        ProjectNodeReferenceSet? nodeReferences = null,
+        ProjectNodeReferenceCollection? nodeReferences = null,
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -687,7 +681,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         {
             return null;
         }
-        await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, [node], cancellationToken);
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
 
         if (notes is not null)
         {
@@ -749,7 +743,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, nodes, cancellationToken);
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, nodes, cancellationToken);
         return nodes.Select(node => ProjectWorkbenchNodeMapper.MapStructureNode(node)).ToList();
     }
 
@@ -795,7 +789,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, nodes, cancellationToken);
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, nodes, cancellationToken);
         return nodes.Select(node => ProjectWorkbenchNodeMapper.MapStructureNode(node)).ToList();
     }
 
@@ -914,12 +908,6 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
 
         foreach (var node in nodes)
         {
-            node.MarkersJson = ProjectNodeMarkerState.ResolveLegacyJson(
-                node.MarkersJson,
-                node.MarkerIcon,
-                node.MarkerTone,
-                node.MarkerLabel,
-                node.MetadataJson);
             var existingMarkers = ProjectNodeMarkerState.Parse(node.MarkersJson);
             var updatedMarkers = mutationMode switch
             {
@@ -931,12 +919,11 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 _ => existingMarkers
             };
             node.MarkersJson = ProjectNodeMarkerState.Serialize(updatedMarkers);
-            ProjectNodeMarkerState.HydrateLegacyFields(node);
             node.UpdatedAtUtc = updatedAtUtc;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, nodes, cancellationToken);
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, nodes, cancellationToken);
         return nodes.Select(node => ProjectWorkbenchNodeMapper.MapStructureNode(node)).ToList();
     }
 
@@ -1014,7 +1001,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, nodes, cancellationToken);
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, nodes, cancellationToken);
         return nodes.Select(node => ProjectWorkbenchNodeMapper.MapStructureNode(node)).ToList();
     }
 

@@ -68,35 +68,18 @@ public sealed class ProjectStructureProjectionContext(
         node.IsSystemManaged = true;
         node.MetadataJson = string.IsNullOrWhiteSpace(node.MetadataJson) ? "{}" : node.MetadataJson;
         node.ProgressMode ??= string.Empty;
-        node.Route ??= string.Empty;
-        node.ExternalArtifactKind ??= string.Empty;
         node.ObjectSubtype ??= string.Empty;
-        node.MarkerIcon ??= string.Empty;
-        node.MarkerTone ??= string.Empty;
-        node.MarkerLabel ??= string.Empty;
-        node.MediaRelativePath ??= string.Empty;
-        node.MediaContentType ??= string.Empty;
-        node.MediaOriginalFileName ??= string.Empty;
-        node.StorageObjectReferenceJson ??= string.Empty;
         node.Title ??= string.Empty;
         node.Subtitle ??= string.Empty;
         node.Status ??= string.Empty;
         node.Notes ??= string.Empty;
-        node.Binding = new ProjectNodeBindingState(
-            string.IsNullOrWhiteSpace(node.Binding.Route) ? node.Route : node.Binding.Route,
-            string.IsNullOrWhiteSpace(node.Binding.ExternalArtifactKind) ? node.ExternalArtifactKind : node.Binding.ExternalArtifactKind,
-            node.Binding.ExternalArtifactId ?? node.ExternalArtifactId,
-            string.IsNullOrWhiteSpace(node.Binding.MediaRelativePath) ? node.MediaRelativePath : node.Binding.MediaRelativePath,
-            string.IsNullOrWhiteSpace(node.Binding.MediaContentType) ? node.MediaContentType : node.Binding.MediaContentType,
-            string.IsNullOrWhiteSpace(node.Binding.MediaOriginalFileName) ? node.MediaOriginalFileName : node.Binding.MediaOriginalFileName,
-            string.IsNullOrWhiteSpace(node.Binding.StorageObjectReferenceJson) ? node.StorageObjectReferenceJson : node.Binding.StorageObjectReferenceJson);
-        node.MarkersJson = ProjectNodeMarkerState.ResolveLegacyJson(
-            node.MarkersJson,
-            node.MarkerIcon,
-            node.MarkerTone,
-            node.MarkerLabel,
-            node.MetadataJson);
-        ProjectNodeMarkerState.HydrateLegacyFields(node);
+        node.Binding = ProjectNodeBindingStorage.ResolveForRuntime(node);
+        var normalizedMarkers = ProjectNodeMarkerState.Parse(node.MarkersJson);
+        node.MarkersJson = normalizedMarkers.Count > 0
+            ? ProjectNodeMarkerState.Serialize(normalizedMarkers)
+            : ProjectNodeLegacyMetadata.ReadLegacyMarkers(node.MetadataJson) is { Count: > 0 } legacyMarkers
+                ? ProjectNodeMarkerState.Serialize(legacyMarkers)
+                : "[]";
 
         if (layoutOverrides.TryGetValue(node.NodeKey, out var layout))
         {
@@ -154,12 +137,11 @@ public sealed class ProjectStructureAssemblyService(
         var canonicalNodes = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == projectId && !item.IsSystemManaged)
             .ToListAsync(cancellationToken);
-        await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, canonicalNodes, cancellationToken);
         foreach (var canonicalNode in canonicalNodes)
         {
-            dbContext.Entry(canonicalNode).State = EntityState.Unchanged;
+            canonicalNode.MarkersJson = NormalizeMarkersJson(canonicalNode.MarkersJson, canonicalNode.MetadataJson);
         }
-        await ProjectNodeMarkerState.NormalizeAndHydrateAsync(dbContext, canonicalNodes, cancellationToken);
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, canonicalNodes, cancellationToken);
         foreach (var canonicalNode in canonicalNodes)
         {
             dbContext.Entry(canonicalNode).State = EntityState.Unchanged;
@@ -404,6 +386,41 @@ public sealed class ProjectStructureAssemblyService(
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    private static string NormalizeMarkersJson(string? markersJson, string? metadataJson)
+    {
+        var normalizedMarkers = ProjectNodeMarkerState.Parse(markersJson);
+        if (normalizedMarkers.Count > 0)
+        {
+            return ProjectNodeMarkerState.Serialize(normalizedMarkers);
+        }
+
+        var legacyMarkers = ProjectNodeLegacyMetadata.ReadLegacyMarkers(metadataJson);
+        return NormalizeLegacyMarkers(metadataJson);
+    }
+
+    private static string NormalizeLegacyMarkers(string? metadataJson)
+    {
+        var legacyMarkers = ProjectNodeLegacyMetadata.ReadLegacyMarkers(metadataJson);
+        return legacyMarkers.Count == 0
+            ? "[]"
+            : ProjectNodeMarkerState.Serialize(legacyMarkers);
+    }
+}
+
+internal static class ProjectStructureProjectionBindingFactory
+{
+    public static ProjectNodeBindingState Create(string route, string externalArtifactKind, Guid? externalArtifactId)
+    {
+        return new ProjectNodeBindingState(
+            route,
+            externalArtifactKind,
+            externalArtifactId,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty);
+    }
 }
 
 internal sealed class ProjectHierarchyProjectionContributor(IClock clock) : IProjectStructureProjectionContributor
@@ -429,9 +446,7 @@ internal sealed class ProjectHierarchyProjectionContributor(IClock clock) : IPro
             Subtitle = project.Objective,
             Status = project.Status.ToString(),
             Notes = project.Description,
-            Route = $"/projects?projectId={project.Id}",
-            ExternalArtifactKind = "project",
-            ExternalArtifactId = project.Id,
+            Binding = ProjectStructureProjectionBindingFactory.Create($"/projects?projectId={project.Id}", "project", project.Id),
             PositionX = 140,
             PositionY = 240,
             CreatedAtUtc = project.CreatedAtUtc,
@@ -465,9 +480,7 @@ internal sealed class ProjectHierarchyProjectionContributor(IClock clock) : IPro
                 Subtitle = phase.Phase.Goal,
                 Status = phase.Phase.Status.ToString(),
                 Notes = phase.Phase.Goal,
-                Route = $"/projects?projectId={context.ProjectId}",
-                ExternalArtifactKind = "phase",
-                ExternalArtifactId = phase.Phase.Id,
+                Binding = ProjectStructureProjectionBindingFactory.Create($"/projects?projectId={context.ProjectId}", "phase", phase.Phase.Id),
                 ParentNodeKey = BuildProjectRootNodeKey(project.Id),
                 PositionX = 420,
                 PositionY = 120 + (phase.Index * 180),
@@ -588,9 +601,7 @@ internal sealed class ProjectHierarchyProjectionContributor(IClock clock) : IPro
             Subtitle = ResolveRelatedProjectSubtitle(parentProject, fallbackLabel),
             Status = parentProject.Status.ToString(),
             Notes = ResolveRelatedProjectNotes(parentProject, fallbackLabel),
-            Route = $"/projects/{parentProject.Id}/structure",
-            ExternalArtifactKind = "project",
-            ExternalArtifactId = parentProject.Id,
+            Binding = ProjectStructureProjectionBindingFactory.Create($"/projects/{parentProject.Id}/structure", "project", parentProject.Id),
             PositionX = x,
             PositionY = y,
             CreatedAtUtc = parentProject.CreatedAtUtc,
@@ -732,9 +743,7 @@ internal sealed class ProjectHierarchyProjectionContributor(IClock clock) : IPro
                     Subtitle = ResolveRelatedProjectSubtitle(descendantProject, "Subproject"),
                     Status = descendantProject.Status.ToString(),
                     Notes = ResolveRelatedProjectNotes(descendantProject, "Subproject"),
-                    Route = $"/projects/{descendantProject.Id}/structure",
-                    ExternalArtifactKind = "project",
-                    ExternalArtifactId = descendantProject.Id,
+                    Binding = ProjectStructureProjectionBindingFactory.Create($"/projects/{descendantProject.Id}/structure", "project", descendantProject.Id),
                     ParentNodeKey = parentProjectId == project.Id
                         ? BuildProjectRootNodeKey(project.Id)
                         : BuildProjectChildNodeKey(parentProjectId),
@@ -841,9 +850,7 @@ internal sealed class ProjectResourceProjectionContributor(
                 Subtitle = resource.Resource.LocationOrIdentifier,
                 Status = resource.Resource.ValidationStatus.ToString(),
                 Notes = resource.Resource.Description,
-                Route = $"/resources?resourceId={resource.Resource.Id}",
-                ExternalArtifactKind = "resource",
-                ExternalArtifactId = resource.Resource.Id,
+                Binding = ProjectStructureProjectionBindingFactory.Create($"/resources?resourceId={resource.Resource.Id}", "resource", resource.Resource.Id),
                 ParentNodeKey = $"project:{context.ProjectId}",
                 PositionX = 760,
                 PositionY = 100 + (resource.Index * 120),
@@ -890,9 +897,7 @@ internal sealed class PromptFactoryProjectionContributor : IProjectStructureProj
                 Subtitle = run.Run.Phase,
                 Status = "Active",
                 Notes = run.Run.Phase,
-                Route = $"/prompt-factory?runId={run.Run.Id}",
-                ExternalArtifactKind = "prompt-run",
-                ExternalArtifactId = run.Run.Id,
+                Binding = ProjectStructureProjectionBindingFactory.Create($"/prompt-factory?runId={run.Run.Id}", "prompt-run", run.Run.Id),
                 ParentNodeKey = phaseNodeKey,
                 PositionX = 1080,
                 PositionY = 100 + (run.Index * 160),
@@ -916,11 +921,12 @@ internal sealed class PromptFactoryProjectionContributor : IProjectStructureProj
                 Subtitle = node.Node.BranchLabel,
                 Status = node.Node.State.ToString(),
                 Notes = node.Node.Notes,
-                Route = node.Node.PromptArtifactId.HasValue
-                    ? $"/prompt-gallery?promptId={node.Node.PromptArtifactId}"
-                    : $"/prompt-factory?runId={node.Node.PromptRunId}",
-                ExternalArtifactKind = "prompt-node",
-                ExternalArtifactId = node.Node.Id,
+                Binding = ProjectStructureProjectionBindingFactory.Create(
+                    node.Node.PromptArtifactId.HasValue
+                        ? $"/prompt-gallery?promptId={node.Node.PromptArtifactId}"
+                        : $"/prompt-factory?runId={node.Node.PromptRunId}",
+                    "prompt-node",
+                    node.Node.Id),
                 ParentNodeKey = parentNodeKey,
                 PositionX = 1400,
                 PositionY = 100 + (node.Index * 120),
@@ -958,9 +964,7 @@ internal sealed class ValidationProjectionContributor : IProjectStructureProject
                 Subtitle = validation.Validation.ValidationType.ToString(),
                 Status = validation.Validation.Decision.ToString(),
                 Notes = validation.Validation.Summary,
-                Route = $"/validation?runId={validation.Validation.Id}",
-                ExternalArtifactKind = "validation-run",
-                ExternalArtifactId = validation.Validation.Id,
+                Binding = ProjectStructureProjectionBindingFactory.Create($"/validation?runId={validation.Validation.Id}", "validation-run", validation.Validation.Id),
                 ParentNodeKey = $"project:{context.ProjectId}",
                 PositionX = 780,
                 PositionY = 580 + (validation.Index * 120),
@@ -996,9 +1000,7 @@ internal sealed class TestPlanProjectionContributor : IProjectStructureProjectio
                 Subtitle = testPlan.TestPlan.Phase,
                 Status = "Planned",
                 Notes = testPlan.TestPlan.CoverageGoal,
-                Route = $"/test-lab?planId={testPlan.TestPlan.Id}",
-                ExternalArtifactKind = "test-plan",
-                ExternalArtifactId = testPlan.TestPlan.Id,
+                Binding = ProjectStructureProjectionBindingFactory.Create($"/test-lab?planId={testPlan.TestPlan.Id}", "test-plan", testPlan.TestPlan.Id),
                 ParentNodeKey = $"project:{context.ProjectId}",
                 PositionX = 1100,
                 PositionY = 620 + (testPlan.Index * 140),

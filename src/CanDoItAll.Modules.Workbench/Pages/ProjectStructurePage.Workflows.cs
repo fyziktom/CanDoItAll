@@ -298,7 +298,7 @@ public partial class ProjectStructurePage
                 TranscriptText = string.Empty
             }
         };
-        var nodeReferences = new ProjectNodeReferenceSet
+        var nodeReferences = new ProjectNodeReferenceCollection
         {
             TranscriptRecordingNodeId = recordingArtifactId
         };
@@ -409,23 +409,7 @@ public partial class ProjectStructurePage
         metadata.Transcript.LastActionKind = pendingTranscriptAction.ActionKind;
         metadata.Transcript.LastProviderName = provider.Name;
         metadata.Transcript.LastGeneratedAtUtc = DateTimeOffset.UtcNow;
-        var updatedReferences = transcriptNode.NodeReferences is null
-            ? new ProjectNodeReferenceSet()
-            : new ProjectNodeReferenceSet
-            {
-                MeetingParticipantIds = transcriptNode.NodeReferences.MeetingParticipantIds.ToList(),
-                RecordingMeetingNodeId = transcriptNode.NodeReferences.RecordingMeetingNodeId,
-                RecordingTranscriptNodeId = transcriptNode.NodeReferences.RecordingTranscriptNodeId,
-                TranscriptRecordingNodeId = transcriptNode.NodeReferences.TranscriptRecordingNodeId,
-                TranscriptProviderProfileId = transcriptNode.NodeReferences.TranscriptProviderProfileId,
-                ParticipantParentNodeId = transcriptNode.NodeReferences.ParticipantParentNodeId,
-                WorkItemAssigneeNodeId = transcriptNode.NodeReferences.WorkItemAssigneeNodeId,
-                WorkItemRepositoryResourceId = transcriptNode.NodeReferences.WorkItemRepositoryResourceId,
-                RepositoryResourceId = transcriptNode.NodeReferences.RepositoryResourceId,
-                EnvironmentRepositoryResourceId = transcriptNode.NodeReferences.EnvironmentRepositoryResourceId,
-                InfrastructureSecretReferenceId = transcriptNode.NodeReferences.InfrastructureSecretReferenceId,
-                InfrastructureStorageCatalogId = transcriptNode.NodeReferences.InfrastructureStorageCatalogId
-            };
+        var updatedReferences = transcriptNode.NodeReferences?.Clone() ?? new ProjectNodeReferenceCollection();
         updatedReferences.TranscriptProviderProfileId = provider.Id;
 
         switch (pendingTranscriptAction.ActionKind)

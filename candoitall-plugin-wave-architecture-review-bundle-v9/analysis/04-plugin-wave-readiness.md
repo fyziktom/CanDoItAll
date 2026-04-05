@@ -1,18 +1,18 @@
 ## Plugin-wave readiness
-**Verdict: NO-GO**
+**Verdict: GO with guarded rollout**
 
-The next large plugin wave should not start yet for the following reasons:
+The next large plugin wave can now proceed because the phase9 blockers were closed in code and revalidated in a real .NET environment:
 
-1. The core node still exposes legacy carrier concerns.
-2. The active runtime still hydrates compatibility state back into the node.
-3. Marker truth is still split.
-4. The “plugin platform” is not yet truly plugin-first because unknown fields still require shared UI/model changes.
-5. Custom plugins can still inherit fake legacy identity.
-6. Reference semantics still require core-workbench edits for every new relation kind.
-7. Read paths still mutate persisted state.
-8. There is no generic write-side connector execution boundary yet.
+1. The core node no longer persists binding/media/external-artifact carrier concerns.
+2. Runtime binding composition no longer depends on legacy node-carrier fallback.
+3. Marker truth is single-source through `MarkersJson`.
+4. Provider/resource plugin editors are manifest-driven through shared connector-config state.
+5. Custom plugin save flows keep plugin key authoritative and stop synthesizing fake legacy enum identity.
+6. Reference semantics are open-world string rows with typed convenience helpers only at the edges.
+7. Structure load paths are read-only and compatibility normalization is not persisted during reads.
+8. A durable connector-command boundary now exists for retry/idempotency/replay/approval/audit before future write-side plugins land.
 
-The result would be predictable:
-- email / LinkedIn / custom API work would either push more technical state into the node carrier,
-- or add more hardcoded shared UI/editor logic,
-- or both.
+Guarded-rollout caveats remain:
+- `CrmHrServices.cs` and `ProjectWorkbenchModels.cs` still trip advisory hotspot thresholds and should stay on the architecture cleanup backlog.
+- Full-repo Playwright coverage was not used as the closure gate; the targeted phase9 proof set was used instead.
+- Existing unrelated `NU1510` and `xUnit2031` warnings remain outside this bundle’s write scope.

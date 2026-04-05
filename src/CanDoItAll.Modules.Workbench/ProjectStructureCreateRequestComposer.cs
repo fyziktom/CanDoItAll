@@ -23,7 +23,7 @@ internal static class ProjectStructureCreateRequestComposer
             .GroupBy(item => item.Key.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Last().Value?.Trim() ?? string.Empty, StringComparer.OrdinalIgnoreCase);
         var metadata = new ProjectObjectMetadataEnvelope();
-        var nodeReferences = new ProjectNodeReferenceSet();
+        var nodeReferences = new ProjectNodeReferenceCollection();
         var pendingLinks = new List<ProjectStructurePendingLink>();
         var notes = ResolveNotes(definition, request, inputValues);
         var startUtc = ParseDateTimeOffset(inputValues, "startUtc");

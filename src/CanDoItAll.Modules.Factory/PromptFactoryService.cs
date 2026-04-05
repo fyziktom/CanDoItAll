@@ -1222,7 +1222,7 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
             .Select(option => $"- {option.Category}: {option.OptionName} {option.Notes}".Trim())
             .ToList();
         var resourceLines = resources
-            .Select(resource => $"- {resource.ResourceKind}: {resource.Name} ({resource.LocationOrIdentifier})")
+            .Select(resource => $"- {DescribeResource(resource)}: {resource.Name} ({resource.LocationOrIdentifier})")
             .ToList();
         var attachmentLines = model.SessionAttachments
             .Select(BuildAttachmentLine)
@@ -1262,6 +1262,11 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
         ## Requested output
         Produce a phase-aware response that explains the recommended approach, the concrete implementation steps, and the tests or verification needed to close the work safely.
         """;
+    }
+
+    private static string DescribeResource(ResourceSummary resource)
+    {
+        return resource.LegacyResourceKind?.ToString() ?? resource.ConnectorDisplayName;
     }
 
     private static string BuildPromptAssembly(PromptFlowTemplateSummary? flowTemplate, IReadOnlyCollection<ResolvedPromptBlock> blocks)

@@ -101,7 +101,7 @@ internal static class ProjectWorkbenchNodeMapper
                 break;
         }
 
-        var metadataJson = string.IsNullOrWhiteSpace(record.MetadataJson) ? "{}" : record.MetadataJson;
+        var metadataJson = ProjectNodeLegacyMetadata.SanitizeLegacyReferenceMetadata(record.MetadataJson);
         var markers = ProjectNodeMarkerState.Parse(record.MarkersJson);
         var primaryMarker = ProjectObjectMetadataSerializer.ResolvePrimaryMarker(markers);
 
@@ -139,25 +139,6 @@ internal static class ProjectWorkbenchNodeMapper
             relatedProjectId,
             parentProjectCount,
             record.DurationSeconds,
-            CloneReferenceSet(record.NodeReferences));
-    }
-
-    private static ProjectNodeReferenceSet CloneReferenceSet(ProjectNodeReferenceSet referenceSet)
-    {
-        return new ProjectNodeReferenceSet
-        {
-            MeetingParticipantIds = referenceSet.MeetingParticipantIds.ToList(),
-            RecordingMeetingNodeId = referenceSet.RecordingMeetingNodeId,
-            RecordingTranscriptNodeId = referenceSet.RecordingTranscriptNodeId,
-            TranscriptRecordingNodeId = referenceSet.TranscriptRecordingNodeId,
-            TranscriptProviderProfileId = referenceSet.TranscriptProviderProfileId,
-            ParticipantParentNodeId = referenceSet.ParticipantParentNodeId,
-            WorkItemAssigneeNodeId = referenceSet.WorkItemAssigneeNodeId,
-            WorkItemRepositoryResourceId = referenceSet.WorkItemRepositoryResourceId,
-            RepositoryResourceId = referenceSet.RepositoryResourceId,
-            EnvironmentRepositoryResourceId = referenceSet.EnvironmentRepositoryResourceId,
-            InfrastructureSecretReferenceId = referenceSet.InfrastructureSecretReferenceId,
-            InfrastructureStorageCatalogId = referenceSet.InfrastructureStorageCatalogId
-        };
+            record.NodeReferences.Clone());
     }
 }

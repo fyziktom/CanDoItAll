@@ -62,8 +62,8 @@ public sealed class ProviderRegistry(IEnumerable<IProviderAdapter> adapters) : I
             return Resolve(profile.ConnectorPluginKey);
         }
 
-        return profile.ProviderKind is var legacyProviderKind
-            ? adaptersByLegacyKind.GetValueOrDefault(legacyProviderKind)
+        return profile.ProviderKind.HasValue
+            ? adaptersByLegacyKind.GetValueOrDefault(profile.ProviderKind.Value)
             : null;
     }
 

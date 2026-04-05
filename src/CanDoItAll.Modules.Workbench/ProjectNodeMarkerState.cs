@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CanDoItAll.Infrastructure.Persistence;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -38,74 +37,5 @@ internal static class ProjectNodeMarkerState
     public static ProjectNodeMarker? ResolvePrimary(string? markersJson)
     {
         return ProjectObjectMetadataSerializer.ResolvePrimaryMarker(Parse(markersJson));
-    }
-
-    public static string ResolveLegacyJson(
-        string? markersJson,
-        string? markerIcon,
-        string? markerTone,
-        string? markerLabel,
-        string? metadataJson)
-    {
-        var parsedMarkers = Parse(markersJson);
-        if (parsedMarkers.Count > 0)
-        {
-            return Serialize(parsedMarkers);
-        }
-
-        var legacyMetadataMarkers = ProjectNodeLegacyMetadata.ReadLegacyMarkers(metadataJson);
-        if (legacyMetadataMarkers.Count > 0)
-        {
-            return Serialize(legacyMetadataMarkers);
-        }
-
-        var legacyPrimaryMarker = ProjectObjectMetadataSerializer.NormalizeMarker(markerIcon, markerTone, markerLabel);
-        return legacyPrimaryMarker is null
-            ? "[]"
-            : Serialize([legacyPrimaryMarker]);
-    }
-
-    public static void HydrateLegacyFields(ProjectObjectRecord node)
-    {
-        ArgumentNullException.ThrowIfNull(node);
-
-        var primaryMarker = ResolvePrimary(node.MarkersJson);
-        node.MarkerIcon = primaryMarker?.Icon ?? string.Empty;
-        node.MarkerTone = primaryMarker?.Tone ?? string.Empty;
-        node.MarkerLabel = primaryMarker?.Label ?? string.Empty;
-    }
-
-    public static async Task NormalizeAndHydrateAsync(
-        AppDbContext dbContext,
-        IReadOnlyCollection<ProjectObjectRecord> nodes,
-        CancellationToken cancellationToken = default)
-    {
-        if (nodes.Count == 0)
-        {
-            return;
-        }
-
-        var changed = false;
-        foreach (var node in nodes)
-        {
-            var normalizedJson = ResolveLegacyJson(
-                node.MarkersJson,
-                node.MarkerIcon,
-                node.MarkerTone,
-                node.MarkerLabel,
-                node.MetadataJson);
-            if (!string.Equals(node.MarkersJson, normalizedJson, StringComparison.Ordinal))
-            {
-                node.MarkersJson = normalizedJson;
-                changed = true;
-            }
-
-            HydrateLegacyFields(node);
-        }
-
-        if (changed)
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
     }
 }

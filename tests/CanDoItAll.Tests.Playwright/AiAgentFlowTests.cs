@@ -113,10 +113,14 @@ public sealed class AiAgentFlowTests
         var providerSave = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = providerName,
-            ProviderKind = ProviderKind.OllamaRemote,
-            BaseUrl = "http://ollama.internal",
-            DefaultModel = "llama3.1",
-            TimeoutSeconds = 45,
+            ConnectorPluginKey = OllamaRemoteProviderAdapter.PluginKey,
+            ConfigSchemaVersion = "1.0",
+            Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["baseUrl"] = "http://ollama.internal",
+                ["defaultModel"] = "llama3.1",
+                ["timeoutSeconds"] = "45"
+            }),
             IsEnabled = true
         });
         Assert.True(providerSave.IsSuccess);

@@ -117,7 +117,7 @@
                         <option value="">Select a provider</option>
                         @foreach (var provider in PendingTranscriptAction.Providers)
                         {
-                            <option value="@provider.Id">@($"{provider.Name} ({provider.ProviderKind})")</option>
+                            <option value="@provider.Id">@($"{provider.Name} ({provider.LegacyProviderKind?.ToString() ?? provider.ConnectorDisplayName})")</option>
                         }
                     </select>
                 </FormField>

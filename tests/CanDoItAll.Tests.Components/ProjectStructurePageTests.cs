@@ -62,7 +62,7 @@ public sealed class ProjectStructurePageTests
                 null,
                 ProjectObjectMetadataSerializer.Serialize(metadata),
                 null,
-                new ProjectNodeReferenceSet
+                new ProjectNodeReferenceCollection
                 {
                     InfrastructureStorageCatalogId = storageSave.Value
                 }));
@@ -1195,10 +1195,14 @@ public sealed class ProjectStructurePageTests
         var providerSave = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = "Local llama",
-            ProviderKind = ProviderKind.OllamaLocal,
-            BaseUrl = "http://localhost:11434",
-            DefaultModel = "llama3.1",
-            TimeoutSeconds = 30,
+            ConnectorPluginKey = OllamaProviderAdapter.PluginKey,
+            ConfigSchemaVersion = "1.0",
+            Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["baseUrl"] = "http://localhost:11434",
+                ["defaultModel"] = "llama3.1",
+                ["timeoutSeconds"] = "30"
+            }),
             IsEnabled = true
         });
 

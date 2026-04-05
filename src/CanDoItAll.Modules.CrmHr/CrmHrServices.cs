@@ -593,7 +593,7 @@ public sealed class AiAgentProfileEditorModel
 public sealed record AiProviderOptionModel(
     Guid Id,
     string Name,
-    ProviderKind ProviderKind,
+    string ProviderLabel,
     string DefaultModel,
     bool IsEnabled);
 
@@ -3922,15 +3922,16 @@ public sealed partial class AiAgentService(
             .ToListAsync(cancellationToken);
         var profile = await dbContext.Set<AiAgentProfile>()
             .SingleOrDefaultAsync(item => item.PartyId == partyId, cancellationToken);
-        var providerOptions = await dbContext.Set<ProviderProfile>()
+        var providerOptions = (await dbContext.Set<ProviderProfile>()
             .OrderBy(item => item.Name)
+            .ToListAsync(cancellationToken))
             .Select(item => new AiProviderOptionModel(
                 item.Id,
                 item.Name,
-                item.ProviderKind,
+                item.ProviderKind?.ToString() ?? item.ConnectorPluginKey,
                 item.DefaultModel,
                 item.IsEnabled))
-            .ToListAsync(cancellationToken);
+            .ToList();
         var ownerOptions = await dbContext.Set<Party>()
             .Where(item => item.Id != partyId && item.PartyType == PartyType.Person)
             .OrderBy(item => item.DisplayName)

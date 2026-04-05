@@ -78,7 +78,7 @@ public sealed class ProjectWorkbenchRelationService(
             return null;
         }
 
-        await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, [node], cancellationToken);
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
 
         var normalizedParentNodeKey = ProjectWorkbenchGraphConventions.NormalizeEditableParentNodeKey(projectId, parentNodeKey);
         if (string.Equals(node.ParentNodeKey, normalizedParentNodeKey, StringComparison.Ordinal))

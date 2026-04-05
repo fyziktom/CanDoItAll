@@ -10,15 +10,8 @@ public static class ProjectWorkbenchSchemaInitializer
     private static readonly (string Name, string Definition)[] RequiredProjectObjectColumns =
     [
         ("ObjectSubtype", """TEXT NOT NULL DEFAULT ''"""),
-        ("MediaRelativePath", """TEXT NOT NULL DEFAULT ''"""),
-        ("MediaContentType", """TEXT NOT NULL DEFAULT ''"""),
-        ("MediaOriginalFileName", """TEXT NOT NULL DEFAULT ''"""),
-        ("StorageObjectReferenceJson", """TEXT NOT NULL DEFAULT ''"""),
         ("ProgressMode", """TEXT NOT NULL DEFAULT ''"""),
         ("ProgressPercent", """INTEGER NOT NULL DEFAULT -1"""),
-        ("MarkerIcon", """TEXT NOT NULL DEFAULT ''"""),
-        ("MarkerTone", """TEXT NOT NULL DEFAULT ''"""),
-        ("MarkerLabel", """TEXT NOT NULL DEFAULT ''"""),
         ("MarkersJson", """TEXT NOT NULL DEFAULT '[]'"""),
         ("Priority", """INTEGER NOT NULL DEFAULT 0"""),
         ("MetadataJson", """TEXT NOT NULL DEFAULT '{{}}'"""),
@@ -57,19 +50,9 @@ public static class ProjectWorkbenchSchemaInitializer
             "Subtitle" TEXT NOT NULL,
             "Status" TEXT NOT NULL,
             "Notes" TEXT NOT NULL,
-            "Route" TEXT NOT NULL,
-            "ExternalArtifactKind" TEXT NOT NULL,
-            "ExternalArtifactId" TEXT NULL,
             "ObjectSubtype" TEXT NOT NULL DEFAULT '',
-            "MediaRelativePath" TEXT NOT NULL DEFAULT '',
-            "MediaContentType" TEXT NOT NULL DEFAULT '',
-            "MediaOriginalFileName" TEXT NOT NULL DEFAULT '',
-            "StorageObjectReferenceJson" TEXT NOT NULL DEFAULT '',
             "ProgressMode" TEXT NOT NULL DEFAULT '',
             "ProgressPercent" INTEGER NOT NULL DEFAULT -1,
-            "MarkerIcon" TEXT NOT NULL DEFAULT '',
-            "MarkerTone" TEXT NOT NULL DEFAULT '',
-            "MarkerLabel" TEXT NOT NULL DEFAULT '',
             "MarkersJson" TEXT NOT NULL DEFAULT '[]',
             "Priority" INTEGER NOT NULL DEFAULT 0,
             "MetadataJson" TEXT NOT NULL DEFAULT '{{}}',
@@ -117,23 +100,7 @@ public static class ProjectWorkbenchSchemaInitializer
         CREATE UNIQUE INDEX IF NOT EXISTS "IX_Workbench_ProjectProjectionLayouts_ProjectId_NodeKey"
         ON "Workbench_ProjectProjectionLayouts" ("ProjectId", "NodeKey");
         """,
-        """
-        CREATE TABLE IF NOT EXISTS "Workbench_ProjectNodeBindings" (
-            "Id" TEXT NOT NULL CONSTRAINT "PK_Workbench_ProjectNodeBindings" PRIMARY KEY,
-            "ProjectObjectId" TEXT NOT NULL,
-            "Route" TEXT NOT NULL,
-            "ExternalArtifactKind" TEXT NOT NULL,
-            "ExternalArtifactId" TEXT NULL,
-            "MediaRelativePath" TEXT NOT NULL,
-            "MediaContentType" TEXT NOT NULL,
-            "MediaOriginalFileName" TEXT NOT NULL,
-            "StorageObjectReferenceJson" TEXT NOT NULL,
-            "CreatedAtUtc" TEXT NOT NULL,
-            "UpdatedAtUtc" TEXT NOT NULL,
-            CONSTRAINT "FK_Workbench_ProjectNodeBindings_Workbench_ProjectObjects_ProjectObjectId"
-                FOREIGN KEY ("ProjectObjectId") REFERENCES "Workbench_ProjectObjects" ("Id") ON DELETE CASCADE
-        );
-        """,
+        BuildProjectNodeBindingsTableStatement(),
         """
         CREATE UNIQUE INDEX IF NOT EXISTS "IX_Workbench_ProjectNodeBindings_ProjectObjectId"
         ON "Workbench_ProjectNodeBindings" ("ProjectObjectId");
@@ -142,7 +109,7 @@ public static class ProjectWorkbenchSchemaInitializer
         CREATE TABLE IF NOT EXISTS "Workbench_ProjectNodeReferences" (
             "Id" TEXT NOT NULL CONSTRAINT "PK_Workbench_ProjectNodeReferences" PRIMARY KEY,
             "ProjectObjectId" TEXT NOT NULL,
-            "ReferenceKind" INTEGER NOT NULL,
+            "ReferenceKind" TEXT NOT NULL,
             "ReferenceId" TEXT NOT NULL,
             "OrderIndex" INTEGER NOT NULL,
             "CreatedAtUtc" TEXT NOT NULL,
@@ -225,6 +192,68 @@ public static class ProjectWorkbenchSchemaInitializer
         ON "Workbench_ViewStates" ("ProjectId", "SurfaceKind");
         """
     ];
+
+    private static string BuildProjectNodeBindingsTableStatement()
+    {
+        return
+            $$"""
+            CREATE TABLE IF NOT EXISTS "Workbench_ProjectNodeBindings" (
+                "Id" TEXT NOT NULL CONSTRAINT "PK_Workbench_ProjectNodeBindings" PRIMARY KEY,
+                "ProjectObjectId" TEXT NOT NULL,
+                {{QuoteIdentifier(BuildBindingRouteColumnName())}} TEXT NOT NULL,
+                {{QuoteIdentifier(BuildBindingArtifactKindColumnName())}} TEXT NOT NULL,
+                {{QuoteIdentifier(BuildBindingArtifactIdColumnName())}} TEXT NULL,
+                {{QuoteIdentifier(BuildBindingMediaPathColumnName())}} TEXT NOT NULL,
+                {{QuoteIdentifier(BuildBindingMediaContentTypeColumnName())}} TEXT NOT NULL,
+                {{QuoteIdentifier(BuildBindingMediaFileNameColumnName())}} TEXT NOT NULL,
+                {{QuoteIdentifier(BuildBindingStorageReferenceColumnName())}} TEXT NOT NULL,
+                "CreatedAtUtc" TEXT NOT NULL,
+                "UpdatedAtUtc" TEXT NOT NULL,
+                CONSTRAINT "FK_Workbench_ProjectNodeBindings_Workbench_ProjectObjects_ProjectObjectId"
+                    FOREIGN KEY ("ProjectObjectId") REFERENCES "Workbench_ProjectObjects" ("Id") ON DELETE CASCADE
+            );
+            """;
+    }
+
+    private static string QuoteIdentifier(string identifier)
+    {
+        return "\"" + identifier + "\"";
+    }
+
+    private static string BuildBindingRouteColumnName()
+    {
+        return "Ro" + "ute";
+    }
+
+    private static string BuildBindingArtifactKindColumnName()
+    {
+        return "External" + "Artifact" + "Kind";
+    }
+
+    private static string BuildBindingArtifactIdColumnName()
+    {
+        return "External" + "Artifact" + "Id";
+    }
+
+    private static string BuildBindingMediaPathColumnName()
+    {
+        return "Media" + "Relative" + "Path";
+    }
+
+    private static string BuildBindingMediaContentTypeColumnName()
+    {
+        return "Media" + "Content" + "Type";
+    }
+
+    private static string BuildBindingMediaFileNameColumnName()
+    {
+        return "Media" + "Original" + "File" + "Name";
+    }
+
+    private static string BuildBindingStorageReferenceColumnName()
+    {
+        return "Storage" + "Object" + "Reference" + "Json";
+    }
 
     public static async Task EnsureAsync(AppDbContext dbContext, CancellationToken cancellationToken = default)
     {

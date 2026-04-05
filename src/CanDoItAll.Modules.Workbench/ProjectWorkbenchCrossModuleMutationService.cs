@@ -37,7 +37,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         var recordsToDelete = records
             .Where(item => !item.IsSystemManaged && keysToDelete.Contains(item.NodeKey))
             .ToList();
-        await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, recordsToDelete, cancellationToken);
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, recordsToDelete, cancellationToken);
 
         var mutationRecord = mutationCoordinator.Begin(
             projectId,
@@ -120,7 +120,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         var movedRecords = sourceRecords
             .Where(item => movedNodeKeys.Contains(item.NodeKey))
             .ToList();
-        await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, movedRecords, cancellationToken);
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, movedRecords, cancellationToken);
         var movedRecordByNodeKey = movedRecords.ToDictionary(item => item.NodeKey, StringComparer.Ordinal);
         var updatedAtUtc = clock.GetUtcNow();
 

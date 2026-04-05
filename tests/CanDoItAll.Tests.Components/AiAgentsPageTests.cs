@@ -47,10 +47,14 @@ public sealed class AiAgentsPageTests
         var providerSave = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = "Local agent provider",
-            ProviderKind = ProviderKind.OllamaLocal,
-            BaseUrl = "http://localhost:11434",
-            DefaultModel = "llama3.1",
-            TimeoutSeconds = 30,
+            ConnectorPluginKey = OllamaProviderAdapter.PluginKey,
+            ConfigSchemaVersion = "1.0",
+            Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["baseUrl"] = "http://localhost:11434",
+                ["defaultModel"] = "llama3.1",
+                ["timeoutSeconds"] = "30"
+            }),
             IsEnabled = true
         });
         Assert.True(providerSave.IsSuccess);

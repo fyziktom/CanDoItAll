@@ -1,21 +1,22 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace CanDoItAll.Modules.Workbench;
 
 internal static class ProjectNodeLegacyMetadata
 {
-    public static ProjectNodeReferenceSet ReadLegacyReferences(string? metadataJson)
+    public static ProjectNodeReferenceCollection ReadLegacyReferences(string? metadataJson)
     {
         if (string.IsNullOrWhiteSpace(metadataJson))
         {
-            return ProjectNodeReferenceSet.Empty;
+            return ProjectNodeReferenceCollection.Empty;
         }
 
         try
         {
             using var document = JsonDocument.Parse(metadataJson);
             var root = document.RootElement;
-            return new ProjectNodeReferenceSet
+            return new ProjectNodeReferenceCollection
             {
                 MeetingParticipantIds = ReadGuidList(root, "meeting", "participantIds"),
                 RecordingMeetingNodeId = ReadGuid(root, "recording", "meetingNodeArtifactId"),
@@ -33,7 +34,45 @@ internal static class ProjectNodeLegacyMetadata
         }
         catch (JsonException)
         {
-            return ProjectNodeReferenceSet.Empty;
+            return ProjectNodeReferenceCollection.Empty;
+        }
+    }
+
+    public static string SanitizeLegacyReferenceMetadata(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return "{}";
+        }
+
+        try
+        {
+            if (JsonNode.Parse(metadataJson) is not JsonObject root)
+            {
+                return metadataJson;
+            }
+
+            var didChange = false;
+            didChange |= RemoveNestedProperty(root, "meeting", "participantIds");
+            didChange |= RemoveNestedProperty(root, "recording", "meetingNodeArtifactId");
+            didChange |= RemoveNestedProperty(root, "recording", "transcriptNodeArtifactId");
+            didChange |= RemoveNestedProperty(root, "transcript", "recordingNodeArtifactId");
+            didChange |= RemoveNestedProperty(root, "transcript", "lastProviderProfileId");
+            didChange |= RemoveNestedProperty(root, "participant", "parentParticipantArtifactId");
+            didChange |= RemoveNestedProperty(root, "workItem", "assigneeParticipantArtifactId");
+            didChange |= RemoveNestedProperty(root, "workItem", "repositoryResourceId");
+            didChange |= RemoveNestedProperty(root, "repository", "resourceId");
+            didChange |= RemoveNestedProperty(root, "environment", "repositoryResourceId");
+            didChange |= RemoveNestedProperty(root, "infrastructure", "secretReferenceArtifactId");
+            didChange |= RemoveNestedProperty(root, "infrastructure", "storageCatalogId");
+
+            return didChange
+                ? root.ToJsonString()
+                : metadataJson;
+        }
+        catch (JsonException)
+        {
+            return metadataJson;
         }
     }
 
@@ -138,5 +177,59 @@ internal static class ProjectNodeLegacyMetadata
 
         value = default;
         return false;
+    }
+
+    private static bool RemoveNestedProperty(JsonObject root, string sectionName, string propertyName)
+    {
+        if (!TryGetNestedObject(root, sectionName, out var section))
+        {
+            return false;
+        }
+
+        var propertyToRemove = FindPropertyName(section, propertyName);
+        if (propertyToRemove is null)
+        {
+            return false;
+        }
+
+        section.Remove(propertyToRemove);
+
+        if (section.Count == 0)
+        {
+            var sectionToRemove = FindPropertyName(root, sectionName);
+            if (sectionToRemove is not null)
+            {
+                root.Remove(sectionToRemove);
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryGetNestedObject(JsonObject root, string propertyName, out JsonObject value)
+    {
+        var resolvedPropertyName = FindPropertyName(root, propertyName);
+        if (resolvedPropertyName is not null &&
+            root[resolvedPropertyName] is JsonObject objectValue)
+        {
+            value = objectValue;
+            return true;
+        }
+
+        value = null!;
+        return false;
+    }
+
+    private static string? FindPropertyName(JsonObject root, string propertyName)
+    {
+        foreach (var property in root)
+        {
+            if (string.Equals(property.Key, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                return property.Key;
+            }
+        }
+
+        return null;
     }
 }

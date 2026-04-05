@@ -131,15 +131,18 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
                     Field(ResourceConnectorFieldKeys.RepositoryUrl, "Repository URL", ConnectorConfigFieldType.Url, true, "Source repository URL."),
                     Field(ResourceConnectorFieldKeys.DefaultBranch, "Default branch", ConnectorConfigFieldType.Text, false, "Default branch for checkouts."),
                     Field(ResourceConnectorFieldKeys.RelativePath, "Relative path", ConnectorConfigFieldType.Text, false, "Optional path inside the repository.")),
-                model => model.RepositoryUrl.Trim(),
-                model => JsonSerializer.Serialize(new RepositoryResourceConfig(model.RepositoryUrl, model.DefaultBranch, model.RelativePath)),
+                model => GetText(model, ResourceConnectorFieldKeys.RepositoryUrl).Trim(),
+                model => JsonSerializer.Serialize(new RepositoryResourceConfig(
+                    GetText(model, ResourceConnectorFieldKeys.RepositoryUrl),
+                    GetText(model, ResourceConnectorFieldKeys.DefaultBranch),
+                    GetText(model, ResourceConnectorFieldKeys.RelativePath))),
                 static (model, json) =>
                 {
                     if (JsonSerializer.Deserialize<RepositoryResourceConfig>(NormalizeConfigJson(json)) is { } value)
                     {
-                        model.RepositoryUrl = value.RepositoryUrl;
-                        model.DefaultBranch = value.DefaultBranch;
-                        model.RelativePath = value.RelativePath;
+                        SetText(model, ResourceConnectorFieldKeys.RepositoryUrl, value.RepositoryUrl);
+                        SetText(model, ResourceConnectorFieldKeys.DefaultBranch, value.DefaultBranch);
+                        SetText(model, ResourceConnectorFieldKeys.RelativePath, value.RelativePath);
                     }
                 }),
             Legacy(
@@ -152,14 +155,16 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
                 LegacySchema(
                     Field(ResourceConnectorFieldKeys.FolderPath, "Folder path", ConnectorConfigFieldType.Text, true, "Absolute or project-relative folder path."),
                     Field(ResourceConnectorFieldKeys.WorkingDirectory, "Working directory", ConnectorConfigFieldType.Text, false, "Optional working directory.")),
-                model => model.FolderPath.Trim(),
-                model => JsonSerializer.Serialize(new FolderResourceConfig(model.FolderPath, model.WorkingDirectory)),
+                model => GetText(model, ResourceConnectorFieldKeys.FolderPath).Trim(),
+                model => JsonSerializer.Serialize(new FolderResourceConfig(
+                    GetText(model, ResourceConnectorFieldKeys.FolderPath),
+                    GetText(model, ResourceConnectorFieldKeys.WorkingDirectory))),
                 static (model, json) =>
                 {
                     if (JsonSerializer.Deserialize<FolderResourceConfig>(NormalizeConfigJson(json)) is { } value)
                     {
-                        model.FolderPath = value.Path;
-                        model.WorkingDirectory = value.WorkingDirectory;
+                        SetText(model, ResourceConnectorFieldKeys.FolderPath, value.Path);
+                        SetText(model, ResourceConnectorFieldKeys.WorkingDirectory, value.WorkingDirectory);
                     }
                 }),
             Legacy(
@@ -172,14 +177,16 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
                 LegacySchema(
                     Field(ResourceConnectorFieldKeys.FilePath, "File path", ConnectorConfigFieldType.Text, true, "Absolute or project-relative file path."),
                     Field(ResourceConnectorFieldKeys.WorkingDirectory, "Working directory", ConnectorConfigFieldType.Text, false, "Optional working directory.")),
-                model => model.FilePath.Trim(),
-                model => JsonSerializer.Serialize(new FileResourceConfig(model.FilePath, model.WorkingDirectory)),
+                model => GetText(model, ResourceConnectorFieldKeys.FilePath).Trim(),
+                model => JsonSerializer.Serialize(new FileResourceConfig(
+                    GetText(model, ResourceConnectorFieldKeys.FilePath),
+                    GetText(model, ResourceConnectorFieldKeys.WorkingDirectory))),
                 static (model, json) =>
                 {
                     if (JsonSerializer.Deserialize<FileResourceConfig>(NormalizeConfigJson(json)) is { } value)
                     {
-                        model.FilePath = value.Path;
-                        model.WorkingDirectory = value.WorkingDirectory;
+                        SetText(model, ResourceConnectorFieldKeys.FilePath, value.Path);
+                        SetText(model, ResourceConnectorFieldKeys.WorkingDirectory, value.WorkingDirectory);
                     }
                 }),
             Legacy(
@@ -192,14 +199,16 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
                 LegacySchema(
                     Field(ResourceConnectorFieldKeys.WebUrl, "URL", ConnectorConfigFieldType.Url, true, "Absolute URL."),
                     Field(ResourceConnectorFieldKeys.UrlTitleHint, "Title hint", ConnectorConfigFieldType.Text, false, "Optional display title hint.")),
-                model => model.WebUrl.Trim(),
-                model => JsonSerializer.Serialize(new WebLinkResourceConfig(model.WebUrl, model.UrlTitleHint)),
+                model => GetText(model, ResourceConnectorFieldKeys.WebUrl).Trim(),
+                model => JsonSerializer.Serialize(new WebLinkResourceConfig(
+                    GetText(model, ResourceConnectorFieldKeys.WebUrl),
+                    GetText(model, ResourceConnectorFieldKeys.UrlTitleHint))),
                 static (model, json) =>
                 {
                     if (JsonSerializer.Deserialize<WebLinkResourceConfig>(NormalizeConfigJson(json)) is { } value)
                     {
-                        model.WebUrl = value.Url;
-                        model.UrlTitleHint = value.TitleHint;
+                        SetText(model, ResourceConnectorFieldKeys.WebUrl, value.Url);
+                        SetText(model, ResourceConnectorFieldKeys.UrlTitleHint, value.TitleHint);
                     }
                 },
                 ConnectorManifestCapability.ProjectResource | ConnectorManifestCapability.WorkbenchProjection | ConnectorManifestCapability.AgentExposure),
@@ -215,16 +224,23 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
                     Field(ResourceConnectorFieldKeys.Port, "Port", ConnectorConfigFieldType.Number, false, "Optional FTP port."),
                     Field(ResourceConnectorFieldKeys.UserName, "User", ConnectorConfigFieldType.Text, false, "Optional user name."),
                     Field(ResourceConnectorFieldKeys.RemotePath, "Remote path", ConnectorConfigFieldType.Text, false, "Optional remote path.")),
-                model => BuildRemoteEndpoint(model.Host, model.Port, model.RemotePath),
-                model => JsonSerializer.Serialize(new FtpResourceConfig(model.Host, model.Port, model.RemotePath, model.UserName)),
+                model => BuildRemoteEndpoint(
+                    GetText(model, ResourceConnectorFieldKeys.Host),
+                    GetNumber(model, ResourceConnectorFieldKeys.Port),
+                    GetText(model, ResourceConnectorFieldKeys.RemotePath)),
+                model => JsonSerializer.Serialize(new FtpResourceConfig(
+                    GetText(model, ResourceConnectorFieldKeys.Host),
+                    GetNumber(model, ResourceConnectorFieldKeys.Port),
+                    GetText(model, ResourceConnectorFieldKeys.RemotePath),
+                    GetText(model, ResourceConnectorFieldKeys.UserName))),
                 static (model, json) =>
                 {
                     if (JsonSerializer.Deserialize<FtpResourceConfig>(NormalizeConfigJson(json)) is { } value)
                     {
-                        model.Host = value.Host;
-                        model.Port = value.Port;
-                        model.RemotePath = value.RemotePath;
-                        model.UserName = value.UserName;
+                        SetText(model, ResourceConnectorFieldKeys.Host, value.Host);
+                        SetNumber(model, ResourceConnectorFieldKeys.Port, value.Port);
+                        SetText(model, ResourceConnectorFieldKeys.RemotePath, value.RemotePath);
+                        SetText(model, ResourceConnectorFieldKeys.UserName, value.UserName);
                     }
                 }),
             Legacy(
@@ -239,16 +255,23 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
                     Field(ResourceConnectorFieldKeys.Port, "Port", ConnectorConfigFieldType.Number, false, "Optional SSH port."),
                     Field(ResourceConnectorFieldKeys.UserName, "User", ConnectorConfigFieldType.Text, false, "Optional user name."),
                     Field(ResourceConnectorFieldKeys.WorkingDirectory, "Working directory", ConnectorConfigFieldType.Text, false, "Optional working directory.")),
-                model => BuildRemoteEndpoint(model.Host, model.Port, model.WorkingDirectory),
-                model => JsonSerializer.Serialize(new SshResourceConfig(model.Host, model.Port, model.UserName, model.WorkingDirectory)),
+                model => BuildRemoteEndpoint(
+                    GetText(model, ResourceConnectorFieldKeys.Host),
+                    GetNumber(model, ResourceConnectorFieldKeys.Port),
+                    GetText(model, ResourceConnectorFieldKeys.WorkingDirectory)),
+                model => JsonSerializer.Serialize(new SshResourceConfig(
+                    GetText(model, ResourceConnectorFieldKeys.Host),
+                    GetNumber(model, ResourceConnectorFieldKeys.Port),
+                    GetText(model, ResourceConnectorFieldKeys.UserName),
+                    GetText(model, ResourceConnectorFieldKeys.WorkingDirectory))),
                 static (model, json) =>
                 {
                     if (JsonSerializer.Deserialize<SshResourceConfig>(NormalizeConfigJson(json)) is { } value)
                     {
-                        model.Host = value.Host;
-                        model.Port = value.Port;
-                        model.UserName = value.UserName;
-                        model.WorkingDirectory = value.WorkingDirectory;
+                        SetText(model, ResourceConnectorFieldKeys.Host, value.Host);
+                        SetNumber(model, ResourceConnectorFieldKeys.Port, value.Port);
+                        SetText(model, ResourceConnectorFieldKeys.UserName, value.UserName);
+                        SetText(model, ResourceConnectorFieldKeys.WorkingDirectory, value.WorkingDirectory);
                     }
                 }),
             Legacy(
@@ -262,15 +285,18 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
                     Field(ResourceConnectorFieldKeys.ScriptPath, "Script path", ConnectorConfigFieldType.Text, true, "Script file path."),
                     Field(ResourceConnectorFieldKeys.WorkingDirectory, "Working directory", ConnectorConfigFieldType.Text, false, "Optional working directory."),
                     Field(ResourceConnectorFieldKeys.ScriptArguments, "Arguments", ConnectorConfigFieldType.Text, false, "Optional script arguments.")),
-                model => model.ScriptPath.Trim(),
-                model => JsonSerializer.Serialize(new PowerShellScriptResourceConfig(model.ScriptPath, model.ScriptArguments, model.WorkingDirectory)),
+                model => GetText(model, ResourceConnectorFieldKeys.ScriptPath).Trim(),
+                model => JsonSerializer.Serialize(new PowerShellScriptResourceConfig(
+                    GetText(model, ResourceConnectorFieldKeys.ScriptPath),
+                    GetText(model, ResourceConnectorFieldKeys.ScriptArguments),
+                    GetText(model, ResourceConnectorFieldKeys.WorkingDirectory))),
                 static (model, json) =>
                 {
                     if (JsonSerializer.Deserialize<PowerShellScriptResourceConfig>(NormalizeConfigJson(json)) is { } value)
                     {
-                        model.ScriptPath = value.ScriptPath;
-                        model.ScriptArguments = value.Arguments;
-                        model.WorkingDirectory = value.WorkingDirectory;
+                        SetText(model, ResourceConnectorFieldKeys.ScriptPath, value.ScriptPath);
+                        SetText(model, ResourceConnectorFieldKeys.ScriptArguments, value.Arguments);
+                        SetText(model, ResourceConnectorFieldKeys.WorkingDirectory, value.WorkingDirectory);
                     }
                 },
                 workbenchSubtype: "shell"),
@@ -284,14 +310,16 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
                 LegacySchema(
                     Field(ResourceConnectorFieldKeys.ComposeFilePath, "Compose file", ConnectorConfigFieldType.Text, true, "Compose file path."),
                     Field(ResourceConnectorFieldKeys.ComposeService, "Service name", ConnectorConfigFieldType.Text, false, "Optional compose service name.")),
-                model => model.ComposeFilePath.Trim(),
-                model => JsonSerializer.Serialize(new DockerComposeResourceConfig(model.ComposeFilePath, model.ComposeService)),
+                model => GetText(model, ResourceConnectorFieldKeys.ComposeFilePath).Trim(),
+                model => JsonSerializer.Serialize(new DockerComposeResourceConfig(
+                    GetText(model, ResourceConnectorFieldKeys.ComposeFilePath),
+                    GetText(model, ResourceConnectorFieldKeys.ComposeService))),
                 static (model, json) =>
                 {
                     if (JsonSerializer.Deserialize<DockerComposeResourceConfig>(NormalizeConfigJson(json)) is { } value)
                     {
-                        model.ComposeFilePath = value.ComposeFilePath;
-                        model.ComposeService = value.ServiceName;
+                        SetText(model, ResourceConnectorFieldKeys.ComposeFilePath, value.ComposeFilePath);
+                        SetText(model, ResourceConnectorFieldKeys.ComposeService, value.ServiceName);
                     }
                 }),
             Legacy(
@@ -303,13 +331,15 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
                 "Secret purpose is required.",
                 LegacySchema(
                     Field(ResourceConnectorFieldKeys.SecretPurpose, "Secret purpose", ConnectorConfigFieldType.Text, true, "Purpose for the linked secret.")),
-                model => model.SecretPurpose.Trim(),
-                model => JsonSerializer.Serialize(new SecretLinkResourceConfig(model.SecretPurpose, string.Empty)),
+                model => GetText(model, ResourceConnectorFieldKeys.SecretPurpose).Trim(),
+                model => JsonSerializer.Serialize(new SecretLinkResourceConfig(
+                    GetText(model, ResourceConnectorFieldKeys.SecretPurpose),
+                    string.Empty)),
                 static (model, json) =>
                 {
                     if (JsonSerializer.Deserialize<SecretLinkResourceConfig>(NormalizeConfigJson(json)) is { } value)
                     {
-                        model.SecretPurpose = value.Purpose;
+                        SetText(model, ResourceConnectorFieldKeys.SecretPurpose, value.Purpose);
                     }
                 }),
             Legacy(
@@ -322,14 +352,16 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
                 LegacySchema(
                     Field(ResourceConnectorFieldKeys.PromptReference, "Prompt reference", ConnectorConfigFieldType.Text, true, "Prompt reference or identifier."),
                     Field(ResourceConnectorFieldKeys.PromptTitleHint, "Prompt title hint", ConnectorConfigFieldType.Text, false, "Optional display title hint.")),
-                model => model.PromptReference.Trim(),
-                model => JsonSerializer.Serialize(new PromptLinkResourceConfig(model.PromptReference, model.PromptTitleHint)),
+                model => GetText(model, ResourceConnectorFieldKeys.PromptReference).Trim(),
+                model => JsonSerializer.Serialize(new PromptLinkResourceConfig(
+                    GetText(model, ResourceConnectorFieldKeys.PromptReference),
+                    GetText(model, ResourceConnectorFieldKeys.PromptTitleHint))),
                 static (model, json) =>
                 {
                     if (JsonSerializer.Deserialize<PromptLinkResourceConfig>(NormalizeConfigJson(json)) is { } value)
                     {
-                        model.PromptReference = value.PromptReference;
-                        model.PromptTitleHint = value.PromptTitleHint;
+                        SetText(model, ResourceConnectorFieldKeys.PromptReference, value.PromptReference);
+                        SetText(model, ResourceConnectorFieldKeys.PromptTitleHint, value.PromptTitleHint);
                     }
                 },
                 ConnectorManifestCapability.ProjectResource | ConnectorManifestCapability.WorkbenchProjection | ConnectorManifestCapability.AgentExposure)
@@ -390,6 +422,26 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
         return string.IsNullOrWhiteSpace(configJson)
             ? "{}"
             : configJson;
+    }
+
+    private static string GetText(ResourceEditorModel model, string key)
+    {
+        return model.Configuration.GetText(key);
+    }
+
+    private static int? GetNumber(ResourceEditorModel model, string key)
+    {
+        return model.Configuration.GetNumber(key);
+    }
+
+    private static void SetText(ResourceEditorModel model, string key, string? value)
+    {
+        model.Configuration.SetText(key, value);
+    }
+
+    private static void SetNumber(ResourceEditorModel model, string key, int? value)
+    {
+        model.Configuration.SetNumber(key, value);
     }
 
     private static string BuildRemoteEndpoint(string host, int? port, string path)
@@ -455,28 +507,29 @@ public sealed class WebhookResourceConnectorPlugin : IResourceConnectorPlugin
 
     public Error? ValidateEditor(ResourceEditorModel model)
     {
-        if (string.IsNullOrWhiteSpace(model.EndpointUrl))
+        var endpointUrl = model.Configuration.GetText(ResourceConnectorFieldKeys.EndpointUrl);
+        if (string.IsNullOrWhiteSpace(endpointUrl))
         {
             return Error.Validation("Webhook connector config must contain endpointUrl.");
         }
 
-        return Uri.TryCreate(model.EndpointUrl, UriKind.Absolute, out _)
+        return Uri.TryCreate(endpointUrl, UriKind.Absolute, out _)
             ? null
             : Error.Validation("Webhook connector endpointUrl must be an absolute URL.");
     }
 
     public string BuildLocation(ResourceEditorModel model)
     {
-        return model.EndpointUrl.Trim();
+        return model.Configuration.GetText(ResourceConnectorFieldKeys.EndpointUrl).Trim();
     }
 
     public string SerializeConfig(ResourceEditorModel model)
     {
         return JsonSerializer.Serialize(
             new WebhookResourceConfig(
-                model.EndpointUrl.Trim(),
-                model.HealthPath.Trim(),
-                string.IsNullOrWhiteSpace(model.HttpMethod) ? "POST" : model.HttpMethod.Trim().ToUpperInvariant()),
+                model.Configuration.GetText(ResourceConnectorFieldKeys.EndpointUrl).Trim(),
+                model.Configuration.GetText(ResourceConnectorFieldKeys.HealthPath).Trim(),
+                NormalizeHttpMethod(model.Configuration.GetText(ResourceConnectorFieldKeys.HttpMethod))),
             JsonOptions);
     }
 
@@ -488,9 +541,9 @@ public sealed class WebhookResourceConnectorPlugin : IResourceConnectorPlugin
             return;
         }
 
-        model.EndpointUrl = config.EndpointUrl;
-        model.HealthPath = config.HealthPath;
-        model.HttpMethod = config.Method;
+        model.Configuration.SetText(ResourceConnectorFieldKeys.EndpointUrl, config.EndpointUrl);
+        model.Configuration.SetText(ResourceConnectorFieldKeys.HealthPath, config.HealthPath);
+        model.Configuration.SetText(ResourceConnectorFieldKeys.HttpMethod, NormalizeHttpMethod(config.Method));
     }
 
     public ProjectObjectType ResolveWorkbenchObjectType(ProjectResource resource) => ProjectObjectType.Connector;
@@ -500,6 +553,13 @@ public sealed class WebhookResourceConnectorPlugin : IResourceConnectorPlugin
     private static string NormalizeConfigJson(string configJson)
     {
         return string.IsNullOrWhiteSpace(configJson) ? "{}" : configJson;
+    }
+
+    private static string NormalizeHttpMethod(string? method)
+    {
+        return string.IsNullOrWhiteSpace(method)
+            ? "POST"
+            : method.Trim().ToUpperInvariant();
     }
 
     private sealed record WebhookResourceConfig(string EndpointUrl, string HealthPath, string Method);
