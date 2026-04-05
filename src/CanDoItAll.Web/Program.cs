@@ -7,6 +7,7 @@ using CanDoItAll.Infrastructure.Readiness;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.Automation;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Prompts;
@@ -57,6 +58,7 @@ builder.Services.AddValidationModule();
 builder.Services.AddTestLabModule();
 builder.Services.AddActivityModule();
 builder.Services.AddAutomationModule();
+builder.Services.AddCrmHrModule();
 
 var app = builder.Build();
 

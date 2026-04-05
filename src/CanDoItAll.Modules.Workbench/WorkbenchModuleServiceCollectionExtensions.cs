@@ -10,6 +10,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
     {
         services.AddScoped<WorkbenchStateService>();
         services.AddScoped<ProjectWorkbenchService>();
+        services.AddScoped<IProjectNodeScopeBridge, ProjectNodeScopeBridge>();
         services.AddScoped<ProjectStructureLeaseService>();
         services.AddScoped<ProjectStructureAnalyticsService>();
         services.AddScoped<ProjectStructureChecklistService>();

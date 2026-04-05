@@ -20,21 +20,21 @@ tests: component:ActivityPageTests, e2e:activity-smoke
     <Header>
         <PageHeader Eyebrow="Activity"
                     Title="Activity timeline and search"
-                    Description="Review recent actions across projects, prompts, validations, test evidence, and background workflows from one searchable timeline." />
+                    Description="Review recent actions across projects, prompts, CRM-HR, validations, test evidence, and background workflows from one searchable timeline." />
     </Header>
 
     <ChildContent>
         <ListDetailShell ListPaneWidth="22rem">
             <ListHeader>
                 <ListPanelHeader Title="Search"
-                                 Description="Cross-entity search is backed by the relational index and routes back into the workbench."
+                                 Description="Cross-entity search is backed by the relational index and routes back into CRM-HR and the rest of the workbench."
                                  Count="@($"{results.Count} result(s)")">
                     <Filters>
                         <FilterBar ResultText="@(hasSearched ? $"{results.Count} result(s)" : "Search is ready")">
                             <EditForm Model="this" OnSubmit="SearchAsync" class="min-w-0 flex-1">
                                 <Cluster Gap="LayoutGap.Small"
                                          Class="min-w-0">
-                                    <InputText @bind-Value="query" class="cda-input min-w-[14rem] flex-1" placeholder="Search projects, prompts, resources, validations, and tests" />
+                                    <InputText @bind-Value="query" class="cda-input min-w-[14rem] flex-1" placeholder="Search projects, CRM-HR, prompts, resources, validations, and tests" data-testid="activity-search-input" />
                                     <Button Type="submit" Text="Search" />
                                     <Button ButtonStyle="ButtonStyle.Light" Text="Clear" Size="ButtonSize.Small" Click="ClearSearch" />
                                 </Cluster>
@@ -48,13 +48,13 @@ tests: component:ActivityPageTests, e2e:activity-smoke
                 {
                     <EmptyState Eyebrow="Search ready"
                                 Title="No query yet"
-                                Description="Search the indexed records to jump directly into the right workbench surface without scanning the full timeline." />
+                                Description="Search the indexed records to jump directly into the right workbench or CRM-HR surface without scanning the full timeline." />
                 }
                 else if (results.Count == 0)
                 {
                     <EmptyState Eyebrow="No results"
                                 Title="Nothing matched this query"
-                                Description="Try a broader project, prompt, resource, validation, or test term and search again." />
+                                Description="Try a broader CRM-HR, project, prompt, resource, validation, or test term and search again." />
                 }
                 else
                 {

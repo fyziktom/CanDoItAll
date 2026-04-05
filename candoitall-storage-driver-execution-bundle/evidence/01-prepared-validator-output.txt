@@ -1,1 +1,0 @@
-Bundle is valid for stage 'prepared': /tmp/cando_repo/CanDoItAll-canvas-drawing-refactor/candoitall-storage-driver-execution-bundle

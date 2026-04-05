@@ -21,6 +21,8 @@ public sealed class TestPlan
 
     public Guid? ProjectId { get; set; }
 
+    public Guid? ResponsiblePartyId { get; set; }
+
     public string Title { get; set; } = string.Empty;
 
     public string Phase { get; set; } = string.Empty;
@@ -183,6 +185,8 @@ public sealed class TestPlanEditorModel
 
     public Guid? ProjectId { get; set; }
 
+    public Guid? ResponsiblePartyId { get; set; }
+
     public string Title { get; set; } = string.Empty;
 
     public string Phase { get; set; } = string.Empty;
@@ -269,6 +273,7 @@ public sealed class TestLabService(
         {
             Id = plan.Id,
             ProjectId = plan.ProjectId,
+            ResponsiblePartyId = plan.ResponsiblePartyId,
             Title = plan.Title,
             Phase = plan.Phase,
             CoverageGoal = plan.CoverageGoal,
@@ -312,6 +317,7 @@ public sealed class TestLabService(
         }
 
         entity.ProjectId = model.ProjectId;
+        entity.ResponsiblePartyId = model.ResponsiblePartyId;
         entity.Title = model.Title.Trim();
         entity.Phase = model.Phase?.Trim() ?? string.Empty;
         entity.CoverageGoal = model.CoverageGoal?.Trim() ?? string.Empty;
@@ -381,7 +387,9 @@ public sealed class TestLabService(
         where TEntity : class, new()
         where TModel : class
     {
-        var entities = await set.Where(entity => keySelector(entity) == planId).ToListAsync(cancellationToken);
+        var entities = (await set.ToListAsync(cancellationToken))
+            .Where(entity => keySelector(entity) == planId)
+            .ToList();
         var modelIds = models
             .Select(model => (Guid?)model.GetType().GetProperty("Id")?.GetValue(model))
             .Where(id => id.HasValue)

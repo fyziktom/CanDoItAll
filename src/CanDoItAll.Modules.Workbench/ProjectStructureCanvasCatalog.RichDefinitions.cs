@@ -6,6 +6,100 @@ namespace CanDoItAll.Modules.Workbench;
 
 internal static partial class ProjectStructureCanvasCatalog
 {
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> MeetingChannelOptions =
+    [
+        Option("msTeams", "MS Teams"),
+        Option("googleMeet", "Google Meet"),
+        Option("zoom", "Zoom"),
+        Option("whatsApp", "WhatsApp"),
+        Option("telegram", "Telegram")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> RepeatCadenceOptions =
+    [
+        Option("none", "No repeat"),
+        Option("daily", "Daily"),
+        Option("weekly", "Weekly"),
+        Option("biWeekly", "Every 2 weeks"),
+        Option("monthly", "Monthly")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> PythonProviderOptions =
+    [
+        Option("python", "Python"),
+        Option("conda", "Conda")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> RuntimeProtocolOptions =
+    [
+        Option("https", "HTTPS"),
+        Option("http", "HTTP"),
+        Option("both", "HTTP + HTTPS")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DeliveryChannelOptions =
+    [
+        Option("none", "None"),
+        Option("email", "Email"),
+        Option("whatsApp", "WhatsApp"),
+        Option("telegram", "Telegram"),
+        Option("teams", "Teams"),
+        Option("sms", "SMS")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> SendKindOptions =
+    [
+        Option("file", "File"),
+        Option("offer", "Offer"),
+        Option("email", "Email"),
+        Option("message", "Message"),
+        Option("invoice", "Invoice"),
+        Option("money", "Money")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DnsRecordTypeOptions =
+    [
+        Option("A", "A"),
+        Option("AAAA", "AAAA"),
+        Option("CNAME", "CNAME"),
+        Option("TXT", "TXT"),
+        Option("MX", "MX")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DockerModeOptions =
+    [
+        Option("compose", "Compose"),
+        Option("swarm", "Swarm"),
+        Option("devContainer", "Dev container")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DatabaseTypeOptions =
+    [
+        Option("postgresql", "PostgreSQL"),
+        Option("sqlServer", "SQL Server"),
+        Option("mysql", "MySQL"),
+        Option("sqlite", "SQLite")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> AiReferenceOptions =
+    [
+        Option("chatGptConversation", "ChatGPT conversation"),
+        Option("codexThread", "Codex thread"),
+        Option("localLlm", "Local LLM")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> StoragePurposeOptions =
+    [
+        Option(nameof(StorageUsagePurpose.ProjectAsset), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.ProjectAsset)),
+        Option(nameof(StorageUsagePurpose.PromptAttachment), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.PromptAttachment)),
+        Option(nameof(StorageUsagePurpose.PromptExport), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.PromptExport)),
+        Option(nameof(StorageUsagePurpose.Evidence), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.Evidence)),
+        Option(nameof(StorageUsagePurpose.RecordingMedia), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.RecordingMedia)),
+        Option(nameof(StorageUsagePurpose.SnapshotPackage), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.SnapshotPackage)),
+        Option(nameof(StorageUsagePurpose.ReleasePackage), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.ReleasePackage)),
+        Option(nameof(StorageUsagePurpose.DeploymentMirror), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.DeploymentMirror))
+    ];
+
     private static readonly ProjectStructureCreateLeafDefinition[] RichCreateLeafDefinitions =
     [
         new("add-block-deployment", ProjectObjectType.ProjectBlock, "deployment", "blocks", "Deployment block", "Map rollout work, release gates, and deployment readiness.", "ship", "warn", "Deployment block", "Block name", "Deployment lane", "Release", "Target release or environment", "Description", "What this deployment block covers"),
@@ -176,100 +270,6 @@ internal static partial class ProjectStructureCanvasCatalog
         new("add-infrastructure-storage", ProjectObjectType.Infrastructure, "storage-system", "infrastructure", "Storage", "Track workspace storage lanes, usage purpose, and path ownership as typed infrastructure.", "storage", "mint", "Storage lane", "Storage", "Project assets lane", "Purpose", "Storage role or owner", "Notes", "What this storage lane supports", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("storageSystem", "Storage")]), Field("storageCatalogId", "Storage catalog", "select", "Choose storage target", true), Field("storagePurpose", "Usage purpose", "select", "Choose purpose", true, StoragePurposeOptions), Field("storagePathPrefix", "Path prefix", "text", "projects/demo/assets"), Field("connectionReference", "Connection reference", "text", "/storage/assets")], [DefaultValue("infrastructureKind", "storageSystem"), DefaultValue("storagePurpose", nameof(StorageUsagePurpose.ProjectAsset))]),
         new("add-infrastructure-key", ProjectObjectType.Infrastructure, "key-reference", "infrastructure", "Key reference", "Track a key or secret reference without storing the secret itself.", "key", "danger", "Key reference", "Key", "Deployment key", "Owner", "Who owns this key", "Notes", "Usage context", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("keyReference", "Key reference")]), Field("connectionReference", "Reference", "text", "GitHub Actions secret", true), Field("secretRef", "Secret reference", "select", "Optional secret")], [DefaultValue("infrastructureKind", "keyReference")]),
         new("add-infrastructure-ai", ProjectObjectType.Infrastructure, "ai-link", "infrastructure", "AI link", "Track AI conversations and local LLM references as typed infrastructure nodes.", "ai", "accent", "AI link", "Reference", "ChatGPT design review", "Owner", "Project or operator", "Notes", "Why this AI reference matters", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("aiLink", "AI link")]), Field("aiReferenceKind", "Reference kind", "select", "Choose AI reference", true, AiReferenceOptions), Field("aiReferenceUrl", "Reference URL", "url", "https://..."), Field("providerName", "Tool", "text", "ChatGPT / Codex / Ollama")], [DefaultValue("infrastructureKind", "aiLink")])
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> MeetingChannelOptions =
-    [
-        Option("msTeams", "MS Teams"),
-        Option("googleMeet", "Google Meet"),
-        Option("zoom", "Zoom"),
-        Option("whatsApp", "WhatsApp"),
-        Option("telegram", "Telegram")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> RepeatCadenceOptions =
-    [
-        Option("none", "No repeat"),
-        Option("daily", "Daily"),
-        Option("weekly", "Weekly"),
-        Option("biWeekly", "Every 2 weeks"),
-        Option("monthly", "Monthly")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> PythonProviderOptions =
-    [
-        Option("python", "Python"),
-        Option("conda", "Conda")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> RuntimeProtocolOptions =
-    [
-        Option("https", "HTTPS"),
-        Option("http", "HTTP"),
-        Option("both", "HTTP + HTTPS")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DeliveryChannelOptions =
-    [
-        Option("none", "None"),
-        Option("email", "Email"),
-        Option("whatsApp", "WhatsApp"),
-        Option("telegram", "Telegram"),
-        Option("teams", "Teams"),
-        Option("sms", "SMS")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> SendKindOptions =
-    [
-        Option("file", "File"),
-        Option("offer", "Offer"),
-        Option("email", "Email"),
-        Option("message", "Message"),
-        Option("invoice", "Invoice"),
-        Option("money", "Money")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DnsRecordTypeOptions =
-    [
-        Option("A", "A"),
-        Option("AAAA", "AAAA"),
-        Option("CNAME", "CNAME"),
-        Option("TXT", "TXT"),
-        Option("MX", "MX")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DockerModeOptions =
-    [
-        Option("compose", "Compose"),
-        Option("swarm", "Swarm"),
-        Option("devContainer", "Dev container")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DatabaseTypeOptions =
-    [
-        Option("postgresql", "PostgreSQL"),
-        Option("sqlServer", "SQL Server"),
-        Option("mysql", "MySQL"),
-        Option("sqlite", "SQLite")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> AiReferenceOptions =
-    [
-        Option("chatGptConversation", "ChatGPT conversation"),
-        Option("codexThread", "Codex thread"),
-        Option("localLlm", "Local LLM")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> StoragePurposeOptions =
-    [
-        Option(nameof(StorageUsagePurpose.ProjectAsset), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.ProjectAsset)),
-        Option(nameof(StorageUsagePurpose.PromptAttachment), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.PromptAttachment)),
-        Option(nameof(StorageUsagePurpose.PromptExport), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.PromptExport)),
-        Option(nameof(StorageUsagePurpose.Evidence), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.Evidence)),
-        Option(nameof(StorageUsagePurpose.RecordingMedia), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.RecordingMedia)),
-        Option(nameof(StorageUsagePurpose.SnapshotPackage), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.SnapshotPackage)),
-        Option(nameof(StorageUsagePurpose.ReleasePackage), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.ReleasePackage)),
-        Option(nameof(StorageUsagePurpose.DeploymentMirror), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.DeploymentMirror))
     ];
 
     private static IReadOnlyList<ProjectStructureCreateLeafDefinition> ResolveMeetingLeafDefinitions()

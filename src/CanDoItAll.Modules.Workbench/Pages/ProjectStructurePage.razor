@@ -17,6 +17,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.Infrastructure.Storage
 @using CanDoItAll.SharedKernel
 @inject ProjectsService ProjectsService
+@inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 @inject ProjectWorkbenchService ProjectWorkbenchService
 @inject IProjectWorkbenchSeedService ProjectWorkbenchSeedService
 @inject IProjectStructureLocalFileOpener LocalFileOpener
@@ -218,6 +219,214 @@ else
                                               LinkCount="@surface.Links.Count" />
             </Supporting>
         </CanvasWorkbenchStage>
+
+        @if (CanShowPartyEditor)
+        {
+            <SectionCard Title="@PartyEditorTitle"
+                         Description="@PartyEditorDescription">
+                <div class="space-y-5"
+                     data-testid="project-structure-party-editor">
+                    <SurfaceCard Soft="true">
+                        <Stack GapScale="LayoutGap.Small">
+                            <Cluster>
+                                <StatusBadge Tone="@PartyEditorTone"
+                                             Text="@PartyEditorStatus" />
+                                @if (!string.IsNullOrWhiteSpace(PartyEditorLinkedPartyName))
+                                {
+                                    <Pill Tone="PillTone.Info"
+                                          Text="@PartyEditorLinkedPartyName" />
+                                }
+                            </Cluster>
+                            <p class="text-sm text-slate-600">@PartyEditorLead</p>
+                        </Stack>
+                    </SurfaceCard>
+
+                    @if (isPartyEditorLoading)
+                    {
+                        <SurfaceCard Soft="true"
+                                     data-testid="project-structure-party-editor-loading">
+                            <p class="text-sm text-slate-600">Loading party relationships for the selected node.</p>
+                        </SurfaceCard>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(partyEditor.Message))
+                    {
+                        <SurfaceCard Soft="true">
+                            <p class="text-sm @(partyEditor.MessageTone == "danger" ? "text-rose-700" : "text-slate-700")"
+                               data-testid="project-structure-party-editor-message">@partyEditor.Message</p>
+                        </SurfaceCard>
+                    }
+
+                    @if (isPartyEditorLoading)
+                    {
+                        <SurfaceCard Soft="true">
+                            <p class="text-sm text-slate-600">Preparing the directory linkage controls.</p>
+                        </SurfaceCard>
+                    }
+                    else if (IsParticipantPartyEditor)
+                    {
+                        <SurfaceCard>
+                            <Stack GapScale="LayoutGap.Large">
+                                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                    <InputCheckbox @bind-Value="partyEditor.KeepProjectLocalOnly"
+                                                   data-testid="project-structure-participant-local-only" />
+                                    <span>Keep project-local only</span>
+                                </label>
+
+                                @if (!partyEditor.KeepProjectLocalOnly)
+                                {
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnsLg="2">
+                                        <FormField Text="Existing party">
+                                            <InputSelect @bind-Value="ParticipantPartyValue"
+                                                         class="cda-input"
+                                                         data-testid="project-structure-participant-party">
+                                                <option value="">Choose a party</option>
+                                                @foreach (var option in partyEditorOptions)
+                                                {
+                                                    <option value="@option.PartyId">@($"{option.DisplayName} ({option.PartyTypeLabel})")</option>
+                                                }
+                                            </InputSelect>
+                                        </FormField>
+                                        <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                            The synced party can drive reusable staffing, AI-agent reuse, and meeting defaults without forcing every participant node into the central directory.
+                                        </div>
+                                    </Grid>
+
+                                    <SurfaceCard Soft="true">
+                                        <Stack GapScale="LayoutGap.Medium">
+                                            <div>
+                                                <p class="cda-eyebrow">Quick create</p>
+                                                <p class="mt-1 text-sm text-slate-600">Create a directory record from the selected participant node when nothing reusable exists yet.</p>
+                                            </div>
+
+                                            <Grid Gap="LayoutGap.Medium"
+                                                  ColumnsLg="2">
+                                                <FormField Text="Kind">
+                                                    <InputSelect @bind-Value="partyEditor.QuickCreate.PartyKind"
+                                                                 class="cda-input"
+                                                                 data-testid="project-structure-participant-quick-kind">
+                                                        @foreach (var kind in Enum.GetValues<ProjectPartyQuickCreateKind>())
+                                                        {
+                                                            <option value="@kind">@ResolveQuickCreateKindLabel(kind)</option>
+                                                        }
+                                                    </InputSelect>
+                                                </FormField>
+                                                <FormField Text="Name">
+                                                    <InputText @bind-Value="partyEditor.QuickCreate.DisplayName"
+                                                               class="cda-input"
+                                                               data-testid="project-structure-participant-quick-name" />
+                                                </FormField>
+                                            </Grid>
+
+                                            <Grid Gap="LayoutGap.Medium"
+                                                  ColumnsLg="2">
+                                                <FormField Text="Email">
+                                                    <InputText @bind-Value="partyEditor.QuickCreate.Email"
+                                                               class="cda-input"
+                                                               data-testid="project-structure-participant-quick-email" />
+                                                </FormField>
+                                                <FormField Text="Phone">
+                                                    <InputText @bind-Value="partyEditor.QuickCreate.Phone"
+                                                               class="cda-input"
+                                                               data-testid="project-structure-participant-quick-phone" />
+                                                </FormField>
+                                            </Grid>
+
+                                            <FormField Text="Summary">
+                                                <InputTextArea @bind-Value="partyEditor.QuickCreate.Summary"
+                                                               class="cda-input cda-input--textarea min-h-24"
+                                                               data-testid="project-structure-participant-quick-summary" />
+                                            </FormField>
+
+                                            <Cluster>
+                                                <Button ButtonStyle="ButtonStyle.Light"
+                                                        Text="Create party"
+                                                        Disabled="@isPartyEditorBusy"
+                                                        data-testid="project-structure-participant-quick-create"
+                                                        Click="CreateParticipantPartyAsync" />
+                                            </Cluster>
+                                        </Stack>
+                                    </SurfaceCard>
+                                }
+
+                                <Cluster>
+                                    <Button Text="Save participant sync"
+                                            Disabled="@isPartyEditorBusy"
+                                            data-testid="project-structure-participant-save"
+                                            Click="SaveParticipantPartyAsync" />
+                                </Cluster>
+                            </Stack>
+                        </SurfaceCard>
+                    }
+                    else if (IsMeetingPartyEditor)
+                    {
+                        <SurfaceCard>
+                            <Stack GapScale="LayoutGap.Large">
+                                <Cluster>
+                                    <Button ButtonStyle="ButtonStyle.Light"
+                                            Text="Use project defaults"
+                                            Disabled="@isPartyEditorBusy"
+                                            data-testid="project-structure-meeting-project-defaults"
+                                            Click="ApplyMeetingProjectDefaultsAsync" />
+                                    <Pill Tone="PillTone.Neutral"
+                                          Text="@($"{partyEditor.SelectedMeetingPartyIds.Count} selected")" />
+                                </Cluster>
+
+                                <Grid Gap="LayoutGap.Medium"
+                                      ColumnsLg="2">
+                                    @foreach (var option in partyEditorOptions)
+                                    {
+                                        <label class="flex items-start gap-3 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                                               data-testid="project-structure-meeting-party-option">
+                                            <input type="checkbox"
+                                                   checked="@partyEditor.SelectedMeetingPartyIds.Contains(option.PartyId)"
+                                                   data-testid="project-structure-meeting-party-checkbox"
+                                                   @onchange="args => HandleMeetingPartyChanged(option.PartyId, args)" />
+                                            <span>
+                                                <span class="block font-semibold text-slate-950">@option.DisplayName</span>
+                                                <span class="block">@option.PartyTypeLabel</span>
+                                            </span>
+                                        </label>
+                                    }
+                                </Grid>
+
+                                <Cluster>
+                                    <Button Text="Save meeting parties"
+                                            Disabled="@isPartyEditorBusy"
+                                            data-testid="project-structure-meeting-save"
+                                            Click="SaveMeetingPartiesAsync" />
+                                </Cluster>
+                            </Stack>
+                        </SurfaceCard>
+                    }
+                    else if (IsWorkItemPartyEditor)
+                    {
+                        <SurfaceCard>
+                            <Stack GapScale="LayoutGap.Large">
+                                <FormField Text="Assignee party">
+                                    <InputSelect @bind-Value="WorkItemPartyValue"
+                                                 class="cda-input"
+                                                 data-testid="project-structure-work-item-party">
+                                        <option value="">No central assignee</option>
+                                        @foreach (var option in partyEditorOptions)
+                                        {
+                                            <option value="@option.PartyId">@($"{option.DisplayName} ({option.PartyTypeLabel})")</option>
+                                        }
+                                    </InputSelect>
+                                </FormField>
+
+                                <Cluster>
+                                    <Button Text="Save work-item assignee"
+                                            Disabled="@isPartyEditorBusy"
+                                            data-testid="project-structure-work-item-save"
+                                            Click="SaveWorkItemPartyAsync" />
+                                </Cluster>
+                            </Stack>
+                        </SurfaceCard>
+                    }
+                </div>
+            </SectionCard>
+        }
 
     </Stack>
 }
@@ -449,6 +658,7 @@ else
         surface = reloadedSurface with { ViewStateJson = uiState.ToJson() };
         currentViewStateJson = surface.ViewStateJson;
         RefreshCanvasSurface();
+        await LoadPartyEditorAsync();
     }
 
     private Task OpenUnavailableRouteAsync()
@@ -569,6 +779,7 @@ else
 
         selectedNodeIds = args.SelectedNodeIds.ToList();
         pendingClientSelectionId = null;
+        await LoadPartyEditorAsync();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -640,16 +851,31 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    private Task HandleNodeOpenedAsync(string nodeId)
+    private async Task HandleNodeOpenedAsync(string nodeId)
     {
         var node = ResolveNode(nodeId);
         if (node is null)
         {
-            return Task.CompletedTask;
+            return;
+        }
+
+        if (CanOpenRelatedProjectStructure(node))
+        {
+            CloseQuickActionDialog();
+            await OpenProjectStructureInNewTabAsync(node);
+            return;
+        }
+
+        if (CanRenderAttachmentPreview(node))
+        {
+            CloseQuickActionDialog();
+            OpenAttachmentPreview(node);
+            await InvokeAsync(StateHasChanged);
+            return;
         }
 
         OpenQuickActionDialog(node);
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleContextActionAsync(CanvasWorkbenchContextActionRequest request)
@@ -948,12 +1174,16 @@ else
 
         selectedNodeIds = [nodeId];
         await PersistSelectionAsync();
+        await LoadPartyEditorAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ClearSelectionAsync()
     {
         selectedNodeIds.Clear();
         await PersistSelectionAsync();
+        await LoadPartyEditorAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private static IReadOnlyList<ProjectStructureCommandKind> ResolveInspectorCommands(ProjectStructureNode node)

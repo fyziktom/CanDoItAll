@@ -201,6 +201,8 @@ public sealed class ProjectStructureToolsTests
 
         public Func<Guid, ProjectStructureNodeReparentInput, int?, CancellationToken, Task<ProjectStructureNodeSummary>>? OnReparentNode { get; init; }
 
+        public Func<Guid, ProjectStructureNodeRecomposeInput, int?, CancellationToken, Task<ProjectStructureSubtreeRecompositionResult>>? OnRecomposeNode { get; init; }
+
         public Func<Guid, ProjectStructureApprovalRequestCreateInput, CancellationToken, Task<ProjectStructureNodeSummary>>? OnCreateApprovalRequest { get; init; }
 
         public Func<Guid, string, CancellationToken, Task<ProjectStructureAssetDescriptor>>? OnGetAsset { get; init; }
@@ -306,6 +308,12 @@ public sealed class ProjectStructureToolsTests
                     0,
                     null,
                     null));
+        }
+
+        public Task<ProjectStructureSubtreeRecompositionResult> RecomposeNodeAsync(Guid projectId, ProjectStructureNodeRecomposeInput request, int? estimatedMinutes, CancellationToken cancellationToken = default)
+        {
+            return OnRecomposeNode?.Invoke(projectId, request, estimatedMinutes, cancellationToken)
+                ?? Task.FromResult(new ProjectStructureSubtreeRecompositionResult(request.RootNodeId, 0, 0));
         }
 
         public Task<ProjectStructureNodeSummary> CreateApprovalRequestAsync(Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken = default)

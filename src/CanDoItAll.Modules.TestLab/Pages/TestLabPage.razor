@@ -3,6 +3,7 @@
 @using CanDoItAll.Modules.Projects
 @inject TestLabService TestLabService
 @inject ProjectsService ProjectsService
+@inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 
 <PageTitle>Test Lab</PageTitle>
 
@@ -119,7 +120,7 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Project</label>
-                                        <InputSelect @bind-Value="editor.ProjectId" class="cda-input">
+                                        <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="testlab-project-select" @bind-Value:after="LoadResponsiblePartyOptionsAsync">
                                             <option value="">None</option>
                                             @foreach (var project in projects)
                                             {
@@ -133,9 +134,20 @@
                                     </div>
                                 </Grid>
 
+                                <div class="max-w-xl">
+                                    <label class="cda-field-label">Responsible party</label>
+                                    <InputSelect @bind-Value="editor.ResponsiblePartyId" class="cda-input" data-testid="testlab-responsible-party-select">
+                                        <option value="">None</option>
+                                        @foreach (var option in responsiblePartyOptions)
+                                        {
+                                            <option value="@option.PartyId">@option.DisplayName</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+
                                 <div>
                                     <label class="cda-field-label">Title</label>
-                                    <InputText @bind-Value="editor.Title" class="cda-input" />
+                                        <InputText @bind-Value="editor.Title" class="cda-input" data-testid="testlab-title-input" />
                                 </div>
 
                                 <div>
@@ -262,6 +274,7 @@
 
     private IReadOnlyList<ProjectSummary> projects = [];
     private IReadOnlyList<TestPlanSummary> plans = [];
+    private IReadOnlyList<ProjectPartyOption> responsiblePartyOptions = [];
     private TestPlanEditorModel editor = new();
     private string? message;
     private string planSearch = string.Empty;
@@ -308,20 +321,22 @@
         projects = await ProjectsService.ListAsync();
         plans = await TestLabService.ListAsync();
         editor = planId.HasValue ? await TestLabService.GetAsync(planId.Value) : new TestPlanEditorModel { ProjectId = projectId };
+        await LoadResponsiblePartyOptionsAsync();
         detailTab = "overview";
     }
 
-    private Task CreateNewAsync()
+    private async Task CreateNewAsync()
     {
         editor = new TestPlanEditorModel { ProjectId = ProjectIdQuery };
         message = null;
         detailTab = "overview";
-        return Task.CompletedTask;
+        await LoadResponsiblePartyOptionsAsync();
     }
 
     private async Task EditAsync(Guid id)
     {
         editor = await TestLabService.GetAsync(id);
+        await LoadResponsiblePartyOptionsAsync();
         message = null;
         detailTab = "overview";
     }
@@ -378,6 +393,25 @@
         => projectId.HasValue
             ? projects.FirstOrDefault(project => project.Id == projectId.Value)?.Name ?? "No project"
             : "No project";
+
+    private async Task LoadResponsiblePartyOptionsAsync()
+    {
+        responsiblePartyOptions = editor.ProjectId.HasValue
+            ? await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(editor.ProjectId.Value)
+            : [];
+
+        if (editor.ResponsiblePartyId.HasValue && responsiblePartyOptions.All(option => option.PartyId != editor.ResponsiblePartyId.Value))
+        {
+            var responsibleParty = await ProjectPartyIntegrationBridge.GetPartyOptionAsync(editor.ResponsiblePartyId.Value);
+            if (responsibleParty is not null)
+            {
+                responsiblePartyOptions = responsiblePartyOptions.Append(responsibleParty)
+                    .DistinctBy(option => option.PartyId)
+                    .OrderBy(option => option.DisplayName)
+                    .ToList();
+            }
+        }
+    }
 
     private static string ResolveStatusTone(TestCaseStatus? status) => status switch
     {

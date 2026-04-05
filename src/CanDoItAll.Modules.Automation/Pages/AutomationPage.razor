@@ -11,7 +11,9 @@ tests: component:AutomationPageTests, e2e:automation-smoke
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Infrastructure.BackgroundJobs
+@using CanDoItAll.SharedKernel
 @inject AutomationWorkspaceService AutomationWorkspaceService
+@inject NavigationManager Navigation
 
 <PageTitle>Automation</PageTitle>
 
@@ -25,10 +27,58 @@ tests: component:AutomationPageTests, e2e:automation-smoke
     <ChildContent>
         <SummaryTiles>
             <SummaryTile Label="Jobs" Value="@jobs.Count.ToString()" HelperText="Tracked asynchronous tasks in the workspace." />
+            <SummaryTile Label="CRM-HR signals" Value="@signals.Count.ToString()" HelperText="Reminder-style operational states surfaced from CRM-HR data." Tone="info" />
             <SummaryTile Label="Running" Value="@jobs.Count(job => job.State == BackgroundJobState.Running).ToString()" HelperText="Work currently in progress." Tone="info" />
             <SummaryTile Label="Failed" Value="@jobs.Count(job => job.State == BackgroundJobState.Failed).ToString()" HelperText="Operational issues that need attention." Tone="warning" />
             <SummaryTile Label="Succeeded" Value="@jobs.Count(job => job.State == BackgroundJobState.Succeeded).ToString()" HelperText="Completed jobs with no action required." Tone="success" />
         </SummaryTiles>
+
+        <SectionCard Title="CRM-HR operational signals"
+                     Description="These are reminder-style states derived from CRM-HR data when no explicit background job exists yet.">
+            @if (signals.Count == 0)
+            {
+                <EmptyState Eyebrow="No signals"
+                            Title="No CRM-HR reminder work is pending"
+                            Description="Overdue next actions and lifecycle follow-up items will appear here when CRM-HR data requires attention." />
+            }
+            else
+            {
+                <Stack GapScale="LayoutGap.Medium">
+                    @foreach (var signal in signals.OrderByDescending(item => item.Count).ThenBy(item => item.DueAtUtc))
+                    {
+                        <div class="cda-panel-card--soft" data-testid="automation-signal-item">
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
+                                <div class="min-w-0">
+                                    <p class="cda-eyebrow">@signal.Area</p>
+                                    <p class="mt-1 text-sm font-semibold text-slate-900">@signal.Title</p>
+                                    <p class="mt-3 text-sm leading-6 text-slate-600">@signal.Description</p>
+                                </div>
+                                <Cluster Gap="LayoutGap.Small">
+                                    @if (signal.Count > 0)
+                                    {
+                                        <StatusBadge Tone="@signal.Tone" Text="@($"{signal.Count} item(s)")" />
+                                    }
+                                    @if (signal.DueAtUtc.HasValue)
+                                    {
+                                        <StatusBadge Tone="neutral" Text="@signal.DueAtUtc.Value.LocalDateTime.ToString("g")" />
+                                    }
+                                </Cluster>
+                            </Split>
+                            <Cluster Gap="LayoutGap.Small" Class="mt-3">
+                                <Button ButtonStyle="ButtonStyle.Info"
+                                        Text="Open"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => Navigation.NavigateTo(signal.Route))" />
+                            </Cluster>
+                        </div>
+                    }
+                </Stack>
+            }
+        </SectionCard>
 
         <SectionCard Title="Background jobs" Description="The tracker records prompt sends, exports, and other operational tasks with correlation ids and outcomes.">
             <FilterBar ResultText="@($"{FilteredJobs.Count} job(s)")">
@@ -90,6 +140,7 @@ tests: component:AutomationPageTests, e2e:automation-smoke
 
 @code {
     private IReadOnlyList<BackgroundJobSummary> jobs = [];
+    private IReadOnlyList<AutomationSignalItem> signals = [];
     private string stateFilter = string.Empty;
     private string jobTypeFilter = string.Empty;
 
@@ -102,7 +153,9 @@ tests: component:AutomationPageTests, e2e:automation-smoke
 
     protected override async Task OnInitializedAsync()
     {
-        jobs = await AutomationWorkspaceService.ListJobsAsync();
+        var workspace = await AutomationWorkspaceService.GetWorkspaceAsync();
+        jobs = workspace.Jobs;
+        signals = workspace.Signals;
     }
 
     private void ResetFilters()

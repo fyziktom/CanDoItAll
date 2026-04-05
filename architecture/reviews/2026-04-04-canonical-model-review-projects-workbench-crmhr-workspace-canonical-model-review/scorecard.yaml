@@ -1,0 +1,27 @@
+review_kind: canonical-model-review
+scope: "Projects / Workbench / CrmHr / Workspace canonical model review"
+scores:
+  source_of_truth_integrity: 2
+  boundary_clarity: 3
+  invariant_enforcement: 3
+  projection_discipline: 2
+  integration_isolation: 2
+  runtime_state_separation: 2
+  ai_policy_separation: 3
+  testable_architecture: 3
+  change_safety: 2
+  overall_stability: 2
+findings:
+  critical:
+    - "Node-scoped party assignments are not lifecycle-managed when Workbench nodes are deleted or moved."
+  high:
+    - "The shared `NodeKey` bridge contract is globally ambiguous because the bridge resolves by `NodeKey` alone while uniqueness is only per project."
+    - "Workbench is using one universal node record and one orchestration service to carry too many unrelated semantics."
+  medium:
+    - "Project-party assignment roles are duplicated across Projects and CRM/HR, and both map functions fail open to `TechnicalContact`."
+    - "Project-structure agent authorization policy currently lives in Workspace rather than a clearly documented security boundary."
+  low: []
+  open_questions:
+    - "Are imported or system-managed Workbench node keys always GUID-based?"
+    - "Should node-scoped project-party assignments remain persisted canonical relations?"
+    - "Should project-structure agent authorization remain in Workspace or move into Security?"

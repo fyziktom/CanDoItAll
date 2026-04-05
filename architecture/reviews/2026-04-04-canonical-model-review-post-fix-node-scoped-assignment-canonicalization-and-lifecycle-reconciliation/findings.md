@@ -1,0 +1,1 @@
+# Findings Scratchpad\n\nUse this file to collect raw evidence before synthesizing the final report.\n

@@ -47,9 +47,7 @@ public partial class ProjectStructurePage
 
     private ProjectStructureQuickActionButton ResolvePrimaryQuickAction(ProjectStructureNode node)
     {
-        if (node.ProjectRole is ProjectStructureProjectRole.Subproject or
-            ProjectStructureProjectRole.ParentProject or
-            ProjectStructureProjectRole.AdditionalParentProject)
+        if (CanOpenRelatedProjectStructure(node))
         {
             return BuildInspectorQuickAction(
                 "Open Structure in New Tab",
@@ -122,6 +120,11 @@ public partial class ProjectStructurePage
                 "summary")
         };
     }
+
+    private static bool CanOpenRelatedProjectStructure(ProjectStructureNode node)
+        => node.ProjectRole is ProjectStructureProjectRole.Subproject or
+           ProjectStructureProjectRole.ParentProject or
+           ProjectStructureProjectRole.AdditionalParentProject;
 
     private static bool CanOpenNodeInNewTab(ProjectStructureNode node)
         => !string.IsNullOrWhiteSpace(node.Route) &&

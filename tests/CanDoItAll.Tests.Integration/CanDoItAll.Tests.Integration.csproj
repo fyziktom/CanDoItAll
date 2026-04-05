@@ -29,6 +29,7 @@
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
     <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
   </ItemGroup>
 
 </Project>

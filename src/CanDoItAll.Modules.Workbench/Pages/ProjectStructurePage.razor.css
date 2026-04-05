@@ -110,6 +110,13 @@
     background: rgba(239, 246, 255, 0.92);
 }
 
+.project-structure-page ::deep .project-structure-toolbar-recompose {
+    flex: 0 0 auto;
+    min-width: 6.8rem;
+    justify-content: center;
+    white-space: nowrap;
+}
+
 .project-structure-page ::deep .cw-floating-window[data-testid="project-structure-toolbox-window"] {
     gap: 0.72rem;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.98));

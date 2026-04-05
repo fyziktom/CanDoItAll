@@ -216,6 +216,10 @@ public sealed class ProjectMeetingMetadata
     [ProjectStructurePreviewField("Map URL", 50)]
     public string MapUrl { get; set; } = string.Empty;
 
+    [JsonPropertyName("relatedPartyNames")]
+    [ProjectStructurePreviewField("Parties", 60)]
+    public string RelatedPartySummary { get; set; } = string.Empty;
+
     public List<Guid> ParticipantIds { get; set; } = [];
 }
 
@@ -279,6 +283,10 @@ public sealed class ProjectParticipantMetadata
     [ProjectStructurePreviewField("Phone", 50)]
     public string Phone { get; set; } = string.Empty;
 
+    [JsonPropertyName("linkedPartyName")]
+    [ProjectStructurePreviewField("Directory party", 60)]
+    public string LinkedPartyDisplayName { get; set; } = string.Empty;
+
     public Guid? ParentParticipantArtifactId { get; set; }
 }
 
@@ -308,6 +316,10 @@ public sealed class ProjectWorkItemMetadata
 
     [ProjectStructurePreviewField("Due", 70)]
     public DateTimeOffset? DueUtc { get; set; }
+
+    [JsonPropertyName("assigneePartyName")]
+    [ProjectStructurePreviewField("Assignee party", 80)]
+    public string AssigneePartyDisplayName { get; set; } = string.Empty;
 }
 
 public sealed class ProjectRepositoryMetadata

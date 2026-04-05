@@ -1,0 +1,242 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
+
+<Stack GapScale="LayoutGap.Large">
+    <Grid Gap="LayoutGap.Medium"
+          ColumnsLg="2">
+        <FormField Text="Project">
+            <InputSelect @bind-Value="SelectedProjectValue"
+                         class="cda-input"
+                         data-testid="crmhr-assignment-project">
+                <option value="">Choose a project</option>
+                @foreach (var project in Projects.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    <option value="@project.Id">@project.Name</option>
+                }
+            </InputSelect>
+        </FormField>
+        <Cluster AlignItems="AlignItems.End"
+                 JustifyContent="JustifyContent.End">
+            @if (SelectedProjectId.HasValue)
+            {
+                <Button ButtonStyle="ButtonStyle.Light"
+                        Text="Open structure"
+                        data-testid="crmhr-assignment-open-structure"
+                        Click="@(() => OpenStructure.InvokeAsync(SelectedProjectId.Value))" />
+            }
+        </Cluster>
+    </Grid>
+
+    @if (SelectedProject is not null)
+    {
+        <SurfaceCard>
+            <Stack GapScale="LayoutGap.Large">
+                <div>
+                    <p class="cda-eyebrow">Project context</p>
+                    <h3 class="mt-1 text-lg font-semibold text-slate-950">@SelectedProject.Name</h3>
+                    <p class="mt-2 text-sm text-slate-600">Keep the primary commercial and staffing relationships visible from the project portfolio.</p>
+                </div>
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnsLg="2">
+                    <FormField Text="Assignment role">
+                        <InputSelect @bind-Value="Draft.Role"
+                                     class="cda-input"
+                                     data-testid="crmhr-assignment-role">
+                            @foreach (var role in Enum.GetValues<ProjectPartyAssignmentRole>())
+                            {
+                                <option value="@role">@ResolveRoleLabel(role)</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+                    <FormField Text="Node key">
+                        <InputText @bind-Value="Draft.NodeKey"
+                                   class="cda-input"
+                                   data-testid="crmhr-assignment-node-key" />
+                    </FormField>
+                </Grid>
+
+                <PartyPicker Label="Party"
+                             TestIdPrefix="crmhr-assignment-party"
+                             Options="PartyOptions"
+                             SelectedPartyId="Draft.PartyId"
+                             SelectedPartyIdChanged="HandlePartyChanged" />
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnsLg="3">
+                    <FormField Text="Allocation %">
+                        <InputNumber @bind-Value="Draft.AllocationPercent"
+                                     class="cda-input"
+                                     data-testid="crmhr-assignment-allocation" />
+                    </FormField>
+                    <FormField Text="Starts on">
+                        <InputDate @bind-Value="Draft.StartsOn"
+                                   class="cda-input"
+                                   data-testid="crmhr-assignment-starts-on" />
+                    </FormField>
+                    <FormField Text="Ends on">
+                        <InputDate @bind-Value="Draft.EndsOn"
+                                   class="cda-input"
+                                   data-testid="crmhr-assignment-ends-on" />
+                    </FormField>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnsLg="2">
+                    <FormField Text="Notes">
+                        <InputTextArea @bind-Value="Draft.Notes"
+                                       class="cda-input cda-input--textarea min-h-24"
+                                       data-testid="crmhr-assignment-notes" />
+                    </FormField>
+                    <Stack GapScale="LayoutGap.Medium">
+                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <InputCheckbox @bind-Value="Draft.IsPrimary"
+                                           data-testid="crmhr-assignment-primary" />
+                            <span>Mark as primary</span>
+                        </label>
+
+                        <Cluster>
+                            <Button Text="Save assignment"
+                                    data-testid="crmhr-assignment-save-button"
+                                    Click="SaveDraft" />
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Text="Reset"
+                                    data-testid="crmhr-assignment-reset-button"
+                                    Click="ResetDraft" />
+                        </Cluster>
+                    </Stack>
+                </Grid>
+            </Stack>
+        </SurfaceCard>
+    }
+
+    <SurfaceCard Soft="true">
+        <Stack GapScale="LayoutGap.Medium">
+            <div>
+                <p class="cda-eyebrow">Recorded assignments</p>
+                <h3 class="mt-1 text-lg font-semibold text-slate-950">@Assignments.Count assignment(s)</h3>
+            </div>
+
+            @if (Assignments.Count == 0)
+            {
+                <EmptyState Eyebrow="No assignments"
+                            Title="Capture the first project relationship"
+                            Description="Primary customer, delivery, staffing, and AI-agent relationships appear here after they are saved." />
+            }
+            else
+            {
+                <Stack GapScale="LayoutGap.Medium">
+                    @foreach (var assignment in Assignments)
+                    {
+                        <PanelCard data-testid="crmhr-assignment-item">
+                            <Split Breakpoint="LayoutBreakpoint.Xl"
+                                   Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween">
+                                <div class="space-y-1 text-sm text-slate-600">
+                                    <p class="text-base font-semibold text-slate-950">@assignment.PartyDisplayName</p>
+                                    <p>@ResolveRoleLabel(assignment.Role) · @assignment.PartyTypeLabel</p>
+                                    @if (!string.IsNullOrWhiteSpace(assignment.NodeKey))
+                                    {
+                                        <p>Node: @assignment.NodeKey</p>
+                                    }
+                                    @if (assignment.AllocationPercent.HasValue)
+                                    {
+                                        <p>Allocation: @assignment.AllocationPercent.Value.ToString("0.##")%</p>
+                                    }
+                                    @if (assignment.StartsAtUtc.HasValue || assignment.EndsAtUtc.HasValue)
+                                    {
+                                        <p>@($"{assignment.StartsAtUtc?.LocalDateTime:yyyy-MM-dd} -> {assignment.EndsAtUtc?.LocalDateTime:yyyy-MM-dd}")</p>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(assignment.Notes))
+                                    {
+                                        <p>@assignment.Notes</p>
+                                    }
+                                </div>
+                                <Cluster>
+                                    @if (assignment.IsPrimary)
+                                    {
+                                        <StatusBadge Tone="info"
+                                                     Text="Primary" />
+                                    }
+                                    <Button ButtonStyle="ButtonStyle.Danger"
+                                            Text="Delete"
+                                            data-testid="crmhr-assignment-delete-button"
+                                            Click="@(() => DeleteAssignment.InvokeAsync(assignment.Id))" />
+                                </Cluster>
+                            </Split>
+                        </PanelCard>
+                    }
+                </Stack>
+            }
+        </Stack>
+    </SurfaceCard>
+</Stack>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ProjectSummary> Projects { get; set; } = [];
+
+    [Parameter]
+    public Guid? SelectedProjectId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> SelectedProjectIdChanged { get; set; }
+
+    [Parameter]
+    public ProjectPartyAssignmentUpsertRequest Draft { get; set; } = new();
+
+    [Parameter]
+    public IReadOnlyList<ProjectPartyOption> PartyOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<ProjectPartyAssignmentDetail> Assignments { get; set; } = [];
+
+    [Parameter]
+    public EventCallback SaveDraft { get; set; }
+
+    [Parameter]
+    public EventCallback ResetDraft { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> DeleteAssignment { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenStructure { get; set; }
+
+    private ProjectSummary? SelectedProject => SelectedProjectId.HasValue
+        ? Projects.FirstOrDefault(project => project.Id == SelectedProjectId.Value)
+        : null;
+
+    private string SelectedProjectValue
+    {
+        get => SelectedProjectId?.ToString("D") ?? string.Empty;
+        set
+        {
+            Guid? parsed = Guid.TryParse(value, out var projectId) ? projectId : null;
+            _ = SelectedProjectIdChanged.InvokeAsync(parsed);
+        }
+    }
+
+    private Task HandlePartyChanged(Guid? partyId)
+    {
+        Draft.PartyId = partyId ?? Guid.Empty;
+        return Task.CompletedTask;
+    }
+
+    private static string ResolveRoleLabel(ProjectPartyAssignmentRole role)
+    {
+        return role switch
+        {
+            ProjectPartyAssignmentRole.CustomerContact => "Customer contact",
+            ProjectPartyAssignmentRole.DeliveryUnit => "Delivery unit",
+            ProjectPartyAssignmentRole.TeamMember => "Team member",
+            ProjectPartyAssignmentRole.MeetingParticipant => "Meeting participant",
+            ProjectPartyAssignmentRole.WorkItemAssignee => "Work-item assignee",
+            ProjectPartyAssignmentRole.AiAgent => "AI agent",
+            ProjectPartyAssignmentRole.BillingContact => "Billing contact",
+            ProjectPartyAssignmentRole.TechnicalContact => "Technical contact",
+            _ => role.ToString()
+        };
+    }
+}

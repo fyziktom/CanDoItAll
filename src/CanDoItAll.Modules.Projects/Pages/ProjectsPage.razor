@@ -34,6 +34,11 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                        ProjectSearchChanged="@(value => { projectSearch = value; })"
                        StatusFilter="@statusFilter"
                        StatusFilterChanged="@(value => { statusFilter = value; })"
+                       RelatedPartyCategoryFilter="@relatedPartyCategoryFilter"
+                       RelatedPartyCategoryFilterChanged="HandleRelatedPartyCategoryFilterChanged"
+                       RelatedPartyValueFilter="@relatedPartyValueFilter"
+                       RelatedPartyValueFilterChanged="HandleRelatedPartyValueFilterChanged"
+                       AvailableRelatedPartyValues="@AvailableRelatedPartyValues"
                        HierarchyFilterProjectId="@hierarchyFilterProjectId"
                        HierarchyFilterProjectIdChanged="@(value => { hierarchyFilterProjectId = value; })"
                        HierarchyFilterMode="@hierarchyFilterMode"
@@ -179,6 +184,8 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private bool showProjectModal;
     private string projectSearch = string.Empty;
     private string statusFilter = string.Empty;
+    private string relatedPartyCategoryFilter = string.Empty;
+    private string relatedPartyValueFilter = string.Empty;
     private string hierarchyFilterMode = string.Empty;
     private string hierarchyFilterProjectId = string.Empty;
     private ProjectModalMode modalMode = ProjectModalMode.Overview;
@@ -193,11 +200,23 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         .Where(project =>
             (string.IsNullOrWhiteSpace(projectSearch) ||
              project.Name.Contains(projectSearch, StringComparison.OrdinalIgnoreCase) ||
-             project.CurrentPhase.Contains(projectSearch, StringComparison.OrdinalIgnoreCase)) &&
+             project.CurrentPhase.Contains(projectSearch, StringComparison.OrdinalIgnoreCase) ||
+             project.RelatedPartySearchText.Contains(projectSearch, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrWhiteSpace(statusFilter) ||
              string.Equals(project.Status.ToString(), statusFilter, StringComparison.OrdinalIgnoreCase)) &&
+            MatchesRelatedPartyFilter(project) &&
             MatchesHierarchyFilter(project))
         .OrderByDescending(project => project.UpdatedAtUtc)
+        .ToList();
+
+    private IReadOnlyList<string> AvailableRelatedPartyValues => projectSummaries
+        .SelectMany(project => project.RelatedParties ?? [])
+        .Where(item =>
+            string.IsNullOrWhiteSpace(relatedPartyCategoryFilter) ||
+            string.Equals(item.Category.ToString(), relatedPartyCategoryFilter, StringComparison.OrdinalIgnoreCase))
+        .Select(item => item.DisplayName)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
         .ToList();
 
     private Guid? SelectedHierarchyFilterProjectId
@@ -264,6 +283,37 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             modalOpenedFromRoute = false;
             message = null;
         }
+    }
+
+    private Task HandleRelatedPartyCategoryFilterChanged(string value)
+    {
+        relatedPartyCategoryFilter = value;
+        if (!string.IsNullOrWhiteSpace(relatedPartyValueFilter) &&
+            !AvailableRelatedPartyValues.Contains(relatedPartyValueFilter, StringComparer.OrdinalIgnoreCase))
+        {
+            relatedPartyValueFilter = string.Empty;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRelatedPartyValueFilterChanged(string value)
+    {
+        relatedPartyValueFilter = value;
+        return Task.CompletedTask;
+    }
+
+    private bool MatchesRelatedPartyFilter(ProjectSummary project)
+    {
+        var relatedParties = project.RelatedParties ?? [];
+        if (!string.IsNullOrWhiteSpace(relatedPartyCategoryFilter) &&
+            !relatedParties.Any(item => string.Equals(item.Category.ToString(), relatedPartyCategoryFilter, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        return string.IsNullOrWhiteSpace(relatedPartyValueFilter) ||
+               relatedParties.Any(item => string.Equals(item.DisplayName, relatedPartyValueFilter, StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task LoadProjectSummariesAsync()

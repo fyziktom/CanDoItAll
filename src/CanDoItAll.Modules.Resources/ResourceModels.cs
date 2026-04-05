@@ -87,6 +87,10 @@ public sealed class ProjectResource
 
     public Guid ProjectId { get; set; }
 
+    public Guid? OwnerPartyId { get; set; }
+
+    public Guid? MaintainerPartyId { get; set; }
+
     public ResourceKind ResourceKind { get; set; }
 
     public string Name { get; set; } = string.Empty;
@@ -141,6 +145,10 @@ public sealed class ResourceEditorModel
     public Guid? Id { get; set; }
 
     public Guid? ProjectId { get; set; }
+
+    public Guid? OwnerPartyId { get; set; }
+
+    public Guid? MaintainerPartyId { get; set; }
 
     public ResourceKind ResourceKind { get; set; } = ResourceKind.Repository;
 
@@ -248,6 +256,8 @@ public sealed class ResourcesService(
         {
             Id = resource.Id,
             ProjectId = resource.ProjectId,
+            OwnerPartyId = resource.OwnerPartyId,
+            MaintainerPartyId = resource.MaintainerPartyId,
             ResourceKind = resource.ResourceKind,
             Name = resource.Name,
             Description = resource.Description,
@@ -298,6 +308,8 @@ public sealed class ResourcesService(
         }
 
         entity.ProjectId = model.ProjectId.Value;
+        entity.OwnerPartyId = model.OwnerPartyId;
+        entity.MaintainerPartyId = model.MaintainerPartyId;
         entity.ResourceKind = model.ResourceKind;
         entity.Name = model.Name.Trim();
         entity.Description = model.Description?.Trim() ?? string.Empty;

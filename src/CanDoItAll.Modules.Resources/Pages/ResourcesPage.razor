@@ -5,6 +5,7 @@
 @inject ResourcesService ResourcesService
 @inject ProjectsService ProjectsService
 @inject SecretService SecretService
+@inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 
 <PageTitle>Resources</PageTitle>
 
@@ -125,7 +126,7 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">Project</label>
-                                    <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="resource-project-select">
+                                    <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="resource-project-select" @bind-Value:after="LoadResponsiblePartyOptionsAsync">
                                         <option value="">Select a project</option>
                                         @foreach (var project in projects)
                                         {
@@ -156,6 +157,29 @@
                                         @foreach (var secret in secrets)
                                         {
                                             <option value="@secret.Id">@secret.Name</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                            </Grid>
+
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Owner</label>
+                                    <InputSelect @bind-Value="editor.OwnerPartyId" class="cda-input" data-testid="resource-owner-select">
+                                        <option value="">None</option>
+                                        @foreach (var option in responsiblePartyOptions)
+                                        {
+                                            <option value="@option.PartyId">@option.DisplayName</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Maintainer</label>
+                                    <InputSelect @bind-Value="editor.MaintainerPartyId" class="cda-input" data-testid="resource-maintainer-select">
+                                        <option value="">None</option>
+                                        @foreach (var option in responsiblePartyOptions)
+                                        {
+                                            <option value="@option.PartyId">@option.DisplayName</option>
                                         }
                                     </InputSelect>
                                 </div>
@@ -375,6 +399,7 @@
     private IReadOnlyList<ResourceSummary> resources = [];
     private IReadOnlyList<ProjectSummary> projects = [];
     private IReadOnlyList<SecretListItem> secrets = [];
+    private IReadOnlyList<ProjectPartyOption> responsiblePartyOptions = [];
     private ResourceEditorModel editor = new();
     private string? message;
     private string resourceSearch = string.Empty;
@@ -424,18 +449,20 @@
         projects = await ProjectsService.ListAsync();
         secrets = await SecretService.ListForPickerAsync();
         editor = resourceId.HasValue ? await ResourcesService.GetAsync(resourceId.Value) : new ResourceEditorModel { ProjectId = projectId };
+        await LoadResponsiblePartyOptionsAsync();
     }
 
-    private Task CreateNewAsync()
+    private async Task CreateNewAsync()
     {
         editor = new ResourceEditorModel { ProjectId = ProjectIdQuery };
         message = null;
-        return Task.CompletedTask;
+        await LoadResponsiblePartyOptionsAsync();
     }
 
     private async Task EditAsync(Guid id)
     {
         editor = await ResourcesService.GetAsync(id);
+        await LoadResponsiblePartyOptionsAsync();
         message = null;
     }
 
@@ -471,6 +498,37 @@
     }
 
     private static string BuildResourceMeta(ResourceSummary resource) => $"{resource.ProjectName} / {resource.ResourceKind}";
+
+    private async Task LoadResponsiblePartyOptionsAsync()
+    {
+        responsiblePartyOptions = editor.ProjectId.HasValue
+            ? await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(editor.ProjectId.Value)
+            : [];
+
+        if (editor.OwnerPartyId.HasValue && responsiblePartyOptions.All(option => option.PartyId != editor.OwnerPartyId.Value))
+        {
+            var owner = await ProjectPartyIntegrationBridge.GetPartyOptionAsync(editor.OwnerPartyId.Value);
+            if (owner is not null)
+            {
+                responsiblePartyOptions = responsiblePartyOptions.Append(owner)
+                    .DistinctBy(option => option.PartyId)
+                    .OrderBy(option => option.DisplayName)
+                    .ToList();
+            }
+        }
+
+        if (editor.MaintainerPartyId.HasValue && responsiblePartyOptions.All(option => option.PartyId != editor.MaintainerPartyId.Value))
+        {
+            var maintainer = await ProjectPartyIntegrationBridge.GetPartyOptionAsync(editor.MaintainerPartyId.Value);
+            if (maintainer is not null)
+            {
+                responsiblePartyOptions = responsiblePartyOptions.Append(maintainer)
+                    .DistinctBy(option => option.PartyId)
+                    .OrderBy(option => option.DisplayName)
+                    .ToList();
+            }
+        }
+    }
 
     private static string ResolveTone(ResourceValidationStatus status) => status switch
     {

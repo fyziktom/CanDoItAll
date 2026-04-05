@@ -1110,6 +1110,13 @@
         {
             "/" => new TuningSurfaceDefinition("page-home", "Home", "Dashboard summary and startup guidance."),
             "/projects" => new TuningSurfaceDefinition("page-projectspage", "ProjectsPage", "Project list, editor, and phase planning."),
+            "/crm-hr" => new TuningSurfaceDefinition("page-crmhrhomepage", "CrmHrHomePage", "CRM / HR module summary and route hub."),
+            "/crm-hr/directory" => new TuningSurfaceDefinition("page-crmhrdirectorypage", "CrmHrDirectoryPage", "Unified party directory and editor."),
+            "/crm-hr/crm" => new TuningSurfaceDefinition("page-crmhrcrmpage", "CrmHrCrmPage", "CRM workspace shell for accounts and opportunities."),
+            "/crm-hr/workforce" => new TuningSurfaceDefinition("page-crmhrworkforcepage", "CrmHrWorkforcePage", "Workforce shell for delivery units and staffing supply."),
+            "/crm-hr/recruiting" => new TuningSurfaceDefinition("page-crmhrrecruitingpage", "CrmHrRecruitingPage", "Recruiting shell for candidates and lifecycle tasks."),
+            "/crm-hr/agents" => new TuningSurfaceDefinition("page-crmhragentspage", "CrmHrAgentsPage", "AI agent directory and governance shell."),
+            "/crm-hr/assignments" => new TuningSurfaceDefinition("page-crmhrassignmentspage", "CrmHrAssignmentsPage", "Project-linked assignment shell."),
             "/resources" => new TuningSurfaceDefinition("page-resourcespage", "ResourcesPage", "Resource registry and connector editing."),
             "/prompt-gallery" => new TuningSurfaceDefinition("page-promptgallerypage", "PromptGalleryPage", "Prompt library, versions, and usage history."),
             "/prompt-factory" => new TuningSurfaceDefinition("page-promptfactorypage", "PromptFactoryPage", "Prompt assembly, flow templates, and provider sends."),
@@ -1145,6 +1152,7 @@
     private static string ResolvePageGroup(string path)
         => path.Trim().ToLowerInvariant() switch
         {
+            var normalized when normalized.StartsWith("/crm-hr", StringComparison.Ordinal) => "CRM / HR",
             "/validation" => "Validation",
             "/test-lab" => "Testing",
             "/settings" => "Settings",

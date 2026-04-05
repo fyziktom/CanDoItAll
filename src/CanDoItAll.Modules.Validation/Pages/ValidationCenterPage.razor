@@ -4,6 +4,7 @@
 @using CanDoItAll.Modules.Projects
 @inject ValidationService ValidationService
 @inject ProjectsService ProjectsService
+@inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 
 <PageTitle>Validation Center</PageTitle>
 
@@ -113,7 +114,7 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Project</label>
-                                        <InputSelect @bind-Value="editor.ProjectId" class="cda-input">
+                                        <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="validation-project-select" @bind-Value:after="LoadResponsiblePartyOptionsAsync">
                                             <option value="">None</option>
                                             @foreach (var project in projects)
                                             {
@@ -148,16 +149,27 @@
                                     </div>
                                 </Grid>
 
+                                <div class="max-w-xl">
+                                    <label class="cda-field-label">Responsible party</label>
+                                    <InputSelect @bind-Value="editor.ResponsiblePartyId" class="cda-input" data-testid="validation-responsible-party-select">
+                                        <option value="">None</option>
+                                        @foreach (var option in responsiblePartyOptions)
+                                        {
+                                            <option value="@option.PartyId">@option.DisplayName</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+
                                 <div>
                                     <label class="cda-field-label">Artifact title</label>
-                                    <InputText @bind-Value="editor.ArtifactTitle" class="cda-input" />
+                                    <InputText @bind-Value="editor.ArtifactTitle" class="cda-input" data-testid="validation-artifact-title-input" />
                                 </div>
                             </FormSection>
 
                             <FormSection Title="Source content" Description="Paste or stage the content that the deterministic checks should evaluate.">
                                 <div>
                                     <label class="cda-field-label">Source content</label>
-                                    <InputTextArea @bind-Value="editor.SourceContent" class="cda-input cda-input--textarea cda-input--mono min-h-72" />
+                                    <InputTextArea @bind-Value="editor.SourceContent" class="cda-input cda-input--textarea cda-input--mono min-h-72" data-testid="validation-source-content-input" />
                                 </div>
 
                                 @if (!string.IsNullOrWhiteSpace(editor.Summary))
@@ -250,6 +262,7 @@
     private IReadOnlyList<ProjectSummary> projects = [];
     private IReadOnlyList<ValidationChecklistSummary> checklists = [];
     private IReadOnlyList<ValidationRunSummary> runs = [];
+    private IReadOnlyList<ProjectPartyOption> responsiblePartyOptions = [];
     private ValidationRunEditorModel editor = new();
     private string? message;
     private string runSearch = string.Empty;
@@ -288,6 +301,7 @@
             editor.ProjectId = projectId;
         }
 
+        await LoadResponsiblePartyOptionsAsync();
         detailTab = editor.Findings.Count > 0 ? "findings" : "overview";
     }
 
@@ -295,6 +309,7 @@
     {
         editor = await ValidationService.GetRunAsync(null);
         editor.ProjectId ??= ProjectIdQuery;
+        await LoadResponsiblePartyOptionsAsync();
         message = null;
         detailTab = "overview";
     }
@@ -302,6 +317,7 @@
     private async Task EditAsync(Guid id)
     {
         editor = await ValidationService.GetRunAsync(id);
+        await LoadResponsiblePartyOptionsAsync();
         message = null;
         detailTab = editor.Findings.Count > 0 ? "findings" : "overview";
     }
@@ -341,6 +357,25 @@
         runSearch = string.Empty;
         typeFilter = string.Empty;
         decisionFilter = string.Empty;
+    }
+
+    private async Task LoadResponsiblePartyOptionsAsync()
+    {
+        responsiblePartyOptions = editor.ProjectId.HasValue
+            ? await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(editor.ProjectId.Value)
+            : [];
+
+        if (editor.ResponsiblePartyId.HasValue && responsiblePartyOptions.All(option => option.PartyId != editor.ResponsiblePartyId.Value))
+        {
+            var responsibleParty = await ProjectPartyIntegrationBridge.GetPartyOptionAsync(editor.ResponsiblePartyId.Value);
+            if (responsibleParty is not null)
+            {
+                responsiblePartyOptions = responsiblePartyOptions.Append(responsibleParty)
+                    .DistinctBy(option => option.PartyId)
+                    .OrderBy(option => option.DisplayName)
+                    .ToList();
+            }
+        }
     }
 
     private static string BuildRunSummary(ValidationRunSummary run)
