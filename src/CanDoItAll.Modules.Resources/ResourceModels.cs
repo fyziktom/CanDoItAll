@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
+using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -97,6 +98,10 @@ public sealed class ProjectResource
 
     public string Description { get; set; } = string.Empty;
 
+    public string ConnectorPluginKey { get; set; } = string.Empty;
+
+    public string ConfigSchemaVersion { get; set; } = string.Empty;
+
     public string LocationOrIdentifier { get; set; } = string.Empty;
 
     public string ConfigJson { get; set; } = "{}";
@@ -124,6 +129,8 @@ internal sealed class ProjectResourceConfiguration : IEntityTypeConfiguration<Pr
         builder.HasKey(resource => resource.Id);
         builder.Property(resource => resource.Name).HasMaxLength(200).IsRequired();
         builder.Property(resource => resource.Description).HasColumnType("TEXT");
+        builder.Property(resource => resource.ConnectorPluginKey).HasMaxLength(160).IsRequired();
+        builder.Property(resource => resource.ConfigSchemaVersion).HasMaxLength(40).IsRequired();
         builder.Property(resource => resource.LocationOrIdentifier).HasMaxLength(1000).IsRequired();
         builder.Property(resource => resource.ConfigJson).HasColumnType("TEXT");
         builder.Property(resource => resource.LinkedSecretIdsJson).HasColumnType("TEXT");
@@ -155,6 +162,10 @@ public sealed class ResourceEditorModel
     public string Name { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;
+
+    public string ConnectorPluginKey { get; set; } = string.Empty;
+
+    public string ConfigSchemaVersion { get; set; } = string.Empty;
 
     public string LocationOrIdentifier { get; set; } = string.Empty;
 
@@ -213,7 +224,8 @@ public sealed class ResourcesService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
-    ISearchIndexService searchIndexService)
+    ISearchIndexService searchIndexService,
+    ResourceConnectorPluginRegistry resourceConnectorPluginRegistry)
 {
     public async Task<IReadOnlyList<ResourceSummary>> ListAsync(CancellationToken cancellationToken = default)
     {
@@ -261,6 +273,8 @@ public sealed class ResourcesService(
             ResourceKind = resource.ResourceKind,
             Name = resource.Name,
             Description = resource.Description,
+            ConnectorPluginKey = resource.ConnectorPluginKey,
+            ConfigSchemaVersion = resource.ConfigSchemaVersion,
             LocationOrIdentifier = resource.LocationOrIdentifier,
             ConfigJson = resource.ConfigJson,
             LinkedSecretId = ParseLinkedSecret(resource.LinkedSecretIdsJson),
@@ -270,7 +284,7 @@ public sealed class ResourcesService(
             SupportsIndexing = resource.SupportsIndexing
         };
 
-        ApplyTypedConfiguration(editor, resource.ResourceKind, resource.ConfigJson);
+        resourceConnectorPluginRegistry.Resolve(resource).ApplyConfig(editor, resource.ConfigJson);
         return editor;
     }
 
@@ -286,7 +300,24 @@ public sealed class ResourcesService(
             return Result<Guid>.Failure(Error.Validation("Resource name is required."));
         }
 
-        var validationError = ValidateTypedEditor(model);
+        var connectorPlugin = resourceConnectorPluginRegistry.Resolve(model.ResourceKind, model.ConnectorPluginKey);
+        var configSchemaVersion = string.IsNullOrWhiteSpace(model.ConfigSchemaVersion)
+            ? connectorPlugin.Manifest.ConfigurationSchema.Version
+            : model.ConfigSchemaVersion.Trim();
+        if (!string.Equals(configSchemaVersion, connectorPlugin.Manifest.ConfigurationSchema.Version, StringComparison.Ordinal))
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                $"Resource connector '{connectorPlugin.Manifest.PluginKey}' requires config schema version '{connectorPlugin.Manifest.ConfigurationSchema.Version}', but '{configSchemaVersion}' was supplied."));
+        }
+
+        var requiresSecret = connectorPlugin.Manifest.SecretRequirements.Any(requirement => requirement.IsRequired);
+        if (requiresSecret && !model.LinkedSecretId.HasValue)
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                $"{connectorPlugin.Manifest.DisplayName} requires a linked secret reference."));
+        }
+
+        var validationError = connectorPlugin.ValidateEditor(model);
         if (validationError is not null)
         {
             return Result<Guid>.Failure(validationError);
@@ -313,8 +344,10 @@ public sealed class ResourcesService(
         entity.ResourceKind = model.ResourceKind;
         entity.Name = model.Name.Trim();
         entity.Description = model.Description?.Trim() ?? string.Empty;
-        entity.LocationOrIdentifier = BuildLocation(model);
-        entity.ConfigJson = SerializeConfig(model);
+        entity.ConnectorPluginKey = connectorPlugin.Manifest.PluginKey;
+        entity.ConfigSchemaVersion = configSchemaVersion;
+        entity.LocationOrIdentifier = connectorPlugin.BuildLocation(model);
+        entity.ConfigJson = connectorPlugin.SerializeConfig(model);
         entity.LinkedSecretIdsJson = model.LinkedSecretId.HasValue ? $"[\"{model.LinkedSecretId.Value}\"]" : "[]";
         entity.ValidationStatus = model.ValidationStatus;
         entity.Sensitivity = model.Sensitivity;

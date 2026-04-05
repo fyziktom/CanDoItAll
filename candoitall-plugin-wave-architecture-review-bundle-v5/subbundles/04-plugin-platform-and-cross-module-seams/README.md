@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared for Codex execution`
+- `Completed`
 
 ## Objective
 
@@ -23,12 +23,12 @@ Create a real plugin/connector platform and harden cross-module write boundaries
 
 ## Exact Source References
 
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs`
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workspace/WorkspaceModuleServiceCollectionExtensions.cs`
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workspace/ProviderExecution.cs`
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Resources/ResourceModels.cs`
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\WorkspaceModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\WorkspaceModuleServiceCollectionExtensions.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\ProviderExecution.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Resources\ResourceModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectWorkbenchModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\ProjectPartyIntegrationContracts.cs`
 
 ## Evidence Focus
 
@@ -73,9 +73,9 @@ Create a real plugin/connector platform and harden cross-module write boundaries
 
 ## Acceptance Checklist
 
-- [ ] A skeleton connector plugin can be added without modifying existing provider/resource enums.
-- [ ] Plugin configuration is versioned and validated through a declared schema.
-- [ ] Cross-module failure handling has an explicit durable recovery story.
+- [x] A skeleton connector plugin can be added without modifying existing provider/resource enums.
+- [x] Plugin configuration is versioned and validated through a declared schema.
+- [x] Cross-module failure handling has an explicit durable recovery story.
 
 ## Proof Required
 
@@ -85,11 +85,11 @@ Create a real plugin/connector platform and harden cross-module write boundaries
 
 ## Browser Validation Logging
 
-- If plugin configuration UI exists, capture at least one configuration and health-check flow.
+- No dedicated plugin configuration UI exists yet. Final browser proof captured the structure/assignment sync flow that exercises the hardened cross-module seam.
 
 ## Progression Gate
 
-- Do not start real external plugin work until this subbundle closes.
+- Passed. SB05 executed on top of the completed manifest/registry seam.
 
 ## Suggested Agent Prompt
 

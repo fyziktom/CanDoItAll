@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared for Codex execution`
+- `Completed`
 
 ## Objective
 
@@ -22,8 +22,8 @@ Keep node as the universal carrier, but slim the carrier so it only stores stabl
 
 ## Exact Source References
 
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchMetadata.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectWorkbenchModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectWorkbenchMetadata.cs`
 
 ## Evidence Focus
 
@@ -65,15 +65,34 @@ Keep node as the universal carrier, but slim the carrier so it only stores stabl
 
 ## Acceptance Checklist
 
-- [ ] Carrier persistence no longer stores route plus artifact plus media plus storage plus provider references in the same row.
-- [ ] X/Y and marker meaning survive migration unchanged.
-- [ ] Foreign-owner ids are expressed only through explicit bindings/facets.
+- [x] Carrier persistence no longer stores route plus artifact plus media plus storage plus provider references in the same row.
+- [x] X/Y and marker meaning survive migration unchanged.
+- [x] Foreign-owner ids are expressed only through explicit bindings/facets.
 
 ## Proof Required
 
 - Schema diff.
 - Migration tests.
 - Architecture note that enumerates carrier-owned vs facet-owned fields.
+
+## Completion Notes
+
+- Added `Workbench_ProjectNodeBindings` and `Workbench_ProjectNodeReferences` as the explicit persistence boundary for route, artifact/media/storage payload, and foreign-owner references.
+- Introduced `ProjectNodeBindingStorage` as the migration-safe adapter that normalizes legacy carrier rows, persists binding/reference ownership, and rehydrates the existing `ProjectStructureNode` surface DTO for callers.
+- `ProjectWorkbenchService` write flows now persist sanitized carrier rows and explicit bindings/references instead of keeping foreign-owned payload in the canonical carrier row.
+
+## Architecture Resolution
+
+- The carrier remains the universal node, but its durable meaning is now constrained to node semantics, hierarchy, schedule anchors, spatial placement, progress, and markers.
+- External navigation, artifact/media/storage payload, and cross-module foreign-owner ids are no longer canonical carrier state; they are persisted through explicit binding/reference rows.
+- Metadata remains descriptive and node-local after sanitization. Foreign-owner ids still round-trip through the public surface DTO, but only as hydrated projection data backed by binding/reference persistence.
+
+## Proof Produced
+
+- Schema diff proof is in `src/CanDoItAll.Migrations.Sqlite/Migrations/20260405024055_AddProjectNodeBindings.cs` and `src/CanDoItAll.Migrations.PostgreSql/Migrations/20260405024129_AddProjectNodeBindings.cs`.
+- Runtime proof: `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests|FullyQualifiedName~ProjectWorkbenchSubtreeRecompositionIntegrationTests|FullyQualifiedName~ProjectStructureAgentIntegrationTests|FullyQualifiedName~ProjectStructureAgentApiIntegrationTests"` passed with `40/40` tests.
+- Added integration coverage proving uploaded-file bindings persist outside the carrier row, transcript provider references are stored in explicit reference rows, schema repair recreates the new binding tables, and legacy carrier rows normalize without changing `X/Y` or marker semantics.
+- Architecture ownership note is updated in `architecture/02-node-carrier-and-facet-model.md`.
 
 ## Browser Validation Logging
 

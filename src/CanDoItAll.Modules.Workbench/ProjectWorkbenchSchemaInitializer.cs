@@ -28,6 +28,11 @@ public static class ProjectWorkbenchSchemaInitializer
     [
         "Workbench_ProjectObjects",
         "Workbench_ProjectObjectLinks",
+        "Workbench_ProjectNodeBindings",
+        "Workbench_ProjectNodeReferences",
+        "Workbench_ProjectNodeLifecycleEvents",
+        "Workbench_ProjectCrossModuleMutations",
+        "Workbench_ProjectProjectionLayouts",
         "Workbench_ViewStates"
     ];
 
@@ -89,6 +94,106 @@ public static class ProjectWorkbenchSchemaInitializer
         ON "Workbench_ProjectObjectLinks" ("ProjectId", "SourceNodeKey", "TargetNodeKey", "LinkKind", "IsSystemManaged");
         """,
         """
+        CREATE TABLE IF NOT EXISTS "Workbench_ProjectProjectionLayouts" (
+            "Id" TEXT NOT NULL CONSTRAINT "PK_Workbench_ProjectProjectionLayouts" PRIMARY KEY,
+            "ProjectId" TEXT NOT NULL,
+            "NodeKey" TEXT NOT NULL,
+            "PositionX" REAL NOT NULL,
+            "PositionY" REAL NOT NULL,
+            "UpdatedAtUtc" TEXT NOT NULL
+        );
+        """,
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS "IX_Workbench_ProjectProjectionLayouts_ProjectId_NodeKey"
+        ON "Workbench_ProjectProjectionLayouts" ("ProjectId", "NodeKey");
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS "Workbench_ProjectNodeBindings" (
+            "Id" TEXT NOT NULL CONSTRAINT "PK_Workbench_ProjectNodeBindings" PRIMARY KEY,
+            "ProjectObjectId" TEXT NOT NULL,
+            "Route" TEXT NOT NULL,
+            "ExternalArtifactKind" TEXT NOT NULL,
+            "ExternalArtifactId" TEXT NULL,
+            "MediaRelativePath" TEXT NOT NULL,
+            "MediaContentType" TEXT NOT NULL,
+            "MediaOriginalFileName" TEXT NOT NULL,
+            "StorageObjectReferenceJson" TEXT NOT NULL,
+            "CreatedAtUtc" TEXT NOT NULL,
+            "UpdatedAtUtc" TEXT NOT NULL,
+            CONSTRAINT "FK_Workbench_ProjectNodeBindings_Workbench_ProjectObjects_ProjectObjectId"
+                FOREIGN KEY ("ProjectObjectId") REFERENCES "Workbench_ProjectObjects" ("Id") ON DELETE CASCADE
+        );
+        """,
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS "IX_Workbench_ProjectNodeBindings_ProjectObjectId"
+        ON "Workbench_ProjectNodeBindings" ("ProjectObjectId");
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS "Workbench_ProjectNodeReferences" (
+            "Id" TEXT NOT NULL CONSTRAINT "PK_Workbench_ProjectNodeReferences" PRIMARY KEY,
+            "ProjectObjectId" TEXT NOT NULL,
+            "ReferenceKind" INTEGER NOT NULL,
+            "ReferenceId" TEXT NOT NULL,
+            "OrderIndex" INTEGER NOT NULL,
+            "CreatedAtUtc" TEXT NOT NULL,
+            CONSTRAINT "FK_Workbench_ProjectNodeReferences_Workbench_ProjectObjects_ProjectObjectId"
+                FOREIGN KEY ("ProjectObjectId") REFERENCES "Workbench_ProjectObjects" ("Id") ON DELETE CASCADE
+        );
+        """,
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS "IX_Workbench_ProjectNodeReferences_ProjectObjectId_ReferenceKind_ReferenceId"
+        ON "Workbench_ProjectNodeReferences" ("ProjectObjectId", "ReferenceKind", "ReferenceId");
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS "IX_Workbench_ProjectNodeReferences_ProjectObjectId_ReferenceKind_OrderIndex"
+        ON "Workbench_ProjectNodeReferences" ("ProjectObjectId", "ReferenceKind", "OrderIndex");
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS "Workbench_ProjectNodeLifecycleEvents" (
+            "Id" TEXT NOT NULL CONSTRAINT "PK_Workbench_ProjectNodeLifecycleEvents" PRIMARY KEY,
+            "ProjectId" TEXT NOT NULL,
+            "ProjectObjectId" TEXT NOT NULL,
+            "NodeKey" TEXT NOT NULL,
+            "TransitionMode" INTEGER NOT NULL,
+            "SourceFamily" INTEGER NOT NULL,
+            "TargetFamily" INTEGER NOT NULL,
+            "SourceObjectType" INTEGER NOT NULL,
+            "SourceObjectSubtype" TEXT NOT NULL,
+            "TargetObjectType" INTEGER NOT NULL,
+            "TargetObjectSubtype" TEXT NOT NULL,
+            "SourceSnapshotJson" TEXT NOT NULL,
+            "TargetSnapshotJson" TEXT NOT NULL,
+            "OccurredAtUtc" TEXT NOT NULL,
+            CONSTRAINT "FK_Workbench_ProjectNodeLifecycleEvents_Workbench_ProjectObjects_ProjectObjectId"
+                FOREIGN KEY ("ProjectObjectId") REFERENCES "Workbench_ProjectObjects" ("Id") ON DELETE CASCADE
+        );
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS "IX_Workbench_ProjectNodeLifecycleEvents_ProjectId_NodeKey_OccurredAtUtc"
+        ON "Workbench_ProjectNodeLifecycleEvents" ("ProjectId", "NodeKey", "OccurredAtUtc");
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS "Workbench_ProjectCrossModuleMutations" (
+            "Id" TEXT NOT NULL CONSTRAINT "PK_Workbench_ProjectCrossModuleMutations" PRIMARY KEY,
+            "ProjectId" TEXT NOT NULL,
+            "ScopeNodeKey" TEXT NOT NULL,
+            "MutationKind" INTEGER NOT NULL,
+            "Status" INTEGER NOT NULL,
+            "PayloadJson" TEXT NOT NULL,
+            "ErrorMessage" TEXT NOT NULL,
+            "CreatedAtUtc" TEXT NOT NULL,
+            "UpdatedAtUtc" TEXT NOT NULL
+        );
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS "IX_Workbench_ProjectCrossModuleMutations_ProjectId_ScopeNodeKey_CreatedAtUtc"
+        ON "Workbench_ProjectCrossModuleMutations" ("ProjectId", "ScopeNodeKey", "CreatedAtUtc");
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS "IX_Workbench_ProjectCrossModuleMutations_ProjectId_Status_UpdatedAtUtc"
+        ON "Workbench_ProjectCrossModuleMutations" ("ProjectId", "Status", "UpdatedAtUtc");
+        """,
+        """
         CREATE TABLE IF NOT EXISTS "Workbench_ViewStates" (
             "Id" TEXT NOT NULL CONSTRAINT "PK_Workbench_ViewStates" PRIMARY KEY,
             "ProjectId" TEXT NOT NULL,
@@ -142,7 +247,7 @@ public static class ProjectWorkbenchSchemaInitializer
                 SELECT "name"
                 FROM "sqlite_master"
                 WHERE "type" = 'table'
-                  AND "name" IN ('Workbench_ProjectObjects', 'Workbench_ProjectObjectLinks', 'Workbench_ViewStates');
+                  AND "name" IN ('Workbench_ProjectObjects', 'Workbench_ProjectObjectLinks', 'Workbench_ProjectNodeBindings', 'Workbench_ProjectNodeReferences', 'Workbench_ProjectNodeLifecycleEvents', 'Workbench_ProjectCrossModuleMutations', 'Workbench_ProjectProjectionLayouts', 'Workbench_ViewStates');
                 """;
 
             var existingTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

@@ -23,7 +23,7 @@ public sealed record ProviderExecutionResponse(
     bool ContainsWarnings,
     string? WarningSummary = null);
 
-public interface IProviderAdapter
+public interface IProviderAdapter : IConnectorPlugin
 {
     ProviderKind ProviderKind { get; }
 
@@ -36,15 +36,63 @@ public interface IProviderAdapter
         CancellationToken cancellationToken = default);
 }
 
-public sealed class ProviderRegistry(IEnumerable<IProviderAdapter> adapters)
+public sealed class ProviderRegistry(IEnumerable<IProviderAdapter> adapters) : IConnectorManifestSource
 {
-    private readonly IReadOnlyDictionary<ProviderKind, IProviderAdapter> _adapters =
+    private readonly IReadOnlyDictionary<ProviderKind, IProviderAdapter> adaptersByKind =
         adapters.ToDictionary(adapter => adapter.ProviderKind);
 
-    public IProviderAdapter? Resolve(ProviderKind providerKind)
-        => _adapters.GetValueOrDefault(providerKind);
+    private readonly IReadOnlyDictionary<string, IProviderAdapter> adaptersByKey =
+        adapters.ToDictionary(adapter => adapter.Manifest.PluginKey, StringComparer.OrdinalIgnoreCase);
 
-    public IReadOnlyCollection<ProviderKind> RegisteredKinds => _adapters.Keys.ToArray();
+    public IProviderAdapter? Resolve(ProviderProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        if (!string.IsNullOrWhiteSpace(profile.ConnectorPluginKey) &&
+            adaptersByKey.TryGetValue(profile.ConnectorPluginKey.Trim(), out var pluginByKey))
+        {
+            return pluginByKey;
+        }
+
+        return adaptersByKind.GetValueOrDefault(profile.ProviderKind);
+    }
+
+    public bool TryResolve(ProviderKind providerKind, string? connectorPluginKey, out IProviderAdapter adapter)
+    {
+        adapter = null!;
+
+        if (!string.IsNullOrWhiteSpace(connectorPluginKey) &&
+            adaptersByKey.TryGetValue(connectorPluginKey.Trim(), out var pluginByKey))
+        {
+            adapter = pluginByKey;
+            return true;
+        }
+
+        if (adaptersByKind.TryGetValue(providerKind, out var pluginByKind))
+        {
+            adapter = pluginByKind;
+            return true;
+        }
+
+        return false;
+    }
+
+    public string ResolvePluginKey(ProviderKind providerKind)
+    {
+        return adaptersByKind.TryGetValue(providerKind, out var adapter)
+            ? adapter.Manifest.PluginKey
+            : throw new InvalidOperationException($"No provider adapter is registered for {providerKind}.");
+    }
+
+    public IReadOnlyCollection<ProviderKind> RegisteredKinds => adaptersByKind.Keys.ToArray();
+
+    public IReadOnlyList<ConnectorPluginManifest> ListManifests()
+    {
+        return adaptersByKey.Values
+            .Select(adapter => adapter.Manifest)
+            .OrderBy(manifest => manifest.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
 }
 
 /* codex-capsule
@@ -60,6 +108,29 @@ outputs: ProviderExecutionResponse
 */
 public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
 {
+    public const string PluginKey = "provider.openai";
+
+    private static readonly ConnectorPluginManifest PluginManifest = new(
+        PluginKey,
+        "OpenAI provider",
+        "1.0.0",
+        ConnectorManifestCapability.ProviderExecution | ConnectorManifestCapability.AgentExposure,
+        new ConnectorConfigurationSchema(
+            "1.0",
+            [
+                new ConnectorConfigFieldDescriptor("baseUrl", "Base URL", ConnectorConfigFieldType.Url, true, "OpenAI-compatible API root."),
+                new ConnectorConfigFieldDescriptor("defaultModel", "Default model", ConnectorConfigFieldType.Text, true, "Model name used when the request does not override it."),
+                new ConnectorConfigFieldDescriptor("timeoutSeconds", "Timeout", ConnectorConfigFieldType.Number, true, "HTTP timeout in seconds.")
+            ]),
+        [
+            new ConnectorSecretRequirement("apiKey", "API key", true, "Bearer token for the provider API.")
+        ],
+        new ConnectorHealthCheckDescriptor("GET /models", "Verifies that the provider accepts the configured API key and responds to model discovery."),
+        new ConnectorAgentExposure("workspace.prompt.send", true, true, "Allows agent-triggered prompt execution through the provider profile."),
+        null);
+
+    public ConnectorPluginManifest Manifest => PluginManifest;
+
     public ProviderKind ProviderKind => ProviderKind.OpenAi;
 
     public async Task<ProviderHealthResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
@@ -165,6 +236,27 @@ public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) 
 
 public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
 {
+    public const string PluginKey = "provider.ollama.local";
+
+    private static readonly ConnectorPluginManifest PluginManifest = new(
+        PluginKey,
+        "Ollama local provider",
+        "1.0.0",
+        ConnectorManifestCapability.ProviderExecution | ConnectorManifestCapability.AgentExposure,
+        new ConnectorConfigurationSchema(
+            "1.0",
+            [
+                new ConnectorConfigFieldDescriptor("baseUrl", "Base URL", ConnectorConfigFieldType.Url, true, "Ollama API root."),
+                new ConnectorConfigFieldDescriptor("defaultModel", "Default model", ConnectorConfigFieldType.Text, true, "Model used for prompt execution."),
+                new ConnectorConfigFieldDescriptor("timeoutSeconds", "Timeout", ConnectorConfigFieldType.Number, true, "HTTP timeout in seconds.")
+            ]),
+        [],
+        new ConnectorHealthCheckDescriptor("GET /api/tags", "Verifies that the Ollama endpoint is reachable and returns model metadata."),
+        new ConnectorAgentExposure("workspace.prompt.send", true, true, "Allows agent-triggered prompt execution through the provider profile."),
+        null);
+
+    public ConnectorPluginManifest Manifest => PluginManifest;
+
     public ProviderKind ProviderKind => ProviderKind.OllamaLocal;
 
     public async Task<ProviderHealthResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
@@ -221,7 +313,28 @@ public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) 
 
 public sealed class OllamaRemoteProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
 {
+    public const string PluginKey = "provider.ollama.remote";
+
+    private static readonly ConnectorPluginManifest PluginManifest = new(
+        PluginKey,
+        "Ollama remote provider",
+        "1.0.0",
+        ConnectorManifestCapability.ProviderExecution | ConnectorManifestCapability.AgentExposure,
+        new ConnectorConfigurationSchema(
+            "1.0",
+            [
+                new ConnectorConfigFieldDescriptor("baseUrl", "Base URL", ConnectorConfigFieldType.Url, true, "Remote Ollama API root."),
+                new ConnectorConfigFieldDescriptor("defaultModel", "Default model", ConnectorConfigFieldType.Text, true, "Model used for prompt execution."),
+                new ConnectorConfigFieldDescriptor("timeoutSeconds", "Timeout", ConnectorConfigFieldType.Number, true, "HTTP timeout in seconds.")
+            ]),
+        [],
+        new ConnectorHealthCheckDescriptor("GET /api/tags", "Verifies that the remote Ollama endpoint is reachable."),
+        new ConnectorAgentExposure("workspace.prompt.send", true, true, "Allows agent-triggered prompt execution through the provider profile."),
+        null);
+
     private readonly OllamaProviderAdapter _inner = new(httpClientFactory);
+
+    public ConnectorPluginManifest Manifest => PluginManifest;
 
     public ProviderKind ProviderKind => ProviderKind.OllamaRemote;
 
@@ -264,10 +377,11 @@ public sealed class ProviderExecutionService(
             return Result<ProviderExecutionResponse>.Failure(Error.Validation("Provider profile not found or disabled."));
         }
 
-        var adapter = providerRegistry.Resolve(profile.ProviderKind);
+        var adapter = providerRegistry.Resolve(profile);
         if (adapter is null)
         {
-            return Result<ProviderExecutionResponse>.Failure(Error.Failure($"No adapter is registered for {profile.ProviderKind}."));
+            return Result<ProviderExecutionResponse>.Failure(Error.Failure(
+                $"No adapter is registered for provider profile '{profile.Name}'."));
         }
 
         string? secretValue = null;
@@ -283,7 +397,7 @@ public sealed class ProviderExecutionService(
                 "providers",
                 "send",
                 $"Sent prompt through {profile.Name}",
-                $"Provider kind: {profile.ProviderKind}. Model: {result.Value!.Model}.",
+                $"Plugin: {adapter.Manifest.PluginKey}. Model: {result.Value!.Model}.",
                 Route: "/settings"), cancellationToken);
         }
 

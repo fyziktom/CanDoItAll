@@ -1,19 +1,20 @@
 # CanDoItAll Plugin-Wave Architecture Review Bundle V5
 
-This bundle reviews the **post-refactor** codebase with one specific decision in mind: **is the current architecture strong enough to start the next plugin wave (email, LinkedIn, custom APIs, and similar integrations)?**
+This bundle reviewed the **post-refactor** codebase with one specific decision in mind: **is the architecture strong enough to start the next plugin wave (email, LinkedIn, custom APIs, and similar integrations)?** The initial review answer was `NO-GO`. SB01 through SB05 are now implemented and validated, so the verdict below reflects the post-execution state.
 
 ## Verdict
 
-- **Small feature work / bugfixes:** `GO with normal caution`
-- **Major external plugin wave:** `NO-GO until the critical subbundles in this bundle are complete`
+- **Initial review before execution:** `NO-GO`
+- **Post-execution small feature work / bugfixes:** `GO`
+- **Post-execution major external plugin wave:** `GO with guarded rollout`
 
-The refactor clearly improved several important seams, especially around CRM/HR canonical party ownership and node-scoped assignment flow. However, the codebase is **not yet a stable base for the next integration/plugin wave** because the deepest canonical-model issues were not fully removed:
+The initial review identified five real blockers: persisted Workbench parallel truth, an overloaded carrier row, fragmented kind semantics, shallow lifecycle tracking, and static plugin seams. SB01 through SB05 now close or harden those areas:
 
-- persisted Workbench sync still creates a parallel truth
-- the universal node record is still too overloaded
-- kind semantics are still fragmented and UI-centric
-- node lifecycle/reclassification is still too shallow
-- plugin architecture is still mostly enum/switch/DI-registration based
+- persisted Workbench projections are no longer stored as canonical truth
+- carrier data is split from bindings and foreign references while preserving canonical X/Y and markers
+- node kinds, labels, palette hints, and reclassification rules are registry-driven with lifecycle history
+- connector/provider/resource integration is manifest- and registry-driven with durable recovery tracking
+- the Workbench hotspot is decomposed and protected by architecture, integration, component, and Playwright proof
 
 ## Mission
 
@@ -47,7 +48,7 @@ The refactor clearly improved several important seams, especially around CRM/HR 
 
 - Bundle preparation status: `Prepared-stage validation passed`
 - Bundle readiness gate: `Passed`
-- Execution status: `Not started`
-- Subbundle gate review: `Not started`
-- Final closure gate: `Not started`
-- Browser validation analytics: `Blocked in this environment because dotnet SDK/runtime is unavailable; runtime proof must be produced by Codex in a real .NET environment`
+- Execution status: `Completed`
+- Subbundle gate review: `SB01-SB05 passed`
+- Final closure gate: `Passed`
+- Browser validation analytics: `Targeted Playwright proof captured for structure catalog, mutation, subtree transfer, and project-assignment sync flows`

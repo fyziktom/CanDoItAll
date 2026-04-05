@@ -62,7 +62,7 @@ internal static class ProjectStructureCreateRequestComposer
             case ProjectObjectType.Participant:
                 metadata.Participant = new ProjectParticipantMetadata
                 {
-                    ParticipantKind = ParseEnum(inputValues, "participantKind", MapParticipantKind(subtype)),
+                    ParticipantKind = ParseEnum(inputValues, "participantKind", ProjectNodeKindRegistry.ResolveParticipantKind(subtype)),
                     Role = GetValue(inputValues, "role"),
                     Organization = GetValue(inputValues, "organization"),
                     Email = GetValue(inputValues, "email"),
@@ -74,7 +74,7 @@ internal static class ProjectStructureCreateRequestComposer
             case ProjectObjectType.WorkItem:
                 metadata.WorkItem = new ProjectWorkItemMetadata
                 {
-                    WorkItemKind = ParseEnum(inputValues, "workItemKind", MapWorkItemKind(subtype)),
+                    WorkItemKind = ParseEnum(inputValues, "workItemKind", ProjectNodeKindRegistry.ResolveWorkItemKind(subtype)),
                     AssigneeParticipantArtifactId = ParseNodeGuid(inputValues, "assigneeRef"),
                     RepositoryResourceId = ParseNodeGuid(inputValues, "repositoryRef"),
                     SendKind = TryParseNullableEnum<ProjectSendKind>(inputValues, "sendKind"),
@@ -90,7 +90,7 @@ internal static class ProjectStructureCreateRequestComposer
             case ProjectObjectType.Repository:
                 metadata.Repository = new ProjectRepositoryMetadata
                 {
-                    RepositoryMode = ParseEnum(inputValues, "repositoryMode", MapRepositoryMode(subtype)),
+                    RepositoryMode = ParseEnum(inputValues, "repositoryMode", ProjectNodeKindRegistry.ResolveRepositoryMode(subtype)),
                     RepositoryUrl = GetValue(inputValues, "repositoryUrl"),
                     LocalPath = GetValue(inputValues, "localPath"),
                     DefaultBranch = GetValue(inputValues, "defaultBranch"),
@@ -101,7 +101,7 @@ internal static class ProjectStructureCreateRequestComposer
             case ProjectObjectType.File:
                 metadata.File = new ProjectFileMetadata
                 {
-                    FileSubtype = ParseEnum(inputValues, "fileSubtype", MapFileSubtype(subtype)),
+                    FileSubtype = ParseEnum(inputValues, "fileSubtype", ProjectNodeKindRegistry.ResolveFileSubtype(ProjectObjectType.File, subtype)),
                     MermaidDiagramKind = string.Equals(subtype, "mermaid", StringComparison.OrdinalIgnoreCase)
                         ? ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(notes)
                         : MermaidDiagramKind.Unknown,
@@ -113,7 +113,7 @@ internal static class ProjectStructureCreateRequestComposer
             case ProjectObjectType.Script:
                 metadata.Script = new ProjectScriptMetadata
                 {
-                    ScriptKind = ParseEnum(inputValues, "scriptKind", MapScriptKind(subtype)),
+                    ScriptKind = ParseEnum(inputValues, "scriptKind", ProjectNodeKindRegistry.ResolveScriptKind(subtype)),
                     ScriptPath = GetValue(inputValues, "scriptPath"),
                     Command = GetValue(inputValues, "command"),
                     Arguments = GetValue(inputValues, "arguments"),
@@ -124,7 +124,7 @@ internal static class ProjectStructureCreateRequestComposer
             case ProjectObjectType.Environment:
                 metadata.Environment = new ProjectEnvironmentMetadata
                 {
-                    EnvironmentKind = ParseEnum(inputValues, "environmentKind", MapEnvironmentKind(subtype)),
+                    EnvironmentKind = ParseEnum(inputValues, "environmentKind", ProjectNodeKindRegistry.ResolveEnvironmentKind(subtype)),
                     PythonProvider = TryParseNullableEnum<ProjectPythonProvider>(inputValues, "pythonProvider"),
                     EnvironmentName = GetValue(inputValues, "environmentName"),
                     ProjectPath = GetValue(inputValues, "projectPath"),
@@ -138,7 +138,7 @@ internal static class ProjectStructureCreateRequestComposer
             case ProjectObjectType.Infrastructure:
                 metadata.Infrastructure = new ProjectInfrastructureMetadata
                 {
-                    InfrastructureKind = ParseEnum(inputValues, "infrastructureKind", MapInfrastructureKind(subtype)),
+                    InfrastructureKind = ParseEnum(inputValues, "infrastructureKind", ProjectNodeKindRegistry.ResolveInfrastructureKind(subtype)),
                     Host = GetValue(inputValues, "host"),
                     Port = ParseNullableInt(inputValues, "port"),
                     ProviderName = GetValue(inputValues, "providerName"),
@@ -259,76 +259,4 @@ internal static class ProjectStructureCreateRequestComposer
         where TEnum : struct, Enum
         => inputValues.TryGetValue(key, out var value) && Enum.TryParse<TEnum>(value, true, out var parsed) ? parsed : null;
 
-    private static ProjectParticipantKind MapParticipantKind(string subtype) => subtype switch
-    {
-        "hr" => ProjectParticipantKind.Hr,
-        "team-block" => ProjectParticipantKind.TeamBlock,
-        "team-section" => ProjectParticipantKind.TeamSection,
-        "freelancer" => ProjectParticipantKind.Freelancer,
-        "partner" => ProjectParticipantKind.Partner,
-        "ai-agent" => ProjectParticipantKind.AiAgent,
-        _ => ProjectParticipantKind.Hr
-    };
-
-    private static ProjectWorkItemKind MapWorkItemKind(string subtype) => subtype switch
-    {
-        "issue" => ProjectWorkItemKind.Issue,
-        "revision" => ProjectWorkItemKind.Revision,
-        "feedback" => ProjectWorkItemKind.Feedback,
-        "payment" => ProjectWorkItemKind.Payment,
-        "send" => ProjectWorkItemKind.Send,
-        _ => ProjectWorkItemKind.Task
-    };
-
-    private static ProjectRepositoryMode MapRepositoryMode(string subtype) => subtype switch
-    {
-        "remote" => ProjectRepositoryMode.RemoteGitHub,
-        "folder" => ProjectRepositoryMode.LocalFolder,
-        _ => ProjectRepositoryMode.LocalRepository
-    };
-
-    private static ProjectFileSubtype MapFileSubtype(string subtype) => subtype switch
-    {
-        "pdf" => ProjectFileSubtype.Pdf,
-        "excel" => ProjectFileSubtype.Excel,
-        "docx" => ProjectFileSubtype.Docx,
-        "text" => ProjectFileSubtype.Text,
-        "json" => ProjectFileSubtype.Json,
-        "markdown" => ProjectFileSubtype.Markdown,
-        "mermaid" => ProjectFileSubtype.Mermaid,
-        "screenshot" => ProjectFileSubtype.Screenshot,
-        "log" => ProjectFileSubtype.Log,
-        "archive" => ProjectFileSubtype.Archive,
-        "audio" => ProjectFileSubtype.Audio,
-        _ => ProjectFileSubtype.Unknown
-    };
-
-    private static ProjectScriptKind MapScriptKind(string subtype) => subtype switch
-    {
-        "powershell" => ProjectScriptKind.PowerShell,
-        "ef-migration" => ProjectScriptKind.EfMigration,
-        "tailwind-watch" => ProjectScriptKind.TailwindWatch,
-        _ => ProjectScriptKind.Console
-    };
-
-    private static ProjectEnvironmentKind MapEnvironmentKind(string subtype) => subtype switch
-    {
-        "python" => ProjectEnvironmentKind.PythonEnvironment,
-        "dotnet-watch" => ProjectEnvironmentKind.DotNetWatch,
-        "dotnet-release" => ProjectEnvironmentKind.DotNetRelease,
-        _ => ProjectEnvironmentKind.DotNetRuntime
-    };
-
-    private static ProjectInfrastructureKind MapInfrastructureKind(string subtype) => subtype switch
-    {
-        "domain" => ProjectInfrastructureKind.Domain,
-        "dns-record" => ProjectInfrastructureKind.DnsRecord,
-        "docker-mode" => ProjectInfrastructureKind.DockerMode,
-        "database" => ProjectInfrastructureKind.Database,
-        "deployment-folder" => ProjectInfrastructureKind.DeploymentFolder,
-        "storage-system" => ProjectInfrastructureKind.StorageSystem,
-        "key-reference" => ProjectInfrastructureKind.KeyReference,
-        "ai-link" => ProjectInfrastructureKind.AiLink,
-        _ => ProjectInfrastructureKind.RemoteServer
-    };
 }

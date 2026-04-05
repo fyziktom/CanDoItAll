@@ -110,9 +110,9 @@ public sealed class ProjectStructureActionCatalogAdapter
             actions.Add(new CanvasWorkbenchAction
             {
                 ActionId = "note:convert-to-block",
-                Label = "Convert to block",
+                Label = "Convert",
                 MenuLabel = "Convert",
-                Description = "Convert this note into a typed common block while keeping the note text.",
+                Description = "Convert this note into a typed node while keeping the note text.",
                 Icon = "swap_horiz",
                 Tone = "accent"
             });

@@ -30,6 +30,33 @@ The answer is “node is the stable carrier, while rich behavior hangs off the c
 3. Migrate one family at a time (participant, work item, repository, etc.).
 4. After families are migrated, remove old carrier overload fields.
 
+## Executed SB02 Ownership Split
+
+Current execution keeps the existing `ProjectObjectRecord` schema physically in place for migration safety, but canonical ownership is now explicit:
+
+- Carrier-owned in `Workbench_ProjectObjects`:
+  - identity and project scope
+  - node kind and subtype
+  - title, subtitle, notes, status
+  - progress mode and percent
+  - semantic marker columns and priority
+  - parent relation
+  - canonical `X/Y`
+  - schedule anchors and duration
+  - timestamps
+- Binding-owned in `Workbench_ProjectNodeBindings`:
+  - route
+  - external artifact kind and artifact id
+  - managed media path, content type, and original file name
+  - storage object reference payload
+- Reference-owned in `Workbench_ProjectNodeReferences`:
+  - meeting participant ids
+  - recording/transcript cross-node references
+  - transcript provider profile ids
+  - participant/work-item/repository/environment/infrastructure foreign-owner ids
+
+`ProjectNodeBindingStorage` is the transitional adapter. It normalizes legacy carrier rows on read, persists the binding/reference split on write, rehydrates the current DTO surface for callers, and rejects any sanitized metadata payload that still tries to retain foreign-owner references.
+
 ## Guardrails
 
 - No new foreign-owner ids inside Workbench metadata.

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared for Codex execution`
+- `Completed`
 
 ## Objective
 
@@ -23,8 +23,8 @@ Remove or quarantine the persisted system-managed projection graph so Workbench 
 
 ## Exact Source References
 
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectStructureInvariantService.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectWorkbenchModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectStructureInvariantService.cs`
 
 ## Evidence Focus
 
@@ -65,15 +65,35 @@ Remove or quarantine the persisted system-managed projection graph so Workbench 
 
 ## Acceptance Checklist
 
-- [ ] GetStructureAsync and GetCalendarAsync no longer write cross-module projections into Workbench_ProjectObjects.
-- [ ] A repository/resource/validation/test-plan entry can appear in the surface without existing as a persisted canonical node row.
-- [ ] Hierarchy is represented once canonically.
+- [x] GetStructureAsync and GetCalendarAsync no longer write cross-module projections into Workbench_ProjectObjects.
+- [x] A repository/resource/validation/test-plan entry can appear in the surface without existing as a persisted canonical node row.
+- [x] Hierarchy is represented once canonically.
 
 ## Proof Required
 
 - Targeted integration tests for structure and calendar loads.
 - Schema diff or code proof showing system-managed projection writes were removed or moved to dedicated read-model tables.
 - Updated architecture review note confirming no parallel truth remains.
+
+## Completion Notes
+
+- Introduced `ProjectStructureAssemblyService` with projection contributors for hierarchy/phases, resources, prompt factory, validation, and test lab.
+- `ProjectWorkbenchService` now assembles structure and calendar surfaces from canonical user-authored rows plus in-memory projections.
+- Projected-node coordinate overrides now persist in `Workbench_ProjectProjectionLayouts` instead of promoting projected nodes into canonical Workbench tables.
+- The retired `SyncGraphAsync` persistence path was removed from `ProjectWorkbenchService`.
+
+## Architecture Resolution
+
+- No parallel truth remains inside Workbench persistence. `Workbench_ProjectObjects` and `Workbench_ProjectObjectLinks` now hold only user-authored canonical nodes/links.
+- Cross-module read-model nodes and links are assembled at read time through contributor contracts, so new plugins can project into the surface without writing mirrored canonical rows.
+- Hierarchy semantics come from the project parent relation and assembled hierarchy links, not duplicated persisted read-model hierarchy rows.
+
+## Proof Produced
+
+- Runtime regression proof: `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests|FullyQualifiedName~ProjectWorkbenchSubtreeRecompositionIntegrationTests|FullyQualifiedName~ProjectStructureAgentIntegrationTests|FullyQualifiedName~ProjectStructureAgentApiIntegrationTests"` passed with `39/39` tests.
+- Added integration coverage proving structure/calendar surfaces can include resource, validation, and test-plan projections with zero persisted Workbench node/link rows for the project.
+- Added integration coverage proving projected node movement persists only `Workbench_ProjectProjectionLayouts` overrides and does not create canonical projection rows.
+- Code/schema proof is in `src/CanDoItAll.Modules.Workbench/ProjectStructureAssemblyService.cs`, `src/CanDoItAll.Modules.Workbench/ProjectWorkbenchSchemaInitializer.cs`, `src/CanDoItAll.Migrations.Sqlite/Migrations/20260405021055_AddWorkbenchProjectionLayouts.cs`, and `src/CanDoItAll.Migrations.PostgreSql/Migrations/20260405021055_AddWorkbenchProjectionLayouts.cs`.
 
 ## Browser Validation Logging
 

@@ -9,6 +9,17 @@ public static class WorkbenchModuleServiceCollectionExtensions
     public static IServiceCollection AddWorkbenchModule(this IServiceCollection services)
     {
         services.AddScoped<WorkbenchStateService>();
+        services.AddScoped<ProjectCrossModuleMutationCoordinator>();
+        services.AddScoped<ProjectWorkbenchCommandService>();
+        services.AddScoped<ProjectWorkbenchCrossModuleMutationService>();
+        services.AddScoped<ProjectWorkbenchLifecycleService>();
+        services.AddScoped<ProjectWorkbenchRelationService>();
+        services.AddScoped<ProjectStructureAssemblyService>();
+        services.AddScoped<IProjectStructureProjectionContributor, ProjectHierarchyProjectionContributor>();
+        services.AddScoped<IProjectStructureProjectionContributor, ProjectResourceProjectionContributor>();
+        services.AddScoped<IProjectStructureProjectionContributor, PromptFactoryProjectionContributor>();
+        services.AddScoped<IProjectStructureProjectionContributor, ValidationProjectionContributor>();
+        services.AddScoped<IProjectStructureProjectionContributor, TestPlanProjectionContributor>();
         services.AddScoped<ProjectWorkbenchService>();
         services.AddScoped<IProjectNodeScopeBridge, ProjectNodeScopeBridge>();
         services.AddScoped<ProjectStructureLeaseService>();

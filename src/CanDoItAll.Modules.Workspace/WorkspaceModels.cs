@@ -37,6 +37,10 @@ public sealed class ProviderProfile
 
     public ProviderKind ProviderKind { get; set; }
 
+    public string ConnectorPluginKey { get; set; } = string.Empty;
+
+    public string ConfigSchemaVersion { get; set; } = string.Empty;
+
     public string BaseUrl { get; set; } = string.Empty;
 
     public Guid? ApiKeySecretId { get; set; }
@@ -82,6 +86,8 @@ internal sealed class ProviderProfileConfiguration : IEntityTypeConfiguration<Pr
         builder.HasKey(profile => profile.Id);
         builder.Property(profile => profile.Name).HasMaxLength(200).IsRequired();
         builder.Property(profile => profile.BaseUrl).HasMaxLength(500).IsRequired();
+        builder.Property(profile => profile.ConnectorPluginKey).HasMaxLength(160).IsRequired();
+        builder.Property(profile => profile.ConfigSchemaVersion).HasMaxLength(40).IsRequired();
         builder.Property(profile => profile.DefaultModel).HasMaxLength(120);
         builder.Property(profile => profile.LastHealthStatus).HasMaxLength(120);
         builder.Property(profile => profile.ExtraSettingsJson).HasColumnType("TEXT");
@@ -116,6 +122,10 @@ public sealed class ProviderProfileEditorModel
     public string Name { get; set; } = string.Empty;
 
     public ProviderKind ProviderKind { get; set; } = ProviderKind.OpenAi;
+
+    public string ConnectorPluginKey { get; set; } = string.Empty;
+
+    public string ConfigSchemaVersion { get; set; } = string.Empty;
 
     public string BaseUrl { get; set; } = string.Empty;
 
@@ -232,6 +242,8 @@ public sealed partial class WorkspaceService(
             Id = provider.Id,
             Name = provider.Name,
             ProviderKind = provider.ProviderKind,
+            ConnectorPluginKey = provider.ConnectorPluginKey,
+            ConfigSchemaVersion = provider.ConfigSchemaVersion,
             BaseUrl = provider.BaseUrl,
             ApiKeySecretId = provider.ApiKeySecretId,
             DefaultModel = provider.DefaultModel,
@@ -257,9 +269,21 @@ public sealed partial class WorkspaceService(
             return Result<Guid>.Failure(Error.Validation("Provider base URL is required."));
         }
 
-        if (model.ProviderKind == ProviderKind.OpenAi && !model.ApiKeySecretId.HasValue)
+        var providerResolutionError = TryResolveProviderPlugin(
+            model,
+            out var providerPlugin,
+            out var providerManifest,
+            out var configSchemaVersion);
+        if (providerResolutionError is not null)
         {
-            return Result<Guid>.Failure(Error.Validation("OpenAI profiles require an API key secret reference."));
+            return Result<Guid>.Failure(providerResolutionError);
+        }
+
+        var requiresSecret = providerManifest.SecretRequirements.Any(requirement => requirement.IsRequired);
+        if (requiresSecret && !model.ApiKeySecretId.HasValue)
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                $"{providerManifest.DisplayName} requires a secret reference."));
         }
 
         if (model.TimeoutSeconds < 5)
@@ -280,6 +304,8 @@ public sealed partial class WorkspaceService(
 
         entity.Name = model.Name.Trim();
         entity.ProviderKind = model.ProviderKind;
+        entity.ConnectorPluginKey = providerPlugin.Manifest.PluginKey;
+        entity.ConfigSchemaVersion = configSchemaVersion;
         entity.BaseUrl = model.BaseUrl.Trim().TrimEnd('/');
         entity.ApiKeySecretId = model.ApiKeySecretId;
         entity.DefaultModel = ResolveDefaultModel(model);
@@ -296,7 +322,7 @@ public sealed partial class WorkspaceService(
             "providers",
             model.Id.HasValue ? "update" : "create",
             $"{(model.Id.HasValue ? "Updated" : "Created")} provider profile",
-            $"{entity.Name} ({entity.ProviderKind})",
+            $"{entity.Name} ({providerPlugin.Manifest.DisplayName})",
             ArtifactKind: "provider-profile",
             ArtifactId: entity.Id,
             Route: "/settings"), cancellationToken);
@@ -333,10 +359,10 @@ public sealed partial class WorkspaceService(
             return new ProviderHealthResult(false, "Provider profile not found.");
         }
 
-        var adapter = providerRegistry.Resolve(provider.ProviderKind);
+        var adapter = providerRegistry.Resolve(provider);
         if (adapter is null)
         {
-            return new ProviderHealthResult(false, $"No adapter is registered for {provider.ProviderKind}.");
+            return new ProviderHealthResult(false, $"No adapter is registered for provider profile '{provider.Name}'.");
         }
 
         var secretValue = provider.ApiKeySecretId.HasValue
@@ -374,6 +400,8 @@ public sealed partial class WorkspaceService(
 
     private static ProviderProfileEditorModel NewProvider() => new()
     {
+        ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
+        ConfigSchemaVersion = "1.0",
         BaseUrl = "https://api.openai.com/v1/models",
         DefaultModel = "gpt-4.1",
         IsEnabled = true,
@@ -395,6 +423,39 @@ public sealed partial class WorkspaceService(
             ProviderKind.OllamaLocal or ProviderKind.OllamaRemote => "llama3.1",
             _ => "unknown"
         };
+    }
+
+    private Error? TryResolveProviderPlugin(
+        ProviderProfileEditorModel model,
+        out IProviderAdapter providerPlugin,
+        out ConnectorPluginManifest manifest,
+        out string configSchemaVersion)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        providerPlugin = default!;
+        manifest = default!;
+        configSchemaVersion = string.Empty;
+
+        var requestedPluginKey = string.IsNullOrWhiteSpace(model.ConnectorPluginKey)
+            ? providerRegistry.ResolvePluginKey(model.ProviderKind)
+            : model.ConnectorPluginKey.Trim();
+        if (!providerRegistry.TryResolve(model.ProviderKind, requestedPluginKey, out providerPlugin))
+        {
+            return Error.Validation($"No provider adapter is registered for plugin '{requestedPluginKey}'.");
+        }
+
+        manifest = providerPlugin.Manifest;
+        configSchemaVersion = string.IsNullOrWhiteSpace(model.ConfigSchemaVersion)
+            ? manifest.ConfigurationSchema.Version
+            : model.ConfigSchemaVersion.Trim();
+        if (!string.Equals(configSchemaVersion, manifest.ConfigurationSchema.Version, StringComparison.Ordinal))
+        {
+            return Error.Validation(
+                $"Provider plugin '{manifest.PluginKey}' requires config schema version '{manifest.ConfigurationSchema.Version}', but '{configSchemaVersion}' was supplied.");
+        }
+
+        return null;
     }
 }
 

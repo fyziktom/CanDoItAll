@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared for Codex execution`
+- `Completed`
 
 ## Objective
 
@@ -22,11 +22,11 @@ Replace fragmented kind semantics with a central registry and add explicit lifec
 
 ## Exact Source References
 
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.SharedKernel/ProjectObjectContracts.cs`
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectStructureCanvasCatalog.cs`
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectStructureNodeEditor.cs`
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\ProjectObjectContracts.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectStructureCanvasCatalog.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectStructureNodeEditor.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectWorkbenchModels.cs`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs`
 
 ## Evidence Focus
 
@@ -72,9 +72,9 @@ Replace fragmented kind semantics with a central registry and add explicit lifec
 
 ## Acceptance Checklist
 
-- [ ] A new internal kind or plugin kind can be registered without editing multiple switch statements.
-- [ ] Reclassification persists a lifecycle-history event.
-- [ ] Facet migration rules are explicit and tested.
+- [x] A new internal kind or plugin kind can be registered without editing multiple switch statements.
+- [x] Reclassification persists a lifecycle-history event.
+- [x] Facet migration rules are explicit and tested.
 
 ## Proof Required
 
@@ -84,11 +84,11 @@ Replace fragmented kind semantics with a central registry and add explicit lifec
 
 ## Browser Validation Logging
 
-- Capture note-to-task/decision conversion if editor UX changes.
+- Captured during the final browser pass through note-to-task and block-mutation flows.
 
 ## Progression Gate
 
-- SB04 depends on registry-driven extensibility being real, not nominal.
+- Passed. SB04 consumed the registry-driven extensibility path directly.
 
 ## Suggested Agent Prompt
 

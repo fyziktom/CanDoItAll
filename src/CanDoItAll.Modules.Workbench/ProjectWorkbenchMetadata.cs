@@ -623,20 +623,11 @@ public static class ProjectObjectMetadataSerializer
             return;
         }
 
-        switch (objectType)
+        var expectedFamily = ProjectNodeKindRegistry.ResolveFamily(objectType, objectSubtype);
+        var actualFamily = ResolveMetadataFamily(metadata);
+        if (actualFamily != expectedFamily)
         {
-            case ProjectObjectType.Meeting when metadata.Meeting is null:
-            case ProjectObjectType.Recording when metadata.Recording is null:
-            case ProjectObjectType.Transcript when metadata.Transcript is null:
-            case ProjectObjectType.Participant when metadata.Participant is null:
-            case ProjectObjectType.WorkItem when metadata.WorkItem is null:
-            case ProjectObjectType.Repository when metadata.Repository is null:
-            case ProjectObjectType.File when metadata.File is null:
-            case ProjectObjectType.Script when metadata.Script is null:
-            case ProjectObjectType.Environment when metadata.Environment is null:
-            case ProjectObjectType.Infrastructure when metadata.Infrastructure is null:
-            case ProjectObjectType.Link when metadata.Link is null:
-                throw new InvalidOperationException($"Metadata payload does not match object type '{objectType}'.");
+            throw new InvalidOperationException($"Metadata payload does not match object type '{objectType}'.");
         }
 
         if (objectType == ProjectObjectType.Meeting &&
@@ -853,5 +844,62 @@ public static class ProjectObjectMetadataSerializer
         }
 
         return count;
+    }
+
+    private static ProjectNodeKindFamily ResolveMetadataFamily(ProjectObjectMetadataEnvelope metadata)
+    {
+        if (metadata.Meeting is not null)
+        {
+            return ProjectNodeKindFamily.Meeting;
+        }
+
+        if (metadata.Recording is not null)
+        {
+            return ProjectNodeKindFamily.Recording;
+        }
+
+        if (metadata.Transcript is not null)
+        {
+            return ProjectNodeKindFamily.Transcript;
+        }
+
+        if (metadata.Participant is not null)
+        {
+            return ProjectNodeKindFamily.Participant;
+        }
+
+        if (metadata.WorkItem is not null)
+        {
+            return ProjectNodeKindFamily.WorkItem;
+        }
+
+        if (metadata.Repository is not null)
+        {
+            return ProjectNodeKindFamily.Repository;
+        }
+
+        if (metadata.File is not null)
+        {
+            return ProjectNodeKindFamily.File;
+        }
+
+        if (metadata.Script is not null)
+        {
+            return ProjectNodeKindFamily.Script;
+        }
+
+        if (metadata.Environment is not null)
+        {
+            return ProjectNodeKindFamily.Environment;
+        }
+
+        if (metadata.Infrastructure is not null)
+        {
+            return ProjectNodeKindFamily.Infrastructure;
+        }
+
+        return metadata.Link is not null
+            ? ProjectNodeKindFamily.Link
+            : ProjectNodeKindFamily.None;
     }
 }

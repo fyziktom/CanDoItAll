@@ -2239,6 +2239,16 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ConfigSchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConnectorPluginKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
@@ -2617,6 +2627,197 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.ToTable("Validation_Runs", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectCrossModuleMutationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MutationKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ScopeNodeKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "ScopeNodeKey", "CreatedAtUtc");
+
+                    b.HasIndex("ProjectId", "Status", "UpdatedAtUtc");
+
+                    b.ToTable("Workbench_ProjectCrossModuleMutations", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ExternalArtifactId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalArtifactKind")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MediaContentType")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MediaOriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MediaRelativePath")
+                        .IsRequired()
+                        .HasMaxLength(800)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectObjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasMaxLength(800)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StorageObjectReferenceJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectObjectId")
+                        .IsUnique();
+
+                    b.ToTable("Workbench_ProjectNodeBindings", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeLifecycleEventRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NodeKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectObjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SourceFamily")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceObjectSubtype")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SourceObjectType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TargetFamily")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TargetObjectSubtype")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TargetObjectType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TargetSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TransitionMode")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectObjectId");
+
+                    b.HasIndex("ProjectId", "NodeKey", "OccurredAtUtc");
+
+                    b.ToTable("Workbench_ProjectNodeLifecycleEvents", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeReferenceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("ProjectObjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ReferenceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ReferenceKind")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectObjectId", "ReferenceKind", "OrderIndex");
+
+                    b.HasIndex("ProjectObjectId", "ReferenceKind", "ReferenceId")
+                        .IsUnique();
+
+                    b.ToTable("Workbench_ProjectNodeReferences", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectObjectLinkRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2952,6 +3153,37 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.ToTable("Workbench_ProjectStructureOperationAnalytics", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectStructureProjectionLayoutRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NodeKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("PositionX")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("PositionY")
+                        .HasColumnType("REAL");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "NodeKey")
+                        .IsUnique();
+
+                    b.ToTable("Workbench_ProjectProjectionLayouts", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkbenchViewStateRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3120,6 +3352,16 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ConfigSchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConnectorPluginKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("DefaultModel")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -3196,6 +3438,33 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Workspace_Settings", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
+                        .WithOne()
+                        .HasForeignKey("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", "ProjectObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeLifecycleEventRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeReferenceRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

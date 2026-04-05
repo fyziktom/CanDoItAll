@@ -2,7 +2,9 @@
 
 ## QA Verdict
 
-- `Passed with amendments already incorporated into this bundle`
+- `Passed`
+- `Original sign-off conditions are now satisfied in execution`
+- `Final recommendation: GO with guarded rollout for the plugin wave`
 
 ## Main QA Concerns Raised
 
@@ -20,5 +22,5 @@
 
 ## QA Sign-Off Conditions
 
-- SB01 through SB05 must complete in order.
-- The final post-wave review must explicitly say GO before real plugin delivery begins.
+- [x] SB01 through SB05 completed in order.
+- [x] The final post-wave review explicitly says GO before real plugin delivery begins.

@@ -66,7 +66,7 @@ public partial class ProjectStructurePage
 
         if (node.ObjectType == ProjectObjectType.Note)
         {
-            actions.Add(new ProjectStructureInspectorAction("note:convert-to-block", "Convert to block", "swap_horiz", "accent"));
+            actions.Add(new ProjectStructureInspectorAction("note:convert-to-block", "Convert", "swap_horiz", "accent"));
         }
 
         actions.Add(new ProjectStructureInspectorAction("delete", "Delete", "delete", "danger"));

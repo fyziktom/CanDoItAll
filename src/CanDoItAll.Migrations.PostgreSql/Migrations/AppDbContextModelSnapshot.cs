@@ -2244,6 +2244,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ConfigSchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("ConnectorPluginKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -2622,6 +2632,198 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Validation_Runs", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectCrossModuleMutationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MutationKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ScopeNodeKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "ScopeNodeKey", "CreatedAtUtc");
+
+                    b.HasIndex("ProjectId", "Status", "UpdatedAtUtc");
+
+                    b.ToTable("Workbench_ProjectCrossModuleMutations", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ExternalArtifactId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExternalArtifactKind")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("MediaContentType")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("MediaOriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("character varying(260)");
+
+                    b.Property<string>("MediaRelativePath")
+                        .IsRequired()
+                        .HasMaxLength(800)
+                        .HasColumnType("character varying(800)");
+
+                    b.Property<Guid>("ProjectObjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasMaxLength(800)
+                        .HasColumnType("character varying(800)");
+
+                    b.Property<string>("StorageObjectReferenceJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectObjectId")
+                        .IsUnique();
+
+                    b.ToTable("Workbench_ProjectNodeBindings", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeLifecycleEventRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NodeKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProjectObjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SourceFamily")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SourceObjectSubtype")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("SourceObjectType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SourceSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TargetFamily")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TargetObjectSubtype")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("TargetObjectType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TargetSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TransitionMode")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectObjectId");
+
+                    b.HasIndex("ProjectId", "NodeKey", "OccurredAtUtc");
+
+                    b.ToTable("Workbench_ProjectNodeLifecycleEvents", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeReferenceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProjectObjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReferenceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ReferenceKind")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectObjectId", "ReferenceKind", "OrderIndex");
+
+                    b.HasIndex("ProjectObjectId", "ReferenceKind", "ReferenceId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Workbench_ProjectNodeReferences_ProjectObjectId_ReferenceK~1");
+
+                    b.ToTable("Workbench_ProjectNodeReferences", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectObjectLinkRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2957,6 +3159,37 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Workbench_ProjectStructureOperationAnalytics", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectStructureProjectionLayoutRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NodeKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<double>("PositionX")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("PositionY")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "NodeKey")
+                        .IsUnique();
+
+                    b.ToTable("Workbench_ProjectProjectionLayouts", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkbenchViewStateRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3125,6 +3358,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("ConfigSchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("ConnectorPluginKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
                     b.Property<string>("DefaultModel")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -3201,6 +3444,33 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Workspace_Settings", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
+                        .WithOne()
+                        .HasForeignKey("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", "ProjectObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeLifecycleEventRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeReferenceRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

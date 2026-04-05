@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared for Codex execution`
+- `Completed`
 
 ## Objective
 
@@ -23,8 +23,8 @@ Break the Workbench hotspot into focused services, add architecture guardrail te
 
 ## Exact Source References
 
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
-- `/mnt/data/unpacked_current/CanDoItAll-canonical-model-refactor/tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectWorkbenchModels.cs`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs`
 
 ## Evidence Focus
 
@@ -65,9 +65,9 @@ Break the Workbench hotspot into focused services, add architecture guardrail te
 
 ## Acceptance Checklist
 
-- [ ] No single service replaces ProjectWorkbenchModels.cs with the same god-class shape.
-- [ ] Architecture tests protect the newly established boundaries.
-- [ ] A final review explicitly reopens the plugin wave gate.
+- [x] No single service replaces ProjectWorkbenchModels.cs with the same god-class shape.
+- [x] Architecture tests protect the newly established boundaries.
+- [x] A final review explicitly reopens the plugin wave gate.
 
 ## Proof Required
 
@@ -77,11 +77,11 @@ Break the Workbench hotspot into focused services, add architecture guardrail te
 
 ## Browser Validation Logging
 
-- Capture key structure and plugin flows after the final pass.
+- Captured with `output/playwright/feedback-bundle-visuals`, `output/playwright/feedback-bundle-mutations`, `output/playwright/feedback-bundle-transfer`, and the project-assignment sync browser flow.
 
 ## Progression Gate
 
-- Plugin wave may begin only after SB05 closes and the fresh review says GO.
+- Passed. Plugin wave may proceed under the guarded-rollout verdict recorded in `analysis/04-plugin-wave-readiness.md`.
 
 ## Suggested Agent Prompt
 
