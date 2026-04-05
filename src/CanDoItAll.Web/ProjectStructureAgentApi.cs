@@ -308,6 +308,27 @@ public static class ProjectStructureAgentApi
                 requiredCapability: ProjectStructureAgentCapability.MutateStructure,
                 enforceMutationApproval: true));
 
+        group.MapPost("/projects/{projectId:guid}/nodes/recompose", async (
+            Guid projectId,
+            HttpContext httpContext,
+            ProjectStructureNodeRecomposeInput request,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.node-recompose",
+                projectId,
+                request.RootNodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                request,
+                (agent, cancellationToken) => agentService.RecomposeNodeAsync(projectId, request, agent, cancellationToken),
+                cancellationToken,
+                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
+                enforceMutationApproval: true));
+
         group.MapPost("/projects/{projectId:guid}/nodes/reparent", async (
             Guid projectId,
             HttpContext httpContext,

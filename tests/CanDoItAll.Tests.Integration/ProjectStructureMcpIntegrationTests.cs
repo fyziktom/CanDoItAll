@@ -193,6 +193,157 @@ public sealed class ProjectStructureMcpIntegrationTests
         Assert.DoesNotContain(readback.Links, link => link.SourceId == $"project:{project.Id}" && link.TargetId == childNode.Id);
     }
 
+    [Fact]
+    public async Task ProjectStructureMcp_import_recomposes_new_outline_for_initial_readability()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+        var tools = CreateTools(host, "Project Structure Import Layout Agent");
+
+        var project = await AssertOkAsync(tools.ProjectStructureProjectCreateAsync(new ProjectStructureProjectSaveRequest(
+            "MCP import layout project",
+            "Validate import-time readability normalization.",
+            "Import a deep outline and confirm the imported branch is laid out with usable horizontal spread.",
+            "Planning",
+            ProjectStatus.Active)));
+
+        var lease = await AssertOkAsync(tools.ProjectStructureProjectLeaseAcquireAsync(project.Id, "Import canonical outline"));
+        var importResult = await AssertOkAsync(tools.ProjectStructureImportAsync(
+            new ProjectStructureImportRequest(
+                project.Id,
+                null,
+                ProjectStructureImportSourceKind.JsonOutline,
+                "Canonical import",
+                """
+                [
+                  {
+                    "title": "Phase 0 guardrails",
+                    "children": [
+                      {
+                        "title": "Invariant tests",
+                        "children": [
+                          { "title": "Projection equivalence proof" }
+                        ]
+                      },
+                      {
+                        "title": "Node assignment integrity",
+                        "children": [
+                          { "title": "Guardrail validator" }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "title": "Phase 1 semantics",
+                    "children": [
+                      { "title": "Node kind registry" },
+                      { "title": "Actor ownership matrix" }
+                    ]
+                  }
+                ]
+                """,
+                LeaseToken: lease.LeaseToken)));
+
+        var readback = await AssertOkAsync(tools.ProjectStructureReadAsync(
+            project.Id,
+            new ProjectStructureReadRequest(
+                IncludeLinks: true,
+                IncludeLayout: true)));
+
+        var container = Assert.Single(readback.Nodes, node => node.Id == importResult.ContainerNodeId);
+        var importedChildren = readback.Nodes
+            .Where(node => node.ParentId == container.Id)
+            .ToList();
+
+        Assert.True(importedChildren.Count >= 2);
+        Assert.All(importedChildren, node => Assert.NotNull(node.X));
+        Assert.All(importedChildren, node => Assert.NotNull(node.Y));
+
+        var spread = importedChildren.Max(node => node.X!.Value) - importedChildren.Min(node => node.X!.Value);
+        Assert.True(spread >= 300, $"Expected imported branches to spread horizontally after auto-recomposition, but spread was {spread}.");
+    }
+
+    [Fact]
+    public async Task ProjectStructureMcp_recomposes_existing_branch_through_the_real_tool_path()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+        var tools = CreateTools(host, "Project Structure Recompose Agent");
+
+        var project = await AssertOkAsync(tools.ProjectStructureProjectCreateAsync(new ProjectStructureProjectSaveRequest(
+            "MCP recompose project",
+            "Validate explicit branch recomposition through the real tool path.",
+            "Create a compact branch, call recompose, and confirm descendants move into a readable spread.",
+            "Execution",
+            ProjectStatus.Active)));
+
+        var lease = await AssertOkAsync(tools.ProjectStructureProjectLeaseAcquireAsync(project.Id, "Recompose branch"));
+
+        var branchRoot = await AssertOkAsync(tools.ProjectStructureNodeCreateAsync(
+            project.Id,
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.ProjectBlock,
+                "Branch root",
+                "Execution",
+                "Branch root for recomposition validation.",
+                $"project:{project.Id}",
+                420,
+                220,
+                null,
+                null,
+                "delivery",
+                null,
+                null,
+                lease.LeaseToken)));
+
+        var childA = await AssertOkAsync(tools.ProjectStructureNodeCreateAsync(
+            project.Id,
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.WorkItem,
+                "Child A",
+                "Task",
+                "Manual stack child.",
+                branchRoot.Id,
+                620,
+                420,
+                null,
+                null,
+                "task",
+                null,
+                null,
+                lease.LeaseToken)));
+
+        var childB = await AssertOkAsync(tools.ProjectStructureNodeCreateAsync(
+            project.Id,
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.WorkItem,
+                "Child B",
+                "Task",
+                "Manual stack child.",
+                branchRoot.Id,
+                620,
+                420,
+                null,
+                null,
+                "task",
+                null,
+                null,
+                lease.LeaseToken)));
+
+        var result = await AssertOkAsync(tools.ProjectStructureNodeRecomposeAsync(
+            project.Id,
+            new ProjectStructureNodeRecomposeInput(branchRoot.Id, lease.LeaseToken)));
+
+        var readback = await AssertOkAsync(tools.ProjectStructureReadAsync(
+            project.Id,
+            new ProjectStructureReadRequest(
+                IncludeLayout: true)));
+
+        var recomposedA = Assert.Single(readback.Nodes, node => node.Id == childA.Id);
+        var recomposedB = Assert.Single(readback.Nodes, node => node.Id == childB.Id);
+
+        Assert.True(result.RepositionedNodeCount >= 2);
+        Assert.NotEqual(recomposedA.X, recomposedB.X);
+    }
+
     private static async Task<ProjectStructureNodeSummary> CreateAssetAsync(
         ProjectStructureTools tools,
         Guid projectId,

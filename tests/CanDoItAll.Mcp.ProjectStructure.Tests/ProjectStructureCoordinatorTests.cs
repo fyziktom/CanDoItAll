@@ -167,6 +167,31 @@ public sealed class ProjectStructureCoordinatorTests
     }
 
     [Fact]
+    public async Task RecomposeNodeAsync_posts_to_recompose_route_and_returns_result()
+    {
+        var projectId = Guid.NewGuid();
+        string? capturedPath = null;
+        string? capturedBody = null;
+        var handler = new DelegateHttpMessageHandler(async request =>
+        {
+            capturedPath = request.RequestUri?.ToString();
+            capturedBody = await request.Content!.ReadAsStringAsync();
+            return JsonResponse(new ProjectStructureSubtreeRecompositionResult("node-1", 6, 6));
+        });
+
+        var coordinator = CreateCoordinator(handler);
+        var result = await coordinator.RecomposeNodeAsync(
+            projectId,
+            new ProjectStructureNodeRecomposeInput("node-1", "lease-token"),
+            estimatedMinutes: 10);
+
+        using var document = JsonDocument.Parse(capturedBody!);
+        Assert.Equal("/api/project-structure-mcp/projects/" + projectId + "/nodes/recompose", new Uri(capturedPath!, UriKind.Absolute).AbsolutePath);
+        Assert.Equal("node-1", document.RootElement.GetProperty("rootNodeId").GetString());
+        Assert.Equal(6, result.RepositionedNodeCount);
+    }
+
+    [Fact]
     public async Task CreateProjectAsync_maps_remote_error_envelope_to_tool_invocation_exception()
     {
         var handler = new DelegateHttpMessageHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.Forbidden)

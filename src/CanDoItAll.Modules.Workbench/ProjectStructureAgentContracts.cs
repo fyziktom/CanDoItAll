@@ -211,6 +211,10 @@ public sealed record ProjectStructureNodeMoveInput(
     double Y,
     string? LeaseToken = null);
 
+public sealed record ProjectStructureNodeRecomposeInput(
+    string RootNodeId,
+    string? LeaseToken = null);
+
 public sealed record ProjectStructureNodeReparentInput(
     string NodeId,
     string? ParentNodeKey,

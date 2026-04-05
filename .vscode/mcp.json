@@ -38,7 +38,7 @@
     },
     "candoitall_projectstructure": {
       "type": "stdio",
-      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\20260404-212139\\CanDoItAll.Mcp.ProjectStructure.exe",
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\20260405-001758\\CanDoItAll.Mcp.ProjectStructure.exe",
       "args": [
         "--settings",
         "${workspaceFolder}\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"

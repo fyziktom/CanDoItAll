@@ -20,6 +20,7 @@ internal static class ProjectStructureSubtreeRecompositionEngine
     private const double FirstLayerSeparationGap = 72d;
     private const double SectorUsageRatio = 0.76d;
     private const double SingleBranchSectorSpan = Math.PI * 0.85d;
+    private const double PairBranchSectorSpan = Math.PI / 2d;
     private const double PositionEpsilon = 0.5d;
 
     public static ProjectStructureSubtreeRecompositionPlan? Recompose(
@@ -470,6 +471,11 @@ internal static class ProjectStructureSubtreeRecompositionEngine
             return SingleBranchSectorSpan;
         }
 
+        if (firstLayerCount == 2)
+        {
+            return PairBranchSectorSpan;
+        }
+
         return clockStep * SectorUsageRatio;
     }
 
@@ -478,6 +484,11 @@ internal static class ProjectStructureSubtreeRecompositionEngine
         if (firstLayerCount <= 1)
         {
             return BottomAngle;
+        }
+
+        if (firstLayerCount == 2)
+        {
+            return BottomAngle - (PairBranchSectorSpan / 2d) + (PairBranchSectorSpan * index);
         }
 
         return TopAngle + (clockStep * index);

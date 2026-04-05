@@ -81,6 +81,13 @@ public sealed class ProjectStructureTools(IProjectStructureCoordinator coordinat
         return ExecuteAsync("project_structure_node_update", () => coordinator.UpdateNodeAsync(projectId, nodeId, request, estimatedMinutes, cancellationToken));
     }
 
+    [McpServerTool(Name = "project_structure_node_recompose", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Redistributes a selected branch after imports or manual edits so the resulting project mindmap opens in a readable layout.")]
+    public Task<McpToolEnvelope<ProjectStructureSubtreeRecompositionResult>> ProjectStructureNodeRecomposeAsync(Guid projectId, ProjectStructureNodeRecomposeInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("project_structure_node_recompose", () => coordinator.RecomposeNodeAsync(projectId, request, estimatedMinutes, cancellationToken));
+    }
+
     [McpServerTool(Name = "project_structure_node_reparent", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
     [Description("Reconnects an existing project-structure node under a new logical parent node or back to the project root.")]
     public Task<McpToolEnvelope<ProjectStructureNodeSummary>> ProjectStructureNodeReparentAsync(Guid projectId, ProjectStructureNodeReparentInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default)

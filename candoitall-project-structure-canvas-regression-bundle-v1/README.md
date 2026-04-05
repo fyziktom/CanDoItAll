@@ -25,6 +25,8 @@ This bundle covers a real-browser Playwright MCP regression sweep for the projec
 2. `subbundles/02-context-menu-links-and-dependencies`
 3. `subbundles/03-conditional-repairs-and-closure`
 4. `subbundles/04-layout-overlap-and-recomposition-repair`
+5. `subbundles/05-fresh-sqlite-canonical-bundle-backfill-and-pm-validation`
+6. `subbundles/06-follow-up-readability-and-selection-hardening`
 
 ## Validation Summary
 
@@ -32,5 +34,6 @@ This bundle covers a real-browser Playwright MCP regression sweep for the projec
 - Bundle readiness gate: `Passed`
 - Execution status: `Completed`
 - Subbundle gate review: `Passed`
-- Final closure gate: `Passed`
+- Final closure gate: `Passed with next-phase follow-up prepared`
 - Browser validation analytics: `Recorded in reviews/01-execution-report.md`
+- Fresh validation state: `A new managed SQLite profile in artifacts was used to reconstruct candoitall-canonical-architecture-review-bundle-v2 into project structure, repair CRM AI-agent directory bindings, and review PM control usability with Playwright screenshots.`

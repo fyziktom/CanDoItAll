@@ -10,3 +10,9 @@
 | `RQ-06` | `03-conditional-repairs-and-closure` | browser analytics, raw-note closure, completed validator |
 | `RQ-07` | `04-layout-overlap-and-recomposition-repair` | reproduced overlap, code repair, and persisted recomposition proof |
 | `RQ-08` | `04-layout-overlap-and-recomposition-repair` | screenshot review before and after reload plus explicit flow assessment |
+| `RQ-09` | `05-fresh-sqlite-canonical-bundle-backfill-and-pm-validation` | fresh profile artifact, created-plan output, and repaired CRM AI bindings |
+| `RQ-10` | `05-fresh-sqlite-canonical-bundle-backfill-and-pm-validation` | reconstructed umbrella project, 15 subprojects, codes, titles, and timespans |
+| `RQ-11` | `05-fresh-sqlite-canonical-bundle-backfill-and-pm-validation` | CRM AI-agent repair artifact and live browser-visible AI ownership evidence |
+| `RQ-12` | `05-fresh-sqlite-canonical-bundle-backfill-and-pm-validation` | umbrella screenshot, subproject screenshot set, and contact sheet |
+| `RQ-13` | `05-fresh-sqlite-canonical-bundle-backfill-and-pm-validation` | explicit PM assessment in reviews/01-execution-report.md |
+| `RQ-14` | `06-follow-up-readability-and-selection-hardening` | documented next-phase scope for remaining readability and interaction debt |

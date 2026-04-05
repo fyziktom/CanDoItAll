@@ -318,6 +318,33 @@ public sealed class ProjectStructureAgentService(
             cancellationToken);
     }
 
+    public async Task<ProjectStructureSubtreeRecompositionResult> RecomposeNodeAsync(
+        Guid projectId,
+        ProjectStructureNodeRecomposeInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        return await leaseService.RunWithProjectMutationLeaseAsync(
+            projectId,
+            request.LeaseToken,
+            agent,
+            "recompose-structure-node",
+            async cancellationToken =>
+            {
+                var result = await projectWorkbenchService.RecomposeSubtreeAsync(projectId, request.RootNodeId, cancellationToken);
+                if (result is null)
+                {
+                    throw new ProjectStructureAgentException(
+                        400,
+                        "RecompositionUnavailable",
+                        $"Node '{request.RootNodeId}' could not be recomposed because it has no descendants or does not exist.");
+                }
+
+                return result;
+            },
+            cancellationToken);
+    }
+
     public async Task<ProjectStructureNodeSummary> ReparentNodeAsync(
         Guid projectId,
         ProjectStructureNodeReparentInput request,
