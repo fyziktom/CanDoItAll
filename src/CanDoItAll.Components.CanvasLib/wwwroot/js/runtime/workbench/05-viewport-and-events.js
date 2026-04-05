@@ -1213,10 +1213,14 @@
 
         setMaximized(state, !!state.ui.isMaximized);
         workbenchInternals.sceneLayout.resize(state);
-        const shouldPreserveViewport = Math.abs(state.ui.panX - previousViewport.panX) <= 0.5 &&
+        const incomingViewportIsDefault = Math.abs(state.ui.panX - 90) <= 0.5 &&
+            Math.abs(state.ui.panY - 110) <= 0.5 &&
+            Math.abs(state.ui.zoom - 1) <= 0.001;
+        const shouldPreserveViewport = incomingViewportIsDefault || (Math.abs(state.ui.panX - previousViewport.panX) <= 0.5 &&
             Math.abs(state.ui.panY - previousViewport.panY) <= 0.5 &&
-            Math.abs(state.ui.zoom - previousViewport.zoom) <= 0.001;
+            Math.abs(state.ui.zoom - previousViewport.zoom) <= 0.001);
         if (shouldPreserveViewport) {
+            state.ui.zoom = previousViewport.zoom;
             state.ui.panX = previousViewport.panX;
             state.ui.panY = previousViewport.panY;
             workbenchInternals.sceneLayout.applySceneTransform(state);

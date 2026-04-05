@@ -552,28 +552,38 @@
         }
     }
 
-    function drawRoundedPanel(context, bounds, radius, fill, stroke, lineWidth, shadowColor) {
-        const primitives = getCanvasRuntimePrimitives();
-        if (primitives?.fillRoundedPanel) {
-            primitives.fillRoundedPanel(context, {
-                x: bounds.left,
-                y: bounds.top,
-                width: bounds.width,
-                height: bounds.height,
-                radius,
-                fill,
-                stroke,
-                lineWidth,
-                shadowColor,
-                shadowBlur: shadowColor ? 20 : 0,
-                shadowOffsetY: shadowColor ? 8 : 0
-            });
+    function traceRoundedPanelPath(context, bounds, radius) {
+        const width = Math.max(0, bounds.width || 0);
+        const height = Math.max(0, bounds.height || 0);
+        const safeRadius = Math.max(0, Math.min(radius || 0, width / 2, height / 2));
+        if (typeof context.roundRect === "function") {
+            context.beginPath();
+            context.roundRect(bounds.left, bounds.top, width, height, safeRadius);
             return;
         }
 
-        context.save();
         context.beginPath();
-        context.roundRect(bounds.left, bounds.top, bounds.width, bounds.height, radius);
+        context.moveTo(bounds.left + safeRadius, bounds.top);
+        context.lineTo(bounds.left + width - safeRadius, bounds.top);
+        context.quadraticCurveTo(bounds.left + width, bounds.top, bounds.left + width, bounds.top + safeRadius);
+        context.lineTo(bounds.left + width, bounds.top + height - safeRadius);
+        context.quadraticCurveTo(bounds.left + width, bounds.top + height, bounds.left + width - safeRadius, bounds.top + height);
+        context.lineTo(bounds.left + safeRadius, bounds.top + height);
+        context.quadraticCurveTo(bounds.left, bounds.top + height, bounds.left, bounds.top + height - safeRadius);
+        context.lineTo(bounds.left, bounds.top + safeRadius);
+        context.quadraticCurveTo(bounds.left, bounds.top, bounds.left + safeRadius, bounds.top);
+        context.closePath();
+    }
+
+    function drawRoundedPanel(context, bounds, radius, fill, stroke, lineWidth, shadowColor) {
+        context.save();
+        if (shadowColor) {
+            context.shadowColor = shadowColor;
+            context.shadowBlur = 20;
+            context.shadowOffsetY = 8;
+        }
+
+        traceRoundedPanelPath(context, bounds, radius);
         context.fillStyle = fill;
         context.fill();
         if (stroke) {
