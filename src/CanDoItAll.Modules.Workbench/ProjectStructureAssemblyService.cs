@@ -140,7 +140,7 @@ public sealed class ProjectStructureAssemblyService(
             .Where(item => item.ProjectId == projectId && !item.IsSystemManaged)
             .ToListAsync(cancellationToken);
         await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, canonicalNodes, cancellationToken);
-        var userLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+        var persistedUserLinks = await dbContext.Set<ProjectObjectLinkRecord>()
             .Where(item => item.ProjectId == projectId && !item.IsSystemManaged)
             .ToListAsync(cancellationToken);
         var layoutOverrides = await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
@@ -176,7 +176,8 @@ public sealed class ProjectStructureAssemblyService(
                 .OrderBy(item => item.PositionY)
                 .ThenBy(item => item.PositionX)
                 .ToList(),
-            userLinks
+            FilterLegacyCanonicalHierarchyLinks(persistedUserLinks, canonicalNodes)
+                .Concat(BuildCanonicalHierarchyLinks(projectId, canonicalNodes, context.AssembledAtUtc))
                 .Concat(context.Links)
                 .OrderBy(item => item.SourceNodeKey)
                 .ThenBy(item => item.TargetNodeKey)
@@ -313,6 +314,42 @@ public sealed class ProjectStructureAssemblyService(
         return context.Nodes
             .Select(item => item.NodeKey)
             .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static IReadOnlyList<ProjectObjectLinkRecord> FilterLegacyCanonicalHierarchyLinks(
+        IReadOnlyList<ProjectObjectLinkRecord> persistedUserLinks,
+        IReadOnlyCollection<ProjectObjectRecord> canonicalNodes)
+    {
+        var canonicalNodeKeys = canonicalNodes
+            .Select(item => item.NodeKey)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return persistedUserLinks
+            .Where(item =>
+                !(canonicalNodeKeys.Contains(item.TargetNodeKey) &&
+                  (item.LinkKind == ProjectObjectLinkKind.Contains || item.LinkKind == ProjectObjectLinkKind.BelongsTo)))
+            .ToList();
+    }
+
+    private static IReadOnlyList<ProjectObjectLinkRecord> BuildCanonicalHierarchyLinks(
+        Guid projectId,
+        IReadOnlyCollection<ProjectObjectRecord> canonicalNodes,
+        DateTimeOffset assembledAtUtc)
+    {
+        return canonicalNodes
+            .Where(item => !string.IsNullOrWhiteSpace(item.ParentNodeKey))
+            .Select(item => new ProjectObjectLinkRecord
+            {
+                ProjectId = projectId,
+                SourceNodeKey = item.ParentNodeKey!,
+                TargetNodeKey = item.NodeKey,
+                LinkKind = ProjectWorkbenchGraphConventions.ResolveHierarchyLinkKind(projectId, item.ParentNodeKey!),
+                IsSystemManaged = true,
+                CreatedAtUtc = item.UpdatedAtUtc == default
+                    ? assembledAtUtc
+                    : item.UpdatedAtUtc
+            })
+            .ToList();
     }
 
     private static async Task RetireLegacyProjectionRowsAsync(

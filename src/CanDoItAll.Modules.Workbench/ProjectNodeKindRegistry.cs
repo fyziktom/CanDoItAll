@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -29,7 +30,10 @@ internal sealed record ProjectNodeKindDescriptor(
     bool AllowNotePromotion,
     bool IncludeInCommonBlockOptions,
     Func<string, ProjectObjectVisualProfile> BuildVisualProfile,
-    Action<ProjectObjectMetadataEnvelope, ProjectNodeMetadataNormalizationContext>? NormalizeMetadata = null);
+    Action<ProjectObjectMetadataEnvelope, ProjectNodeMetadataNormalizationContext>? NormalizeMetadata = null,
+    IReadOnlyList<ProjectPartyAssignmentRole>? AllowedAssignmentRoles = null,
+    IReadOnlyList<ProjectPartyAssignmentRole>? ReplacementRoles = null,
+    ProjectPartyAssignmentRole? PreferredRole = null);
 
 internal sealed record ProjectNodeMetadataNormalizationContext(
     ProjectObjectType ObjectType,
@@ -41,6 +45,35 @@ internal static class ProjectNodeKindRegistry
 {
     private static readonly IReadOnlyDictionary<(ProjectObjectType ObjectType, string ObjectSubtype), ProjectNodeKindDescriptor> Descriptors =
         BuildDescriptors();
+    private static readonly IReadOnlySet<ProjectPartyAssignmentRole> CanonicalNodeOptionalRoles =
+        new HashSet<ProjectPartyAssignmentRole>
+        {
+            ProjectPartyAssignmentRole.TeamMember,
+            ProjectPartyAssignmentRole.DeliveryUnit,
+            ProjectPartyAssignmentRole.Partner,
+            ProjectPartyAssignmentRole.AiAgent
+        };
+    private static readonly IReadOnlySet<ProjectPartyAssignmentRole> CanonicalNodeRequiredRoles =
+        new HashSet<ProjectPartyAssignmentRole>
+        {
+            ProjectPartyAssignmentRole.MeetingParticipant,
+            ProjectPartyAssignmentRole.WorkItemAssignee
+        };
+    private static readonly IReadOnlyList<ProjectPartyAssignmentRole> ParticipantReplacementRoles =
+    [
+        ProjectPartyAssignmentRole.TeamMember,
+        ProjectPartyAssignmentRole.DeliveryUnit,
+        ProjectPartyAssignmentRole.Partner,
+        ProjectPartyAssignmentRole.AiAgent
+    ];
+    private static readonly IReadOnlyList<ProjectPartyAssignmentRole> MeetingAssignmentRoles =
+    [
+        ProjectPartyAssignmentRole.MeetingParticipant
+    ];
+    private static readonly IReadOnlyList<ProjectPartyAssignmentRole> WorkItemAssignmentRoles =
+    [
+        ProjectPartyAssignmentRole.WorkItemAssignee
+    ];
 
     public static ProjectNodeKindDescriptor ResolveDescriptor(ProjectObjectType objectType, string? objectSubtype)
     {
@@ -106,6 +139,66 @@ internal static class ProjectNodeKindRegistry
 
     public static ProjectNodeKindFamily ResolveFamily(ProjectObjectType objectType, string? objectSubtype)
         => ResolveDescriptor(objectType, objectSubtype).Family;
+
+    public static IReadOnlyList<ProjectPartyAssignmentRole> ResolveAllowedAssignmentRoles(ProjectObjectType objectType, string? objectSubtype)
+    {
+        return objectType switch
+        {
+            ProjectObjectType.Participant =>
+            [
+                ResolveParticipantAssignmentRole(ResolveParticipantKind(objectSubtype))
+            ],
+            ProjectObjectType.Meeting => MeetingAssignmentRoles,
+            ProjectObjectType.WorkItem => WorkItemAssignmentRoles,
+            _ => ResolveDescriptor(objectType, objectSubtype).AllowedAssignmentRoles ?? []
+        };
+    }
+
+    public static IReadOnlyList<ProjectPartyAssignmentRole> ResolveReplacementRoles(ProjectObjectType objectType, string? objectSubtype)
+    {
+        return objectType switch
+        {
+            ProjectObjectType.Participant => ParticipantReplacementRoles,
+            ProjectObjectType.Meeting => MeetingAssignmentRoles,
+            ProjectObjectType.WorkItem => WorkItemAssignmentRoles,
+            _ =>
+                ResolveDescriptor(objectType, objectSubtype).ReplacementRoles ??
+                ResolveDescriptor(objectType, objectSubtype).AllowedAssignmentRoles ??
+                []
+        };
+    }
+
+    public static ProjectPartyAssignmentRole? ResolvePreferredRole(ProjectObjectType objectType, string? objectSubtype)
+    {
+        switch (objectType)
+        {
+            case ProjectObjectType.Participant:
+                return ResolveParticipantAssignmentRole(ResolveParticipantKind(objectSubtype));
+            case ProjectObjectType.Meeting:
+                return ProjectPartyAssignmentRole.MeetingParticipant;
+            case ProjectObjectType.WorkItem:
+                return ProjectPartyAssignmentRole.WorkItemAssignee;
+        }
+
+        var descriptor = ResolveDescriptor(objectType, objectSubtype);
+        if (descriptor.PreferredRole.HasValue)
+        {
+            return descriptor.PreferredRole.Value;
+        }
+
+        return descriptor.AllowedAssignmentRoles is { Count: > 0 }
+            ? descriptor.AllowedAssignmentRoles[0]
+            : null;
+    }
+
+    public static bool AllowsAssignmentRole(ProjectObjectType objectType, string? objectSubtype, ProjectPartyAssignmentRole role)
+        => ResolveAllowedAssignmentRoles(objectType, objectSubtype).Contains(role);
+
+    public static bool SupportsCanonicalNodeScope(ProjectPartyAssignmentRole role)
+        => CanonicalNodeRequiredRoles.Contains(role) || CanonicalNodeOptionalRoles.Contains(role);
+
+    public static bool RequiresCanonicalNodeScope(ProjectPartyAssignmentRole role)
+        => CanonicalNodeRequiredRoles.Contains(role);
 
     public static ProjectParticipantKind ResolveParticipantKind(string? objectSubtype)
     {
@@ -259,7 +352,9 @@ internal static class ProjectNodeKindRegistry
                 false,
                 false,
                 _ => Profile("diamond", "#0ea5e9", "ME", "Meeting", ProjectObjectPaletteKeys.Info),
-                (metadata, _) => metadata.Meeting ??= new ProjectMeetingMetadata()),
+                (metadata, _) => metadata.Meeting ??= new ProjectMeetingMetadata(),
+                AllowedAssignmentRoles: MeetingAssignmentRoles,
+                PreferredRole: ProjectPartyAssignmentRole.MeetingParticipant),
 
             Recording(ProjectObjectType.Recording, string.Empty, "Recording", Profile("pill", "#8b5cf6", "RC", "Recording", ProjectObjectPaletteKeys.Secondary)),
             Recording(ProjectObjectType.Transcript, string.Empty, "Transcript", Profile("rect", "#14b8a6", "TR", "Transcript", ProjectObjectPaletteKeys.Success), ProjectNodeKindFamily.Transcript, (metadata, context) =>
@@ -291,7 +386,10 @@ internal static class ProjectNodeKindRegistry
                 {
                     metadata.Participant ??= new ProjectParticipantMetadata();
                     metadata.Participant.ParticipantKind = ProjectParticipantKind.Hr;
-                }),
+                },
+                AllowedAssignmentRoles: ParticipantReplacementRoles,
+                ReplacementRoles: ParticipantReplacementRoles,
+                PreferredRole: ProjectPartyAssignmentRole.TeamMember),
 
             WorkItem("task", "Task", Profile("pill", "#d97706", "TK", "Task", ProjectObjectPaletteKeys.Warning), ProjectWorkItemKind.Task, true),
             WorkItem("issue", "Issue", Profile("pill", "#dc2626", "IS", "Issue", ProjectObjectPaletteKeys.Danger), ProjectWorkItemKind.Issue, true),
@@ -317,7 +415,9 @@ internal static class ProjectNodeKindRegistry
                     {
                         metadata.WorkItem.Description = context.Notes;
                     }
-                }),
+                },
+                AllowedAssignmentRoles: WorkItemAssignmentRoles,
+                PreferredRole: ProjectPartyAssignmentRole.WorkItemAssignee),
 
             Repository("remote", "Remote repo", Profile("rect", "#0f766e", "GH", "Remote", ProjectObjectPaletteKeys.Success), ProjectRepositoryMode.RemoteGitHub),
             Repository("local", "Local repo", Profile("rect", "#0891b2", "RE", "Local", ProjectObjectPaletteKeys.Info), ProjectRepositoryMode.LocalRepository),
@@ -500,7 +600,9 @@ internal static class ProjectNodeKindRegistry
             false,
             false,
             _ => visualProfile,
-            (metadata, _) => metadata.Meeting ??= new ProjectMeetingMetadata());
+            (metadata, _) => metadata.Meeting ??= new ProjectMeetingMetadata(),
+            AllowedAssignmentRoles: MeetingAssignmentRoles,
+            PreferredRole: ProjectPartyAssignmentRole.MeetingParticipant);
 
     private static ProjectNodeKindDescriptor Recording(
         ProjectObjectType objectType,
@@ -546,7 +648,13 @@ internal static class ProjectNodeKindRegistry
             {
                 metadata.Participant ??= new ProjectParticipantMetadata();
                 metadata.Participant.ParticipantKind = kind;
-            });
+            },
+            AllowedAssignmentRoles:
+            [
+                ResolveParticipantAssignmentRole(kind)
+            ],
+            ReplacementRoles: ParticipantReplacementRoles,
+            PreferredRole: ResolveParticipantAssignmentRole(kind));
 
     private static ProjectNodeKindDescriptor WorkItem(
         string objectSubtype,
@@ -572,7 +680,9 @@ internal static class ProjectNodeKindRegistry
                 {
                     metadata.WorkItem.Description = context.Notes;
                 }
-            });
+            },
+            AllowedAssignmentRoles: WorkItemAssignmentRoles,
+            PreferredRole: ProjectPartyAssignmentRole.WorkItemAssignee);
 
     private static ProjectNodeKindDescriptor Repository(
         string objectSubtype,
@@ -708,4 +818,15 @@ internal static class ProjectNodeKindRegistry
 
     private static ProjectObjectVisualProfile Profile(string shape, string accentColor, string icon, string accentBadge, string paletteKey)
         => new(shape, accentColor, icon, accentBadge, paletteKey);
+
+    private static ProjectPartyAssignmentRole ResolveParticipantAssignmentRole(ProjectParticipantKind kind)
+    {
+        return kind switch
+        {
+            ProjectParticipantKind.TeamBlock or ProjectParticipantKind.TeamSection => ProjectPartyAssignmentRole.DeliveryUnit,
+            ProjectParticipantKind.Partner => ProjectPartyAssignmentRole.Partner,
+            ProjectParticipantKind.AiAgent => ProjectPartyAssignmentRole.AiAgent,
+            _ => ProjectPartyAssignmentRole.TeamMember
+        };
+    }
 }

@@ -22,7 +22,7 @@ internal sealed class ProjectNodeScopeBridge(
 
         if (string.Equals(normalizedNodeKey, $"project:{projectId}", StringComparison.Ordinal))
         {
-            return new ProjectNodeScopeResolution(true, false, ProjectObjectType.ProjectRoot, string.Empty);
+            return new ProjectNodeScopeResolution(true, false, false, ProjectObjectType.ProjectRoot, string.Empty);
         }
 
         if (TryParsePrefixedGuidNodeKey(normalizedNodeKey, "project:", out var rootProjectId) ||
@@ -32,6 +32,7 @@ internal sealed class ProjectNodeScopeBridge(
             return new ProjectNodeScopeResolution(
                 rootProjectId == projectId,
                 rootProjectId != projectId,
+                false,
                 ProjectObjectType.ProjectRoot,
                 string.Empty);
         }
@@ -50,7 +51,7 @@ internal sealed class ProjectNodeScopeBridge(
             .FirstOrDefaultAsync(cancellationToken);
         if (projectNode is not null)
         {
-            return new ProjectNodeScopeResolution(true, false, projectNode.ObjectType, projectNode.ObjectSubtype);
+            return new ProjectNodeScopeResolution(true, false, true, projectNode.ObjectType, projectNode.ObjectSubtype);
         }
 
         var projectedScope = await ResolveProjectedNodeAsync(dbContext, projectId, normalizedNodeKey, cancellationToken);
@@ -71,11 +72,12 @@ internal sealed class ProjectNodeScopeBridge(
 
         if (foreignNode is null)
         {
-            return new ProjectNodeScopeResolution(false, false, null, string.Empty);
+            return new ProjectNodeScopeResolution(false, false, false, null, string.Empty);
         }
 
         return new ProjectNodeScopeResolution(
             false,
+            true,
             true,
             foreignNode.ObjectType,
             foreignNode.ObjectSubtype);
@@ -194,6 +196,7 @@ internal sealed class ProjectNodeScopeBridge(
         return new ProjectNodeScopeResolution(
             ownerProjectId.Value == projectId,
             ownerProjectId.Value != projectId,
+            false,
             objectType,
             objectSubtype);
     }

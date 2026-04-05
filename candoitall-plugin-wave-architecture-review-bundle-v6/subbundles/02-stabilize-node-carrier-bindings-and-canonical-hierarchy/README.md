@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared for Codex execution`
+- `Completed`
 
 ## Objective
 
@@ -21,9 +21,9 @@ Keep node as the universal carrier, but reduce the carrier to durable project se
 
 ## Exact Source References
 
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchMetadata.cs`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectStructureInvariantService.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectWorkbenchModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectWorkbenchMetadata.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectStructureInvariantService.cs`
 
 ## Evidence Focus
 

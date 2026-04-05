@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared for Codex execution`
+- `Completed`
 
 ## Objective
 
@@ -20,16 +20,16 @@ Reduce hotspot risk, add architecture guardrails, and rerun the review in a real
 
 ## Exact Source References
 
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/architecture/adrs/ADR-0004-workbench-node-extension-guardrails.md`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectWorkbenchModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CrmHrServices.cs`
+- `C:\repositories\CanDoItAll\architecture\adrs\ADR-0004-workbench-node-extension-guardrails.md`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs`
 
 ## Evidence Focus
 
-- `src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs (3227 lines)`
-- `src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs (5001 lines)`
-- `tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:1262-1425`
+- `src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs (1024 lines)`
+- `src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs (4503 lines)`
+- `tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs`
 - `architecture/adrs/ADR-0004-workbench-node-extension-guardrails.md`
 
 ## Deliverables
@@ -62,9 +62,9 @@ Reduce hotspot risk, add architecture guardrails, and rerun the review in a real
 
 ## Acceptance Checklist
 
-- [ ] Hotspot classes materially shrink or lose major responsibilities.
-- [ ] Guardrail tests fail on the prohibited architectural regressions.
-- [ ] Final review says GO for the plugin wave with real runtime evidence.
+- [x] Hotspot classes materially shrink or lose major responsibilities.
+- [x] Guardrail tests fail on the prohibited architectural regressions.
+- [x] Final review says GO for the plugin wave with real runtime evidence.
 
 ## Proof Required
 

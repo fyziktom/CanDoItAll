@@ -219,6 +219,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         var movedRecordSnapshots = movedRecords
             .Select(CloneProjectObjectRecord)
             .ToList();
+        var movedRecordByNodeKey = movedRecords.ToDictionary(item => item.NodeKey, StringComparer.Ordinal);
         var updatedAtUtc = clock.GetUtcNow();
 
         foreach (var record in movedRecords)
@@ -242,6 +243,12 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
 
         foreach (var link in linksToProcess)
         {
+            if (IsLegacyEditableHierarchyLink(link, movedRecordByNodeKey))
+            {
+                dbContext.Remove(link);
+                continue;
+            }
+
             var hasMovedSource = movedNodeKeys.Contains(link.SourceNodeKey);
             var hasMovedTarget = movedNodeKeys.Contains(link.TargetNodeKey);
             if (hasMovedSource && hasMovedTarget)
@@ -251,18 +258,6 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             }
 
             dbContext.Remove(link);
-        }
-
-        foreach (var movedRootKey in movedRootKeys)
-        {
-            await UpsertLinkAsync(
-                dbContext,
-                targetProjectId,
-                targetRootNodeKey,
-                movedRootKey,
-                ResolveHierarchyLinkKind(targetProjectId, targetRootNodeKey),
-                isSystemManaged: false,
-                cancellationToken);
         }
 
         foreach (var record in movedRecords)
@@ -585,6 +580,26 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         };
     }
 
+    private static bool IsLegacyEditableHierarchyLink(
+        ProjectObjectLinkRecord link,
+        IReadOnlyDictionary<string, ProjectObjectRecord> movedRecordByNodeKey)
+    {
+        if (link.LinkKind != ProjectObjectLinkKind.Contains && link.LinkKind != ProjectObjectLinkKind.BelongsTo)
+        {
+            return false;
+        }
+
+        if (!movedRecordByNodeKey.TryGetValue(link.TargetNodeKey, out var targetNode) ||
+            string.IsNullOrWhiteSpace(targetNode.ParentNodeKey))
+        {
+            return false;
+        }
+
+        var expectedKind = ResolveHierarchyLinkKind(targetNode.ProjectId, targetNode.ParentNodeKey!);
+        return string.Equals(link.SourceNodeKey, targetNode.ParentNodeKey, StringComparison.Ordinal) &&
+               link.LinkKind == expectedKind;
+    }
+
     private static string BuildProjectRootNodeKey(Guid projectId)
     {
         return $"project:{projectId}";
@@ -625,37 +640,4 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         return route;
     }
 
-    private static async Task UpsertLinkAsync(
-        AppDbContext dbContext,
-        Guid projectId,
-        string sourceNodeKey,
-        string targetNodeKey,
-        ProjectObjectLinkKind linkKind,
-        bool isSystemManaged,
-        CancellationToken cancellationToken)
-    {
-        var existing = await dbContext.Set<ProjectObjectLinkRecord>()
-            .FirstOrDefaultAsync(item =>
-                item.ProjectId == projectId &&
-                item.SourceNodeKey == sourceNodeKey &&
-                item.TargetNodeKey == targetNodeKey &&
-                item.LinkKind == linkKind &&
-                item.IsSystemManaged == isSystemManaged,
-                cancellationToken);
-
-        if (existing is not null)
-        {
-            return;
-        }
-
-        await dbContext.Set<ProjectObjectLinkRecord>().AddAsync(new ProjectObjectLinkRecord
-        {
-            ProjectId = projectId,
-            SourceNodeKey = sourceNodeKey,
-            TargetNodeKey = targetNodeKey,
-            LinkKind = linkKind,
-            IsSystemManaged = isSystemManaged,
-            CreatedAtUtc = DateTimeOffset.UtcNow
-        }, cancellationToken);
-    }
 }

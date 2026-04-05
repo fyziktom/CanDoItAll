@@ -2,21 +2,21 @@
 
 ## Verdict
 
-**NO-GO** for the large external plugin wave on the current architecture.
+**GO with guarded rollout** for the large external plugin wave on the current architecture.
 
 ## Reasoning
 
 | Dimension | Verdict | Why |
 | --- | --- | --- |
-| Canonical truth | Fail | Workbench still persists mirrored cross-module projections. |
-| Universal node stability | Fail | The carrier is still overloaded instead of governed by carrier/facet/binding boundaries. |
-| Kind / lifecycle semantics | Fail | Semantics still depend on enums, subtype strings, and multiple switch locations. |
-| Brainstorming → structured evolution | Fail | Reclassification still does not preserve durable semantic transition history. |
-| Node-scoped assignment semantics | Fail | Role-to-node capability rules are still partial and hardcoded. |
-| Plugin platform | Fail | Providers/resources are still too static for the connector wave. |
-| Cross-module mutation safety | Partial | Better than before, but still compensation-based and non-atomic. |
-| Guardrail testability | Partial | Useful tests exist, but key canonical invariants are still unguarded. |
+| Canonical truth | Pass | Editable hierarchy now assembles from `ParentNodeKey`, and duplicate persisted hierarchy truth is filtered out. |
+| Universal node stability | Pass | Carrier/binding separation stays intact while canonical hierarchy truth is enforced through one path. |
+| Kind / lifecycle semantics | Pass | Registry descriptors now govern the assignment capability matrix and continue to own lifecycle normalization. |
+| Brainstorming → structured evolution | Pass | Durable transition history remains in place and the missing policy layer is now closed. |
+| Node-scoped assignment semantics | Pass | Projection-only nodes are rejected centrally and CRM/HR plus Workbench now share the same capability rules. |
+| Plugin platform | Pass | Connector manifests, registries, and resource plugins are in place and were revalidated after the remaining phase-6 closures. |
+| Cross-module mutation safety | Conditional pass | Durable mutation records and compensation remain compensating rather than atomic, but targeted move/delete regression coverage passed. |
+| Guardrail testability | Pass | Targeted unit, integration, component, and Playwright proof now cover the critical canonical invariants. |
 
 ## Safe Conclusion
 
-The current codebase is good enough to keep evolving in controlled local ways, but it is **not yet the correct base** for the major external plugin wave.
+The current codebase is now a viable base for the external plugin wave, provided new connectors continue to use the registry/bridge/plugin-manifest seams and do not reintroduce parallel truth through ad hoc hierarchy or assignment paths.

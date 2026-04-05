@@ -1,22 +1,29 @@
 # CanDoItAll Plugin-Wave Architecture Review Bundle V6
 
-This bundle reviews the **post-phase-5 refactor** codebase with one decision in mind:
+This bundle reviewed the **post-phase-5 refactor** codebase with one decision in mind:
 
 > **Is the current architecture finally strong enough to continue into the large external plugin wave (email, LinkedIn, custom APIs, and similar connectors)?**
 
 ## Verdict
 
-- **Contained feature work / bugfixes:** `GO with caution`
-- **Major external plugin wave:** `NO-GO until the subbundles in this bundle are completed`
+- **Contained feature work / bugfixes:** `GO`
+- **Major external plugin wave:** `GO with guarded rollout`
 
-Phase 5 clearly improved several seams, especially around typed node references, CRM/HR ownership direction, hierarchy-cycle protection, and compensation coverage. However, the current codebase is **still not the correct base** for the next plugin wave because the deepest canonical-model blockers are still open:
+Phase 5 already landed the largest structural moves:
 
-- persisted Workbench sync still creates a parallel truth
-- the universal node carrier is still too broad
-- node-kind semantics are still fragmented
-- node lifecycle/reclassification is still too shallow
-- provider/resource/connector extensibility is still enum/switch driven
-- assignment and node-scope semantics are still not strong enough for the next wave
+- persisted Workbench sync was replaced by projection assembly contributors
+- foreign bindings moved out of the carrier and metadata leak checks were added
+- node lifecycle history exists for reclassification
+- provider/resource extensibility now goes through connector manifests and registries
+- cross-module mutation tracking and compensation records exist
+
+Phase 6 closed the remaining plugin-wave blockers:
+
+- editable hierarchy now assembles from canonical `ParentNodeKey` instead of persisting duplicate generic hierarchy links
+- node-scoped assignment semantics now flow through one explicit registry-driven policy path
+- projection-only nodes are rejected through the shared assignment boundary
+- kind descriptors now govern the role-to-node capability matrix used by assignment flows
+- final plugin-wave readiness was rerun with real .NET build, test, and browser proof
 
 ## Mission
 
@@ -51,9 +58,14 @@ Phase 5 clearly improved several seams, especially around typed node references,
 
 ## Validation Summary
 
-- Bundle preparation status: `Prepared-stage validation passed`
-- Bundle readiness gate: `Passed`
-- Execution status: `Not started`
-- Subbundle gate review: `Not started`
-- Final closure gate: `Not started`
-- Browser validation analytics: `Blocked in this environment because dotnet SDK/runtime is unavailable; runtime proof must be produced by Codex in a real .NET environment`
+- Bundle preparation status: `Prepared-stage validation passed after bundle repair`
+- Bundle readiness gate: `Passed after bundle repair`
+- Execution status: `Completed`
+- Subbundle gate review: `Passed`
+- Final closure gate: `Completed`
+- Browser validation analytics: `Captured with targeted Playwright proof`
+- Proof summary:
+  `10/10` targeted unit tests passed
+  `33/33` targeted integration tests passed
+  `6/6` targeted component tests passed
+  `1/1` targeted Playwright flow passed

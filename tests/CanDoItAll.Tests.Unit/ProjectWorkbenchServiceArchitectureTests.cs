@@ -49,6 +49,11 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
         AssertScoped<ProjectWorkbenchService>(services);
         Assert.Contains(
             services,
+            descriptor => descriptor.ServiceType == typeof(IProjectNodeAssignmentPolicyBridge) &&
+                descriptor.ImplementationType == typeof(ProjectNodeAssignmentPolicyBridge) &&
+                descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(
+            services,
             descriptor => descriptor.ServiceType == typeof(IProjectWorkbenchSeedService) &&
                 descriptor.Lifetime == ServiceLifetime.Scoped);
     }

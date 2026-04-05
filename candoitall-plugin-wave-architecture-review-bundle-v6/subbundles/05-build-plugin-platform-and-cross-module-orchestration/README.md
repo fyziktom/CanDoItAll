@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared for Codex execution`
+- `Completed`
 
 ## Objective
 
@@ -20,12 +20,12 @@ Create a real connector/plugin platform and strengthen cross-module mutation han
 
 ## Exact Source References
 
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workspace/ProviderExecution.cs`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workspace/WorkspaceModuleServiceCollectionExtensions.cs`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Resources/ResourceModels.cs`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\WorkspaceModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\ProviderExecution.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\WorkspaceModuleServiceCollectionExtensions.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Resources\ResourceModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectWorkbenchModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CrmHrServices.cs`
 
 ## Evidence Focus
 

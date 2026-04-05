@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared for Codex execution`
+- `Completed`
 
 ## Objective
 
@@ -20,10 +20,10 @@ Make canonical node scope explicit for assignments, agents, and future node-scop
 
 ## Exact Source References
 
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectNodeScopeBridge.cs`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs`
-- `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\ProjectPartyIntegrationContracts.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectNodeScopeBridge.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CrmHrBusinessModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CrmHrServices.cs`
 
 ## Evidence Focus
 

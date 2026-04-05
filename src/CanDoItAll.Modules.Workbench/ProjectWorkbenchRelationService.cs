@@ -102,15 +102,6 @@ public sealed class ProjectWorkbenchRelationService(
         node.ParentNodeKey = normalizedParentNodeKey;
         node.UpdatedAtUtc = clock.GetUtcNow();
 
-        await ProjectWorkbenchGraphConventions.UpsertLinkAsync(
-            dbContext,
-            projectId,
-            normalizedParentNodeKey,
-            node.NodeKey,
-            ProjectWorkbenchGraphConventions.ResolveHierarchyLinkKind(projectId, normalizedParentNodeKey),
-            isSystemManaged: false,
-            cancellationToken);
-
         await dbContext.SaveChangesAsync(cancellationToken);
         return ProjectWorkbenchNodeMapper.MapStructureNode(node);
     }

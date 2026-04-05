@@ -8,6 +8,7 @@ public static class ProjectsModuleServiceCollectionExtensions
     {
         services.AddScoped<ProjectsService>();
         services.AddScoped<IProjectNodeScopeBridge, NoopProjectNodeScopeBridge>();
+        services.AddScoped<IProjectNodeAssignmentPolicyBridge, NoopProjectNodeAssignmentPolicyBridge>();
         services.AddScoped<IProjectPartyIntegrationBridge, NoopProjectPartyIntegrationBridge>();
         return services;
     }

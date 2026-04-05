@@ -3,11 +3,11 @@
 - Current code archive reviewed:
   - `/mnt/data/CanDoItAll-canonical-model-refactor.zip`
 - Extracted review root:
-  - `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor`
+- `C:\repositories\CanDoItAll`
 - Prior comparison / historical context reviewed:
   - `/mnt/data/candoitall-plugin-wave-architecture-review-bundle-v5.zip`
-  - repo-local ADRs under `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/architecture/adrs`
-  - repo-local review reports under `/mnt/data/unpacked_phase5_current/CanDoItAll-canonical-model-refactor/architecture/reviews`
+- repo-local ADRs under `C:\repositories\CanDoItAll\architecture\adrs`
+- repo-local review reports under `C:\repositories\CanDoItAll\architecture\reviews`
 
 ## Environment constraint
 

@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Tests.Unit;
@@ -55,5 +56,34 @@ public sealed class ProjectNodeKindRegistryTests
 
         Assert.Null(normalizedDecision.WorkItem);
         Assert.NotNull(normalizedDecision.MarkerSet);
+    }
+
+    [Fact]
+    public void ResolveReplacementRoles_and_preferred_role_follow_descriptor_policy()
+    {
+        var participantRoles = ProjectNodeKindRegistry.ResolveReplacementRoles(ProjectObjectType.Participant, "partner");
+        var participantPreferredRole = ProjectNodeKindRegistry.ResolvePreferredRole(ProjectObjectType.Participant, "partner");
+        var meetingRoles = ProjectNodeKindRegistry.ResolveReplacementRoles(ProjectObjectType.Meeting, "online");
+
+        Assert.Equal(
+            [
+                ProjectPartyAssignmentRole.TeamMember,
+                ProjectPartyAssignmentRole.DeliveryUnit,
+                ProjectPartyAssignmentRole.Partner,
+                ProjectPartyAssignmentRole.AiAgent
+            ],
+            participantRoles);
+        Assert.Equal(ProjectPartyAssignmentRole.Partner, participantPreferredRole);
+        Assert.Equal([ProjectPartyAssignmentRole.MeetingParticipant], meetingRoles);
+    }
+
+    [Fact]
+    public void Canonical_node_scope_policy_distinguishes_optional_and_required_roles()
+    {
+        Assert.True(ProjectNodeKindRegistry.SupportsCanonicalNodeScope(ProjectPartyAssignmentRole.TeamMember));
+        Assert.False(ProjectNodeKindRegistry.RequiresCanonicalNodeScope(ProjectPartyAssignmentRole.TeamMember));
+        Assert.True(ProjectNodeKindRegistry.SupportsCanonicalNodeScope(ProjectPartyAssignmentRole.WorkItemAssignee));
+        Assert.True(ProjectNodeKindRegistry.RequiresCanonicalNodeScope(ProjectPartyAssignmentRole.WorkItemAssignee));
+        Assert.False(ProjectNodeKindRegistry.SupportsCanonicalNodeScope(ProjectPartyAssignmentRole.Manager));
     }
 }

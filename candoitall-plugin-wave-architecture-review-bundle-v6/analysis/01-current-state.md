@@ -4,20 +4,26 @@
 
 - The cross-module public boundary now has `ProjectNodeReference`, which is healthier than raw string-only bridge contracts.
 - CRM/HR node-scoped assignment ownership direction is better than before.
+- Persisted SyncGraph rows were replaced by projection assembly contributors and projection layout overrides.
+- Foreign ids and transport bindings were moved out of canonical node metadata into binding tables and typed reference rows.
+- Node reclassification now writes durable lifecycle history.
+- Connector/provider/resource registration now goes through manifest and registry contracts.
 - Hierarchy cycle protection and the explicit ban on user-authored hierarchy-like generic links now exist.
 - Delete/move compensation paths are covered by integration tests.
 - ADR guardrails were added to the repo.
+- Editable hierarchy no longer persists duplicate `Contains` / `BelongsTo` truth for canonical nodes.
+- Node-role capability rules now come from the Workbench node-kind registry instead of page-local switches.
+- Projection-only versus canonical node scope is now enforced through the CRM/HR assignment policy boundary.
+- The CRM/HR assignment hotspot was reduced by extracting `ProjectPartyAssignmentNodePolicy`.
+- Final readiness proof was rerun with real build, test, and browser evidence.
 
-## What is still materially wrong
+## What still needs discipline
 
-The deepest blockers for the external plugin wave are **still open**:
+The major phase-6 blockers are closed. The remaining cautions are now operational rather than architectural:
 
-- Workbench still persists a synchronized foreign-module projection graph as system-managed canonical rows.
-- The node carrier is still too broad.
-- Kind semantics are still scattered.
-- Reclassification still lacks durable lifecycle history.
-- Assignment capability rules are still too weak for the next wave.
-- Provider/resource extensibility is still enum/switch driven.
+- `CrmHrServices.cs` is still a large file and will need continued decomposition as new CRM/HR features land.
+- Cross-module move/delete safety still relies on durable compensation rather than true atomicity.
+- Browser proof is targeted to the changed routes, not a full UI regression matrix.
 
 ## Static inventory snapshot
 
@@ -27,11 +33,11 @@ The deepest blockers for the external plugin wave are **still open**:
 
 ## Architectural hotspots
 
-- `5001` LOC — `src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs`
-- `3227` LOC — `src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
+- `4503` LOC — `src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs`
+- `1024` LOC — `src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs`
 - `1951` LOC — `src/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor`
 - `1292` LOC — `src/CanDoItAll.Modules.CrmHr/Pages/CrmHrDirectoryPage.razor`
 
 ## Bottom line
 
-Phase 5 was valuable, but it did **not** finish the canonical-model stabilization work that is needed before the plugin wave.
+Phase 5 closed the large architectural gaps. Phase 6 closed the remaining plugin-wave blockers and converted the bundle from a `NO-GO` review into a guarded `GO`.

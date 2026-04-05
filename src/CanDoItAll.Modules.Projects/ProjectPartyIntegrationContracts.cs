@@ -137,8 +137,20 @@ public readonly record struct ProjectNodeReference
 public sealed record ProjectNodeScopeResolution(
     bool ExistsInProject,
     bool ExistsInOtherProject,
+    bool IsCanonicalNode,
     ProjectObjectType? ObjectType,
     string ObjectSubtype);
+
+public sealed record ProjectNodeAssignmentSemantics(
+    IReadOnlyList<ProjectPartyAssignmentRole> AllowedRoles,
+    IReadOnlyList<ProjectPartyAssignmentRole> ReplacementRoles,
+    ProjectPartyAssignmentRole? PreferredRole)
+{
+    public static ProjectNodeAssignmentSemantics None { get; } = new(
+        Array.Empty<ProjectPartyAssignmentRole>(),
+        Array.Empty<ProjectPartyAssignmentRole>(),
+        null);
+}
 
 public interface IProjectNodeScopeBridge
 {
@@ -146,6 +158,15 @@ public interface IProjectNodeScopeBridge
         Guid projectId,
         ProjectNodeReference nodeReference,
         CancellationToken cancellationToken = default);
+}
+
+public interface IProjectNodeAssignmentPolicyBridge
+{
+    bool SupportsCanonicalNodeScope(ProjectPartyAssignmentRole role);
+
+    bool RequiresCanonicalNodeScope(ProjectPartyAssignmentRole role);
+
+    ProjectNodeAssignmentSemantics Resolve(ProjectObjectType objectType, string objectSubtype);
 }
 
 public interface IProjectPartyIntegrationBridge
@@ -204,7 +225,25 @@ internal sealed class NoopProjectNodeScopeBridge : IProjectNodeScopeBridge
         ProjectNodeReference nodeReference,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(new ProjectNodeScopeResolution(false, false, null, string.Empty));
+        return Task.FromResult(new ProjectNodeScopeResolution(false, false, false, null, string.Empty));
+    }
+}
+
+internal sealed class NoopProjectNodeAssignmentPolicyBridge : IProjectNodeAssignmentPolicyBridge
+{
+    public bool SupportsCanonicalNodeScope(ProjectPartyAssignmentRole role)
+    {
+        return false;
+    }
+
+    public bool RequiresCanonicalNodeScope(ProjectPartyAssignmentRole role)
+    {
+        return false;
+    }
+
+    public ProjectNodeAssignmentSemantics Resolve(ProjectObjectType objectType, string objectSubtype)
+    {
+        return ProjectNodeAssignmentSemantics.None;
     }
 }
 

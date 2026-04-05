@@ -458,14 +458,6 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         };
 
         await dbContext.Set<ProjectObjectRecord>().AddAsync(record, cancellationToken);
-        await ProjectWorkbenchGraphConventions.UpsertLinkAsync(
-            dbContext,
-            projectId,
-            normalizedParentNodeKey,
-            record.NodeKey,
-            ProjectWorkbenchGraphConventions.ResolveHierarchyLinkKind(projectId, normalizedParentNodeKey),
-            isSystemManaged: false,
-            cancellationToken);
 
         if (request.ObjectType == ProjectObjectType.PromptFlow)
         {
@@ -524,15 +516,6 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             };
             await dbContext.Set<ProjectObjectRecord>().AddAsync(record, cancellationToken);
             await ProjectNodeBindingStorage.PersistAsync(dbContext, record, cancellationToken);
-
-            await ProjectWorkbenchGraphConventions.UpsertLinkAsync(
-                dbContext,
-                projectId,
-                projectRootNodeKey,
-                nodeKey,
-                ProjectObjectLinkKind.Contains,
-                isSystemManaged: false,
-                cancellationToken);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

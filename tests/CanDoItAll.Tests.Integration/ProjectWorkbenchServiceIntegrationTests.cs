@@ -758,6 +758,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         await using var scope = application.Services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var saveResult = await projects.SaveAsync(new ProjectEditorModel
         {
@@ -791,6 +792,17 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             string.Equals(link.SourceId, projectRootNodeKey, StringComparison.Ordinal) &&
             string.Equals(link.TargetId, created.Id, StringComparison.Ordinal) &&
             link.Kind == ProjectObjectLinkKind.Contains);
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var persistedHierarchyLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+                .Where(item =>
+                    item.ProjectId == projectId &&
+                    item.TargetNodeKey == created.Id &&
+                    !item.IsSystemManaged &&
+                    (item.LinkKind == ProjectObjectLinkKind.Contains || item.LinkKind == ProjectObjectLinkKind.BelongsTo))
+                .ToListAsync();
+            Assert.Empty(persistedHierarchyLinks);
+        }
 
         var child = await workbench.CreateObjectAsync(
             projectId,
@@ -822,6 +834,17 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             string.Equals(link.SourceId, created.Id, StringComparison.Ordinal) &&
             string.Equals(link.TargetId, child.Id, StringComparison.Ordinal) &&
             (link.Kind == ProjectObjectLinkKind.BelongsTo || link.Kind == ProjectObjectLinkKind.Contains));
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var persistedHierarchyLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+                .Where(item =>
+                    item.ProjectId == projectId &&
+                    item.TargetNodeKey == child.Id &&
+                    !item.IsSystemManaged &&
+                    (item.LinkKind == ProjectObjectLinkKind.Contains || item.LinkKind == ProjectObjectLinkKind.BelongsTo))
+                .ToListAsync();
+            Assert.Empty(persistedHierarchyLinks);
+        }
     }
 
     [Fact]
@@ -1623,11 +1646,11 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.Contains(targetSurface.Links, link =>
             string.Equals(link.SourceId, BuildProjectRootNodeKey(targetProjectId), StringComparison.Ordinal) &&
             string.Equals(link.TargetId, childNote.Id, StringComparison.Ordinal) &&
-            link.IsUserAuthored);
+            link.Kind == ProjectObjectLinkKind.Contains);
         Assert.Contains(targetSurface.Links, link =>
             string.Equals(link.SourceId, BuildProjectRootNodeKey(targetProjectId), StringComparison.Ordinal) &&
             string.Equals(link.TargetId, wifiBlock.Id, StringComparison.Ordinal) &&
-            link.IsUserAuthored);
+            link.Kind == ProjectObjectLinkKind.Contains);
         Assert.Contains(targetSurface.Links, link =>
             string.Equals(link.SourceId, childNote.Id, StringComparison.Ordinal) &&
             string.Equals(link.TargetId, wifiBlock.Id, StringComparison.Ordinal) &&
@@ -1896,6 +1919,17 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             string.Equals(item.NodeKey, workItemNode.Id, StringComparison.Ordinal) &&
             item.PartyId == workItemPartyId &&
             item.Role == ProjectPartyAssignmentRole.WorkItemAssignee);
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var persistedHierarchyLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+                .Where(item =>
+                    item.ProjectId == targetProjectId &&
+                    (item.TargetNodeKey == participantNode.Id || item.TargetNodeKey == workItemNode.Id) &&
+                    !item.IsSystemManaged &&
+                    (item.LinkKind == ProjectObjectLinkKind.Contains || item.LinkKind == ProjectObjectLinkKind.BelongsTo))
+                .ToListAsync();
+            Assert.Empty(persistedHierarchyLinks);
+        }
 
         await AssertMutationStatusAsync(
             dbContextFactory,
