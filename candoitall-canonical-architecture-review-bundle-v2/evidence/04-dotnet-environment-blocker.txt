@@ -1,7 +1,0 @@
-
-dotnet runtime / SDK is not installed in this container.
-
-Result:
-- dotnet build/test/run commands could not be executed here
-- all runtime validation remains blocked locally
-- the bundle defines required commands for Codex to execute later in a real .NET environment
