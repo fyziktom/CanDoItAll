@@ -1,0 +1,44 @@
+=== Phase9 plugin-gate check ===
+Repo: /mnt/data/review_phase9_current/CanDoItAll-canonical-model-refactor
+
+Hard-gate failures:
+- HG-01 FAIL: legacy carrier file still exists: src/CanDoItAll.Modules.Workbench/ProjectObjectRecord.LegacyCarrier.cs
+- HG-01 FAIL: Workbench_ProjectObjects/schema initializer still carries legacy carrier column 'Route'.
+- HG-01 FAIL: Workbench_ProjectObjects/schema initializer still carries legacy carrier column 'ExternalArtifactKind'.
+- HG-01 FAIL: Workbench_ProjectObjects/schema initializer still carries legacy carrier column 'ExternalArtifactId'.
+- HG-01 FAIL: Workbench_ProjectObjects/schema initializer still carries legacy carrier column 'MediaRelativePath'.
+- HG-01 FAIL: Workbench_ProjectObjects/schema initializer still carries legacy carrier column 'MediaContentType'.
+- HG-01 FAIL: Workbench_ProjectObjects/schema initializer still carries legacy carrier column 'MediaOriginalFileName'.
+- HG-01 FAIL: Workbench_ProjectObjects/schema initializer still carries legacy carrier column 'StorageObjectReferenceJson'.
+- HG-01 FAIL: ProjectNodeBindingStorage still writes binding data into legacy carrier fields.
+- HG-01 FAIL: ResolveBinding still falls back from binding state to node.ExternalArtifactKind.
+- HG-01 FAIL: Projection assembly still seeds binding state from node carrier fields.
+- HG-01 FAIL: Legacy carrier payload detection still exists in active binding code.
+- HG-02 FAIL: ProjectObjectRecord still persists MarkerIcon.
+- HG-02 FAIL: ProjectObjectRecord still persists MarkerTone.
+- HG-02 FAIL: ProjectObjectRecord still persists MarkerLabel.
+- HG-02 FAIL: schema initializer still carries scalar marker column 'MarkerIcon'.
+- HG-02 FAIL: schema initializer still carries scalar marker column 'MarkerTone'.
+- HG-02 FAIL: schema initializer still carries scalar marker column 'MarkerLabel'.
+- HG-02 FAIL: ProjectNodeMarkerState still exposes ResolveLegacyJson in active code.
+- HG-02 FAIL: ProjectNodeMarkerState still exposes HydrateLegacyFields in active code.
+- HG-02 FAIL: load path still calls marker normalization/hydration.
+- HG-03 FAIL: ResourcesPage.razor still renders connector fields via @switch(field.Key).
+- HG-03 FAIL: SettingsPage.razor still renders connector fields via @switch(field.Key).
+- HG-03 FAIL: ResourceEditorModel is still a current-plugin hardcoded property bag instead of a generic manifest-driven config state.
+- HG-04 FAIL: resource editor still synthesizes legacy ResourceKind.
+- HG-04 FAIL: resource editor still resolves legacy ResourceKind from plugin key.
+- HG-04 FAIL: resource save flow still persists fallback legacy enum identity.
+- HG-04 FAIL: provider save flow still persists fallback legacy enum identity.
+- HG-05 FAIL: closed-world ProjectNodeReferenceKind enum still exists.
+- HG-05 FAIL: closed-world ProjectNodeReferenceSet fixed property bag still exists.
+- HG-05 FAIL: ProjectNodeReferenceRecord.ReferenceId is still Guid-only.
+- HG-06 FAIL: load path still calls binding normalization/hydration.
+- HG-06 FAIL: load path still calls marker normalization/hydration.
+- HG-06 FAIL: ProjectNodeMarkerState.NormalizeAndHydrateAsync still saves changes.
+
+Warnings:
+- ADV WARNING: ProviderProfile/ProviderProfileEditorModel still exposes active ProviderKind surface.
+- ADV WARNING: ProjectResource/ResourceEditorModel still exposes active ResourceKind surface.
+- ADV WARNING: hotspot 'src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs' is still large (4969 lines > 4000).
+- ADV WARNING: hotspot 'src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs' is still large (1161 lines > 1000).

@@ -1,0 +1,1 @@
+Bundle structure looks valid.
