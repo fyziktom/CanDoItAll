@@ -2,6 +2,7 @@
 @page "/groups/inputs"
 @inherits CatalogPageBase
 @using CanDoItAll.Components.Common
+@using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>Inputs</PageTitle>
 
@@ -135,6 +136,72 @@
                     </Grid>
                 </div>
             </SectionCard>
+
+            <SectionCard Title="File upload"
+                         Description="The picker stays native while drag and drop route through the same shared change callback.">
+                <Grid Gap="LayoutGap.Large"
+                      Columns="1"
+                      ColumnsLg="2">
+                    <div class="space-y-4">
+                        <FileUpload PrimaryText="@UploadPrimaryText"
+                                    SecondaryText="@UploadSecondaryText"
+                                    ButtonText="@UploadButtonText"
+                                    Accept=".musicxml,.xml,text/xml,application/xml"
+                                    Disabled="@IsDisabled"
+                                    Change="HandleUploadChanged"
+                                    RootTestHookId="sandbox-inputs-file-upload"
+                                    DropZoneTestHookId="sandbox-inputs-file-upload-zone"
+                                    ButtonTestHookId="sandbox-inputs-file-upload-button"
+                                    InputTestHookId="sandbox-inputs-file-upload-input" />
+
+                        <div class="flex flex-wrap gap-2" data-testid="sandbox-inputs-file-upload-modes">
+                            <StatusBadge Text="Native picker" Tone="info" />
+                            <StatusBadge Text="Drag and drop" Tone="success" />
+                            <StatusBadge Text="@(IsDisabled ? "Disabled state" : "Live state")"
+                                         Tone="@(IsDisabled ? "neutral" : "warning")" />
+                        </div>
+                    </div>
+
+                    <div class="space-y-4" data-testid="sandbox-inputs-file-upload-summary">
+                        <SummaryTiles>
+                            <SummaryTile Label="Selections"
+                                         Value="@uploadSelectionCount.ToString()"
+                                         HelperText="How many successful file selections reached the shared callback."
+                                         Tone="info" />
+                            <SummaryTile Label="Files"
+                                         Value="@uploadedFileCount.ToString()"
+                                         HelperText="Current file count in the latest selection."
+                                         Tone="success" />
+                            <SummaryTile Label="Payload"
+                                         Value="@UploadedTotalSizeLabel"
+                                         HelperText="Combined size of the latest accepted files."
+                                         Tone="warning" />
+                        </SummaryTiles>
+
+                        <div class="rounded-[1rem] border border-slate-200 bg-white px-4 py-4">
+                            <div class="space-y-1">
+                                <TextBlock TextStyle="@(TextStyle.Subtitle2)" Value="Latest selection" />
+                                <TextBlock TextStyle="@(TextStyle.Caption)"
+                                           Value="Use this panel to confirm that browse and drop both resolve through the same stable callback." />
+                            </div>
+
+                            @if (uploadedFileNames.Count == 0)
+                            {
+                                <p class="mt-3 text-sm leading-6 text-slate-500">No files selected yet.</p>
+                            }
+                            else
+                            {
+                                <ul class="mt-3 space-y-2 text-sm text-slate-700" data-testid="sandbox-inputs-file-upload-files">
+                                    @foreach (var fileName in uploadedFileNames)
+                                    {
+                                        <li class="rounded-[0.85rem] bg-slate-50 px-3 py-2">@fileName</li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    </div>
+                </Grid>
+            </SectionCard>
         }
     </ChildContent>
 </CatalogPageFrame>
@@ -149,6 +216,11 @@
         new("Blocked", "Blocked"),
         new("Approved", "Approved")
     ];
+
+    private int uploadSelectionCount;
+    private int uploadedFileCount;
+    private long uploadedTotalSizeBytes;
+    private IReadOnlyList<string> uploadedFileNames = [];
 
     private InputFormState FormState => CurrentScenario switch
     {
@@ -194,6 +266,29 @@
         ? "Dense scenario notes stay compact but legible."
         : "Explain context, risk, and reviewer expectations.";
 
+    private string UploadPrimaryText => CurrentScenario switch
+    {
+        SandboxScenarioKey.LongText => "Drag and drop a longer MusicXML review package without losing the reading rhythm of the surface.",
+        SandboxScenarioKey.DenseContent => "Drag and drop the current MusicXML intake package.",
+        SandboxScenarioKey.DisabledState => "Uploads are currently locked for this scenario.",
+        _ => "Drag and drop MusicXML"
+    };
+
+    private string UploadSecondaryText => CurrentScenario switch
+    {
+        SandboxScenarioKey.LongText => "or browse for a plain `.musicxml` / `.xml` source while keeping the helper copy, button, and drop state aligned.",
+        SandboxScenarioKey.DisabledState => "Browsing and drag and drop are disabled here so the component can prove its inactive state.",
+        _ => "or browse for a plain `.musicxml` / `.xml` source."
+    };
+
+    private string UploadButtonText => CurrentScenario == SandboxScenarioKey.DisabledState
+        ? "Upload locked"
+        : "Choose MusicXML";
+
+    private string UploadedTotalSizeLabel => uploadedTotalSizeBytes == 0
+        ? "0 B"
+        : FormatBytes(uploadedTotalSizeBytes);
+
     private Task HandleTitleChanged(string? value)
     {
         return Task.CompletedTask;
@@ -237,6 +332,35 @@
     private Task HandlePublishChanged(bool value)
     {
         return Task.CompletedTask;
+    }
+
+    private Task HandleUploadChanged(InputFileChangeEventArgs args)
+    {
+        var files = args.GetMultipleFiles(10);
+        uploadSelectionCount++;
+        uploadedFileCount = files.Count;
+        uploadedTotalSizeBytes = files.Sum(file => file.Size);
+        uploadedFileNames = files
+            .Select(file => $"{file.Name} ({FormatBytes(file.Size)})")
+            .ToArray();
+        return Task.CompletedTask;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] suffixes = ["B", "KB", "MB", "GB"];
+        double value = bytes;
+        var suffixIndex = 0;
+
+        while (value >= 1024d && suffixIndex < suffixes.Length - 1)
+        {
+            value /= 1024d;
+            suffixIndex++;
+        }
+
+        return suffixIndex == 0
+            ? $"{value:0} {suffixes[suffixIndex]}"
+            : $"{value:0.0} {suffixes[suffixIndex]}";
     }
 
     private sealed record SelectOption(string Text, string Value);
