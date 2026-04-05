@@ -25,6 +25,14 @@ public static class ProjectWorkbenchSchemaInitializer
         ("DurationSeconds", """INTEGER NULL""")
     ];
 
+    private static readonly (string Name, string Definition)[] RequiredCrossModuleMutationColumns =
+    [
+        ("ApprovalState", """INTEGER NOT NULL DEFAULT 0"""),
+        ("AttemptCount", """INTEGER NOT NULL DEFAULT 0"""),
+        ("LastAttemptAtUtc", """TEXT NULL"""),
+        ("CompletedAtUtc", """TEXT NULL""")
+    ];
+
     private static readonly string[] RequiredTables =
     [
         "Workbench_ProjectObjects",
@@ -181,8 +189,12 @@ public static class ProjectWorkbenchSchemaInitializer
             "ScopeNodeKey" TEXT NOT NULL,
             "MutationKind" INTEGER NOT NULL,
             "Status" INTEGER NOT NULL,
+            "ApprovalState" INTEGER NOT NULL DEFAULT 0,
             "PayloadJson" TEXT NOT NULL,
             "ErrorMessage" TEXT NOT NULL,
+            "AttemptCount" INTEGER NOT NULL DEFAULT 0,
+            "LastAttemptAtUtc" TEXT NULL,
+            "CompletedAtUtc" TEXT NULL,
             "CreatedAtUtc" TEXT NOT NULL,
             "UpdatedAtUtc" TEXT NOT NULL
         );
@@ -194,6 +206,10 @@ public static class ProjectWorkbenchSchemaInitializer
         """
         CREATE INDEX IF NOT EXISTS "IX_Workbench_ProjectCrossModuleMutations_ProjectId_Status_UpdatedAtUtc"
         ON "Workbench_ProjectCrossModuleMutations" ("ProjectId", "Status", "UpdatedAtUtc");
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS "IX_Workbench_ProjectCrossModuleMutations_ProjectId_ApprovalState_Status_UpdatedAtUtc"
+        ON "Workbench_ProjectCrossModuleMutations" ("ProjectId", "ApprovalState", "Status", "UpdatedAtUtc");
         """,
         """
         CREATE TABLE IF NOT EXISTS "Workbench_ViewStates" (
@@ -221,6 +237,7 @@ public static class ProjectWorkbenchSchemaInitializer
         if (RequiredTables.All(existingTables.Contains))
         {
             await EnsureProjectObjectColumnsAsync(dbContext, cancellationToken);
+            await EnsureCrossModuleMutationColumnsAsync(dbContext, cancellationToken);
             return;
         }
 
@@ -230,6 +247,7 @@ public static class ProjectWorkbenchSchemaInitializer
         }
 
         await EnsureProjectObjectColumnsAsync(dbContext, cancellationToken);
+        await EnsureCrossModuleMutationColumnsAsync(dbContext, cancellationToken);
     }
 
     private static async Task<HashSet<string>> ReadExistingTablesAsync(AppDbContext dbContext, CancellationToken cancellationToken)
@@ -289,6 +307,31 @@ public static class ProjectWorkbenchSchemaInitializer
                 cancellationToken);
 #pragma warning restore EF1002
         }
+    }
+
+    private static async Task EnsureCrossModuleMutationColumnsAsync(AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        var existingColumns = await ReadExistingColumnsAsync(dbContext, "Workbench_ProjectCrossModuleMutations", cancellationToken);
+        foreach (var requiredColumn in RequiredCrossModuleMutationColumns)
+        {
+            if (existingColumns.Contains(requiredColumn.Name))
+            {
+                continue;
+            }
+
+#pragma warning disable EF1002
+            await dbContext.Database.ExecuteSqlRawAsync(
+                $"""ALTER TABLE "Workbench_ProjectCrossModuleMutations" ADD COLUMN "{requiredColumn.Name}" {requiredColumn.Definition};""",
+                cancellationToken);
+#pragma warning restore EF1002
+        }
+
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Workbench_ProjectCrossModuleMutations_ProjectId_ApprovalState_Status_UpdatedAtUtc"
+            ON "Workbench_ProjectCrossModuleMutations" ("ProjectId", "ApprovalState", "Status", "UpdatedAtUtc");
+            """,
+            cancellationToken);
     }
 
     private static async Task<HashSet<string>> ReadExistingColumnsAsync(AppDbContext dbContext, string tableName, CancellationToken cancellationToken)

@@ -139,14 +139,12 @@ public sealed class ProjectWorkbenchCommandService(
             ExternalArtifactKind = "prompt-session",
             ExternalArtifactId = sessionId
         };
-        node.Route = route;
-        node.ExternalArtifactKind = "prompt-session";
-        node.ExternalArtifactId = sessionId;
     }
 
     private static ArtifactReference? BuildArtifactReference(ProjectObjectRecord node, Guid projectId)
     {
-        if (string.IsNullOrWhiteSpace(node.Route))
+        var binding = ProjectNodeBindingStorage.ResolveForRuntime(node);
+        if (string.IsNullOrWhiteSpace(binding.Route))
         {
             return null;
         }
@@ -157,16 +155,16 @@ public sealed class ProjectWorkbenchCommandService(
             ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep => WorkbenchTabKinds.PromptWizardSession,
             ProjectObjectType.ValidationRun => WorkbenchTabKinds.ValidationRun,
             ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => WorkbenchTabKinds.TestPlan,
-            _ when node.Route.EndsWith("/structure", StringComparison.OrdinalIgnoreCase) => WorkbenchTabKinds.ProjectStructure,
-            _ when node.Route.EndsWith("/calendar", StringComparison.OrdinalIgnoreCase) => WorkbenchTabKinds.ProjectCalendar,
+            _ when binding.Route.EndsWith("/structure", StringComparison.OrdinalIgnoreCase) => WorkbenchTabKinds.ProjectStructure,
+            _ when binding.Route.EndsWith("/calendar", StringComparison.OrdinalIgnoreCase) => WorkbenchTabKinds.ProjectCalendar,
             _ => WorkbenchTabKinds.Page
         };
 
         return new ArtifactReference(
-            node.ExternalArtifactKind,
-            node.ExternalArtifactId,
+            binding.ExternalArtifactKind,
+            binding.ExternalArtifactId,
             node.Title,
-            node.Route,
+            binding.Route,
             node.Notes,
             projectId,
             node.NodeKey,

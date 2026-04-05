@@ -10,6 +10,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
     {
         services.AddScoped<WorkbenchStateService>();
         services.AddScoped<ProjectCrossModuleMutationCoordinator>();
+        services.AddScoped<ProjectCrossModuleMutationProcessor>();
         services.AddScoped<ProjectWorkbenchCommandService>();
         services.AddScoped<ProjectWorkbenchCrossModuleMutationService>();
         services.AddScoped<ProjectWorkbenchLifecycleService>();

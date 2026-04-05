@@ -23,9 +23,16 @@ public sealed record ProviderExecutionResponse(
     bool ContainsWarnings,
     string? WarningSummary = null);
 
+internal static class ProviderConnectorFieldKeys
+{
+    public const string BaseUrl = "baseUrl";
+    public const string DefaultModel = "defaultModel";
+    public const string TimeoutSeconds = "timeoutSeconds";
+}
+
 public interface IProviderAdapter : IConnectorPlugin
 {
-    ProviderKind ProviderKind { get; }
+    ProviderKind? LegacyProviderKind { get; }
 
     Task<ProviderHealthResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default);
 
@@ -38,53 +45,66 @@ public interface IProviderAdapter : IConnectorPlugin
 
 public sealed class ProviderRegistry(IEnumerable<IProviderAdapter> adapters) : IConnectorManifestSource
 {
-    private readonly IReadOnlyDictionary<ProviderKind, IProviderAdapter> adaptersByKind =
-        adapters.ToDictionary(adapter => adapter.ProviderKind);
-
     private readonly IReadOnlyDictionary<string, IProviderAdapter> adaptersByKey =
         adapters.ToDictionary(adapter => adapter.Manifest.PluginKey, StringComparer.OrdinalIgnoreCase);
+
+    private readonly IReadOnlyDictionary<ProviderKind, IProviderAdapter> adaptersByLegacyKind = adapters
+        .Where(adapter => adapter.LegacyProviderKind.HasValue)
+        .GroupBy(adapter => adapter.LegacyProviderKind!.Value)
+        .ToDictionary(group => group.Key, group => group.Last());
 
     public IProviderAdapter? Resolve(ProviderProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
-        if (!string.IsNullOrWhiteSpace(profile.ConnectorPluginKey) &&
-            adaptersByKey.TryGetValue(profile.ConnectorPluginKey.Trim(), out var pluginByKey))
+        if (!string.IsNullOrWhiteSpace(profile.ConnectorPluginKey))
+        {
+            return Resolve(profile.ConnectorPluginKey);
+        }
+
+        return profile.ProviderKind is var legacyProviderKind
+            ? adaptersByLegacyKind.GetValueOrDefault(legacyProviderKind)
+            : null;
+    }
+
+    public IProviderAdapter? Resolve(string? connectorPluginKey, ProviderKind? legacyProviderKind = null)
+    {
+        if (!string.IsNullOrWhiteSpace(connectorPluginKey) &&
+            adaptersByKey.TryGetValue(connectorPluginKey.Trim(), out var pluginByKey))
         {
             return pluginByKey;
         }
 
-        return adaptersByKind.GetValueOrDefault(profile.ProviderKind);
+        return string.IsNullOrWhiteSpace(connectorPluginKey) && legacyProviderKind.HasValue
+            ? adaptersByLegacyKind.GetValueOrDefault(legacyProviderKind.Value)
+            : null;
     }
 
-    public bool TryResolve(ProviderKind providerKind, string? connectorPluginKey, out IProviderAdapter adapter)
+    public bool TryResolve(string? connectorPluginKey, out IProviderAdapter adapter)
+        => TryResolve(connectorPluginKey, legacyProviderKind: null, out adapter);
+
+    public bool TryResolve(string? connectorPluginKey, ProviderKind? legacyProviderKind, out IProviderAdapter adapter)
     {
         adapter = null!;
 
-        if (!string.IsNullOrWhiteSpace(connectorPluginKey) &&
-            adaptersByKey.TryGetValue(connectorPluginKey.Trim(), out var pluginByKey))
+        var resolved = Resolve(connectorPluginKey, legacyProviderKind);
+        if (resolved is not null)
         {
-            adapter = pluginByKey;
-            return true;
-        }
-
-        if (adaptersByKind.TryGetValue(providerKind, out var pluginByKind))
-        {
-            adapter = pluginByKind;
+            adapter = resolved;
             return true;
         }
 
         return false;
     }
 
-    public string ResolvePluginKey(ProviderKind providerKind)
+    public string? ResolveLegacyPluginKey(ProviderKind providerKind)
     {
-        return adaptersByKind.TryGetValue(providerKind, out var adapter)
+        return adaptersByLegacyKind.TryGetValue(providerKind, out var adapter)
             ? adapter.Manifest.PluginKey
-            : throw new InvalidOperationException($"No provider adapter is registered for {providerKind}.");
+            : null;
     }
 
-    public IReadOnlyCollection<ProviderKind> RegisteredKinds => adaptersByKind.Keys.ToArray();
+    public IReadOnlyCollection<ProviderKind> RegisteredLegacyKinds => adaptersByLegacyKind.Keys.ToArray();
 
     public IReadOnlyList<ConnectorPluginManifest> ListManifests()
     {
@@ -118,9 +138,9 @@ public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) 
         new ConnectorConfigurationSchema(
             "1.0",
             [
-                new ConnectorConfigFieldDescriptor("baseUrl", "Base URL", ConnectorConfigFieldType.Url, true, "OpenAI-compatible API root."),
-                new ConnectorConfigFieldDescriptor("defaultModel", "Default model", ConnectorConfigFieldType.Text, true, "Model name used when the request does not override it."),
-                new ConnectorConfigFieldDescriptor("timeoutSeconds", "Timeout", ConnectorConfigFieldType.Number, true, "HTTP timeout in seconds.")
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.BaseUrl, "Base URL", ConnectorConfigFieldType.Url, true, "OpenAI-compatible API root."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.DefaultModel, "Default model", ConnectorConfigFieldType.Text, true, "Model name used when the request does not override it."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.TimeoutSeconds, "Timeout", ConnectorConfigFieldType.Number, true, "HTTP timeout in seconds.")
             ]),
         [
             new ConnectorSecretRequirement("apiKey", "API key", true, "Bearer token for the provider API.")
@@ -131,7 +151,7 @@ public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) 
 
     public ConnectorPluginManifest Manifest => PluginManifest;
 
-    public ProviderKind ProviderKind => ProviderKind.OpenAi;
+    public ProviderKind? LegacyProviderKind => ProviderKind.OpenAi;
 
     public async Task<ProviderHealthResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
     {
@@ -246,9 +266,9 @@ public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) 
         new ConnectorConfigurationSchema(
             "1.0",
             [
-                new ConnectorConfigFieldDescriptor("baseUrl", "Base URL", ConnectorConfigFieldType.Url, true, "Ollama API root."),
-                new ConnectorConfigFieldDescriptor("defaultModel", "Default model", ConnectorConfigFieldType.Text, true, "Model used for prompt execution."),
-                new ConnectorConfigFieldDescriptor("timeoutSeconds", "Timeout", ConnectorConfigFieldType.Number, true, "HTTP timeout in seconds.")
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.BaseUrl, "Base URL", ConnectorConfigFieldType.Url, true, "Ollama API root."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.DefaultModel, "Default model", ConnectorConfigFieldType.Text, true, "Model used for prompt execution."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.TimeoutSeconds, "Timeout", ConnectorConfigFieldType.Number, true, "HTTP timeout in seconds.")
             ]),
         [],
         new ConnectorHealthCheckDescriptor("GET /api/tags", "Verifies that the Ollama endpoint is reachable and returns model metadata."),
@@ -257,7 +277,7 @@ public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) 
 
     public ConnectorPluginManifest Manifest => PluginManifest;
 
-    public ProviderKind ProviderKind => ProviderKind.OllamaLocal;
+    public ProviderKind? LegacyProviderKind => ProviderKind.OllamaLocal;
 
     public async Task<ProviderHealthResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
     {
@@ -323,9 +343,9 @@ public sealed class OllamaRemoteProviderAdapter(IHttpClientFactory httpClientFac
         new ConnectorConfigurationSchema(
             "1.0",
             [
-                new ConnectorConfigFieldDescriptor("baseUrl", "Base URL", ConnectorConfigFieldType.Url, true, "Remote Ollama API root."),
-                new ConnectorConfigFieldDescriptor("defaultModel", "Default model", ConnectorConfigFieldType.Text, true, "Model used for prompt execution."),
-                new ConnectorConfigFieldDescriptor("timeoutSeconds", "Timeout", ConnectorConfigFieldType.Number, true, "HTTP timeout in seconds.")
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.BaseUrl, "Base URL", ConnectorConfigFieldType.Url, true, "Remote Ollama API root."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.DefaultModel, "Default model", ConnectorConfigFieldType.Text, true, "Model used for prompt execution."),
+                new ConnectorConfigFieldDescriptor(ProviderConnectorFieldKeys.TimeoutSeconds, "Timeout", ConnectorConfigFieldType.Number, true, "HTTP timeout in seconds.")
             ]),
         [],
         new ConnectorHealthCheckDescriptor("GET /api/tags", "Verifies that the remote Ollama endpoint is reachable."),
@@ -336,7 +356,7 @@ public sealed class OllamaRemoteProviderAdapter(IHttpClientFactory httpClientFac
 
     public ConnectorPluginManifest Manifest => PluginManifest;
 
-    public ProviderKind ProviderKind => ProviderKind.OllamaRemote;
+    public ProviderKind? LegacyProviderKind => ProviderKind.OllamaRemote;
 
     public Task<ProviderHealthResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
         => _inner.CheckHealthAsync(profile, secretValue, cancellationToken);

@@ -4,6 +4,47 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Resources;
 
+internal static class ResourceConnectorPluginKeys
+{
+    public const string Repository = "resource.repository";
+    public const string Folder = "resource.folder";
+    public const string File = "resource.file";
+    public const string WebLink = "resource.web-link";
+    public const string Ftp = "resource.ftp";
+    public const string Ssh = "resource.ssh";
+    public const string PowerShellScript = "resource.powershell-script";
+    public const string DockerCompose = "resource.docker-compose";
+    public const string SecretLink = "resource.secret-link";
+    public const string PromptLink = "resource.prompt-link";
+    public const string WebhookEndpoint = "resource.webhook-endpoint";
+}
+
+internal static class ResourceConnectorFieldKeys
+{
+    public const string RepositoryUrl = "repositoryUrl";
+    public const string DefaultBranch = "defaultBranch";
+    public const string RelativePath = "relativePath";
+    public const string FolderPath = "folderPath";
+    public const string FilePath = "filePath";
+    public const string WorkingDirectory = "workingDirectory";
+    public const string WebUrl = "webUrl";
+    public const string UrlTitleHint = "urlTitleHint";
+    public const string Host = "host";
+    public const string Port = "port";
+    public const string RemotePath = "remotePath";
+    public const string UserName = "userName";
+    public const string ScriptPath = "scriptPath";
+    public const string ScriptArguments = "scriptArguments";
+    public const string ComposeFilePath = "composeFilePath";
+    public const string ComposeService = "composeService";
+    public const string SecretPurpose = "secretPurpose";
+    public const string PromptReference = "promptReference";
+    public const string PromptTitleHint = "promptTitleHint";
+    public const string EndpointUrl = "endpointUrl";
+    public const string HealthPath = "healthPath";
+    public const string HttpMethod = "method";
+}
+
 public interface IResourceConnectorPlugin : IConnectorPlugin
 {
     ResourceKind? LegacyResourceKind { get; }
@@ -31,27 +72,32 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
         .GroupBy(plugin => plugin.LegacyResourceKind!.Value)
         .ToDictionary(group => group.Key, group => group.Last());
 
-    public IResourceConnectorPlugin Resolve(ResourceKind resourceKind, string? connectorPluginKey)
+    public IResourceConnectorPlugin Resolve(string? connectorPluginKey, ResourceKind? legacyResourceKind = null)
     {
-        if (!string.IsNullOrWhiteSpace(connectorPluginKey) &&
-            pluginsByKey.TryGetValue(connectorPluginKey.Trim(), out var pluginByKey))
+        if (!string.IsNullOrWhiteSpace(connectorPluginKey))
         {
-            return pluginByKey;
+            if (pluginsByKey.TryGetValue(connectorPluginKey.Trim(), out var pluginByKey))
+            {
+                return pluginByKey;
+            }
+
+            throw new InvalidOperationException(
+                $"No resource connector plugin is registered for plugin key '{connectorPluginKey}'.");
         }
 
-        if (pluginsByLegacyKind.TryGetValue(resourceKind, out var pluginByKind))
+        if (legacyResourceKind.HasValue &&
+            pluginsByLegacyKind.TryGetValue(legacyResourceKind.Value, out var pluginByKind))
         {
             return pluginByKind;
         }
 
-        throw new InvalidOperationException(
-            $"No resource connector plugin is registered for kind '{resourceKind}' and plugin key '{connectorPluginKey ?? "<empty>"}'.");
+        throw new InvalidOperationException("No resource connector plugin is registered for the supplied resource editor.");
     }
 
     public IResourceConnectorPlugin Resolve(ProjectResource resource)
     {
         ArgumentNullException.ThrowIfNull(resource);
-        return Resolve(resource.ResourceKind, resource.ConnectorPluginKey);
+        return Resolve(resource.ConnectorPluginKey, resource.ResourceKind);
     }
 
     public IReadOnlyList<ConnectorPluginManifest> ListManifests()
@@ -74,50 +120,269 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
     {
         return
         [
-            Legacy(ResourceKind.Repository, "resource.repository", "Repository resource", ProjectObjectType.Repository, "Repository", "Repository URL is required.", model => model.RepositoryUrl.Trim(), model => JsonSerializer.Serialize(new RepositoryResourceConfig(model.RepositoryUrl, model.DefaultBranch, model.RelativePath)), static (model, json) => { if (JsonSerializer.Deserialize<RepositoryResourceConfig>(NormalizeConfigJson(json)) is { } value) { model.RepositoryUrl = value.RepositoryUrl; model.DefaultBranch = value.DefaultBranch; model.RelativePath = value.RelativePath; } }),
-            Legacy(ResourceKind.Folder, "resource.folder", "Folder resource", ProjectObjectType.Connector, "Folder", "Folder path is required.", model => model.FolderPath.Trim(), model => JsonSerializer.Serialize(new FolderResourceConfig(model.FolderPath, model.WorkingDirectory)), static (model, json) => { if (JsonSerializer.Deserialize<FolderResourceConfig>(NormalizeConfigJson(json)) is { } value) { model.FolderPath = value.Path; model.WorkingDirectory = value.WorkingDirectory; } }),
-            Legacy(ResourceKind.File, "resource.file", "File resource", ProjectObjectType.File, "File", "File path is required.", model => model.FilePath.Trim(), model => JsonSerializer.Serialize(new FileResourceConfig(model.FilePath, model.WorkingDirectory)), static (model, json) => { if (JsonSerializer.Deserialize<FileResourceConfig>(NormalizeConfigJson(json)) is { } value) { model.FilePath = value.Path; model.WorkingDirectory = value.WorkingDirectory; } }),
-            Legacy(ResourceKind.WebLink, "resource.web-link", "Web link resource", ProjectObjectType.Link, "Web link", "URL is required.", model => model.WebUrl.Trim(), model => JsonSerializer.Serialize(new WebLinkResourceConfig(model.WebUrl, model.UrlTitleHint)), static (model, json) => { if (JsonSerializer.Deserialize<WebLinkResourceConfig>(NormalizeConfigJson(json)) is { } value) { model.WebUrl = value.Url; model.UrlTitleHint = value.TitleHint; } }, ConnectorManifestCapability.ProjectResource | ConnectorManifestCapability.WorkbenchProjection | ConnectorManifestCapability.AgentExposure),
-            Legacy(ResourceKind.Ftp, "resource.ftp", "FTP resource", ProjectObjectType.Connector, "FTP", "FTP host is required.", model => BuildRemoteEndpoint(model.Host, model.Port, model.RemotePath), model => JsonSerializer.Serialize(new FtpResourceConfig(model.Host, model.Port, model.RemotePath, model.UserName)), static (model, json) => { if (JsonSerializer.Deserialize<FtpResourceConfig>(NormalizeConfigJson(json)) is { } value) { model.Host = value.Host; model.Port = value.Port; model.RemotePath = value.RemotePath; model.UserName = value.UserName; } }),
-            Legacy(ResourceKind.Ssh, "resource.ssh", "SSH resource", ProjectObjectType.Connector, "SSH", "SSH host is required.", model => BuildRemoteEndpoint(model.Host, model.Port, model.WorkingDirectory), model => JsonSerializer.Serialize(new SshResourceConfig(model.Host, model.Port, model.UserName, model.WorkingDirectory)), static (model, json) => { if (JsonSerializer.Deserialize<SshResourceConfig>(NormalizeConfigJson(json)) is { } value) { model.Host = value.Host; model.Port = value.Port; model.UserName = value.UserName; model.WorkingDirectory = value.WorkingDirectory; } }),
-            Legacy(ResourceKind.PowerShellScript, "resource.powershell-script", "PowerShell script resource", ProjectObjectType.Script, "PowerShell script", "Script path is required.", model => model.ScriptPath.Trim(), model => JsonSerializer.Serialize(new PowerShellScriptResourceConfig(model.ScriptPath, model.ScriptArguments, model.WorkingDirectory)), static (model, json) => { if (JsonSerializer.Deserialize<PowerShellScriptResourceConfig>(NormalizeConfigJson(json)) is { } value) { model.ScriptPath = value.ScriptPath; model.ScriptArguments = value.Arguments; model.WorkingDirectory = value.WorkingDirectory; } }, workbenchSubtype: "shell"),
-            Legacy(ResourceKind.DockerCompose, "resource.docker-compose", "Docker Compose resource", ProjectObjectType.Connector, "Docker Compose", "Compose file path is required.", model => model.ComposeFilePath.Trim(), model => JsonSerializer.Serialize(new DockerComposeResourceConfig(model.ComposeFilePath, model.ComposeService)), static (model, json) => { if (JsonSerializer.Deserialize<DockerComposeResourceConfig>(NormalizeConfigJson(json)) is { } value) { model.ComposeFilePath = value.ComposeFilePath; model.ComposeService = value.ServiceName; } }),
-            Legacy(ResourceKind.SecretLink, "resource.secret-link", "Secret link resource", ProjectObjectType.SecretReference, "Secret", "Secret purpose is required.", model => model.SecretPurpose.Trim(), model => JsonSerializer.Serialize(new SecretLinkResourceConfig(model.SecretPurpose, string.Empty)), static (model, json) => { if (JsonSerializer.Deserialize<SecretLinkResourceConfig>(NormalizeConfigJson(json)) is { } value) { model.SecretPurpose = value.Purpose; } }),
-            Legacy(ResourceKind.PromptLink, "resource.prompt-link", "Prompt link resource", ProjectObjectType.Link, "Prompt link", "Prompt reference is required.", model => model.PromptReference.Trim(), model => JsonSerializer.Serialize(new PromptLinkResourceConfig(model.PromptReference, model.PromptTitleHint)), static (model, json) => { if (JsonSerializer.Deserialize<PromptLinkResourceConfig>(NormalizeConfigJson(json)) is { } value) { model.PromptReference = value.PromptReference; model.PromptTitleHint = value.PromptTitleHint; } }, ConnectorManifestCapability.ProjectResource | ConnectorManifestCapability.WorkbenchProjection | ConnectorManifestCapability.AgentExposure)
+            Legacy(
+                ResourceKind.Repository,
+                ResourceConnectorPluginKeys.Repository,
+                "Repository resource",
+                ProjectObjectType.Repository,
+                "Repository",
+                "Repository URL is required.",
+                LegacySchema(
+                    Field(ResourceConnectorFieldKeys.RepositoryUrl, "Repository URL", ConnectorConfigFieldType.Url, true, "Source repository URL."),
+                    Field(ResourceConnectorFieldKeys.DefaultBranch, "Default branch", ConnectorConfigFieldType.Text, false, "Default branch for checkouts."),
+                    Field(ResourceConnectorFieldKeys.RelativePath, "Relative path", ConnectorConfigFieldType.Text, false, "Optional path inside the repository.")),
+                model => model.RepositoryUrl.Trim(),
+                model => JsonSerializer.Serialize(new RepositoryResourceConfig(model.RepositoryUrl, model.DefaultBranch, model.RelativePath)),
+                static (model, json) =>
+                {
+                    if (JsonSerializer.Deserialize<RepositoryResourceConfig>(NormalizeConfigJson(json)) is { } value)
+                    {
+                        model.RepositoryUrl = value.RepositoryUrl;
+                        model.DefaultBranch = value.DefaultBranch;
+                        model.RelativePath = value.RelativePath;
+                    }
+                }),
+            Legacy(
+                ResourceKind.Folder,
+                ResourceConnectorPluginKeys.Folder,
+                "Folder resource",
+                ProjectObjectType.Connector,
+                "Folder",
+                "Folder path is required.",
+                LegacySchema(
+                    Field(ResourceConnectorFieldKeys.FolderPath, "Folder path", ConnectorConfigFieldType.Text, true, "Absolute or project-relative folder path."),
+                    Field(ResourceConnectorFieldKeys.WorkingDirectory, "Working directory", ConnectorConfigFieldType.Text, false, "Optional working directory.")),
+                model => model.FolderPath.Trim(),
+                model => JsonSerializer.Serialize(new FolderResourceConfig(model.FolderPath, model.WorkingDirectory)),
+                static (model, json) =>
+                {
+                    if (JsonSerializer.Deserialize<FolderResourceConfig>(NormalizeConfigJson(json)) is { } value)
+                    {
+                        model.FolderPath = value.Path;
+                        model.WorkingDirectory = value.WorkingDirectory;
+                    }
+                }),
+            Legacy(
+                ResourceKind.File,
+                ResourceConnectorPluginKeys.File,
+                "File resource",
+                ProjectObjectType.File,
+                "File",
+                "File path is required.",
+                LegacySchema(
+                    Field(ResourceConnectorFieldKeys.FilePath, "File path", ConnectorConfigFieldType.Text, true, "Absolute or project-relative file path."),
+                    Field(ResourceConnectorFieldKeys.WorkingDirectory, "Working directory", ConnectorConfigFieldType.Text, false, "Optional working directory.")),
+                model => model.FilePath.Trim(),
+                model => JsonSerializer.Serialize(new FileResourceConfig(model.FilePath, model.WorkingDirectory)),
+                static (model, json) =>
+                {
+                    if (JsonSerializer.Deserialize<FileResourceConfig>(NormalizeConfigJson(json)) is { } value)
+                    {
+                        model.FilePath = value.Path;
+                        model.WorkingDirectory = value.WorkingDirectory;
+                    }
+                }),
+            Legacy(
+                ResourceKind.WebLink,
+                ResourceConnectorPluginKeys.WebLink,
+                "Web link resource",
+                ProjectObjectType.Link,
+                "Web link",
+                "URL is required.",
+                LegacySchema(
+                    Field(ResourceConnectorFieldKeys.WebUrl, "URL", ConnectorConfigFieldType.Url, true, "Absolute URL."),
+                    Field(ResourceConnectorFieldKeys.UrlTitleHint, "Title hint", ConnectorConfigFieldType.Text, false, "Optional display title hint.")),
+                model => model.WebUrl.Trim(),
+                model => JsonSerializer.Serialize(new WebLinkResourceConfig(model.WebUrl, model.UrlTitleHint)),
+                static (model, json) =>
+                {
+                    if (JsonSerializer.Deserialize<WebLinkResourceConfig>(NormalizeConfigJson(json)) is { } value)
+                    {
+                        model.WebUrl = value.Url;
+                        model.UrlTitleHint = value.TitleHint;
+                    }
+                },
+                ConnectorManifestCapability.ProjectResource | ConnectorManifestCapability.WorkbenchProjection | ConnectorManifestCapability.AgentExposure),
+            Legacy(
+                ResourceKind.Ftp,
+                ResourceConnectorPluginKeys.Ftp,
+                "FTP resource",
+                ProjectObjectType.Connector,
+                "FTP",
+                "FTP host is required.",
+                LegacySchema(
+                    Field(ResourceConnectorFieldKeys.Host, "Host", ConnectorConfigFieldType.Text, true, "FTP host."),
+                    Field(ResourceConnectorFieldKeys.Port, "Port", ConnectorConfigFieldType.Number, false, "Optional FTP port."),
+                    Field(ResourceConnectorFieldKeys.UserName, "User", ConnectorConfigFieldType.Text, false, "Optional user name."),
+                    Field(ResourceConnectorFieldKeys.RemotePath, "Remote path", ConnectorConfigFieldType.Text, false, "Optional remote path.")),
+                model => BuildRemoteEndpoint(model.Host, model.Port, model.RemotePath),
+                model => JsonSerializer.Serialize(new FtpResourceConfig(model.Host, model.Port, model.RemotePath, model.UserName)),
+                static (model, json) =>
+                {
+                    if (JsonSerializer.Deserialize<FtpResourceConfig>(NormalizeConfigJson(json)) is { } value)
+                    {
+                        model.Host = value.Host;
+                        model.Port = value.Port;
+                        model.RemotePath = value.RemotePath;
+                        model.UserName = value.UserName;
+                    }
+                }),
+            Legacy(
+                ResourceKind.Ssh,
+                ResourceConnectorPluginKeys.Ssh,
+                "SSH resource",
+                ProjectObjectType.Connector,
+                "SSH",
+                "SSH host is required.",
+                LegacySchema(
+                    Field(ResourceConnectorFieldKeys.Host, "Host", ConnectorConfigFieldType.Text, true, "SSH host."),
+                    Field(ResourceConnectorFieldKeys.Port, "Port", ConnectorConfigFieldType.Number, false, "Optional SSH port."),
+                    Field(ResourceConnectorFieldKeys.UserName, "User", ConnectorConfigFieldType.Text, false, "Optional user name."),
+                    Field(ResourceConnectorFieldKeys.WorkingDirectory, "Working directory", ConnectorConfigFieldType.Text, false, "Optional working directory.")),
+                model => BuildRemoteEndpoint(model.Host, model.Port, model.WorkingDirectory),
+                model => JsonSerializer.Serialize(new SshResourceConfig(model.Host, model.Port, model.UserName, model.WorkingDirectory)),
+                static (model, json) =>
+                {
+                    if (JsonSerializer.Deserialize<SshResourceConfig>(NormalizeConfigJson(json)) is { } value)
+                    {
+                        model.Host = value.Host;
+                        model.Port = value.Port;
+                        model.UserName = value.UserName;
+                        model.WorkingDirectory = value.WorkingDirectory;
+                    }
+                }),
+            Legacy(
+                ResourceKind.PowerShellScript,
+                ResourceConnectorPluginKeys.PowerShellScript,
+                "PowerShell script resource",
+                ProjectObjectType.Script,
+                "PowerShell script",
+                "Script path is required.",
+                LegacySchema(
+                    Field(ResourceConnectorFieldKeys.ScriptPath, "Script path", ConnectorConfigFieldType.Text, true, "Script file path."),
+                    Field(ResourceConnectorFieldKeys.WorkingDirectory, "Working directory", ConnectorConfigFieldType.Text, false, "Optional working directory."),
+                    Field(ResourceConnectorFieldKeys.ScriptArguments, "Arguments", ConnectorConfigFieldType.Text, false, "Optional script arguments.")),
+                model => model.ScriptPath.Trim(),
+                model => JsonSerializer.Serialize(new PowerShellScriptResourceConfig(model.ScriptPath, model.ScriptArguments, model.WorkingDirectory)),
+                static (model, json) =>
+                {
+                    if (JsonSerializer.Deserialize<PowerShellScriptResourceConfig>(NormalizeConfigJson(json)) is { } value)
+                    {
+                        model.ScriptPath = value.ScriptPath;
+                        model.ScriptArguments = value.Arguments;
+                        model.WorkingDirectory = value.WorkingDirectory;
+                    }
+                },
+                workbenchSubtype: "shell"),
+            Legacy(
+                ResourceKind.DockerCompose,
+                ResourceConnectorPluginKeys.DockerCompose,
+                "Docker Compose resource",
+                ProjectObjectType.Connector,
+                "Docker Compose",
+                "Compose file path is required.",
+                LegacySchema(
+                    Field(ResourceConnectorFieldKeys.ComposeFilePath, "Compose file", ConnectorConfigFieldType.Text, true, "Compose file path."),
+                    Field(ResourceConnectorFieldKeys.ComposeService, "Service name", ConnectorConfigFieldType.Text, false, "Optional compose service name.")),
+                model => model.ComposeFilePath.Trim(),
+                model => JsonSerializer.Serialize(new DockerComposeResourceConfig(model.ComposeFilePath, model.ComposeService)),
+                static (model, json) =>
+                {
+                    if (JsonSerializer.Deserialize<DockerComposeResourceConfig>(NormalizeConfigJson(json)) is { } value)
+                    {
+                        model.ComposeFilePath = value.ComposeFilePath;
+                        model.ComposeService = value.ServiceName;
+                    }
+                }),
+            Legacy(
+                ResourceKind.SecretLink,
+                ResourceConnectorPluginKeys.SecretLink,
+                "Secret link resource",
+                ProjectObjectType.SecretReference,
+                "Secret",
+                "Secret purpose is required.",
+                LegacySchema(
+                    Field(ResourceConnectorFieldKeys.SecretPurpose, "Secret purpose", ConnectorConfigFieldType.Text, true, "Purpose for the linked secret.")),
+                model => model.SecretPurpose.Trim(),
+                model => JsonSerializer.Serialize(new SecretLinkResourceConfig(model.SecretPurpose, string.Empty)),
+                static (model, json) =>
+                {
+                    if (JsonSerializer.Deserialize<SecretLinkResourceConfig>(NormalizeConfigJson(json)) is { } value)
+                    {
+                        model.SecretPurpose = value.Purpose;
+                    }
+                }),
+            Legacy(
+                ResourceKind.PromptLink,
+                ResourceConnectorPluginKeys.PromptLink,
+                "Prompt link resource",
+                ProjectObjectType.Link,
+                "Prompt link",
+                "Prompt reference is required.",
+                LegacySchema(
+                    Field(ResourceConnectorFieldKeys.PromptReference, "Prompt reference", ConnectorConfigFieldType.Text, true, "Prompt reference or identifier."),
+                    Field(ResourceConnectorFieldKeys.PromptTitleHint, "Prompt title hint", ConnectorConfigFieldType.Text, false, "Optional display title hint.")),
+                model => model.PromptReference.Trim(),
+                model => JsonSerializer.Serialize(new PromptLinkResourceConfig(model.PromptReference, model.PromptTitleHint)),
+                static (model, json) =>
+                {
+                    if (JsonSerializer.Deserialize<PromptLinkResourceConfig>(NormalizeConfigJson(json)) is { } value)
+                    {
+                        model.PromptReference = value.PromptReference;
+                        model.PromptTitleHint = value.PromptTitleHint;
+                    }
+                },
+                ConnectorManifestCapability.ProjectResource | ConnectorManifestCapability.WorkbenchProjection | ConnectorManifestCapability.AgentExposure)
         ];
+    }
 
-        static IResourceConnectorPlugin Legacy(
-            ResourceKind kind,
-            string pluginKey,
-            string displayName,
-            ProjectObjectType workbenchType,
-            string workbenchLabel,
-            string validationMessage,
-            Func<ResourceEditorModel, string> buildLocation,
-            Func<ResourceEditorModel, string> serializeConfig,
-            Action<ResourceEditorModel, string> applyConfig,
-            ConnectorManifestCapability capabilities = ConnectorManifestCapability.ProjectResource | ConnectorManifestCapability.WorkbenchProjection,
-            string workbenchSubtype = "")
-        {
-            return new LegacyResourceConnectorPlugin(
-                kind,
-                new ConnectorPluginManifest(
-                    pluginKey,
-                    displayName,
-                    "1.0.0",
-                    capabilities,
-                    new ConnectorConfigurationSchema("1.0", []),
-                    [],
-                    new ConnectorHealthCheckDescriptor("metadata-only", "The connector currently relies on stored metadata rather than active probing."),
-                    new ConnectorAgentExposure($"resource.read.{kind.ToString().ToLowerInvariant()}", capabilities.HasFlag(ConnectorManifestCapability.AgentExposure), true, $"Agent access to {displayName} is governed by the connector manifest."),
-                    new ConnectorWorkbenchNodeHook(workbenchType, workbenchSubtype, workbenchLabel)),
-                model => string.IsNullOrWhiteSpace(buildLocation(model))
-                    ? Error.Validation(validationMessage)
-                    : null,
-                buildLocation,
-                serializeConfig,
-                applyConfig);
-        }
+    private static IResourceConnectorPlugin Legacy(
+        ResourceKind kind,
+        string pluginKey,
+        string displayName,
+        ProjectObjectType workbenchType,
+        string workbenchLabel,
+        string validationMessage,
+        ConnectorConfigurationSchema schema,
+        Func<ResourceEditorModel, string> buildLocation,
+        Func<ResourceEditorModel, string> serializeConfig,
+        Action<ResourceEditorModel, string> applyConfig,
+        ConnectorManifestCapability capabilities = ConnectorManifestCapability.ProjectResource | ConnectorManifestCapability.WorkbenchProjection,
+        string workbenchSubtype = "")
+    {
+        return new LegacyResourceConnectorPlugin(
+            kind,
+            new ConnectorPluginManifest(
+                pluginKey,
+                displayName,
+                "1.0.0",
+                capabilities,
+                schema,
+                [],
+                new ConnectorHealthCheckDescriptor("metadata-only", "The connector currently relies on stored metadata rather than active probing."),
+                new ConnectorAgentExposure($"resource.read.{kind.ToString().ToLowerInvariant()}", capabilities.HasFlag(ConnectorManifestCapability.AgentExposure), true, $"Agent access to {displayName} is governed by the connector manifest."),
+                new ConnectorWorkbenchNodeHook(workbenchType, workbenchSubtype, workbenchLabel)),
+            model => string.IsNullOrWhiteSpace(buildLocation(model))
+                ? Error.Validation(validationMessage)
+                : null,
+            buildLocation,
+            serializeConfig,
+            applyConfig);
+    }
+
+    private static ConnectorConfigurationSchema LegacySchema(params ConnectorConfigFieldDescriptor[] fields)
+    {
+        return new ConnectorConfigurationSchema("1.0", fields);
+    }
+
+    private static ConnectorConfigFieldDescriptor Field(
+        string key,
+        string label,
+        ConnectorConfigFieldType fieldType,
+        bool isRequired,
+        string helpText)
+    {
+        return new ConnectorConfigFieldDescriptor(key, label, fieldType, isRequired, helpText);
     }
 
     private static string NormalizeConfigJson(string configJson)
@@ -163,7 +428,8 @@ internal sealed class LegacyResourceConnectorPlugin(
 
 public sealed class WebhookResourceConnectorPlugin : IResourceConnectorPlugin
 {
-    public const string PluginKey = "resource.webhook-endpoint";
+    public const string PluginKey = ResourceConnectorPluginKeys.WebhookEndpoint;
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private static readonly ConnectorPluginManifest PluginManifest = new(
@@ -174,9 +440,9 @@ public sealed class WebhookResourceConnectorPlugin : IResourceConnectorPlugin
         new ConnectorConfigurationSchema(
             "1.0",
             [
-                new ConnectorConfigFieldDescriptor("endpointUrl", "Endpoint URL", ConnectorConfigFieldType.Url, true, "Absolute webhook endpoint URL."),
-                new ConnectorConfigFieldDescriptor("healthPath", "Health path", ConnectorConfigFieldType.Text, false, "Optional relative path used for lightweight health probes."),
-                new ConnectorConfigFieldDescriptor("method", "Method", ConnectorConfigFieldType.Text, true, "HTTP verb used when invoking the connector.")
+                new ConnectorConfigFieldDescriptor(ResourceConnectorFieldKeys.EndpointUrl, "Endpoint URL", ConnectorConfigFieldType.Url, true, "Absolute webhook endpoint URL."),
+                new ConnectorConfigFieldDescriptor(ResourceConnectorFieldKeys.HealthPath, "Health path", ConnectorConfigFieldType.Text, false, "Optional relative path used for lightweight health probes."),
+                new ConnectorConfigFieldDescriptor(ResourceConnectorFieldKeys.HttpMethod, "Method", ConnectorConfigFieldType.Text, true, "HTTP verb used when invoking the connector.")
             ]),
         [new ConnectorSecretRequirement("authorization", "Authorization secret", false, "Optional secret used for outbound authorization.")],
         new ConnectorHealthCheckDescriptor("HTTP GET", "Performs a lightweight request against the configured webhook endpoint."),
@@ -189,55 +455,52 @@ public sealed class WebhookResourceConnectorPlugin : IResourceConnectorPlugin
 
     public Error? ValidateEditor(ResourceEditorModel model)
     {
-        if (string.IsNullOrWhiteSpace(model.ConfigJson))
+        if (string.IsNullOrWhiteSpace(model.EndpointUrl))
         {
-            return Error.Validation("Webhook connector config JSON is required.");
+            return Error.Validation("Webhook connector config must contain endpointUrl.");
         }
 
-        try
-        {
-            var config = JsonSerializer.Deserialize<WebhookResourceConfig>(model.ConfigJson, JsonOptions);
-            if (config is null || string.IsNullOrWhiteSpace(config.EndpointUrl))
-            {
-                return Error.Validation("Webhook connector config must contain endpointUrl.");
-            }
-
-            return Uri.TryCreate(config.EndpointUrl, UriKind.Absolute, out _)
-                ? null
-                : Error.Validation("Webhook connector endpointUrl must be an absolute URL.");
-        }
-        catch (JsonException)
-        {
-            return Error.Validation("Webhook connector config must be valid JSON.");
-        }
+        return Uri.TryCreate(model.EndpointUrl, UriKind.Absolute, out _)
+            ? null
+            : Error.Validation("Webhook connector endpointUrl must be an absolute URL.");
     }
 
     public string BuildLocation(ResourceEditorModel model)
     {
-        return JsonSerializer.Deserialize<WebhookResourceConfig>(model.ConfigJson, JsonOptions)?.EndpointUrl?.Trim()
-            ?? model.LocationOrIdentifier.Trim();
+        return model.EndpointUrl.Trim();
     }
 
     public string SerializeConfig(ResourceEditorModel model)
     {
-        var config = JsonSerializer.Deserialize<WebhookResourceConfig>(model.ConfigJson, JsonOptions);
-        return config is null
-            ? "{}"
-            : JsonSerializer.Serialize(new WebhookResourceConfig(
-                config.EndpointUrl?.Trim() ?? string.Empty,
-                config.HealthPath?.Trim() ?? string.Empty,
-                string.IsNullOrWhiteSpace(config.Method) ? "POST" : config.Method.Trim().ToUpperInvariant()),
-                JsonOptions);
+        return JsonSerializer.Serialize(
+            new WebhookResourceConfig(
+                model.EndpointUrl.Trim(),
+                model.HealthPath.Trim(),
+                string.IsNullOrWhiteSpace(model.HttpMethod) ? "POST" : model.HttpMethod.Trim().ToUpperInvariant()),
+            JsonOptions);
     }
 
     public void ApplyConfig(ResourceEditorModel model, string configJson)
     {
-        model.ConfigJson = string.IsNullOrWhiteSpace(configJson) ? "{}" : configJson;
+        model.ConfigJson = NormalizeConfigJson(configJson);
+        if (JsonSerializer.Deserialize<WebhookResourceConfig>(model.ConfigJson, JsonOptions) is not { } config)
+        {
+            return;
+        }
+
+        model.EndpointUrl = config.EndpointUrl;
+        model.HealthPath = config.HealthPath;
+        model.HttpMethod = config.Method;
     }
 
     public ProjectObjectType ResolveWorkbenchObjectType(ProjectResource resource) => ProjectObjectType.Connector;
 
     public string ResolveWorkbenchObjectSubtype(ProjectResource resource) => "webhook-endpoint";
+
+    private static string NormalizeConfigJson(string configJson)
+    {
+        return string.IsNullOrWhiteSpace(configJson) ? "{}" : configJson;
+    }
 
     private sealed record WebhookResourceConfig(string EndpointUrl, string HealthPath, string Method);
 }

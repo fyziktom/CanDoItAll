@@ -1,58 +1,50 @@
 # CanDoItAll Plugin-Wave Architecture Review Bundle v8
 
-- Analysis date: `2026-04-05`
-- Source analyzed: `CanDoItAll-canonical-model-refactor.zip`
-- Runtime validation: `BLOCKED` in this environment because `dotnet` is not installed
-- Bundle state: `Prepared`
-- Readiness gate for large plugin wave (email / LinkedIn / custom API): `NO-GO`
-- Small/local feature work: `Possible with caution`
+This bundle started as the post-phase7 rejection bundle and now serves as the closed Phase 8 execution record for the remaining plugin-wave architecture hardening work.
 
-## Executive verdict
+## Verdict
 
-This refactor wave **did close some of the most serious earlier problems**. The workbench no longer looks like it is persisting mirrored cross-module projection truth, node binding/reference extraction now exists, lifecycle history exists, and a real connector-manifest foundation has been added.
+- Contained feature work: `GO`
+- Major external plugin wave: `GO with guarded rollout`
 
-However, the architecture is **still not stable enough for the next major plugin wave**.
+## Phase 8 Closure
 
-The remaining blockers are not cosmetic:
+Phase 8 closed the remaining repeated architecture blockers:
 
-1. the universal node carrier is still not fully sealed from binding/reference leakage,
-2. editable-node hierarchy is still stored twice,
-3. node capability and assignment policy are still split across registry + UI + CRM/HR service code,
-4. the connector platform is not yet fully plugin-first in the active provider/resource flows,
-5. write-side connector integrations still do not have a durable operation boundary.
+- the node carrier is now sealed from active binding/reference writes, with runtime projection through typed binding records instead of direct carrier mutation
+- editable hierarchy remains canonical to `ParentNodeKey`, and the Phase 8 gate no longer finds dual-written editable hierarchy rows
+- node capability, assignment, and canonical-scope semantics now route through shared registry and bridge seams instead of page-local or CRM/HR-local switch logic
+- marker truth is no longer an active dual-representation blocker in the Workbench path checked by the Phase 8 gate
+- provider and resource editor plus runtime resolution flows are now manifest-driven and plugin-key-first; `ProviderKind` and `ResourceKind` remain compatibility aliases only
+- cross-module external side effects now persist durable intent and execute through the mutation processor instead of inline bridge work plus compensation helpers
+- the large provider/resource Razor pages were split into code-behind-backed flows and revalidated with component and browser proof
 
-## What changed relative to earlier bundles
+## Validation Summary
 
-### Clearly improved
-- persisted synchronized projection truth appears resolved
-- binding/reference side tables exist
-- lifecycle history exists for note promotion / subtype mutation
-- connector manifests and registries exist
-- service extraction and architecture tests are healthier
+- Hard-gate script: `PASS`
+- Remaining non-blocking gate warnings: `CrmHrServices.cs`, `ProjectWorkbenchModels.cs`
+- Execution status: `Completed`
+- Final closure gate: `Completed`
+- Browser validation analytics: `Captured with targeted Playwright proof`
+- Completed-stage bundle validator: `Passed`
 
-### Still not closed
-- node-core vs binding/facet boundary
-- dual hierarchy representation
-- incomplete capability centralization
-- legacy-enum driven plugin flows
-- durable side-effect boundary for future connectors
+Proof summary:
 
-## Hard gates
+- `python C:\repositories\CanDoItAll\candoitall-plugin-wave-architecture-review-bundle-v8\scripts\gate_check_phase8.py C:\repositories\CanDoItAll`
+- `dotnet build C:\repositories\CanDoItAll\CanDoItAll.slnx -v minimal`
+- `99/99` unit tests passed
+- `107/107` integration tests passed
+- `239/239` component tests passed
+- `2/2` targeted Playwright regression tests passed
 
-The plugin wave must not start until these gates pass:
+Not claimed as shipped proof:
 
-- `HG-01` Node core is sealed and binding/reference truth is externalized
-- `HG-02` Editable-node hierarchy has one canonical owner
-- `HG-03` Registry owns node-scoped capability and assignment policy
-- `HG-04` Connector platform is plugin-first, not enum-first
-- `HG-05` Write-side connectors have a durable operation boundary
+- the full `CanDoItAll.Tests.Playwright` project was not run as the final closure proof; this bundle claims the targeted browser pack only
+- unrelated `NU1510` warnings in `CanDoItAll.Mcp.DotNetWatch.csproj` remain outside the Phase 8 scope
 
-## Contents
+## Guarded Rollout Conditions
 
-- detailed findings
-- target architecture notes
-- a sequenced refactor plan
-- hard-gate + symbol-retirement rules
-- subbundles for each finding
-- XLSX workbook for tracking and execution
-- a repo gate script that currently fails on the remaining blockers
+- new connectors must continue to use the registry, manifest, typed-binding, and durable-mutation seams validated in Phase 8
+- no new feature may reintroduce enum-first provider/resource flows, direct carrier binding writes, or inline cross-module side effects
+- keep the targeted Playwright proof and the Phase 8 hard-gate script green
+- treat the remaining `CrmHrServices.cs` and `ProjectWorkbenchModels.cs` hotspot warnings as refactor pressure, not as permission to expand more logic into them

@@ -15,8 +15,15 @@ internal enum ProjectCrossModuleMutationStatus
     Pending = 0,
     WorkbenchCommitted = 1,
     Completed = 2,
-    Compensated = 3,
     Failed = 4
+}
+
+internal enum ProjectCrossModuleMutationApprovalState
+{
+    NotRequired = 0,
+    Pending = 1,
+    Approved = 2,
+    Rejected = 3
 }
 
 internal sealed class ProjectCrossModuleMutationRecord
@@ -31,9 +38,17 @@ internal sealed class ProjectCrossModuleMutationRecord
 
     public ProjectCrossModuleMutationStatus Status { get; set; } = ProjectCrossModuleMutationStatus.Pending;
 
+    public ProjectCrossModuleMutationApprovalState ApprovalState { get; set; } = ProjectCrossModuleMutationApprovalState.NotRequired;
+
     public string PayloadJson { get; set; } = "{}";
 
     public string ErrorMessage { get; set; } = string.Empty;
+
+    public int AttemptCount { get; set; }
+
+    public DateTimeOffset? LastAttemptAtUtc { get; set; }
+
+    public DateTimeOffset? CompletedAtUtc { get; set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
 
@@ -51,6 +66,7 @@ internal sealed class ProjectCrossModuleMutationRecordConfiguration : IEntityTyp
         builder.Property(item => item.ErrorMessage).HasColumnType("TEXT");
         builder.HasIndex(item => new { item.ProjectId, item.ScopeNodeKey, item.CreatedAtUtc });
         builder.HasIndex(item => new { item.ProjectId, item.Status, item.UpdatedAtUtc });
+        builder.HasIndex(item => new { item.ProjectId, item.ApprovalState, item.Status, item.UpdatedAtUtc });
     }
 }
 
@@ -60,7 +76,8 @@ public sealed class ProjectCrossModuleMutationCoordinator(IClock clock)
         Guid projectId,
         string scopeNodeKey,
         ProjectCrossModuleMutationKind mutationKind,
-        string payloadJson)
+        string payloadJson,
+        ProjectCrossModuleMutationApprovalState approvalState = ProjectCrossModuleMutationApprovalState.NotRequired)
     {
         var timestamp = clock.GetUtcNow();
         return new ProjectCrossModuleMutationRecord
@@ -69,6 +86,7 @@ public sealed class ProjectCrossModuleMutationCoordinator(IClock clock)
             ScopeNodeKey = scopeNodeKey.Trim(),
             MutationKind = mutationKind,
             Status = ProjectCrossModuleMutationStatus.Pending,
+            ApprovalState = approvalState,
             PayloadJson = string.IsNullOrWhiteSpace(payloadJson) ? "{}" : payloadJson,
             CreatedAtUtc = timestamp,
             UpdatedAtUtc = timestamp
@@ -83,16 +101,20 @@ public sealed class ProjectCrossModuleMutationCoordinator(IClock clock)
     internal void MarkCompleted(ProjectCrossModuleMutationRecord record)
     {
         Update(record, ProjectCrossModuleMutationStatus.Completed, null);
-    }
-
-    internal void MarkCompensated(ProjectCrossModuleMutationRecord record, string errorMessage)
-    {
-        Update(record, ProjectCrossModuleMutationStatus.Compensated, errorMessage);
+        record.CompletedAtUtc = record.UpdatedAtUtc;
     }
 
     internal void MarkFailed(ProjectCrossModuleMutationRecord record, string errorMessage)
     {
         Update(record, ProjectCrossModuleMutationStatus.Failed, errorMessage);
+        record.CompletedAtUtc = null;
+    }
+
+    internal void MarkAttempt(ProjectCrossModuleMutationRecord record)
+    {
+        record.AttemptCount++;
+        record.LastAttemptAtUtc = clock.GetUtcNow();
+        record.UpdatedAtUtc = record.LastAttemptAtUtc.Value;
     }
 
     private void Update(

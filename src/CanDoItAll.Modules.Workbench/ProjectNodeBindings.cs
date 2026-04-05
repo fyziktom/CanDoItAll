@@ -302,6 +302,12 @@ internal static class ProjectNodeBindingStorage
         return !references.IsEmpty;
     }
 
+    public static ProjectNodeBindingState ResolveForRuntime(ProjectObjectRecord node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        return ResolveBinding(node);
+    }
+
     private static bool RequiresNormalization(
         ProjectObjectRecord node,
         ProjectNodeBindingRecord? binding,

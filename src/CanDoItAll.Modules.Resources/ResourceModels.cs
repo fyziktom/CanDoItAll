@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Modules.Workspace;
@@ -128,6 +127,8 @@ public sealed record ResourceSummary(
     Guid ProjectId,
     string ProjectName,
     ResourceKind ResourceKind,
+    string ConnectorPluginKey,
+    string ConnectorDisplayName,
     string Name,
     string LocationOrIdentifier,
     ResourceValidationStatus ValidationStatus,
@@ -149,7 +150,7 @@ public sealed class ResourceEditorModel
 
     public string Description { get; set; } = string.Empty;
 
-    public string ConnectorPluginKey { get; set; } = string.Empty;
+    public string ConnectorPluginKey { get; set; } = ResourceConnectorPluginKeys.Repository;
 
     public string ConfigSchemaVersion { get; set; } = string.Empty;
 
@@ -197,6 +198,12 @@ public sealed class ResourceEditorModel
 
     public string PromptTitleHint { get; set; } = string.Empty;
 
+    public string EndpointUrl { get; set; } = string.Empty;
+
+    public string HealthPath { get; set; } = string.Empty;
+
+    public string HttpMethod { get; set; } = string.Empty;
+
     public ResourceValidationStatus ValidationStatus { get; set; } = ResourceValidationStatus.Unknown;
 
     public ResourceSensitivity Sensitivity { get; set; } = ResourceSensitivity.Normal;
@@ -213,6 +220,28 @@ public sealed class ResourcesService(
     ISearchIndexService searchIndexService,
     ResourceConnectorPluginRegistry resourceConnectorPluginRegistry)
 {
+    public IReadOnlyList<ConnectorPluginManifest> ListConnectorManifests()
+    {
+        return resourceConnectorPluginRegistry.ListManifests();
+    }
+
+    public string BuildLocationPreview(ResourceEditorModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        try
+        {
+            var connectorPlugin = resourceConnectorPluginRegistry.Resolve(
+                ResolveRequestedConnectorPluginKey(model),
+                model.ResourceKind);
+            return connectorPlugin.BuildLocation(model);
+        }
+        catch
+        {
+            return model.LocationOrIdentifier?.Trim() ?? string.Empty;
+        }
+    }
+
     public async Task<IReadOnlyList<ResourceSummary>> ListAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -229,6 +258,8 @@ public sealed class ResourcesService(
                 resource.ProjectId,
                 projects.GetValueOrDefault(resource.ProjectId, "Unknown project"),
                 resource.ResourceKind,
+                resourceConnectorPluginRegistry.Resolve(resource).Manifest.PluginKey,
+                resourceConnectorPluginRegistry.Resolve(resource).Manifest.DisplayName,
                 resource.Name,
                 resource.LocationOrIdentifier,
                 resource.ValidationStatus,
@@ -259,7 +290,6 @@ public sealed class ResourcesService(
             ResourceKind = resource.ResourceKind,
             Name = resource.Name,
             Description = resource.Description,
-            ConnectorPluginKey = resource.ConnectorPluginKey,
             ConfigSchemaVersion = resource.ConfigSchemaVersion,
             LocationOrIdentifier = resource.LocationOrIdentifier,
             ConfigJson = resource.ConfigJson,
@@ -270,7 +300,9 @@ public sealed class ResourcesService(
             SupportsIndexing = resource.SupportsIndexing
         };
 
-        resourceConnectorPluginRegistry.Resolve(resource).ApplyConfig(editor, resource.ConfigJson);
+        var connectorPlugin = resourceConnectorPluginRegistry.Resolve(resource);
+        editor.ConnectorPluginKey = connectorPlugin.Manifest.PluginKey;
+        connectorPlugin.ApplyConfig(editor, resource.ConfigJson);
         return editor;
     }
 
@@ -286,7 +318,9 @@ public sealed class ResourcesService(
             return Result<Guid>.Failure(Error.Validation("Resource name is required."));
         }
 
-        var connectorPlugin = resourceConnectorPluginRegistry.Resolve(model.ResourceKind, model.ConnectorPluginKey);
+        var connectorPlugin = resourceConnectorPluginRegistry.Resolve(
+            ResolveRequestedConnectorPluginKey(model),
+            model.ResourceKind);
         var configSchemaVersion = string.IsNullOrWhiteSpace(model.ConfigSchemaVersion)
             ? connectorPlugin.Manifest.ConfigurationSchema.Version
             : model.ConfigSchemaVersion.Trim();
@@ -295,6 +329,8 @@ public sealed class ResourcesService(
             return Result<Guid>.Failure(Error.Validation(
                 $"Resource connector '{connectorPlugin.Manifest.PluginKey}' requires config schema version '{connectorPlugin.Manifest.ConfigurationSchema.Version}', but '{configSchemaVersion}' was supplied."));
         }
+
+        HydrateLegacyConfigIfNeeded(model, connectorPlugin);
 
         var requiresSecret = connectorPlugin.Manifest.SecretRequirements.Any(requirement => requirement.IsRequired);
         if (requiresSecret && !model.LinkedSecretId.HasValue)
@@ -327,7 +363,7 @@ public sealed class ResourcesService(
         entity.ProjectId = model.ProjectId.Value;
         entity.OwnerPartyId = model.OwnerPartyId;
         entity.MaintainerPartyId = model.MaintainerPartyId;
-        entity.ResourceKind = model.ResourceKind;
+        entity.ResourceKind = connectorPlugin.LegacyResourceKind ?? model.ResourceKind;
         entity.Name = model.Name.Trim();
         entity.Description = model.Description?.Trim() ?? string.Empty;
         entity.ConnectorPluginKey = connectorPlugin.Manifest.PluginKey;
@@ -348,7 +384,7 @@ public sealed class ResourcesService(
             "Resources",
             entity.Name,
             entity.Description,
-            $"{entity.LocationOrIdentifier}\nKind: {entity.ResourceKind}\nSensitivity: {entity.Sensitivity}\nValidation: {entity.ValidationStatus}",
+            $"{entity.LocationOrIdentifier}\nConnector: {connectorPlugin.Manifest.DisplayName}\nSensitivity: {entity.Sensitivity}\nValidation: {entity.ValidationStatus}",
             $"/resources?resourceId={entity.Id}",
             entity.ProjectId), cancellationToken);
         await activityStream.RecordAsync(new ActivityWriteRequest(
@@ -386,148 +422,48 @@ public sealed class ResourcesService(
             Route: "/resources"), cancellationToken);
     }
 
-    private static Error? ValidateTypedEditor(ResourceEditorModel model)
-        => model.ResourceKind switch
-        {
-            ResourceKind.Repository when string.IsNullOrWhiteSpace(model.RepositoryUrl) => Error.Validation("Repository URL is required."),
-            ResourceKind.Folder when string.IsNullOrWhiteSpace(model.FolderPath) => Error.Validation("Folder path is required."),
-            ResourceKind.File when string.IsNullOrWhiteSpace(model.FilePath) => Error.Validation("File path is required."),
-            ResourceKind.WebLink when string.IsNullOrWhiteSpace(model.WebUrl) => Error.Validation("URL is required."),
-            ResourceKind.Ftp when string.IsNullOrWhiteSpace(model.Host) => Error.Validation("FTP host is required."),
-            ResourceKind.Ssh when string.IsNullOrWhiteSpace(model.Host) => Error.Validation("SSH host is required."),
-            ResourceKind.PowerShellScript when string.IsNullOrWhiteSpace(model.ScriptPath) => Error.Validation("Script path is required."),
-            ResourceKind.DockerCompose when string.IsNullOrWhiteSpace(model.ComposeFilePath) => Error.Validation("Compose file path is required."),
-            ResourceKind.SecretLink when string.IsNullOrWhiteSpace(model.SecretPurpose) => Error.Validation("Secret purpose is required."),
-            ResourceKind.PromptLink when string.IsNullOrWhiteSpace(model.PromptReference) => Error.Validation("Prompt reference is required."),
-            _ => null
-        };
-
-    private static string BuildLocation(ResourceEditorModel model) => model.ResourceKind switch
-    {
-        ResourceKind.Repository => model.RepositoryUrl.Trim(),
-        ResourceKind.Folder => model.FolderPath.Trim(),
-        ResourceKind.File => model.FilePath.Trim(),
-        ResourceKind.WebLink => model.WebUrl.Trim(),
-        ResourceKind.Ftp => BuildRemoteEndpoint(model.Host, model.Port, model.RemotePath),
-        ResourceKind.Ssh => BuildRemoteEndpoint(model.Host, model.Port, model.WorkingDirectory),
-        ResourceKind.PowerShellScript => model.ScriptPath.Trim(),
-        ResourceKind.DockerCompose => model.ComposeFilePath.Trim(),
-        ResourceKind.SecretLink => model.SecretPurpose.Trim(),
-        ResourceKind.PromptLink => model.PromptReference.Trim(),
-        _ => model.LocationOrIdentifier.Trim()
-    };
-
-    private static string SerializeConfig(ResourceEditorModel model)
-        => model.ResourceKind switch
-        {
-            ResourceKind.Repository => JsonSerializer.Serialize(new RepositoryResourceConfig(model.RepositoryUrl, model.DefaultBranch, model.RelativePath)),
-            ResourceKind.Folder => JsonSerializer.Serialize(new FolderResourceConfig(model.FolderPath, model.WorkingDirectory)),
-            ResourceKind.File => JsonSerializer.Serialize(new FileResourceConfig(model.FilePath, model.WorkingDirectory)),
-            ResourceKind.WebLink => JsonSerializer.Serialize(new WebLinkResourceConfig(model.WebUrl, model.UrlTitleHint)),
-            ResourceKind.Ftp => JsonSerializer.Serialize(new FtpResourceConfig(model.Host, model.Port, model.RemotePath, model.UserName)),
-            ResourceKind.Ssh => JsonSerializer.Serialize(new SshResourceConfig(model.Host, model.Port, model.UserName, model.WorkingDirectory)),
-            ResourceKind.PowerShellScript => JsonSerializer.Serialize(new PowerShellScriptResourceConfig(model.ScriptPath, model.ScriptArguments, model.WorkingDirectory)),
-            ResourceKind.DockerCompose => JsonSerializer.Serialize(new DockerComposeResourceConfig(model.ComposeFilePath, model.ComposeService)),
-            ResourceKind.SecretLink => JsonSerializer.Serialize(new SecretLinkResourceConfig(model.SecretPurpose, string.Empty)),
-            ResourceKind.PromptLink => JsonSerializer.Serialize(new PromptLinkResourceConfig(model.PromptReference, model.PromptTitleHint)),
-            _ => string.IsNullOrWhiteSpace(model.ConfigJson) ? "{}" : model.ConfigJson
-        };
-
-    private static void ApplyTypedConfiguration(ResourceEditorModel model, ResourceKind kind, string configJson)
-    {
-        var json = string.IsNullOrWhiteSpace(configJson) ? "{}" : configJson;
-        switch (kind)
-        {
-            case ResourceKind.Repository:
-                if (JsonSerializer.Deserialize<RepositoryResourceConfig>(json) is { } repository)
-                {
-                    model.RepositoryUrl = repository.RepositoryUrl;
-                    model.DefaultBranch = repository.DefaultBranch;
-                    model.RelativePath = repository.RelativePath;
-                }
-                break;
-            case ResourceKind.Folder:
-                if (JsonSerializer.Deserialize<FolderResourceConfig>(json) is { } folder)
-                {
-                    model.FolderPath = folder.Path;
-                    model.WorkingDirectory = folder.WorkingDirectory;
-                }
-                break;
-            case ResourceKind.File:
-                if (JsonSerializer.Deserialize<FileResourceConfig>(json) is { } file)
-                {
-                    model.FilePath = file.Path;
-                    model.WorkingDirectory = file.WorkingDirectory;
-                }
-                break;
-            case ResourceKind.WebLink:
-                if (JsonSerializer.Deserialize<WebLinkResourceConfig>(json) is { } webLink)
-                {
-                    model.WebUrl = webLink.Url;
-                    model.UrlTitleHint = webLink.TitleHint;
-                }
-                break;
-            case ResourceKind.Ftp:
-                if (JsonSerializer.Deserialize<FtpResourceConfig>(json) is { } ftp)
-                {
-                    model.Host = ftp.Host;
-                    model.Port = ftp.Port;
-                    model.RemotePath = ftp.RemotePath;
-                    model.UserName = ftp.UserName;
-                }
-                break;
-            case ResourceKind.Ssh:
-                if (JsonSerializer.Deserialize<SshResourceConfig>(json) is { } ssh)
-                {
-                    model.Host = ssh.Host;
-                    model.Port = ssh.Port;
-                    model.UserName = ssh.UserName;
-                    model.WorkingDirectory = ssh.WorkingDirectory;
-                }
-                break;
-            case ResourceKind.PowerShellScript:
-                if (JsonSerializer.Deserialize<PowerShellScriptResourceConfig>(json) is { } script)
-                {
-                    model.ScriptPath = script.ScriptPath;
-                    model.ScriptArguments = script.Arguments;
-                    model.WorkingDirectory = script.WorkingDirectory;
-                }
-                break;
-            case ResourceKind.DockerCompose:
-                if (JsonSerializer.Deserialize<DockerComposeResourceConfig>(json) is { } compose)
-                {
-                    model.ComposeFilePath = compose.ComposeFilePath;
-                    model.ComposeService = compose.ServiceName;
-                }
-                break;
-            case ResourceKind.SecretLink:
-                if (JsonSerializer.Deserialize<SecretLinkResourceConfig>(json) is { } secret)
-                {
-                    model.SecretPurpose = secret.Purpose;
-                }
-                break;
-            case ResourceKind.PromptLink:
-                if (JsonSerializer.Deserialize<PromptLinkResourceConfig>(json) is { } prompt)
-                {
-                    model.PromptReference = prompt.PromptReference;
-                    model.PromptTitleHint = prompt.PromptTitleHint;
-                }
-                break;
-        }
-    }
-
-    private static string BuildRemoteEndpoint(string host, int? port, string path)
-    {
-        var hostPart = string.IsNullOrWhiteSpace(host) ? "remote" : host.Trim();
-        var portPart = port.HasValue ? $":{port.Value}" : string.Empty;
-        var pathPart = string.IsNullOrWhiteSpace(path) ? string.Empty : $"/{path.Trim().TrimStart('/')}";
-        return $"{hostPart}{portPart}{pathPart}";
-    }
-
     private static Guid? ParseLinkedSecret(string json)
     {
         var trimmed = json.Trim('[', ']', '"');
         return Guid.TryParse(trimmed, out var parsed) ? parsed : null;
+    }
+
+    private static string? ResolveRequestedConnectorPluginKey(ResourceEditorModel model)
+    {
+        var connectorPluginKey = model.ConnectorPluginKey?.Trim();
+        if (string.IsNullOrWhiteSpace(connectorPluginKey))
+        {
+            return null;
+        }
+
+        if (string.Equals(connectorPluginKey, ResourceConnectorPluginKeys.Repository, StringComparison.OrdinalIgnoreCase) &&
+            model.ResourceKind != ResourceKind.Repository)
+        {
+            return null;
+        }
+
+        return connectorPluginKey;
+    }
+
+    private static void HydrateLegacyConfigIfNeeded(ResourceEditorModel model, IResourceConnectorPlugin connectorPlugin)
+    {
+        if (string.IsNullOrWhiteSpace(model.ConfigJson) ||
+            string.Equals(model.ConfigJson.Trim(), "{}", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (!string.Equals(connectorPlugin.Manifest.PluginKey, WebhookResourceConnectorPlugin.PluginKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.EndpointUrl))
+        {
+            return;
+        }
+
+        connectorPlugin.ApplyConfig(model, model.ConfigJson);
     }
 }
 

@@ -47,7 +47,7 @@ public sealed class ConnectorPluginRegistryTests
     {
         var registry = new ResourceConnectorPluginRegistry([new WebhookResourceConnectorPlugin()]);
 
-        var connectorPlugin = registry.Resolve(ResourceKind.WebLink, WebhookResourceConnectorPlugin.PluginKey);
+        var connectorPlugin = registry.Resolve(WebhookResourceConnectorPlugin.PluginKey, ResourceKind.WebLink);
 
         Assert.Equal(WebhookResourceConnectorPlugin.PluginKey, connectorPlugin.Manifest.PluginKey);
         Assert.Equal(ProjectObjectType.Connector, connectorPlugin.ResolveWorkbenchObjectType(new ProjectResource()));

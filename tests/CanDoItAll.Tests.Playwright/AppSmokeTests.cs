@@ -141,6 +141,81 @@ public sealed partial class AppSmokeTests
     }
 
     [Fact]
+    public async Task Settings_page_supports_manifest_driven_provider_management()
+    {
+        var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\plugin-wave\v8";
+        Directory.CreateDirectory(evidenceDirectory);
+
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize
+            {
+                Width = 1600,
+                Height = 1000
+            }
+        });
+        var page = await context.NewPageAsync();
+
+        var response = await page.GotoAsync($"{fixture.BaseUrl}/settings?tab=providers");
+        Assert.NotNull(response);
+        Assert.True(response!.Ok, $"Expected /settings?tab=providers to return 2xx, got {(int)response.Status}.");
+        await DismissStartupModalIfPresentAsync(page);
+        await page.GetByRole(AriaRole.Button, new() { Name = "New provider", Exact = true }).WaitForAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "New provider", Exact = true }).ClickAsync();
+        await page.GetByTestId("provider-plugin-select").SelectOptionAsync(OllamaProviderAdapter.PluginKey);
+        await page.GetByTestId("provider-name-input").FillAsync("Playwright Ollama");
+        await page.GetByTestId("provider-base-url-input").FillAsync("http://127.0.0.1:11434");
+        await page.GetByTestId("provider-default-model-input").FillAsync("llama3.1");
+        await page.GetByTestId("provider-save-button").ClickAsync();
+        await page.WaitForSelectorAsync("text=Provider profile saved.");
+        await page.WaitForSelectorAsync("text=Playwright Ollama");
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = Path.Combine(evidenceDirectory, "phase8-settings-providers-plugin-first.png"),
+            FullPage = true
+        });
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
+    public async Task Resources_page_supports_manifest_driven_connector_selection()
+    {
+        var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\plugin-wave\v8";
+        Directory.CreateDirectory(evidenceDirectory);
+
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize
+            {
+                Width = 1600,
+                Height = 1000
+            }
+        });
+        var page = await context.NewPageAsync();
+        var projectId = await CreateProjectAsync(page, "Playwright Resource Connectors", "Execution");
+
+        var response = await page.GotoAsync($"{fixture.BaseUrl}/resources?projectId={projectId}");
+        Assert.NotNull(response);
+        Assert.True(response!.Ok, $"Expected /resources to return 2xx, got {(int)response.Status}.");
+        await DismissStartupModalIfPresentAsync(page);
+        await page.GetByTestId("resource-project-select").WaitForAsync();
+        await page.GetByTestId("resource-project-select").SelectOptionAsync(projectId.ToString());
+        await page.GetByTestId("resource-plugin-select").SelectOptionAsync("resource.folder");
+        await page.GetByTestId("resource-primary-input").WaitForAsync();
+        await page.GetByTestId("resource-name-input").FillAsync("Playwright folder resource");
+        await page.GetByTestId("resource-primary-input").FillAsync(@"C:\repositories\CanDoItAll\workspace");
+        await page.GetByTestId("resource-save-button").ClickAsync();
+        await page.WaitForSelectorAsync("text=Resource saved.");
+        await page.WaitForSelectorAsync("text=Playwright folder resource");
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = Path.Combine(evidenceDirectory, "phase8-resources-plugin-first.png"),
+            FullPage = true
+        });
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
     public async Task Structure_canvas_maximize_locks_viewport_without_residual_document_scroll()
     {
         var repoRoot = GetRepoRoot();
@@ -1352,7 +1427,7 @@ public sealed partial class AppSmokeTests
         await OpenSettingsTabAsync(page, "Providers", "Provider profiles");
         await page.GetByRole(AriaRole.Button, new() { Name = "New provider", Exact = true }).ClickAsync();
         await SetFieldByLabelAsync(page, "Profile name", "OpenAI API");
-        await SetFieldByLabelAsync(page, "Provider kind", "OpenAi");
+        await SetFieldByLabelAsync(page, "Connector plugin", "OpenAI provider");
         await SetFieldByLabelAsync(page, "Base URL", "https://api.openai.com/v1");
         await SetFieldByLabelAsync(page, "Default model", "gpt-4.1");
         await SetFieldByLabelAsync(page, "API key secret", "OpenAI API key");
@@ -1361,7 +1436,7 @@ public sealed partial class AppSmokeTests
 
         await page.GetByRole(AriaRole.Button, new() { Name = "New provider", Exact = true }).ClickAsync();
         await SetFieldByLabelAsync(page, "Profile name", "Local Ollama");
-        await SetFieldByLabelAsync(page, "Provider kind", "OllamaLocal");
+        await SetFieldByLabelAsync(page, "Connector plugin", "Ollama local provider");
         await SetFieldByLabelAsync(page, "Base URL", "http://127.0.0.1:11434");
         await SetFieldByLabelAsync(page, "Default model", "llama3.1");
         await page.GetByRole(AriaRole.Button, new() { Name = "Save provider", Exact = true }).ClickAsync();

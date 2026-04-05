@@ -23,13 +23,13 @@ public sealed class ProjectWorkbenchRelationService(
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var existingNodes = (await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken)).Nodes;
         InvariantService.ValidateUserAuthoredLink(projectId, sourceNodeKey, targetNodeKey, linkKind, existingNodes);
-        await ProjectWorkbenchGraphConventions.UpsertLinkAsync(
+        await UpsertUserAuthoredLinkAsync(
             dbContext,
             projectId,
             sourceNodeKey,
             targetNodeKey,
             linkKind,
-            isSystemManaged: false,
+            clock.GetUtcNow(),
             cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
@@ -177,5 +177,38 @@ public sealed class ProjectWorkbenchRelationService(
             plan.Positions.Select(position => new ProjectNodeMoveRequest(position.NodeId, position.X, position.Y)).ToList(),
             cancellationToken);
         return new ProjectStructureSubtreeRecompositionResult(rootNodeKey, plan.DescendantCount, repositionedNodeIds.Count);
+    }
+
+    private static async Task UpsertUserAuthoredLinkAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        string sourceNodeKey,
+        string targetNodeKey,
+        ProjectObjectLinkKind linkKind,
+        DateTimeOffset createdAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var existingLink = await dbContext.Set<ProjectObjectLinkRecord>()
+            .FirstOrDefaultAsync(item =>
+                item.ProjectId == projectId &&
+                item.SourceNodeKey == sourceNodeKey &&
+                item.TargetNodeKey == targetNodeKey &&
+                item.LinkKind == linkKind,
+                cancellationToken);
+        if (existingLink is not null)
+        {
+            existingLink.IsSystemManaged = false;
+            return;
+        }
+
+        await dbContext.Set<ProjectObjectLinkRecord>().AddAsync(new ProjectObjectLinkRecord
+        {
+            ProjectId = projectId,
+            SourceNodeKey = sourceNodeKey,
+            TargetNodeKey = targetNodeKey,
+            LinkKind = linkKind,
+            IsSystemManaged = false,
+            CreatedAtUtc = createdAtUtc
+        }, cancellationToken);
     }
 }

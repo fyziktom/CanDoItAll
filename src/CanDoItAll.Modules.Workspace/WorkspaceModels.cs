@@ -102,6 +102,8 @@ public sealed record ProviderProfileSummary(
     Guid Id,
     string Name,
     ProviderKind ProviderKind,
+    string ConnectorPluginKey,
+    string ConnectorDisplayName,
     string BaseUrl,
     string DefaultModel,
     bool IsEnabled,
@@ -199,21 +201,34 @@ public sealed partial class WorkspaceService(
             Route: "/settings"), cancellationToken);
     }
 
+    public IReadOnlyList<ConnectorPluginManifest> ListProviderManifests()
+    {
+        return providerRegistry.ListManifests();
+    }
+
     public async Task<IReadOnlyList<ProviderProfileSummary>> ListProviderProfilesAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await dbContext.Set<ProviderProfile>()
+        var profiles = await dbContext.Set<ProviderProfile>()
             .OrderBy(profile => profile.Name)
-            .Select(profile => new ProviderProfileSummary(
+            .ToListAsync(cancellationToken);
+        return profiles
+            .Select(profile =>
+            {
+                var providerPlugin = providerRegistry.Resolve(profile);
+                return new ProviderProfileSummary(
                 profile.Id,
                 profile.Name,
                 profile.ProviderKind,
+                providerPlugin?.Manifest.PluginKey ?? profile.ConnectorPluginKey,
+                providerPlugin?.Manifest.DisplayName ?? profile.ConnectorPluginKey,
                 profile.BaseUrl,
                 profile.DefaultModel,
                 profile.IsEnabled,
                 profile.LastHealthStatus,
-                profile.LastHealthCheckAtUtc))
-            .ToListAsync(cancellationToken);
+                profile.LastHealthCheckAtUtc);
+            })
+            .ToList();
     }
 
     public async Task<ProviderProfileEditorModel> GetProviderAsync(Guid? id, CancellationToken cancellationToken = default)
@@ -235,7 +250,7 @@ public sealed partial class WorkspaceService(
             Id = provider.Id,
             Name = provider.Name,
             ProviderKind = provider.ProviderKind,
-            ConnectorPluginKey = provider.ConnectorPluginKey,
+            ConnectorPluginKey = providerRegistry.Resolve(provider)?.Manifest.PluginKey ?? provider.ConnectorPluginKey,
             ConfigSchemaVersion = provider.ConfigSchemaVersion,
             BaseUrl = provider.BaseUrl,
             ApiKeySecretId = provider.ApiKeySecretId,
@@ -296,8 +311,8 @@ public sealed partial class WorkspaceService(
         }
 
         entity.Name = model.Name.Trim();
-        entity.ProviderKind = model.ProviderKind;
         entity.ConnectorPluginKey = providerPlugin.Manifest.PluginKey;
+        entity.ProviderKind = providerPlugin.LegacyProviderKind ?? model.ProviderKind;
         entity.ConfigSchemaVersion = configSchemaVersion;
         entity.BaseUrl = model.BaseUrl.Trim().TrimEnd('/');
         entity.ApiKeySecretId = model.ApiKeySecretId;
@@ -435,11 +450,14 @@ public sealed partial class WorkspaceService(
         configSchemaVersion = string.Empty;
 
         var requestedPluginKey = string.IsNullOrWhiteSpace(model.ConnectorPluginKey)
-            ? providerRegistry.ResolvePluginKey(model.ProviderKind)
+            ? providerRegistry.ResolveLegacyPluginKey(model.ProviderKind)
             : model.ConnectorPluginKey.Trim();
-        if (!providerRegistry.TryResolve(model.ProviderKind, requestedPluginKey, out providerPlugin))
+        if (!providerRegistry.TryResolve(requestedPluginKey, model.ProviderKind, out providerPlugin))
         {
-            return Error.Validation($"No provider adapter is registered for plugin '{requestedPluginKey}'.");
+            return Error.Validation(
+                string.IsNullOrWhiteSpace(requestedPluginKey)
+                    ? "Select a connector plugin for the provider profile."
+                    : $"No provider adapter is registered for plugin '{requestedPluginKey}'.");
         }
 
         manifest = providerPlugin.Manifest;

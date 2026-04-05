@@ -2633,11 +2633,23 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("ApprovalState")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ErrorMessage")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAtUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("MutationKind")
@@ -2666,6 +2678,8 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasIndex("ProjectId", "ScopeNodeKey", "CreatedAtUtc");
 
                     b.HasIndex("ProjectId", "Status", "UpdatedAtUtc");
+
+                    b.HasIndex("ProjectId", "ApprovalState", "Status", "UpdatedAtUtc");
 
                     b.ToTable("Workbench_ProjectCrossModuleMutations", (string)null);
                 });

@@ -50,7 +50,7 @@ public sealed class PluginWaveArchitectureGuardrailTests
             new TestResourceConnectorPlugin("resource.custom", legacyResourceKind: null)
         ]);
 
-        var resolved = registry.Resolve(ResourceKind.Repository, "resource.custom");
+        var resolved = registry.Resolve("resource.custom", ResourceKind.Repository);
 
         Assert.Equal("resource.custom", resolved.Manifest.PluginKey);
         Assert.Null(resolved.LegacyResourceKind);
@@ -63,7 +63,7 @@ public sealed class PluginWaveArchitectureGuardrailTests
 
     private sealed class TestProviderAdapter(ProviderKind providerKind, string pluginKey) : IProviderAdapter
     {
-        public ProviderKind ProviderKind => providerKind;
+        public ProviderKind? LegacyProviderKind => providerKind;
 
         public ConnectorPluginManifest Manifest { get; } = new(
             pluginKey,

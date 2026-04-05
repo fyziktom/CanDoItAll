@@ -45,6 +45,7 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
         AssertScoped<ProjectWorkbenchLifecycleService>(services);
         AssertScoped<ProjectWorkbenchCommandService>(services);
         AssertScoped<ProjectWorkbenchCrossModuleMutationService>(services);
+        AssertScoped<ProjectCrossModuleMutationProcessor>(services);
         AssertScoped<ProjectStructureAssemblyService>(services);
         AssertScoped<ProjectWorkbenchService>(services);
         Assert.Contains(

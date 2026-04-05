@@ -223,6 +223,11 @@ internal static class LegacySqliteMigrationBootstrap
                 && HasTable(schemaSnapshot, "Workbench_ProjectCrossModuleMutations"),
             _ when migrationId.Contains("AddProjectObjectMarkersJson", StringComparison.Ordinal) =>
                 HasColumn(schemaSnapshot, "Workbench_ProjectObjects", "MarkersJson"),
+            _ when migrationId.Contains("AddCrossModuleMutationDurabilityFields", StringComparison.Ordinal) =>
+                HasColumn(schemaSnapshot, "Workbench_ProjectCrossModuleMutations", "ApprovalState")
+                && HasColumn(schemaSnapshot, "Workbench_ProjectCrossModuleMutations", "AttemptCount")
+                && HasColumn(schemaSnapshot, "Workbench_ProjectCrossModuleMutations", "LastAttemptAtUtc")
+                && HasColumn(schemaSnapshot, "Workbench_ProjectCrossModuleMutations", "CompletedAtUtc"),
             _ => false
         };
     }

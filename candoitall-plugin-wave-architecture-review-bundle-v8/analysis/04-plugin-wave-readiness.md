@@ -1,17 +1,25 @@
-## Plugin-wave readiness
+# Plugin-Wave Readiness
 
-### Email connector(s)
-- **Read-only / fetch-only mailbox inventory:** partially feasible once the plugin-first resource/provider editor flow is fixed.
-- **Write-side send / sync / queue operations:** **not ready** until a durable connector-operation boundary exists.
+## Verdict
 
-### LinkedIn / social / remote API connectors
-- The new connector manifest foundation is promising.
-- The current resource/provider UIs still force legacy enum-driven flows, so these connectors are **not first-class yet**.
-- Direct introduction now would either distort the model or force more core-page edits than a true plugin platform should need.
+**GO with guarded rollout**
 
-### Custom API connectors
-- Best future fit: manifest-driven connectors with schema-defined config, secrets, health checks, agent exposure, and optional workbench hooks.
-- Current state: **close in direction, not close enough in execution**.
+The current branch is now a viable base for the next connector and plugin wave. The remaining caution is about hotspot pressure and proof breadth, not about the repeated architectural blockers that stopped the prior phases.
 
-## Conclusion
-The repo is **closer** than before, but the next big plugin wave would still land on seams that are not fully stabilized.
+## Reasoning
+
+| Dimension | Verdict | Why |
+| --- | --- | --- |
+| Core node vs bindings | Pass | The Phase 8 gate no longer reports direct carrier binding writes, and runtime binding resolution now goes through `ProjectNodeBindings`. |
+| Editable hierarchy ownership | Pass | Editable nodes remain canonical to `ParentNodeKey`, and the gate no longer finds persisted editable hierarchy dual truth. |
+| Kind and assignment semantics | Pass | Capability, assignment, and canonical-scope checks now flow through the shared registry and bridge seams instead of scattered UI and CRM/HR rules. |
+| Marker truth | Pass | The current branch no longer trips the Phase 8 marker-dual-truth blocker. |
+| Plugin platform seam | Pass | Provider and resource flows are now manifest-driven and plugin-key-first in both editor and runtime paths. |
+| Durable side-effect boundary | Pass | Cross-module mutation work now persists durable intent and executes through `ProjectCrossModuleMutationProcessor` instead of inline bridge-side effects plus compensation helpers. |
+| Guardrail enforcement | Pass | `gate_check_phase8.py` now reports no hard-gate failures, and the updated unit/integration/component/browser proof covers the active seams. |
+| Runtime proof depth | Guarded | The relevant targeted validation passed, but the final closure claim is still based on targeted Playwright proof rather than a full Playwright-project pass. |
+| Hotspot pressure | Guarded | `CrmHrServices.cs` and `ProjectWorkbenchModels.cs` still exceed the gate warning thresholds. |
+
+## Safe Conclusion
+
+The architecture is now strong enough to continue into the external connector wave, provided future work stays on the registry, manifest, binding, and durable-mutation seams and does not treat the compatibility enums as the active extensibility surface.

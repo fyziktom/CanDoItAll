@@ -1765,7 +1765,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
-    public async Task DeleteObjectAsync_restores_workbench_subtree_when_assignment_cleanup_fails()
+    public async Task DeleteObjectAsync_marks_durable_failure_when_assignment_cleanup_fails_after_workbench_commit()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -1786,7 +1786,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                 ProjectObjectType.ProjectBlock,
                 "Delete branch",
                 string.Empty,
-                "Rollback should restore this subtree.",
+                "Durable failure should not restore this subtree.",
                 $"project:{projectId}",
                 360,
                 220,
@@ -1799,7 +1799,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                 ProjectObjectType.Participant,
                 "Delete participant",
                 string.Empty,
-                "Child node should remain after compensation.",
+                "Child node should stay deleted when canonical cleanup fails after commit.",
                 parentBlock.Id,
                 560,
                 260,
@@ -1820,11 +1820,12 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             failingWorkbench.DeleteObjectAsync(projectId, parentBlock.Id));
 
-        Assert.Contains("restored", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("committed the Workbench change", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("marked failed for retry", exception.Message, StringComparison.OrdinalIgnoreCase);
 
         var surface = await workbench.GetStructureAsync(projectId);
-        Assert.Contains(surface.Nodes, node => string.Equals(node.Id, parentBlock.Id, StringComparison.Ordinal));
-        Assert.Contains(surface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(surface.Nodes, node => string.Equals(node.Id, parentBlock.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(surface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
 
         var assignments = await bridge.ListAssignmentsDetailedAsync(projectId);
         Assert.Contains(assignments, item =>
@@ -1836,7 +1837,9 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             projectId,
             parentBlock.Id,
             ProjectCrossModuleMutationKind.DeleteSubtree,
-            ProjectCrossModuleMutationStatus.Compensated);
+            ProjectCrossModuleMutationStatus.Failed,
+            expectedAttemptCount: 1,
+            expectCompletedAtUtc: false);
     }
 
     [Fact]
@@ -1953,7 +1956,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
-    public async Task MoveDescendantsToProjectAsync_restores_workbench_state_when_assignment_transfer_fails()
+    public async Task MoveDescendantsToProjectAsync_marks_durable_failure_when_assignment_transfer_fails_after_workbench_commit()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -1976,7 +1979,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                 ProjectObjectType.ProjectBlock,
                 "Move branch",
                 string.Empty,
-                "Parent block stays put when compensation runs.",
+                "Parent block stays put while descendants move before durable reconciliation.",
                 $"project:{sourceProjectId}",
                 360,
                 220,
@@ -1989,7 +1992,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                 ProjectObjectType.Participant,
                 "Move participant",
                 string.Empty,
-                "Moved child should return to source project after compensation.",
+                "Moved child should remain in the target project if canonical reconciliation fails after commit.",
                 parentBlock.Id,
                 560,
                 260,
@@ -2010,13 +2013,14 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             failingWorkbench.MoveDescendantsToProjectAsync(sourceProjectId, parentBlock.Id, targetProjectId));
 
-        Assert.Contains("canonical assignment reconciliation", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("committed the Workbench change", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("marked failed for retry", exception.Message, StringComparison.OrdinalIgnoreCase);
 
         var sourceSurface = await workbench.GetStructureAsync(sourceProjectId);
-        Assert.Contains(sourceSurface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(sourceSurface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
 
         var targetSurface = await workbench.GetStructureAsync(targetProjectId);
-        Assert.DoesNotContain(targetSurface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
+        Assert.Contains(targetSurface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
 
         var sourceAssignments = await bridge.ListAssignmentsDetailedAsync(sourceProjectId);
         Assert.Contains(sourceAssignments, item =>
@@ -2031,7 +2035,9 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             sourceProjectId,
             parentBlock.Id,
             ProjectCrossModuleMutationKind.MoveDescendants,
-            ProjectCrossModuleMutationStatus.Compensated);
+            ProjectCrossModuleMutationStatus.Failed,
+            expectedAttemptCount: 1,
+            expectCompletedAtUtc: false);
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
@@ -2070,11 +2076,16 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var dbContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         var clock = serviceProvider.GetRequiredService<IClock>();
         var assemblyService = serviceProvider.GetRequiredService<ProjectStructureAssemblyService>();
+        var mutationCoordinator = serviceProvider.GetRequiredService<ProjectCrossModuleMutationCoordinator>();
+        var mutationProcessor = new ProjectCrossModuleMutationProcessor(
+            dbContextFactory,
+            bridge,
+            mutationCoordinator);
         var crossModuleMutationService = new ProjectWorkbenchCrossModuleMutationService(
             dbContextFactory,
             clock,
-            bridge,
-            serviceProvider.GetRequiredService<ProjectCrossModuleMutationCoordinator>());
+            mutationCoordinator,
+            mutationProcessor);
         var relationService = new ProjectWorkbenchRelationService(
             dbContextFactory,
             clock,
@@ -2103,7 +2114,9 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Guid projectId,
         string scopeNodeKey,
         ProjectCrossModuleMutationKind mutationKind,
-        ProjectCrossModuleMutationStatus expectedStatus)
+        ProjectCrossModuleMutationStatus expectedStatus,
+        int? expectedAttemptCount = null,
+        bool? expectCompletedAtUtc = null)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var mutation = (await dbContext.Set<ProjectCrossModuleMutationRecord>()
@@ -2121,6 +2134,22 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             $"Expected mutation status '{expectedStatus}' but found '{mutation.Status}'. Error: {mutation.ErrorMessage}");
         Assert.NotEqual(DateTimeOffset.MinValue, mutation.CreatedAtUtc);
         Assert.NotEqual(DateTimeOffset.MinValue, mutation.UpdatedAtUtc);
+        if (expectedAttemptCount.HasValue)
+        {
+            Assert.Equal(expectedAttemptCount.Value, mutation.AttemptCount);
+        }
+
+        if (expectCompletedAtUtc.HasValue)
+        {
+            if (expectCompletedAtUtc.Value)
+            {
+                Assert.NotNull(mutation.CompletedAtUtc);
+            }
+            else
+            {
+                Assert.Null(mutation.CompletedAtUtc);
+            }
+        }
     }
 
     private static string BuildProjectRootNodeKey(Guid projectId)
