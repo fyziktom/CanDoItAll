@@ -1,0 +1,32 @@
+# Finding to subbundle map
+
+- `P7-001` -> `subbundles/P7-001-workbench-still-persists-synchronized-cross-module-projection-nodes-an`
+  - Gate: Hard blocker
+  - Required proof: No SyncGraphAsync method or call remains in Workbench read flows; no system-managed cross-module nodes are persisted into Workbench canonical tables; new assembly contributor layer and guardrail tests exist.
+- `P7-002` -> `subbundles/P7-002-the-universal-node-carrier-is-still-overloaded-instead-of-being-a-stab`
+  - Gate: Hard blocker
+  - Required proof: ProjectObjectRecord no longer owns external artifact/media/storage binding fields; typed facet/binding tables exist; X/Y and canonical markers remain available as canonical node semantics.
+- `P7-003` -> `subbundles/P7-003-node-kind-semantics-and-node-scoped-capability-rules-are-still-fragmen`
+  - Gate: Hard blocker
+  - Required proof: A node-kind registry exists; page code no longer hardcodes ResolveNodeAssignmentRoles/ResolveParticipantRole; CRM-HR no longer hardcodes RequiresCanonicalNode / IsAllowedNodeType for node-scoped roles.
+- `P7-004` -> `subbundles/P7-004-node-reclassification-still-mutates-in-place-without-transition-histor`
+  - Gate: Hard blocker
+  - Required proof: Reclassification writes transition history, preserves stable node identity, and adds guardrail tests for same-family and cross-family transitions.
+- `P7-005` -> `subbundles/P7-005-hierarchy-is-still-dual-represented-through-parentnodekey-and-generic-`
+  - Gate: Hard blocker
+  - Required proof: Editable create/reparent/seed/move flows no longer persist hierarchy links; guardrail tests fail if Contains/BelongsTo is reintroduced for canonical editable nodes.
+- `P7-006` -> `subbundles/P7-006-workbench-metadata-still-carries-foreign-identifiers-and-keeps-dual-ma`
+  - Gate: Hard blocker
+  - Required proof: Foreign-id helper fields are removed from metadata envelopes or clearly moved into binding tables; marker storage has one canonical representation only; guardrail tests cover both constraints.
+- `P7-007` -> `subbundles/P7-007-provider-resource-connector-architecture-is-still-a-closed-enum-and-sw`
+  - Gate: Hard blocker
+  - Required proof: ProviderKind/ResourceKind are no longer the extensibility seam for new connectors; connector descriptors/manifests exist; new first-party connectors register through the descriptor platform.
+- `P7-008` -> `subbundles/P7-008-cross-module-mutation-boundaries-are-still-compensation-based-and-not-`
+  - Gate: Conditional blocker
+  - Required proof: A documented and tested mutation boundary exists; outbound connectors are forbidden until that boundary is in place.
+- `P7-009` -> `subbundles/P7-009-workbench-and-crm-hr-service-hotspots-remain-too-large-and-multi-respo`
+  - Gate: Watch
+  - Required proof: Hotspot files are decomposed or at least the new extension seams isolate future connector work away from the hotspots.
+- `P7-010` -> `subbundles/P7-010-there-is-still-no-hard-architecture-closure-mechanism-preventing-the-s`
+  - Gate: Hard blocker
+  - Required proof: Architecture guardrail tests exist; a hard-gate script passes on the refactored branch; bundle closure requires the script output and test names as evidence.
