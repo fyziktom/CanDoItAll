@@ -269,7 +269,6 @@ internal static class ProjectNodeKindRegistry
     private static ProjectObjectMetadataEnvelope ScopeMetadata(ProjectObjectMetadataEnvelope metadata, ProjectNodeKindFamily family)
         => new()
         {
-            MarkerSet = metadata.MarkerSet,
             Meeting = family == ProjectNodeKindFamily.Meeting ? metadata.Meeting : null,
             Recording = family == ProjectNodeKindFamily.Recording ? metadata.Recording : null,
             Transcript = family == ProjectNodeKindFamily.Transcript ? metadata.Transcript : null,

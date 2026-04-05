@@ -2874,7 +2874,6 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.Property<string>("ExternalArtifactKind")
                         .IsRequired()
-                        .HasMaxLength(120)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsSystemManaged")
@@ -2895,19 +2894,20 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("MarkersJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("MediaContentType")
                         .IsRequired()
-                        .HasMaxLength(160)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("MediaOriginalFileName")
                         .IsRequired()
-                        .HasMaxLength(260)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("MediaRelativePath")
                         .IsRequired()
-                        .HasMaxLength(800)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("MetadataJson")
@@ -2957,7 +2957,6 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.Property<string>("Route")
                         .IsRequired()
-                        .HasMaxLength(800)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset?>("StartUtc")

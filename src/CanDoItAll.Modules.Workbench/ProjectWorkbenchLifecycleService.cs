@@ -45,9 +45,6 @@ public sealed class ProjectWorkbenchLifecycleService(
             Subtitle = node.Subtitle,
             Status = node.Status,
             Notes = node.Notes,
-            Route = node.Route,
-            ExternalArtifactKind = node.ExternalArtifactKind,
-            ExternalArtifactId = node.ExternalArtifactId,
             MediaRelativePath = node.MediaRelativePath,
             MediaContentType = node.MediaContentType,
             MediaOriginalFileName = node.MediaOriginalFileName,
@@ -57,6 +54,7 @@ public sealed class ProjectWorkbenchLifecycleService(
             MarkerIcon = node.MarkerIcon,
             MarkerTone = node.MarkerTone,
             MarkerLabel = node.MarkerLabel,
+            MarkersJson = node.MarkersJson,
             Priority = node.Priority,
             MetadataJson = node.MetadataJson,
             ParentNodeKey = node.ParentNodeKey,
@@ -67,7 +65,23 @@ public sealed class ProjectWorkbenchLifecycleService(
             DurationSeconds = node.DurationSeconds,
             IsSystemManaged = node.IsSystemManaged,
             CreatedAtUtc = node.CreatedAtUtc,
-            UpdatedAtUtc = node.UpdatedAtUtc
+            UpdatedAtUtc = node.UpdatedAtUtc,
+            Binding = node.Binding,
+            NodeReferences = new ProjectNodeReferenceSet
+            {
+                MeetingParticipantIds = node.NodeReferences.MeetingParticipantIds.ToList(),
+                RecordingMeetingNodeId = node.NodeReferences.RecordingMeetingNodeId,
+                RecordingTranscriptNodeId = node.NodeReferences.RecordingTranscriptNodeId,
+                TranscriptRecordingNodeId = node.NodeReferences.TranscriptRecordingNodeId,
+                TranscriptProviderProfileId = node.NodeReferences.TranscriptProviderProfileId,
+                ParticipantParentNodeId = node.NodeReferences.ParticipantParentNodeId,
+                WorkItemAssigneeNodeId = node.NodeReferences.WorkItemAssigneeNodeId,
+                WorkItemRepositoryResourceId = node.NodeReferences.WorkItemRepositoryResourceId,
+                RepositoryResourceId = node.NodeReferences.RepositoryResourceId,
+                EnvironmentRepositoryResourceId = node.NodeReferences.EnvironmentRepositoryResourceId,
+                InfrastructureSecretReferenceId = node.NodeReferences.InfrastructureSecretReferenceId,
+                InfrastructureStorageCatalogId = node.NodeReferences.InfrastructureStorageCatalogId
+            }
         };
 
         node.ObjectType = request.TargetObjectType;
@@ -82,11 +96,13 @@ public sealed class ProjectWorkbenchLifecycleService(
             sourceSnapshot.MetadataJson,
             node.Notes,
             null);
-        node.ExternalArtifactKind = node.ObjectType.ToString();
-        if (string.IsNullOrWhiteSpace(node.Route))
+        node.Binding = node.Binding with
         {
-            node.Route = $"/projects/{projectId}/structure";
-        }
+            Route = string.IsNullOrWhiteSpace(node.Binding.Route)
+                ? $"/projects/{projectId}/structure"
+                : node.Binding.Route,
+            ExternalArtifactKind = node.ObjectType.ToString()
+        };
 
         var now = clock.GetUtcNow();
         node.UpdatedAtUtc = now;
@@ -94,7 +110,7 @@ public sealed class ProjectWorkbenchLifecycleService(
         ProjectNodeBindingStorage.Apply(node, bindingPlan);
         await dbContext.Set<ProjectNodeLifecycleEventRecord>()
             .AddAsync(
-                ProjectNodeLifecycleHistory.CaptureReclassification(
+                ProjectNodeTransitionHistory.CaptureReclassification(
                     projectId,
                     sourceSnapshot,
                     sourceDescriptor,

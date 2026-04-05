@@ -82,6 +82,21 @@ public sealed class ProjectStructureProjectionContext(
         node.Subtitle ??= string.Empty;
         node.Status ??= string.Empty;
         node.Notes ??= string.Empty;
+        node.Binding = new ProjectNodeBindingState(
+            string.IsNullOrWhiteSpace(node.Binding.Route) ? node.Route : node.Binding.Route,
+            string.IsNullOrWhiteSpace(node.Binding.ExternalArtifactKind) ? node.ExternalArtifactKind : node.Binding.ExternalArtifactKind,
+            node.Binding.ExternalArtifactId ?? node.ExternalArtifactId,
+            string.IsNullOrWhiteSpace(node.Binding.MediaRelativePath) ? node.MediaRelativePath : node.Binding.MediaRelativePath,
+            string.IsNullOrWhiteSpace(node.Binding.MediaContentType) ? node.MediaContentType : node.Binding.MediaContentType,
+            string.IsNullOrWhiteSpace(node.Binding.MediaOriginalFileName) ? node.MediaOriginalFileName : node.Binding.MediaOriginalFileName,
+            string.IsNullOrWhiteSpace(node.Binding.StorageObjectReferenceJson) ? node.StorageObjectReferenceJson : node.Binding.StorageObjectReferenceJson);
+        node.MarkersJson = ProjectNodeMarkerState.ResolveLegacyJson(
+            node.MarkersJson,
+            node.MarkerIcon,
+            node.MarkerTone,
+            node.MarkerLabel,
+            node.MetadataJson);
+        ProjectNodeMarkerState.HydrateLegacyFields(node);
 
         if (layoutOverrides.TryGetValue(node.NodeKey, out var layout))
         {
@@ -140,6 +155,15 @@ public sealed class ProjectStructureAssemblyService(
             .Where(item => item.ProjectId == projectId && !item.IsSystemManaged)
             .ToListAsync(cancellationToken);
         await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, canonicalNodes, cancellationToken);
+        foreach (var canonicalNode in canonicalNodes)
+        {
+            dbContext.Entry(canonicalNode).State = EntityState.Unchanged;
+        }
+        await ProjectNodeMarkerState.NormalizeAndHydrateAsync(dbContext, canonicalNodes, cancellationToken);
+        foreach (var canonicalNode in canonicalNodes)
+        {
+            dbContext.Entry(canonicalNode).State = EntityState.Unchanged;
+        }
         var persistedUserLinks = await dbContext.Set<ProjectObjectLinkRecord>()
             .Where(item => item.ProjectId == projectId && !item.IsSystemManaged)
             .ToListAsync(cancellationToken);

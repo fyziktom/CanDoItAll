@@ -200,6 +200,29 @@ internal static class LegacySqliteMigrationBootstrap
             _ when migrationId.Contains("AddCrmHrFoundation", StringComparison.Ordinal) =>
                 HasTable(schemaSnapshot, "CrmHr_Parties")
                 && HasTable(schemaSnapshot, "CrmHr_LookupOptions"),
+            _ when migrationId.Contains("AddCrmHrAccountsAndInteractions", StringComparison.Ordinal) =>
+                HasTable(schemaSnapshot, "CrmHr_AccountProfiles")
+                && HasTable(schemaSnapshot, "CrmHr_AccountStakeholders"),
+            _ when migrationId.Contains("AddCrmHrCrossModuleResponsibleParties", StringComparison.Ordinal) =>
+                HasColumn(schemaSnapshot, "Validation_Runs", "ResponsiblePartyId")
+                && HasColumn(schemaSnapshot, "TestLab_TestPlans", "ResponsiblePartyId")
+                && HasColumn(schemaSnapshot, "Resources_ProjectResources", "OwnerPartyId")
+                && HasColumn(schemaSnapshot, "Resources_ProjectResources", "MaintainerPartyId"),
+            _ when migrationId.Contains("AddWorkbenchProjectionLayouts", StringComparison.Ordinal) =>
+                HasTable(schemaSnapshot, "Workbench_ProjectProjectionLayouts"),
+            _ when migrationId.Contains("AddProjectNodeBindings", StringComparison.Ordinal) =>
+                HasTable(schemaSnapshot, "Workbench_ProjectNodeBindings")
+                && HasTable(schemaSnapshot, "Workbench_ProjectNodeReferences"),
+            _ when migrationId.Contains("AddProjectNodeLifecycleEvents", StringComparison.Ordinal) =>
+                HasTable(schemaSnapshot, "Workbench_ProjectNodeLifecycleEvents"),
+            _ when migrationId.Contains("AddConnectorPluginPlatformAndCrossModuleMutations", StringComparison.Ordinal) =>
+                HasColumn(schemaSnapshot, "Workspace_ProviderProfiles", "ConnectorPluginKey")
+                && HasColumn(schemaSnapshot, "Workspace_ProviderProfiles", "ConfigSchemaVersion")
+                && HasColumn(schemaSnapshot, "Resources_ProjectResources", "ConnectorPluginKey")
+                && HasColumn(schemaSnapshot, "Resources_ProjectResources", "ConfigSchemaVersion")
+                && HasTable(schemaSnapshot, "Workbench_ProjectCrossModuleMutations"),
+            _ when migrationId.Contains("AddProjectObjectMarkersJson", StringComparison.Ordinal) =>
+                HasColumn(schemaSnapshot, "Workbench_ProjectObjects", "MarkersJson"),
             _ => false
         };
     }

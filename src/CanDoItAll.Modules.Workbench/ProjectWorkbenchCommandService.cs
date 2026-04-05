@@ -101,27 +101,47 @@ public sealed class ProjectWorkbenchCommandService(
         ProjectObjectRecord node,
         CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(node.Route) &&
-            node.Route.StartsWith("/prompt-factory", StringComparison.OrdinalIgnoreCase))
+        var effectiveRoute = ResolveEffectiveRoute(node);
+        if (!string.IsNullOrWhiteSpace(effectiveRoute) &&
+            effectiveRoute.StartsWith("/prompt-factory", StringComparison.OrdinalIgnoreCase))
         {
-            node.ExternalArtifactKind = "prompt-session";
-            if (!node.ExternalArtifactId.HasValue &&
-                TryResolvePromptFactorySessionId(node.Route, out var existingSessionId))
+            var resolvedSessionId = node.Binding.ExternalArtifactId ?? node.ExternalArtifactId;
+            if (!resolvedSessionId.HasValue &&
+                TryResolvePromptFactorySessionId(effectiveRoute, out var routeSessionId))
             {
-                node.ExternalArtifactId = existingSessionId;
+                resolvedSessionId = routeSessionId;
             }
 
+            ApplyPromptSessionBinding(node, effectiveRoute, resolvedSessionId);
             node.UpdatedAtUtc = clock.GetUtcNow();
             return BuildArtifactReference(node, projectId);
         }
 
         var phase = await ResolvePromptFlowPhaseAsync(dbContext, projectId, node, cancellationToken);
         var sessionId = await promptFactoryService.CreateBlankProjectSessionAsync(projectId, node.Title, phase, cancellationToken);
-        node.Route = $"/prompt-factory?sessionId={sessionId}";
-        node.ExternalArtifactKind = "prompt-session";
-        node.ExternalArtifactId = sessionId;
+        ApplyPromptSessionBinding(node, $"/prompt-factory?sessionId={sessionId}", sessionId);
         node.UpdatedAtUtc = clock.GetUtcNow();
         return BuildArtifactReference(node, projectId);
+    }
+
+    private static string ResolveEffectiveRoute(ProjectObjectRecord node)
+    {
+        return !string.IsNullOrWhiteSpace(node.Binding.Route)
+            ? node.Binding.Route
+            : node.Route;
+    }
+
+    private static void ApplyPromptSessionBinding(ProjectObjectRecord node, string route, Guid? sessionId)
+    {
+        node.Binding = node.Binding with
+        {
+            Route = route,
+            ExternalArtifactKind = "prompt-session",
+            ExternalArtifactId = sessionId
+        };
+        node.Route = route;
+        node.ExternalArtifactKind = "prompt-session";
+        node.ExternalArtifactId = sessionId;
     }
 
     private static ArtifactReference? BuildArtifactReference(ProjectObjectRecord node, Guid projectId)

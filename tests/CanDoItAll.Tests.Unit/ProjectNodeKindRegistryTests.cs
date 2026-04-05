@@ -32,13 +32,6 @@ public sealed class ProjectNodeKindRegistryTests
     {
         var metadata = new ProjectObjectMetadataEnvelope
         {
-            MarkerSet = new ProjectMarkerSetMetadata
-            {
-                Markers =
-                [
-                    new ProjectNodeMarker("question", "accent", "Question")
-                ]
-            },
             WorkItem = new ProjectWorkItemMetadata
             {
                 WorkItemKind = ProjectWorkItemKind.Task,
@@ -52,10 +45,8 @@ public sealed class ProjectNodeKindRegistryTests
         Assert.NotNull(normalizedWorkItem.WorkItem);
         Assert.Equal(ProjectWorkItemKind.Payment, normalizedWorkItem.WorkItem!.WorkItemKind);
         Assert.Equal("Keep description", normalizedWorkItem.WorkItem.Description);
-        Assert.NotNull(normalizedWorkItem.MarkerSet);
 
         Assert.Null(normalizedDecision.WorkItem);
-        Assert.NotNull(normalizedDecision.MarkerSet);
     }
 
     [Fact]

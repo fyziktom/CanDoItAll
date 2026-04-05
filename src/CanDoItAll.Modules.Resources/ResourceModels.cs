@@ -8,20 +8,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.Resources;
 
-public enum ResourceKind
-{
-    Folder,
-    File,
-    WebLink,
-    Ftp,
-    PowerShellScript,
-    Repository,
-    DockerCompose,
-    Ssh,
-    SecretLink,
-    PromptLink
-}
-
 public enum ResourceValidationStatus
 {
     Unknown,

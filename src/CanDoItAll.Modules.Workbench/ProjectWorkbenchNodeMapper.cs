@@ -78,7 +78,7 @@ internal static class ProjectWorkbenchNodeMapper
             badges.Add(ProjectNodeKindRegistry.ResolveSubtypeBadge(record.ObjectType, record.ObjectSubtype));
         }
 
-        if (!string.IsNullOrWhiteSpace(record.MediaOriginalFileName))
+        if (!string.IsNullOrWhiteSpace(record.Binding.MediaOriginalFileName))
         {
             badges.Add("Uploaded");
         }
@@ -102,8 +102,7 @@ internal static class ProjectWorkbenchNodeMapper
         }
 
         var metadataJson = string.IsNullOrWhiteSpace(record.MetadataJson) ? "{}" : record.MetadataJson;
-        var metadata = ProjectObjectMetadataSerializer.Parse(metadataJson);
-        var markers = ProjectObjectMetadataSerializer.ResolveMarkers(metadata, record.MarkerIcon, record.MarkerTone, record.MarkerLabel);
+        var markers = ProjectNodeMarkerState.Parse(record.MarkersJson);
         var primaryMarker = ProjectObjectMetadataSerializer.ResolvePrimaryMarker(markers);
 
         return new ProjectStructureNode(
@@ -115,12 +114,12 @@ internal static class ProjectWorkbenchNodeMapper
             record.Subtitle,
             record.Status,
             record.Notes,
-            record.Route,
-            record.ExternalArtifactKind,
-            record.ExternalArtifactId,
-            record.MediaRelativePath,
-            record.MediaContentType,
-            record.MediaOriginalFileName,
+            record.Binding.Route,
+            record.Binding.ExternalArtifactKind,
+            record.Binding.ExternalArtifactId,
+            record.Binding.MediaRelativePath,
+            record.Binding.MediaContentType,
+            record.Binding.MediaOriginalFileName,
             record.PositionX,
             record.PositionY,
             profile,
@@ -135,10 +134,30 @@ internal static class ProjectWorkbenchNodeMapper
             record.StartUtc,
             record.EndUtc,
             metadataJson,
-            record.StorageObjectReferenceJson,
+            record.Binding.StorageObjectReferenceJson,
             projectRole,
             relatedProjectId,
             parentProjectCount,
-            record.DurationSeconds);
+            record.DurationSeconds,
+            CloneReferenceSet(record.NodeReferences));
+    }
+
+    private static ProjectNodeReferenceSet CloneReferenceSet(ProjectNodeReferenceSet referenceSet)
+    {
+        return new ProjectNodeReferenceSet
+        {
+            MeetingParticipantIds = referenceSet.MeetingParticipantIds.ToList(),
+            RecordingMeetingNodeId = referenceSet.RecordingMeetingNodeId,
+            RecordingTranscriptNodeId = referenceSet.RecordingTranscriptNodeId,
+            TranscriptRecordingNodeId = referenceSet.TranscriptRecordingNodeId,
+            TranscriptProviderProfileId = referenceSet.TranscriptProviderProfileId,
+            ParticipantParentNodeId = referenceSet.ParticipantParentNodeId,
+            WorkItemAssigneeNodeId = referenceSet.WorkItemAssigneeNodeId,
+            WorkItemRepositoryResourceId = referenceSet.WorkItemRepositoryResourceId,
+            RepositoryResourceId = referenceSet.RepositoryResourceId,
+            EnvironmentRepositoryResourceId = referenceSet.EnvironmentRepositoryResourceId,
+            InfrastructureSecretReferenceId = referenceSet.InfrastructureSecretReferenceId,
+            InfrastructureStorageCatalogId = referenceSet.InfrastructureStorageCatalogId
+        };
     }
 }

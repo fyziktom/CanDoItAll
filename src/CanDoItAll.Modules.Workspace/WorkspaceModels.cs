@@ -7,13 +7,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.Workspace;
 
-public enum ProviderKind
-{
-    OpenAi,
-    OllamaLocal,
-    OllamaRemote
-}
-
 public sealed class WorkspaceSettings
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -308,13 +301,17 @@ public sealed partial class WorkspaceService(
         entity.ConfigSchemaVersion = configSchemaVersion;
         entity.BaseUrl = model.BaseUrl.Trim().TrimEnd('/');
         entity.ApiKeySecretId = model.ApiKeySecretId;
-        entity.DefaultModel = ResolveDefaultModel(model);
+        entity.DefaultModel = ResolveDefaultModel(model, providerPlugin.Manifest.PluginKey);
         entity.TimeoutSeconds = Math.Max(5, model.TimeoutSeconds);
         entity.IsEnabled = model.IsEnabled;
-        entity.SupportsStreaming = model.ProviderKind == ProviderKind.OpenAi || model.SupportsStreaming;
-        entity.SupportsToolCalling = model.ProviderKind == ProviderKind.OpenAi || model.SupportsToolCalling;
-        entity.SupportsStructuredOutput = model.ProviderKind == ProviderKind.OpenAi || model.SupportsStructuredOutput;
-        entity.SupportsVision = model.ProviderKind == ProviderKind.OpenAi && model.SupportsVision;
+        var isOpenAiPlugin = string.Equals(
+            providerPlugin.Manifest.PluginKey,
+            OpenAiProviderAdapter.PluginKey,
+            StringComparison.OrdinalIgnoreCase);
+        entity.SupportsStreaming = isOpenAiPlugin || model.SupportsStreaming;
+        entity.SupportsToolCalling = isOpenAiPlugin || model.SupportsToolCalling;
+        entity.SupportsStructuredOutput = isOpenAiPlugin || model.SupportsStructuredOutput;
+        entity.SupportsVision = isOpenAiPlugin && model.SupportsVision;
         entity.ExtraSettingsJson = string.IsNullOrWhiteSpace(model.ExtraSettingsJson) ? "{}" : model.ExtraSettingsJson;
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -410,17 +407,17 @@ public sealed partial class WorkspaceService(
         SupportsStructuredOutput = true
     };
 
-    private static string ResolveDefaultModel(ProviderProfileEditorModel model)
+    private static string ResolveDefaultModel(ProviderProfileEditorModel model, string pluginKey)
     {
         if (!string.IsNullOrWhiteSpace(model.DefaultModel))
         {
             return model.DefaultModel.Trim();
         }
 
-        return model.ProviderKind switch
+        return pluginKey.Trim() switch
         {
-            ProviderKind.OpenAi => "gpt-4.1",
-            ProviderKind.OllamaLocal or ProviderKind.OllamaRemote => "llama3.1",
+            OpenAiProviderAdapter.PluginKey => "gpt-4.1",
+            OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => "llama3.1",
             _ => "unknown"
         };
     }

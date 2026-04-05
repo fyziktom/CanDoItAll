@@ -159,17 +159,17 @@ public partial class ProjectStructurePage
             switch (selectedNode.ObjectType)
             {
                 case ProjectObjectType.Participant:
-                    partyEditor.SelectedPartyId = ResolvePrimaryNodeAssignment(selectedNode.Id, ResolveNodeAssignmentRoles(selectedNode))?.PartyId;
+                    partyEditor.SelectedPartyId = ResolvePrimaryNodeAssignment(selectedNode.Id, GetNodeAssignmentRoles(selectedNode))?.PartyId;
                     partyEditor.KeepProjectLocalOnly = !partyEditor.SelectedPartyId.HasValue;
                     break;
                 case ProjectObjectType.Meeting:
-                    foreach (var item in ResolveNodeAssignments(selectedNode.Id, ResolveNodeAssignmentRoles(selectedNode)))
+                    foreach (var item in ResolveNodeAssignments(selectedNode.Id, GetNodeAssignmentRoles(selectedNode)))
                     {
                         partyEditor.SelectedMeetingPartyIds.Add(item.PartyId);
                     }
                     break;
                 case ProjectObjectType.WorkItem:
-                    partyEditor.SelectedPartyId = ResolvePrimaryNodeAssignment(selectedNode.Id, ResolveNodeAssignmentRoles(selectedNode))?.PartyId;
+                    partyEditor.SelectedPartyId = ResolvePrimaryNodeAssignment(selectedNode.Id, GetNodeAssignmentRoles(selectedNode))?.PartyId;
                     break;
             }
         }
@@ -253,7 +253,7 @@ public partial class ProjectStructurePage
             metadata.Participant ??= new ProjectParticipantMetadata();
             if (partyEditor.KeepProjectLocalOnly || !partyEditor.SelectedPartyId.HasValue)
             {
-                if (!await ReplaceNodeAssignmentsAsync(selectedNode.Id, [], ResolveNodeAssignmentRoles(selectedNode)))
+                if (!await ReplaceNodeAssignmentsAsync(selectedNode.Id, [], GetNodeAssignmentRoles(selectedNode)))
                 {
                     return;
                 }
@@ -286,13 +286,13 @@ public partial class ProjectStructurePage
                         {
                             ProjectId = ProjectId,
                             PartyId = option.PartyId,
-                            Role = ResolvePreferredNodeAssignmentRole(selectedNode),
+                            Role = GetPreferredNodeAssignmentRole(selectedNode),
                             NodeKey = selectedNode.Id,
                             IsPrimary = true,
                             Source = "project-structure"
                         }
                     ],
-                    ResolveNodeAssignmentRoles(selectedNode)))
+                    GetNodeAssignmentRoles(selectedNode)))
             {
                 return;
             }
@@ -332,8 +332,8 @@ public partial class ProjectStructurePage
         {
             var metadata = ProjectObjectMetadataSerializer.Parse(selectedNode.MetadataJson);
             metadata.Meeting ??= new ProjectMeetingMetadata();
-            var assignmentRoles = ResolveNodeAssignmentRoles(selectedNode);
-            var preferredRole = ResolvePreferredNodeAssignmentRole(selectedNode);
+            var assignmentRoles = GetNodeAssignmentRoles(selectedNode);
+            var preferredRole = GetPreferredNodeAssignmentRole(selectedNode);
             var selectedOptions = partyEditorOptions
                 .Where(option => partyEditor.SelectedMeetingPartyIds.Contains(option.PartyId))
                 .ToList();
@@ -375,8 +375,8 @@ public partial class ProjectStructurePage
         {
             var metadata = ProjectObjectMetadataSerializer.Parse(selectedNode.MetadataJson);
             metadata.WorkItem ??= new ProjectWorkItemMetadata();
-            var assignmentRoles = ResolveNodeAssignmentRoles(selectedNode);
-            var preferredRole = ResolvePreferredNodeAssignmentRole(selectedNode);
+            var assignmentRoles = GetNodeAssignmentRoles(selectedNode);
+            var preferredRole = GetPreferredNodeAssignmentRole(selectedNode);
             if (!partyEditor.SelectedPartyId.HasValue)
             {
                 if (!await ReplaceNodeAssignmentsAsync(selectedNode.Id, [], assignmentRoles))
@@ -485,12 +485,12 @@ public partial class ProjectStructurePage
         return NodeAssignmentPolicyBridge.Resolve(node.ObjectType, node.ObjectSubtype);
     }
 
-    private IReadOnlyList<ProjectPartyAssignmentRole> ResolveNodeAssignmentRoles(ProjectStructureNode node)
+    private IReadOnlyList<ProjectPartyAssignmentRole> GetNodeAssignmentRoles(ProjectStructureNode node)
     {
         return ResolveNodeAssignmentSemantics(node).ReplacementRoles;
     }
 
-    private ProjectPartyAssignmentRole ResolvePreferredNodeAssignmentRole(ProjectStructureNode node)
+    private ProjectPartyAssignmentRole GetPreferredNodeAssignmentRole(ProjectStructureNode node)
     {
         return ResolveNodeAssignmentSemantics(node).PreferredRole ?? ProjectPartyAssignmentRole.TeamMember;
     }

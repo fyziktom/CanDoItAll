@@ -23,6 +23,7 @@ internal static class ProjectStructureCreateRequestComposer
             .GroupBy(item => item.Key.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Last().Value?.Trim() ?? string.Empty, StringComparer.OrdinalIgnoreCase);
         var metadata = new ProjectObjectMetadataEnvelope();
+        var nodeReferences = new ProjectNodeReferenceSet();
         var pendingLinks = new List<ProjectStructurePendingLink>();
         var notes = ResolveNotes(definition, request, inputValues);
         var startUtc = ParseDateTimeOffset(inputValues, "startUtc");
@@ -66,17 +67,15 @@ internal static class ProjectStructureCreateRequestComposer
                     Role = GetValue(inputValues, "role"),
                     Organization = GetValue(inputValues, "organization"),
                     Email = GetValue(inputValues, "email"),
-                    Phone = GetValue(inputValues, "phone"),
-                    ParentParticipantArtifactId = ParseNodeGuid(inputValues, "parentParticipantRef")
+                    Phone = GetValue(inputValues, "phone")
                 };
+                nodeReferences.ParticipantParentNodeId = ParseNodeGuid(inputValues, "parentParticipantRef");
                 AddLinkIfPresent(pendingLinks, inputValues, "parentParticipantRef", ProjectObjectLinkKind.BelongsTo);
                 break;
             case ProjectObjectType.WorkItem:
                 metadata.WorkItem = new ProjectWorkItemMetadata
                 {
                     WorkItemKind = ParseEnum(inputValues, "workItemKind", ProjectNodeKindRegistry.ResolveWorkItemKind(subtype)),
-                    AssigneeParticipantArtifactId = ParseNodeGuid(inputValues, "assigneeRef"),
-                    RepositoryResourceId = ParseNodeGuid(inputValues, "repositoryRef"),
                     SendKind = TryParseNullableEnum<ProjectSendKind>(inputValues, "sendKind"),
                     DeliveryChannel = ParseEnum(inputValues, "deliveryChannel", ProjectMessageChannel.None),
                     Amount = ParseDecimalNullable(inputValues, "amount"),
@@ -84,6 +83,8 @@ internal static class ProjectStructureCreateRequestComposer
                     Description = notes,
                     DueUtc = ParseDateTimeOffset(inputValues, "dueUtc")
                 };
+                nodeReferences.WorkItemAssigneeNodeId = ParseNodeGuid(inputValues, "assigneeRef");
+                nodeReferences.WorkItemRepositoryResourceId = ParseNodeGuid(inputValues, "repositoryRef");
                 AddLinkIfPresent(pendingLinks, inputValues, "assigneeRef", ProjectObjectLinkKind.Uses);
                 AddLinkIfPresent(pendingLinks, inputValues, "repositoryRef", ProjectObjectLinkKind.Uses);
                 break;
@@ -94,9 +95,9 @@ internal static class ProjectStructureCreateRequestComposer
                     RepositoryUrl = GetValue(inputValues, "repositoryUrl"),
                     LocalPath = GetValue(inputValues, "localPath"),
                     DefaultBranch = GetValue(inputValues, "defaultBranch"),
-                    RelativePath = GetValue(inputValues, "relativePath"),
-                    ResourceId = ParseNodeGuid(inputValues, "resourceRef")
+                    RelativePath = GetValue(inputValues, "relativePath")
                 };
+                nodeReferences.RepositoryResourceId = ParseNodeGuid(inputValues, "resourceRef");
                 break;
             case ProjectObjectType.File:
                 metadata.File = new ProjectFileMetadata
@@ -130,9 +131,9 @@ internal static class ProjectStructureCreateRequestComposer
                     ProjectPath = GetValue(inputValues, "projectPath"),
                     LaunchProfileName = GetValue(inputValues, "launchProfileName"),
                     RuntimeProtocol = ParseEnum(inputValues, "runtimeProtocol", ProjectRuntimeProtocol.Https),
-                    LocalhostUrl = GetValue(inputValues, "localhostUrl"),
-                    RepositoryResourceId = ParseNodeGuid(inputValues, "repositoryRef")
+                    LocalhostUrl = GetValue(inputValues, "localhostUrl")
                 };
+                nodeReferences.EnvironmentRepositoryResourceId = ParseNodeGuid(inputValues, "repositoryRef");
                 AddLinkIfPresent(pendingLinks, inputValues, "repositoryRef", ProjectObjectLinkKind.Uses);
                 break;
             case ProjectObjectType.Infrastructure:
@@ -158,13 +159,13 @@ internal static class ProjectStructureCreateRequestComposer
                     DatabaseType = GetValue(inputValues, "databaseType"),
                     ConnectionReference = GetValue(inputValues, "connectionReference"),
                     FolderPath = GetValue(inputValues, "folderPath"),
-                    StorageCatalogId = ParseGuid(inputValues, "storageCatalogId"),
                     StoragePurpose = GetValue(inputValues, "storagePurpose"),
                     StoragePathPrefix = GetValue(inputValues, "storagePathPrefix"),
                     AiReferenceKind = TryParseNullableEnum<ProjectAiReferenceKind>(inputValues, "aiReferenceKind"),
-                    AiReferenceUrl = GetValue(inputValues, "aiReferenceUrl"),
-                    SecretReferenceArtifactId = ParseNodeGuid(inputValues, "secretRef")
+                    AiReferenceUrl = GetValue(inputValues, "aiReferenceUrl")
                 };
+                nodeReferences.InfrastructureStorageCatalogId = ParseGuid(inputValues, "storageCatalogId");
+                nodeReferences.InfrastructureSecretReferenceId = ParseNodeGuid(inputValues, "secretRef");
                 AddLinkIfPresent(pendingLinks, inputValues, "secretRef", ProjectObjectLinkKind.Uses);
                 break;
             case ProjectObjectType.Link:
@@ -193,7 +194,9 @@ internal static class ProjectStructureCreateRequestComposer
                 request.UploadedFile is null
                     ? null
                     : new ProjectObjectMediaPayload(request.UploadedFile.FileName, request.UploadedFile.ContentType, request.UploadedFile.Base64Data),
-                metadataJson),
+                metadataJson,
+                null,
+                nodeReferences.IsEmpty ? null : nodeReferences),
             pendingLinks);
     }
 

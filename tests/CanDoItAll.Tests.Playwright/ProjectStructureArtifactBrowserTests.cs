@@ -216,10 +216,13 @@ public sealed partial class AppSmokeTests
         await structureToolboxSearch.FillAsync(string.Empty);
 
         await EnsureCanvasSelectionAsync(page, SelectorForNodeId(recordingId));
-        await OpenCanvasContextMenuAsync(page, SelectorForNodeId(recordingId));
-        await page.WaitForSelectorAsync(".cw-context-menu__action[data-action-id='transcript:create']");
+        await OpenNodeQuickActionsAsync(page, SelectorForNodeId(recordingId));
+        var quickActionsDialog = page.GetByTestId("project-structure-node-quick-actions");
+        await quickActionsDialog.WaitForAsync();
+        await quickActionsDialog.GetByTestId("project-structure-quick-action-primary").WaitForAsync();
         await CaptureWorkbenchShellAsync(page, Path.Combine(i04Root, "01-primary-state.png"));
-        await page.Keyboard.PressAsync("Escape");
+        await quickActionsDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
+        await page.WaitForFunctionAsync("() => !document.querySelector('[data-testid=\"project-structure-node-quick-actions\"]')");
 
         await EnsureCanvasSelectionAsync(page, SelectorForNodeId(transcriptId));
         await page.GetByTestId("project-structure-selection-window").WaitForAsync();
@@ -268,7 +271,9 @@ public sealed partial class AppSmokeTests
         await CaptureWorkbenchShellAsync(page, Path.Combine(i17Root, "04-reconnect-result.png"));
 
         await SelectStructureOutlineNodeAsync(page, "Canvas editor rollout");
-        await page.GetByRole(AriaRole.Button, new() { Name = "Delete", Exact = true }).ClickAsync();
+        await page.GetByTestId("project-structure-node-actions")
+            .GetByRole(AriaRole.Button, new() { Name = "Delete", Exact = true })
+            .ClickAsync();
         var deleteDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Delete Canvas editor rollout" });
         await deleteDialog.WaitForAsync();
         await CaptureLocatorAsync(deleteDialog, Path.Combine(i17Root, "02-secondary-state.png"));
@@ -310,11 +315,21 @@ public sealed partial class AppSmokeTests
         await CaptureLocatorAsync(summaryDialog, Path.Combine(i19Root, "02-secondary-state.png"));
 
         await summaryDialog.GetByRole(AriaRole.Button, new() { Name = "Export XLSX", Exact = true }).ClickAsync();
-        await WaitForSceneNodeTitleAsync(page, "Canvas editor rollout progress workbook");
-        await summaryDialog.GetByRole(AriaRole.Button, new() { Name = "Export Gantt", Exact = true }).ClickAsync();
-        await WaitForSceneNodeTitleAsync(page, "Canvas editor rollout gantt");
+        Assert.True(
+            await WaitForNodeTitleInStateAsync(page, "Canvas editor rollout progress workbook", timeoutMs: 15_000),
+            "Expected the workbook export node to exist in canvas state.");
+        await page.GetByText("was exported as an Excel attachment.", new() { Exact = false }).WaitForAsync();
         await summaryDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
-        await FocusCanvasRootAsync(page);
+        await SelectStructureOutlineNodeAsync(page, "Canvas editor rollout");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Summary", Exact = true }).ClickAsync();
+        await summaryDialog.WaitForAsync();
+        await summaryDialog.GetByRole(AriaRole.Button, new() { Name = "Export Gantt", Exact = true }).ClickAsync();
+        Assert.True(
+            await WaitForNodeTitleInStateAsync(page, "Canvas editor rollout gantt", timeoutMs: 15_000),
+            "Expected the Gantt export node to exist in canvas state.");
+        await page.GetByText("was exported as a Mermaid Gantt node.", new() { Exact = false }).WaitForAsync();
+        await summaryDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
+        await SelectStructureOutlineNodeAsync(page, "Canvas editor rollout gantt");
         await SetCanvasZoomPercentAsync(page, 52);
         await page.WaitForTimeoutAsync(250);
         await CaptureCanvasSurfaceAsync(page, Path.Combine(i19Root, "03-interaction-result.png"));

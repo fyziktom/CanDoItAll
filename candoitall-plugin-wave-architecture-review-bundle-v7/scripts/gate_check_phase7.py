@@ -67,12 +67,18 @@ def main() -> int:
         "StorageObjectReferenceJson",
     ]
     missing = []
-    carrier_block = wb_text.split("public sealed class ProjectObjectRecord", 1)[1].split("internal sealed class ProjectObjectRecordConfiguration", 1)[0]
-    remaining_banned = [field for field in banned_carrier_fields if re.search(rf"\b{re.escape(field)}\b", carrier_block)]
-    if remaining_banned:
-        fail(failures, "G2 FAIL - The node carrier still owns overloaded binding/projection fields: " + ", ".join(remaining_banned))
+    carrier_match = re.search(
+        r"public\s+sealed(?:\s+partial)?\s+class\s+ProjectObjectRecord(?P<body>[\s\S]*?)internal\s+sealed\s+class\s+ProjectObjectRecordConfiguration",
+        wb_text)
+    if carrier_match is None:
+        fail(failures, "G2 FAIL - Unable to locate the ProjectObjectRecord declaration block in ProjectWorkbenchModels.cs.")
     else:
-        pass_msg(passes, "G2 PASS - The carrier no longer exposes the overloaded binding/projection fields checked by this gate.")
+        carrier_block = carrier_match.group("body")
+        remaining_banned = [field for field in banned_carrier_fields if re.search(rf"\b{re.escape(field)}\b", carrier_block)]
+        if remaining_banned:
+            fail(failures, "G2 FAIL - The node carrier still owns overloaded binding/projection fields: " + ", ".join(remaining_banned))
+        else:
+            pass_msg(passes, "G2 PASS - The carrier no longer exposes the overloaded binding/projection fields checked by this gate.")
 
     # G3: Node-kind registry and capability rules
     registry_files = find_file(src, "*ProjectNodeKindRegistry*.cs") + find_file(src, "*NodeKindRegistry*.cs")

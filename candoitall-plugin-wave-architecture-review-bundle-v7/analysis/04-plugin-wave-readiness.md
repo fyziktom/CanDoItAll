@@ -1,44 +1,26 @@
-# Plugin-wave readiness
+# Plugin-Wave Readiness
 
-## Decision
+## Verdict
 
-**NO-GO**
+**GO with guarded rollout**
 
-The current branch is still not a safe base for the next big connector/plugin wave.
+The current branch is now a viable base for the next connector and plugin wave, but the rollout should stay disciplined around the new seams and guardrails that Phase 7 introduced.
 
-## Hard blockers
+## Reasoning
 
-- P7-001 - Workbench still persists synchronized cross-module projection nodes and links as a second truth
-- P7-002 - The universal node carrier is still overloaded instead of being a stable carrier plus typed facets and bindings
-- P7-003 - Node-kind semantics and node-scoped capability rules are still fragmented and hardcoded
-- P7-004 - Node reclassification still mutates in place without transition history or facet supersession
-- P7-005 - Hierarchy is still dual-represented through ParentNodeKey and generic link rows
-- P7-006 - Workbench metadata still carries foreign identifiers and keeps dual marker truth
-- P7-007 - Provider/resource/connector architecture is still a closed enum-and-switch seam
-- P7-010 - There is still no hard architecture closure mechanism preventing the same blockers from being reintroduced
+| Dimension | Verdict | Why |
+| --- | --- | --- |
+| Canonical truth | Pass | The hard-gate script now reports `G1 PASS`, and the active Workbench model no longer keeps SyncGraph-style persisted projection truth. |
+| Universal node stability | Pass | Carrier overload was split into typed bindings, legacy carrier storage, explicit marker state, and dedicated transition history. |
+| Kind and capability semantics | Pass | `ProjectNodeKindRegistry` is the central rule source for node-scoped capability and assignment semantics. |
+| Reclassification and lifecycle | Pass | Reclassification now has explicit transition-history support instead of mutating the active node kind without history. |
+| Editable hierarchy | Pass | Editable hierarchy now stays canonical to `ParentNodeKey`, and the phase7 gate no longer finds duplicate persisted hierarchy truth. |
+| Metadata and marker truth | Pass | Foreign-id helper leakage was removed from active Workbench metadata and marker truth no longer falls back through legacy columns. |
+| Plugin platform seam | Pass | Connector manifests and plugin-platform descriptors replaced the old enum-and-switch extensibility boundary. |
+| Cross-module mutation safety | Conditional pass | The mutation path is explicit and covered, but it remains a durable compensation model rather than an atomic cross-module transaction. |
+| Guardrail enforcement | Pass | `PluginWaveArchitectureGuardrailTests` plus `gate_check_phase7.py` now provide repeatable closure checks for the repeated blockers. |
+| Runtime proof depth | Guarded | The relevant targeted validation passed, but the full Playwright project did not complete within the available timeout budget. |
 
-## Conditional blocker
+## Safe Conclusion
 
-- P7-008 - Cross-module mutation boundaries are still compensation-based and not ready for outbound connector side effects
-
-## Watch items
-
-- P7-009 - Workbench and CRM/HR service hotspots remain too large and multi-responsibility
-
-## Key reason
-
-The system is still too willing to treat projections, metadata helpers, and closed integration enums as if they were stable architecture. That is exactly the wrong base for a large connector wave.
-
-## What is allowed right now
-
-- small local bug fixes
-- narrow UX polishing
-- tests and guardrails
-- isolated refactor work that closes the hard blockers
-
-## What is not allowed right now
-
-- large email connector work
-- LinkedIn connector work
-- general custom API plugin platform work
-- any new feature that depends on the current closed ProviderKind / ResourceKind seam
+The architecture is now strong enough to continue into the external connector wave, provided future work stays on the registry, manifest, and typed-binding seams and does not treat the legacy compatibility types as active extensibility surfaces.

@@ -185,13 +185,6 @@ public sealed class ProjectObjectMetadataEnvelope
     public ProjectInfrastructureMetadata? Infrastructure { get; set; }
 
     public ProjectLinkMetadata? Link { get; set; }
-
-    public ProjectMarkerSetMetadata? MarkerSet { get; set; }
-}
-
-public sealed class ProjectMarkerSetMetadata
-{
-    public List<ProjectNodeMarker> Markers { get; set; } = [];
 }
 
 public sealed record ProjectNodeMarker(
@@ -219,8 +212,6 @@ public sealed class ProjectMeetingMetadata
     [JsonPropertyName("relatedPartyNames")]
     [ProjectStructurePreviewField("Parties", 60)]
     public string RelatedPartySummary { get; set; } = string.Empty;
-
-    public List<Guid> ParticipantIds { get; set; } = [];
 }
 
 public sealed class ProjectRecordingMetadata
@@ -231,20 +222,12 @@ public sealed class ProjectRecordingMetadata
     [ProjectStructurePreviewField("Storage", 20)]
     public string StorageReference { get; set; } = string.Empty;
 
-    public Guid? MeetingNodeArtifactId { get; set; }
-
-    public Guid? TranscriptNodeArtifactId { get; set; }
-
     [ProjectStructurePreviewField("Duration (min)", 30)]
     public int DurationMinutes { get; set; }
 }
 
 public sealed class ProjectTranscriptMetadata
 {
-    public Guid? RecordingNodeArtifactId { get; set; }
-
-    public Guid? LastProviderProfileId { get; set; }
-
     [ProjectStructurePreviewField("Last provider", 10)]
     public string LastProviderName { get; set; } = string.Empty;
 
@@ -286,18 +269,12 @@ public sealed class ProjectParticipantMetadata
     [JsonPropertyName("linkedPartyName")]
     [ProjectStructurePreviewField("Directory party", 60)]
     public string LinkedPartyDisplayName { get; set; } = string.Empty;
-
-    public Guid? ParentParticipantArtifactId { get; set; }
 }
 
 public sealed class ProjectWorkItemMetadata
 {
     [ProjectStructurePreviewField("Kind", 10)]
     public ProjectWorkItemKind WorkItemKind { get; set; }
-
-    public Guid? AssigneeParticipantArtifactId { get; set; }
-
-    public Guid? RepositoryResourceId { get; set; }
 
     [ProjectStructurePreviewField("Send kind", 20)]
     public ProjectSendKind? SendKind { get; set; }
@@ -326,8 +303,6 @@ public sealed class ProjectRepositoryMetadata
 {
     [ProjectStructurePreviewField("Mode", 10)]
     public ProjectRepositoryMode RepositoryMode { get; set; }
-
-    public Guid? ResourceId { get; set; }
 
     [ProjectStructurePreviewField("Repository URL", 20)]
     public string RepositoryUrl { get; set; } = string.Empty;
@@ -388,8 +363,6 @@ public sealed class ProjectEnvironmentMetadata
     [ProjectStructurePreviewField("Python provider", 20)]
     public ProjectPythonProvider? PythonProvider { get; set; }
 
-    public Guid? RepositoryResourceId { get; set; }
-
     [ProjectStructurePreviewField("Environment name", 30)]
     public string EnvironmentName { get; set; } = string.Empty;
 
@@ -444,8 +417,6 @@ public sealed class ProjectInfrastructureMetadata
     [ProjectStructurePreviewField("Monthly price", 120)]
     public decimal? MonthlyPrice { get; set; }
 
-    public Guid? SecretReferenceArtifactId { get; set; }
-
     [ProjectStructurePreviewField("Domain", 130)]
     public string DomainName { get; set; } = string.Empty;
 
@@ -472,8 +443,6 @@ public sealed class ProjectInfrastructureMetadata
 
     [ProjectStructurePreviewField("Folder path", 210)]
     public string FolderPath { get; set; } = string.Empty;
-
-    public Guid? StorageCatalogId { get; set; }
 
     [ProjectStructurePreviewField("Storage purpose", 220)]
     public string StoragePurpose { get; set; } = string.Empty;
@@ -542,22 +511,6 @@ public static class ProjectObjectMetadataSerializer
         return new ProjectNodeMarker(normalizedIcon, normalizedTone, normalizedLabel);
     }
 
-    public static IReadOnlyList<ProjectNodeMarker> ResolveMarkers(
-        ProjectObjectMetadataEnvelope? metadata,
-        string? legacyMarkerIcon,
-        string? legacyMarkerTone,
-        string? legacyMarkerLabel)
-    {
-        var markers = NormalizeMarkers(metadata?.MarkerSet?.Markers);
-        if (markers.Count > 0)
-        {
-            return markers;
-        }
-
-        var legacyMarker = NormalizeMarker(legacyMarkerIcon, legacyMarkerTone, legacyMarkerLabel);
-        return legacyMarker is null ? [] : [legacyMarker];
-    }
-
     public static IReadOnlyList<ProjectNodeMarker> NormalizeMarkers(IEnumerable<ProjectNodeMarker>? markers)
     {
         if (markers is null)
@@ -584,17 +537,6 @@ public static class ProjectObjectMetadataSerializer
         }
 
         return ordered;
-    }
-
-    public static void SetMarkers(ProjectObjectMetadataEnvelope metadata, IEnumerable<ProjectNodeMarker>? markers)
-    {
-        var normalized = NormalizeMarkers(markers);
-        metadata.MarkerSet = normalized.Count == 0
-            ? null
-            : new ProjectMarkerSetMetadata
-            {
-                Markers = normalized.ToList()
-            };
     }
 
     public static ProjectNodeMarker? ResolvePrimaryMarker(IEnumerable<ProjectNodeMarker>? markers)

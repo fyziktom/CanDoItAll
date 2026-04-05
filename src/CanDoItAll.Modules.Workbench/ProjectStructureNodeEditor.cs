@@ -44,6 +44,23 @@ internal static class ProjectStructureNodeEditor
             .ToDictionary(group => group.Key, group => group.Last().Value?.Trim() ?? string.Empty, StringComparer.OrdinalIgnoreCase);
         var submittedKeys = inputValues.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
+        var nodeReferences = node.NodeReferences is null
+            ? new ProjectNodeReferenceSet()
+            : new ProjectNodeReferenceSet
+            {
+                MeetingParticipantIds = node.NodeReferences.MeetingParticipantIds.ToList(),
+                RecordingMeetingNodeId = node.NodeReferences.RecordingMeetingNodeId,
+                RecordingTranscriptNodeId = node.NodeReferences.RecordingTranscriptNodeId,
+                TranscriptRecordingNodeId = node.NodeReferences.TranscriptRecordingNodeId,
+                TranscriptProviderProfileId = node.NodeReferences.TranscriptProviderProfileId,
+                ParticipantParentNodeId = node.NodeReferences.ParticipantParentNodeId,
+                WorkItemAssigneeNodeId = node.NodeReferences.WorkItemAssigneeNodeId,
+                WorkItemRepositoryResourceId = node.NodeReferences.WorkItemRepositoryResourceId,
+                RepositoryResourceId = node.NodeReferences.RepositoryResourceId,
+                EnvironmentRepositoryResourceId = node.NodeReferences.EnvironmentRepositoryResourceId,
+                InfrastructureSecretReferenceId = node.NodeReferences.InfrastructureSecretReferenceId,
+                InfrastructureStorageCatalogId = node.NodeReferences.InfrastructureStorageCatalogId
+            };
         var notes = ResolveNotes(definition, node, request, inputValues);
         var startUtc = ResolveDate(node.StartUtc, inputValues, submittedKeys, "startUtc");
         var endUtc = ResolveDate(node.EndUtc, inputValues, submittedKeys, "endUtc");
@@ -165,7 +182,11 @@ internal static class ProjectStructureNodeEditor
                 metadata.Infrastructure.DatabaseType = ResolveString(inputValues, submittedKeys, "databaseType", metadata.Infrastructure.DatabaseType);
                 metadata.Infrastructure.ConnectionReference = ResolveString(inputValues, submittedKeys, "connectionReference", metadata.Infrastructure.ConnectionReference);
                 metadata.Infrastructure.FolderPath = ResolveString(inputValues, submittedKeys, "folderPath", metadata.Infrastructure.FolderPath);
-                metadata.Infrastructure.StorageCatalogId = ResolveNullableGuid(inputValues, submittedKeys, "storageCatalogId", metadata.Infrastructure.StorageCatalogId);
+                nodeReferences.InfrastructureStorageCatalogId = ResolveNullableGuid(
+                    inputValues,
+                    submittedKeys,
+                    "storageCatalogId",
+                    nodeReferences.InfrastructureStorageCatalogId);
                 metadata.Infrastructure.StoragePurpose = ResolveString(inputValues, submittedKeys, "storagePurpose", metadata.Infrastructure.StoragePurpose);
                 metadata.Infrastructure.StoragePathPrefix = ResolveString(inputValues, submittedKeys, "storagePathPrefix", metadata.Infrastructure.StoragePathPrefix);
                 metadata.Infrastructure.AiReferenceKind = ResolveNullableEnum(inputValues, submittedKeys, "aiReferenceKind", metadata.Infrastructure.AiReferenceKind);
@@ -184,7 +205,9 @@ internal static class ProjectStructureNodeEditor
             notes,
             startUtc,
             endUtc,
-            ProjectObjectMetadataSerializer.Serialize(metadata));
+            ProjectObjectMetadataSerializer.Serialize(metadata),
+            null,
+            nodeReferences.IsEmpty ? null : nodeReferences);
     }
 
     private static string ResolveFieldValue(string key, ProjectStructureNode node, ProjectObjectMetadataEnvelope metadata)
@@ -250,7 +273,7 @@ internal static class ProjectStructureNodeEditor
             "databaseType" => metadata.Infrastructure?.DatabaseType ?? string.Empty,
             "connectionReference" => metadata.Infrastructure?.ConnectionReference ?? string.Empty,
             "folderPath" => metadata.Infrastructure?.FolderPath ?? string.Empty,
-            "storageCatalogId" => metadata.Infrastructure?.StorageCatalogId?.ToString("D") ?? string.Empty,
+            "storageCatalogId" => node.NodeReferences?.InfrastructureStorageCatalogId?.ToString("D") ?? string.Empty,
             "storagePurpose" => metadata.Infrastructure?.StoragePurpose ?? string.Empty,
             "storagePathPrefix" => metadata.Infrastructure?.StoragePathPrefix ?? string.Empty,
             "aiReferenceKind" => ToCamelCaseToken(metadata.Infrastructure?.AiReferenceKind),

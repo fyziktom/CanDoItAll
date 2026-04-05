@@ -762,6 +762,15 @@ public sealed partial class AppSmokeTests
 
         const string rootSelector = ".cw-node[data-node-id^='project:']";
         var rootNodeId = await ReadNodeIdAsync(page, rootSelector);
+        var editableNoteId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-note",
+            rootNodeId,
+            rootNodeId,
+            "Feedback 6 editable note",
+            "Validation",
+            "Editable node for context menu mutation proof.");
+        var editableNoteSelector = SelectorForNodeId(editableNoteId);
 
         await FocusCanvasRootAsync(page);
         await SetCanvasZoomPercentAsync(page, 100);
@@ -802,13 +811,11 @@ public sealed partial class AppSmokeTests
                 $"Expected progress submenu action '{action.ActionId}' to stay below the toolbar. top={action.Top}, toolbarBottom={progressLayout.ToolbarBottom}, hostTop={progressLayout.HostTop}, safeTop={progressLayout.SafeTop}, rootCenterY={progressLayout.RootCenterY}."));
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "02-progress-submenu-hive.png"), FullPage = true });
         AssertMenuActionsDoNotOverlap(progressLayout.Actions, 18, "progress submenu");
+        await page.Keyboard.PressAsync("Escape");
+        await OpenCanvasContextMenuAsync(page, editableNoteSelector);
+        await OpenContextSubmenuAsync(page, "progress");
         await ClickContextMenuActionAsync(page, "progress:30");
-        await WaitForSceneSnapshotAsync(
-            page,
-            snapshot => snapshot.Nodes.Any(node =>
-                string.Equals(node.Id, rootNodeId, StringComparison.Ordinal) &&
-                node.ProgressTitle.Contains("30%", StringComparison.Ordinal)),
-            "root progress badge metadata");
+        await WaitForNodeProgressStateAsync(page, editableNoteId, "progress", 30);
 
         await OpenCanvasContextMenuAsync(page, rootSelector);
         await page.Mouse.MoveAsync(8, 8);
@@ -824,26 +831,32 @@ public sealed partial class AppSmokeTests
                 $"Expected marker submenu action '{action.ActionId}' to stay below the toolbar. top={action.Top}, toolbarBottom={markerLayout.ToolbarBottom}, hostTop={markerLayout.HostTop}, safeTop={markerLayout.SafeTop}, rootCenterY={markerLayout.RootCenterY}."));
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "03-marker-submenu-hive.png"), FullPage = true });
         AssertMenuActionsDoNotOverlap(markerLayout.Actions, 18, "marker submenu");
+        await page.Keyboard.PressAsync("Escape");
+        await OpenCanvasContextMenuAsync(page, editableNoteSelector);
+        await OpenContextSubmenuAsync(page, "marker");
         await ClickContextMenuActionAsync(page, "marker:money");
         await WaitForSceneSnapshotAsync(
             page,
             snapshot => snapshot.Nodes.Any(node =>
-                string.Equals(node.Id, rootNodeId, StringComparison.Ordinal) &&
+                string.Equals(node.Id, editableNoteId, StringComparison.Ordinal) &&
                 string.Equals(node.MarkerText, "Budget", StringComparison.Ordinal)),
-            "root marker badge metadata");
+            "editable node marker badge metadata");
 
         await OpenCanvasContextMenuAsync(page, rootSelector);
         await page.Mouse.MoveAsync(8, 8);
         await page.WaitForTimeoutAsync(80);
         await HoverContextMenuActionAsync(page, "priority");
         Assert.True(await WaitForMenuActionAsync(page, "priority:2", 1_000), "Expected the priority submenu to stay functional after the shared menu layout changes.");
+        await page.Keyboard.PressAsync("Escape");
+        await OpenCanvasContextMenuAsync(page, editableNoteSelector);
+        await OpenContextSubmenuAsync(page, "priority");
         await ClickContextMenuActionAsync(page, "priority:2");
         await WaitForSceneSnapshotAsync(
             page,
             snapshot => snapshot.Nodes.Any(node =>
-                string.Equals(node.Id, rootNodeId, StringComparison.Ordinal) &&
+                string.Equals(node.Id, editableNoteId, StringComparison.Ordinal) &&
                 string.Equals(node.PriorityText, "2", StringComparison.Ordinal)),
-            "root priority badge metadata");
+            "editable node priority badge metadata");
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
@@ -1260,10 +1273,12 @@ public sealed partial class AppSmokeTests
         await using var dbContext = new AppDbContext(dbOptions);
         var exportedRecord = await dbContext.Set<ProjectObjectRecord>()
             .SingleAsync(item => item.NodeKey == exportedImageNodeId);
+        var exportedBinding = await dbContext.Set<ProjectNodeBindingRecord>()
+            .SingleAsync(item => item.ProjectObjectId == exportedRecord.Id);
 
-        if (!string.IsNullOrWhiteSpace(exportedRecord.Route))
+        if (!string.IsNullOrWhiteSpace(exportedBinding.Route))
         {
-            var exportedImageResponse = await context.APIRequest.GetAsync($"{fixture.BaseUrl}{exportedRecord.Route}");
+            var exportedImageResponse = await context.APIRequest.GetAsync($"{fixture.BaseUrl}{exportedBinding.Route}");
             Assert.True(exportedImageResponse.Ok, $"Expected the exported mindmap image route to return 2xx, got {exportedImageResponse.Status}.");
             await File.WriteAllBytesAsync(
                 Path.Combine(i18Root, "04-exported-mindmap-image.png"),
@@ -1271,10 +1286,10 @@ public sealed partial class AppSmokeTests
         }
         else
         {
-            Assert.False(string.IsNullOrWhiteSpace(exportedRecord.MediaRelativePath), $"Expected node '{exportedImageNodeId}' to expose a managed media path.");
+            Assert.False(string.IsNullOrWhiteSpace(exportedBinding.MediaRelativePath), $"Expected node '{exportedImageNodeId}' to expose a managed media path.");
             Assert.False(string.IsNullOrWhiteSpace(fixture.StorageWorkspaceRoot), "Expected the Playwright fixture to expose the workspace storage root.");
 
-            var exportedImagePath = Path.Combine(fixture.StorageWorkspaceRoot!, exportedRecord.MediaRelativePath);
+            var exportedImagePath = Path.Combine(fixture.StorageWorkspaceRoot!, exportedBinding.MediaRelativePath);
             Assert.True(File.Exists(exportedImagePath), $"Expected exported image file to exist at '{exportedImagePath}'.");
             File.Copy(exportedImagePath, Path.Combine(i18Root, "04-exported-mindmap-image.png"), overwrite: true);
         }
@@ -2851,6 +2866,7 @@ public sealed partial class AppSmokeTests
         FilePayload? uploadedFile = null)
     {
         await WaitForInitializedCanvasHostAsync(page);
+        await WaitForCanvasRenderIdleAsync(page);
 
         var uploadedFilePayload = uploadedFile is null
             ? null
@@ -2962,7 +2978,7 @@ public sealed partial class AppSmokeTests
         }
 
         await WaitForInitializedCanvasHostAsync(page);
-        await page.WaitForTimeoutAsync(uploadedFile is null ? 220 : 520);
+        await WaitForCanvasRenderIdleAsync(page, steadyMs: uploadedFile is null ? 220 : 520, timeoutMs: 15_000);
 
         return createdNodeId;
     }
@@ -3013,6 +3029,31 @@ public sealed partial class AppSmokeTests
         }
 
         return false;
+    }
+
+    private static async Task WaitForNodeProgressStateAsync(
+        IPage page,
+        string nodeId,
+        string expectedProgressMode,
+        int expectedProgressPercent,
+        int timeoutMs = 10_000)
+    {
+        await page.WaitForFunctionAsync(
+            @"request => {
+                const host = document.querySelector('.cw-canvas-host');
+                const nodes = host?.__canvasWorkbenchState?.surface?.nodes || [];
+                const node = nodes.find(candidate => candidate?.id === request.nodeId);
+                return !!node &&
+                    (node.progressMode || '') === request.progressMode &&
+                    Number(node.progressPercent || 0) === Number(request.progressPercent);
+            }",
+            new
+            {
+                nodeId,
+                progressMode = expectedProgressMode,
+                progressPercent = expectedProgressPercent
+            },
+            new() { Timeout = timeoutMs });
     }
 
     private static async Task<string> ReadNodeRouteAsync(IPage page, string nodeId)
@@ -3161,15 +3202,21 @@ public sealed partial class AppSmokeTests
         {
             try
             {
-                await page.WaitForSelectorAsync(
-                    $"text={nodeIds.Count} nodes selected",
+                await page.WaitForFunctionAsync(
+                    @"expectedCount => {
+                        const selectionWindow = document.querySelector('.cw-floating-window[data-testid=""project-structure-selection-window""]');
+                        const text = (selectionWindow?.textContent || '').replace(/\s+/g, ' ').trim();
+                        return text.includes(`${expectedCount} selected`) ||
+                            text.includes(`${expectedCount} nodes selected`);
+                    }",
+                    nodeIds.Count,
                     new() { Timeout = 10_000 });
             }
             catch (TimeoutException exception)
             {
                 var snapshot = await CaptureSelectionFailureSnapshotAsync(page);
                 throw new InvalidOperationException(
-                    $"Expected visible selection panel text '{nodeIds.Count} nodes selected' but it did not appear. " +
+                    $"Expected visible multi-selection text for count '{nodeIds.Count}' but it did not appear. " +
                     $"HostSelectedNodeIds=[{string.Join(", ", snapshot?.HostSelectedNodeIds ?? [])}] " +
                     $"SelectionApiCalls=[{string.Join(" || ", snapshot?.SelectionApiCalls ?? [])}] " +
                     $"SelectionDebugEvents=[{string.Join(" || ", snapshot?.SelectionDebugEvents ?? [])}] " +
@@ -3267,6 +3314,61 @@ public sealed partial class AppSmokeTests
                     })
                     .length > 0;
             }");
+    }
+
+    private static async Task WaitForCanvasRenderIdleAsync(IPage page, int steadyMs = 240, int timeoutMs = 10_000)
+    {
+        await WaitForInitializedCanvasHostAsync(page);
+        await page.WaitForFunctionAsync(
+            @"steadyMs => {
+                const workbench = window.CanDoItAll?.canvasWorkbench;
+                const host = Array.from(document.querySelectorAll('.cw-canvas-host'))
+                    .filter(candidate => candidate instanceof HTMLElement)
+                    .filter(candidate => {
+                        const rect = candidate.getBoundingClientRect();
+                        if (rect.width <= 0 || rect.height <= 0) {
+                            return false;
+                        }
+
+                        const styles = getComputedStyle(candidate);
+                        return styles.display !== 'none'
+                            && styles.visibility !== 'hidden'
+                            && !!candidate.__canvasWorkbenchState
+                            && !!workbench?.getDiagnostics;
+                    })
+                    .sort((left, right) => {
+                        const leftRect = left.getBoundingClientRect();
+                        const rightRect = right.getBoundingClientRect();
+                        return (rightRect.width * rightRect.height) - (leftRect.width * leftRect.height);
+                    })[0];
+                if (!host || !workbench?.getDiagnostics) {
+                    return false;
+                }
+
+                const diagnostics = workbench.getDiagnostics(host);
+                if (!diagnostics || diagnostics.interaction !== 'idle') {
+                    host.__codexCanvasIdleSignature = '';
+                    host.__codexCanvasIdleSince = 0;
+                    return false;
+                }
+
+                const signature = JSON.stringify({
+                    renderCount: diagnostics.metrics?.renderCount || 0,
+                    totalNodeCount: diagnostics.totalNodeCount || 0,
+                    selectedCount: diagnostics.selectedCount || 0,
+                    interaction: diagnostics.interaction || 'idle'
+                });
+                const now = Date.now();
+                if (host.__codexCanvasIdleSignature !== signature) {
+                    host.__codexCanvasIdleSignature = signature;
+                    host.__codexCanvasIdleSince = now;
+                    return false;
+                }
+
+                return now - (host.__codexCanvasIdleSince || 0) >= steadyMs;
+            }",
+            steadyMs,
+            new() { Timeout = timeoutMs });
     }
 
     private static async Task<CanvasSceneSnapshot> ReadSceneSnapshotAsync(IPage page)

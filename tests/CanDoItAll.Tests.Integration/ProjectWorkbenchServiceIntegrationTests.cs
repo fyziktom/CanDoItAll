@@ -295,13 +295,13 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var providerId = Guid.NewGuid();
         var nodeKey = Guid.NewGuid().ToString("D");
         var createdAtUtc = new DateTimeOffset(2026, 4, 4, 18, 30, 0, TimeSpan.Zero);
-        var metadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        var metadataJson = JsonSerializer.Serialize(new
         {
-            Transcript = new ProjectTranscriptMetadata
+            transcript = new
             {
-                TranscriptText = "Legacy transcript payload.",
-                LastProviderProfileId = providerId,
-                LastProviderName = "Offline provider"
+                transcriptText = "Legacy transcript payload.",
+                lastProviderProfileId = providerId,
+                lastProviderName = "Offline provider"
             }
         });
 
@@ -355,7 +355,8 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
 
         var normalizedMetadata = ProjectObjectMetadataSerializer.Parse(normalizedNode.MetadataJson);
         Assert.NotNull(normalizedMetadata.Transcript);
-        Assert.Equal(providerId, normalizedMetadata.Transcript!.LastProviderProfileId);
+        Assert.NotNull(normalizedNode.NodeReferences);
+        Assert.Equal(providerId, normalizedNode.NodeReferences!.TranscriptProviderProfileId);
         Assert.Equal("Offline provider", normalizedMetadata.Transcript.LastProviderName);
 
         await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
@@ -371,8 +372,12 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
 
         var persistedMetadata = ProjectObjectMetadataSerializer.Parse(carrier.MetadataJson);
         Assert.NotNull(persistedMetadata.Transcript);
-        Assert.Null(persistedMetadata.Transcript!.LastProviderProfileId);
         Assert.Equal("Offline provider", persistedMetadata.Transcript.LastProviderName);
+        using (var persistedMetadataDocument = JsonDocument.Parse(carrier.MetadataJson))
+        {
+            var transcriptElement = persistedMetadataDocument.RootElement.GetProperty("transcript");
+            Assert.False(transcriptElement.TryGetProperty("lastProviderProfileId", out _));
+        }
 
         var binding = await verificationContext.Set<ProjectNodeBindingRecord>()
             .SingleAsync(item => item.ProjectObjectId == carrier.Id);
@@ -1119,7 +1124,6 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                 SummaryText = "Alice owns the checklist before Friday.",
                 MyTasksText = "- Review the rollout checklist",
                 OthersDeliveriesText = "- Alice: rollout checklist",
-                LastProviderProfileId = providerId,
                 LastProviderName = "Local llama",
                 LastActionKind = ProjectLlmActionKind.FindMyTasks
             }
@@ -1130,7 +1134,11 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             transcript.Id,
             updatedMetadata,
             notes: "Alice owes the rollout checklist.",
-            status: "Review");
+            status: "Review",
+            nodeReferences: new ProjectNodeReferenceSet
+            {
+                TranscriptProviderProfileId = providerId
+            });
 
         Assert.NotNull(updated);
         Assert.Equal("Review", updated!.Status);
@@ -1143,7 +1151,8 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
 
         var parsedMetadata = ProjectObjectMetadataSerializer.Parse(persistedTranscript.MetadataJson);
         Assert.NotNull(parsedMetadata.Transcript);
-        Assert.Equal(providerId, parsedMetadata.Transcript!.LastProviderProfileId);
+        Assert.NotNull(persistedTranscript.NodeReferences);
+        Assert.Equal(providerId, persistedTranscript.NodeReferences!.TranscriptProviderProfileId);
         Assert.Equal("Local llama", parsedMetadata.Transcript.LastProviderName);
         Assert.Equal(ProjectLlmActionKind.FindMyTasks, parsedMetadata.Transcript.LastActionKind);
         Assert.Equal("- Review the rollout checklist", parsedMetadata.Transcript.MyTasksText);
@@ -1154,8 +1163,12 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             .SingleAsync(item => item.ProjectId == projectId && item.NodeKey == transcript.Id);
         var persistedMetadata = ProjectObjectMetadataSerializer.Parse(carrier.MetadataJson);
         Assert.NotNull(persistedMetadata.Transcript);
-        Assert.Null(persistedMetadata.Transcript!.LastProviderProfileId);
         Assert.Equal("Local llama", persistedMetadata.Transcript.LastProviderName);
+        using (var persistedMetadataDocument = JsonDocument.Parse(carrier.MetadataJson))
+        {
+            var transcriptElement = persistedMetadataDocument.RootElement.GetProperty("transcript");
+            Assert.False(transcriptElement.TryGetProperty("lastProviderProfileId", out _));
+        }
 
         var providerBinding = await dbContext.Set<ProjectNodeReferenceRecord>()
             .SingleAsync(item =>

@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Factory;
@@ -23,7 +24,7 @@ public enum ProjectStructureCommandKind
     MarkUsed
 }
 
-public sealed class ProjectObjectRecord : IProjectObject
+public sealed partial class ProjectObjectRecord : IProjectObject
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ProjectId { get; set; }
@@ -33,19 +34,13 @@ public sealed class ProjectObjectRecord : IProjectObject
     public string Subtitle { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
-    public string Route { get; set; } = string.Empty;
-    public string ExternalArtifactKind { get; set; } = string.Empty;
-    public Guid? ExternalArtifactId { get; set; }
     public string ObjectSubtype { get; set; } = string.Empty;
-    public string MediaRelativePath { get; set; } = string.Empty;
-    public string MediaContentType { get; set; } = string.Empty;
-    public string MediaOriginalFileName { get; set; } = string.Empty;
-    public string StorageObjectReferenceJson { get; set; } = string.Empty;
     public string ProgressMode { get; set; } = string.Empty;
     public int ProgressPercent { get; set; } = -1;
     public string MarkerIcon { get; set; } = string.Empty;
     public string MarkerTone { get; set; } = string.Empty;
     public string MarkerLabel { get; set; } = string.Empty;
+    public string MarkersJson { get; set; } = "[]";
     public int Priority { get; set; }
     public string MetadataJson { get; set; } = "{}";
     public string? ParentNodeKey { get; set; }
@@ -57,6 +52,12 @@ public sealed class ProjectObjectRecord : IProjectObject
     public bool IsSystemManaged { get; set; }
     public DateTimeOffset CreatedAtUtc { get; set; }
     public DateTimeOffset UpdatedAtUtc { get; set; }
+
+    [NotMapped]
+    internal ProjectNodeBindingState Binding { get; set; } = ProjectNodeBindingState.Empty;
+
+    [NotMapped]
+    internal ProjectNodeReferenceSet NodeReferences { get; set; } = ProjectNodeReferenceSet.Empty;
 }
 
 internal sealed class ProjectObjectRecordConfiguration : IEntityTypeConfiguration<ProjectObjectRecord>
@@ -70,19 +71,16 @@ internal sealed class ProjectObjectRecordConfiguration : IEntityTypeConfiguratio
         builder.Property(item => item.Subtitle).HasMaxLength(240);
         builder.Property(item => item.Status).HasMaxLength(120);
         builder.Property(item => item.Notes).HasColumnType("TEXT");
-        builder.Property(item => item.Route).HasMaxLength(800);
-        builder.Property(item => item.ExternalArtifactKind).HasMaxLength(120);
         builder.Property(item => item.ObjectSubtype).HasMaxLength(120);
-        builder.Property(item => item.MediaRelativePath).HasMaxLength(800);
-        builder.Property(item => item.MediaContentType).HasMaxLength(160);
-        builder.Property(item => item.MediaOriginalFileName).HasMaxLength(260);
-        builder.Property(item => item.StorageObjectReferenceJson).HasColumnType("TEXT");
         builder.Property(item => item.ProgressMode).HasMaxLength(32);
         builder.Property(item => item.MarkerIcon).HasMaxLength(80);
         builder.Property(item => item.MarkerTone).HasMaxLength(40);
         builder.Property(item => item.MarkerLabel).HasMaxLength(120);
+        builder.Property(item => item.MarkersJson).HasColumnType("TEXT");
         builder.Property(item => item.MetadataJson).HasColumnType("TEXT");
         builder.Property(item => item.ParentNodeKey).HasMaxLength(160);
+        builder.Ignore(item => item.Binding);
+        builder.Ignore(item => item.NodeReferences);
         builder.HasIndex(item => new { item.ProjectId, item.NodeKey }).IsUnique();
     }
 }
@@ -173,7 +171,8 @@ public sealed record ProjectStructureNode(
     ProjectStructureProjectRole ProjectRole = ProjectStructureProjectRole.None,
     Guid? RelatedProjectId = null,
     int ParentProjectCount = 0,
-    int? DurationSeconds = null);
+    int? DurationSeconds = null,
+    ProjectNodeReferenceSet? NodeReferences = null);
 
 public sealed record ProjectStructureLink(string SourceId, string TargetId, ProjectObjectLinkKind Kind, bool IsUserAuthored);
 
@@ -236,7 +235,8 @@ public sealed record ProjectObjectCreateRequest(
     string? ObjectSubtype = null,
     ProjectObjectMediaPayload? Media = null,
     string? MetadataJson = null,
-    int? DurationSeconds = null);
+    int? DurationSeconds = null,
+    ProjectNodeReferenceSet? NodeReferences = null);
 
 public sealed record ProjectObjectEditRequest(
     string Title,
@@ -245,7 +245,8 @@ public sealed record ProjectObjectEditRequest(
     DateTimeOffset? StartUtc,
     DateTimeOffset? EndUtc,
     string MetadataJson,
-    int? DurationSeconds = null);
+    int? DurationSeconds = null,
+    ProjectNodeReferenceSet? NodeReferences = null);
 
 public sealed record ProjectObjectReclassificationRequest(
     ProjectObjectType TargetObjectType,
@@ -397,9 +398,9 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 item.StartUtc!.Value,
                 item.EndUtc!.Value,
                 item.Status,
-                item.Route,
-                item.ExternalArtifactKind,
-                item.ExternalArtifactId,
+                item.Binding.Route,
+                item.Binding.ExternalArtifactKind,
+                item.Binding.ExternalArtifactId,
                 item.ObjectType,
                 ProjectNodeKindRegistry.ResolveVisualProfile(item.ObjectType, item.ObjectSubtype, item.Status).AccentColor))
             .ToList();
@@ -437,13 +438,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             Subtitle = request.Subtitle?.Trim() ?? string.Empty,
             Status = "Draft",
             Notes = request.Notes?.Trim() ?? string.Empty,
-            Route = route,
-            ExternalArtifactKind = artifactKind,
             ObjectSubtype = request.ObjectSubtype?.Trim() ?? string.Empty,
-            MediaRelativePath = media?.RelativePath ?? string.Empty,
-            MediaContentType = media?.ContentType ?? string.Empty,
-            MediaOriginalFileName = media?.OriginalFileName ?? string.Empty,
-            StorageObjectReferenceJson = media?.StorageObjectReferenceJson ?? string.Empty,
             ProgressMode = "progress",
             ProgressPercent = 0,
             MetadataJson = metadataJson,
@@ -454,7 +449,17 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             EndUtc = resolvedEndUtc,
             DurationSeconds = normalizedDurationSeconds,
             CreatedAtUtc = clock.GetUtcNow(),
-            UpdatedAtUtc = clock.GetUtcNow()
+            UpdatedAtUtc = clock.GetUtcNow(),
+            Binding = new ProjectNodeBindingState(
+                route,
+                artifactKind,
+                null,
+                media?.RelativePath ?? string.Empty,
+                media?.ContentType ?? string.Empty,
+                media?.OriginalFileName ?? string.Empty,
+                media?.StorageObjectReferenceJson ?? string.Empty),
+            NodeReferences = request.NodeReferences ?? ProjectNodeReferenceSet.Empty,
+            MarkersJson = "[]"
         };
 
         await dbContext.Set<ProjectObjectRecord>().AddAsync(record, cancellationToken);
@@ -499,8 +504,6 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 Subtitle = seed.Subtitle?.Trim() ?? string.Empty,
                 Status = "Planned",
                 Notes = seed.Notes?.Trim() ?? string.Empty,
-                Route = $"/projects/{projectId}/structure",
-                ExternalArtifactKind = seed.ObjectType.ToString(),
                 ObjectSubtype = seed.ObjectSubtype?.Trim() ?? string.Empty,
                 ProgressMode = "progress",
                 ProgressPercent = 0,
@@ -512,7 +515,16 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 EndUtc = resolvedEndUtc,
                 DurationSeconds = normalizedDurationSeconds,
                 CreatedAtUtc = clock.GetUtcNow(),
-                UpdatedAtUtc = clock.GetUtcNow()
+                UpdatedAtUtc = clock.GetUtcNow(),
+                Binding = new ProjectNodeBindingState(
+                    $"/projects/{projectId}/structure",
+                    seed.ObjectType.ToString(),
+                    null,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty),
+                MarkersJson = "[]"
             };
             await dbContext.Set<ProjectObjectRecord>().AddAsync(record, cancellationToken);
             await ProjectNodeBindingStorage.PersistAsync(dbContext, record, cancellationToken);
@@ -628,6 +640,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         node.EndUtc = ProjectWorkbenchObjectModeling.ResolveEndUtc(request.StartUtc, request.EndUtc, request.DurationSeconds);
         node.DurationSeconds = ProjectWorkbenchObjectModeling.NormalizeDurationSeconds(request.DurationSeconds, node.StartUtc, node.EndUtc);
         node.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(node.ObjectType, node.ObjectSubtype, request.MetadataJson, node.MetadataJson, node.Notes, null);
+        node.NodeReferences = request.NodeReferences ?? node.NodeReferences;
         node.UpdatedAtUtc = clock.GetUtcNow();
         var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -663,6 +676,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         string metadataJson,
         string? notes = null,
         string? status = null,
+        ProjectNodeReferenceSet? nodeReferences = null,
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -681,6 +695,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         }
 
         node.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(node.ObjectType, node.ObjectSubtype, metadataJson, node.MetadataJson, node.Notes, null);
+        node.NodeReferences = nodeReferences ?? node.NodeReferences;
 
         if (!string.IsNullOrWhiteSpace(status))
         {
@@ -899,8 +914,13 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
 
         foreach (var node in nodes)
         {
-            var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
-            var existingMarkers = ProjectObjectMetadataSerializer.ResolveMarkers(metadata, node.MarkerIcon, node.MarkerTone, node.MarkerLabel);
+            node.MarkersJson = ProjectNodeMarkerState.ResolveLegacyJson(
+                node.MarkersJson,
+                node.MarkerIcon,
+                node.MarkerTone,
+                node.MarkerLabel,
+                node.MetadataJson);
+            var existingMarkers = ProjectNodeMarkerState.Parse(node.MarkersJson);
             var updatedMarkers = mutationMode switch
             {
                 ProjectMarkerMutationMode.ReplaceAll => normalizedMarker is null ? [] : [normalizedMarker],
@@ -910,9 +930,8 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 ProjectMarkerMutationMode.ClearAll => [],
                 _ => existingMarkers
             };
-            ProjectObjectMetadataSerializer.SetMarkers(metadata, updatedMarkers);
-            node.MetadataJson = ProjectObjectMetadataSerializer.Serialize(metadata);
-            ProjectWorkbenchObjectModeling.ApplyPrimaryMarker(node, updatedMarkers);
+            node.MarkersJson = ProjectNodeMarkerState.Serialize(updatedMarkers);
+            ProjectNodeMarkerState.HydrateLegacyFields(node);
             node.UpdatedAtUtc = updatedAtUtc;
         }
 
