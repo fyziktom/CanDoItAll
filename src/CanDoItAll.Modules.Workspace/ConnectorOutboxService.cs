@@ -335,15 +335,19 @@ public sealed class ConnectorOutboxService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var now = clock.GetUtcNow();
-        var commandIds = await dbContext.Set<ConnectorCommandRecord>()
+        var pendingCommands = await dbContext.Set<ConnectorCommandRecord>()
             .Where(item =>
                 item.Status == ConnectorCommandStatus.Pending &&
-                item.ApprovalState != ConnectorCommandApprovalState.Pending &&
-                (!item.NextAttemptAtUtc.HasValue || item.NextAttemptAtUtc.Value <= now))
+                item.ApprovalState != ConnectorCommandApprovalState.Pending)
+            .ToListAsync(cancellationToken);
+        var commandIds = pendingCommands
+            .Where(item =>
+                !item.NextAttemptAtUtc.HasValue ||
+                item.NextAttemptAtUtc.Value <= now)
             .OrderBy(item => item.CreatedAtUtc)
             .Take(take)
             .Select(item => item.Id)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         foreach (var commandId in commandIds)
         {

@@ -81,6 +81,8 @@ public interface IBackgroundJobTracker
         IReadOnlyDictionary<string, string>? metadata = null,
         CancellationToken cancellationToken = default);
 
+    Task MarkQueuedAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task MarkRunningAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task MarkSucceededAsync(Guid id, CancellationToken cancellationToken = default);
@@ -143,6 +145,9 @@ public sealed class BackgroundJobTracker(
 
     public Task MarkRunningAsync(Guid id, CancellationToken cancellationToken = default)
         => UpdateStateAsync(id, BackgroundJobState.Running, null, cancellationToken);
+
+    public Task MarkQueuedAsync(Guid id, CancellationToken cancellationToken = default)
+        => UpdateStateAsync(id, BackgroundJobState.Queued, null, cancellationToken);
 
     public Task MarkSucceededAsync(Guid id, CancellationToken cancellationToken = default)
         => UpdateStateAsync(id, BackgroundJobState.Succeeded, null, cancellationToken);

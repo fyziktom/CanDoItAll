@@ -49,6 +49,8 @@ public static class TestApplicationBootstrap
     {
         services.AddLogging();
         services.AddSingleton(configuration);
+        services.AddSingleton<TestHostApplicationLifetime>();
+        services.AddSingleton<IHostApplicationLifetime>(serviceProvider => serviceProvider.GetRequiredService<TestHostApplicationLifetime>());
         services.AddCanDoItAllInfrastructure(configuration, environment, ModuleAssemblies);
         services.AddCanDoItAllRuntimeDatabaseSwitching();
         services.AddScoped<IWorkbenchStateStore, InMemoryWorkbenchStateStore>();

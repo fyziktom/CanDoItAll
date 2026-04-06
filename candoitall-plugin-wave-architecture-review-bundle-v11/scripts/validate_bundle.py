@@ -2,9 +2,19 @@
 from __future__ import annotations
 
 from pathlib import Path
+import argparse
 import sys
 
-root = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path.cwd().resolve()
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("root", nargs="?", default=".")
+    parser.add_argument("--stage", choices=["prepared", "completed"], default="prepared")
+    return parser.parse_args()
+
+
+args = parse_args()
+root = Path(args.root).resolve()
 
 required_files = [
     "README.md",
@@ -18,6 +28,7 @@ required_files = [
     "gates/01-stop-conditions.md",
     "gates/02-exit-criteria.md",
     "gates/03-anti-evasion-rules.md",
+    "reviews/00-bundle-self-review.md",
     "reviews/01-execution-report.md",
     "reviews/02-senior-qa-review.md",
     "reviews/03-hard-gate-review.md",
@@ -56,4 +67,32 @@ if missing:
         print(f"- Missing: {item}")
     sys.exit(1)
 
-print("Bundle validation OK.")
+phase_plan_text = (root / "plan/01-phase11-refactor-plan.md").read_text(encoding="utf-8")
+if "```mermaid" not in phase_plan_text:
+    print("Bundle validation FAILED.")
+    print("- plan/01-phase11-refactor-plan.md is missing a mermaid dependency map.")
+    sys.exit(1)
+
+for required_phrase in [
+    "critical foundation",
+    "## Entry gate",
+    "## Progression gate",
+]:
+    if required_phrase.lower() not in phase_plan_text.lower():
+        print("Bundle validation FAILED.")
+        print(f"- plan/01-phase11-refactor-plan.md is missing required gate language: {required_phrase}")
+        sys.exit(1)
+
+if args.stage == "completed":
+    execution_report = (root / "reviews/01-execution-report.md").read_text(encoding="utf-8")
+    for required_phrase in [
+        "## Browser Validation Analytics",
+        "## Subbundle Gate Results",
+        "Solved",
+    ]:
+        if required_phrase not in execution_report:
+            print("Bundle validation FAILED.")
+            print(f"- reviews/01-execution-report.md is missing completed-stage evidence marker: {required_phrase}")
+            sys.exit(1)
+
+print(f"Bundle validation OK for stage '{args.stage}'.")

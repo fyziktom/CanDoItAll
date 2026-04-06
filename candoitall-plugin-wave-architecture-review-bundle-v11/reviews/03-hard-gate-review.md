@@ -1,28 +1,29 @@
 # Hard-gate review
 
 ## HG-11-01
-FAIL in the current repo.
-The repo still lacks an explicit internal execution plane, and signal contribution is still shaped as singular provider consumption.
+PASS.
+Operational envelopes stay off the canonical Workbench graph by default, explicit materialization exists for domain artifacts, and signal contribution is now open-world through multi-source aggregation.
 
 ## HG-11-02
-FAIL in the current repo.
-No canonical trigger registry or Quartz-backed runtime scheduling exists.
+PASS.
+Canonical trigger persistence, Quartz projection, cron/timezone round-trip behavior, and trigger-fired durable work publication are implemented and covered by integration tests.
 
 ## HG-11-03
-FAIL in the current repo.
-No durable internal message bus/outbox/inbox/subscription runtime exists.
+PASS.
+Durable internal envelope, delivery, attempt, and dead-letter records now exist together with publish/dispatch/subscription services, retry handling, and restart-boundary proof.
 
 ## HG-11-04
-FAIL in the current repo.
-No hosted workers drain queued background work, due triggers, or connector outbox pending commands automatically.
+PASS.
+Hosted workers now drain due messages, connector outbox commands, trigger work, and background-job wakeups without manual invocation.
 
 ## HG-11-05
-FAIL in the current repo.
-No generic plugin ingress inbox/cursor/materialization boundary exists.
+PASS.
+Plugin ingress now lands in a durable inbox with deduplication, cursor persistence, and explicit materialization into domain artifacts only when requested.
 
 ## HG-11-06
-FAIL in the current repo.
-No execution policy / delivery telemetry / dead-letter / optional MQTT bridge seam exists.
+PASS.
+Execution telemetry, attempt logs, dead-letter inspection, and optional MQTT-disabled behavior are implemented and validated without making MQTT the internal source of truth.
 
 ## Conclusion
-Phase11 is intentionally designed to fail the current repo so the next runtime substrate is implemented before the plugin wave begins.
+All Phase11 hard gates now pass.
+The platform-level runtime blocker for the next plugin wave is closed.
