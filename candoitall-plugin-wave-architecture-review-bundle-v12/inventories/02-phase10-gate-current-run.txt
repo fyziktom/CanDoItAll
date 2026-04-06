@@ -1,23 +1,9 @@
 === Phase10 plugin-gate check ===
-Repo: /mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor
+Repo: C:\repositories\CanDoItAll
 
-Hard-gate failures:
-- HG-10-01 FAIL: transitive mutation detected in LoadAsync: SaveChangesAsync
-- HG-10-01 FAIL: transitive mutation detected in LoadAsync: dbContext.RemoveRange
-- HG-10-01 FAIL: transitive mutation detected in LoadAsync -> RetireLegacyProjectionRowsAsync: SaveChangesAsync
-- HG-10-01 FAIL: transitive mutation detected in LoadAsync -> RetireLegacyProjectionRowsAsync: dbContext.RemoveRange
-- HG-10-01 FAIL: LoadAsync still calls RetireLegacyProjectionRowsAsync from the read path.
-- HG-10-01 FAIL: LoadAsync still deletes stale projection layouts and saves during reads.
-- HG-10-03 FAIL: required zero-write/repair test is missing: GetStructureAsync_does_not_delete_stale_system_managed_projection_rows
-- HG-10-03 FAIL: required zero-write/repair test is missing: GetStructureAsync_does_not_delete_stale_projection_layout_rows
-- HG-10-03 FAIL: required zero-write/repair test is missing: GetStructureAsync_does_not_write_when_legacy_marker_and_reference_fallback_is_used
-- HG-10-03 FAIL: required zero-write/repair test is missing: Explicit_projection_repair_removes_stale_system_managed_rows_and_orphan_layouts_idempotently
-- HG-10-05 FAIL: required unknown-plugin proof test is missing: Settings_page_renders_unknown_provider_manifest_fields_through_shared_field_editor
-- HG-10-05 FAIL: required unknown-plugin proof test is missing: Resources_page_renders_unknown_resource_manifest_fields_through_shared_field_editor
-- HG-10-05 FAIL: required unknown-plugin proof test is missing: Unknown_connector_manifest_fields_round_trip_without_page_specific_code
+No hard-gate failures detected.
 
 Warnings:
-- ADV WARNING: the phase9 gate still appears focused on the old normalization symbols and does not obviously scan the current stale-projection delete path.
 - ADV WARNING: marker compatibility fallback from metadata is still active in active code: src/CanDoItAll.Modules.Workbench/ProjectStructureAssemblyService.cs
 - ADV WARNING: reference compatibility fallback from metadata is still active in active code: src/CanDoItAll.Modules.Workbench/ProjectNodeBindings.cs
 - ADV WARNING: hotspot 'src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs' is still large (4970 lines > 4000).

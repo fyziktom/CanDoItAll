@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 from pathlib import Path
+import argparse
 import sys
 
-bundle = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path.cwd().resolve()
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("root", nargs="?", default=".")
+    parser.add_argument("--stage", choices=["prepared", "completed"], default="prepared")
+    return parser.parse_args()
+
+args = parse_args()
+bundle = Path(args.root).resolve()
 required = [
     "README.md",
     "analysis/01-current-verdict.md",
@@ -18,6 +26,12 @@ required = [
     "gates/01-stop-conditions.md",
     "gates/02-exit-criteria.md",
     "gates/03-anti-evasion-rules.md",
+    "reviews/00-bundle-self-review.md",
+    "reviews/01-execution-report.md",
+    "reviews/01-senior-review.md",
+    "reviews/02-hard-gate-review.md",
+    "reviews/03-current-state-validation.md",
+    "scripts/gate_check_phase10.py",
     "subbundles/p12-001-restore-phase10-zero-write-project-structure-read-path/README.md",
     "subbundles/p12-002-restore-phase10-unknown-manifest-shared-editor-proof/README.md",
     "subbundles/p12-003-add-operational-execution-plane-and-multi-source-automation-signals/README.md",
@@ -32,8 +46,6 @@ required = [
     "inventories/05-phase10-gate-previous-upload-run.txt",
     "inventories/06-regression-diff-vs-previous-upload.txt",
     "inventories/07-runtime-gap-search-baseline.txt",
-    "reviews/01-senior-review.md",
-    "reviews/02-hard-gate-review.md",
     "shared-prompts/implementation-prompt.md",
     "shared-prompts/qa-prompt.md",
     "shared-prompts/hard-gate-prompt.md",
@@ -47,4 +59,30 @@ if missing:
     for item in missing:
         print(f"- {item}")
     sys.exit(1)
-print("OK")
+
+phase_plan = (bundle / "plan/01-phase12-recovery-sequence.md").read_text(encoding="utf-8")
+for required_phrase in [
+    "```mermaid",
+    "critical foundation",
+    "## Entry gate",
+    "## Progression gate",
+]:
+    if required_phrase.lower() not in phase_plan.lower():
+        print("BUNDLE VALIDATION FAILED")
+        print(f"- plan/01-phase12-recovery-sequence.md is missing required execution metadata: {required_phrase}")
+        sys.exit(1)
+
+if args.stage == "completed":
+    execution_report = (bundle / "reviews/01-execution-report.md").read_text(encoding="utf-8")
+    for required_phrase in [
+        "## Browser Validation Analytics",
+        "## Subbundle Gate Results",
+        "## Raw Feedback Closure Audit",
+        "Solved",
+    ]:
+        if required_phrase not in execution_report:
+            print("BUNDLE VALIDATION FAILED")
+            print(f"- reviews/01-execution-report.md is missing completed-stage evidence marker: {required_phrase}")
+            sys.exit(1)
+
+print(f"Bundle validation OK for stage '{args.stage}'.")

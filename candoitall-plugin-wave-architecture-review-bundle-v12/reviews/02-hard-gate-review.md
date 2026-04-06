@@ -1,14 +1,14 @@
 # Hard-gate review
 
 ## Phase10
-Current upload: **FAIL**  
-Previous upload: **PASS**
+Current workspace: **PASS**  
+Previous stale upload evidence remains archived in `inventories/05-phase10-gate-previous-upload-run.txt`
 
 ## Phase11
-Current upload: **FAIL**
+Current workspace: **PASS**
 
 ## Phase12
-Current upload: **FAIL**
+Current workspace: **PASS**
 
 ## Release / plugin-wave decision
-**NO-GO** until bundle12 closes.
+**GO** for bundle12 closure in the current workspace, with advisory warnings only.
