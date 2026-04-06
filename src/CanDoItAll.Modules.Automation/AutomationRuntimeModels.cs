@@ -149,7 +149,8 @@ internal sealed class AutomationEnvelopeDeliveryRecordConfiguration : IEntityTyp
         builder.HasIndex(item => new
         {
             item.State,
-            item.AvailableAtUtc
+            item.AvailableAtUtc,
+            item.LockedAtUtc
         });
         builder.HasOne<AutomationEnvelopeRecord>()
             .WithMany()

@@ -2,6 +2,8 @@ namespace CanDoItAll.Modules.Automation;
 
 public sealed class AutomationRuntimeOptions
 {
+    public const string SectionName = "Automation:Runtime";
+
     public TimeSpan MessagePollInterval { get; set; } = TimeSpan.FromMilliseconds(200);
 
     public TimeSpan ConnectorOutboxPollInterval { get; set; } = TimeSpan.FromMilliseconds(200);
@@ -11,6 +13,12 @@ public sealed class AutomationRuntimeOptions
     public int MessageDispatchBatchSize { get; set; } = 20;
 
     public int ConnectorOutboxBatchSize { get; set; } = 20;
+
+    public TimeSpan DeliveryLeaseDuration { get; set; } = TimeSpan.FromMinutes(2);
+
+    public TimeSpan ConnectorCommandLeaseDuration { get; set; } = TimeSpan.FromMinutes(2);
+
+    public TimeSpan WorkerFailureBackoff { get; set; } = TimeSpan.FromSeconds(2);
 
     public AutomationMqttOptions Mqtt { get; set; } = new();
 }

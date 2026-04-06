@@ -161,6 +161,7 @@ public interface IAutomationBackgroundJobScheduler
         string jobType,
         string description,
         IReadOnlyDictionary<string, string>? metadata = null,
+        Guid? correlationId = null,
         CancellationToken cancellationToken = default);
 }
 

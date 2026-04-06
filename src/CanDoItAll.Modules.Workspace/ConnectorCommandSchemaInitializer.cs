@@ -30,6 +30,8 @@ public static class ConnectorCommandSchemaInitializer
             "CompletedAtUtc" TEXT NULL,
             "LastError" TEXT NOT NULL,
             "ResultJson" TEXT NOT NULL,
+            "LeaseToken" TEXT NOT NULL DEFAULT '',
+            "LeaseExpiresAtUtc" TEXT NULL,
             "RequestedBy" TEXT NOT NULL,
             "CreatedAtUtc" TEXT NOT NULL,
             "UpdatedAtUtc" TEXT NOT NULL
@@ -40,8 +42,8 @@ public static class ConnectorCommandSchemaInitializer
         ON "Workspace_ConnectorCommands" ("ProjectId", "ConnectorPluginKey", "CommandKey", "IdempotencyKey");
         """,
         """
-        CREATE INDEX IF NOT EXISTS "IX_Workspace_ConnectorCommands_Status_ApprovalState_NextAttemptAtUtc"
-        ON "Workspace_ConnectorCommands" ("Status", "ApprovalState", "NextAttemptAtUtc");
+        CREATE INDEX IF NOT EXISTS "IX_Workspace_ConnectorCommands_Status_ApprovalState_NextAttemptAtUtc_LeaseExpiresAtUtc"
+        ON "Workspace_ConnectorCommands" ("Status", "ApprovalState", "NextAttemptAtUtc", "LeaseExpiresAtUtc");
         """,
         """
         CREATE INDEX IF NOT EXISTS "IX_Workspace_ConnectorCommands_ProjectId_CreatedAtUtc"
@@ -75,15 +77,52 @@ public static class ConnectorCommandSchemaInitializer
         }
 
         var existingTables = await ReadExistingTablesAsync(dbContext, cancellationToken);
-        if (RequiredTables.All(existingTables.Contains))
+        if (!RequiredTables.All(existingTables.Contains))
         {
+            foreach (var statement in SqliteStatements)
+            {
+                await dbContext.Database.ExecuteSqlRawAsync(statement, cancellationToken);
+            }
+
             return;
         }
 
-        foreach (var statement in SqliteStatements)
+        var existingColumns = await ReadExistingColumnsAsync(
+            dbContext,
+            "Workspace_ConnectorCommands",
+            cancellationToken);
+        if (!existingColumns.Contains("LeaseToken"))
         {
-            await dbContext.Database.ExecuteSqlRawAsync(statement, cancellationToken);
+            await dbContext.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Workspace_ConnectorCommands" ADD COLUMN "LeaseToken" TEXT NOT NULL DEFAULT '';""",
+                cancellationToken);
         }
+
+        if (!existingColumns.Contains("LeaseExpiresAtUtc"))
+        {
+            await dbContext.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Workspace_ConnectorCommands" ADD COLUMN "LeaseExpiresAtUtc" TEXT NULL;""",
+                cancellationToken);
+        }
+
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Workspace_ConnectorCommands_Status_ApprovalState_NextAttemptAtUtc_LeaseExpiresAtUtc"
+            ON "Workspace_ConnectorCommands" ("Status", "ApprovalState", "NextAttemptAtUtc", "LeaseExpiresAtUtc");
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Workspace_ConnectorCommands_ProjectId_CreatedAtUtc"
+            ON "Workspace_ConnectorCommands" ("ProjectId", "CreatedAtUtc");
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Workspace_ConnectorCommandAudits_ConnectorCommandId_CreatedAtUtc"
+            ON "Workspace_ConnectorCommandAudits" ("ConnectorCommandId", "CreatedAtUtc");
+            """,
+            cancellationToken);
     }
 
     private static async Task<HashSet<string>> ReadExistingTablesAsync(
@@ -119,6 +158,44 @@ public static class ConnectorCommandSchemaInitializer
             }
 
             return existingTables;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static async Task<HashSet<string>> ReadExistingColumnsAsync(
+        AppDbContext dbContext,
+        string tableName,
+        CancellationToken cancellationToken)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != ConnectionState.Open;
+        if (shouldCloseConnection)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"""PRAGMA table_info("{tableName}");""";
+
+            var existingColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                if (!reader.IsDBNull(1))
+                {
+                    existingColumns.Add(reader.GetString(1));
+                }
+            }
+
+            return existingColumns;
         }
         finally
         {

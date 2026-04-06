@@ -12,16 +12,25 @@ def read_text(path: pathlib.Path) -> str:
         return path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         return path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return ""
 
 
 def iter_src_files(repo: pathlib.Path) -> Iterable[pathlib.Path]:
+    excluded_parts = {
+        "tests",
+        "bin",
+        "obj",
+        ".git",
+        ".artifacts",
+        "node_modules",
+        "candoitall-plugin-wave-architecture-review-bundle-v11",
+        "candoitall-plugin-wave-architecture-review-bundle-v12",
+        "candoitall-plugin-wave-architecture-review-bundle-v13",
+    }
     for path in repo.rglob("*.cs"):
         parts = set(path.parts)
-        if "tests" in parts:
-            continue
-        if "candoitall-plugin-wave-architecture-review-bundle-v11" in parts:
-            continue
-        if "candoitall-plugin-wave-architecture-review-bundle-v12" in parts:
+        if parts & excluded_parts:
             continue
         yield path
 

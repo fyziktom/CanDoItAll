@@ -17,11 +17,15 @@ public sealed class PluginIngressInbox(
         ValidateRequest(request);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var normalizedSourceKind = request.SourceKind.Trim();
+        var normalizedSourceKey = request.SourceKey.Trim();
+        var normalizedExternalMessageId = request.ExternalMessageId.Trim();
+        var normalizedCursorValue = request.CursorValue?.Trim() ?? string.Empty;
         var dedupeKey = BuildDedupeKey(request);
         var existing = await dbContext.Set<PluginIngressEnvelopeRecord>()
             .FirstOrDefaultAsync(item =>
-                    item.SourceKind == request.SourceKind &&
-                    item.SourceKey == request.SourceKey &&
+                    item.SourceKind == normalizedSourceKind &&
+                    item.SourceKey == normalizedSourceKey &&
                     item.DedupeKey == dedupeKey,
                 cancellationToken);
         if (existing is not null)
@@ -32,10 +36,10 @@ public sealed class PluginIngressInbox(
         var now = clock.GetUtcNow();
         var record = new PluginIngressEnvelopeRecord
         {
-            SourceKind = request.SourceKind.Trim(),
-            SourceKey = request.SourceKey.Trim(),
-            ExternalMessageId = request.ExternalMessageId.Trim(),
-            CursorValue = request.CursorValue?.Trim() ?? string.Empty,
+            SourceKind = normalizedSourceKind,
+            SourceKey = normalizedSourceKey,
+            ExternalMessageId = normalizedExternalMessageId,
+            CursorValue = normalizedCursorValue,
             DedupeKey = dedupeKey,
             PayloadJson = string.IsNullOrWhiteSpace(request.PayloadJson)
                 ? "{}"
@@ -46,7 +50,28 @@ public sealed class PluginIngressInbox(
         };
 
         await dbContext.Set<PluginIngressEnvelopeRecord>().AddAsync(record, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            var existingId = await TryFindExistingEnvelopeIdAsync(
+                normalizedSourceKind,
+                normalizedSourceKey,
+                dedupeKey,
+                cancellationToken);
+            if (existingId.HasValue)
+            {
+                var existingState = await GetStateAsync(existingId.Value, cancellationToken);
+                return new PluginIngressAcceptResult(
+                    existingId.Value,
+                    true,
+                    existingState ?? PluginIngressState.Accepted);
+            }
+
+            throw;
+        }
 
         await telemetryPublisher.PublishAsync(new AutomationTelemetryEvent(
             AutomationExecutionLogKind.IngressAccepted,
@@ -213,6 +238,31 @@ public sealed class PluginIngressInbox(
             record.ReceivedAtUtc,
             record.UpdatedAtUtc,
             record.MaterializedAtUtc);
+    }
+
+    private async Task<Guid?> TryFindExistingEnvelopeIdAsync(
+        string sourceKind,
+        string sourceKey,
+        string dedupeKey,
+        CancellationToken cancellationToken)
+    {
+        await using var verificationContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await verificationContext.Set<PluginIngressEnvelopeRecord>()
+            .Where(item =>
+                item.SourceKind == sourceKind &&
+                item.SourceKey == sourceKey &&
+                item.DedupeKey == dedupeKey)
+            .Select(item => (Guid?)item.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<PluginIngressState?> GetStateAsync(Guid envelopeId, CancellationToken cancellationToken)
+    {
+        await using var verificationContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await verificationContext.Set<PluginIngressEnvelopeRecord>()
+            .Where(item => item.Id == envelopeId)
+            .Select(item => (PluginIngressState?)item.State)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private static string EscapeJson(string? value)

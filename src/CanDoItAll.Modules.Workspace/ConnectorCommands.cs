@@ -57,6 +57,8 @@ public sealed class ConnectorCommandRecord
     public DateTimeOffset? CompletedAtUtc { get; set; }
     public string LastError { get; set; } = string.Empty;
     public string ResultJson { get; set; } = string.Empty;
+    public string LeaseToken { get; set; } = string.Empty;
+    public DateTimeOffset? LeaseExpiresAtUtc { get; set; }
     public string RequestedBy { get; set; } = string.Empty;
     public DateTimeOffset CreatedAtUtc { get; set; }
     public DateTimeOffset UpdatedAtUtc { get; set; }
@@ -74,6 +76,7 @@ internal sealed class ConnectorCommandRecordConfiguration : IEntityTypeConfigura
         builder.Property(item => item.PayloadJson).HasColumnType("TEXT");
         builder.Property(item => item.LastError).HasColumnType("TEXT");
         builder.Property(item => item.ResultJson).HasColumnType("TEXT");
+        builder.Property(item => item.LeaseToken).HasMaxLength(100).IsRequired();
         builder.Property(item => item.RequestedBy).HasMaxLength(160).IsRequired();
         builder.HasIndex(item => new
         {
@@ -86,7 +89,8 @@ internal sealed class ConnectorCommandRecordConfiguration : IEntityTypeConfigura
         {
             item.Status,
             item.ApprovalState,
-            item.NextAttemptAtUtc
+            item.NextAttemptAtUtc,
+            item.LeaseExpiresAtUtc
         });
         builder.HasIndex(item => new
         {

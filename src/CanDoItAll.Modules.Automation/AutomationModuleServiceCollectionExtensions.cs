@@ -9,7 +9,8 @@ public static class AutomationModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddAutomationModule(this IServiceCollection services)
     {
-        services.AddOptions<AutomationRuntimeOptions>();
+        services.AddOptions<AutomationRuntimeOptions>()
+            .BindConfiguration(AutomationRuntimeOptions.SectionName);
         services.AddQuartz(options =>
         {
             options.SchedulerId = "CanDoItAll.Automation";

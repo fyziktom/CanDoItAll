@@ -13,10 +13,12 @@ public sealed class ConnectorCommandProcessor(
 
     public async Task<ConnectorCommandStatus?> ProcessAsync(
         Guid commandId,
+        string? leaseToken = null,
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var now = clock.GetUtcNow();
         var command = await dbContext.Set<ConnectorCommandRecord>()
             .FirstOrDefaultAsync(item => item.Id == commandId, cancellationToken);
         if (command is null)
@@ -24,22 +26,41 @@ public sealed class ConnectorCommandProcessor(
             return null;
         }
 
+        if (!string.IsNullOrWhiteSpace(leaseToken))
+        {
+            if (!string.Equals(command.LeaseToken, leaseToken, StringComparison.Ordinal) ||
+                command.LeaseExpiresAtUtc is null ||
+                command.LeaseExpiresAtUtc <= now)
+            {
+                return null;
+            }
+        }
+        else if (command.LeaseExpiresAtUtc.HasValue && command.LeaseExpiresAtUtc.Value > now)
+        {
+            return command.Status;
+        }
+
         if (command.Status is ConnectorCommandStatus.Completed or ConnectorCommandStatus.DeadLettered or ConnectorCommandStatus.Rejected)
         {
+            ReleaseLease(command);
+            await dbContext.SaveChangesAsync(cancellationToken);
             return command.Status;
         }
 
         if (command.ApprovalState == ConnectorCommandApprovalState.Pending)
         {
+            ReleaseLease(command);
+            await dbContext.SaveChangesAsync(cancellationToken);
             return command.Status;
         }
 
-        if (command.NextAttemptAtUtc.HasValue && command.NextAttemptAtUtc.Value > clock.GetUtcNow())
+        if (command.NextAttemptAtUtc.HasValue && command.NextAttemptAtUtc.Value > now)
         {
+            ReleaseLease(command);
+            await dbContext.SaveChangesAsync(cancellationToken);
             return command.Status;
         }
 
-        var now = clock.GetUtcNow();
         command.AttemptCount++;
         command.LastAttemptAtUtc = now;
         command.UpdatedAtUtc = now;
@@ -95,6 +116,7 @@ public sealed class ConnectorCommandProcessor(
                 command.NextAttemptAtUtc = null;
                 command.LastError = string.Empty;
                 command.ResultJson = NormalizeJson(executionResult.ResultJson);
+                ReleaseLease(command);
                 command.UpdatedAtUtc = now;
                 dbContext.Set<ConnectorCommandAuditRecord>().Add(new ConnectorCommandAuditRecord
                 {
@@ -122,6 +144,7 @@ public sealed class ConnectorCommandProcessor(
                     command.CompletedAtUtc = null;
                     command.LastError = NormalizeError(executionResult.ErrorMessage, "Connector command failed and will be retried.");
                     command.NextAttemptAtUtc = now.Add(ComputeBackoff(command.AttemptCount));
+                    ReleaseLease(command);
                     command.UpdatedAtUtc = now;
                     dbContext.Set<ConnectorCommandAuditRecord>().Add(new ConnectorCommandAuditRecord
                     {
@@ -160,6 +183,7 @@ public sealed class ConnectorCommandProcessor(
         command.CompletedAtUtc = null;
         command.LastError = errorMessage;
         command.NextAttemptAtUtc = null;
+        ReleaseLease(command);
         command.UpdatedAtUtc = occurredAtUtc;
         dbContext.Set<ConnectorCommandAuditRecord>().Add(new ConnectorCommandAuditRecord
         {
@@ -171,6 +195,12 @@ public sealed class ConnectorCommandProcessor(
             DetailsJson = BuildFailureDetailsJson(errorMessage, null),
             CreatedAtUtc = occurredAtUtc
         });
+    }
+
+    private static void ReleaseLease(ConnectorCommandRecord command)
+    {
+        command.LeaseToken = string.Empty;
+        command.LeaseExpiresAtUtc = null;
     }
 
     private static TimeSpan ComputeBackoff(int attemptCount)
@@ -219,6 +249,8 @@ public sealed class ConnectorOutboxService(
     ConnectorPluginRegistry connectorPluginRegistry,
     ConnectorCommandProcessor commandProcessor)
 {
+    private static readonly TimeSpan DefaultLeaseDuration = TimeSpan.FromMinutes(2);
+
     public async Task<ConnectorCommandEnqueueResult> EnqueueAsync(
         ConnectorCommandEnqueueRequest request,
         CancellationToken cancellationToken = default)
@@ -308,7 +340,27 @@ public sealed class ConnectorOutboxService(
             });
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            var duplicate = await TryResolveDuplicateEnqueueAsync(
+                request.ProjectId,
+                normalizedPluginKey,
+                normalizedCommandKey,
+                normalizedIdempotencyKey,
+                normalizedActor,
+                cancellationToken);
+            if (duplicate is not null)
+            {
+                return duplicate;
+            }
+
+            throw;
+        }
+
         return new ConnectorCommandEnqueueResult(
             command.Id,
             false,
@@ -320,11 +372,12 @@ public sealed class ConnectorOutboxService(
         Guid commandId,
         CancellationToken cancellationToken = default)
     {
-        return commandProcessor.ProcessAsync(commandId, cancellationToken);
+        return commandProcessor.ProcessAsync(commandId, cancellationToken: cancellationToken);
     }
 
     public async Task<int> ProcessPendingAsync(
         int take = 20,
+        TimeSpan? leaseDuration = null,
         CancellationToken cancellationToken = default)
     {
         if (take <= 0)
@@ -335,26 +388,36 @@ public sealed class ConnectorOutboxService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var now = clock.GetUtcNow();
-        var pendingCommands = await dbContext.Set<ConnectorCommandRecord>()
-            .Where(item =>
-                item.Status == ConnectorCommandStatus.Pending &&
-                item.ApprovalState != ConnectorCommandApprovalState.Pending)
-            .ToListAsync(cancellationToken);
-        var commandIds = pendingCommands
-            .Where(item =>
-                !item.NextAttemptAtUtc.HasValue ||
-                item.NextAttemptAtUtc.Value <= now)
-            .OrderBy(item => item.CreatedAtUtc)
-            .Take(take)
-            .Select(item => item.Id)
-            .ToList();
+        var effectiveLeaseDuration = leaseDuration is null || leaseDuration.Value <= TimeSpan.Zero
+            ? DefaultLeaseDuration
+            : leaseDuration.Value;
+        var commandIds = dbContext.Database.IsSqlite()
+            ? await ListPendingCommandIdsForSqliteAsync(dbContext, now, take, cancellationToken)
+            : await dbContext.Set<ConnectorCommandRecord>()
+                .Where(item => item.Status == ConnectorCommandStatus.Pending)
+                .Where(item => item.ApprovalState != ConnectorCommandApprovalState.Pending)
+                .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
+                .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
+                .OrderBy(item => item.NextAttemptAtUtc ?? item.CreatedAtUtc)
+                .ThenBy(item => item.CreatedAtUtc)
+                .Take(take)
+                .Select(item => item.Id)
+                .ToListAsync(cancellationToken);
 
+        var processedCount = 0;
         foreach (var commandId in commandIds)
         {
-            await commandProcessor.ProcessAsync(commandId, cancellationToken);
+            var leaseToken = await TryClaimCommandAsync(commandId, effectiveLeaseDuration, cancellationToken);
+            if (leaseToken is null)
+            {
+                continue;
+            }
+
+            await commandProcessor.ProcessAsync(commandId, leaseToken, cancellationToken);
+            processedCount++;
         }
 
-        return commandIds.Count;
+        return processedCount;
     }
 
     public async Task<bool> ApproveAsync(
@@ -413,6 +476,8 @@ public sealed class ConnectorOutboxService(
         command.NextAttemptAtUtc = now;
         command.CompletedAtUtc = null;
         command.LastError = string.Empty;
+        command.LeaseToken = string.Empty;
+        command.LeaseExpiresAtUtc = null;
         command.UpdatedAtUtc = now;
         dbContext.Set<ConnectorCommandAuditRecord>().Add(new ConnectorCommandAuditRecord
         {
@@ -487,6 +552,8 @@ public sealed class ConnectorOutboxService(
         var now = clock.GetUtcNow();
         command.ApprovalState = approvalState;
         command.Status = status;
+        command.LeaseToken = string.Empty;
+        command.LeaseExpiresAtUtc = null;
         command.UpdatedAtUtc = now;
         if (approvalState == ConnectorCommandApprovalState.Approved)
         {
@@ -538,5 +605,123 @@ public sealed class ConnectorOutboxService(
         return string.IsNullOrWhiteSpace(actor)
             ? "system"
             : actor.Trim();
+    }
+
+    private async Task<string?> TryClaimCommandAsync(
+        Guid commandId,
+        TimeSpan leaseDuration,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+
+        var now = clock.GetUtcNow();
+        var leaseToken = Guid.NewGuid().ToString("N");
+        var leaseExpiresAtUtc = now.Add(leaseDuration);
+        var updatedRows = dbContext.Database.IsSqlite()
+            ? await TryClaimCommandForSqliteAsync(
+                dbContext,
+                commandId,
+                now,
+                leaseExpiresAtUtc,
+                leaseToken,
+                cancellationToken)
+            : await dbContext.Set<ConnectorCommandRecord>()
+                .Where(item => item.Id == commandId)
+                .Where(item => item.Status == ConnectorCommandStatus.Pending)
+                .Where(item => item.ApprovalState != ConnectorCommandApprovalState.Pending)
+                .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
+                .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(item => item.LeaseToken, leaseToken)
+                    .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
+                    .SetProperty(item => item.UpdatedAtUtc, now), cancellationToken);
+
+        return updatedRows == 0
+            ? null
+            : leaseToken;
+    }
+
+    private async Task<ConnectorCommandEnqueueResult?> TryResolveDuplicateEnqueueAsync(
+        Guid projectId,
+        string connectorPluginKey,
+        string commandKey,
+        string idempotencyKey,
+        string actor,
+        CancellationToken cancellationToken)
+    {
+        await using var verificationContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ConnectorCommandSchemaInitializer.EnsureAsync(verificationContext, cancellationToken);
+        var existing = await verificationContext.Set<ConnectorCommandRecord>()
+            .FirstOrDefaultAsync(item =>
+                    item.ProjectId == projectId &&
+                    item.ConnectorPluginKey == connectorPluginKey &&
+                    item.CommandKey == commandKey &&
+                    item.IdempotencyKey == idempotencyKey,
+                cancellationToken);
+        if (existing is null)
+        {
+            return null;
+        }
+
+        verificationContext.Set<ConnectorCommandAuditRecord>().Add(new ConnectorCommandAuditRecord
+        {
+            ConnectorCommandId = existing.Id,
+            ProjectId = existing.ProjectId,
+            EventKind = ConnectorCommandAuditEventKind.IdempotencyHit,
+            Actor = actor,
+            Message = "Duplicate connector command enqueue returned the existing durable command.",
+            DetailsJson = "{}",
+            CreatedAtUtc = clock.GetUtcNow()
+        });
+        await verificationContext.SaveChangesAsync(cancellationToken);
+
+        return new ConnectorCommandEnqueueResult(
+            existing.Id,
+            true,
+            existing.Status,
+            existing.ApprovalState);
+    }
+
+    private static Task<List<Guid>> ListPendingCommandIdsForSqliteAsync(
+        AppDbContext dbContext,
+        DateTimeOffset now,
+        int take,
+        CancellationToken cancellationToken)
+    {
+        return dbContext.Database
+            .SqlQuery<Guid>($"""
+                             SELECT "Id" AS "Value"
+                             FROM "Workspace_ConnectorCommands"
+                             WHERE "Status" = {(int)ConnectorCommandStatus.Pending}
+                               AND "ApprovalState" <> {(int)ConnectorCommandApprovalState.Pending}
+                               AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
+                               AND ("LeaseExpiresAtUtc" IS NULL OR "LeaseExpiresAtUtc" <= {now})
+                             ORDER BY COALESCE("NextAttemptAtUtc", "CreatedAtUtc"), "CreatedAtUtc"
+                             LIMIT {take}
+                             """)
+            .ToListAsync(cancellationToken);
+    }
+
+    private static Task<int> TryClaimCommandForSqliteAsync(
+        AppDbContext dbContext,
+        Guid commandId,
+        DateTimeOffset now,
+        DateTimeOffset leaseExpiresAtUtc,
+        string leaseToken,
+        CancellationToken cancellationToken)
+    {
+        return dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+                                                               UPDATE "Workspace_ConnectorCommands"
+                                                               SET "LeaseToken" = {leaseToken},
+                                                                   "LeaseExpiresAtUtc" = {leaseExpiresAtUtc},
+                                                                   "UpdatedAtUtc" = {now}
+                                                               WHERE "Id" = {commandId}
+                                                                 AND "Status" = {(int)ConnectorCommandStatus.Pending}
+                                                                 AND "ApprovalState" <> {(int)ConnectorCommandApprovalState.Pending}
+                                                                 AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
+                                                                 AND ("LeaseExpiresAtUtc" IS NULL OR "LeaseExpiresAtUtc" <= {now})
+                                                               """,
+            cancellationToken);
     }
 }

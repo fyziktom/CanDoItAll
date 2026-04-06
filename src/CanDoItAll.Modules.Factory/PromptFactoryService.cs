@@ -685,7 +685,7 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
             return Result<string>.Failure(build.Errors);
         }
 
-        var jobId = await backgroundJobTracker.EnqueueTrackedAsync("prompt-export", "Export generated prompt", cancellationToken: cancellationToken);
+        var jobId = await backgroundJobTracker.CreateTrackedAsync("prompt-export", "Export generated prompt", cancellationToken: cancellationToken);
         await backgroundJobTracker.MarkRunningAsync(jobId, cancellationToken);
 
         try
@@ -741,7 +741,7 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
             return Result<ProviderExecutionResponse>.Failure(promptIdResult.Errors);
         }
 
-        var jobId = await backgroundJobTracker.EnqueueTrackedAsync("prompt-send", "Send generated prompt to provider", cancellationToken: cancellationToken);
+        var jobId = await backgroundJobTracker.CreateTrackedAsync("prompt-send", "Send generated prompt to provider", cancellationToken: cancellationToken);
         await backgroundJobTracker.MarkRunningAsync(jobId, cancellationToken);
 
         var result = await providerExecutionService.SendAsync(new ProviderExecutionRequest(

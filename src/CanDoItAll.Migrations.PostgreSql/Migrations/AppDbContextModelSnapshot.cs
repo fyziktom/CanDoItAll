@@ -490,7 +490,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasIndex("EnvelopeId", "HandlerKey")
                         .IsUnique();
 
-                    b.HasIndex("State", "AvailableAtUtc");
+                    b.HasIndex("State", "AvailableAtUtc", "LockedAtUtc");
 
                     b.ToTable("Automation_EnvelopeDeliveries", (string)null);
                 });
@@ -3716,6 +3716,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LeaseToken")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<DateTimeOffset?>("NextAttemptAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -3745,10 +3753,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("ProjectId", "CreatedAtUtc");
 
-                    b.HasIndex("Status", "ApprovalState", "NextAttemptAtUtc");
-
                     b.HasIndex("ProjectId", "ConnectorPluginKey", "CommandKey", "IdempotencyKey")
                         .IsUnique();
+
+                    b.HasIndex("Status", "ApprovalState", "NextAttemptAtUtc", "LeaseExpiresAtUtc");
 
                     b.ToTable("Workspace_ConnectorCommands", (string)null);
                 });

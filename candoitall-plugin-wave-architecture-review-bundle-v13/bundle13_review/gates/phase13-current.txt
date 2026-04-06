@@ -1,19 +1,9 @@
 === Phase13 execution-grade runtime hardening gate ===
-Repo: /tmp/repo_check/CanDoItAll-canonical-model-refactor
+Repo: C:\repositories\CanDoItAll
 
-Hard-gate failures:
-- P13-001 FAIL: AutomationRuntimeOptions are not bound from production configuration. Evidence: src/CanDoItAll.Modules.Automation/AutomationModuleServiceCollectionExtensions.cs
-- P13-002 FAIL: Automation message publish still uses read-then-insert dedupe without uniqueness-conflict recovery. Evidence: src/CanDoItAll.Modules.Automation/AutomationMessagingServices.cs
-- P13-002 FAIL: Plugin ingress accept still uses read-then-insert dedupe without uniqueness-conflict recovery. Evidence: src/CanDoItAll.Modules.Automation/AutomationIngressService.cs
-- P13-002 FAIL: Connector outbox enqueue still uses read-then-insert idempotency without uniqueness-conflict recovery. Evidence: src/CanDoItAll.Modules.Workspace/ConnectorOutboxService.cs
-- P13-003 FAIL: Automation dispatcher still materializes delivery candidates in memory before due-work acquisition. Evidence: src/CanDoItAll.Modules.Automation/AutomationMessagingServices.cs
-- P13-003 FAIL: Connector outbox still materializes pending command candidates in memory before acquisition. Evidence: src/CanDoItAll.Modules.Workspace/ConnectorOutboxService.cs
-- P13-004 FAIL: Automation hosted worker loops have no iteration-level exception isolation. Evidence: src/CanDoItAll.Modules.Automation/AutomationHostedServices.cs
-- P13-005 FAIL: Production call sites still schedule work through the legacy background-job queue seam: src/CanDoItAll.Modules.Factory/PromptFactoryService.cs
+No hard-gate failures detected.
 
 Warnings:
-- ADV WARNING: delivery lock fields exist but are not used as an acquisition predicate: src/CanDoItAll.Modules.Automation/AutomationMessagingServices.cs
-- ADV WARNING: legacy background queue bridge still looks observational/log-only: src/CanDoItAll.Modules.Automation/AutomationHostedServices.cs
 - ADV WARNING: marker compatibility fallback from metadata is still active in active code: src/CanDoItAll.Modules.Workbench/ProjectStructureAssemblyService.cs
 - ADV WARNING: reference compatibility fallback from metadata is still active in active code: src/CanDoItAll.Modules.Workbench/ProjectNodeBindings.cs
 - ADV WARNING: hotspot 'src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs' is still large (4970 lines > 4000).

@@ -13,6 +13,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Quartz;
 using Quartz.Impl.Matchers;
 
@@ -237,6 +239,7 @@ public sealed class AutomationRuntimeIntegrationTests
         IReadOnlyDictionary<string, string?>? configurationOverrides = null,
         CancellationToken cancellationToken = default)
     {
+        var mergedConfigurationOverrides = CreateRuntimeConfigurationOverrides(configurationOverrides);
         Quartz.Logging.LogProvider.IsDisabled = false;
         Quartz.Logging.LogProvider.SetCurrentLogProvider(new NoOpQuartzLogProvider());
 
@@ -244,7 +247,7 @@ public sealed class AutomationRuntimeIntegrationTests
             profile,
             "CanDoItAll.Tests",
             TestSchemaBootstrapModules.Full,
-            configurationOverrides,
+            mergedConfigurationOverrides,
             services =>
             {
                 services.RemoveAll<IHostedService>();
@@ -252,19 +255,39 @@ public sealed class AutomationRuntimeIntegrationTests
                 services.AddHostedService<AutomationMessagePumpWorker>();
                 services.AddHostedService<ConnectorOutboxDrainWorker>();
                 services.AddHostedService<LegacyBackgroundJobQueueBridgeWorker>();
-                services.Configure<AutomationRuntimeOptions>(options =>
-                {
-                    options.MessageDispatchBatchSize = 20;
-                    options.MessagePollInterval = TimeSpan.FromMilliseconds(20);
-                    options.ConnectorOutboxBatchSize = 20;
-                    options.ConnectorOutboxPollInterval = TimeSpan.FromMilliseconds(20);
-                    options.LegacyBackgroundQueuePollInterval = TimeSpan.FromMilliseconds(20);
-                    options.Mqtt.Enabled = false;
-                    options.Mqtt.Host = string.Empty;
-                });
                 configureServices?.Invoke(services);
             },
             cancellationToken);
+    }
+
+    private static IReadOnlyDictionary<string, string?> CreateRuntimeConfigurationOverrides(
+        IReadOnlyDictionary<string, string?>? overrides)
+    {
+        var merged = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Automation:Runtime:MessageDispatchBatchSize"] = "20",
+            ["Automation:Runtime:MessagePollInterval"] = "00:00:00.020",
+            ["Automation:Runtime:ConnectorOutboxBatchSize"] = "20",
+            ["Automation:Runtime:ConnectorOutboxPollInterval"] = "00:00:00.020",
+            ["Automation:Runtime:LegacyBackgroundQueuePollInterval"] = "00:00:00.020",
+            ["Automation:Runtime:DeliveryLeaseDuration"] = "00:05:00",
+            ["Automation:Runtime:ConnectorCommandLeaseDuration"] = "00:05:00",
+            ["Automation:Runtime:WorkerFailureBackoff"] = "00:00:00.050",
+            ["Automation:Runtime:Mqtt:Enabled"] = "false",
+            ["Automation:Runtime:Mqtt:Host"] = string.Empty
+        };
+
+        if (overrides is null)
+        {
+            return merged;
+        }
+
+        foreach (var pair in overrides)
+        {
+            merged[pair.Key] = pair.Value;
+        }
+
+        return merged;
     }
 
     private static async Task InsertTriggerRecordAsync(ServiceProvider provider, AutomationTriggerRecord record)
@@ -829,6 +852,487 @@ public sealed class AutomationRuntimeIntegrationTests
         Assert.True(await dbContext.Set<AutomationExecutionLogRecord>().AnyAsync());
     }
 
+    [Fact]
+    public async Task Automation_runtime_options_bind_from_configuration()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-options-config");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var overrides = new Dictionary<string, string?>
+        {
+            ["Automation:Runtime:MessagePollInterval"] = "00:00:00.123",
+            ["Automation:Runtime:ConnectorOutboxPollInterval"] = "00:00:00.456",
+            ["Automation:Runtime:LegacyBackgroundQueuePollInterval"] = "00:00:00.789",
+            ["Automation:Runtime:MessageDispatchBatchSize"] = "11",
+            ["Automation:Runtime:ConnectorOutboxBatchSize"] = "17",
+            ["Automation:Runtime:DeliveryLeaseDuration"] = "00:03:00",
+            ["Automation:Runtime:ConnectorCommandLeaseDuration"] = "00:04:00",
+            ["Automation:Runtime:WorkerFailureBackoff"] = "00:00:09",
+            ["Automation:Runtime:Mqtt:Enabled"] = "true",
+            ["Automation:Runtime:Mqtt:ClientId"] = "integration-bridge",
+            ["Automation:Runtime:Mqtt:Host"] = "mqtt.example.test",
+            ["Automation:Runtime:Mqtt:Port"] = "2883",
+            ["Automation:Runtime:Mqtt:TopicPrefix"] = "custom/runtime"
+        };
+
+        await using var provider = await BuildProviderAsync(profile, configurationOverrides: overrides);
+        await using var scope = provider.CreateAsyncScope();
+        var runtimeOptions = scope.ServiceProvider.GetRequiredService<IOptions<AutomationRuntimeOptions>>().Value;
+
+        Assert.Equal(TimeSpan.FromMilliseconds(123), runtimeOptions.MessagePollInterval);
+        Assert.Equal(TimeSpan.FromMilliseconds(456), runtimeOptions.ConnectorOutboxPollInterval);
+        Assert.Equal(TimeSpan.FromMilliseconds(789), runtimeOptions.LegacyBackgroundQueuePollInterval);
+        Assert.Equal(11, runtimeOptions.MessageDispatchBatchSize);
+        Assert.Equal(17, runtimeOptions.ConnectorOutboxBatchSize);
+        Assert.Equal(TimeSpan.FromMinutes(3), runtimeOptions.DeliveryLeaseDuration);
+        Assert.Equal(TimeSpan.FromMinutes(4), runtimeOptions.ConnectorCommandLeaseDuration);
+        Assert.Equal(TimeSpan.FromSeconds(9), runtimeOptions.WorkerFailureBackoff);
+        Assert.True(runtimeOptions.Mqtt.Enabled);
+        Assert.Equal("integration-bridge", runtimeOptions.Mqtt.ClientId);
+        Assert.Equal("mqtt.example.test", runtimeOptions.Mqtt.Host);
+        Assert.Equal(2883, runtimeOptions.Mqtt.Port);
+        Assert.Equal("custom/runtime", runtimeOptions.Mqtt.TopicPrefix);
+    }
+
+    [Fact]
+    public async Task Automation_mqtt_bridge_reads_production_configuration_without_test_only_overrides()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-mqtt-config-bridge");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var logSink = new TestLoggerSink();
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton<ILoggerProvider>(new TestLoggerProvider(logSink));
+            },
+            new Dictionary<string, string?>
+            {
+                ["Automation:Runtime:Mqtt:Enabled"] = "true",
+                ["Automation:Runtime:Mqtt:Host"] = string.Empty,
+                ["Automation:Runtime:Mqtt:ClientId"] = "bridge-from-config",
+                ["Automation:Runtime:Mqtt:TopicPrefix"] = "config/runtime"
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var bridge = scope.ServiceProvider.GetServices<IAutomationTelemetryBridge>()
+            .OfType<MqttAutomationTelemetryBridge>()
+            .Single();
+
+        await bridge.PublishAsync(
+            new AutomationTelemetryEvent(
+                AutomationExecutionLogKind.Published,
+                "automation-envelope",
+                Guid.NewGuid().ToString("N"),
+                Guid.NewGuid(),
+                null,
+                "Bridge configuration test.",
+                "{}"),
+            CancellationToken.None);
+
+        Assert.Contains(
+            logSink.Entries,
+            entry =>
+                entry.LogLevel == LogLevel.Warning &&
+                entry.Message.Contains("Automation MQTT telemetry is enabled but no host is configured.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Concurrent_message_publish_with_same_dedupe_key_returns_single_envelope()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-publish-concurrency");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        await using var provider = await BuildProviderAsync(profile);
+
+        var envelopeIds = await RunConcurrentlyAsync(
+            8,
+            async () =>
+            {
+                await using var scope = provider.CreateAsyncScope();
+                var publisher = scope.ServiceProvider.GetRequiredService<IAutomationMessagePublisher>();
+                return await publisher.PublishAsync(
+                    new TestOperationalEnvelope("shared-dedupe"),
+                    new AutomationPublishOptions(DedupeKey: "shared-dedupe-key"));
+            });
+
+        await using var verificationScope = provider.CreateAsyncScope();
+        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+        Assert.Single(envelopeIds.Distinct());
+        Assert.Equal(
+            1,
+            await dbContext.Set<AutomationEnvelopeRecord>()
+                .CountAsync(item =>
+                    item.EnvelopeType == AutomationEnvelopeTypeNames.For<TestOperationalEnvelope>() &&
+                    item.DedupeKey == "shared-dedupe-key"));
+    }
+
+    [Fact]
+    public async Task Concurrent_ingress_accept_with_same_external_message_returns_single_envelope()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-ingress-concurrency");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        await using var provider = await BuildProviderAsync(profile);
+
+        var results = await RunConcurrentlyAsync(
+            8,
+            async () =>
+            {
+                await using var scope = provider.CreateAsyncScope();
+                var inbox = scope.ServiceProvider.GetRequiredService<IPluginIngressInbox>();
+                return await inbox.AcceptAsync(new PluginIngressEnvelopeRequest(
+                    "email",
+                    "crm-sync",
+                    "shared-message",
+                    "cursor-01",
+                    """{"subject":"hello"}"""));
+            });
+
+        await using var verificationScope = provider.CreateAsyncScope();
+        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+        Assert.Single(results.Select(item => item.EnvelopeId).Distinct());
+        Assert.Equal(1, await dbContext.Set<PluginIngressEnvelopeRecord>().CountAsync());
+        Assert.Equal(7, results.Count(item => item.IsDuplicate));
+    }
+
+    [Fact]
+    public async Task Concurrent_connector_enqueue_with_same_idempotency_key_returns_single_command()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-outbox-concurrency");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        await using var provider = await BuildProviderAsync(profile);
+
+        Guid projectId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+            projectId = await CreateProjectAsync(projectsService, "Concurrent outbox dedupe");
+        }
+
+        var results = await RunConcurrentlyAsync(
+            8,
+            async () =>
+            {
+                await using var scope = provider.CreateAsyncScope();
+                var outbox = scope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
+                return await outbox.EnqueueAsync(new ConnectorCommandEnqueueRequest(
+                    projectId,
+                    WebhookResourceConnectorPlugin.PluginKey,
+                    "deliver",
+                    """{"endpointUrl":"https://example.com/hooks/concurrency"}""",
+                    "shared-idempotency-key",
+                    "integration-tests"));
+            });
+
+        await using var verificationScope = provider.CreateAsyncScope();
+        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+        Assert.Single(results.Select(item => item.CommandId).Distinct());
+        Assert.Equal(
+            1,
+            await dbContext.Set<ConnectorCommandRecord>()
+                .CountAsync(item =>
+                    item.ProjectId == projectId &&
+                    item.ConnectorPluginKey == WebhookResourceConnectorPlugin.PluginKey &&
+                    item.CommandKey == "deliver" &&
+                    item.IdempotencyKey == "shared-idempotency-key"));
+        Assert.Equal(7, results.Count(item => item.IsDuplicate));
+    }
+
+    [Fact]
+    public async Task Parallel_dispatchers_do_not_process_the_same_delivery_twice()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-parallel-dispatchers");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var sink = new MessageSink();
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton(sink);
+                services.AddScoped<IAutomationMessageHandler, SlowSuccessfulOperationalHandler>();
+            });
+
+        Guid envelopeId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var publisher = scope.ServiceProvider.GetRequiredService<IAutomationMessagePublisher>();
+            envelopeId = await publisher.PublishAsync(new TestOperationalEnvelope("parallel-dispatch"));
+        }
+
+        var results = await RunConcurrentlyAsync(
+            2,
+            () => DispatchPendingAsync(provider, 1));
+
+        await using var verificationScope = provider.CreateAsyncScope();
+        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var attempts = await dbContext.Set<AutomationDeliveryAttemptRecord>()
+            .Where(item => item.EnvelopeId == envelopeId)
+            .ToListAsync();
+
+        Assert.Equal(1, results.Sum());
+        Assert.Single(sink.Messages);
+        Assert.Single(attempts);
+    }
+
+    [Fact]
+    public async Task Parallel_connector_outbox_workers_do_not_process_the_same_command_twice()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-parallel-outbox-workers");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var handler = new TestConnectorCommandHandler(
+            TimeSpan.FromMilliseconds(100),
+            ConnectorCommandExecutionResult.Completed("""{"delivery":"parallel"}"""));
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton(handler);
+                services.AddSingleton<IConnectorCommandHandler>(serviceProvider => serviceProvider.GetRequiredService<TestConnectorCommandHandler>());
+            });
+
+        Guid commandId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+            var outbox = scope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
+            var projectId = await CreateProjectAsync(projectsService, "Parallel outbox worker");
+            commandId = (await outbox.EnqueueAsync(new ConnectorCommandEnqueueRequest(
+                projectId,
+                WebhookResourceConnectorPlugin.PluginKey,
+                "deliver",
+                """{"endpointUrl":"https://example.com/hooks/parallel"}""",
+                "parallel-command",
+                "integration-tests"))).CommandId;
+        }
+
+        var results = await RunConcurrentlyAsync(
+            2,
+            async () =>
+            {
+                await using var scope = provider.CreateAsyncScope();
+                var outbox = scope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
+                return await outbox.ProcessPendingAsync(1, TimeSpan.FromMinutes(1));
+            });
+
+        var snapshot = await GetConnectorSnapshotAsync(provider, commandId);
+
+        Assert.Equal(1, results.Sum());
+        Assert.NotNull(snapshot);
+        Assert.Equal(ConnectorCommandStatus.Completed, snapshot!.Status);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Abandoned_delivery_lease_can_be_reclaimed()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-reclaim-lease");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var sink = new MessageSink();
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton(sink);
+                services.AddScoped<IAutomationMessageHandler, SuccessfulOperationalHandler>();
+            });
+
+        Guid envelopeId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var publisher = scope.ServiceProvider.GetRequiredService<IAutomationMessagePublisher>();
+            envelopeId = await publisher.PublishAsync(new TestOperationalEnvelope("reclaim-me"));
+        }
+
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            var staleDelivery = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
+                .SingleAsync(item => item.EnvelopeId == envelopeId);
+            var staleTime = DateTimeOffset.UtcNow.AddMinutes(-10);
+            staleDelivery.State = AutomationDeliveryState.Running;
+            staleDelivery.AttemptCount = 1;
+            staleDelivery.LastAttemptAtUtc = staleTime;
+            staleDelivery.AvailableAtUtc = staleTime;
+            staleDelivery.LockedAtUtc = staleTime;
+            staleDelivery.LockToken = "stale-lease";
+            staleDelivery.UpdatedAtUtc = staleTime;
+            await dbContext.SaveChangesAsync();
+        }
+
+        Assert.Equal(1, await DispatchPendingAsync(provider, 1));
+
+        await using var verificationScope = provider.CreateAsyncScope();
+        var verificationFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var verificationContext = await verificationFactory.CreateDbContextAsync();
+        var delivery = await verificationContext.Set<AutomationEnvelopeDeliveryRecord>()
+            .SingleAsync(item => item.EnvelopeId == envelopeId);
+
+        Assert.Single(sink.Messages);
+        Assert.Equal(AutomationDeliveryState.Completed, delivery.State);
+        Assert.Equal(2, delivery.AttemptCount);
+        Assert.Equal(string.Empty, delivery.LockToken);
+        Assert.Null(delivery.LockedAtUtc);
+    }
+
+    [Fact]
+    public async Task Automation_message_pump_worker_continues_after_transient_dispatch_failure()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-worker-dispatch-failure");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var sink = new MessageSink();
+        var clockState = new ArmedThrowOnceClockState();
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.RemoveAll<IHostedService>();
+                services.AddHostedService<AutomationMessagePumpWorker>();
+                services.AddSingleton(sink);
+                services.AddScoped<IAutomationMessageHandler, SuccessfulOperationalHandler>();
+                services.AddSingleton(clockState);
+                services.RemoveAll<IClock>();
+                services.AddSingleton<IClock>(serviceProvider => new ThrowOnceArmedClock(serviceProvider.GetRequiredService<ArmedThrowOnceClockState>()));
+            });
+
+        Guid envelopeId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var publisher = scope.ServiceProvider.GetRequiredService<IAutomationMessagePublisher>();
+            envelopeId = await publisher.PublishAsync(new TestOperationalEnvelope("worker-survives-dispatch-failure"));
+        }
+
+        clockState.Arm();
+
+        await using var hostedServices = await HostedServiceHarness.StartAsync(provider);
+        await WaitForAsync(
+            async () => await GetEnvelopeStateAsync(provider, envelopeId) == AutomationEnvelopeState.Completed,
+            TimeSpan.FromSeconds(10));
+
+        Assert.Equal(1, clockState.FailureCount);
+        Assert.Single(sink.Messages);
+    }
+
+    [Fact]
+    public async Task Connector_outbox_worker_continues_after_transient_processing_failure()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-worker-outbox-failure");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var handler = new TestConnectorCommandHandler(ConnectorCommandExecutionResult.Completed("""{"delivery":"worker"}"""));
+        var clockState = new ArmedThrowOnceClockState();
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.RemoveAll<IHostedService>();
+                services.AddHostedService<ConnectorOutboxDrainWorker>();
+                services.AddSingleton(handler);
+                services.AddSingleton<IConnectorCommandHandler>(serviceProvider => serviceProvider.GetRequiredService<TestConnectorCommandHandler>());
+                services.AddSingleton(clockState);
+                services.RemoveAll<IClock>();
+                services.AddSingleton<IClock>(serviceProvider => new ThrowOnceArmedClock(serviceProvider.GetRequiredService<ArmedThrowOnceClockState>()));
+            });
+
+        Guid commandId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+            var outbox = scope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
+            var projectId = await CreateProjectAsync(projectsService, "Outbox worker failure");
+            commandId = (await outbox.EnqueueAsync(new ConnectorCommandEnqueueRequest(
+                projectId,
+                WebhookResourceConnectorPlugin.PluginKey,
+                "deliver",
+                """{"endpointUrl":"https://example.com/hooks/worker"}""",
+                "worker-outbox-command",
+                "integration-tests"))).CommandId;
+        }
+
+        clockState.Arm();
+
+        await using var hostedServices = await HostedServiceHarness.StartAsync(provider);
+        await WaitForAsync(
+            async () => (await GetConnectorSnapshotAsync(provider, commandId))?.Status == ConnectorCommandStatus.Completed,
+            TimeSpan.FromSeconds(10));
+
+        Assert.Equal(1, clockState.FailureCount);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Legacy_background_queue_items_are_forwarded_to_durable_runtime_when_legacy_mode_is_enabled()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-legacy-queue-forward");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var sink = new MessageSink();
+        var correlationId = Guid.NewGuid();
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton(sink);
+                services.AddScoped<IAutomationBackgroundJobHandler, BackgroundJobCaptureHandler>();
+            });
+
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var backgroundJobQueue = scope.ServiceProvider.GetRequiredService<IBackgroundJobQueue>();
+            await backgroundJobQueue.EnqueueAsync(new BackgroundJobRequest(
+                BackgroundJobCaptureHandler.JobTypeValue,
+                correlationId,
+                "Legacy queued job",
+                new Dictionary<string, string>
+                {
+                    ["origin"] = "legacy"
+                }));
+        }
+
+        await using var hostedServices = await HostedServiceHarness.StartAsync(provider);
+        await WaitForAsync(
+            () => Task.FromResult(sink.BackgroundJobRequests.Count > 0),
+            TimeSpan.FromSeconds(10));
+
+        await using var verificationScope = provider.CreateAsyncScope();
+        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var backgroundJob = await dbContext.Set<BackgroundJobRecord>()
+            .SingleAsync(item => item.CorrelationId == correlationId);
+
+        Assert.Single(sink.BackgroundJobRequests);
+        Assert.Equal(BackgroundJobCaptureHandler.JobTypeValue, sink.BackgroundJobRequests.Single().JobType);
+        Assert.Equal(BackgroundJobCaptureHandler.JobTypeValue, backgroundJob.JobType);
+        Assert.Equal(BackgroundJobState.Succeeded.ToString(), backgroundJob.State);
+    }
+
+    private static async Task<IReadOnlyList<T>> RunConcurrentlyAsync<T>(
+        int workerCount,
+        Func<Task<T>> action)
+    {
+        var startGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var tasks = Enumerable.Range(0, workerCount)
+            .Select(_ => Task.Run(async () =>
+            {
+                await startGate.Task;
+                return await action();
+            }))
+            .ToArray();
+
+        startGate.SetResult();
+        return await Task.WhenAll(tasks);
+    }
+
     private sealed record TestOperationalEnvelope(string Value);
 
     private sealed record MaterializerPayload(Guid ProjectId, string Title, string NodeKey);
@@ -913,6 +1417,24 @@ public sealed class AutomationRuntimeIntegrationTests
 
     private sealed class SuccessfulOperationalHandler(MessageSink sink) : SuccessfulOperationalHandlerBase(sink);
 
+    private sealed class SlowSuccessfulOperationalHandler(MessageSink sink) : AutomationMessageHandler<TestOperationalEnvelope>
+    {
+        protected override async Task<AutomationMessageHandleResult> HandleAsync(
+            TestOperationalEnvelope envelope,
+            AutomationMessageContext context,
+            CancellationToken cancellationToken)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
+            sink.Messages.Enqueue(new MessageCapture(
+                HandlerKey,
+                envelope.Value,
+                context.EnvelopeId,
+                context.CorrelationId,
+                context.CausationId));
+            return AutomationMessageHandleResult.Completed();
+        }
+    }
+
     private sealed class FanOutPrimaryHandler(MessageSink sink) : SuccessfulOperationalHandlerBase(sink);
 
     private sealed class FanOutSecondaryHandler(MessageSink sink) : SuccessfulOperationalHandlerBase(sink);
@@ -952,6 +1474,95 @@ public sealed class AutomationRuntimeIntegrationTests
         {
             sink.BackgroundJobRequests.Enqueue(request);
             return Task.FromResult(AutomationMessageHandleResult.Completed());
+        }
+    }
+
+    private sealed class ArmedThrowOnceClockState
+    {
+        private int _armed;
+        private int _failures;
+
+        public int FailureCount => Volatile.Read(ref _failures);
+
+        public void Arm()
+        {
+            Interlocked.Exchange(ref _armed, 1);
+        }
+
+        public bool TryConsumeFailure()
+        {
+            if (Interlocked.Exchange(ref _armed, 0) != 1)
+            {
+                return false;
+            }
+
+            Interlocked.Increment(ref _failures);
+            return true;
+        }
+    }
+
+    private sealed class ThrowOnceArmedClock(ArmedThrowOnceClockState state) : IClock
+    {
+        private readonly IClock _innerClock = new SystemClock();
+
+        public DateTimeOffset GetUtcNow()
+        {
+            if (state.TryConsumeFailure())
+            {
+                throw new InvalidOperationException("Injected transient clock failure.");
+            }
+
+            return _innerClock.GetUtcNow();
+        }
+    }
+
+    private sealed class TestLoggerSink
+    {
+        public ConcurrentQueue<TestLogEntry> Entries { get; } = new();
+    }
+
+    private sealed record TestLogEntry(
+        string Category,
+        LogLevel LogLevel,
+        string Message);
+
+    private sealed class TestLoggerProvider(TestLoggerSink sink) : ILoggerProvider
+    {
+        public ILogger CreateLogger(string categoryName)
+        {
+            return new TestLogger(categoryName, sink);
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class TestLogger(
+        string categoryName,
+        TestLoggerSink sink) : ILogger
+    {
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull
+        {
+            return NoOpDisposable.Instance;
+        }
+
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return true;
+        }
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            sink.Entries.Enqueue(new TestLogEntry(
+                categoryName,
+                logLevel,
+                formatter(state, exception)));
         }
     }
 
@@ -1014,9 +1625,16 @@ public sealed class AutomationRuntimeIntegrationTests
     private sealed class TestConnectorCommandHandler : IConnectorCommandHandler
     {
         private readonly Queue<ConnectorCommandExecutionResult> _results;
+        private readonly TimeSpan _delay;
 
         public TestConnectorCommandHandler(params ConnectorCommandExecutionResult[] results)
+            : this(TimeSpan.Zero, results)
         {
+        }
+
+        public TestConnectorCommandHandler(TimeSpan delay, params ConnectorCommandExecutionResult[] results)
+        {
+            _delay = delay;
             _results = new Queue<ConnectorCommandExecutionResult>(results);
         }
 
@@ -1033,10 +1651,19 @@ public sealed class AutomationRuntimeIntegrationTests
             CancellationToken cancellationToken)
         {
             Requests.Add(request);
-            return Task.FromResult(
-                _results.Count > 0
-                    ? _results.Dequeue()
-                    : ConnectorCommandExecutionResult.Completed("""{"delivery":"default"}"""));
+            return ExecuteAsyncCore(cancellationToken);
+        }
+
+        private async Task<ConnectorCommandExecutionResult> ExecuteAsyncCore(CancellationToken cancellationToken)
+        {
+            if (_delay > TimeSpan.Zero)
+            {
+                await Task.Delay(_delay, cancellationToken);
+            }
+
+            return _results.Count > 0
+                ? _results.Dequeue()
+                : ConnectorCommandExecutionResult.Completed("""{"delivery":"default"}""");
         }
     }
 

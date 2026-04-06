@@ -1,5 +1,5 @@
 === Phase12 recovery + plugin-runtime gate check ===
-Repo: /tmp/repo_check/CanDoItAll-canonical-model-refactor
+Repo: C:\repositories\CanDoItAll
 
 No hard-gate failures detected.
 
