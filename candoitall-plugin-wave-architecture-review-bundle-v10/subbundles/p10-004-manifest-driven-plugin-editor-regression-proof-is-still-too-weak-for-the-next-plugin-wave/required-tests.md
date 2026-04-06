@@ -1,0 +1,7 @@
+# Required tests
+
+Use these exact names:
+
+- `Settings_page_renders_unknown_provider_manifest_fields_through_shared_field_editor`
+- `Resources_page_renders_unknown_resource_manifest_fields_through_shared_field_editor`
+- `Unknown_connector_manifest_fields_round_trip_without_page_specific_code`

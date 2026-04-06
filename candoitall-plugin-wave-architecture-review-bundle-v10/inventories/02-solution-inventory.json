@@ -1,0 +1,25 @@
+{
+  "repo": "/mnt/data/work/repo/CanDoItAll-canonical-model-refactor",
+  "review_bundle": "v10",
+  "verdict": "NO-GO",
+  "open_findings": 3,
+  "critical_findings": 1,
+  "high_findings": 2,
+  "blockers": [
+    "HG-10-01 read path is still zero-write incomplete",
+    "HG-10-04 phase9 gate false-green pattern still exists"
+  ],
+  "closed_or_improved_areas": [
+    "legacy node carrier retired from ProjectObjectRecord and Workbench_ProjectObjects",
+    "binding state is separated from the canonical node row",
+    "shared manifest-driven connector editor exists",
+    "plugin key is the active identity in save flows",
+    "node-reference persistence contract is open-world",
+    "generic connector command/outbox boundary exists"
+  ],
+  "guarded_rollout_warnings": [
+    "marker compatibility fallback from legacy metadata is still active in read-side runtime composition",
+    "node-reference compatibility fallback from legacy metadata is still active when persisted rows are absent",
+    "manifest-driven editor proof still lacks unknown-plugin coverage across all field types"
+  ]
+}

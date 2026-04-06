@@ -1,0 +1,8 @@
+=== Phase9 plugin-gate check ===
+Repo: /mnt/data/work/repo/CanDoItAll-canonical-model-refactor
+
+No hard-gate failures detected.
+
+Warnings:
+- ADV WARNING: hotspot 'src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs' is still large (4970 lines > 4000).
+- ADV WARNING: hotspot 'src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs' is still large (1148 lines > 1000).
