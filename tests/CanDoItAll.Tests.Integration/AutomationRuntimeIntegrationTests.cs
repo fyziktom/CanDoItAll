@@ -120,6 +120,82 @@ public sealed class AutomationRuntimeIntegrationTests
     }
 
     [Fact]
+    public async Task Concurrent_materialize_calls_only_run_the_materializer_once()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-concurrent-materialize");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var materializer = new CountingMaterializer(TimeSpan.FromMilliseconds(150));
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton<IPluginIngressMaterializer>(materializer);
+            });
+
+        Guid envelopeId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var inbox = scope.ServiceProvider.GetRequiredService<IPluginIngressInbox>();
+            envelopeId = (await inbox.AcceptAsync(new PluginIngressEnvelopeRequest(
+                "email",
+                "crm-sync",
+                "materialize-once",
+                "cursor-100",
+                """{"mode":"count"}"""))).EnvelopeId;
+        }
+
+        var results = await RunConcurrentlyAsync(
+            2,
+            async () =>
+            {
+                await using var scope = provider.CreateAsyncScope();
+                var inbox = scope.ServiceProvider.GetRequiredService<IPluginIngressInbox>();
+                return await inbox.MaterializeAsync(envelopeId, CountingMaterializer.Key);
+            });
+
+        Assert.Equal(1, materializer.CallCount);
+        Assert.All(results, item => Assert.Equal(PluginIngressState.Materialized, item.State));
+        Assert.All(results, item => Assert.Equal("counted materialization", item.MaterializationSummary));
+    }
+
+    [Fact]
+    public async Task Already_materialized_envelope_returns_existing_snapshot_without_reinvoking_plugin_code()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-reread-materialize");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var materializer = new CountingMaterializer(TimeSpan.Zero);
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton<IPluginIngressMaterializer>(materializer);
+            });
+
+        PluginIngressEnvelopeSnapshot first;
+        PluginIngressEnvelopeSnapshot second;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var inbox = scope.ServiceProvider.GetRequiredService<IPluginIngressInbox>();
+            var envelopeId = (await inbox.AcceptAsync(new PluginIngressEnvelopeRequest(
+                "email",
+                "crm-sync",
+                "materialize-reread",
+                "cursor-101",
+                """{"mode":"count"}"""))).EnvelopeId;
+
+            first = await inbox.MaterializeAsync(envelopeId, CountingMaterializer.Key);
+            second = await inbox.MaterializeAsync(envelopeId, CountingMaterializer.Key);
+        }
+
+        Assert.Equal(1, materializer.CallCount);
+        Assert.Equal(PluginIngressState.Materialized, first.State);
+        Assert.Equal(PluginIngressState.Materialized, second.State);
+        Assert.Equal(first.MaterializationSummary, second.MaterializationSummary);
+    }
+
+    [Fact]
     public async Task Automation_trigger_definition_round_trips_with_cron_timezone_and_misfire_policy()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-trigger-roundtrip");
@@ -231,6 +307,142 @@ public sealed class AutomationRuntimeIntegrationTests
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         Assert.True(await dbContext.Set<AutomationEnvelopeRecord>().AnyAsync(item => item.EnvelopeType == AutomationEnvelopeTypeNames.For<AutomationTriggerFireRequest>()));
         Assert.True(await dbContext.Set<AutomationTriggerRecord>().AnyAsync(item => item.Id == triggerId && item.LastFiredAtUtc.HasValue));
+    }
+
+    [Fact]
+    public async Task Once_like_trigger_is_retired_after_first_fire()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-retire-once-like");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var sink = new MessageSink();
+        var triggerId = Guid.NewGuid();
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton(sink);
+                services.AddScoped<IAutomationMessageHandler, TriggerFireCaptureHandler>();
+            });
+
+        await InsertTriggerRecordAsync(provider, new AutomationTriggerRecord
+        {
+            Id = triggerId,
+            OwnerKind = AutomationTriggerOwnerKind.Plugin,
+            OwnerKey = "retire-plugin",
+            TriggerKey = "retire-due-date",
+            IsEnabled = true,
+            TriggerKind = AutomationTriggerKind.DueDateProjection,
+            CronExpression = string.Empty,
+            TimeZoneId = "UTC",
+            StartAtUtc = DateTimeOffset.UtcNow.AddMilliseconds(300),
+            PayloadJson = """{"mode":"retire"}""",
+            DedupeKey = "retire-due-date",
+            UpdatedAtUtc = DateTimeOffset.UtcNow
+        });
+
+        await using var hostedServices = await HostedServiceHarness.StartAsync(provider);
+        await WaitForAsync(() => Task.FromResult(sink.TriggerRequests.Count > 0), TimeSpan.FromSeconds(10));
+
+        await using var scope = provider.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var trigger = await dbContext.Set<AutomationTriggerRecord>()
+            .SingleAsync(item => item.Id == triggerId);
+
+        Assert.False(trigger.IsEnabled);
+        Assert.NotNull(trigger.LastFiredAtUtc);
+        Assert.Null(trigger.NextPlannedFireAtUtc);
+    }
+
+    [Fact]
+    public async Task One_shot_trigger_is_not_rehydrated_after_it_has_already_fired()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-no-rehydrate-once");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var firstSink = new MessageSink();
+        var triggerId = Guid.NewGuid();
+
+        await using (var firstProvider = await BuildProviderAsync(
+                         profile,
+                         services =>
+                         {
+                             services.AddSingleton(firstSink);
+                             services.AddScoped<IAutomationMessageHandler, TriggerFireCaptureHandler>();
+                         }))
+        {
+            await InsertTriggerRecordAsync(firstProvider, new AutomationTriggerRecord
+            {
+                Id = triggerId,
+                OwnerKind = AutomationTriggerOwnerKind.Plugin,
+                OwnerKey = "one-shot-plugin",
+                TriggerKey = "run-once",
+                IsEnabled = true,
+                TriggerKind = AutomationTriggerKind.Once,
+                CronExpression = string.Empty,
+                TimeZoneId = "UTC",
+                StartAtUtc = DateTimeOffset.UtcNow.AddMilliseconds(300),
+                PayloadJson = """{"mode":"one-shot"}""",
+                DedupeKey = "run-once",
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            });
+
+            await using var hostedServices = await HostedServiceHarness.StartAsync(firstProvider);
+            await WaitForAsync(() => Task.FromResult(firstSink.TriggerRequests.Count > 0), TimeSpan.FromSeconds(10));
+        }
+
+        var secondSink = new MessageSink();
+        await using var restartedProvider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton(secondSink);
+                services.AddScoped<IAutomationMessageHandler, TriggerFireCaptureHandler>();
+            });
+        await using var restartedHostedServices = await HostedServiceHarness.StartAsync(restartedProvider);
+        await using var restartedScope = restartedProvider.CreateAsyncScope();
+        var scheduler = await restartedScope.ServiceProvider.GetRequiredService<ISchedulerFactory>().GetScheduler();
+        var jobKeys = await scheduler.GetJobKeys(GroupMatcher<JobKey>.GroupEquals("candoitall-automation-triggers"));
+
+        Assert.DoesNotContain(jobKeys, jobKey => jobKey.Name == $"trigger-{triggerId:N}");
+        await Task.Delay(TimeSpan.FromMilliseconds(500));
+        Assert.Empty(secondSink.TriggerRequests);
+    }
+
+    [Fact]
+    public async Task Trigger_registry_save_returns_reloaded_next_fire_time_after_quartz_projection()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-trigger-save-reload");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        await using var provider = await BuildProviderAsync(profile);
+        await using var scope = provider.CreateAsyncScope();
+        var registry = scope.ServiceProvider.GetRequiredService<IAutomationTriggerRegistry>();
+
+        var definition = new AutomationTriggerDefinition(
+            Guid.NewGuid(),
+            AutomationTriggerOwnerKind.Plugin,
+            "crm-sync",
+            "reload-next-fire",
+            true,
+            AutomationTriggerKind.Once,
+            string.Empty,
+            "UTC",
+            DateTimeOffset.UtcNow.AddMinutes(5),
+            null,
+            AutomationTriggerMisfirePolicy.FireOnceNow,
+            """{"mode":"reload"}""",
+            "reload-next-fire",
+            null,
+            null,
+            DateTimeOffset.UtcNow);
+
+        var saved = await registry.SaveAsync(definition);
+        var roundTrip = await registry.GetAsync(saved.Id);
+
+        Assert.NotNull(saved.NextPlannedFireAtUtc);
+        Assert.NotNull(roundTrip);
+        Assert.Equal(roundTrip!.NextPlannedFireAtUtc, saved.NextPlannedFireAtUtc);
+        Assert.Equal(roundTrip.UpdatedAtUtc, saved.UpdatedAtUtc);
     }
 
     private static Task<ServiceProvider> BuildProviderAsync(
@@ -617,6 +829,19 @@ public sealed class AutomationRuntimeIntegrationTests
         return await outbox.GetAsync(commandId);
     }
 
+    private static async Task<bool> HasActiveConnectorLeaseAsync(ServiceProvider provider, Guid commandId)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var command = await dbContext.Set<ConnectorCommandRecord>()
+            .FirstOrDefaultAsync(item => item.Id == commandId);
+        return command is not null &&
+               !string.IsNullOrWhiteSpace(command.LeaseToken) &&
+               command.LeaseExpiresAtUtc.HasValue &&
+               command.LeaseExpiresAtUtc.Value > DateTimeOffset.UtcNow;
+    }
+
     private static async Task<string?> GetBackgroundJobStateAsync(ServiceProvider provider, Guid jobId)
     {
         await using var scope = provider.CreateAsyncScope();
@@ -684,6 +909,60 @@ public sealed class AutomationRuntimeIntegrationTests
         var verificationInbox = secondScope.ServiceProvider.GetRequiredService<IPluginIngressInbox>();
 
         Assert.Equal("cursor-002", await verificationInbox.GetCursorAsync("email", "crm-sync"));
+    }
+
+    [Fact]
+    public async Task Plugin_ingress_cursor_save_trims_keys_before_lookup()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-ingress-cursor-trim");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        await using var provider = await BuildProviderAsync(profile);
+
+        await using var scope = provider.CreateAsyncScope();
+        var inbox = scope.ServiceProvider.GetRequiredService<IPluginIngressInbox>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        await inbox.SaveCursorAsync(" email ", " crm-sync ", " cursor-003 ");
+        await inbox.SaveCursorAsync("email", "crm-sync", "cursor-004");
+
+        Assert.Equal("cursor-004", await inbox.GetCursorAsync(" email ", " crm-sync "));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var rows = await dbContext.Set<PluginIngressCursorRecord>()
+            .Where(item => item.SourceKind == "email" && item.SourceKey == "crm-sync")
+            .ToListAsync();
+
+        Assert.Single(rows);
+        Assert.Equal("cursor-004", rows.Single().CursorValue);
+    }
+
+    [Fact]
+    public async Task Concurrent_first_cursor_save_reuses_the_same_cursor_row()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-ingress-cursor-concurrent");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        await using var provider = await BuildProviderAsync(profile);
+
+        await RunConcurrentlyAsync(
+            2,
+            async () =>
+            {
+                await using var scope = provider.CreateAsyncScope();
+                var inbox = scope.ServiceProvider.GetRequiredService<IPluginIngressInbox>();
+                await inbox.SaveCursorAsync(" email ", " crm-sync ", "cursor-005");
+                return true;
+            });
+
+        await using var verificationScope = provider.CreateAsyncScope();
+        var verificationInbox = verificationScope.ServiceProvider.GetRequiredService<IPluginIngressInbox>();
+        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var rows = await dbContext.Set<PluginIngressCursorRecord>()
+            .Where(item => item.SourceKind == "email" && item.SourceKey == "crm-sync")
+            .ToListAsync();
+
+        Assert.Single(rows);
+        Assert.Equal("cursor-005", await verificationInbox.GetCursorAsync("email", "crm-sync"));
     }
 
     [Fact]
@@ -1131,6 +1410,102 @@ public sealed class AutomationRuntimeIntegrationTests
     }
 
     [Fact]
+    public async Task Direct_process_async_claims_a_lease_before_execution()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-direct-process-lease");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var handler = new TestConnectorCommandHandler(
+            TimeSpan.FromMilliseconds(150),
+            ConnectorCommandExecutionResult.Completed("""{"delivery":"direct"}"""));
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton(handler);
+                services.AddSingleton<IConnectorCommandHandler>(serviceProvider => serviceProvider.GetRequiredService<TestConnectorCommandHandler>());
+            });
+
+        Guid commandId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+            var outbox = scope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
+            var projectId = await CreateProjectAsync(projectsService, "Direct process lease");
+            commandId = (await outbox.EnqueueAsync(new ConnectorCommandEnqueueRequest(
+                projectId,
+                WebhookResourceConnectorPlugin.PluginKey,
+                "deliver",
+                """{"endpointUrl":"https://example.com/hooks/direct"}""",
+                "direct-process-command",
+                "integration-tests"))).CommandId;
+        }
+
+        await using var processingScope = provider.CreateAsyncScope();
+        var processingOutbox = processingScope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
+        var processTask = processingOutbox.ProcessAsync(commandId);
+        await WaitForAsync(
+            async () => await HasActiveConnectorLeaseAsync(provider, commandId),
+            TimeSpan.FromSeconds(5));
+        var status = await processTask;
+        var snapshot = await GetConnectorSnapshotAsync(provider, commandId);
+
+        Assert.Equal(ConnectorCommandStatus.Completed, status);
+        Assert.NotNull(snapshot);
+        Assert.Equal(ConnectorCommandStatus.Completed, snapshot!.Status);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Concurrent_direct_process_calls_do_not_execute_the_same_command_twice()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-concurrent-direct-process");
+        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var handler = new TestConnectorCommandHandler(
+            TimeSpan.FromMilliseconds(150),
+            ConnectorCommandExecutionResult.Completed("""{"delivery":"direct-parallel"}"""));
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton(handler);
+                services.AddSingleton<IConnectorCommandHandler>(serviceProvider => serviceProvider.GetRequiredService<TestConnectorCommandHandler>());
+            });
+
+        Guid commandId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+            var outbox = scope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
+            var projectId = await CreateProjectAsync(projectsService, "Concurrent direct process");
+            commandId = (await outbox.EnqueueAsync(new ConnectorCommandEnqueueRequest(
+                projectId,
+                WebhookResourceConnectorPlugin.PluginKey,
+                "deliver",
+                """{"endpointUrl":"https://example.com/hooks/direct-parallel"}""",
+                "direct-process-parallel-command",
+                "integration-tests"))).CommandId;
+        }
+
+        var results = await RunConcurrentlyAsync(
+            2,
+            async () =>
+            {
+                await using var scope = provider.CreateAsyncScope();
+                var outbox = scope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
+                return await outbox.ProcessAsync(commandId);
+            });
+
+        var snapshot = await GetConnectorSnapshotAsync(provider, commandId);
+
+        Assert.Contains(ConnectorCommandStatus.Completed, results);
+        Assert.Single(handler.Requests);
+        Assert.NotNull(snapshot);
+        Assert.Equal(ConnectorCommandStatus.Completed, snapshot!.Status);
+    }
+
+    [Fact]
     public async Task Abandoned_delivery_lease_can_be_reclaimed()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-reclaim-lease");
@@ -1395,6 +1770,31 @@ public sealed class AutomationRuntimeIntegrationTests
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return PluginIngressMaterializationResult.Success($"Created node '{payload.NodeKey}'.");
+        }
+    }
+
+    private sealed class CountingMaterializer(TimeSpan delay) : IPluginIngressMaterializer
+    {
+        private readonly TimeSpan _delay = delay;
+        private int _callCount;
+
+        public const string Key = "test.counting";
+
+        public string MaterializerKey => Key;
+
+        public int CallCount => Volatile.Read(ref _callCount);
+
+        public async Task<PluginIngressMaterializationResult> MaterializeAsync(
+            PluginIngressEnvelopeSnapshot envelope,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _callCount);
+            if (_delay > TimeSpan.Zero)
+            {
+                await Task.Delay(_delay, cancellationToken);
+            }
+
+            return PluginIngressMaterializationResult.Success("counted materialization");
         }
     }
 

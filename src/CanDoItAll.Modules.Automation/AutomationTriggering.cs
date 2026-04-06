@@ -51,7 +51,11 @@ public sealed class AutomationTriggerRegistry(
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await schedulerBridge.SynchronizeAsync(cancellationToken);
-        return Map(record);
+
+        await using var verificationContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var canonicalRecord = await verificationContext.Set<AutomationTriggerRecord>()
+            .FirstAsync(item => item.Id == record.Id, cancellationToken);
+        return Map(canonicalRecord);
     }
 
     public async Task<AutomationTriggerDefinition?> GetAsync(
@@ -195,6 +199,14 @@ public sealed class QuartzAutomationSchedulerBridge(
             return;
         }
 
+        if (IsConsumedOnceLikeTrigger(triggerRecord))
+        {
+            triggerRecord.IsEnabled = false;
+            triggerRecord.NextPlannedFireAtUtc = null;
+            triggerRecord.UpdatedAtUtc = clock.GetUtcNow();
+            return;
+        }
+
         var quartzTrigger = BuildQuartzTrigger(triggerRecord, jobKey, triggerKey);
         var job = JobBuilder.Create<AutomationTriggerQuartzJob>()
             .WithIdentity(jobKey)
@@ -278,6 +290,12 @@ public sealed class QuartzAutomationSchedulerBridge(
 
         return builder.Build();
     }
+
+    private static bool IsConsumedOnceLikeTrigger(AutomationTriggerRecord triggerRecord)
+    {
+        return triggerRecord.LastFiredAtUtc.HasValue &&
+               triggerRecord.TriggerKind is AutomationTriggerKind.Once or AutomationTriggerKind.Relative or AutomationTriggerKind.DueDateProjection;
+    }
 }
 
 [DisallowConcurrentExecution]
@@ -326,7 +344,16 @@ public sealed class AutomationTriggerQuartzJob(
         if (record is not null)
         {
             record.LastFiredAtUtc = firedAtUtc;
-            record.NextPlannedFireAtUtc = context.NextFireTimeUtc;
+            if (IsOnceLike(record.TriggerKind))
+            {
+                record.IsEnabled = false;
+                record.NextPlannedFireAtUtc = null;
+            }
+            else
+            {
+                record.NextPlannedFireAtUtc = context.NextFireTimeUtc;
+            }
+
             record.UpdatedAtUtc = clock.GetUtcNow();
             await dbContext.SaveChangesAsync(cancellationToken);
         }
@@ -354,5 +381,10 @@ public sealed class AutomationTriggerQuartzJob(
             : configuredDedupeKey.Trim();
 
         return $"{baseKey}:{firedAtUtc.UtcTicks}";
+    }
+
+    private static bool IsOnceLike(AutomationTriggerKind triggerKind)
+    {
+        return triggerKind is AutomationTriggerKind.Once or AutomationTriggerKind.Relative or AutomationTriggerKind.DueDateProjection;
     }
 }

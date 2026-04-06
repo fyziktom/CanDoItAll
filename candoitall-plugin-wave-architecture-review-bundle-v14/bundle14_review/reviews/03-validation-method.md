@@ -1,16 +1,20 @@
 # Validation method
 
 I validated the repository by:
-- unpacking the newly uploaded code,
+- repairing the uploaded bundle so the standard workflow could execute it honestly,
+- implementing the required phase14 runtime and test changes,
+- running `dotnet build CanDoItAll.slnx -v minimal`,
+- running `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~CanDoItAll.Tests.Integration.AutomationRuntimeIntegrationTests" -v minimal`,
 - running the available phase10 and phase13 gate scripts directly on the repo,
-- performing a manual static architecture review of the new automation runtime surfaces,
-- tracing the important restart/concurrency flows in source code,
-- creating a new phase14 hidden-semantics gate to capture the newly found defects.
+- running the phase14 hidden-semantics gate directly on the repo,
+- tracing the important restart/concurrency flows in source code against the shipped implementation,
+- refreshing the captured gate outputs inside the bundle.
 
-## Limitation
+## Result quality
 
-The container does not include the .NET SDK, so I could not execute `dotnet build` or `dotnet test`.
-The verdict is therefore based on:
-- direct source inspection,
-- architectural flow analysis,
-- static gate scripts.
+The verdict is based on:
+- full-solution compilation,
+- targeted integration tests that exercise the corrected restart and concurrency semantics,
+- carry-forward gate scripts,
+- the phase14 hidden-semantics gate,
+- direct source inspection of the affected runtime boundaries.

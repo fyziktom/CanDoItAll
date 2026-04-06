@@ -372,7 +372,7 @@ public sealed class ConnectorOutboxService(
         Guid commandId,
         CancellationToken cancellationToken = default)
     {
-        return commandProcessor.ProcessAsync(commandId, cancellationToken: cancellationToken);
+        return ProcessDirectAsync(commandId, DefaultLeaseDuration, cancellationToken);
     }
 
     public async Task<int> ProcessPendingAsync(
@@ -640,6 +640,21 @@ public sealed class ConnectorOutboxService(
         return updatedRows == 0
             ? null
             : leaseToken;
+    }
+
+    private async Task<ConnectorCommandStatus?> ProcessDirectAsync(
+        Guid commandId,
+        TimeSpan leaseDuration,
+        CancellationToken cancellationToken)
+    {
+        var leaseToken = await TryClaimCommandAsync(commandId, leaseDuration, cancellationToken);
+        if (leaseToken is null)
+        {
+            var snapshot = await GetAsync(commandId, cancellationToken);
+            return snapshot?.Status;
+        }
+
+        return await commandProcessor.ProcessAsync(commandId, leaseToken, cancellationToken);
     }
 
     private async Task<ConnectorCommandEnqueueResult?> TryResolveDuplicateEnqueueAsync(

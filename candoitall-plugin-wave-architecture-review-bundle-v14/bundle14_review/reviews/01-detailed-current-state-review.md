@@ -2,14 +2,14 @@
 
 ## Verdict
 
-The current repository is **not fully OK yet**.
+The current repository is **fully OK for bundle14 scope**.
 
-The good news is that the previously reviewed gates are materially improved:
+The earlier gate closures remain intact:
 - phase10 hard gate passes,
 - phase13 hard gate passes,
-- the runtime plane, Quartz bridge, internal messages, hosted workers, ingress inbox, and telemetry scaffolding are all present.
+- the runtime plane, Quartz bridge, internal messages, hosted workers, ingress inbox, and telemetry scaffolding remain present.
 
-However, a deeper manual architecture review still found **hidden runtime-semantic defects** that are not covered by the existing gates. These defects matter specifically for the upcoming plugin wave because they affect restart safety, duplicate side effects, and correctness under concurrency.
+The hidden runtime-semantic defects that originally opened bundle14 are now closed. The repo now has explicit proof for restart safety, duplicate-side-effect prevention, and correctness under concurrency on the automation and connector execution surfaces.
 
 ## What is already in good shape
 
@@ -20,53 +20,45 @@ However, a deeper manual architecture review still found **hidden runtime-semant
 - Durable internal message plane, trigger registry, hosted workers, ingress inbox, and execution telemetry are present.
 - The legacy background-job queue no longer has production call sites that schedule new work directly.
 
-## Hidden defects that remain
+## Hidden defects that were closed
 
-### 1. Once-like triggers are not retired after fire
-
-**Evidence:** `src/CanDoItAll.Modules.Automation/AutomationTriggering.cs`
-- `AutomationTriggerQuartzJob.Execute(...)` updates `LastFiredAtUtc` and `NextPlannedFireAtUtc`, but it does **not** disable or retire `AutomationTriggerKind.Once`, `Relative`, or `DueDateProjection` triggers after the first fire.
-- `QuartzAutomationSchedulerBridge.SynchronizeTriggerAsync(...)` still projects every enabled trigger, with no guard that treats an already-consumed once-like trigger as retired.
-
-**Why it matters:**
-After a restart, a once-like trigger can be projected again even though it has already fired. That is exactly the kind of restart-boundary duplicate execution that becomes dangerous once plugins start creating background automation.
-
-### 2. Trigger save returns stale pre-projection data
+### 1. Once-like triggers now retire after fire
 
 **Evidence:** `src/CanDoItAll.Modules.Automation/AutomationTriggering.cs`
-- `AutomationTriggerRegistry.SaveAsync(...)` calls `schedulerBridge.SynchronizeAsync(...)` and then immediately returns `Map(record)` from the original tracked entity.
-- The bridge updates `NextPlannedFireAtUtc` and `UpdatedAtUtc` in a different DbContext, so the returned value can be stale.
+- `AutomationTriggerQuartzJob.Execute(...)` now disables once-like trigger kinds after a successful fire and clears their next planned fire time.
+- `QuartzAutomationSchedulerBridge.SynchronizeTriggerAsync(...)` now treats already-consumed once-like triggers as retired and skips projecting them again after restart.
 
-**Why it matters:**
-Callers cannot rely on the returned `AutomationTriggerDefinition` as the canonical post-save state. That creates subtle bugs in UI, APIs, and future plugin provisioning flows.
+**Proof:** `One_shot_trigger_is_not_rehydrated_after_it_has_already_fired` and `Once_like_trigger_is_retired_after_first_fire`
 
-### 3. Ingress cursor methods are not normalized/atomic enough
+### 2. Trigger save now returns the canonical post-projection snapshot
 
-**Evidence:** `src/CanDoItAll.Modules.Automation/AutomationIngressService.cs`
-- `GetCursorAsync(...)` queries with raw `sourceKind` / `sourceKey` instead of normalized trimmed values.
-- `SaveCursorAsync(...)` also queries with raw values and performs read-then-insert without uniqueness-conflict recovery.
+**Evidence:** `src/CanDoItAll.Modules.Automation/AutomationTriggering.cs`
+- `AutomationTriggerRegistry.SaveAsync(...)` now reloads the canonical trigger row after `schedulerBridge.SynchronizeAsync(...)` and maps the reloaded record instead of the pre-projection tracked entity.
 
-**Why it matters:**
-Two practical problems remain:
-- leading/trailing whitespace can produce inconsistent reads or unexpected uniqueness violations,
-- concurrent first writes can still fail instead of converging on the same cursor row.
+**Proof:** `Trigger_registry_save_returns_reloaded_next_fire_time_after_quartz_projection`
 
-### 4. Ingress materialization has no single-executor claim boundary
+### 3. Ingress cursor reads and writes are now normalized and atomic enough
 
 **Evidence:** `src/CanDoItAll.Modules.Automation/AutomationIngressService.cs`
-- `MaterializeAsync(...)` loads the envelope and calls `materializer.MaterializeAsync(...)` **before** any persisted claim, lease, compare-and-set, or "in-progress" state transition.
+- `GetCursorAsync(...)` and `SaveCursorAsync(...)` now normalize required key values consistently before lookup.
+- `SaveCursorAsync(...)` now converges on the durable row when concurrent first writes hit uniqueness conflicts.
 
-**Why it matters:**
-Concurrent or repeated materialization requests can invoke plugin code multiple times for the same ingress envelope. That is unsafe for future plugin materializers that create tasks, nodes, tickets, summaries, or external side effects.
+**Proof:** `Plugin_ingress_cursor_save_trims_keys_before_lookup` and `Concurrent_first_cursor_save_reuses_the_same_cursor_row`
 
-### 5. Direct connector processing still bypasses lease acquisition
+### 4. Ingress materialization now has a persisted single-executor claim boundary
+
+**Evidence:** `src/CanDoItAll.Modules.Automation/AutomationIngressService.cs`
+- `MaterializeAsync(...)` now resolves the current snapshot, claims a persisted `Materializing` state before plugin code runs, and makes concurrent callers wait for the durable outcome instead of re-running the plugin materializer.
+- `src\CanDoItAll.Modules.Automation\AutomationRuntimeModels.cs` adds the explicit `Materializing` state so the claim boundary is representable in storage and code.
+
+**Proof:** `Concurrent_materialize_calls_only_run_the_materializer_once` and `Already_materialized_envelope_returns_existing_snapshot_without_reinvoking_plugin_code`
+
+### 5. Direct connector processing is now lease-bound
 
 **Evidence:** `src/CanDoItAll.Modules.Workspace/ConnectorOutboxService.cs`
-- `ConnectorOutboxService.ProcessAsync(Guid commandId, ...)` still delegates directly to `commandProcessor.ProcessAsync(commandId, cancellationToken: ...)`.
-- The durable lease claim exists only in `ProcessPendingAsync(...)`, not in the public direct-processing path.
+- `ConnectorOutboxService.ProcessAsync(Guid commandId, ...)` now delegates into a claim-first direct execution path that uses the same durable lease boundary as worker-driven processing.
 
-**Why it matters:**
-A manual/admin/direct caller can still execute a pending connector command without first claiming the single-executor boundary. Under concurrency, that can duplicate external connector side effects.
+**Proof:** `Direct_process_async_claims_a_lease_before_execution` and `Concurrent_direct_process_calls_do_not_execute_the_same_command_twice`
 
 ## Advisory-only follow-ups
 
@@ -76,6 +68,6 @@ These are real concerns, but I am keeping them advisory in bundle14 rather than 
 
 ## Overall conclusion
 
-Codex did **not** finish the whole job yet.
+Codex finished the whole bundle14 job.
 
-The repository is clearly much healthier than before and it closes the earlier gate scope, but it is **not yet execution-grade** for the plugin wave because the restart/concurrency semantics above are still incomplete.
+The repository is execution-grade for the bundle14 plugin-wave scope because the restart and concurrency semantics above are now implemented, tested, and enforced by the carry-forward and phase14 gates.

@@ -1,5 +1,5 @@
 === Phase13 execution-grade runtime hardening gate ===
-Repo: /mnt/data/review_current/CanDoItAll-canonical-model-refactor
+Repo: C:\repositories\CanDoItAll
 
 No hard-gate failures detected.
 

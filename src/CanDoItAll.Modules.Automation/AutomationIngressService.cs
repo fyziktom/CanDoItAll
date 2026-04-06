@@ -10,6 +10,8 @@ public sealed class PluginIngressInbox(
     IAutomationTelemetryPublisher telemetryPublisher,
     IClock clock) : IPluginIngressInbox
 {
+    private static readonly TimeSpan MaterializationPollInterval = TimeSpan.FromMilliseconds(50);
+
     public async Task<PluginIngressAcceptResult> AcceptAsync(
         PluginIngressEnvelopeRequest request,
         CancellationToken cancellationToken = default)
@@ -95,9 +97,12 @@ public sealed class PluginIngressInbox(
         string sourceKey,
         CancellationToken cancellationToken = default)
     {
+        var normalizedSourceKind = NormalizeRequiredValue(sourceKind, nameof(sourceKind));
+        var normalizedSourceKey = NormalizeRequiredValue(sourceKey, nameof(sourceKey));
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await dbContext.Set<PluginIngressCursorRecord>()
-            .Where(item => item.SourceKind == sourceKind && item.SourceKey == sourceKey)
+            .Where(item => item.SourceKind == normalizedSourceKind && item.SourceKey == normalizedSourceKey)
             .Select(item => item.CursorValue)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -108,27 +113,45 @@ public sealed class PluginIngressInbox(
         string cursorValue,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(sourceKind);
-        ArgumentException.ThrowIfNullOrWhiteSpace(sourceKey);
-        ArgumentException.ThrowIfNullOrWhiteSpace(cursorValue);
+        var normalizedSourceKind = NormalizeRequiredValue(sourceKind, nameof(sourceKind));
+        var normalizedSourceKey = NormalizeRequiredValue(sourceKey, nameof(sourceKey));
+        var normalizedCursorValue = NormalizeRequiredValue(cursorValue, nameof(cursorValue));
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var record = await dbContext.Set<PluginIngressCursorRecord>()
-            .FirstOrDefaultAsync(item => item.SourceKind == sourceKind && item.SourceKey == sourceKey, cancellationToken);
+            .FirstOrDefaultAsync(
+                item => item.SourceKind == normalizedSourceKind && item.SourceKey == normalizedSourceKey,
+                cancellationToken);
 
         if (record is null)
         {
             record = new PluginIngressCursorRecord
             {
-                SourceKind = sourceKind.Trim(),
-                SourceKey = sourceKey.Trim()
+                SourceKind = normalizedSourceKind,
+                SourceKey = normalizedSourceKey
             };
             await dbContext.Set<PluginIngressCursorRecord>().AddAsync(record, cancellationToken);
         }
 
-        record.CursorValue = cursorValue.Trim();
+        record.CursorValue = normalizedCursorValue;
         record.UpdatedAtUtc = clock.GetUtcNow();
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            if (await UpdateExistingCursorAsync(
+                    normalizedSourceKind,
+                    normalizedSourceKey,
+                    normalizedCursorValue,
+                    cancellationToken))
+            {
+                return;
+            }
+
+            throw;
+        }
     }
 
     public async Task<PluginIngressEnvelopeSnapshot?> GetAsync(
@@ -148,23 +171,186 @@ public sealed class PluginIngressInbox(
         string materializerKey,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(materializerKey);
+        var normalizedMaterializerKey = NormalizeRequiredValue(materializerKey, nameof(materializerKey));
+        var currentSnapshot = await GetRequiredSnapshotAsync(envelopeId, cancellationToken);
 
+        if (currentSnapshot.State == PluginIngressState.Materialized ||
+            currentSnapshot.State == PluginIngressState.Quarantined)
+        {
+            return currentSnapshot;
+        }
+
+        if (currentSnapshot.State == PluginIngressState.Materializing)
+        {
+            return await WaitForMaterializationResolutionAsync(envelopeId, cancellationToken);
+        }
+
+        var materializer = materializers.FirstOrDefault(candidate =>
+            string.Equals(candidate.MaterializerKey, normalizedMaterializerKey, StringComparison.Ordinal))
+            ?? throw new InvalidOperationException(
+                $"Plugin ingress materializer '{normalizedMaterializerKey}' is not registered.");
+
+        if (!await TryClaimMaterializationAsync(envelopeId, normalizedMaterializerKey, cancellationToken))
+        {
+            return await WaitForMaterializationResolutionAsync(envelopeId, cancellationToken);
+        }
+
+        var claimedSnapshot = await GetRequiredSnapshotAsync(envelopeId, cancellationToken);
+        PluginIngressMaterializationResult result;
+        try
+        {
+            result = await materializer.MaterializeAsync(claimedSnapshot, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            result = PluginIngressMaterializationResult.Failure(ex.Message);
+        }
+
+        return await FinalizeMaterializationAsync(
+            envelopeId,
+            normalizedMaterializerKey,
+            result,
+            cancellationToken);
+    }
+
+    private static void ValidateRequest(PluginIngressEnvelopeRequest request)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.SourceKind);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.SourceKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.ExternalMessageId);
+    }
+
+    private static string BuildDedupeKey(PluginIngressEnvelopeRequest request)
+    {
+        var cursorPart = string.IsNullOrWhiteSpace(request.CursorValue)
+            ? "-"
+            : request.CursorValue.Trim();
+
+        return $"{request.SourceKind.Trim()}::{request.SourceKey.Trim()}::{request.ExternalMessageId.Trim()}::{cursorPart}";
+    }
+
+    private static PluginIngressEnvelopeSnapshot Map(PluginIngressEnvelopeRecord record)
+    {
+        return new PluginIngressEnvelopeSnapshot(
+            record.Id,
+            record.SourceKind,
+            record.SourceKey,
+            record.ExternalMessageId,
+            record.CursorValue,
+            record.DedupeKey,
+            record.State,
+            record.PayloadJson,
+            record.MaterializerKey,
+            record.MaterializationSummary,
+            record.LastError,
+            record.CorrelationId,
+            record.ReceivedAtUtc,
+            record.UpdatedAtUtc,
+            record.MaterializedAtUtc);
+    }
+
+    private static string NormalizeRequiredValue(string value, string parameterName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
+        return value.Trim();
+    }
+
+    private async Task<bool> UpdateExistingCursorAsync(
+        string sourceKind,
+        string sourceKey,
+        string cursorValue,
+        CancellationToken cancellationToken)
+    {
+        await using var verificationContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var existing = await verificationContext.Set<PluginIngressCursorRecord>()
+            .FirstOrDefaultAsync(
+                item => item.SourceKind == sourceKind && item.SourceKey == sourceKey,
+                cancellationToken);
+        if (existing is null)
+        {
+            return false;
+        }
+
+        existing.CursorValue = cursorValue;
+        existing.UpdatedAtUtc = clock.GetUtcNow();
+        await verificationContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    private async Task<PluginIngressEnvelopeSnapshot> GetRequiredSnapshotAsync(
+        Guid envelopeId,
+        CancellationToken cancellationToken)
+    {
+        return await GetAsync(envelopeId, cancellationToken)
+            ?? throw new InvalidOperationException($"Plugin ingress envelope '{envelopeId}' was not found.");
+    }
+
+    private async Task<bool> TryClaimMaterializationAsync(
+        Guid envelopeId,
+        string materializerKey,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var now = clock.GetUtcNow();
+        var claimedRows = dbContext.Database.IsSqlite()
+            ? await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+                                                                   UPDATE "Automation_PluginIngressEnvelopes"
+                                                                   SET "State" = {(int)PluginIngressState.Materializing},
+                                                                       "MaterializerKey" = {materializerKey},
+                                                                       "MaterializationSummary" = {string.Empty},
+                                                                       "LastError" = {string.Empty},
+                                                                       "UpdatedAtUtc" = {now}
+                                                                   WHERE "Id" = {envelopeId}
+                                                                     AND (
+                                                                           "State" = {(int)PluginIngressState.Accepted}
+                                                                           OR "State" = {(int)PluginIngressState.Failed}
+                                                                       )
+                                                                   """,
+                cancellationToken)
+            : await dbContext.Set<PluginIngressEnvelopeRecord>()
+                .Where(item => item.Id == envelopeId)
+                .Where(item =>
+                    item.State == PluginIngressState.Accepted ||
+                    item.State == PluginIngressState.Failed)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(item => item.State, PluginIngressState.Materializing)
+                    .SetProperty(item => item.MaterializerKey, materializerKey)
+                    .SetProperty(item => item.MaterializationSummary, string.Empty)
+                    .SetProperty(item => item.LastError, string.Empty)
+                    .SetProperty(item => item.UpdatedAtUtc, now), cancellationToken);
+
+        return claimedRows > 0;
+    }
+
+    private async Task<PluginIngressEnvelopeSnapshot> WaitForMaterializationResolutionAsync(
+        Guid envelopeId,
+        CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            var snapshot = await GetRequiredSnapshotAsync(envelopeId, cancellationToken);
+            if (snapshot.State != PluginIngressState.Materializing)
+            {
+                return snapshot;
+            }
+
+            await Task.Delay(MaterializationPollInterval, cancellationToken);
+        }
+    }
+
+    private async Task<PluginIngressEnvelopeSnapshot> FinalizeMaterializationAsync(
+        Guid envelopeId,
+        string materializerKey,
+        PluginIngressMaterializationResult result,
+        CancellationToken cancellationToken)
+    {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var record = await dbContext.Set<PluginIngressEnvelopeRecord>()
             .FirstOrDefaultAsync(item => item.Id == envelopeId, cancellationToken)
             ?? throw new InvalidOperationException($"Plugin ingress envelope '{envelopeId}' was not found.");
 
-        var materializer = materializers.FirstOrDefault(candidate =>
-            string.Equals(candidate.MaterializerKey, materializerKey, StringComparison.Ordinal))
-            ?? throw new InvalidOperationException(
-                $"Plugin ingress materializer '{materializerKey}' is not registered.");
-
-        var snapshot = Map(record);
-        var result = await materializer.MaterializeAsync(snapshot, cancellationToken);
         var now = clock.GetUtcNow();
-
-        record.MaterializerKey = materializerKey.Trim();
+        record.MaterializerKey = materializerKey;
         record.UpdatedAtUtc = now;
         if (result.IsSuccess)
         {
@@ -202,42 +388,6 @@ public sealed class PluginIngressInbox(
               """), cancellationToken);
 
         return Map(record);
-    }
-
-    private static void ValidateRequest(PluginIngressEnvelopeRequest request)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.SourceKind);
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.SourceKey);
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.ExternalMessageId);
-    }
-
-    private static string BuildDedupeKey(PluginIngressEnvelopeRequest request)
-    {
-        var cursorPart = string.IsNullOrWhiteSpace(request.CursorValue)
-            ? "-"
-            : request.CursorValue.Trim();
-
-        return $"{request.SourceKind.Trim()}::{request.SourceKey.Trim()}::{request.ExternalMessageId.Trim()}::{cursorPart}";
-    }
-
-    private static PluginIngressEnvelopeSnapshot Map(PluginIngressEnvelopeRecord record)
-    {
-        return new PluginIngressEnvelopeSnapshot(
-            record.Id,
-            record.SourceKind,
-            record.SourceKey,
-            record.ExternalMessageId,
-            record.CursorValue,
-            record.DedupeKey,
-            record.State,
-            record.PayloadJson,
-            record.MaterializerKey,
-            record.MaterializationSummary,
-            record.LastError,
-            record.CorrelationId,
-            record.ReceivedAtUtc,
-            record.UpdatedAtUtc,
-            record.MaterializedAtUtc);
     }
 
     private async Task<Guid?> TryFindExistingEnvelopeIdAsync(

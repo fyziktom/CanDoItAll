@@ -46,10 +46,11 @@ public enum AutomationTriggerMisfirePolicy
 
 public enum PluginIngressState
 {
-    Accepted,
-    Materialized,
-    Failed,
-    Quarantined
+    Accepted = 0,
+    Materialized = 1,
+    Failed = 2,
+    Quarantined = 3,
+    Materializing = 4
 }
 
 public enum AutomationExecutionLogKind

@@ -1,22 +1,7 @@
 === Phase14 hidden runtime semantics gate ===
-Repo: /mnt/data/review_current/CanDoItAll-canonical-model-refactor
+Repo: C:\repositories\CanDoItAll
 
-Hard-gate failures:
-- P14-001 FAIL: AutomationTriggerQuartzJob.Execute does not retire/disable once-like triggers after they fire. Evidence: src/CanDoItAll.Modules.Automation/AutomationTriggering.cs
-- P14-001 FAIL: required one-shot trigger safety test is missing: One_shot_trigger_is_not_rehydrated_after_it_has_already_fired
-- P14-001 FAIL: required one-shot trigger safety test is missing: Once_like_trigger_is_retired_after_first_fire
-- P14-002 FAIL: AutomationTriggerRegistry.SaveAsync still returns the pre-synchronization tracked entity instead of reloading the canonical record after Quartz projection. Evidence: src/CanDoItAll.Modules.Automation/AutomationTriggering.cs
-- P14-002 FAIL: required trigger-save canonical round-trip test is missing: Trigger_registry_save_returns_reloaded_next_fire_time_after_quartz_projection
-- P14-003 FAIL: PluginIngressInbox.GetCursorAsync still queries with raw sourceKind/sourceKey instead of normalized trimmed keys. Evidence: src/CanDoItAll.Modules.Automation/AutomationIngressService.cs
-- P14-003 FAIL: PluginIngressInbox.SaveCursorAsync still uses read-then-insert without uniqueness-conflict recovery for concurrent first writes. Evidence: src/CanDoItAll.Modules.Automation/AutomationIngressService.cs
-- P14-003 FAIL: required cursor normalization/upsert test is missing: Plugin_ingress_cursor_save_trims_keys_before_lookup
-- P14-003 FAIL: required cursor normalization/upsert test is missing: Concurrent_first_cursor_save_reuses_the_same_cursor_row
-- P14-004 FAIL: PluginIngressInbox.MaterializeAsync calls plugin materializer code before any persisted claim/state transition, so concurrent callers can materialize the same envelope twice. Evidence: src/CanDoItAll.Modules.Automation/AutomationIngressService.cs
-- P14-004 FAIL: required materialization single-executor test is missing: Concurrent_materialize_calls_only_run_the_materializer_once
-- P14-004 FAIL: required materialization single-executor test is missing: Already_materialized_envelope_returns_existing_snapshot_without_reinvoking_plugin_code
-- P14-005 FAIL: ConnectorOutboxService.ProcessAsync still bypasses lease acquisition and can execute a pending command without claiming the durable single-executor boundary first. Evidence: src/CanDoItAll.Modules.Workspace/ConnectorOutboxService.cs
-- P14-005 FAIL: required direct-process lease test is missing: Direct_process_async_claims_a_lease_before_execution
-- P14-005 FAIL: required direct-process lease test is missing: Concurrent_direct_process_calls_do_not_execute_the_same_command_twice
+No hard-gate failures detected.
 
 Warnings:
 - ADV WARNING: Automation message dispatch still catches Exception broadly around handler execution; verify cancellation is propagated distinctly: src/CanDoItAll.Modules.Automation/AutomationMessagingServices.cs

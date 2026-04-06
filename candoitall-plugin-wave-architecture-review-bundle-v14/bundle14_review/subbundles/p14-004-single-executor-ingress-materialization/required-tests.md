@@ -1,0 +1,4 @@
+# Required tests
+
+- `Concurrent_materialize_calls_only_run_the_materializer_once`
+- `Already_materialized_envelope_returns_existing_snapshot_without_reinvoking_plugin_code`
