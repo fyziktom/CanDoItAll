@@ -1,20 +1,18 @@
 # Plugin-wave readiness
 
 ## Verdict
-**NO-GO**
+**GO with guarded rollout**
 
-## Why the answer is still NO-GO
-The repo is close, but not safe enough yet for the next large plugin wave because one of the most important architecture promises is still broken:
+## Why the answer moved back to GO
+The repo is now safe enough for the next plugin wave because the real remaining blocker from bundle9 is closed:
 
-- the structure read path still mutates persistence,
-- the current hard gate does not detect that mutation,
-- the current test suite does not prove the absence of that mutation.
+- the structure read path no longer mutates persistence,
+- stale projection cleanup is now explicit instead of hidden behind reads,
+- the phase10 gate detects the old false-green scenario,
+- the required behavior tests now prove zero-write reads and explicit repair,
+- unknown connector manifests are covered through the shared field editor across all field types.
 
-That combination is exactly how architecture drift survives multiple review rounds.
-
-## What becomes true after phase10
-Once phase10 is closed, the repo can move back to a guarded-rollout posture because:
-- canonical structure reads will be zero-write,
-- stale projection cleanup will live in an explicit repair boundary,
-- closure will be proven by behavior tests instead of only symbol retirement,
-- future plugin manifests will have stronger shared-editor regression proof.
+## Remaining guarded-rollout notes
+- marker/reference compatibility fallback is still active in the read model,
+- `CrmHrServices.cs` and `ProjectWorkbenchModels.cs` are still hotspot files,
+- the historical phase9 gate remains a review artifact and should not be reused as a final authority.

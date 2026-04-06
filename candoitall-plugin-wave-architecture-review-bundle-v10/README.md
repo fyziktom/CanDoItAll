@@ -4,14 +4,15 @@
 Re-check the current repo after the claimed phase9 closure, prove whether bundle9 is really complete, and give Codex a precise phase10 package that closes the remaining blocker before the next large plugin wave.
 
 ## Verdict
-**NO-GO until phase10 closes.**
+**GO with guarded rollout.**
 
-Bundle9 is **not fully complete**. The critical miss is that the structure read path is still not read-only:
+Phase10 is now complete. The remaining blocker from bundle9 is closed:
 
-1. `ProjectStructureAssemblyService.LoadAsync(...)` still calls `RetireLegacyProjectionRowsAsync(...)` from the hot read path (`src/CanDoItAll.Modules.Workbench/ProjectStructureAssemblyService.cs:135`).
-2. `LoadAsync(...)` still deletes stale projection layout rows and persists the delete during reads (`src/CanDoItAll.Modules.Workbench/ProjectStructureAssemblyService.cs:167-175`).
-3. `RetireLegacyProjectionRowsAsync(...)` still removes stale system-managed nodes/links and saves changes (`src/CanDoItAll.Modules.Workbench/ProjectStructureAssemblyService.cs:361-388`).
-4. The phase9 gate script produced another false green because it only looked for the old normalization method names and never failed on direct/transitive write operations inside the load path (`candoitall-plugin-wave-architecture-review-bundle-v9/scripts/gate_check_phase9.py`).
+1. `ProjectStructureAssemblyService.LoadAsync(...)` is zero-write again.
+2. stale system-managed projection cleanup moved to the explicit `ProjectStructureProjectionMaintenanceService.RepairAsync(...)` seam.
+3. the required exact-name zero-write and repair tests now exist and pass.
+4. unknown-manifest connector proof now exercises the shared field editor across all six field types.
+5. `gate_check_phase10.py` now passes on the current repo and still emits the expected advisories.
 
 ## What phase10 must close
 - **HG-10-01**: `LoadAsync` and the active structure-read path must be zero-write.
@@ -26,6 +27,20 @@ Bundle9 is **not fully complete**. The critical miss is that the structure read 
 - stronger anti-evasion rules,
 - a new `gate_check_phase10.py` that detects the current false-green scenario,
 - explicit required test names so Codex cannot “close” phase10 with vague coverage.
+
+## Validation executed
+- `dotnet build CanDoItAll.slnx --artifacts-path C:\repositories\CanDoItAll\artifacts\phase10-validation\solution-build -v minimal`
+- `dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --artifacts-path C:\repositories\CanDoItAll\artifacts\phase10-validation\unit-test -v minimal` -> `99/99`
+- `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --artifacts-path C:\repositories\CanDoItAll\artifacts\phase10-validation\integration-test -v minimal` -> `115/115`
+- `dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --artifacts-path C:\repositories\CanDoItAll\artifacts\phase10-validation\component-test -v minimal` -> `241/241`
+- `python candoitall-plugin-wave-architecture-review-bundle-v10/scripts/gate_check_phase10.py C:\repositories\CanDoItAll` -> pass with advisories
+- `python candoitall-plugin-wave-architecture-review-bundle-v10/scripts/validate_bundle.py C:\repositories\CanDoItAll\candoitall-plugin-wave-architecture-review-bundle-v10 --profile initiative --stage completed` -> pass
+
+## Residual advisories
+- The historical phase9 gate is still visibly false-green-shaped.
+- Legacy marker/reference compatibility fallbacks are still active and should not expand further.
+- `CrmHrServices.cs` and `ProjectWorkbenchModels.cs` remain hotspot warnings.
+- Validation used isolated `--artifacts-path` outputs because the default `bin/obj` paths were locked by another local process during this run.
 
 ## Important scope note
 The current repo also still contains read-only compatibility fallbacks from legacy metadata for markers and node references:

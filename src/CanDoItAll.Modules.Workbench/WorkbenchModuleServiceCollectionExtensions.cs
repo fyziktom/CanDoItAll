@@ -16,6 +16,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectWorkbenchLifecycleService>();
         services.AddScoped<ProjectWorkbenchRelationService>();
         services.AddScoped<ProjectStructureAssemblyService>();
+        services.AddScoped<ProjectStructureProjectionMaintenanceService>();
         services.AddScoped<IProjectStructureProjectionContributor, ProjectHierarchyProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, ProjectResourceProjectionContributor>();
         services.AddScoped<IProjectStructureProjectionContributor, PromptFactoryProjectionContributor>();

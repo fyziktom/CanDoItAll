@@ -132,8 +132,6 @@ public sealed class ProjectStructureAssemblyService(
         Guid projectId,
         CancellationToken cancellationToken = default)
     {
-        await RetireLegacyProjectionRowsAsync(dbContext, projectId, cancellationToken);
-
         var canonicalNodes = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == projectId && !item.IsSystemManaged)
             .ToListAsync(cancellationToken);
@@ -162,18 +160,6 @@ public sealed class ProjectStructureAssemblyService(
         foreach (var contributor in _projectionContributors)
         {
             await contributor.ContributeAsync(context, cancellationToken);
-        }
-
-        if (layoutOverrides.Count > 0)
-        {
-            var staleLayouts = layoutOverrides.Values
-                .Where(item => !context.ContainsNode(item.NodeKey))
-                .ToList();
-            if (staleLayouts.Count > 0)
-            {
-                dbContext.RemoveRange(staleLayouts);
-                await dbContext.SaveChangesAsync(cancellationToken);
-            }
         }
 
         return new ProjectStructureAssemblySnapshot(
@@ -356,35 +342,6 @@ public sealed class ProjectStructureAssemblyService(
                     : item.UpdatedAtUtc
             })
             .ToList();
-    }
-
-    private static async Task RetireLegacyProjectionRowsAsync(
-        AppDbContext dbContext,
-        Guid projectId,
-        CancellationToken cancellationToken)
-    {
-        var staleNodes = await dbContext.Set<ProjectObjectRecord>()
-            .Where(item => item.ProjectId == projectId && item.IsSystemManaged)
-            .ToListAsync(cancellationToken);
-        var staleLinks = await dbContext.Set<ProjectObjectLinkRecord>()
-            .Where(item => item.ProjectId == projectId && item.IsSystemManaged)
-            .ToListAsync(cancellationToken);
-        if (staleNodes.Count == 0 && staleLinks.Count == 0)
-        {
-            return;
-        }
-
-        if (staleLinks.Count > 0)
-        {
-            dbContext.RemoveRange(staleLinks);
-        }
-
-        if (staleNodes.Count > 0)
-        {
-            dbContext.RemoveRange(staleNodes);
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static string NormalizeMarkersJson(string? markersJson, string? metadataJson)

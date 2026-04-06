@@ -213,7 +213,7 @@ public partial class ResourcesPage
         var primaryFieldKey = fields.FirstOrDefault()?.Key;
         if (!string.Equals(field.Key, primaryFieldKey, StringComparison.OrdinalIgnoreCase))
         {
-            return null;
+            return $"resource-config-{field.Key}";
         }
 
         return "resource-primary-input";

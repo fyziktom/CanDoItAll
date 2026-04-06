@@ -1,21 +1,15 @@
 # Hard-gate review
 
-## Why the phase9 hard gate was not enough
-The old gate looked for:
-- retired legacy carrier symbols,
-- old normalization method names,
-- a few known page/editor anti-patterns.
+## Result
+The phase10 gate now passes on the current repo with advisory warnings only.
 
-It did **not** verify the actual invariant:
-- no persistence mutation in the active read seam.
+## What the gate now proves
+- `LoadAsync(...)` has no reachable direct/transitive persistence mutation,
+- the required exact-name zero-write and repair tests exist,
+- the required unknown-plugin editor proof exists,
+- the historical phase9 false-green shape is still surfaced as an advisory note.
 
-## What phase10 changes
-The phase10 gate now:
-- inspects the `LoadAsync(...)` method body,
-- recursively inspects local helper methods reachable from `LoadAsync(...)`,
-- fails on direct/transitive persistence mutations,
-- fails when the required proof tests are missing,
-- warns on remaining compatibility fallbacks and hotspots.
-
-## Expected behavior today
-The phase10 gate is expected to fail on the current repo, because the current repo still contains the unresolved blocker.
+## Remaining advisories
+- marker/reference compatibility fallback is still active,
+- `CrmHrServices.cs` and `ProjectWorkbenchModels.cs` remain hotspot warnings,
+- the absence of gate failures must still be paired with real test execution, which happened in this run.

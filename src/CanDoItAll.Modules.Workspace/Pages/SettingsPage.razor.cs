@@ -329,7 +329,7 @@ public partial class SettingsPage
         {
             ProviderConnectorFieldKeys.BaseUrl => "provider-base-url-input",
             ProviderConnectorFieldKeys.DefaultModel => "provider-default-model-input",
-            _ => null
+            _ => $"provider-config-{field.Key}"
         };
     }
 }
