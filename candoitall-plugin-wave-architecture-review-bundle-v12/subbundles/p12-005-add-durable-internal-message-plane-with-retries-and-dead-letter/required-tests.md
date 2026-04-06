@@ -1,0 +1,5 @@
+# Required tests
+
+- `Internal_message_dispatch_retries_then_dead_letters_failed_handlers_idempotently`
+- `Internal_message_publish_fans_out_to_multiple_subscribers`
+- `Internal_message_delivery_survives_restart_boundary`
