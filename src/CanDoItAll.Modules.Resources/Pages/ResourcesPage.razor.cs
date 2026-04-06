@@ -1,6 +1,7 @@
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Modules.Workspace.Pages.Components;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Resources.Pages;
@@ -67,7 +68,7 @@ public partial class ResourcesPage
         editor = resourceId.HasValue
             ? await ResourcesService.GetAsync(resourceId.Value)
             : NewEditor(projectId);
-        EnsureLegacyResourceKind(editor);
+        NormalizeResourceEditorForCurrentPlugin();
         await LoadResponsiblePartyOptionsAsync();
     }
 
@@ -81,14 +82,13 @@ public partial class ResourcesPage
     private async Task EditAsync(Guid id)
     {
         editor = await ResourcesService.GetAsync(id);
-        EnsureLegacyResourceKind(editor);
+        NormalizeResourceEditorForCurrentPlugin();
         await LoadResponsiblePartyOptionsAsync();
         message = null;
     }
 
     private async Task SaveAsync()
     {
-        EnsureLegacyResourceKind(editor);
         var result = await ResourcesService.SaveAsync(editor);
         message = result.IsSuccess ? "Resource saved." : string.Join(" ", result.Errors.Select(error => error.Message));
         resources = await ResourcesService.ListAsync();
@@ -98,7 +98,7 @@ public partial class ResourcesPage
         }
 
         editor = await ResourcesService.GetAsync(result.Value);
-        EnsureLegacyResourceKind(editor);
+        NormalizeResourceEditorForCurrentPlugin();
         await LoadResponsiblePartyOptionsAsync();
     }
 
@@ -129,7 +129,7 @@ public partial class ResourcesPage
 
     private Task HandleConnectorPluginChangedAsync()
     {
-        EnsureLegacyResourceKind(editor);
+        NormalizeResourceEditorForCurrentPlugin();
         return Task.CompletedTask;
     }
 
@@ -182,52 +182,40 @@ public partial class ResourcesPage
             ProjectId = projectId,
             ConnectorPluginKey = resourceManifests.FirstOrDefault()?.PluginKey ?? ResourceConnectorPluginKeys.Repository
         };
-        EnsureLegacyResourceKind(model);
+        editor = model;
+        NormalizeResourceEditorForCurrentPlugin();
+        model = editor;
         return model;
     }
 
-    private void EnsureLegacyResourceKind(ResourceEditorModel model)
+    private void NormalizeResourceEditorForCurrentPlugin()
     {
-        model.ResourceKind = ResolveLegacyResourceKind(model.ConnectorPluginKey, model.ResourceKind);
-        if (string.IsNullOrWhiteSpace(model.ConfigSchemaVersion))
-        {
-            var manifest = resourceManifests.FirstOrDefault(candidate =>
-                string.Equals(candidate.PluginKey, model.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase));
-            if (manifest is not null)
-            {
-                model.ConfigSchemaVersion = manifest.ConfigurationSchema.Version;
-            }
-        }
-    }
-
-    private ResourceKind ResolveLegacyResourceKind(string? connectorPluginKey, ResourceKind fallback)
-    {
-        if (string.IsNullOrWhiteSpace(connectorPluginKey))
-        {
-            return fallback;
-        }
-
         var manifest = resourceManifests.FirstOrDefault(candidate =>
-            string.Equals(candidate.PluginKey, connectorPluginKey, StringComparison.OrdinalIgnoreCase));
+                string.Equals(candidate.PluginKey, editor.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
+            ?? resourceManifests.FirstOrDefault();
         if (manifest is null)
         {
-            return fallback;
+            return;
         }
 
-        return manifest.PluginKey switch
+        editor.ConnectorPluginKey = manifest.PluginKey;
+        editor.ConfigSchemaVersion = manifest.ConfigurationSchema.Version;
+
+        var existingConfiguration = editor.Configuration?.Clone() ?? new ConnectorConfigState();
+        existingConfiguration.KeepOnly(manifest.ConfigurationSchema.Fields.Select(field => field.Key));
+        editor.Configuration = existingConfiguration;
+    }
+
+    private static string? ResolveResourceFieldTestId(
+        ConnectorConfigFieldDescriptor field,
+        IReadOnlyList<ConnectorConfigFieldDescriptor> fields)
+    {
+        var primaryFieldKey = fields.FirstOrDefault()?.Key;
+        if (!string.Equals(field.Key, primaryFieldKey, StringComparison.OrdinalIgnoreCase))
         {
-            ResourceConnectorPluginKeys.Repository => ResourceKind.Repository,
-            ResourceConnectorPluginKeys.Folder => ResourceKind.Folder,
-            ResourceConnectorPluginKeys.File => ResourceKind.File,
-            ResourceConnectorPluginKeys.WebLink => ResourceKind.WebLink,
-            ResourceConnectorPluginKeys.Ftp => ResourceKind.Ftp,
-            ResourceConnectorPluginKeys.Ssh => ResourceKind.Ssh,
-            ResourceConnectorPluginKeys.PowerShellScript => ResourceKind.PowerShellScript,
-            ResourceConnectorPluginKeys.DockerCompose => ResourceKind.DockerCompose,
-            ResourceConnectorPluginKeys.SecretLink => ResourceKind.SecretLink,
-            ResourceConnectorPluginKeys.PromptLink => ResourceKind.PromptLink,
-            ResourceConnectorPluginKeys.WebhookEndpoint => ResourceKind.WebLink,
-            _ => fallback
-        };
+            return $"resource-config-{field.Key}";
+        }
+
+        return "resource-primary-input";
     }
 }

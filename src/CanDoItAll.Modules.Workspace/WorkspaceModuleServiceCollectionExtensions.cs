@@ -14,6 +14,8 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.AddScoped<ProviderRegistry>();
         services.AddScoped<IConnectorManifestSource>(serviceProvider => serviceProvider.GetRequiredService<ProviderRegistry>());
         services.TryAddScoped<ConnectorPluginRegistry>();
+        services.AddScoped<ConnectorCommandProcessor>();
+        services.AddScoped<ConnectorOutboxService>();
         services.AddScoped<ProviderExecutionService>();
         services.AddScoped<WorkspaceService>();
         services.AddScoped<DatabaseProfileWorkspaceService>();

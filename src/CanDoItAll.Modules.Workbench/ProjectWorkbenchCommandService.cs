@@ -39,11 +39,12 @@ public sealed class ProjectWorkbenchCommandService(
             return artifact;
         }
 
-        if (string.Equals(node.ExternalArtifactKind, "prompt-node", StringComparison.OrdinalIgnoreCase) &&
-            node.ExternalArtifactId.HasValue)
+        var binding = ProjectNodeBindingStorage.ResolveForRuntime(node);
+        if (string.Equals(binding.ExternalArtifactKind, "prompt-node", StringComparison.OrdinalIgnoreCase) &&
+            binding.ExternalArtifactId.HasValue)
         {
             var promptNode = await dbContext.Set<PromptRunNode>()
-                .FirstOrDefaultAsync(item => item.Id == node.ExternalArtifactId.Value, cancellationToken);
+                .FirstOrDefaultAsync(item => item.Id == binding.ExternalArtifactId.Value, cancellationToken);
             if (promptNode is null)
             {
                 return null;
@@ -101,11 +102,12 @@ public sealed class ProjectWorkbenchCommandService(
         ProjectObjectRecord node,
         CancellationToken cancellationToken)
     {
-        var effectiveRoute = ResolveEffectiveRoute(node);
+        var binding = ProjectNodeBindingStorage.ResolveForRuntime(node);
+        var effectiveRoute = binding.Route;
         if (!string.IsNullOrWhiteSpace(effectiveRoute) &&
             effectiveRoute.StartsWith("/prompt-factory", StringComparison.OrdinalIgnoreCase))
         {
-            var resolvedSessionId = node.Binding.ExternalArtifactId ?? node.ExternalArtifactId;
+            var resolvedSessionId = binding.ExternalArtifactId;
             if (!resolvedSessionId.HasValue &&
                 TryResolvePromptFactorySessionId(effectiveRoute, out var routeSessionId))
             {
@@ -122,13 +124,6 @@ public sealed class ProjectWorkbenchCommandService(
         ApplyPromptSessionBinding(node, $"/prompt-factory?sessionId={sessionId}", sessionId);
         node.UpdatedAtUtc = clock.GetUtcNow();
         return BuildArtifactReference(node, projectId);
-    }
-
-    private static string ResolveEffectiveRoute(ProjectObjectRecord node)
-    {
-        return !string.IsNullOrWhiteSpace(node.Binding.Route)
-            ? node.Binding.Route
-            : node.Route;
     }
 
     private static void ApplyPromptSessionBinding(ProjectObjectRecord node, string route, Guid? sessionId)

@@ -193,8 +193,7 @@ internal static class LegacySqliteMigrationBootstrap
             _ when migrationId.Contains("InitialCreate", StringComparison.Ordinal) => true,
             _ when migrationId.Contains("AddStorageFoundation", StringComparison.Ordinal) =>
                 HasTable(schemaSnapshot, "Storage_Catalog")
-                && HasTable(schemaSnapshot, "Storage_RoutingRules")
-                && HasColumn(schemaSnapshot, "Workbench_ProjectObjects", "StorageObjectReferenceJson"),
+                && HasTable(schemaSnapshot, "Storage_RoutingRules"),
             _ when migrationId.Contains("AddProjectObjectDurationSeconds", StringComparison.Ordinal) =>
                 HasColumn(schemaSnapshot, "Workbench_ProjectObjects", "DurationSeconds"),
             _ when migrationId.Contains("AddCrmHrFoundation", StringComparison.Ordinal) =>
@@ -228,6 +227,16 @@ internal static class LegacySqliteMigrationBootstrap
                 && HasColumn(schemaSnapshot, "Workbench_ProjectCrossModuleMutations", "AttemptCount")
                 && HasColumn(schemaSnapshot, "Workbench_ProjectCrossModuleMutations", "LastAttemptAtUtc")
                 && HasColumn(schemaSnapshot, "Workbench_ProjectCrossModuleMutations", "CompletedAtUtc"),
+            _ when migrationId.Contains("AddConnectorCommandOutboxBoundary", StringComparison.Ordinal) =>
+                HasTable(schemaSnapshot, "Workspace_ConnectorCommands")
+                && HasTable(schemaSnapshot, "Workspace_ConnectorCommandAudits")
+                && !HasColumn(schemaSnapshot, "Workbench_ProjectObjects", "Route")
+                && !HasColumn(schemaSnapshot, "Workbench_ProjectObjects", "ExternalArtifactKind")
+                && !HasColumn(schemaSnapshot, "Workbench_ProjectObjects", "ExternalArtifactId")
+                && !HasColumn(schemaSnapshot, "Workbench_ProjectObjects", "MediaRelativePath")
+                && !HasColumn(schemaSnapshot, "Workbench_ProjectObjects", "MediaContentType")
+                && !HasColumn(schemaSnapshot, "Workbench_ProjectObjects", "MediaOriginalFileName")
+                && !HasColumn(schemaSnapshot, "Workbench_ProjectObjects", "StorageObjectReferenceJson"),
             _ => false
         };
     }

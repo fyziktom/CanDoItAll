@@ -28,7 +28,7 @@ public sealed class ProviderProfile
 
     public string Name { get; set; } = string.Empty;
 
-    public ProviderKind ProviderKind { get; set; }
+    public ProviderKind? ProviderKind { get; set; }
 
     public string ConnectorPluginKey { get; set; } = string.Empty;
 
@@ -101,7 +101,7 @@ public sealed class WorkspaceSettingsModel
 public sealed record ProviderProfileSummary(
     Guid Id,
     string Name,
-    ProviderKind ProviderKind,
+    ProviderKind? LegacyProviderKind,
     string ConnectorPluginKey,
     string ConnectorDisplayName,
     string BaseUrl,
@@ -116,19 +116,11 @@ public sealed class ProviderProfileEditorModel
 
     public string Name { get; set; } = string.Empty;
 
-    public ProviderKind ProviderKind { get; set; } = ProviderKind.OpenAi;
-
     public string ConnectorPluginKey { get; set; } = string.Empty;
 
     public string ConfigSchemaVersion { get; set; } = string.Empty;
 
-    public string BaseUrl { get; set; } = string.Empty;
-
     public Guid? ApiKeySecretId { get; set; }
-
-    public string DefaultModel { get; set; } = string.Empty;
-
-    public int TimeoutSeconds { get; set; } = 45;
 
     public bool IsEnabled { get; set; } = true;
 
@@ -140,7 +132,7 @@ public sealed class ProviderProfileEditorModel
 
     public bool SupportsVision { get; set; }
 
-    public string ExtraSettingsJson { get; set; } = "{}";
+    public ConnectorConfigState Configuration { get; set; } = new();
 }
 
 public sealed record ProviderHealthResult(bool Success, string Message);
@@ -249,19 +241,15 @@ public sealed partial class WorkspaceService(
         {
             Id = provider.Id,
             Name = provider.Name,
-            ProviderKind = provider.ProviderKind,
             ConnectorPluginKey = providerRegistry.Resolve(provider)?.Manifest.PluginKey ?? provider.ConnectorPluginKey,
             ConfigSchemaVersion = provider.ConfigSchemaVersion,
-            BaseUrl = provider.BaseUrl,
             ApiKeySecretId = provider.ApiKeySecretId,
-            DefaultModel = provider.DefaultModel,
-            TimeoutSeconds = provider.TimeoutSeconds,
             IsEnabled = provider.IsEnabled,
             SupportsStreaming = provider.SupportsStreaming,
             SupportsToolCalling = provider.SupportsToolCalling,
             SupportsStructuredOutput = provider.SupportsStructuredOutput,
             SupportsVision = provider.SupportsVision,
-            ExtraSettingsJson = provider.ExtraSettingsJson
+            Configuration = BuildProviderConfiguration(provider)
         };
     }
 
@@ -272,7 +260,8 @@ public sealed partial class WorkspaceService(
             return Result<Guid>.Failure(Error.Validation("Provider profile name is required."));
         }
 
-        if (string.IsNullOrWhiteSpace(model.BaseUrl))
+        var configuredBaseUrl = model.Configuration.GetText(ProviderConnectorFieldKeys.BaseUrl);
+        if (string.IsNullOrWhiteSpace(configuredBaseUrl))
         {
             return Result<Guid>.Failure(Error.Validation("Provider base URL is required."));
         }
@@ -294,7 +283,8 @@ public sealed partial class WorkspaceService(
                 $"{providerManifest.DisplayName} requires a secret reference."));
         }
 
-        if (model.TimeoutSeconds < 5)
+        var configuredTimeoutSeconds = model.Configuration.GetNumber(ProviderConnectorFieldKeys.TimeoutSeconds) ?? 45;
+        if (configuredTimeoutSeconds < 5)
         {
             return Result<Guid>.Failure(Error.Validation("Provider timeout must be at least five seconds."));
         }
@@ -312,12 +302,12 @@ public sealed partial class WorkspaceService(
 
         entity.Name = model.Name.Trim();
         entity.ConnectorPluginKey = providerPlugin.Manifest.PluginKey;
-        entity.ProviderKind = providerPlugin.LegacyProviderKind ?? model.ProviderKind;
+        entity.ProviderKind = providerPlugin.LegacyProviderKind;
         entity.ConfigSchemaVersion = configSchemaVersion;
-        entity.BaseUrl = model.BaseUrl.Trim().TrimEnd('/');
+        entity.BaseUrl = configuredBaseUrl.Trim().TrimEnd('/');
         entity.ApiKeySecretId = model.ApiKeySecretId;
         entity.DefaultModel = ResolveDefaultModel(model, providerPlugin.Manifest.PluginKey);
-        entity.TimeoutSeconds = Math.Max(5, model.TimeoutSeconds);
+        entity.TimeoutSeconds = Math.Max(5, configuredTimeoutSeconds);
         entity.IsEnabled = model.IsEnabled;
         var isOpenAiPlugin = string.Equals(
             providerPlugin.Manifest.PluginKey,
@@ -327,7 +317,7 @@ public sealed partial class WorkspaceService(
         entity.SupportsToolCalling = isOpenAiPlugin || model.SupportsToolCalling;
         entity.SupportsStructuredOutput = isOpenAiPlugin || model.SupportsStructuredOutput;
         entity.SupportsVision = isOpenAiPlugin && model.SupportsVision;
-        entity.ExtraSettingsJson = string.IsNullOrWhiteSpace(model.ExtraSettingsJson) ? "{}" : model.ExtraSettingsJson;
+        entity.ExtraSettingsJson = model.Configuration.ToJson();
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await activityStream.RecordAsync(new ActivityWriteRequest(
@@ -414,8 +404,12 @@ public sealed partial class WorkspaceService(
     {
         ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
         ConfigSchemaVersion = "1.0",
-        BaseUrl = "https://api.openai.com/v1/models",
-        DefaultModel = "gpt-4.1",
+        Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [ProviderConnectorFieldKeys.BaseUrl] = "https://api.openai.com/v1/models",
+            [ProviderConnectorFieldKeys.DefaultModel] = "gpt-4.1",
+            [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
+        }),
         IsEnabled = true,
         SupportsStreaming = true,
         SupportsToolCalling = true,
@@ -424,9 +418,10 @@ public sealed partial class WorkspaceService(
 
     private static string ResolveDefaultModel(ProviderProfileEditorModel model, string pluginKey)
     {
-        if (!string.IsNullOrWhiteSpace(model.DefaultModel))
+        var configuredModel = model.Configuration.GetText(ProviderConnectorFieldKeys.DefaultModel);
+        if (!string.IsNullOrWhiteSpace(configuredModel))
         {
-            return model.DefaultModel.Trim();
+            return configuredModel.Trim();
         }
 
         return pluginKey.Trim() switch
@@ -449,10 +444,8 @@ public sealed partial class WorkspaceService(
         manifest = default!;
         configSchemaVersion = string.Empty;
 
-        var requestedPluginKey = string.IsNullOrWhiteSpace(model.ConnectorPluginKey)
-            ? providerRegistry.ResolveLegacyPluginKey(model.ProviderKind)
-            : model.ConnectorPluginKey.Trim();
-        if (!providerRegistry.TryResolve(requestedPluginKey, model.ProviderKind, out providerPlugin))
+        var requestedPluginKey = model.ConnectorPluginKey?.Trim();
+        if (!providerRegistry.TryResolve(requestedPluginKey, out providerPlugin))
         {
             return Error.Validation(
                 string.IsNullOrWhiteSpace(requestedPluginKey)
@@ -471,6 +464,17 @@ public sealed partial class WorkspaceService(
         }
 
         return null;
+    }
+
+    private static ConnectorConfigState BuildProviderConfiguration(ProviderProfile provider)
+    {
+        var configuration = ConnectorConfigState.FromJson(provider.ExtraSettingsJson);
+
+        configuration.SetText(ProviderConnectorFieldKeys.BaseUrl, provider.BaseUrl);
+        configuration.SetText(ProviderConnectorFieldKeys.DefaultModel, provider.DefaultModel);
+        configuration.SetNumber(ProviderConnectorFieldKeys.TimeoutSeconds, provider.TimeoutSeconds);
+
+        return configuration;
     }
 }
 

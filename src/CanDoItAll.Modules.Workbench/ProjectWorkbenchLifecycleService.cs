@@ -25,7 +25,7 @@ public sealed class ProjectWorkbenchLifecycleService(
             return null;
         }
 
-        await ProjectNodeBindingStorage.NormalizeAndHydrateAsync(dbContext, [node], cancellationToken);
+        await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
 
         var sourceDescriptor = ProjectNodeKindRegistry.ResolveDescriptor(node.ObjectType, node.ObjectSubtype);
         var targetDescriptor = ProjectNodeKindRegistry.ResolveDescriptor(request.TargetObjectType, request.TargetObjectSubtype);
@@ -45,15 +45,8 @@ public sealed class ProjectWorkbenchLifecycleService(
             Subtitle = node.Subtitle,
             Status = node.Status,
             Notes = node.Notes,
-            MediaRelativePath = node.MediaRelativePath,
-            MediaContentType = node.MediaContentType,
-            MediaOriginalFileName = node.MediaOriginalFileName,
-            StorageObjectReferenceJson = node.StorageObjectReferenceJson,
             ProgressMode = node.ProgressMode,
             ProgressPercent = node.ProgressPercent,
-            MarkerIcon = node.MarkerIcon,
-            MarkerTone = node.MarkerTone,
-            MarkerLabel = node.MarkerLabel,
             MarkersJson = node.MarkersJson,
             Priority = node.Priority,
             MetadataJson = node.MetadataJson,
@@ -67,21 +60,7 @@ public sealed class ProjectWorkbenchLifecycleService(
             CreatedAtUtc = node.CreatedAtUtc,
             UpdatedAtUtc = node.UpdatedAtUtc,
             Binding = node.Binding,
-            NodeReferences = new ProjectNodeReferenceSet
-            {
-                MeetingParticipantIds = node.NodeReferences.MeetingParticipantIds.ToList(),
-                RecordingMeetingNodeId = node.NodeReferences.RecordingMeetingNodeId,
-                RecordingTranscriptNodeId = node.NodeReferences.RecordingTranscriptNodeId,
-                TranscriptRecordingNodeId = node.NodeReferences.TranscriptRecordingNodeId,
-                TranscriptProviderProfileId = node.NodeReferences.TranscriptProviderProfileId,
-                ParticipantParentNodeId = node.NodeReferences.ParticipantParentNodeId,
-                WorkItemAssigneeNodeId = node.NodeReferences.WorkItemAssigneeNodeId,
-                WorkItemRepositoryResourceId = node.NodeReferences.WorkItemRepositoryResourceId,
-                RepositoryResourceId = node.NodeReferences.RepositoryResourceId,
-                EnvironmentRepositoryResourceId = node.NodeReferences.EnvironmentRepositoryResourceId,
-                InfrastructureSecretReferenceId = node.NodeReferences.InfrastructureSecretReferenceId,
-                InfrastructureStorageCatalogId = node.NodeReferences.InfrastructureStorageCatalogId
-            }
+            NodeReferences = node.NodeReferences.Clone()
         };
 
         node.ObjectType = request.TargetObjectType;

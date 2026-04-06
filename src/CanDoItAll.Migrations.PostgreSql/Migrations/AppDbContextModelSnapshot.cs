@@ -324,6 +324,449 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Activity_Entries", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationDeadLetterRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("CausationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("DeadLetteredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DedupeKey")
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<Guid>("DeliveryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EnvelopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EnvelopeType")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HandlerKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryId")
+                        .IsUnique();
+
+                    b.HasIndex("DeadLetteredAtUtc", "HandlerKey");
+
+                    b.ToTable("Automation_DeadLetters", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationDeliveryAttemptRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("CausationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DeliveryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EnvelopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HandlerKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<int>("Outcome")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryId", "AttemptNumber")
+                        .IsUnique();
+
+                    b.ToTable("Automation_DeliveryAttempts", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationEnvelopeDeliveryRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("AvailableAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EnvelopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EnvelopeType")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("HandlerKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastError")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LockToken")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("LockedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EnvelopeId", "HandlerKey")
+                        .IsUnique();
+
+                    b.HasIndex("State", "AvailableAtUtc", "LockedAtUtc");
+
+                    b.ToTable("Automation_EnvelopeDeliveries", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationEnvelopeRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("AvailableAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CausationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DedupeKey")
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("EnvelopeType")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EnvelopeType", "DedupeKey")
+                        .IsUnique();
+
+                    b.HasIndex("State", "AvailableAtUtc");
+
+                    b.ToTable("Automation_Envelopes", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationExecutionLogRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CausationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DetailsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EventKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("SourceId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourceType", "SourceId", "CreatedAtUtc");
+
+                    b.ToTable("Automation_ExecutionLogs", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationTriggerRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CronExpression")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("DedupeKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<DateTimeOffset?>("EndAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LastFiredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MisfirePolicy")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("NextPlannedFireAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OwnerKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<int>("OwnerKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("StartAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("TriggerKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<int>("TriggerKind")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerKind", "OwnerKey", "TriggerKey")
+                        .IsUnique();
+
+                    b.ToTable("Automation_Triggers", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.PluginIngressCursorRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CursorValue")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("SourceKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("SourceKind")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourceKind", "SourceKey")
+                        .IsUnique();
+
+                    b.ToTable("Automation_PluginIngressCursors", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.PluginIngressEnvelopeRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CursorValue")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("DedupeKey")
+                        .IsRequired()
+                        .HasMaxLength(280)
+                        .HasColumnType("character varying(280)");
+
+                    b.Property<string>("ExternalMessageId")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("LastError")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaterializationSummary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("MaterializedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MaterializerKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("ReceivedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SourceKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("SourceKind")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("State", "ReceivedAtUtc");
+
+                    b.HasIndex("SourceKind", "SourceKey", "DedupeKey")
+                        .IsUnique();
+
+                    b.ToTable("Automation_PluginIngressEnvelopes", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.AiAgentProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2284,7 +2727,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("ResourceKind")
+                    b.Property<int?>("ResourceKind")
                         .HasColumnType("integer");
 
                     b.Property<int>("Sensitivity")
@@ -2821,11 +3264,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("ProjectObjectId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ReferenceId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("ReferenceId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
-                    b.Property<int>("ReferenceKind")
-                        .HasColumnType("integer");
+                    b.Property<string>("ReferenceKind")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
 
                     b.HasKey("Id");
 
@@ -2889,46 +3336,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<DateTimeOffset?>("EndUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("ExternalArtifactId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ExternalArtifactKind")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsSystemManaged")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("MarkerIcon")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
-
-                    b.Property<string>("MarkerLabel")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<string>("MarkerTone")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)");
 
                     b.Property<string>("MarkersJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<string>("MediaContentType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("MediaOriginalFileName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("MediaRelativePath")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("MetadataJson")
                         .IsRequired()
@@ -2975,10 +3388,6 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Route")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<DateTimeOffset?>("StartUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -2986,10 +3395,6 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
-
-                    b.Property<string>("StorageObjectReferenceJson")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Subtitle")
                         .IsRequired()
@@ -3232,6 +3637,130 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Workbench_ViewStates", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandAuditRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid>("ConnectorCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DetailsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EventKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectorCommandId", "CreatedAtUtc");
+
+                    b.ToTable("Workspace_ConnectorCommandAudits", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ApprovalState")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CommandKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ConnectorPluginKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastError")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LeaseToken")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "CreatedAtUtc");
+
+                    b.HasIndex("ProjectId", "ConnectorPluginKey", "CommandKey", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "ApprovalState", "NextAttemptAtUtc", "LeaseExpiresAtUtc");
+
+                    b.ToTable("Workspace_ConnectorCommands", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Workspace.ProjectStructureAgentProfileRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3405,7 +3934,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("ProviderKind")
+                    b.Property<int?>("ProviderKind")
                         .HasColumnType("integer");
 
                     b.Property<bool>("SupportsStreaming")
@@ -3459,6 +3988,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Workspace_Settings", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationEnvelopeDeliveryRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Automation.AutomationEnvelopeRecord", null)
+                        .WithMany()
+                        .HasForeignKey("EnvelopeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b =>
                 {
                     b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
@@ -3482,6 +4020,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
                         .WithMany()
                         .HasForeignKey("ProjectObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandAuditRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Workspace.ConnectorCommandRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectorCommandId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

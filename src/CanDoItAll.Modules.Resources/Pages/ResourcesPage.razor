@@ -2,6 +2,7 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Security
+@using CanDoItAll.Modules.Workspace.Pages.Components
 @inject ResourcesService ResourcesService
 @inject ProjectsService ProjectsService
 @inject SecretService SecretService
@@ -194,141 +195,11 @@
                             <Stack GapScale="LayoutGap.Medium">
                                 @foreach (var field in SelectedResourceFields)
                                 {
-                                    @switch (field.Key)
-                                    {
-                                        case ResourceConnectorFieldKeys.RepositoryUrl:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.RepositoryUrl" class="cda-input" data-testid="resource-primary-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.DefaultBranch:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.DefaultBranch" class="cda-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.RelativePath:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.RelativePath" class="cda-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.FolderPath:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.FolderPath" class="cda-input" data-testid="resource-primary-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.FilePath:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.FilePath" class="cda-input" data-testid="resource-primary-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.WorkingDirectory:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.WebUrl:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.WebUrl" class="cda-input" data-testid="resource-primary-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.UrlTitleHint:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.UrlTitleHint" class="cda-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.Host:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.Host" class="cda-input" data-testid="resource-primary-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.Port:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputNumber @bind-Value="editor.Port" class="cda-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.RemotePath:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.RemotePath" class="cda-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.UserName:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.UserName" class="cda-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.ScriptPath:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.ScriptPath" class="cda-input" data-testid="resource-primary-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.ScriptArguments:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.ScriptArguments" class="cda-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.ComposeFilePath:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.ComposeFilePath" class="cda-input" data-testid="resource-primary-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.ComposeService:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.ComposeService" class="cda-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.SecretPurpose:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.SecretPurpose" class="cda-input" data-testid="resource-primary-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.PromptReference:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.PromptReference" class="cda-input" data-testid="resource-primary-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.PromptTitleHint:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.PromptTitleHint" class="cda-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.EndpointUrl:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.EndpointUrl" class="cda-input" data-testid="resource-primary-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.HealthPath:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.HealthPath" class="cda-input" />
-                                            </div>
-                                            break;
-                                        case ResourceConnectorFieldKeys.HttpMethod:
-                                            <div>
-                                                <label class="cda-field-label">@field.Label</label>
-                                                <InputText @bind-Value="editor.HttpMethod" class="cda-input" />
-                                            </div>
-                                            break;
-                                    }
+                                    <ConnectorConfigFieldEditor Field="field"
+                                                                State="editor.Configuration"
+                                                                Secrets="secrets"
+                                                                InputClass="cda-input"
+                                                                TestId="@ResolveResourceFieldTestId(field, SelectedResourceFields)" />
                                 }
                             </Stack>
 

@@ -193,9 +193,6 @@ internal static class ProjectWorkbenchObjectModeling
 
     internal static void ApplyPrimaryMarker(ProjectObjectRecord node, IReadOnlyList<ProjectNodeMarker> markers)
     {
-        var primaryMarker = ProjectObjectMetadataSerializer.ResolvePrimaryMarker(markers);
-        node.MarkerIcon = primaryMarker?.Icon ?? string.Empty;
-        node.MarkerTone = primaryMarker?.Tone ?? string.Empty;
-        node.MarkerLabel = primaryMarker?.Label ?? string.Empty;
+        node.MarkersJson = ProjectNodeMarkerState.Serialize(markers);
     }
 }

@@ -77,7 +77,7 @@ public sealed class ProjectResource
 
     public Guid? MaintainerPartyId { get; set; }
 
-    public ResourceKind ResourceKind { get; set; }
+    public ResourceKind? ResourceKind { get; set; }
 
     public string Name { get; set; } = string.Empty;
 
@@ -126,7 +126,7 @@ public sealed record ResourceSummary(
     Guid Id,
     Guid ProjectId,
     string ProjectName,
-    ResourceKind ResourceKind,
+    ResourceKind? LegacyResourceKind,
     string ConnectorPluginKey,
     string ConnectorDisplayName,
     string Name,
@@ -144,8 +144,6 @@ public sealed class ResourceEditorModel
 
     public Guid? MaintainerPartyId { get; set; }
 
-    public ResourceKind ResourceKind { get; set; } = ResourceKind.Repository;
-
     public string Name { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;
@@ -158,51 +156,9 @@ public sealed class ResourceEditorModel
 
     public string ConfigJson { get; set; } = "{}";
 
+    public ConnectorConfigState Configuration { get; set; } = new();
+
     public Guid? LinkedSecretId { get; set; }
-
-    public string RepositoryUrl { get; set; } = string.Empty;
-
-    public string DefaultBranch { get; set; } = string.Empty;
-
-    public string RelativePath { get; set; } = string.Empty;
-
-    public string FolderPath { get; set; } = string.Empty;
-
-    public string FilePath { get; set; } = string.Empty;
-
-    public string WorkingDirectory { get; set; } = string.Empty;
-
-    public string WebUrl { get; set; } = string.Empty;
-
-    public string UrlTitleHint { get; set; } = string.Empty;
-
-    public string Host { get; set; } = string.Empty;
-
-    public int? Port { get; set; }
-
-    public string RemotePath { get; set; } = string.Empty;
-
-    public string UserName { get; set; } = string.Empty;
-
-    public string ScriptPath { get; set; } = string.Empty;
-
-    public string ScriptArguments { get; set; } = string.Empty;
-
-    public string ComposeFilePath { get; set; } = string.Empty;
-
-    public string ComposeService { get; set; } = string.Empty;
-
-    public string SecretPurpose { get; set; } = string.Empty;
-
-    public string PromptReference { get; set; } = string.Empty;
-
-    public string PromptTitleHint { get; set; } = string.Empty;
-
-    public string EndpointUrl { get; set; } = string.Empty;
-
-    public string HealthPath { get; set; } = string.Empty;
-
-    public string HttpMethod { get; set; } = string.Empty;
 
     public ResourceValidationStatus ValidationStatus { get; set; } = ResourceValidationStatus.Unknown;
 
@@ -231,9 +187,7 @@ public sealed class ResourcesService(
 
         try
         {
-            var connectorPlugin = resourceConnectorPluginRegistry.Resolve(
-                ResolveRequestedConnectorPluginKey(model),
-                model.ResourceKind);
+            var connectorPlugin = resourceConnectorPluginRegistry.Resolve(ResolveRequestedConnectorPluginKey(model));
             return connectorPlugin.BuildLocation(model);
         }
         catch
@@ -287,12 +241,12 @@ public sealed class ResourcesService(
             ProjectId = resource.ProjectId,
             OwnerPartyId = resource.OwnerPartyId,
             MaintainerPartyId = resource.MaintainerPartyId,
-            ResourceKind = resource.ResourceKind,
             Name = resource.Name,
             Description = resource.Description,
             ConfigSchemaVersion = resource.ConfigSchemaVersion,
             LocationOrIdentifier = resource.LocationOrIdentifier,
             ConfigJson = resource.ConfigJson,
+            Configuration = ConnectorConfigState.FromJson(resource.ConfigJson),
             LinkedSecretId = ParseLinkedSecret(resource.LinkedSecretIdsJson),
             ValidationStatus = resource.ValidationStatus,
             Sensitivity = resource.Sensitivity,
@@ -318,9 +272,7 @@ public sealed class ResourcesService(
             return Result<Guid>.Failure(Error.Validation("Resource name is required."));
         }
 
-        var connectorPlugin = resourceConnectorPluginRegistry.Resolve(
-            ResolveRequestedConnectorPluginKey(model),
-            model.ResourceKind);
+        var connectorPlugin = resourceConnectorPluginRegistry.Resolve(ResolveRequestedConnectorPluginKey(model));
         var configSchemaVersion = string.IsNullOrWhiteSpace(model.ConfigSchemaVersion)
             ? connectorPlugin.Manifest.ConfigurationSchema.Version
             : model.ConfigSchemaVersion.Trim();
@@ -363,7 +315,7 @@ public sealed class ResourcesService(
         entity.ProjectId = model.ProjectId.Value;
         entity.OwnerPartyId = model.OwnerPartyId;
         entity.MaintainerPartyId = model.MaintainerPartyId;
-        entity.ResourceKind = connectorPlugin.LegacyResourceKind ?? model.ResourceKind;
+        entity.ResourceKind = connectorPlugin.LegacyResourceKind;
         entity.Name = model.Name.Trim();
         entity.Description = model.Description?.Trim() ?? string.Empty;
         entity.ConnectorPluginKey = connectorPlugin.Manifest.PluginKey;
@@ -428,20 +380,13 @@ public sealed class ResourcesService(
         return Guid.TryParse(trimmed, out var parsed) ? parsed : null;
     }
 
-    private static string? ResolveRequestedConnectorPluginKey(ResourceEditorModel model)
+    private static string ResolveRequestedConnectorPluginKey(ResourceEditorModel model)
     {
         var connectorPluginKey = model.ConnectorPluginKey?.Trim();
         if (string.IsNullOrWhiteSpace(connectorPluginKey))
         {
-            return null;
+            throw new InvalidOperationException("Select a connector plugin before building the resource configuration.");
         }
-
-        if (string.Equals(connectorPluginKey, ResourceConnectorPluginKeys.Repository, StringComparison.OrdinalIgnoreCase) &&
-            model.ResourceKind != ResourceKind.Repository)
-        {
-            return null;
-        }
-
         return connectorPluginKey;
     }
 
@@ -458,7 +403,7 @@ public sealed class ResourcesService(
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(model.EndpointUrl))
+        if (!string.IsNullOrWhiteSpace(model.Configuration.GetText(ResourceConnectorFieldKeys.EndpointUrl)))
         {
             return;
         }

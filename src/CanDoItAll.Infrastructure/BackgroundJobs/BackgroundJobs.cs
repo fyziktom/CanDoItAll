@@ -75,11 +75,21 @@ public sealed record BackgroundJobSummary(
 
 public interface IBackgroundJobTracker
 {
+    Task<Guid> CreateTrackedAsync(
+        string jobType,
+        string description,
+        IReadOnlyDictionary<string, string>? metadata = null,
+        Guid? correlationId = null,
+        CancellationToken cancellationToken = default);
+
+    [Obsolete("Use IBackgroundJobTracker.CreateTrackedAsync for synchronous tracking or IAutomationBackgroundJobScheduler for durable execution.")]
     Task<Guid> EnqueueTrackedAsync(
         string jobType,
         string description,
         IReadOnlyDictionary<string, string>? metadata = null,
         CancellationToken cancellationToken = default);
+
+    Task MarkQueuedAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task MarkRunningAsync(Guid id, CancellationToken cancellationToken = default);
 
@@ -117,32 +127,50 @@ public sealed class BackgroundJobTracker(
     IBackgroundJobQueue queue,
     IClock clock) : IBackgroundJobTracker
 {
+    public async Task<Guid> CreateTrackedAsync(
+        string jobType,
+        string description,
+        IReadOnlyDictionary<string, string>? metadata = null,
+        Guid? correlationId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var prepared = PrepareJob(jobType, description, metadata, correlationId);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await dbContext.Set<BackgroundJobRecord>().AddAsync(prepared.Record, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return prepared.Record.Id;
+    }
+
     public async Task<Guid> EnqueueTrackedAsync(
         string jobType,
         string description,
         IReadOnlyDictionary<string, string>? metadata = null,
         CancellationToken cancellationToken = default)
     {
-        var record = new BackgroundJobRecord
-        {
-            JobType = jobType.Trim(),
-            Description = description.Trim(),
-            CorrelationId = Guid.NewGuid(),
-            MetadataJson = SerializeMetadata(metadata),
-            CreatedAtUtc = clock.GetUtcNow(),
-            UpdatedAtUtc = clock.GetUtcNow()
-        };
+        var prepared = PrepareJob(jobType, description, metadata, Guid.NewGuid());
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await dbContext.Set<BackgroundJobRecord>().AddAsync(record, cancellationToken);
+        await dbContext.Set<BackgroundJobRecord>().AddAsync(prepared.Record, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        await queue.EnqueueAsync(new BackgroundJobRequest(record.JobType, record.CorrelationId, record.Description, metadata), cancellationToken);
-        return record.Id;
+        await queue.EnqueueAsync(
+            new BackgroundJobRequest(
+                prepared.Record.JobType,
+                prepared.Record.CorrelationId,
+                prepared.Record.Description,
+                prepared.Metadata),
+            cancellationToken);
+
+        return prepared.Record.Id;
     }
 
     public Task MarkRunningAsync(Guid id, CancellationToken cancellationToken = default)
         => UpdateStateAsync(id, BackgroundJobState.Running, null, cancellationToken);
+
+    public Task MarkQueuedAsync(Guid id, CancellationToken cancellationToken = default)
+        => UpdateStateAsync(id, BackgroundJobState.Queued, null, cancellationToken);
 
     public Task MarkSucceededAsync(Guid id, CancellationToken cancellationToken = default)
         => UpdateStateAsync(id, BackgroundJobState.Succeeded, null, cancellationToken);
@@ -198,4 +226,42 @@ public sealed class BackgroundJobTracker(
 
         return System.Text.Json.JsonSerializer.Serialize(metadata);
     }
+
+    private PreparedBackgroundJob PrepareJob(
+        string jobType,
+        string description,
+        IReadOnlyDictionary<string, string>? metadata,
+        Guid? correlationId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(description);
+
+        var now = clock.GetUtcNow();
+        var normalizedMetadata = NormalizeMetadata(metadata);
+        var record = new BackgroundJobRecord
+        {
+            JobType = jobType.Trim(),
+            Description = description.Trim(),
+            CorrelationId = correlationId ?? Guid.NewGuid(),
+            MetadataJson = SerializeMetadata(normalizedMetadata),
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
+        };
+
+        return new PreparedBackgroundJob(record, normalizedMetadata);
+    }
+
+    private static IReadOnlyDictionary<string, string> NormalizeMetadata(IReadOnlyDictionary<string, string>? metadata)
+    {
+        if (metadata is null || metadata.Count == 0)
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return new Dictionary<string, string>(metadata, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed record PreparedBackgroundJob(
+        BackgroundJobRecord Record,
+        IReadOnlyDictionary<string, string> Metadata);
 }

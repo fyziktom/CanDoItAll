@@ -73,7 +73,7 @@ public partial class SettingsPage
         settingsModel = await WorkspaceService.GetSettingsAsync();
         providers = await WorkspaceService.ListProviderProfilesAsync();
         secrets = await WorkspaceService.ListSecretsAsync();
-        ApplyProviderConnectorDefaults(providerModel, preserveIdentity: true);
+        NormalizeProviderEditorForCurrentPlugin(resetCapabilities: false);
         ApplyRequestedTab();
     }
 
@@ -141,7 +141,7 @@ public partial class SettingsPage
     private async Task EditProviderAsync(Guid id)
     {
         providerModel = await WorkspaceService.GetProviderAsync(id);
-        ApplyProviderConnectorDefaults(providerModel, preserveIdentity: true);
+        NormalizeProviderEditorForCurrentPlugin(resetCapabilities: false);
     }
 
     private async Task TestProviderAsync(Guid id)
@@ -162,13 +162,12 @@ public partial class SettingsPage
     private Task ResetProviderAsync()
     {
         providerModel = NewProvider();
-        ApplyProviderConnectorDefaults(providerModel, preserveIdentity: true);
         return Task.CompletedTask;
     }
 
     private Task HandleProviderPluginChangedAsync()
     {
-        ApplyProviderConnectorDefaults(providerModel, preserveIdentity: true);
+        NormalizeProviderEditorForCurrentPlugin(resetCapabilities: true);
         return Task.CompletedTask;
     }
 
@@ -231,86 +230,106 @@ public partial class SettingsPage
         var normalizedPluginKey = string.IsNullOrWhiteSpace(connectorPluginKey)
             ? OpenAiProviderAdapter.PluginKey
             : connectorPluginKey.Trim();
-        return normalizedPluginKey switch
+        var defaults = ResolveProviderCapabilityDefaults(normalizedPluginKey);
+        return new ProviderProfileEditorModel
         {
-            OpenAiProviderAdapter.PluginKey => new ProviderProfileEditorModel
-            {
-                ProviderKind = ProviderKind.OpenAi,
-                ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
-                ConfigSchemaVersion = "1.0",
-                BaseUrl = "https://api.openai.com/v1/models",
-                DefaultModel = "gpt-4.1",
-                TimeoutSeconds = 45,
-                IsEnabled = true,
-                SupportsStreaming = true,
-                SupportsToolCalling = true,
-                SupportsStructuredOutput = true
-            },
-            OllamaProviderAdapter.PluginKey => new ProviderProfileEditorModel
-            {
-                ProviderKind = ProviderKind.OllamaLocal,
-                ConnectorPluginKey = OllamaProviderAdapter.PluginKey,
-                ConfigSchemaVersion = "1.0",
-                BaseUrl = "http://127.0.0.1:11434",
-                DefaultModel = "llama3.1",
-                TimeoutSeconds = 45,
-                IsEnabled = true,
-                SupportsStreaming = true,
-                SupportsToolCalling = true,
-                SupportsStructuredOutput = true
-            },
-            OllamaRemoteProviderAdapter.PluginKey => new ProviderProfileEditorModel
-            {
-                ProviderKind = ProviderKind.OllamaRemote,
-                ConnectorPluginKey = OllamaRemoteProviderAdapter.PluginKey,
-                ConfigSchemaVersion = "1.0",
-                BaseUrl = "https://ollama.example.com",
-                DefaultModel = "llama3.1",
-                TimeoutSeconds = 45,
-                IsEnabled = true,
-                SupportsStreaming = true,
-                SupportsToolCalling = true,
-                SupportsStructuredOutput = true
-            },
-            _ => new ProviderProfileEditorModel
-            {
-                ConnectorPluginKey = normalizedPluginKey,
-                ConfigSchemaVersion = "1.0",
-                TimeoutSeconds = 45,
-                IsEnabled = true
-            }
+            ConnectorPluginKey = normalizedPluginKey,
+            ConfigSchemaVersion = "1.0",
+            IsEnabled = true,
+            SupportsStreaming = defaults.SupportsStreaming,
+            SupportsToolCalling = defaults.SupportsToolCalling,
+            SupportsStructuredOutput = defaults.SupportsStructuredOutput,
+            SupportsVision = defaults.SupportsVision,
+            Configuration = BuildDefaultProviderConfiguration(normalizedPluginKey)
         };
     }
 
-    private static void ApplyProviderConnectorDefaults(ProviderProfileEditorModel model, bool preserveIdentity)
+    private void NormalizeProviderEditorForCurrentPlugin(bool resetCapabilities)
     {
-        var draft = NewProvider(model.ConnectorPluginKey);
-        var existingId = model.Id;
-        var existingName = model.Name;
-        var existingSecretId = model.ApiKeySecretId;
-        var existingEnabled = model.IsEnabled;
-        var existingExtraSettingsJson = string.IsNullOrWhiteSpace(model.ExtraSettingsJson) ? "{}" : model.ExtraSettingsJson;
-
-        model.ProviderKind = draft.ProviderKind;
-        model.ConnectorPluginKey = draft.ConnectorPluginKey;
-        model.ConfigSchemaVersion = draft.ConfigSchemaVersion;
-        model.BaseUrl = draft.BaseUrl;
-        model.DefaultModel = draft.DefaultModel;
-        model.TimeoutSeconds = draft.TimeoutSeconds;
-        model.SupportsStreaming = draft.SupportsStreaming;
-        model.SupportsToolCalling = draft.SupportsToolCalling;
-        model.SupportsStructuredOutput = draft.SupportsStructuredOutput;
-        model.SupportsVision = draft.SupportsVision;
-        model.ExtraSettingsJson = existingExtraSettingsJson;
-
-        if (!preserveIdentity)
+        var manifest = providerManifests.FirstOrDefault(candidate =>
+                string.Equals(candidate.PluginKey, providerModel.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
+            ?? providerManifests.FirstOrDefault();
+        if (manifest is null)
         {
             return;
         }
 
-        model.Id = existingId;
-        model.Name = existingName;
-        model.ApiKeySecretId = existingSecretId;
-        model.IsEnabled = existingEnabled;
+        providerModel.ConnectorPluginKey = manifest.PluginKey;
+        providerModel.ConfigSchemaVersion = manifest.ConfigurationSchema.Version;
+
+        var existingConfiguration = providerModel.Configuration?.Clone() ?? new ConnectorConfigState();
+        var mergedConfiguration = BuildDefaultProviderConfiguration(manifest.PluginKey);
+        foreach (var field in manifest.ConfigurationSchema.Fields)
+        {
+            var existingValue = existingConfiguration.GetText(field.Key);
+            if (!string.IsNullOrWhiteSpace(existingValue))
+            {
+                mergedConfiguration.SetText(field.Key, existingValue);
+            }
+        }
+
+        mergedConfiguration.KeepOnly(manifest.ConfigurationSchema.Fields.Select(field => field.Key));
+        providerModel.Configuration = mergedConfiguration;
+
+        if (!resetCapabilities)
+        {
+            return;
+        }
+
+        var defaults = ResolveProviderCapabilityDefaults(manifest.PluginKey);
+        providerModel.SupportsStreaming = defaults.SupportsStreaming;
+        providerModel.SupportsToolCalling = defaults.SupportsToolCalling;
+        providerModel.SupportsStructuredOutput = defaults.SupportsStructuredOutput;
+        providerModel.SupportsVision = defaults.SupportsVision;
+    }
+
+    private static ConnectorConfigState BuildDefaultProviderConfiguration(string pluginKey)
+    {
+        return pluginKey switch
+        {
+            OpenAiProviderAdapter.PluginKey => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [ProviderConnectorFieldKeys.BaseUrl] = "https://api.openai.com/v1/models",
+                [ProviderConnectorFieldKeys.DefaultModel] = "gpt-4.1",
+                [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
+            }),
+            OllamaProviderAdapter.PluginKey => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [ProviderConnectorFieldKeys.BaseUrl] = "http://127.0.0.1:11434",
+                [ProviderConnectorFieldKeys.DefaultModel] = "llama3.1",
+                [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
+            }),
+            OllamaRemoteProviderAdapter.PluginKey => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [ProviderConnectorFieldKeys.BaseUrl] = "https://ollama.example.com",
+                [ProviderConnectorFieldKeys.DefaultModel] = "llama3.1",
+                [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
+            }),
+            _ => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
+            })
+        };
+    }
+
+    private static (bool SupportsStreaming, bool SupportsToolCalling, bool SupportsStructuredOutput, bool SupportsVision) ResolveProviderCapabilityDefaults(string pluginKey)
+    {
+        return pluginKey switch
+        {
+            OpenAiProviderAdapter.PluginKey => (true, true, true, false),
+            OllamaProviderAdapter.PluginKey => (true, true, true, false),
+            OllamaRemoteProviderAdapter.PluginKey => (true, true, true, false),
+            _ => (false, false, false, false)
+        };
+    }
+
+    private static string? ResolveProviderFieldTestId(ConnectorConfigFieldDescriptor field)
+    {
+        return field.Key switch
+        {
+            ProviderConnectorFieldKeys.BaseUrl => "provider-base-url-input",
+            ProviderConnectorFieldKeys.DefaultModel => "provider-default-model-input",
+            _ => $"provider-config-{field.Key}"
+        };
     }
 }

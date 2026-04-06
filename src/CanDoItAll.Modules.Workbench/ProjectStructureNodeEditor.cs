@@ -44,23 +44,7 @@ internal static class ProjectStructureNodeEditor
             .ToDictionary(group => group.Key, group => group.Last().Value?.Trim() ?? string.Empty, StringComparer.OrdinalIgnoreCase);
         var submittedKeys = inputValues.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
-        var nodeReferences = node.NodeReferences is null
-            ? new ProjectNodeReferenceSet()
-            : new ProjectNodeReferenceSet
-            {
-                MeetingParticipantIds = node.NodeReferences.MeetingParticipantIds.ToList(),
-                RecordingMeetingNodeId = node.NodeReferences.RecordingMeetingNodeId,
-                RecordingTranscriptNodeId = node.NodeReferences.RecordingTranscriptNodeId,
-                TranscriptRecordingNodeId = node.NodeReferences.TranscriptRecordingNodeId,
-                TranscriptProviderProfileId = node.NodeReferences.TranscriptProviderProfileId,
-                ParticipantParentNodeId = node.NodeReferences.ParticipantParentNodeId,
-                WorkItemAssigneeNodeId = node.NodeReferences.WorkItemAssigneeNodeId,
-                WorkItemRepositoryResourceId = node.NodeReferences.WorkItemRepositoryResourceId,
-                RepositoryResourceId = node.NodeReferences.RepositoryResourceId,
-                EnvironmentRepositoryResourceId = node.NodeReferences.EnvironmentRepositoryResourceId,
-                InfrastructureSecretReferenceId = node.NodeReferences.InfrastructureSecretReferenceId,
-                InfrastructureStorageCatalogId = node.NodeReferences.InfrastructureStorageCatalogId
-            };
+        var nodeReferences = node.NodeReferences?.Clone() ?? new ProjectNodeReferenceCollection();
         var notes = ResolveNotes(definition, node, request, inputValues);
         var startUtc = ResolveDate(node.StartUtc, inputValues, submittedKeys, "startUtc");
         var endUtc = ResolveDate(node.EndUtc, inputValues, submittedKeys, "endUtc");

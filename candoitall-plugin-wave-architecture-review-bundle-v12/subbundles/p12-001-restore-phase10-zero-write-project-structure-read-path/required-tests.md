@@ -1,0 +1,6 @@
+# Required tests
+
+- `GetStructureAsync_does_not_delete_stale_system_managed_projection_rows`
+- `GetStructureAsync_does_not_delete_stale_projection_layout_rows`
+- `GetStructureAsync_does_not_write_when_legacy_marker_and_reference_fallback_is_used`
+- `Explicit_projection_repair_removes_stale_system_managed_rows_and_orphan_layouts_idempotently`

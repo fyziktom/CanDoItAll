@@ -5,20 +5,20 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.Workbench;
 
-public enum ProjectNodeReferenceKind
+internal static class ProjectNodeReferenceKinds
 {
-    MeetingParticipant,
-    RecordingMeetingNode,
-    RecordingTranscriptNode,
-    TranscriptRecordingNode,
-    TranscriptProviderProfile,
-    ParticipantParentParticipant,
-    WorkItemAssigneeParticipant,
-    WorkItemRepositoryResource,
-    RepositoryResource,
-    EnvironmentRepositoryResource,
-    InfrastructureSecretReference,
-    InfrastructureStorageCatalog
+    public const string MeetingParticipant = "meeting.participant";
+    public const string RecordingMeetingNode = "recording.meeting-node";
+    public const string RecordingTranscriptNode = "recording.transcript-node";
+    public const string TranscriptRecordingNode = "transcript.recording-node";
+    public const string TranscriptProviderProfile = "transcript.provider-profile";
+    public const string ParticipantParentParticipant = "participant.parent-participant";
+    public const string WorkItemAssigneeParticipant = "work-item.assignee-participant";
+    public const string WorkItemRepositoryResource = "work-item.repository-resource";
+    public const string RepositoryResource = "repository.resource";
+    public const string EnvironmentRepositoryResource = "environment.repository-resource";
+    public const string InfrastructureSecretReference = "infrastructure.secret-reference";
+    public const string InfrastructureStorageCatalog = "infrastructure.storage-catalog";
 }
 
 public sealed class ProjectNodeBindingRecord
@@ -60,8 +60,8 @@ public sealed class ProjectNodeReferenceRecord
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ProjectObjectId { get; set; }
-    public ProjectNodeReferenceKind ReferenceKind { get; set; }
-    public Guid ReferenceId { get; set; }
+    public string ReferenceKind { get; set; } = string.Empty;
+    public string ReferenceId { get; set; } = string.Empty;
     public int OrderIndex { get; set; }
     public DateTimeOffset CreatedAtUtc { get; set; }
 }
@@ -72,6 +72,8 @@ internal sealed class ProjectNodeReferenceRecordConfiguration : IEntityTypeConfi
     {
         builder.ToTable("Workbench_ProjectNodeReferences");
         builder.HasKey(item => item.Id);
+        builder.Property(item => item.ReferenceKind).HasMaxLength(160).IsRequired();
+        builder.Property(item => item.ReferenceId).HasMaxLength(200).IsRequired();
         builder.HasIndex(item => new { item.ProjectObjectId, item.ReferenceKind, item.ReferenceId }).IsUnique();
         builder.HasIndex(item => new { item.ProjectObjectId, item.ReferenceKind, item.OrderIndex });
         builder.HasOne<ProjectObjectRecord>()
@@ -81,9 +83,11 @@ internal sealed class ProjectNodeReferenceRecordConfiguration : IEntityTypeConfi
     }
 }
 
+public sealed record ProjectNodeReferenceEntry(string ReferenceKind, string ReferenceId, int OrderIndex);
+
 internal sealed record ProjectNodeBindingReferencePayload(
-    ProjectNodeReferenceKind ReferenceKind,
-    Guid ReferenceId,
+    string ReferenceKind,
+    string ReferenceId,
     int OrderIndex);
 
 internal sealed record ProjectNodeBindingState(
@@ -105,47 +109,152 @@ internal sealed record ProjectNodeBindingState(
         string.Empty);
 }
 
-public sealed class ProjectNodeReferenceSet
+public sealed class ProjectNodeReferenceCollection
 {
-    public static ProjectNodeReferenceSet Empty { get; } = new();
+    public static ProjectNodeReferenceCollection Empty { get; } = new();
 
-    public IReadOnlyList<Guid> MeetingParticipantIds { get; set; } = [];
+    public IReadOnlyList<ProjectNodeReferenceEntry> Entries { get; set; } = [];
 
-    public Guid? RecordingMeetingNodeId { get; set; }
+    public IReadOnlyList<Guid> MeetingParticipantIds
+    {
+        get => GetGuidValues(ProjectNodeReferenceKinds.MeetingParticipant);
+        set => SetGuidValues(ProjectNodeReferenceKinds.MeetingParticipant, value);
+    }
 
-    public Guid? RecordingTranscriptNodeId { get; set; }
+    public Guid? RecordingMeetingNodeId
+    {
+        get => GetGuidValue(ProjectNodeReferenceKinds.RecordingMeetingNode);
+        set => SetGuidValue(ProjectNodeReferenceKinds.RecordingMeetingNode, value);
+    }
 
-    public Guid? TranscriptRecordingNodeId { get; set; }
+    public Guid? RecordingTranscriptNodeId
+    {
+        get => GetGuidValue(ProjectNodeReferenceKinds.RecordingTranscriptNode);
+        set => SetGuidValue(ProjectNodeReferenceKinds.RecordingTranscriptNode, value);
+    }
 
-    public Guid? TranscriptProviderProfileId { get; set; }
+    public Guid? TranscriptRecordingNodeId
+    {
+        get => GetGuidValue(ProjectNodeReferenceKinds.TranscriptRecordingNode);
+        set => SetGuidValue(ProjectNodeReferenceKinds.TranscriptRecordingNode, value);
+    }
 
-    public Guid? ParticipantParentNodeId { get; set; }
+    public Guid? TranscriptProviderProfileId
+    {
+        get => GetGuidValue(ProjectNodeReferenceKinds.TranscriptProviderProfile);
+        set => SetGuidValue(ProjectNodeReferenceKinds.TranscriptProviderProfile, value);
+    }
 
-    public Guid? WorkItemAssigneeNodeId { get; set; }
+    public Guid? ParticipantParentNodeId
+    {
+        get => GetGuidValue(ProjectNodeReferenceKinds.ParticipantParentParticipant);
+        set => SetGuidValue(ProjectNodeReferenceKinds.ParticipantParentParticipant, value);
+    }
 
-    public Guid? WorkItemRepositoryResourceId { get; set; }
+    public Guid? WorkItemAssigneeNodeId
+    {
+        get => GetGuidValue(ProjectNodeReferenceKinds.WorkItemAssigneeParticipant);
+        set => SetGuidValue(ProjectNodeReferenceKinds.WorkItemAssigneeParticipant, value);
+    }
 
-    public Guid? RepositoryResourceId { get; set; }
+    public Guid? WorkItemRepositoryResourceId
+    {
+        get => GetGuidValue(ProjectNodeReferenceKinds.WorkItemRepositoryResource);
+        set => SetGuidValue(ProjectNodeReferenceKinds.WorkItemRepositoryResource, value);
+    }
 
-    public Guid? EnvironmentRepositoryResourceId { get; set; }
+    public Guid? RepositoryResourceId
+    {
+        get => GetGuidValue(ProjectNodeReferenceKinds.RepositoryResource);
+        set => SetGuidValue(ProjectNodeReferenceKinds.RepositoryResource, value);
+    }
 
-    public Guid? InfrastructureSecretReferenceId { get; set; }
+    public Guid? EnvironmentRepositoryResourceId
+    {
+        get => GetGuidValue(ProjectNodeReferenceKinds.EnvironmentRepositoryResource);
+        set => SetGuidValue(ProjectNodeReferenceKinds.EnvironmentRepositoryResource, value);
+    }
 
-    public Guid? InfrastructureStorageCatalogId { get; set; }
+    public Guid? InfrastructureSecretReferenceId
+    {
+        get => GetGuidValue(ProjectNodeReferenceKinds.InfrastructureSecretReference);
+        set => SetGuidValue(ProjectNodeReferenceKinds.InfrastructureSecretReference, value);
+    }
 
-    public bool IsEmpty =>
-        MeetingParticipantIds.Count == 0 &&
-        !RecordingMeetingNodeId.HasValue &&
-        !RecordingTranscriptNodeId.HasValue &&
-        !TranscriptRecordingNodeId.HasValue &&
-        !TranscriptProviderProfileId.HasValue &&
-        !ParticipantParentNodeId.HasValue &&
-        !WorkItemAssigneeNodeId.HasValue &&
-        !WorkItemRepositoryResourceId.HasValue &&
-        !RepositoryResourceId.HasValue &&
-        !EnvironmentRepositoryResourceId.HasValue &&
-        !InfrastructureSecretReferenceId.HasValue &&
-        !InfrastructureStorageCatalogId.HasValue;
+    public Guid? InfrastructureStorageCatalogId
+    {
+        get => GetGuidValue(ProjectNodeReferenceKinds.InfrastructureStorageCatalog);
+        set => SetGuidValue(ProjectNodeReferenceKinds.InfrastructureStorageCatalog, value);
+    }
+
+    public bool IsEmpty => Entries.Count == 0;
+
+    public ProjectNodeReferenceCollection Clone()
+    {
+        return new ProjectNodeReferenceCollection
+        {
+            Entries = Entries
+                .Select(entry => entry with { })
+                .ToList()
+        };
+    }
+
+    private IReadOnlyList<Guid> GetGuidValues(string referenceKind)
+    {
+        return Entries
+            .Where(entry => string.Equals(entry.ReferenceKind, referenceKind, StringComparison.Ordinal))
+            .OrderBy(entry => entry.OrderIndex)
+            .Select(entry => TryParseGuid(entry.ReferenceId))
+            .Where(value => value.HasValue)
+            .Select(value => value!.Value)
+            .ToList();
+    }
+
+    private Guid? GetGuidValue(string referenceKind)
+    {
+        return Entries
+            .Where(entry => string.Equals(entry.ReferenceKind, referenceKind, StringComparison.Ordinal))
+            .OrderBy(entry => entry.OrderIndex)
+            .Select(entry => TryParseGuid(entry.ReferenceId))
+            .FirstOrDefault(value => value.HasValue);
+    }
+
+    private void SetGuidValues(string referenceKind, IEnumerable<Guid> values)
+    {
+        ReplaceEntries(
+            referenceKind,
+            values.Select(value => value.ToString("D")));
+    }
+
+    private void SetGuidValue(string referenceKind, Guid? value)
+    {
+        ReplaceEntries(
+            referenceKind,
+            value.HasValue ? [value.Value.ToString("D")] : []);
+    }
+
+    private void ReplaceEntries(string referenceKind, IEnumerable<string> referenceIds)
+    {
+        var replacements = referenceIds
+            .Where(referenceId => !string.IsNullOrWhiteSpace(referenceId))
+            .Select((referenceId, index) => new ProjectNodeReferenceEntry(referenceKind, referenceId.Trim(), index))
+            .ToList();
+        var retainedEntries = Entries
+            .Where(entry => !string.Equals(entry.ReferenceKind, referenceKind, StringComparison.Ordinal))
+            .ToList();
+        Entries = retainedEntries
+            .Concat(replacements)
+            .OrderBy(entry => entry.ReferenceKind, StringComparer.Ordinal)
+            .ThenBy(entry => entry.OrderIndex)
+            .ToList();
+    }
+
+    private static Guid? TryParseGuid(string? value)
+    {
+        return Guid.TryParse(value, out var parsed)
+            ? parsed
+            : null;
+    }
 }
 
 internal sealed record ProjectNodeBindingPersistencePlan(
@@ -155,7 +264,7 @@ internal sealed record ProjectNodeBindingPersistencePlan(
 
 internal static class ProjectNodeBindingStorage
 {
-    public static async Task NormalizeAndHydrateAsync(
+    public static async Task LoadAsync(
         AppDbContext dbContext,
         IReadOnlyCollection<ProjectObjectRecord> nodes,
         CancellationToken cancellationToken = default)
@@ -181,53 +290,6 @@ internal static class ProjectNodeBindingStorage
             .GroupBy(item => item.ProjectObjectId)
             .ToDictionary(group => group.Key, group => (IReadOnlyList<ProjectNodeReferenceRecord>)group.ToList());
 
-        var changed = false;
-        foreach (var node in nodes)
-        {
-            var binding = bindingByNodeId.GetValueOrDefault(node.Id);
-            var references = referencesByNodeId.GetValueOrDefault(node.Id) ?? [];
-            if (!RequiresNormalization(node, binding, references))
-            {
-                continue;
-            }
-
-            node.Binding = binding is null
-                ? node.Binding
-                : new ProjectNodeBindingState(
-                    binding.Route,
-                    binding.ExternalArtifactKind,
-                    binding.ExternalArtifactId,
-                    binding.MediaRelativePath,
-                    binding.MediaContentType,
-                    binding.MediaOriginalFileName,
-                    binding.StorageObjectReferenceJson);
-            node.NodeReferences = BuildReferenceSet(
-                references
-                    .Select(item => new ProjectNodeBindingReferencePayload(item.ReferenceKind, item.ReferenceId, item.OrderIndex))
-                    .ToList());
-            var plan = CreatePersistencePlan(node);
-            UpsertBindingRecord(dbContext, bindingByNodeId, node, plan);
-            ReplaceReferenceRecords(dbContext, referencesByNodeId, node, plan, referenceRows);
-            StripCarrierPayload(node, plan.SanitizedMetadataJson);
-            changed = true;
-        }
-
-        if (changed)
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-            bindingByNodeId = await dbContext.Set<ProjectNodeBindingRecord>()
-                .Where(item => nodeIds.Contains(item.ProjectObjectId))
-                .ToDictionaryAsync(item => item.ProjectObjectId, cancellationToken);
-            referenceRows = await dbContext.Set<ProjectNodeReferenceRecord>()
-                .Where(item => nodeIds.Contains(item.ProjectObjectId))
-                .OrderBy(item => item.ReferenceKind)
-                .ThenBy(item => item.OrderIndex)
-                .ToListAsync(cancellationToken);
-            referencesByNodeId = referenceRows
-                .GroupBy(item => item.ProjectObjectId)
-                .ToDictionary(group => group.Key, group => (IReadOnlyList<ProjectNodeReferenceRecord>)group.ToList());
-        }
-
         foreach (var node in nodes)
         {
             Apply(
@@ -251,13 +313,15 @@ internal static class ProjectNodeBindingStorage
             .Where(item => item.ProjectObjectId == node.Id)
             .ToListAsync(cancellationToken);
         ReplaceReferenceRecords(dbContext, node, plan, existingReferences);
-        StripCarrierPayload(node, plan.SanitizedMetadataJson);
+
+        node.MetadataJson = plan.SanitizedMetadataJson;
         return plan;
     }
 
     public static void Apply(ProjectObjectRecord node, ProjectNodeBindingPersistencePlan plan)
     {
         Apply(node, plan.Binding, plan.References);
+        node.MetadataJson = plan.SanitizedMetadataJson;
     }
 
     public static void Apply(
@@ -267,14 +331,16 @@ internal static class ProjectNodeBindingStorage
     {
         Apply(
             node,
-            binding is null ? null : new ProjectNodeBindingState(
-                binding.Route,
-                binding.ExternalArtifactKind,
-                binding.ExternalArtifactId,
-                binding.MediaRelativePath,
-                binding.MediaContentType,
-                binding.MediaOriginalFileName,
-                binding.StorageObjectReferenceJson),
+            binding is null
+                ? null
+                : new ProjectNodeBindingState(
+                    binding.Route,
+                    binding.ExternalArtifactKind,
+                    binding.ExternalArtifactId,
+                    binding.MediaRelativePath,
+                    binding.MediaContentType,
+                    binding.MediaOriginalFileName,
+                    binding.StorageObjectReferenceJson),
             references
                 .Select(item => new ProjectNodeBindingReferencePayload(item.ReferenceKind, item.ReferenceId, item.OrderIndex))
                 .ToList());
@@ -286,17 +352,12 @@ internal static class ProjectNodeBindingStorage
         IReadOnlyList<ProjectNodeBindingReferencePayload> references)
     {
         node.Binding = binding ?? ResolveBinding(node);
-        node.Route = node.Binding.Route;
-        node.ExternalArtifactKind = node.Binding.ExternalArtifactKind;
-        node.ExternalArtifactId = node.Binding.ExternalArtifactId;
-        node.MediaRelativePath = node.Binding.MediaRelativePath;
-        node.MediaContentType = node.Binding.MediaContentType;
-        node.MediaOriginalFileName = node.Binding.MediaOriginalFileName;
-        node.StorageObjectReferenceJson = node.Binding.StorageObjectReferenceJson;
-        node.NodeReferences = BuildReferenceSet(references);
+        node.NodeReferences = references.Count == 0
+            ? ResolveReferenceCollection(node)
+            : BuildReferenceCollection(references);
     }
 
-    public static bool HasForeignReferencePayload(ProjectNodeReferenceSet references)
+    public static bool HasForeignReferencePayload(ProjectNodeReferenceCollection references)
     {
         ArgumentNullException.ThrowIfNull(references);
         return !references.IsEmpty;
@@ -308,30 +369,11 @@ internal static class ProjectNodeBindingStorage
         return ResolveBinding(node);
     }
 
-    private static bool RequiresNormalization(
-        ProjectObjectRecord node,
-        ProjectNodeBindingRecord? binding,
-        IReadOnlyList<ProjectNodeReferenceRecord> references)
-    {
-        if (binding is null)
-        {
-            return true;
-        }
-
-        var legacyReferences = ProjectNodeLegacyMetadata.ReadLegacyReferences(node.MetadataJson);
-        if (references.Count > 0)
-        {
-            return HasForeignReferencePayload(legacyReferences);
-        }
-
-        return HasLegacyCarrierPayload(node) || HasForeignReferencePayload(legacyReferences);
-    }
-
     private static ProjectNodeBindingPersistencePlan CreatePersistencePlan(ProjectObjectRecord node)
     {
         var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
         ValidateSanitizedMetadata(node.ObjectType, node.ObjectSubtype, metadata);
-        var references = ExtractReferences(ResolveReferenceSet(node));
+        var references = ExtractReferences(ResolveReferenceCollection(node));
         return new ProjectNodeBindingPersistencePlan(
             ProjectObjectMetadataSerializer.Serialize(metadata),
             ResolveBinding(node),
@@ -346,88 +388,31 @@ internal static class ProjectNodeBindingStorage
         ProjectObjectMetadataSerializer.Validate(objectType, objectSubtype, metadata);
     }
 
-    private static ProjectNodeReferenceSet ResolveReferenceSet(ProjectObjectRecord node)
+    private static ProjectNodeReferenceCollection ResolveReferenceCollection(ProjectObjectRecord node)
     {
         return node.NodeReferences.IsEmpty
             ? ProjectNodeLegacyMetadata.ReadLegacyReferences(node.MetadataJson)
-            : CloneReferenceSet(node.NodeReferences);
+            : node.NodeReferences.Clone();
     }
 
     private static ProjectNodeBindingState ResolveBinding(ProjectObjectRecord node)
     {
-        var binding = node.Binding ?? ProjectNodeBindingState.Empty;
+        var binding = node.Binding;
+        var route = string.IsNullOrWhiteSpace(binding.Route)
+            ? $"/projects/{node.ProjectId}/structure"
+            : binding.Route.Trim();
+        var externalArtifactKind = string.IsNullOrWhiteSpace(binding.ExternalArtifactKind)
+            ? node.ObjectType.ToString()
+            : binding.ExternalArtifactKind.Trim();
+
         return new ProjectNodeBindingState(
-            ResolveRoute(binding.Route, node.Route, node.ProjectId),
-            ResolveArtifactKind(binding.ExternalArtifactKind, node.ExternalArtifactKind, node.ObjectType),
-            binding.ExternalArtifactId ?? node.ExternalArtifactId,
-            ResolveText(binding.MediaRelativePath, node.MediaRelativePath),
-            ResolveText(binding.MediaContentType, node.MediaContentType),
-            ResolveText(binding.MediaOriginalFileName, node.MediaOriginalFileName),
-            ResolveText(binding.StorageObjectReferenceJson, node.StorageObjectReferenceJson));
-    }
-
-    private static string ResolveRoute(string? route, string? legacyRoute, Guid projectId)
-    {
-        var effectiveRoute = ResolveText(route, legacyRoute);
-        return string.IsNullOrWhiteSpace(effectiveRoute)
-            ? $"/projects/{projectId}/structure"
-            : effectiveRoute;
-    }
-
-    private static string ResolveArtifactKind(string? artifactKind, string? legacyArtifactKind, ProjectObjectType objectType)
-    {
-        var effectiveArtifactKind = ResolveText(artifactKind, legacyArtifactKind);
-        return string.IsNullOrWhiteSpace(effectiveArtifactKind)
-            ? objectType.ToString()
-            : effectiveArtifactKind;
-    }
-
-    private static string ResolveText(string? primaryValue, string? fallbackValue)
-    {
-        return !string.IsNullOrWhiteSpace(primaryValue)
-            ? primaryValue.Trim()
-            : fallbackValue?.Trim() ?? string.Empty;
-    }
-
-    private static bool HasLegacyCarrierPayload(ProjectObjectRecord node)
-    {
-        return !string.IsNullOrWhiteSpace(node.Route) ||
-               !string.IsNullOrWhiteSpace(node.ExternalArtifactKind) ||
-               node.ExternalArtifactId.HasValue ||
-               !string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
-               !string.IsNullOrWhiteSpace(node.MediaContentType) ||
-               !string.IsNullOrWhiteSpace(node.MediaOriginalFileName) ||
-               !string.IsNullOrWhiteSpace(node.StorageObjectReferenceJson);
-    }
-
-    private static void UpsertBindingRecord(
-        AppDbContext dbContext,
-        Dictionary<Guid, ProjectNodeBindingRecord> bindingByNodeId,
-        ProjectObjectRecord node,
-        ProjectNodeBindingPersistencePlan plan)
-    {
-        if (bindingByNodeId.TryGetValue(node.Id, out var existingBinding))
-        {
-            ApplyBinding(existingBinding, plan.Binding);
-            existingBinding.UpdatedAtUtc = node.UpdatedAtUtc;
-            return;
-        }
-
-        var binding = new ProjectNodeBindingRecord
-        {
-            ProjectObjectId = node.Id,
-            Route = plan.Binding.Route,
-            ExternalArtifactKind = plan.Binding.ExternalArtifactKind,
-            ExternalArtifactId = plan.Binding.ExternalArtifactId,
-            MediaRelativePath = plan.Binding.MediaRelativePath,
-            MediaContentType = plan.Binding.MediaContentType,
-            MediaOriginalFileName = plan.Binding.MediaOriginalFileName,
-            StorageObjectReferenceJson = plan.Binding.StorageObjectReferenceJson,
-            CreatedAtUtc = node.CreatedAtUtc,
-            UpdatedAtUtc = node.UpdatedAtUtc
-        };
-        bindingByNodeId[node.Id] = binding;
-        dbContext.Set<ProjectNodeBindingRecord>().Add(binding);
+            route,
+            externalArtifactKind,
+            binding.ExternalArtifactId,
+            binding.MediaRelativePath?.Trim() ?? string.Empty,
+            binding.MediaContentType?.Trim() ?? string.Empty,
+            binding.MediaOriginalFileName?.Trim() ?? string.Empty,
+            binding.StorageObjectReferenceJson?.Trim() ?? string.Empty);
     }
 
     private static void UpsertBindingRecord(
@@ -456,30 +441,6 @@ internal static class ProjectNodeBindingStorage
             CreatedAtUtc = node.CreatedAtUtc,
             UpdatedAtUtc = node.UpdatedAtUtc
         });
-    }
-
-    private static void ReplaceReferenceRecords(
-        AppDbContext dbContext,
-        Dictionary<Guid, IReadOnlyList<ProjectNodeReferenceRecord>> referencesByNodeId,
-        ProjectObjectRecord node,
-        ProjectNodeBindingPersistencePlan plan,
-        List<ProjectNodeReferenceRecord> referenceRows)
-    {
-        var existingReferences = referencesByNodeId.GetValueOrDefault(node.Id) ?? [];
-        ReplaceReferenceRecords(dbContext, node, plan, existingReferences);
-
-        referencesByNodeId[node.Id] = plan.References
-            .Select(reference => new ProjectNodeReferenceRecord
-            {
-                ProjectObjectId = node.Id,
-                ReferenceKind = reference.ReferenceKind,
-                ReferenceId = reference.ReferenceId,
-                OrderIndex = reference.OrderIndex,
-                CreatedAtUtc = node.UpdatedAtUtc
-            })
-            .ToList();
-        referenceRows.RemoveAll(item => item.ProjectObjectId == node.Id);
-        referenceRows.AddRange(referencesByNodeId[node.Id]);
     }
 
     private static void ReplaceReferenceRecords(
@@ -517,128 +478,39 @@ internal static class ProjectNodeBindingStorage
         binding.StorageObjectReferenceJson = snapshot.StorageObjectReferenceJson;
     }
 
-    private static void StripCarrierPayload(ProjectObjectRecord node, string sanitizedMetadataJson)
+    private static IReadOnlyList<ProjectNodeBindingReferencePayload> ExtractReferences(ProjectNodeReferenceCollection references)
     {
-        node.Route = string.Empty;
-        node.ExternalArtifactKind = string.Empty;
-        node.ExternalArtifactId = null;
-        node.MediaRelativePath = string.Empty;
-        node.MediaContentType = string.Empty;
-        node.MediaOriginalFileName = string.Empty;
-        node.StorageObjectReferenceJson = string.Empty;
-        node.MetadataJson = sanitizedMetadataJson;
+        return references.Entries
+            .Where(entry =>
+                !string.IsNullOrWhiteSpace(entry.ReferenceKind) &&
+                !string.IsNullOrWhiteSpace(entry.ReferenceId))
+            .OrderBy(entry => entry.ReferenceKind, StringComparer.Ordinal)
+            .ThenBy(entry => entry.OrderIndex)
+            .Select(entry => new ProjectNodeBindingReferencePayload(
+                entry.ReferenceKind.Trim(),
+                entry.ReferenceId.Trim(),
+                entry.OrderIndex))
+            .ToList();
     }
 
-    private static IReadOnlyList<ProjectNodeBindingReferencePayload> ExtractReferences(ProjectNodeReferenceSet referenceSet)
-    {
-        var references = new List<ProjectNodeBindingReferencePayload>();
-        if (referenceSet.MeetingParticipantIds.Count > 0)
-        {
-            references.AddRange(referenceSet.MeetingParticipantIds.Select((participantId, index) =>
-                new ProjectNodeBindingReferencePayload(ProjectNodeReferenceKind.MeetingParticipant, participantId, index)));
-        }
-
-        AddReference(references, ProjectNodeReferenceKind.RecordingMeetingNode, referenceSet.RecordingMeetingNodeId);
-        AddReference(references, ProjectNodeReferenceKind.RecordingTranscriptNode, referenceSet.RecordingTranscriptNodeId);
-        AddReference(references, ProjectNodeReferenceKind.TranscriptRecordingNode, referenceSet.TranscriptRecordingNodeId);
-        AddReference(references, ProjectNodeReferenceKind.TranscriptProviderProfile, referenceSet.TranscriptProviderProfileId);
-        AddReference(references, ProjectNodeReferenceKind.ParticipantParentParticipant, referenceSet.ParticipantParentNodeId);
-        AddReference(references, ProjectNodeReferenceKind.WorkItemAssigneeParticipant, referenceSet.WorkItemAssigneeNodeId);
-        AddReference(references, ProjectNodeReferenceKind.WorkItemRepositoryResource, referenceSet.WorkItemRepositoryResourceId);
-        AddReference(references, ProjectNodeReferenceKind.RepositoryResource, referenceSet.RepositoryResourceId);
-        AddReference(references, ProjectNodeReferenceKind.EnvironmentRepositoryResource, referenceSet.EnvironmentRepositoryResourceId);
-        AddReference(references, ProjectNodeReferenceKind.InfrastructureSecretReference, referenceSet.InfrastructureSecretReferenceId);
-        AddReference(references, ProjectNodeReferenceKind.InfrastructureStorageCatalog, referenceSet.InfrastructureStorageCatalogId);
-        return references;
-    }
-
-    private static void AddReference(
-        ICollection<ProjectNodeBindingReferencePayload> references,
-        ProjectNodeReferenceKind referenceKind,
-        Guid? referenceId)
-    {
-        if (!referenceId.HasValue)
-        {
-            return;
-        }
-
-        references.Add(new ProjectNodeBindingReferencePayload(referenceKind, referenceId.Value, 0));
-    }
-
-    private static ProjectNodeReferenceSet BuildReferenceSet(
+    private static ProjectNodeReferenceCollection BuildReferenceCollection(
         IReadOnlyList<ProjectNodeBindingReferencePayload> references)
     {
-        if (references.Count == 0)
-        {
-            return new ProjectNodeReferenceSet();
-        }
-
-        var referenceSet = new ProjectNodeReferenceSet();
-        foreach (var group in references.GroupBy(item => item.ReferenceKind))
-        {
-            switch (group.Key)
+        return references.Count == 0
+            ? new ProjectNodeReferenceCollection()
+            : new ProjectNodeReferenceCollection
             {
-                case ProjectNodeReferenceKind.MeetingParticipant:
-                    referenceSet.MeetingParticipantIds = group
-                        .OrderBy(item => item.OrderIndex)
-                        .Select(item => item.ReferenceId)
-                        .ToList();
-                    break;
-                case ProjectNodeReferenceKind.RecordingMeetingNode:
-                    referenceSet.RecordingMeetingNodeId = group.First().ReferenceId;
-                    break;
-                case ProjectNodeReferenceKind.RecordingTranscriptNode:
-                    referenceSet.RecordingTranscriptNodeId = group.First().ReferenceId;
-                    break;
-                case ProjectNodeReferenceKind.TranscriptRecordingNode:
-                    referenceSet.TranscriptRecordingNodeId = group.First().ReferenceId;
-                    break;
-                case ProjectNodeReferenceKind.TranscriptProviderProfile:
-                    referenceSet.TranscriptProviderProfileId = group.First().ReferenceId;
-                    break;
-                case ProjectNodeReferenceKind.ParticipantParentParticipant:
-                    referenceSet.ParticipantParentNodeId = group.First().ReferenceId;
-                    break;
-                case ProjectNodeReferenceKind.WorkItemAssigneeParticipant:
-                    referenceSet.WorkItemAssigneeNodeId = group.First().ReferenceId;
-                    break;
-                case ProjectNodeReferenceKind.WorkItemRepositoryResource:
-                    referenceSet.WorkItemRepositoryResourceId = group.First().ReferenceId;
-                    break;
-                case ProjectNodeReferenceKind.RepositoryResource:
-                    referenceSet.RepositoryResourceId = group.First().ReferenceId;
-                    break;
-                case ProjectNodeReferenceKind.EnvironmentRepositoryResource:
-                    referenceSet.EnvironmentRepositoryResourceId = group.First().ReferenceId;
-                    break;
-                case ProjectNodeReferenceKind.InfrastructureSecretReference:
-                    referenceSet.InfrastructureSecretReferenceId = group.First().ReferenceId;
-                    break;
-                case ProjectNodeReferenceKind.InfrastructureStorageCatalog:
-                    referenceSet.InfrastructureStorageCatalogId = group.First().ReferenceId;
-                    break;
-            }
-        }
-
-        return referenceSet;
-    }
-
-    private static ProjectNodeReferenceSet CloneReferenceSet(ProjectNodeReferenceSet referenceSet)
-    {
-        return new ProjectNodeReferenceSet
-        {
-            MeetingParticipantIds = referenceSet.MeetingParticipantIds.ToList(),
-            RecordingMeetingNodeId = referenceSet.RecordingMeetingNodeId,
-            RecordingTranscriptNodeId = referenceSet.RecordingTranscriptNodeId,
-            TranscriptRecordingNodeId = referenceSet.TranscriptRecordingNodeId,
-            TranscriptProviderProfileId = referenceSet.TranscriptProviderProfileId,
-            ParticipantParentNodeId = referenceSet.ParticipantParentNodeId,
-            WorkItemAssigneeNodeId = referenceSet.WorkItemAssigneeNodeId,
-            WorkItemRepositoryResourceId = referenceSet.WorkItemRepositoryResourceId,
-            RepositoryResourceId = referenceSet.RepositoryResourceId,
-            EnvironmentRepositoryResourceId = referenceSet.EnvironmentRepositoryResourceId,
-            InfrastructureSecretReferenceId = referenceSet.InfrastructureSecretReferenceId,
-            InfrastructureStorageCatalogId = referenceSet.InfrastructureStorageCatalogId
-        };
+                Entries = references
+                    .Where(reference =>
+                        !string.IsNullOrWhiteSpace(reference.ReferenceKind) &&
+                        !string.IsNullOrWhiteSpace(reference.ReferenceId))
+                    .OrderBy(reference => reference.ReferenceKind, StringComparer.Ordinal)
+                    .ThenBy(reference => reference.OrderIndex)
+                    .Select(reference => new ProjectNodeReferenceEntry(
+                        reference.ReferenceKind.Trim(),
+                        reference.ReferenceId.Trim(),
+                        reference.OrderIndex))
+                    .ToList()
+            };
     }
 }

@@ -107,15 +107,15 @@
                 ? "No provider default model configured."
                 : $"Provider default model: {selectedProvider.DefaultModel}.";
             return selectedProvider.IsEnabled
-                ? $"{selectedProvider.ProviderKind} provider is enabled. {modelText}"
-                : $"{selectedProvider.ProviderKind} provider is currently disabled. {modelText}";
+                ? $"{selectedProvider.ProviderLabel} provider is enabled. {modelText}"
+                : $"{selectedProvider.ProviderLabel} provider is currently disabled. {modelText}";
         }
     }
 
     private static string BuildProviderLabel(AiProviderOptionModel option)
     {
         return option.IsEnabled
-            ? $"{option.Name} ({option.ProviderKind})"
-            : $"{option.Name} ({option.ProviderKind}, disabled)";
+            ? $"{option.Name} ({option.ProviderLabel})"
+            : $"{option.Name} ({option.ProviderLabel}, disabled)";
     }
 }

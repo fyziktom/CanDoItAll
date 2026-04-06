@@ -270,27 +270,11 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     @foreach (var field in SelectedProviderFields)
                                     {
-                                        @switch (field.Key)
-                                        {
-                                            case ProviderConnectorFieldKeys.BaseUrl:
-                                                <div>
-                                                    <label class="cda-field-label">@field.Label</label>
-                                                    <InputText @bind-Value="providerModel.BaseUrl" class="cda-input" data-testid="provider-base-url-input" />
-                                                </div>
-                                                break;
-                                            case ProviderConnectorFieldKeys.DefaultModel:
-                                                <div>
-                                                    <label class="cda-field-label">@field.Label</label>
-                                                    <InputText @bind-Value="providerModel.DefaultModel" class="cda-input" data-testid="provider-default-model-input" />
-                                                </div>
-                                                break;
-                                            case ProviderConnectorFieldKeys.TimeoutSeconds:
-                                                <div>
-                                                    <label class="cda-field-label">@field.Label</label>
-                                                    <InputNumber @bind-Value="providerModel.TimeoutSeconds" class="cda-input" />
-                                                </div>
-                                                break;
-                                        }
+                                        <ConnectorConfigFieldEditor Field="field"
+                                                                    State="providerModel.Configuration"
+                                                                    Secrets="secrets"
+                                                                    InputClass="cda-input"
+                                                                    TestId="@ResolveProviderFieldTestId(field)" />
                                     }
                                 </Grid>
                             </FormSection>
@@ -316,11 +300,6 @@
                                     <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsStructuredOutput" /> Structured output</label>
                                     <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsVision" /> Vision</label>
                                 </Grid>
-
-                                <div>
-                                    <label class="cda-field-label">Extra settings JSON</label>
-                                    <InputTextArea @bind-Value="providerModel.ExtraSettingsJson" class="cda-input cda-input--textarea min-h-24" />
-                                </div>
                             </FormSection>
 
                             <StickyActionFooter StatusLabel="Provider profiles" StatusMessage="@providerMessage" StatusTone="success">

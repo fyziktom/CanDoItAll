@@ -100,26 +100,31 @@ internal static class ProjectNodeLifecycleHistory
         };
 
     private static string SerializeSnapshot(ProjectObjectRecord node)
-        => JsonSerializer.Serialize(new ProjectNodeLifecycleSnapshot(
+    {
+        var primaryMarker = ProjectNodeMarkerState.ResolvePrimary(node.MarkersJson);
+        var binding = ProjectNodeBindingStorage.ResolveForRuntime(node);
+
+        return JsonSerializer.Serialize(new ProjectNodeLifecycleSnapshot(
             node.Title,
             node.Subtitle,
             node.Notes,
             node.Status,
-            node.Route,
-            node.ExternalArtifactKind,
-            node.ExternalArtifactId,
-            node.MediaRelativePath,
-            node.MediaContentType,
-            node.MediaOriginalFileName,
-            node.StorageObjectReferenceJson,
+            binding.Route,
+            binding.ExternalArtifactKind,
+            binding.ExternalArtifactId,
+            binding.MediaRelativePath,
+            binding.MediaContentType,
+            binding.MediaOriginalFileName,
+            binding.StorageObjectReferenceJson,
             string.IsNullOrWhiteSpace(node.MetadataJson) ? "{}" : node.MetadataJson,
             node.ProgressMode,
             node.ProgressPercent,
-            node.MarkerIcon,
-            node.MarkerTone,
-            node.MarkerLabel,
+            primaryMarker?.Icon ?? string.Empty,
+            primaryMarker?.Tone ?? string.Empty,
+            primaryMarker?.Label ?? string.Empty,
             node.Priority,
             node.StartUtc,
             node.EndUtc,
             node.DurationSeconds));
+    }
 }

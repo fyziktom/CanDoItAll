@@ -1,0 +1,5 @@
+# Required tests
+
+- `AutomationWorkspaceService_aggregates_multiple_signal_sources_without_last_registration_wins`
+- `Operational_messages_do_not_materialize_workbench_nodes_by_default`
+- `Explicit_materializer_can_turn_an_execution_result_into_a_domain_artifact`

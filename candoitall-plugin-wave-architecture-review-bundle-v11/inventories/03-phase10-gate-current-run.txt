@@ -1,0 +1,12 @@
+=== Phase10 plugin-gate check ===
+Repo: /mnt/data/work/code_new/CanDoItAll-canonical-model-refactor
+
+No hard-gate failures detected.
+
+Warnings:
+- ADV WARNING: the phase9 gate still appears focused on the old normalization symbols and does not obviously scan the current stale-projection delete path.
+- ADV WARNING: transitive load mutation analysis found no issues. Review manually that the new gate still rejects the old false-green scenario.
+- ADV WARNING: marker compatibility fallback from metadata is still active in active code: src/CanDoItAll.Modules.Workbench/ProjectStructureAssemblyService.cs
+- ADV WARNING: reference compatibility fallback from metadata is still active in active code: src/CanDoItAll.Modules.Workbench/ProjectNodeBindings.cs
+- ADV WARNING: hotspot 'src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs' is still large (4970 lines > 4000).
+- ADV WARNING: hotspot 'src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs' is still large (1148 lines > 1000).

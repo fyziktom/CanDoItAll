@@ -319,6 +319,449 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.ToTable("Activity_Entries", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationDeadLetterRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("CausationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("DeadLetteredAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DedupeKey")
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DeliveryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EnvelopeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnvelopeType")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HandlerKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryId")
+                        .IsUnique();
+
+                    b.HasIndex("DeadLetteredAtUtc", "HandlerKey");
+
+                    b.ToTable("Automation_DeadLetters", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationDeliveryAttemptRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("CausationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CompletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DeliveryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EnvelopeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HandlerKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Outcome")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryId", "AttemptNumber")
+                        .IsUnique();
+
+                    b.ToTable("Automation_DeliveryAttempts", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationEnvelopeDeliveryRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("AvailableAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EnvelopeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnvelopeType")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HandlerKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastError")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LockToken")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LockedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EnvelopeId", "HandlerKey")
+                        .IsUnique();
+
+                    b.HasIndex("State", "AvailableAtUtc", "LockedAtUtc");
+
+                    b.ToTable("Automation_EnvelopeDeliveries", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationEnvelopeRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("AvailableAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CausationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DedupeKey")
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnvelopeType")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EnvelopeType", "DedupeKey")
+                        .IsUnique();
+
+                    b.HasIndex("State", "AvailableAtUtc");
+
+                    b.ToTable("Automation_Envelopes", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationExecutionLogRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CausationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DetailsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EventKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourceType", "SourceId", "CreatedAtUtc");
+
+                    b.ToTable("Automation_ExecutionLogs", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationTriggerRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CronExpression")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DedupeKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("EndAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("LastFiredAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MisfirePolicy")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("NextPlannedFireAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OwnerKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("StartAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TriggerKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TriggerKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerKind", "OwnerKey", "TriggerKey")
+                        .IsUnique();
+
+                    b.ToTable("Automation_Triggers", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.PluginIngressCursorRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CursorValue")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceKind")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourceKind", "SourceKey")
+                        .IsUnique();
+
+                    b.ToTable("Automation_PluginIngressCursors", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.PluginIngressEnvelopeRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CursorValue")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DedupeKey")
+                        .IsRequired()
+                        .HasMaxLength(280)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalMessageId")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastError")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaterializationSummary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("MaterializedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaterializerKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("ReceivedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceKind")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("State", "ReceivedAtUtc");
+
+                    b.HasIndex("SourceKind", "SourceKey", "DedupeKey")
+                        .IsUnique();
+
+                    b.ToTable("Automation_PluginIngressEnvelopes", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.AiAgentProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2279,7 +2722,7 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("ResourceKind")
+                    b.Property<int?>("ResourceKind")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Sensitivity")
@@ -2816,11 +3259,15 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<Guid>("ProjectObjectId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("ReferenceId")
+                    b.Property<string>("ReferenceId")
+                        .IsRequired()
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("ReferenceKind")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("ReferenceKind")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -2883,44 +3330,10 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<DateTimeOffset?>("EndUtc")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("ExternalArtifactId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ExternalArtifactKind")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<bool>("IsSystemManaged")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("MarkerIcon")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MarkerLabel")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MarkerTone")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("MarkersJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MediaContentType")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MediaOriginalFileName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MediaRelativePath")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -2969,20 +3382,12 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Route")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTimeOffset?>("StartUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("StorageObjectReferenceJson")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Subtitle")
@@ -3226,6 +3631,130 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.ToTable("Workbench_ViewStates", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandAuditRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ConnectorCommandId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DetailsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EventKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectorCommandId", "CreatedAtUtc");
+
+                    b.ToTable("Workspace_ConnectorCommandAudits", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ApprovalState")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CommandKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConnectorPluginKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastError")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LeaseToken")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "CreatedAtUtc");
+
+                    b.HasIndex("ProjectId", "ConnectorPluginKey", "CommandKey", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "ApprovalState", "NextAttemptAtUtc", "LeaseExpiresAtUtc");
+
+                    b.ToTable("Workspace_ConnectorCommands", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Workspace.ProjectStructureAgentProfileRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3399,7 +3928,7 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("ProviderKind")
+                    b.Property<int?>("ProviderKind")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("SupportsStreaming")
@@ -3453,6 +3982,15 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.ToTable("Workspace_Settings", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Automation.AutomationEnvelopeDeliveryRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Automation.AutomationEnvelopeRecord", null)
+                        .WithMany()
+                        .HasForeignKey("EnvelopeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b =>
                 {
                     b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
@@ -3476,6 +4014,15 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
                         .WithMany()
                         .HasForeignKey("ProjectObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandAuditRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Workspace.ConnectorCommandRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectorCommandId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

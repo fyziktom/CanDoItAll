@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +26,6 @@ public sealed class ConnectorPluginIntegrationTests
         var saveResult = await resources.SaveAsync(new ResourceEditorModel
         {
             ProjectId = projectId,
-            ResourceKind = ResourceKind.WebLink,
             ConnectorPluginKey = WebhookResourceConnectorPlugin.PluginKey,
             ConfigSchemaVersion = "1.0",
             Name = "Order status webhook",
@@ -69,7 +69,6 @@ public sealed class ConnectorPluginIntegrationTests
         var saveResult = await resources.SaveAsync(new ResourceEditorModel
         {
             ProjectId = projectId,
-            ResourceKind = ResourceKind.WebLink,
             ConnectorPluginKey = WebhookResourceConnectorPlugin.PluginKey,
             ConfigSchemaVersion = "1.0",
             Name = "Broken webhook",

@@ -1,0 +1,17 @@
+## Search: hosted runtime / scheduler / broker tokens
+
+## Search: BackgroundJobQueue usage
+src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs:19:    ValueTask<BackgroundJobRequest> DequeueAsync(CancellationToken cancellationToken = default);
+src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs:100:    public ValueTask<BackgroundJobRequest> DequeueAsync(CancellationToken cancellationToken = default)
+
+## Search: ConnectorOutbox ProcessPendingAsync usage
+src/CanDoItAll.Modules.Workspace/ConnectorOutboxService.cs:326:    public async Task<int> ProcessPendingAsync(
+
+## Search: Automation signal provider registrations and consumption
+src/CanDoItAll.Modules.Automation/AutomationModels.cs:10:public sealed class AutomationWorkspaceService(
+src/CanDoItAll.Modules.Automation/AutomationModels.cs:12:    IAutomationSignalProvider automationSignalProvider)
+src/CanDoItAll.Modules.Automation/AutomationModuleServiceCollectionExtensions.cs:12:        services.TryAddScoped<IAutomationSignalProvider, NullAutomationSignalProvider>();
+src/CanDoItAll.Modules.CrmHr/CrmHrAutomationSignals.cs:9:    IClock clock) : IAutomationSignalProvider
+src/CanDoItAll.Modules.CrmHr/CrmHrModuleServiceCollectionExtensions.cs:19:        services.AddScoped<IAutomationSignalProvider, CrmHrAutomationSignalProvider>();
+src/CanDoItAll.SharedKernel/AutomationSignals.cs:12:public interface IAutomationSignalProvider
+src/CanDoItAll.SharedKernel/AutomationSignals.cs:17:public sealed class NullAutomationSignalProvider : IAutomationSignalProvider

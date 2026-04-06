@@ -685,7 +685,7 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
             return Result<string>.Failure(build.Errors);
         }
 
-        var jobId = await backgroundJobTracker.EnqueueTrackedAsync("prompt-export", "Export generated prompt", cancellationToken: cancellationToken);
+        var jobId = await backgroundJobTracker.CreateTrackedAsync("prompt-export", "Export generated prompt", cancellationToken: cancellationToken);
         await backgroundJobTracker.MarkRunningAsync(jobId, cancellationToken);
 
         try
@@ -741,7 +741,7 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
             return Result<ProviderExecutionResponse>.Failure(promptIdResult.Errors);
         }
 
-        var jobId = await backgroundJobTracker.EnqueueTrackedAsync("prompt-send", "Send generated prompt to provider", cancellationToken: cancellationToken);
+        var jobId = await backgroundJobTracker.CreateTrackedAsync("prompt-send", "Send generated prompt to provider", cancellationToken: cancellationToken);
         await backgroundJobTracker.MarkRunningAsync(jobId, cancellationToken);
 
         var result = await providerExecutionService.SendAsync(new ProviderExecutionRequest(
@@ -1222,7 +1222,7 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
             .Select(option => $"- {option.Category}: {option.OptionName} {option.Notes}".Trim())
             .ToList();
         var resourceLines = resources
-            .Select(resource => $"- {resource.ResourceKind}: {resource.Name} ({resource.LocationOrIdentifier})")
+            .Select(resource => $"- {DescribeResource(resource)}: {resource.Name} ({resource.LocationOrIdentifier})")
             .ToList();
         var attachmentLines = model.SessionAttachments
             .Select(BuildAttachmentLine)
@@ -1262,6 +1262,11 @@ return Result<PromptRunNodeSummary>.Success(MapRunNodeSummary(node));
         ## Requested output
         Produce a phase-aware response that explains the recommended approach, the concrete implementation steps, and the tests or verification needed to close the work safely.
         """;
+    }
+
+    private static string DescribeResource(ResourceSummary resource)
+    {
+        return resource.LegacyResourceKind?.ToString() ?? resource.ConnectorDisplayName;
     }
 
     private static string BuildPromptAssembly(PromptFlowTemplateSummary? flowTemplate, IReadOnlyCollection<ResolvedPromptBlock> blocks)

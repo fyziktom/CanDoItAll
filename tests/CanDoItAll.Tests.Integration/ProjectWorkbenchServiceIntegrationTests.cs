@@ -6,6 +6,7 @@ using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Validation;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Infrastructure.Persistence;
@@ -126,9 +127,13 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var resourceResult = await resourcesService.SaveAsync(new ResourceEditorModel
         {
             ProjectId = projectId,
-            ResourceKind = ResourceKind.Folder,
+            ConnectorPluginKey = "resource.folder",
+            ConfigSchemaVersion = "1.0",
             Name = "Implementation notes",
-            FolderPath = @"C:\repositories\CanDoItAll\docs\implementation",
+            Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["folderPath"] = @"C:\repositories\CanDoItAll\docs\implementation"
+            }),
             ValidationStatus = ResourceValidationStatus.Valid,
             Sensitivity = ResourceSensitivity.Normal,
             SupportsPreview = true,
@@ -193,9 +198,13 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var resourceResult = await resourcesService.SaveAsync(new ResourceEditorModel
         {
             ProjectId = projectId,
-            ResourceKind = ResourceKind.Folder,
+            ConnectorPluginKey = "resource.folder",
+            ConfigSchemaVersion = "1.0",
             Name = "Design archive",
-            FolderPath = @"C:\repositories\CanDoItAll\docs\design",
+            Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["folderPath"] = @"C:\repositories\CanDoItAll\docs\design"
+            }),
             ValidationStatus = ResourceValidationStatus.Valid,
             Sensitivity = ResourceSensitivity.Normal,
             SupportsPreview = true,
@@ -316,14 +325,10 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                 Subtitle = "Pre-binding row",
                 Status = "Review",
                 Notes = "Normalize this row through the structure load seam.",
-                Route = $"/projects/{projectId}/structure",
-                ExternalArtifactKind = ProjectObjectType.Transcript.ToString(),
                 ObjectSubtype = string.Empty,
                 ProgressMode = "progress",
                 ProgressPercent = 35,
-                MarkerIcon = "risk",
-                MarkerTone = "danger",
-                MarkerLabel = "Critical",
+                MarkersJson = """[{"icon":"risk","tone":"danger","label":"Critical"}]""",
                 MetadataJson = metadataJson,
                 ParentNodeKey = BuildProjectRootNodeKey(projectId),
                 PositionX = 610,
@@ -358,17 +363,18 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.NotNull(normalizedNode.NodeReferences);
         Assert.Equal(providerId, normalizedNode.NodeReferences!.TranscriptProviderProfileId);
         Assert.Equal("Offline provider", normalizedMetadata.Transcript.LastProviderName);
+        using (var normalizedMetadataDocument = JsonDocument.Parse(normalizedNode.MetadataJson))
+        {
+            var transcriptElement = normalizedMetadataDocument.RootElement.GetProperty("transcript");
+            Assert.False(transcriptElement.TryGetProperty("lastProviderProfileId", out _));
+        }
 
         await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
         var carrier = await verificationContext.Set<ProjectObjectRecord>()
             .SingleAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey);
         Assert.Equal(610, carrier.PositionX);
         Assert.Equal(345, carrier.PositionY);
-        Assert.Equal("risk", carrier.MarkerIcon);
-        Assert.Equal("danger", carrier.MarkerTone);
-        Assert.Equal("Critical", carrier.MarkerLabel);
-        Assert.Equal(string.Empty, carrier.Route);
-        Assert.Equal(string.Empty, carrier.ExternalArtifactKind);
+        Assert.Equal("""[{"icon":"risk","tone":"danger","label":"Critical"}]""", carrier.MarkersJson);
 
         var persistedMetadata = ProjectObjectMetadataSerializer.Parse(carrier.MetadataJson);
         Assert.NotNull(persistedMetadata.Transcript);
@@ -376,19 +382,13 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         using (var persistedMetadataDocument = JsonDocument.Parse(carrier.MetadataJson))
         {
             var transcriptElement = persistedMetadataDocument.RootElement.GetProperty("transcript");
-            Assert.False(transcriptElement.TryGetProperty("lastProviderProfileId", out _));
+            Assert.True(transcriptElement.TryGetProperty("lastProviderProfileId", out _));
         }
 
-        var binding = await verificationContext.Set<ProjectNodeBindingRecord>()
-            .SingleAsync(item => item.ProjectObjectId == carrier.Id);
-        Assert.Equal($"/projects/{projectId}/structure", binding.Route);
-        Assert.Equal(ProjectObjectType.Transcript.ToString(), binding.ExternalArtifactKind);
-
-        var providerBinding = await verificationContext.Set<ProjectNodeReferenceRecord>()
-            .SingleAsync(item =>
-                item.ProjectObjectId == carrier.Id &&
-                item.ReferenceKind == ProjectNodeReferenceKind.TranscriptProviderProfile);
-        Assert.Equal(providerId, providerBinding.ReferenceId);
+        Assert.False(await verificationContext.Set<ProjectNodeBindingRecord>()
+            .AnyAsync(item => item.ProjectObjectId == carrier.Id));
+        Assert.False(await verificationContext.Set<ProjectNodeReferenceRecord>()
+            .AnyAsync(item => item.ProjectObjectId == carrier.Id));
     }
 
     [Fact]
@@ -661,9 +661,11 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         {
             var record = await dbContext.Set<ProjectObjectRecord>()
                 .FirstAsync(item => item.ProjectId == saveResult.Value && item.NodeKey == created.Id);
-            record.Route = $"/projects/{saveResult.Value}/structure";
-            record.ExternalArtifactKind = ProjectObjectType.PromptFlow.ToString();
-            record.ExternalArtifactId = null;
+            var binding = await dbContext.Set<ProjectNodeBindingRecord>()
+                .FirstAsync(item => item.ProjectObjectId == record.Id);
+            binding.Route = $"/projects/{saveResult.Value}/structure";
+            binding.ExternalArtifactKind = ProjectObjectType.PromptFlow.ToString();
+            binding.ExternalArtifactId = null;
             await dbContext.SaveChangesAsync();
         }
 
@@ -738,13 +740,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var carrier = await dbContext.Set<ProjectObjectRecord>()
             .SingleAsync(item => item.ProjectId == saveResult.Value && item.NodeKey == created.Id);
-        Assert.Equal(string.Empty, carrier.Route);
-        Assert.Equal(string.Empty, carrier.ExternalArtifactKind);
-        Assert.Null(carrier.ExternalArtifactId);
-        Assert.Equal(string.Empty, carrier.MediaRelativePath);
-        Assert.Equal(string.Empty, carrier.MediaContentType);
-        Assert.Equal(string.Empty, carrier.MediaOriginalFileName);
-        Assert.Equal(string.Empty, carrier.StorageObjectReferenceJson);
+        Assert.Equal(created.Id, carrier.NodeKey);
 
         var binding = await dbContext.Set<ProjectNodeBindingRecord>()
             .SingleAsync(item => item.ProjectObjectId == carrier.Id);
@@ -1135,7 +1131,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             updatedMetadata,
             notes: "Alice owes the rollout checklist.",
             status: "Review",
-            nodeReferences: new ProjectNodeReferenceSet
+            nodeReferences: new ProjectNodeReferenceCollection
             {
                 TranscriptProviderProfileId = providerId
             });
@@ -1171,10 +1167,8 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         }
 
         var providerBinding = await dbContext.Set<ProjectNodeReferenceRecord>()
-            .SingleAsync(item =>
-                item.ProjectObjectId == carrier.Id &&
-                item.ReferenceKind == ProjectNodeReferenceKind.TranscriptProviderProfile);
-        Assert.Equal(providerId, providerBinding.ReferenceId);
+            .SingleAsync(item => item.ProjectObjectId == carrier.Id);
+        Assert.Equal(providerId.ToString("D"), providerBinding.ReferenceId);
     }
 
     [Fact]
