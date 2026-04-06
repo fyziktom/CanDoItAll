@@ -1,1 +1,0 @@
-Review the implementation as a skeptical senior QA architect. Verify that repeated blockers were truly retired rather than relocated, that custom plugin scenarios are covered by tests, and that no new hot-path compatibility writes remain.

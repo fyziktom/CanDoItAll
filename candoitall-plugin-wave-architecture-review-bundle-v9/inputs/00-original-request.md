@@ -1,1 +1,0 @@
-User asked for a detailed re-review after the phase8 refactor, with a decision whether the architecture is finally correct. If not, prepare another execution-grade bundle for the next refactor phase. If Codex is still avoiding repeated issues, strengthen the bundle structure so the next cycle cannot sidestep them again.

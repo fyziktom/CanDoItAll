@@ -1,1 +1,0 @@
-Implement phase9 so that every hard gate in this bundle becomes objectively passable. Do not close findings with naming changes, compatibility shims in hot paths, or ADR-only explanations. Deliver code, tests, migrations, and proof that the gate script passes.

@@ -1,1 +1,0 @@
-Run the phase9 gate script against the target branch. If any gate fails, the phase is not complete. Do not override the gate result with narrative justification. Fix the code or keep the finding open.
