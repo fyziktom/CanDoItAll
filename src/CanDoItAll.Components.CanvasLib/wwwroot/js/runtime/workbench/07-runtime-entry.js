@@ -722,7 +722,10 @@
         state.frameSurface = createCanvasSurfaceHost(frameCanvas, state.host);
         state.linkSurface = createCanvasSurfaceHost(linkCanvas, state.host);
         state.nodeSurface = createCanvasSurfaceHost(nodeCanvas, state.host);
-        state.minimapSurface = createCanvasSurfaceHost(minimapCanvas, minimapCanvas.parentElement || minimapShell);
+        // Measure the minimap against the canvas element itself. Measuring against the shell
+        // creates a circular layout dependency where the shell grows to the canvas and the
+        // canvas then re-measures to the enlarged shell, which can cover the stage on first load.
+        state.minimapSurface = createCanvasSurfaceHost(minimapCanvas, minimapCanvas);
         resize(state);
     }
 
