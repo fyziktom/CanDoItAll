@@ -51,6 +51,30 @@ public sealed class CodeAnalyticsSnapshotQueryInput
     public string? SearchText { get; init; }
 }
 
+public sealed class CodeAnalyticsSolutionInventoryInput
+{
+    [Description("Snapshot identifier returned by a previous snapshot build.")]
+    public string SnapshotId { get; init; } = string.Empty;
+
+    [Description("Whether to include document rows for each project.")]
+    public bool IncludeDocuments { get; init; }
+}
+
+public sealed class CodeAnalyticsProjectInventoryInput
+{
+    [Description("Snapshot identifier returned by a previous snapshot build.")]
+    public string SnapshotId { get; init; } = string.Empty;
+
+    [Description("Optional project identifier returned by a project-aware query.")]
+    public string? ProjectId { get; init; }
+
+    [Description("Optional project name when a stable project identifier is not available.")]
+    public string? ProjectName { get; init; }
+
+    [Description("Whether to include document rows for the selected project.")]
+    public bool IncludeDocuments { get; init; } = true;
+}
+
 public sealed class CodeAnalyticsTypeSearchInput
 {
     [Description("Snapshot identifier returned by a previous snapshot build.")]
@@ -151,4 +175,16 @@ public sealed class CodeAnalyticsFocusedContextInput
 
     [Description("How aggressively to compress the selected context.")]
     public FocusedContextPrecision Precision { get; init; } = FocusedContextPrecision.Auto;
+}
+
+public sealed class CodeAnalyticsDocumentTargetInput
+{
+    [Description("Snapshot identifier returned by a previous snapshot build.")]
+    public string SnapshotId { get; init; } = string.Empty;
+
+    [Description("Optional document identifier returned by a document-aware query.")]
+    public string? DocumentId { get; init; }
+
+    [Description("Optional document path. Supports snapshot-relative or absolute paths.")]
+    public string? DocumentPath { get; init; }
 }

@@ -18,6 +18,14 @@ public interface ICodeAnalyticsCoordinator
 
     Task<FindingsViewResponse> GetFindingsAsync(CodeAnalyticsSnapshotQueryInput request, CancellationToken cancellationToken = default);
 
+    Task<SolutionInventoryResponse> GetSolutionInventoryAsync(CodeAnalyticsSolutionInventoryInput request, CancellationToken cancellationToken = default);
+
+    Task<ProjectInventoryResponse> GetProjectInventoryAsync(CodeAnalyticsProjectInventoryInput request, CancellationToken cancellationToken = default);
+
+    Task<DocumentSourceResponse> GetDocumentSourceAsync(CodeAnalyticsDocumentTargetInput request, CancellationToken cancellationToken = default);
+
+    Task<DocumentSymbolsResponse> GetDocumentSymbolsAsync(CodeAnalyticsDocumentTargetInput request, CancellationToken cancellationToken = default);
+
     Task<ServiceViewResponse> GetServicesAsync(CodeAnalyticsSnapshotQueryInput request, CancellationToken cancellationToken = default);
 
     Task<PersistenceViewResponse> GetPersistenceAsync(CodeAnalyticsSnapshotQueryInput request, CancellationToken cancellationToken = default);
@@ -100,6 +108,56 @@ public sealed class CodeAnalyticsCoordinator(
         var query = CreateSnapshotQuery(request);
         var response = await applicationService.GetFindingsAsync(query, cancellationToken);
         return response ?? throw SnapshotNotFound(query.SnapshotId);
+    }
+
+    public async Task<SolutionInventoryResponse> GetSolutionInventoryAsync(CodeAnalyticsSolutionInventoryInput request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var query = new SolutionInventoryQuery(
+            RequireValue(request.SnapshotId, nameof(request.SnapshotId)),
+            request.IncludeDocuments);
+
+        var response = await applicationService.GetSolutionInventoryAsync(query, cancellationToken);
+        return response ?? throw SnapshotNotFound(query.SnapshotId);
+    }
+
+    public async Task<ProjectInventoryResponse> GetProjectInventoryAsync(CodeAnalyticsProjectInventoryInput request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.ProjectId)
+            && string.IsNullOrWhiteSpace(request.ProjectName))
+        {
+            throw new ToolInvocationException("ValidationError", "Project inventory requires ProjectId or ProjectName.");
+        }
+
+        var query = new ProjectInventoryQuery(
+            RequireValue(request.SnapshotId, nameof(request.SnapshotId)),
+            NormalizeOptionalValue(request.ProjectId),
+            NormalizeOptionalValue(request.ProjectName),
+            request.IncludeDocuments);
+
+        var response = await applicationService.GetProjectInventoryAsync(query, cancellationToken);
+        return response ?? throw new ToolInvocationException("ProjectNotFound", $"The requested project was not found in snapshot '{query.SnapshotId}'.");
+    }
+
+    public async Task<DocumentSourceResponse> GetDocumentSourceAsync(CodeAnalyticsDocumentTargetInput request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var query = CreateDocumentQuery(request);
+        var response = await applicationService.GetDocumentSourceAsync(query, cancellationToken);
+        return response ?? throw new ToolInvocationException("DocumentNotFound", $"The requested document was not found in snapshot '{query.SnapshotId}'.");
+    }
+
+    public async Task<DocumentSymbolsResponse> GetDocumentSymbolsAsync(CodeAnalyticsDocumentTargetInput request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var query = CreateDocumentQuery(request);
+        var response = await applicationService.GetDocumentSymbolsAsync(query, cancellationToken);
+        return response ?? throw new ToolInvocationException("DocumentNotFound", $"The requested document was not found in snapshot '{query.SnapshotId}'.");
     }
 
     public async Task<ServiceViewResponse> GetServicesAsync(CodeAnalyticsSnapshotQueryInput request, CancellationToken cancellationToken = default)
@@ -256,6 +314,20 @@ public sealed class CodeAnalyticsCoordinator(
         return new SnapshotQuery(
             RequireValue(request.SnapshotId, nameof(request.SnapshotId)),
             NormalizeOptionalValue(request.SearchText));
+    }
+
+    private static DocumentQuery CreateDocumentQuery(CodeAnalyticsDocumentTargetInput request)
+    {
+        if (string.IsNullOrWhiteSpace(request.DocumentId)
+            && string.IsNullOrWhiteSpace(request.DocumentPath))
+        {
+            throw new ToolInvocationException("ValidationError", "Document queries require DocumentId or DocumentPath.");
+        }
+
+        return new DocumentQuery(
+            RequireValue(request.SnapshotId, nameof(request.SnapshotId)),
+            NormalizeOptionalValue(request.DocumentId),
+            NormalizeOptionalValue(request.DocumentPath));
     }
 
     private static IReadOnlyList<string>? NormalizeList(IReadOnlyList<string>? values)

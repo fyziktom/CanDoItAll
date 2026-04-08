@@ -47,6 +47,34 @@ public sealed class CodeAnalyticsTools(ICodeAnalyticsCoordinator coordinator, IL
         return ExecuteAsync("code_analytics_findings_get", () => coordinator.GetFindingsAsync(request, cancellationToken));
     }
 
+    [McpServerTool(Name = "code_analytics_solution_inventory_get", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Returns the solution and project inventory for a snapshot, including direct project references and reverse references.")]
+    public Task<McpToolEnvelope<SolutionInventoryResponse>> CodeAnalyticsSolutionInventoryGetAsync(CodeAnalyticsSolutionInventoryInput request, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("code_analytics_solution_inventory_get", () => coordinator.GetSolutionInventoryAsync(request, cancellationToken));
+    }
+
+    [McpServerTool(Name = "code_analytics_project_inventory_get", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Returns one project inventory entry, including its direct project references, reverse references, and optional document list.")]
+    public Task<McpToolEnvelope<ProjectInventoryResponse>> CodeAnalyticsProjectInventoryGetAsync(CodeAnalyticsProjectInventoryInput request, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("code_analytics_project_inventory_get", () => coordinator.GetProjectInventoryAsync(request, cancellationToken));
+    }
+
+    [McpServerTool(Name = "code_analytics_document_source_get", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Returns the raw source text for a snapshot document identified by document id or path.")]
+    public Task<McpToolEnvelope<DocumentSourceResponse>> CodeAnalyticsDocumentSourceGetAsync(CodeAnalyticsDocumentTargetInput request, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("code_analytics_document_source_get", () => coordinator.GetDocumentSourceAsync(request, cancellationToken));
+    }
+
+    [McpServerTool(Name = "code_analytics_document_symbols_get", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Returns the declared types and members for a snapshot document identified by document id or path.")]
+    public Task<McpToolEnvelope<DocumentSymbolsResponse>> CodeAnalyticsDocumentSymbolsGetAsync(CodeAnalyticsDocumentTargetInput request, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("code_analytics_document_symbols_get", () => coordinator.GetDocumentSymbolsAsync(request, cancellationToken));
+    }
+
     [McpServerTool(Name = "code_analytics_services_get", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Returns dependency-injection registrations discovered in a snapshot.")]
     public Task<McpToolEnvelope<ServiceViewResponse>> CodeAnalyticsServicesGetAsync(CodeAnalyticsSnapshotQueryInput request, CancellationToken cancellationToken = default)
@@ -154,7 +182,7 @@ public sealed class CodeAnalyticsTools(ICodeAnalyticsCoordinator coordinator, IL
     {
         return code switch
         {
-            "FocusedContextNotFound" or "SnapshotNotFound" or "SolutionPathNotFound" or "SymbolNotFound" or "TypeNotFound" => "not_found",
+            "DocumentNotFound" or "FocusedContextNotFound" or "ProjectNotFound" or "SnapshotNotFound" or "SolutionPathNotFound" or "SymbolNotFound" or "TypeNotFound" => "not_found",
             "ValidationError" => "validation_error",
             _ => "failed"
         };

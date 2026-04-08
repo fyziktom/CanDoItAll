@@ -12,6 +12,7 @@ It includes these custom skills:
 - `candoitall-watch-playwright-loop`
 - `candoitall-dotnetwatch-setup`
 - `candoitall-components-mcp`
+- `candoitall-codeanalytics-mcp`
 - `candoitall-frontend-theme`
 - `canonical-model-review`
 - `feature-block-architecture-review`
@@ -56,6 +57,7 @@ powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skil
 - The bundle skills now assume real browser validation through Playwright MCP plus the `playwright` skill for UI-heavy work.
 - The bundle skill pack now includes explicit readiness, subbundle-gate, and final-closure validators.
 - `candoitall-components-mcp` is the repo skill to use before inventing page-local structure in BaseLib or CanvasLib consumers. It expects the `candoitall_components` MCP server to be available and points Codex toward shared component parameters, sandbox routes, and real product usages first.
+- `candoitall-codeanalytics-mcp` is the repo skill to use before falling back to SharpTools for read-only C# investigation. It expects the `candoitall_codeanalytics` MCP server to be available and steers Codex toward solution inventory, document inspection, exact symbol tools, and focused context only when broader stitching is actually needed.
 - Large-screen validation comes first: maximize the browser window or fill the available desktop work area, capture a screenshot, review it, then continue to narrower widths.
 - `imagegen` is a planning aid only when UI direction is unclear; it does not replace shipped browser proof.
 - The repo also ships architecture review helper docs in `codex/architecture-review` and optional repo-local custom agents in `.codex/agents`.
