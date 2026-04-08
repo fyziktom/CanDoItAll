@@ -21,6 +21,8 @@ Use `candoitall_codeanalytics` as the default read-only investigation surface fo
 - Solution and project graph:
   Use `code_analytics_solution_inventory_get` for direct project references and reverse references.
   Use `code_analytics_project_inventory_get` when the question is about one project and its files.
+  Treat `DirectProjectReferences` and `ReferencedByProjects` as the primary product-project answer path.
+  If the caller also cares about tests or benchmarks, inspect `SupportingDirectProjectReferences` and `SupportingReferencedByProjects`.
 - DI:
   Use `code_analytics_services_get`.
 - Persistence:
@@ -33,11 +35,13 @@ Use `candoitall_codeanalytics` as the default read-only investigation surface fo
   Use `code_analytics_document_source_get` for raw source text from a file.
 - Broader stitched investigation:
   Use `code_analytics_focused_context_get` for trouble paths, usage summaries, representative consumers, or implementation overviews once the seed symbol is known.
+  Prefer `TroublePath` explicitly; `Behavior` is legacy compatibility only.
 
 ## Recommended Sequences
 
 - Architecture dependency question:
   `snapshot_build` -> `solution_inventory_get`
+  If the answer is about product architecture, use the primary product-reference arrays before mentioning supporting-project arrays.
 - Load one project like SharpTools `LoadProject`:
   `snapshot_build` -> `project_inventory_get`
 - Read one file like SharpTools `ReadRawFromRoslynDocument`:
@@ -55,6 +59,7 @@ Use `candoitall_codeanalytics` as the default read-only investigation surface fo
 - Do not use `focused_context_get` as the first step for a clearly named method when `symbol_definition_get` can answer directly.
 - Do not read the whole document when `symbol_definition_get` already gives the relevant member body.
 - Do not rebuild snapshots repeatedly during one investigation unless source changed or the cache is stale.
+- Do not treat the legacy `Behavior` intent as preferred guidance; it is only there to keep stale callers from failing.
 
 ## Output Expectations
 

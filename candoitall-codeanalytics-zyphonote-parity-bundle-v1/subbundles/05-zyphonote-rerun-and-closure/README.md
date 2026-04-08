@@ -2,7 +2,7 @@
 
 ## Status
 
-- `In progress`
+- `Completed`
 
 ## Objective
 
@@ -24,7 +24,7 @@
 ## Current Execution Note
 
 - Installed-server rerun proof is captured in `01-rerun-scorecard.md`.
-- Native Codex-session MCP validation is still pending a user restart so the new tool schema can be reloaded in this session.
+- Native Codex-session MCP validation completed after restart against snapshot `snap-20260408221224-36a986a3` and matched the installed-server rerun.
 
 ## Exact Source References
 

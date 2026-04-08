@@ -2,7 +2,7 @@
 
 ## Status
 
-- Execution state: `In progress`
+- Execution state: `Complete`
 
 ## Commands
 
@@ -11,6 +11,8 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File C:\repositories\CanDoItAll\tools\Reinstall-CanDoItAllMcps.ps1 -RepoRoot C:\repositories\CanDoItAll`
 - Installed-server harness validation through `C:\repositories\CanDoItAll\tools\CanDoItAll.Mcp.ToolHarness\bin\Debug\net10.0\CanDoItAll.Mcp.ToolHarness.exe`
 - Fresh Zyphonote rerun snapshot: `snap-20260408215645-36a986a3`
+- Native Codex-session validation snapshot after restart: `snap-20260408221224-36a986a3`
+- `python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\candoitall-codeanalytics-zyphonote-parity-bundle-v1 --profile initiative --stage completed`
 
 ## Browser Artifacts
 
@@ -24,7 +26,7 @@
 | `02-project-and-solution-navigation-parity` | `Passed` | `Passed` | `Yes` | `Complete` | Added `solution_inventory_get` and `project_inventory_get`, then validated them on the installed server against Zyphonote. |
 | `03-member-behavior-and-source-inspection-parity` | `Passed` | `Passed` | `Yes` | `Complete` | Added `document_source_get` and `document_symbols_get`, fixed duplicate-document-id resolution, and reran scenario 4 successfully. |
 | `04-host-integration-reinstall-and-skill-guidance` | `Passed` | `Passed` | `Yes` | `Complete` | Reinstalled the published MCP and synced the new `candoitall-codeanalytics-mcp` repo skill. |
-| `05-zyphonote-rerun-and-closure` | `Passed` | `Pending` | `Yes` | `In progress` | Installed-server harness rerun is complete and scored `47 / 50`; native Codex-session tool refresh still requires user restart. |
+| `05-zyphonote-rerun-and-closure` | `Passed` | `Passed` | `Yes` | `Complete` | Installed-server harness rerun scored `47 / 50`, and the restarted native Codex session reproduced the same scenario answers with the live MCP bindings. |
 
 ## Browser Validation Analytics
 
@@ -41,10 +43,9 @@
 
 | Raw note | Status | Proof |
 | --- | --- | --- |
-| `Bundle the findings, implement parity, rerun the same scenarios` | `In progress` | Installed server published, five-scenario rerun captured in `subbundles/05-zyphonote-rerun-and-closure/01-rerun-scorecard.md`, native Codex refresh pending |
+| `Bundle the findings, implement parity, rerun the same scenarios` | `Solved` | Installed server published, five-scenario rerun captured in `subbundles/05-zyphonote-rerun-and-closure/01-rerun-scorecard.md`, and the restarted native Codex session reproduced the same result against snapshot `snap-20260408221224-36a986a3`. |
 
 ## Residual Risks
 
-- This Codex session still has stale MCP tool bindings and needs a user restart before native in-session tool proof can continue.
 - Solution inventory still mixes product and non-product projects in raw output; see `subbundles/05-zyphonote-rerun-and-closure/findings/finding-01-solution-inventory-mixes-product-and-test-projects.md`.
-- Older clients that still send `intent = Behavior` to focused context will fail until they refresh schema or alias handling is added; see `subbundles/05-zyphonote-rerun-and-closure/findings/finding-02-legacy-focused-context-behavior-intent-alias-fails.md`.
+- Older clients that still send `intent = Behavior` to focused context will fail until they refresh schema or alias handling is added; the restarted native session succeeded with the current `TroublePath` intent, so this remains a compatibility gap rather than a live-session failure. See `subbundles/05-zyphonote-rerun-and-closure/findings/finding-02-legacy-focused-context-behavior-intent-alias-fails.md`.
