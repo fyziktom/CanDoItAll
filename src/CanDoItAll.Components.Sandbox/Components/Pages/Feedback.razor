@@ -1,6 +1,7 @@
 @namespace CanDoItAll.Components.Sandbox.Components
 @page "/groups/feedback"
 @inherits CatalogPageBase
+@using CanDoItAll.Components.Common
 @inject NotificationService NotificationService
 
 <PageTitle>Feedback</PageTitle>
@@ -49,15 +50,16 @@
                 </div>
             </SectionCard>
 
-            <div class="sandbox-demo-grid sandbox-demo-grid--two">
+            <Grid Gap="LayoutGap.Large"
+                  ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
                 <SectionCard Title="Status and summaries" Description="Small status surfaces should still scan well next to denser content.">
                     <div class="space-y-4">
-                        <div class="flex flex-wrap gap-2">
+                        <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Text="Healthy" Tone="success" />
                             <StatusBadge Text="Waiting proof" Tone="warning" />
                             <StatusBadge Text="Blocked" Tone="danger" />
                             <StatusBadge Text="Info" Tone="info" />
-                        </div>
+                        </Cluster>
 
                         <SummaryTiles>
                             <SummaryTile Label="Checks" Value="18" HelperText="Total review questions in the screenshot pass." Tone="info" />
@@ -70,14 +72,14 @@
                 <SectionCard Title="Notifications" Description="Toasts should be short, specific, and easy to dismiss mentally.">
                     <div class="space-y-4">
                         <TextBlock TextStyle="@(TextStyle.Body2)" Value="Use the buttons below to verify informational, success, and warning notification copy." />
-                        <div class="flex flex-wrap gap-3">
+                        <Cluster Gap="LayoutGap.Medium">
                             <Button Text="Info toast" ButtonStyle="@(ButtonStyle.Light)" Variant="@(Variant.Outlined)" Click="@SendInfoToast" />
                             <Button Text="Success toast" Click="@SendSuccessToast" />
                             <Button Text="Warning toast" ButtonStyle="@(ButtonStyle.Warning)" Variant="@(Variant.Outlined)" Click="@SendWarningToast" />
-                        </div>
+                        </Cluster>
                     </div>
                 </SectionCard>
-            </div>
+            </Grid>
         }
     </ChildContent>
 </CatalogPageFrame>

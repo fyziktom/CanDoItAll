@@ -1,0 +1,4 @@
+interface:
+  short_description: "Focused architecture review workflow for canonical model integrity and stabilization."
+policy:
+  allow_implicit_invocation: false

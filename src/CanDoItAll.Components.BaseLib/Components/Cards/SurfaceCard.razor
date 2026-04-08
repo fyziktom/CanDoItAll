@@ -1,0 +1,21 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes(ResolveCssClass())'>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public bool Soft { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveCssClass()
+    {
+        return Soft
+            ? "cda-surface-card--soft"
+            : "cda-surface-card";
+    }
+}

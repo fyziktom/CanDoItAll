@@ -1,0 +1,26 @@
+review_kind: canonical-model-review
+scope: "next-wave canonical projection, typed node reference, and guardrails"
+scores:
+  source_of_truth_integrity: 5
+  boundary_clarity: 4
+  invariant_enforcement: 4
+  projection_discipline: 4
+  integration_isolation: 3
+  runtime_state_separation: 4
+  ai_policy_separation: 4
+  testable_architecture: 4
+  change_safety: 4
+  overall_stability: 4
+findings:
+  critical: []
+  high:
+    - "Lifecycle reconciliation is still non-atomic across the Workbench and CRM/HR persistence boundary."
+    - "The universal Workbench node remains a broad primitive that depends on review discipline and ADR guardrails."
+  medium:
+    - "The persisted assignment model still ultimately keys node scope with a raw string."
+    - "Backward-compatible JSON property names still expose the old semantic labels to raw metadata consumers."
+  low: []
+  open_questions:
+    - "Will any future feature need a persisted typed node reference rather than the current wrapper-over-string contract?"
+    - "Are there any raw metadata consumers outside the reviewed C# code paths that still reason directly over the legacy JSON property names?"
+    - "How much additional behavior is the team willing to allow into the universal Workbench node before a typed-family redesign becomes cheaper than continued guardrails?"

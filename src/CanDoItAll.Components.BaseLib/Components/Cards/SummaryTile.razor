@@ -1,10 +1,10 @@
 @namespace CanDoItAll.Components.BaseLib
 <div class="@ResolveCssClass()">
-    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">@Label</p>
-    <p class="mt-3 text-2xl font-semibold tracking-tight text-slate-950">@Value</p>
+    <p class="cda-eyebrow">@Label</p>
+    <p class="cda-summary-tile__value">@Value</p>
     @if (!string.IsNullOrWhiteSpace(HelperText))
     {
-        <p class="mt-2 text-sm leading-6 text-slate-600">@HelperText</p>
+        <p class="cda-summary-tile__helper">@HelperText</p>
     }
 </div>
 
@@ -25,14 +25,16 @@
     {
         var toneClass = Tone.ToLowerInvariant() switch
         {
-            "success" => "border-emerald-200 bg-emerald-50/80",
-            "warning" => "border-amber-200 bg-amber-50/80",
-            "danger" => "border-rose-200 bg-rose-50/80",
-            "info" => "border-sky-200 bg-sky-50/80",
-            _ => "border-slate-200 bg-white/90"
+            "success" => "cda-summary-tile--tone-success",
+            "accent" => "cda-summary-tile--tone-secondary",
+            "secondary" => "cda-summary-tile--tone-secondary",
+            "warning" => "cda-summary-tile--tone-warning",
+            "danger" => "cda-summary-tile--tone-danger",
+            "info" => "cda-summary-tile--tone-info",
+            _ => string.Empty
         };
 
-        return $"rounded-[1.5rem] border p-5 shadow-sm shadow-slate-200/50 {toneClass}";
+        return $"cda-summary-tile {toneClass}".TrimEnd();
     }
 }
 

@@ -18,7 +18,7 @@ public static class PromptRunBranchLane
             ParentId = parentCanvasId,
             Family = "group",
             Kind = "branch",
-            Icon = "BR",
+            Icon = "call_split",
             Title = branchLabel,
             Subtitle = branchKey,
             LeadText = itemCount == 0

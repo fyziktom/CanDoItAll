@@ -1,0 +1,116 @@
+@layer components {
+  .cda-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.2em];
+    color: var(--cad-color-text-soft);
+  }
+
+  .cda-eyebrow--tight {
+    @apply text-[10px] tracking-[0.18em];
+  }
+
+  .cda-copy-strong {
+    @apply text-sm font-semibold;
+    color: var(--cad-color-text-strong);
+  }
+
+  .cda-body-muted {
+    @apply text-sm leading-6;
+    color: var(--cad-color-text-muted);
+  }
+
+  .cda-title-lg {
+    @apply text-lg font-semibold tracking-tight;
+    color: var(--cad-color-text-strong);
+  }
+
+  .cda-title-xl {
+    @apply text-xl font-semibold;
+    color: var(--cad-color-text-strong);
+  }
+
+  .cda-title-display {
+    @apply text-3xl font-semibold tracking-tight;
+    color: var(--cad-color-text-strong);
+  }
+
+  .cda-text-block {
+    color: var(--cad-color-text);
+  }
+
+  .cda-text-block--h1 {
+    @apply text-4xl font-semibold;
+    color: var(--cad-color-text-strong);
+  }
+
+  .cda-text-block--h2 {
+    @apply text-3xl font-semibold;
+    color: var(--cad-color-text-strong);
+  }
+
+  .cda-text-block--h3 {
+    @apply text-2xl font-semibold;
+    color: var(--cad-color-text-strong);
+  }
+
+  .cda-text-block--h4 {
+    @apply text-xl font-semibold;
+    color: var(--cad-color-text-strong);
+  }
+
+  .cda-text-block--h5 {
+    @apply text-lg font-semibold;
+    color: var(--cad-color-text-strong);
+  }
+
+  .cda-text-block--h6 {
+    @apply text-base font-semibold uppercase tracking-[0.18em];
+    color: var(--cad-color-text-muted);
+  }
+
+  .cda-text-block--subtitle1 {
+    @apply text-lg font-semibold;
+    color: var(--cad-color-text);
+  }
+
+  .cda-text-block--subtitle2 {
+    @apply text-base font-semibold;
+    color: var(--cad-color-text-muted);
+  }
+
+  .cda-text-block--body1 {
+    @apply text-base;
+    color: var(--cad-color-text);
+  }
+
+  .cda-text-block--body2 {
+    @apply text-sm;
+    color: var(--cad-color-text);
+  }
+
+  .cda-text-block--small,
+  .cda-text-block--caption {
+    @apply text-xs;
+    color: var(--cad-color-text-soft);
+  }
+
+  .cda-text-block--note,
+  .cda-text-block--muted,
+  .cda-text-block--mono {
+    @apply text-sm;
+    color: var(--cad-color-text-muted);
+  }
+
+  .cda-text-block--mono {
+    @apply font-mono text-xs;
+  }
+
+  .cda-text-block--eyebrow,
+  .cda-text-block--footer {
+    @apply text-[10px] font-semibold uppercase tracking-[0.18em];
+    color: var(--cad-color-text-soft);
+  }
+
+  .cda-text-block--footer {
+    @apply font-normal;
+  }
+}

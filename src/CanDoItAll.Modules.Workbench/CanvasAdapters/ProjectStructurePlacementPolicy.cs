@@ -4,6 +4,11 @@ namespace CanDoItAll.Modules.Workbench.CanvasAdapters;
 
 public sealed class ProjectStructurePlacementPolicy
 {
+    private const double SiblingVerticalSpacing = 280d;
+    private const double ChildHorizontalSpacing = 480d;
+    private const double ChildVerticalStartOffset = -160d;
+    private const double ChildVerticalSpacing = 280d;
+
     public (double? X, double? Y) ResolveCreatePlacement(
         IReadOnlyList<ProjectStructureNode> nodes,
         ProjectStructureNode? sourceNode,
@@ -17,10 +22,9 @@ public sealed class ProjectStructurePlacementPolicy
 
         if (string.Equals(request.PlacementKind, "sibling", StringComparison.OrdinalIgnoreCase) && sourceNode is not null)
         {
-            var existingSiblings = nodes.Count(node => string.Equals(node.ParentId, sourceNode.ParentId, StringComparison.Ordinal));
             return (
-                sourceNode.X + ((existingSiblings % 2) * 24),
-                sourceNode.Y + 132);
+                sourceNode.X,
+                sourceNode.Y + SiblingVerticalSpacing);
         }
 
         var anchorNode = parentNode ?? sourceNode;
@@ -30,8 +34,6 @@ public sealed class ProjectStructurePlacementPolicy
         }
 
         var existingChildren = nodes.Count(node => string.Equals(node.ParentId, anchorNode.Id, StringComparison.Ordinal));
-        var column = existingChildren % 3;
-        var row = existingChildren / 3;
         var anchorParent = string.IsNullOrWhiteSpace(anchorNode.ParentId)
             ? null
             : nodes.FirstOrDefault(node => string.Equals(node.Id, anchorNode.ParentId, StringComparison.Ordinal));
@@ -39,8 +41,8 @@ public sealed class ProjectStructurePlacementPolicy
             ? -1
             : 1;
         return (
-            anchorNode.X + (horizontalDirection * (240 + (column * 46))),
-            anchorNode.Y - 70 + (row * 118));
+            anchorNode.X + (horizontalDirection * ChildHorizontalSpacing),
+            anchorNode.Y + ChildVerticalStartOffset + (existingChildren * ChildVerticalSpacing));
     }
 
     public static string? ResolveParentNodeId(ProjectStructureNode? sourceNode, CanvasWorkbenchCreateActionRequest request)

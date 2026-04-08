@@ -159,7 +159,12 @@ public sealed record ProjectSummary(
     int PhaseCount,
     int ParentCount,
     int ChildCount,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    string PrimaryCustomerName = "",
+    string PrimaryDeliveryUnitName = "",
+    string PrimaryOwnerName = "",
+    IReadOnlyList<ProjectPortfolioPartyItem>? RelatedParties = null,
+    string RelatedPartySearchText = "");
 
 public sealed record ProjectHierarchyLinkSummary(
     Guid ParentProjectId,
@@ -222,7 +227,8 @@ public sealed class ProjectsService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
-    ISearchIndexService searchIndexService)
+    ISearchIndexService searchIndexService,
+    IProjectPartyIntegrationBridge projectPartyIntegrationBridge)
 {
     private sealed record ProjectHierarchyMetrics(
         IReadOnlyDictionary<Guid, int> ParentCounts,
@@ -247,10 +253,13 @@ public sealed class ProjectsService(
         var projects = await dbContext.Set<Project>().ToListAsync(cancellationToken);
         var hierarchyMetrics = await LoadHierarchyMetricsAsync(dbContext, cancellationToken);
         var phaseCounts = await LoadPhaseCountsAsync(dbContext, cancellationToken);
+        var portfolioContexts = await projectPartyIntegrationBridge.GetPortfolioContextsAsync(
+            projects.Select(project => project.Id).ToList(),
+            cancellationToken);
 
         return projects
             .OrderByDescending(project => project.UpdatedAtUtc)
-            .Select(project => MapProjectSummary(project, phaseCounts, hierarchyMetrics))
+            .Select(project => MapProjectSummary(project, phaseCounts, hierarchyMetrics, portfolioContexts.GetValueOrDefault(project.Id)))
             .ToList();
     }
 
@@ -272,9 +281,12 @@ public sealed class ProjectsService(
 
         var hierarchyMetrics = await LoadHierarchyMetricsAsync(dbContext, cancellationToken);
         var phaseCounts = await LoadPhaseCountsAsync(dbContext, cancellationToken);
+        var portfolioContexts = await projectPartyIntegrationBridge.GetPortfolioContextsAsync(
+            projects.Select(project => project.Id).ToList(),
+            cancellationToken);
         var summaryMap = projects.ToDictionary(
             project => project.Id,
-            project => MapProjectSummary(project, phaseCounts, hierarchyMetrics));
+            project => MapProjectSummary(project, phaseCounts, hierarchyMetrics, portfolioContexts.GetValueOrDefault(project.Id)));
 
         var parents = hierarchyMetrics.Links
             .Where(link => link.ChildProjectId == projectId)
@@ -704,16 +716,22 @@ public sealed class ProjectsService(
     private static ProjectSummary MapProjectSummary(
         Project project,
         IReadOnlyDictionary<Guid, int> phaseCounts,
-        ProjectHierarchyMetrics hierarchyMetrics)
-        => new(
-            project.Id,
-            project.Name,
-            project.Status,
-            project.CurrentPhase,
-            phaseCounts.GetValueOrDefault(project.Id),
-            hierarchyMetrics.ParentCounts.GetValueOrDefault(project.Id),
-            hierarchyMetrics.ChildCounts.GetValueOrDefault(project.Id),
-            project.UpdatedAtUtc);
+        ProjectHierarchyMetrics hierarchyMetrics,
+        ProjectPortfolioPartyContext? portfolioContext)
+    => new(
+        project.Id,
+        project.Name,
+        project.Status,
+        project.CurrentPhase,
+        phaseCounts.GetValueOrDefault(project.Id),
+        hierarchyMetrics.ParentCounts.GetValueOrDefault(project.Id),
+        hierarchyMetrics.ChildCounts.GetValueOrDefault(project.Id),
+        project.UpdatedAtUtc,
+        portfolioContext?.PrimaryCustomerName ?? string.Empty,
+        portfolioContext?.PrimaryDeliveryUnitName ?? string.Empty,
+        portfolioContext?.PrimaryOwnerName ?? string.Empty,
+        portfolioContext?.Items ?? [],
+        portfolioContext?.SearchText ?? string.Empty);
 
     private static async Task<IReadOnlyDictionary<Guid, int>> LoadPhaseCountsAsync(
         AppDbContext dbContext,

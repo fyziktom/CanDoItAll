@@ -1,4 +1,5 @@
 @namespace CanDoItAll.Components
+@using CanDoItAll.Components.BaseLib
 <CascadingValue Value="this" IsFixed="true">
     <div style="display:none">
         @ChildContent
@@ -30,7 +31,8 @@
             }
         </svg>
 
-        <div class="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
+        <Cluster Gap="LayoutGap.Small"
+                 Class="mt-2 text-xs text-slate-600">
             @for (var seriesIndex = 0; seriesIndex < snapshots.Count; seriesIndex++)
             {
                 <span class="inline-flex items-center gap-1 rounded border border-slate-200 bg-slate-50 px-2 py-1">
@@ -38,7 +40,7 @@
                     @snapshots[seriesIndex].Title
                 </span>
             }
-        </div>
+        </Cluster>
     }
 </div>
 

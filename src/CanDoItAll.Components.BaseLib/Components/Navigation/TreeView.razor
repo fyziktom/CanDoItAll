@@ -1,0 +1,48 @@
+@namespace CanDoItAll.Components.BaseLib
+
+@if (Items.Count > 0)
+{
+    <div @attributes='AdditionalAttributes.WithClass(ResolveCssClass())'>
+        <ul class="cda-treeview__list"
+            role="tree"
+            aria-label="@AriaLabel">
+            @foreach (var item in Items)
+            {
+                <TreeViewNodeRow Node="@item"
+                                 Level="0"
+                                 Style="@Style"
+                                 OnSelect="OnSelect"
+                                 OnToggle="OnToggle" />
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<TreeViewNode> Items { get; set; } = [];
+
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    [Parameter]
+    public TreeViewStyle Style { get; set; } = TreeViewStyle.Default;
+
+    [Parameter]
+    public EventCallback<string> OnSelect { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnToggle { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string ResolveCssClass()
+    {
+        return Style switch
+        {
+            TreeViewStyle.Workbench => "cda-treeview cda-treeview--workbench",
+            _ => "cda-treeview"
+        };
+    }
+}

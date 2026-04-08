@@ -1,0 +1,937 @@
+@namespace CanDoItAll.Components.CanvasLib
+@implements IAsyncDisposable
+@using System.Globalization
+@using CanDoItAll.Components.CanvasLib
+@inject IJSRuntime JsRuntime
+
+<div class="cw-workbench-shell @(isMaximized ? "is-maximized" : string.Empty)"
+     style="@ThemeStyle"
+     data-theme-key="@ThemeTokens.ThemeKey">
+    <div class="cw-workbench-frame">
+        <div class="cw-toolbar" data-cw-toolbar="true">
+            <div class="cw-toolbar-group cw-toolbar-group--left">
+                @if (Surface.Chrome.ShowQuickCreateRail && Surface.Chrome.QuickCreateActions.Count > 0)
+                {
+                    <button type="button"
+                            class="cw-toolbar-action cw-toolbar-action--primary"
+                            @ref="quickCreateButton"
+                            aria-label="Open quick create actions"
+                            title="Open quick create actions"
+                            @onclick="OpenQuickCreateMenuAsync">
+                        <Icon Name="add" />
+                        <span class="sr-only">Open quick create actions</span>
+                    </button>
+                }
+
+                @if (Surface.Chrome.ShowFocusAction)
+                {
+                    <button type="button"
+                            class="cw-toolbar-action cw-toolbar-action--icon"
+                            aria-label="@Surface.Chrome.FocusActionLabel"
+                            title="@Surface.Chrome.FocusActionLabel"
+                            @onclick="FocusPrimaryNodeAsync">
+                        <Icon Name="center_focus_strong" />
+                        <span class="sr-only">@Surface.Chrome.FocusActionLabel</span>
+                    </button>
+                }
+
+                @ToolbarLeftContent
+            </div>
+
+            <div class="cw-toolbar-group cw-toolbar-group--utility">
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--icon"
+                        aria-label="Fit canvas"
+                        title="Fit canvas"
+                        @onclick="FitViewAsync">
+                    <Icon Name="fit_screen" />
+                    <span class="sr-only">Fit canvas</span>
+                </button>
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--icon"
+                        aria-label="Toggle maximize"
+                        title="@(isMaximized ? "Dock canvas" : "Maximize canvas")"
+                        @onclick="ToggleMaximizeAsync">
+                    <Icon Name="@(isMaximized ? "close_fullscreen" : "open_in_full")" />
+                    <span class="sr-only">@(isMaximized ? "Dock canvas" : "Maximize canvas")</span>
+                </button>
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--icon"
+                        aria-label="Toggle minimap"
+                        title="Toggle minimap"
+                        @onclick="ToggleMinimapAsync">
+                    <Icon Name="map" />
+                    <span class="sr-only">Toggle minimap</span>
+                </button>
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--icon"
+                        aria-label="Toggle diagnostics"
+                        title="Toggle diagnostics"
+                        @onclick="ToggleDiagnosticsAsync">
+                    <Icon Name="monitor_heart" />
+                    <span class="sr-only">Toggle diagnostics</span>
+                </button>
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--icon"
+                        aria-label="Toggle help"
+                        title="Canvas help"
+                        @onclick="ToggleHelp">
+                    <Icon Name="help" />
+                    <span class="sr-only">Canvas help</span>
+                </button>
+                <button type="button"
+                        class="cw-toolbar-action cw-toolbar-action--icon"
+                        aria-label="Toggle settings"
+                        title="Canvas settings"
+                        @onclick="ToggleSettings">
+                    <Icon Name="settings" />
+                    <span class="sr-only">Canvas settings</span>
+                </button>
+
+                <div class="cw-zoom-rail">
+                    <button type="button"
+                            class="cw-toolbar-action cw-toolbar-action--ghost cw-toolbar-action--icon"
+                            aria-label="Zoom out"
+                            title="Zoom out"
+                            @onclick="ZoomOutAsync">
+                        <Icon Name="remove" />
+                        <span class="sr-only">Zoom out</span>
+                    </button>
+                    <input class="cw-zoom-slider"
+                           type="range"
+                           min="15"
+                           max="175"
+                           step="5"
+                           value="@zoomPercent"
+                           aria-label="Canvas zoom"
+                           @onchange="HandleZoomChangedAsync" />
+                    <button type="button"
+                            class="cw-toolbar-action cw-toolbar-action--ghost cw-toolbar-action--icon"
+                            aria-label="Zoom in"
+                            title="Zoom in"
+                            @onclick="ZoomInAsync">
+                        <Icon Name="add" />
+                        <span class="sr-only">Zoom in</span>
+                    </button>
+                    <span class="cw-zoom-pill">@($"{zoomPercent}%")</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="cw-stage-surface">
+            <div @ref="host"
+                 class="cw-canvas-host"
+                 tabindex="0"
+                 aria-label="Canvas workbench">
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Surface.Chrome.HintText))
+            {
+                <div class="cw-hint-pill">@Surface.Chrome.HintText</div>
+            }
+
+            @OverlayContent
+            <AccessibilityMirrorLayer Snapshot="@AccessibilitySnapshot" />
+        </div>
+
+        @if (helpOpen)
+        {
+            <div class="cw-help-overlay">
+                <div class="cw-help-card" role="dialog" aria-modal="false" aria-label="Canvas shortcuts and gestures">
+                    <div class="cw-help-card__header">
+                        <div>
+                            <p class="cw-help-kicker">Canvas help</p>
+                            <h3>Interaction vocabulary</h3>
+                        </div>
+
+                        <button type="button" class="cw-toolbar-action" aria-label="Close help" @onclick="ToggleHelp">Close</button>
+                    </div>
+
+                    <div class="cw-help-layout">
+                        <div class="cw-help-nav" aria-label="Canvas help pages">
+                            <button type="button"
+                                    class="@GetHelpPageButtonClass(HelpPage.Basics)"
+                                    aria-pressed="@(activeHelpPage == HelpPage.Basics)"
+                                    @onclick="@(() => SetHelpPage(HelpPage.Basics))">
+                                <strong>Basics</strong>
+                                <span>Pointer gestures, zoom, and scene movement.</span>
+                            </button>
+                            <button type="button"
+                                    class="@GetHelpPageButtonClass(HelpPage.ContextMenu)"
+                                    aria-pressed="@(activeHelpPage == HelpPage.ContextMenu)"
+                                    @onclick="@(() => SetHelpPage(HelpPage.ContextMenu))">
+                                <strong>Right-click menu</strong>
+                                <span>Layered one-letter menu shortcuts and examples.</span>
+                            </button>
+                            <button type="button"
+                                    class="@GetHelpPageButtonClass(HelpPage.Keyboard)"
+                                    aria-pressed="@(activeHelpPage == HelpPage.Keyboard)"
+                                    @onclick="@(() => SetHelpPage(HelpPage.Keyboard))">
+                                <strong>Keyboard</strong>
+                                <span>Canvas-wide shortcuts outside the menu flow.</span>
+                            </button>
+                        </div>
+
+                        <div class="cw-help-page">
+                            @if (activeHelpPage == HelpPage.Basics)
+                            {
+                                <div class="cw-help-page__header">
+                                    <p class="cw-help-page__eyebrow">Page 1</p>
+                                    <h4>Interaction vocabulary</h4>
+                                    <p class="cw-help-page__summary">Daily scene navigation and pointer-first movement across the canvas.</p>
+                                </div>
+
+                                <div class="cw-help-grid">
+                                    <p><strong>Click</strong> selects the focused node.</p>
+                                    <p><strong>Right-click</strong> opens node-aware actions.</p>
+                                    <p><strong>Alt + drag</strong> draws a marquee for multi-selection.</p>
+                                    <p><strong>Ctrl/Cmd + drag</strong> moves the current node set.</p>
+                                    <p><strong>Drag empty space</strong> pans the scene.</p>
+                                    <p><strong>Mouse wheel</strong> zooms under the pointer.</p>
+                                    <p><strong>Double-click</strong> @(Surface.Chrome.CollapseOnDoubleClick ? "collapses groups or opens artifacts." : "opens the node actions modal. Use +/- on the connector side to collapse children.")</p>
+                                </div>
+                            }
+                            else if (activeHelpPage == HelpPage.ContextMenu)
+                            {
+                                <div class="cw-help-page__header">
+                                    <p class="cw-help-page__eyebrow">Page 2</p>
+                                    <h4>Right-click menu</h4>
+                                    <p class="cw-help-page__summary">Press the underlined letter in the active layer. If it opens a submenu, press the next underlined letter there.</p>
+                                </div>
+
+                                <p class="cw-help-callout"><strong>Example:</strong> <strong>b</strong> opens Blocks and then <strong>d</strong> picks Delivery.</p>
+
+                                <div class="cw-help-section">
+                                    <p class="cw-help-section__title">Quick create</p>
+                                    <div class="cw-help-list">
+                                        <p><strong>b</strong> Blocks: <code>d</code> Delivery, <code>b</code> Backlog, <code>s</code> Support, <code>f</code> Feature.</p>
+                                        <p><strong>a</strong> Assets: <code>p</code> PDF, <code>e</code> Excel, <code>w</code> Word, <code>j</code> JSON, <code>t</code> Text.</p>
+                                        <p><strong>q</strong> Meetings: <code>s</code> Onsite, <code>o</code> Online. <strong>w</strong> opens Work and <code>t</code> chooses Task.</p>
+                                        <p><strong>p</strong> People, <strong>i</strong> Infrastructure, <strong>n</strong> Note, and the rest of the root layer follow the same one-letter rule.</p>
+                                    </div>
+                                </div>
+
+                                <div class="cw-help-section">
+                                    <p class="cw-help-section__title">Node actions</p>
+                                    <div class="cw-help-list">
+                                        <p><strong>m</strong> Markers: <code>q</code> Question, <code>e</code> Exclamation, plus other underlined marker choices.</p>
+                                        <p><strong>r</strong> Progress and <strong>d</strong> Priority open numeric and named follow-up shortcuts in the next layer.</p>
+                                        <p><strong>o</strong> Open, <strong>c</strong> Copy id, <strong>y</strong> Copy info, <strong>t</strong> Copy subtree ids, <strong>s</strong> Summary.</p>
+                                    </div>
+                                </div>
+
+                                <p class="cw-help-footnote">If a group is not listed here, use the underlined one-letter hint shown inside the menu item. Each sibling layer keeps those shortcuts unique.</p>
+                            }
+                            else
+                            {
+                                <div class="cw-help-page__header">
+                                    <p class="cw-help-page__eyebrow">Page 3</p>
+                                    <h4>Keyboard routing</h4>
+                                    <p class="cw-help-page__summary">Canvas-wide shortcuts that stay available when the host itself has focus.</p>
+                                </div>
+
+                                <div class="cw-help-list">
+                                    <p><strong>Tab</strong> creates a child note when the canvas host is focused.</p>
+                                    <p><strong>Enter</strong> creates a sibling note.</p>
+                                    <p><strong>Ctrl/Cmd + X</strong>, <strong>Ctrl/Cmd + C</strong>, and <strong>Ctrl/Cmd + V</strong> use the shared canvas clipboard.</p>
+                                    <p><strong>m</strong> toggles the minimap, <strong>d</strong> toggles diagnostics, and <strong>+</strong>, <strong>-</strong>, <strong>0</strong> control zoom and fit.</p>
+                                    <p><strong>?</strong> or <strong>h</strong> opens help, and <strong>Escape</strong> returns to Select mode before clearing selection.</p>
+                                </div>
+
+                                <p class="cw-help-footnote">When a right-click menu is open, its underlined letters win first so layered menu navigation stays fast.</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (settingsOpen)
+        {
+            <div class="cw-help-overlay cw-help-overlay--settings" data-testid="canvas-settings-overlay">
+                <div class="cw-help-card cw-settings-card" role="dialog" aria-modal="false" aria-label="Canvas settings">
+                    <div class="cw-help-card__header">
+                        <div>
+                            <p class="cw-help-kicker">Canvas settings</p>
+                            <h3>Radial menu tuning</h3>
+                        </div>
+
+                        <button type="button" class="cw-toolbar-action" aria-label="Close settings" @onclick="ToggleSettings">Close</button>
+                    </div>
+
+                    <div class="cw-settings-grid">
+                        <div class="cw-settings-group">
+                            <div>
+                                <p class="cw-settings-label">Menu item size</p>
+                                <p class="cw-panel-copy">Tune the right-click hex size and keep the preview aligned with the live canvas menu.</p>
+                            </div>
+
+                            <div class="cw-zoom-rail cw-settings-rail">
+                                <button type="button" class="cw-toolbar-action cw-toolbar-action--ghost cw-toolbar-action--icon" aria-label="Decrease menu item size" @onclick="DecreaseMenuScaleAsync">
+                                    <Icon Name="remove" />
+                                </button>
+                                <input class="cw-zoom-slider"
+                                       type="range"
+                                       min="80"
+                                       max="140"
+                                       step="5"
+                                       value="@menuScalePercent"
+                                       aria-label="Canvas menu item size"
+                                       @oninput="HandleMenuScaleChangedAsync" />
+                                <button type="button" class="cw-toolbar-action cw-toolbar-action--ghost cw-toolbar-action--icon" aria-label="Increase menu item size" @onclick="IncreaseMenuScaleAsync">
+                                    <Icon Name="add" />
+                                </button>
+                                <span class="cw-zoom-pill">@($"{menuScalePercent}%")</span>
+                            </div>
+                        </div>
+
+                        <div class="cw-settings-preview">
+                            <p class="cw-settings-label">Preview</p>
+                            <div class="cw-menu-preview-shell" style="@PreviewMenuScaleStyle">
+                                <div class="cw-menu-preview-orbit">
+                                    <div class="cw-menu-preview-core">
+                                        <span class="cw-menu-preview-core-dot"></span>
+                                    </div>
+                                    <div class="cw-menu-preview-item tone-accent">
+                                        <Icon Name="arrow_forward" class="cw-menu-preview-item__icon" />
+                                        <span class="cw-menu-preview-item__label">Open</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cw-settings-preview cw-theme-preview" data-testid="canvas-theme-token-pack">
+                            <p class="cw-settings-label">Theme pack</p>
+                            <div class="cw-theme-summary">
+                                <div>
+                                    <p class="cw-theme-summary__title">@ThemeTokens.ThemeName</p>
+                                    <p class="cw-panel-copy">Shared color, radius, and shadow tokens now come from the typed theme pack instead of only living in CSS.</p>
+                                </div>
+                                <span class="cw-theme-pill">@ThemeTokens.ThemeKey</span>
+                            </div>
+
+                            <div class="cw-theme-swatch-grid">
+                                @foreach (var swatch in ThemeSwatches)
+                                {
+                                    <div class="cw-theme-swatch">
+                                        <span class="cw-theme-swatch__chip" style="@($"--cw-token-swatch:{swatch.Value};")"></span>
+                                        <div>
+                                            <strong>@swatch.Label</strong>
+                                            <p>@swatch.Description</p>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="cw-theme-metrics">
+                                @foreach (var metric in ThemeMetrics)
+                                {
+                                    <span class="cw-theme-metric">@metric</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="cw-settings-preview cw-selection-preview" data-testid="selection-model-preview">
+                            <p class="cw-settings-label">Selection snapshot</p>
+                            <div class="cw-selection-preview__summary">
+                                <div>
+                                    <p class="cw-theme-summary__title">@PrimarySelectionLabel</p>
+                                    <p class="cw-panel-copy">@SelectionSummaryLabel</p>
+                                </div>
+                                <span class="cw-theme-pill">@($"{CurrentSelection.SelectedNodeIds.Count} selected")</span>
+                            </div>
+
+                            <div class="cw-selection-preview__order">
+                                <span class="cw-selection-preview__label">Ordered ids</span>
+                                <p>@SelectionOrderLabel</p>
+                            </div>
+                        </div>
+                        <div class="cw-settings-preview">
+                            <p class="cw-settings-label">Sandbox ownership</p>
+                            <div class="cw-theme-summary">
+                                <div>
+                                    <p class="cw-theme-summary__title">Boundary demos moved out of the runtime workbench</p>
+                                    <p class="cw-panel-copy">Primitive galleries, engine previews, and validation surfaces now live in the sandbox catalog so the runtime workbench stays focused on authoring behavior.</p>
+                                </div>
+                                <span class="cw-theme-pill">Sandbox</span>
+                            </div>
+
+                            <div class="cw-theme-metrics">
+                                <span class="cw-theme-metric">Runtime toolbar only</span>
+                                <span class="cw-theme-metric">Diagnostics via sandbox</span>
+                                <span class="cw-theme-metric">Shared contracts preserved</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private const int MinZoomPercent = 15;
+    private const int MaxZoomPercent = 175;
+    private static readonly CanvasThemeTokenPack ThemeTokens = CanvasThemeTokenPack.Default;
+    private readonly CanvasSceneHost sceneHost = new();
+    private ElementReference host;
+    private ElementReference quickCreateButton;
+    private DotNetObjectReference<CanvasWorkbench>? objectReference;
+    private bool helpOpen;
+    private HelpPage activeHelpPage = HelpPage.Basics;
+    private bool settingsOpen;
+    private bool isMaximized;
+    private int zoomPercent = 100;
+    private int menuScalePercent = 100;
+    private string? pendingDataKey;
+    private string? pendingUiStateKey;
+    private string? clientUiStateKey;
+    private long lastSelectionDispatchId;
+    private long lastStateDispatchId;
+    private bool awaitingParentUiStateCommit;
+
+    [Parameter, EditorRequired]
+    public CanvasWorkbenchSurface Surface { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<CanvasWorkbenchSelectionChangedEventArgs> SelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<CanvasWorkbenchNodesMovedEventArgs> NodesMoved { get; set; }
+
+    [Parameter]
+    public EventCallback<CanvasWorkbenchContextActionRequest> ContextActionRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<CanvasWorkbenchCreateActionRequest> CreateActionInvoked { get; set; }
+
+    [Parameter]
+    public EventCallback<CanvasWorkbenchNodeEditRequest> NodeEdited { get; set; }
+
+    [Parameter]
+    public EventCallback<string> NodeOpened { get; set; }
+
+    [Parameter]
+    public EventCallback<string> StateChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<CanvasWorkbenchClipboardRequest> ClipboardRequested { get; set; }
+
+    [Parameter]
+    public RenderFragment? ToolbarLeftContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? OverlayContent { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        isMaximized = Surface.UiState.IsMaximized;
+        zoomPercent = ClampZoomPercent(Surface.UiState.Zoom);
+        menuScalePercent = ClampMenuScalePercent(Surface.UiState.MenuActionScale);
+        pendingDataKey = SerializeSurfaceData(Surface);
+        pendingUiStateKey = Surface.UiState.ToJson();
+
+        var dataChanged = !string.Equals(sceneHost.AppliedStateKey, pendingDataKey, StringComparison.Ordinal);
+        var uiChangedOutsideClient = !string.Equals(clientUiStateKey, pendingUiStateKey, StringComparison.Ordinal);
+        if (!uiChangedOutsideClient)
+        {
+            awaitingParentUiStateCommit = false;
+        }
+
+        var shouldSyncUiState = uiChangedOutsideClient && !awaitingParentUiStateCommit;
+        sceneHost.QueueSync(pendingDataKey, dataChanged || shouldSyncUiState);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        objectReference ??= DotNetObjectReference.Create(this);
+        var bridge = new JsInteropBridge(JsRuntime);
+        if (sceneHost.ShouldCreate())
+        {
+            await bridge.InvokeVoidAsync(
+                "CanDoItAll.canvasWorkbench.create",
+                host,
+                objectReference,
+                Surface,
+                lastSelectionDispatchId,
+                lastStateDispatchId);
+            await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
+            if (ShouldAutoFitInitialView())
+            {
+                await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.fitView", host);
+            }
+
+            await SynchronizeSelectionAsync(bridge);
+            MarkSurfaceApplied();
+            return;
+        }
+
+        if (!sceneHost.ShouldUpdate())
+        {
+            return;
+        }
+
+        await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.update", host, Surface);
+        await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
+        await SynchronizeSelectionAsync(bridge);
+        MarkSurfaceApplied();
+    }
+
+    [JSInvokable]
+    public async Task OnSelectionChanged(string? primaryNodeId, string selectedNodeIdsJson, long dispatchId = 0)
+    {
+        if (!TryAcceptDispatchId(dispatchId, ref lastSelectionDispatchId))
+        {
+            return;
+        }
+
+        var selectedNodeIds = Deserialize<List<string>>(selectedNodeIdsJson) ?? [];
+        await SelectionChanged.InvokeAsync(new CanvasWorkbenchSelectionChangedEventArgs(primaryNodeId, selectedNodeIds));
+    }
+
+    [JSInvokable]
+    public async Task OnNodesMoved(string positionsJson)
+    {
+        var positions = Deserialize<List<CanvasWorkbenchNodePositionChange>>(positionsJson) ?? [];
+        await NodesMoved.InvokeAsync(new CanvasWorkbenchNodesMovedEventArgs(positions));
+    }
+
+    [JSInvokable]
+    public Task OnContextAction(string? nodeId, string actionId, double x, double y)
+        => DispatchContextActionAsync(new CanvasWorkbenchContextActionRequest(nodeId, actionId, x, y));
+
+    [JSInvokable]
+    public Task OnContextActionRequest(string requestJson)
+    {
+        var request = Deserialize<CanvasWorkbenchContextActionRequest>(requestJson);
+        return request is null
+            ? Task.CompletedTask
+            : DispatchContextActionAsync(request);
+    }
+
+    [JSInvokable]
+    public Task OnCreateAction(string requestJson)
+    {
+        var request = Deserialize<CanvasWorkbenchCreateActionRequest>(requestJson);
+        return request is null
+            ? Task.CompletedTask
+            : CreateActionInvoked.InvokeAsync(request);
+    }
+
+    [JSInvokable]
+    public Task OnNodeEdited(string requestJson)
+    {
+        var request = Deserialize<CanvasWorkbenchNodeEditRequest>(requestJson);
+        return request is null
+            ? Task.CompletedTask
+            : NodeEdited.InvokeAsync(request);
+    }
+
+    [JSInvokable]
+    public Task OnNodeOpened(string nodeId)
+        => NodeOpened.InvokeAsync(nodeId);
+
+    [JSInvokable]
+    public async Task OnStateChanged(string stateJson, long dispatchId = 0)
+    {
+        if (!TryAcceptDispatchId(dispatchId, ref lastStateDispatchId))
+        {
+            return;
+        }
+
+        var state = CanvasWorkbenchUiState.Parse(stateJson);
+        state.IsMaximized = isMaximized;
+        clientUiStateKey = state.ToJson();
+        awaitingParentUiStateCommit = true;
+        zoomPercent = ClampZoomPercent(state.Zoom);
+        menuScalePercent = ClampMenuScalePercent(state.MenuActionScale);
+        await StateChanged.InvokeAsync(clientUiStateKey);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public Task OnClipboardAction(string actionId, string payloadJson)
+        => ClipboardRequested.InvokeAsync(new CanvasWorkbenchClipboardRequest(actionId, payloadJson));
+
+    [JSInvokable]
+    public async Task OnHelpToggled(bool isOpen)
+    {
+        helpOpen = isOpen;
+        if (helpOpen)
+        {
+            activeHelpPage = HelpPage.Basics;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleHelp()
+    {
+        helpOpen = !helpOpen;
+        if (helpOpen)
+        {
+            activeHelpPage = HelpPage.Basics;
+            settingsOpen = false;
+        }
+    }
+
+    private void SetHelpPage(HelpPage page)
+        => activeHelpPage = page;
+
+    private string GetHelpPageButtonClass(HelpPage page)
+        => page == activeHelpPage
+            ? "cw-help-nav__button is-active"
+            : "cw-help-nav__button";
+
+    private void ToggleSettings()
+    {
+        settingsOpen = !settingsOpen;
+        if (settingsOpen)
+        {
+            helpOpen = false;
+        }
+    }
+
+    private async Task ToggleMaximizeAsync()
+    {
+        isMaximized = !isMaximized;
+        await InvokeAsync(StateHasChanged);
+        if (sceneHost.IsInitialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
+        }
+
+        await PublishUiStateAsync();
+        await Task.Yield();
+        if (sceneHost.IsInitialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.resize", host);
+        }
+    }
+
+    private async Task FitViewAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.fitView", host);
+    }
+
+    private async Task FocusPrimaryNodeAsync()
+    {
+        var targetNodeId = Surface.Nodes.FirstOrDefault(node => string.Equals(node.Family, "root", StringComparison.OrdinalIgnoreCase))?.Id
+            ?? Surface.Nodes.FirstOrDefault(node => string.IsNullOrWhiteSpace(node.ParentId))?.Id
+            ?? Surface.UiState.SelectedNodeIds.FirstOrDefault()
+            ?? Surface.Nodes.FirstOrDefault()?.Id;
+        if (!sceneHost.IsInitialized || string.IsNullOrWhiteSpace(targetNodeId))
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.focusNode", host, targetNodeId);
+        await Task.Delay(180);
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.focusNode", host, targetNodeId);
+    }
+
+    private Task ZoomInAsync() => SetZoomPercentAsync(Math.Min(MaxZoomPercent, zoomPercent + 10));
+
+    private Task ZoomOutAsync() => SetZoomPercentAsync(Math.Max(MinZoomPercent, zoomPercent - 10));
+
+    private Task IncreaseMenuScaleAsync() => SetMenuScalePercentAsync(Math.Min(140, menuScalePercent + 5));
+
+    private Task DecreaseMenuScaleAsync() => SetMenuScalePercentAsync(Math.Max(80, menuScalePercent - 5));
+
+    private async Task HandleZoomChangedAsync(ChangeEventArgs args)
+    {
+        if (args.Value is null || !int.TryParse(args.Value.ToString(), out var parsed))
+        {
+            return;
+        }
+
+        await SetZoomPercentAsync(parsed);
+    }
+
+    private async Task SetZoomPercentAsync(int value)
+    {
+        zoomPercent = Math.Clamp(value, MinZoomPercent, MaxZoomPercent);
+        if (sceneHost.IsInitialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setZoomPercent", host, zoomPercent);
+        }
+    }
+
+    private async Task HandleMenuScaleChangedAsync(ChangeEventArgs args)
+    {
+        if (args.Value is null || !int.TryParse(args.Value.ToString(), out var parsed))
+        {
+            return;
+        }
+
+        await SetMenuScalePercentAsync(parsed);
+    }
+
+    private async Task SetMenuScalePercentAsync(int value)
+    {
+        menuScalePercent = Math.Clamp(value, 80, 140);
+        if (sceneHost.IsInitialized)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMenuScalePercent", host, menuScalePercent);
+        }
+    }
+
+    private async Task OpenQuickCreateMenuAsync()
+    {
+        if (!sceneHost.IsInitialized || !Surface.Chrome.ShowQuickCreateRail || Surface.Chrome.QuickCreateActions.Count == 0)
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.openQuickCreateMenu", host, quickCreateButton);
+    }
+
+    private async Task ToggleMinimapAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.toggleMinimap", host);
+    }
+
+    private async Task ToggleDiagnosticsAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.toggleDiagnostics", host);
+    }
+
+    private async Task PublishUiStateAsync()
+    {
+        var json = sceneHost.IsInitialized
+            ? await JsRuntime.InvokeAsync<string>("CanDoItAll.canvasWorkbench.getState", host)
+            : Surface.UiState.ToJson();
+
+        var state = CanvasWorkbenchUiState.Parse(json);
+        state.IsMaximized = isMaximized;
+        zoomPercent = ClampZoomPercent(state.Zoom);
+        await StateChanged.InvokeAsync(state.ToJson());
+    }
+
+    private T? Deserialize<T>(string json)
+        => SerializationPersistencePack.Deserialize<T>(json);
+
+    private static bool TryAcceptDispatchId(long dispatchId, ref long lastAcceptedDispatchId)
+    {
+        if (dispatchId <= 0)
+        {
+            return true;
+        }
+
+        if (dispatchId <= lastAcceptedDispatchId)
+        {
+            return false;
+        }
+
+        lastAcceptedDispatchId = dispatchId;
+        return true;
+    }
+
+    private static int ClampZoomPercent(double zoom)
+        => (int)Math.Round(Math.Clamp(zoom, MinZoomPercent / 100d, MaxZoomPercent / 100d) * 100);
+
+    private static int ClampMenuScalePercent(double scale)
+        => (int)Math.Round(Math.Clamp(scale, 0.8, 1.4) * 100);
+
+    private string PreviewMenuScaleStyle
+        => $"--cw-preview-menu-scale:{(menuScalePercent / 100d).ToString("0.##", CultureInfo.InvariantCulture)};";
+
+    private string ThemeStyle => ThemeTokens.ToInlineStyle();
+
+    private IReadOnlyList<CanvasThemeSwatch> ThemeSwatches => ThemeTokens.BuildPreviewSwatches();
+
+    private IReadOnlyList<string> ThemeMetrics => ThemeTokens.BuildMetrics();
+
+    private SelectionModel CurrentSelection
+        => SelectionModel.From(Surface.UiState.SelectedNodeIds).RemoveMissing(Surface.Nodes.Select(node => node.Id));
+
+    private string PrimarySelectionLabel
+        => CurrentSelection.PrimaryNodeId is null
+            ? "No primary selection"
+            : ResolveNodeLabel(CurrentSelection.PrimaryNodeId);
+
+    private string SelectionSummaryLabel
+        => CurrentSelection.SelectedNodeIds.Count == 0
+            ? "SelectionModel is ready for additive, toggle, and replace semantics."
+            : $"{CurrentSelection.SelectedNodeIds.Count} ordered node ids are mirrored into the shared workbench state.";
+
+    private string SelectionOrderLabel
+        => CurrentSelection.SelectedNodeIds.Count == 0
+            ? "Selection is currently empty."
+            : string.Join(" -> ", CurrentSelection.SelectedNodeIds.Select(ResolveNodeLabel));
+    private AccessibilityMirrorSnapshot AccessibilitySnapshot
+        => AccessibilityMirrorLayerFactory.CreateForWorkbench(Surface, Surface.UiState.ShowDiagnostics);
+    private string SerializeSurfaceData(CanvasWorkbenchSurface surface)
+        => SerializationPersistencePack.Serialize(
+            new
+            {
+                surface.SurfaceId,
+                surface.Mode,
+                surface.DependencySourceId,
+                surface.Nodes,
+                surface.Links,
+                surface.Chrome
+            });
+
+    private Task DispatchContextActionAsync(CanvasWorkbenchContextActionRequest request)
+        => ContextActionRequested.InvokeAsync(request);
+
+    private string ResolveNodeLabel(string nodeId)
+    {
+        var node = Surface.Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, nodeId, StringComparison.Ordinal));
+        if (node is null)
+        {
+            return nodeId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(node.Title))
+        {
+            return node.Title;
+        }
+
+        if (!string.IsNullOrWhiteSpace(node.InlineText))
+        {
+            return node.InlineText;
+        }
+
+        return string.IsNullOrWhiteSpace(node.Kind)
+            ? node.Id
+            : node.Kind;
+    }
+
+    private void MarkSurfaceApplied()
+        => sceneHost.MarkApplied();
+
+    private async Task SynchronizeSelectionAsync(JsInteropBridge bridge)
+    {
+        if (Surface.UiState.SelectedNodeIds.Count == 0)
+        {
+            return;
+        }
+
+        await bridge.InvokeVoidAsync(
+            "CanDoItAll.canvasWorkbench.selectNodes",
+            host,
+            Surface.UiState.SelectedNodeIds,
+            Surface.UiState.SelectedNodeIds[0]);
+    }
+
+    private bool ShouldAutoFitInitialView()
+    {
+        if (Surface.Nodes.Count == 0)
+        {
+            return false;
+        }
+
+        if (Surface.UiState.ManualPositions.Count > 0)
+        {
+            return false;
+        }
+
+        var usesDefaultViewport = Math.Abs(Surface.UiState.Zoom - 1d) < 0.001d
+            && Math.Abs(Surface.UiState.PanX - 90d) < 0.001d
+            && Math.Abs(Surface.UiState.PanY - 110d) < 0.001d;
+
+        return usesDefaultViewport;
+    }
+
+    public async Task OpenCreateDialogAsync(CanvasWorkbenchAction action, CanvasWorkbenchCreateActionRequest request)
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            await CreateActionInvoked.InvokeAsync(request);
+            return;
+        }
+
+        if (action.RequiresInput)
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.openCreateComposer", host, action, request);
+            return;
+        }
+
+        await CreateActionInvoked.InvokeAsync(request);
+    }
+
+    public async Task SelectNodesAsync(IReadOnlyList<string> nodeIds, string? primaryNodeId = null)
+    {
+        if (!sceneHost.IsInitialized || nodeIds.Count == 0)
+        {
+            return;
+        }
+
+        var resolvedPrimaryNodeId = string.IsNullOrWhiteSpace(primaryNodeId)
+            ? nodeIds[0]
+            : primaryNodeId;
+        await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.selectNodes", host, nodeIds, resolvedPrimaryNodeId);
+    }
+
+    public async Task<IReadOnlyList<string>> GetSelectedNodeIdsAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return Surface.UiState.SelectedNodeIds;
+        }
+
+        var stateJson = await JsRuntime.InvokeAsync<string>("CanDoItAll.canvasWorkbench.getState", host);
+        return CanvasWorkbenchUiState.Parse(stateJson).SelectedNodeIds;
+    }
+
+    public async Task<string?> CaptureImageAsync()
+    {
+        if (!sceneHost.IsInitialized)
+        {
+            return null;
+        }
+
+        return await JsRuntime.InvokeAsync<string?>("CanDoItAll.canvasWorkbench.exportImageData", host);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (sceneHost.IsInitialized)
+        {
+            try
+            {
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, false);
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.canvasWorkbench.dispose", host);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+            catch (JSException)
+            {
+            }
+        }
+
+        objectReference?.Dispose();
+    }
+
+    private enum HelpPage
+    {
+        Basics,
+        ContextMenu,
+        Keyboard
+    }
+}
+
+

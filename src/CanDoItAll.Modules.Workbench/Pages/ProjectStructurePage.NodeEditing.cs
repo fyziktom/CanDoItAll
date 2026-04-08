@@ -28,6 +28,10 @@ public partial class ProjectStructurePage
             actions.Add(new ProjectStructureInspectorAction("edit", "Edit", "draw", "accent"));
         }
 
+        actions.Add(new ProjectStructureInspectorAction("copy-id", "Copy id", "copy", "ghost"));
+        actions.Add(new ProjectStructureInspectorAction("copy-info", "Copy info", "copy", "primary"));
+        actions.Add(new ProjectStructureInspectorAction("copy-subtree-ids", "Copy tree ids", "copy", "sky"));
+
         var runtimeLaunch = RuntimeLauncher.Resolve(node);
         if (RuntimeLauncher.IsAvailable && runtimeLaunch.IsSuccess)
         {
@@ -40,6 +44,7 @@ public partial class ProjectStructurePage
         actions.Add(new ProjectStructureInspectorAction("connect", "Connect selected", "link", "ghost"));
         actions.Add(new ProjectStructureInspectorAction("reconnect", "Reconnect", "relink", "primary"));
         actions.Add(new ProjectStructureInspectorAction("disconnect", "Disconnect", "link_off", "ghost"));
+        actions.Add(new ProjectStructureInspectorAction("move-descendants-to-subproject", "To subproject", "fork", "primary"));
         actions.Add(new ProjectStructureInspectorAction("export-image", "Export image", "image", "accent"));
 
         if (CanCreateTranscript(node))
@@ -54,6 +59,16 @@ public partial class ProjectStructurePage
             actions.Add(new ProjectStructureInspectorAction("transcript:find-others-deliveries", "Find others delivery to me", "people", "sky"));
         }
 
+        if (node.ObjectType == ProjectObjectType.ProjectBlock)
+        {
+            actions.Add(new ProjectStructureInspectorAction("block:change-type", "Change block", "swap_horiz", "accent"));
+        }
+
+        if (node.ObjectType == ProjectObjectType.Note)
+        {
+            actions.Add(new ProjectStructureInspectorAction("note:convert-to-block", "Convert", "swap_horiz", "accent"));
+        }
+
         actions.Add(new ProjectStructureInspectorAction("delete", "Delete", "delete", "danger"));
         return actions;
     }
@@ -63,7 +78,12 @@ public partial class ProjectStructurePage
         var actions = new List<ProjectStructureInspectorAction>
         {
             new("command:open", "Open", "open", "primary"),
-            new("summary", "Summary", "summary", "sky")
+            new("copy-id", "Copy id", "copy", "ghost"),
+            new("copy-info", "Copy info", "copy", "primary"),
+            new("copy-subtree-ids", "Copy tree ids", "copy", "sky"),
+            new("summary", "Summary", "summary", "sky"),
+            new("connect", "Connect selected", "link", "ghost"),
+            new("export-image", "Export image", "image", "accent")
         };
 
         if (node.ProjectRole is ProjectStructureProjectRole.Subproject or
@@ -132,6 +152,11 @@ public partial class ProjectStructurePage
             case "command:test":
                 await ExecuteCommandAsync(ProjectStructureCommandKind.Test, node.Id);
                 break;
+            case "copy-id":
+            case "copy-info":
+            case "copy-subtree-ids":
+                await TryHandleCopyActionAsync(actionId, node.Id);
+                break;
             case "summary":
                 await OpenSummaryAsync(node.Id);
                 break;
@@ -145,7 +170,7 @@ public partial class ProjectStructurePage
                 await OpenReconnectSubprojectDialogAsync(node);
                 break;
             case "connect":
-                EnableLinkMode();
+                await EnterDependencyModeAsync(node.Id);
                 break;
             case "reconnect":
                 await BeginReconnectAsync(node.Id);
@@ -153,8 +178,17 @@ public partial class ProjectStructurePage
             case "disconnect":
                 await DisconnectNodeAsync(node.Id);
                 break;
+            case "move-descendants-to-subproject":
+                await OpenMoveDescendantsToSubprojectDialogAsync(node);
+                break;
             case "export-image":
                 await ExportMindmapImageAsync();
+                break;
+            case "block:change-type":
+                await OpenChangeBlockTypeDialogAsync(node);
+                break;
+            case "note:convert-to-block":
+                await OpenNoteConversionDialogAsync(node);
                 break;
             case "transcript:create":
                 await CreateTranscriptFromRecordingAsync(node);
@@ -217,7 +251,7 @@ public partial class ProjectStructurePage
             return true;
         }
 
-        await ReloadSurfaceAsync(updated.Id);
+        await ApplySurfaceNodeUpdatesAsync([updated]);
         workflowFeedback = $"{updated.Title} was updated.";
         workflowFeedbackTone = "mint";
         return true;

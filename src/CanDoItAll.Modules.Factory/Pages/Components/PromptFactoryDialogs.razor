@@ -1,0 +1,167 @@
+@if (ShowPromptPreviewDialog)
+{
+    <div class="pf-prompt-modal-backdrop" @onclick="ClosePromptPreviewDialog">
+        <div class="pf-prompt-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-label="Prompt preview"
+             data-testid="prompt-factory-prompt-modal"
+             @onclick:stopPropagation="true">
+            <div class="pf-prompt-modal__header">
+                <div>
+                    <p class="cw-panel-kicker">@PromptPreviewKicker</p>
+                    <h3 class="cw-panel-title">@PromptPreviewTitle</h3>
+                    <p class="cw-panel-copy">@PromptPreviewDescription</p>
+                </div>
+                <PromptFactoryActionButton Tone="ghost"
+                                           Text="Close"
+                                           Click="ClosePromptPreviewDialog" />
+            </div>
+
+            <textarea class="cw-textarea pf-prompt-preview"
+                      readonly
+                      data-testid="prompt-factory-prompt-modal-text">@PromptPreviewText</textarea>
+
+            <div class="cw-button-row">
+                <PromptFactoryActionButton Tone="accent"
+                                           Text="Copy prompt"
+                                           Click="CopyPrompt" />
+                <PromptFactoryActionButton Tone="ghost"
+                                           Text="Done"
+                                           Click="ClosePromptPreviewDialog" />
+            </div>
+        </div>
+    </div>
+}
+
+@if (ShowComponentEditorModal)
+{
+    <div class="pf-prompt-modal-backdrop" @onclick="CloseComponentEditor">
+        <div class="pf-prompt-modal pf-component-editor-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-label="Edit component text"
+             @onclick:stopPropagation="true">
+            <div class="pf-prompt-modal__header">
+                <div>
+                    <p class="cw-panel-kicker">Session prompt text</p>
+                    <h3 class="cw-panel-title">@SelectedComponentName</h3>
+                    <p class="cw-panel-copy">Edit the actual text that this session will use for the selected component.</p>
+                </div>
+                <PromptFactoryActionButton Tone="ghost"
+                                           Text="Close"
+                                           Click="CloseComponentEditor" />
+            </div>
+            <textarea class="cw-textarea pf-component-editor-modal__textarea"
+                      @bind="SelectedComponentRenderedContentProxy"></textarea>
+            <div class="cw-button-row">
+                <PromptFactoryActionButton Tone="accent"
+                                           Text="Reset"
+                                           Disabled="@(!SelectedComponentIsModified)"
+                                           Click="ResetSelectedComponentRenderedContent" />
+                <PromptFactoryActionButton Tone="ghost"
+                                           Text="Done"
+                                           Click="CloseComponentEditor" />
+            </div>
+        </div>
+    </div>
+}
+
+@if (ShowImpactDialog)
+{
+    <div class="pf-prompt-modal-backdrop" @onclick="CloseImpactDialog">
+        <div class="pf-prompt-modal pf-impact-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-label="Confirm prompt-factory action"
+             @onclick:stopPropagation="true">
+            <div class="pf-prompt-modal__header">
+                <div>
+                    <p class="cw-panel-kicker">Confirm action</p>
+                    <h3 class="cw-panel-title">@ImpactDialogTitle</h3>
+                    <p class="cw-panel-copy">@ImpactDialogBody</p>
+                </div>
+                <PromptFactoryActionButton Tone="ghost"
+                                           Text="Close"
+                                           Click="CloseImpactDialog" />
+            </div>
+
+            <div class="cw-button-row">
+                <PromptFactoryActionButton Tone="ghost"
+                                           Text="Cancel"
+                                           Click="CloseImpactDialog" />
+                <PromptFactoryActionButton Tone="warn"
+                                           Text="@ImpactDialogConfirmLabel"
+                                           Click="ConfirmImpactDialog" />
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool ShowPromptPreviewDialog { get; set; }
+
+    [Parameter]
+    public string PromptPreviewKicker { get; set; } = string.Empty;
+
+    [Parameter]
+    public string PromptPreviewTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public string PromptPreviewDescription { get; set; } = string.Empty;
+
+    [Parameter]
+    public string PromptPreviewText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback ClosePromptPreviewDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CopyPrompt { get; set; }
+
+    [Parameter]
+    public bool ShowComponentEditorModal { get; set; }
+
+    [Parameter]
+    public string? SelectedComponentName { get; set; }
+
+    [Parameter]
+    public string SelectedComponentRenderedContent { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> SelectedComponentRenderedContentChanged { get; set; }
+
+    [Parameter]
+    public bool SelectedComponentIsModified { get; set; }
+
+    [Parameter]
+    public EventCallback ResetSelectedComponentRenderedContent { get; set; }
+
+    [Parameter]
+    public EventCallback CloseComponentEditor { get; set; }
+
+    [Parameter]
+    public bool ShowImpactDialog { get; set; }
+
+    [Parameter]
+    public string ImpactDialogTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ImpactDialogBody { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ImpactDialogConfirmLabel { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback CloseImpactDialog { get; set; }
+
+    [Parameter]
+    public EventCallback ConfirmImpactDialog { get; set; }
+
+    private string SelectedComponentRenderedContentProxy
+    {
+        get => SelectedComponentRenderedContent;
+        set => _ = SelectedComponentRenderedContentChanged.InvokeAsync(value);
+    }
+}

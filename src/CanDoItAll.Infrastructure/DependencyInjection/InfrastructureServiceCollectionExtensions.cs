@@ -1,4 +1,5 @@
 using System.Reflection;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.BackgroundJobs;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Logging;
@@ -48,13 +49,50 @@ public static class InfrastructureServiceCollectionExtensions
             .Bind(configuration.GetSection("DevelopmentManager"))
             .ValidateOnStart();
 
+        services
+            .AddOptions<ControlPlaneOptions>()
+            .Bind(configuration.GetSection("ControlPlane"))
+            .ValidateOnStart();
+
+        var configuredControlPlaneOptions =
+            configuration.GetSection("ControlPlane").Get<ControlPlaneOptions>() ?? new ControlPlaneOptions();
+        var dataProtectionKeysPath =
+            ControlPlanePathDefaults.ResolveControlPlaneRootPath(environment, configuredControlPlaneOptions);
+
         services.AddDataProtection()
-            .SetApplicationName("CanDoItAll");
+            .SetApplicationName("CanDoItAll")
+            .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(dataProtectionKeysPath, "dataprotection-keys")));
 
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IActivityStream, NullActivityStream>();
         services.AddSingleton<ISecretRedactor, SecretRedactor>();
+        services.AddSingleton<IControlPlanePathResolver, ControlPlanePathResolver>();
+        services.AddSingleton<IControlPlaneSecretProtector, ControlPlaneSecretProtector>();
+        services.AddSingleton<DatabaseProfileControlPlaneService>();
+        services.AddSingleton<IDatabaseProfileService>(serviceProvider => serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
+        services.AddSingleton<IActiveDatabaseProfileResolver>(serviceProvider => serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
+        services.AddSingleton<IDatabaseProfileRuntimeAccessor>(serviceProvider => serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
+        services.AddSingleton<IDatabaseSnapshotService, DatabaseSnapshotService>();
+        services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
+        services.AddSingleton<IDatabaseRuntimeState, DatabaseRuntimeState>();
+        services.AddSingleton<IDatabaseDriver, InMemoryDatabaseDriver>();
+        services.AddSingleton<IDatabaseDriver, SqliteDatabaseDriver>();
+        services.AddSingleton<IDatabaseDriver, PostgreSqlDatabaseDriver>();
+        services.AddSingleton<IDatabaseDriverRegistry, DatabaseDriverRegistry>();
+        services.AddSingleton<ISwitchableAppDbContextFactory, SwitchableAppDbContextFactory>();
+        services.AddSingleton<IDbContextFactory<AppDbContext>>(serviceProvider => serviceProvider.GetRequiredService<ISwitchableAppDbContextFactory>());
         services.AddSingleton<IWorkspacePathResolver, WorkspacePathResolver>();
+        services.AddSingleton<IWorkspacePathAccessGuard, WorkspacePathAccessGuard>();
+        services.AddSingleton<IStorageCatalogService, StorageCatalogService>();
+        services.AddSingleton<IStorageDriver, FileSystemStorageDriver>();
+        services.AddSingleton<IStorageDriver, IpfsStorageDriver>();
+        services.AddSingleton<IStorageDriver, FtpStorageDriver>();
+        services.AddSingleton<IStorageDriverRegistry, StorageDriverRegistry>();
+        services.AddSingleton<IStorageRoutingService, DefaultStorageRoutingService>();
+        services.AddSingleton<IStorageConnectionTestService, StorageConnectionTestService>();
+        services.AddSingleton<IStorageAccessService, StorageAccessService>();
+        services.AddSingleton<IStoragePlacementService, StoragePlacementService>();
+        services.AddSingleton<IStorageTransferPipeline, StorageTransferPipeline>();
         services.AddScoped<IFileStore, LocalFileStore>();
         services.AddScoped<IManagedArtifactStore, ManagedArtifactStore>();
         services.AddSingleton<IBackgroundJobQueue, InMemoryBackgroundJobQueue>();
@@ -62,55 +100,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IBackgroundJobTracker, BackgroundJobTracker>();
         services.AddScoped<ISearchIndexService, SearchIndexService>();
 
-        services.AddDbContextFactory<AppDbContext>((serviceProvider, options) =>
-        {
-            var databaseOptions = serviceProvider
-                .GetRequiredService<Microsoft.Extensions.Options.IOptions<DatabaseOptions>>()
-                .Value;
-
-            ConfigureDb(options, environment, databaseOptions);
-        });
-
         services.AddHealthChecks()
             .AddCheck<RuntimeReadinessHealthCheck>("runtime-readiness");
 
         return services;
-    }
-
-    private static void ConfigureDb(DbContextOptionsBuilder optionsBuilder, IHostEnvironment environment, DatabaseOptions databaseOptions)
-    {
-        var provider = databaseOptions.Provider.Trim().ToLowerInvariant();
-        if (provider is "inmemory" or "memory")
-        {
-            var databaseName = string.IsNullOrWhiteSpace(databaseOptions.ConnectionString)
-                ? "candoitall"
-                : databaseOptions.ConnectionString.Trim();
-
-            optionsBuilder.UseInMemoryDatabase(databaseName);
-            return;
-        }
-
-        if (provider is "postgres" or "postgresql")
-        {
-            var connectionString = string.IsNullOrWhiteSpace(databaseOptions.ConnectionString)
-                ? "Host=localhost;Database=candoitall;Username=postgres;Password=postgres"
-                : databaseOptions.ConnectionString;
-
-            optionsBuilder.UseNpgsql(connectionString, builder => builder.MigrationsAssembly("CanDoItAll.Web"));
-            return;
-        }
-
-        var connection = string.IsNullOrWhiteSpace(databaseOptions.ConnectionString)
-            ? $"Data Source={Path.Combine(environment.ContentRootPath, ".artifacts", "workspace", "candoitall.db")}"
-            : databaseOptions.ConnectionString;
-
-        var filePath = connection.Replace("Data Source=", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
-        var directory = Path.GetDirectoryName(filePath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        optionsBuilder.UseSqlite(connection, builder => builder.MigrationsAssembly("CanDoItAll.Web"));
     }
 }

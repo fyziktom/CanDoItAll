@@ -656,14 +656,14 @@ public sealed partial class AppSession
 
         if (line.Contains("Hot reload succeeded", StringComparison.OrdinalIgnoreCase))
         {
-            MarkWatchChangeApplied(line, entry, HotReloadOutcome.Succeeded);
+            MarkWatchChangeApplied(line, entry, HotReloadOutcome.Succeeded, requiresHealthConfirmation: true);
             return true;
         }
 
         if (line.Contains("Hot reload of static assets succeeded", StringComparison.OrdinalIgnoreCase) ||
             line.Contains("No C# changes to apply", StringComparison.OrdinalIgnoreCase))
         {
-            MarkWatchChangeApplied(line, entry, HotReloadOutcome.Succeeded);
+            MarkWatchChangeApplied(line, entry, HotReloadOutcome.Succeeded, requiresHealthConfirmation: false);
             return true;
         }
 
@@ -881,7 +881,11 @@ public sealed partial class AppSession
         };
     }
 
-    private void MarkWatchChangeApplied(string line, LogEntry entry, HotReloadOutcome hotReloadOutcome)
+    private void MarkWatchChangeApplied(
+        string line,
+        LogEntry entry,
+        HotReloadOutcome hotReloadOutcome,
+        bool requiresHealthConfirmation)
     {
         AppLifecycleState nextState;
         string transitionSummary;
@@ -892,7 +896,7 @@ public sealed partial class AppSession
             _lastWatchActivityUtc = entry.TimestampUtc;
             _lastHotReloadOutcome = hotReloadOutcome;
 
-            if (_healthEnabled)
+            if (_healthEnabled && requiresHealthConfirmation)
             {
                 _watchPendingChange = true;
                 _watchState = WatchProcessingState.HotReloadSucceeded;
@@ -910,10 +914,11 @@ public sealed partial class AppSession
                 _watchSummary = line;
                 _watchReadyForHotReload = true;
                 _watchReadyForHotReloadSequence = entry.Sequence;
+                _expectedHotReloadGeneration = _confirmedHotReloadGeneration ?? _expectedHotReloadGeneration;
                 if (_observedUrls.Count > 0)
                 {
                     LastHealthSnapshot = new HealthSnapshot(
-                        "Ready",
+                        "Healthy",
                         true,
                         LastHealthSnapshot?.LastSuccessUtc ?? entry.TimestampUtc,
                         null,
@@ -1226,10 +1231,12 @@ public sealed class AppRuntimeManager(
     ProcessSupervisor processSupervisor,
     RuntimeEndpointAllocator endpointAllocator,
     HttpHealthProbe healthProbe,
+    TailwindCompanionCoordinator tailwindCompanionCoordinator,
     ILogger<AppRuntimeManager> logger)
 {
     private readonly object _gate = new();
     private readonly ConcurrentDictionary<string, byte> _backgroundHealthChecks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, TailwindSessionCompanion> _tailwindCompanions = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, AppSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _activeSessionIds = new(StringComparer.OrdinalIgnoreCase);
     private string? _defaultSessionId;
@@ -1372,6 +1379,7 @@ public sealed class AppRuntimeManager(
             async exitCode =>
             {
                 logger.LogInformation("Managed app session {SessionId} exited with code {ExitCode}", session.SessionId, exitCode);
+                await StopTailwindCompanionAsync(session.SessionId);
                 session.MarkExitedUnexpectedly(exitCode);
                 endpointAllocator.Release(session.EndpointLeaseId);
                 lock (_gate)
@@ -1388,6 +1396,19 @@ public sealed class AppRuntimeManager(
             cancellationToken);
 
         session.AttachProcess(process);
+        try
+        {
+            var tailwindCompanion = await tailwindCompanionCoordinator.TryStartAsync(session, template, cancellationToken);
+            if (tailwindCompanion is not null)
+            {
+                _tailwindCompanions[session.SessionId] = tailwindCompanion;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Tailwind companion startup failed for managed app session {SessionId}", session.SessionId);
+        }
+
         return (session, false);
     }
 
@@ -1395,6 +1416,8 @@ public sealed class AppRuntimeManager(
     {
         var session = GetById(sessionId)
             ?? throw new ToolInvocationException("SessionNotFound", "No managed session was found.", new { sessionId });
+
+        await StopTailwindCompanionAsync(session.SessionId);
 
         var process = session.Process;
         if (process is null)
@@ -1443,11 +1466,19 @@ public sealed class AppRuntimeManager(
         return new AppRebuildResult(replacementSession.SessionId, "forced-stop-start");
     }
 
+    private async Task StopTailwindCompanionAsync(string sessionId)
+    {
+        if (_tailwindCompanions.TryRemove(sessionId, out var companion))
+        {
+            await companion.DisposeAsync();
+        }
+    }
+
     private ManagedProcessStartInfo BuildProcessStartInfo(AppStartTemplate template, AppSession session, string correlationId)
     {
         var launchSpec = template.ToLaunchSpec();
         var environment = environmentOverlayFilter.Merge(
-            GetDefaultEnvironment(template, configuration.UsePollingFileWatcher),
+            BuildDefaultEnvironment(template, configuration.UsePollingFileWatcher, configuration.WatchSuppressBrowserRefresh),
             template.EnvironmentOverlay.ToDictionary(static pair => pair.Key, static pair => (string?)pair.Value, StringComparer.OrdinalIgnoreCase),
             configuration.UsePollingFileWatcher && template.LaneKind == RuntimeLaneKind.SourceWatch);
 
@@ -1594,7 +1625,10 @@ public sealed class AppRuntimeManager(
         return BuildManagedProcessStartArguments(template.ToLaunchSpec(), applicationArguments, artifactsRoot).Arguments;
     }
 
-    private static IReadOnlyDictionary<string, string> GetDefaultEnvironment(AppStartTemplate template, bool usePollingWatcher)
+    internal static IReadOnlyDictionary<string, string> BuildDefaultEnvironment(
+        AppStartTemplate template,
+        bool usePollingWatcher,
+        bool suppressBrowserRefresh)
     {
         var environment = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -1603,12 +1637,16 @@ public sealed class AppRuntimeManager(
             ["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1",
             ["DOTNET_WATCH_RESTART_ON_RUDE_EDIT"] = "1",
             ["DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER"] = "1",
-            ["DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH"] = "1",
             ["DOTNET_WATCH_SUPPRESS_EMOJIS"] = "1",
             ["DOTNET_CLI_USE_MSBUILD_SERVER"] = "1",
             ["ASPNETCORE_ENVIRONMENT"] = "Development",
             ["DOTNET_ENVIRONMENT"] = "Development"
         };
+
+        if (suppressBrowserRefresh)
+        {
+            environment["DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH"] = "1";
+        }
 
         if (usePollingWatcher)
         {

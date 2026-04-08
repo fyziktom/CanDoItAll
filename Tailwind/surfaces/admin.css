@@ -1,0 +1,42 @@
+@layer components {
+  .cda-admin-panel {
+    @apply flex min-h-full flex-col gap-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm;
+  }
+
+  .cda-admin-subpanel {
+    @apply rounded-2xl border border-slate-200 bg-slate-50 p-4;
+  }
+
+  .cda-admin-empty {
+    @apply rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600;
+  }
+
+  .cda-admin-note {
+    @apply rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-600;
+    overflow-wrap: anywhere;
+  }
+
+  .cda-admin-kicker {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-slate-500;
+  }
+
+  .cda-admin-heading {
+    @apply text-lg font-semibold text-slate-950;
+  }
+
+  .cda-admin-title {
+    @apply text-xl font-semibold text-slate-950;
+  }
+
+  .cda-admin-copy {
+    @apply text-sm leading-6 text-slate-600;
+  }
+
+  .cda-admin-code-label {
+    @apply mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500;
+  }
+
+  .cda-admin-knowledge-card {
+    @apply rounded-2xl border border-slate-200 bg-slate-50 p-4;
+  }
+}

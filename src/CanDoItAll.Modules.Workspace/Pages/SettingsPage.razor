@@ -2,16 +2,18 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Security
 @using CanDoItAll.Modules.Workspace.Pages.Components
+@using Microsoft.AspNetCore.Components
 @inject WorkspaceService WorkspaceService
 @inject SecretService SecretService
+@inject NavigationManager Navigation
 
 <PageTitle>Settings</PageTitle>
 
 <PageScaffold>
     <Header>
         <PageHeader Eyebrow="Settings"
-                    Title="Workspace defaults and providers"
-                    Description="Manage workspace defaults, encrypted secrets, and provider profiles as three separate jobs instead of one long settings page." />
+                    Title="Workspace defaults, data sources, and providers"
+                    Description="Manage workspace defaults, runtime data sources, encrypted secrets, and provider profiles as separate jobs instead of one long settings page." />
     </Header>
 
     <Lead>
@@ -19,7 +21,6 @@
             <SummaryTile Label="Providers" Value="@providers.Count.ToString()" HelperText="Configured provider profiles." />
             <SummaryTile Label="Enabled" Value="@providers.Count(item => item.IsEnabled).ToString()" HelperText="Profiles currently enabled." Tone="success" />
             <SummaryTile Label="Secrets" Value="@secrets.Count.ToString()" HelperText="Stored encrypted secrets." />
-            <SummaryTile Label="Default provider" Value="@DefaultProviderLabel" HelperText="Workspace default for new prompt sessions." Tone="info" />
         </SummaryTiles>
 
         <SecondaryTabs Items="SettingsTabs" SelectedKey="@settingsTab" SelectedKeyChanged="HandleSettingsTabChanged" />
@@ -29,20 +30,20 @@
         @if (string.Equals(settingsTab, "workspace", StringComparison.Ordinal))
         {
             <EditForm Model="settingsModel" OnValidSubmit="SaveSettingsAsync">
-                <div class="flex min-h-full flex-col gap-6">
+                <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
                     <FormSection Title="Workspace defaults" Description="These values define how the rest of the app boots and which provider profile new prompt sessions prefer.">
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Workspace name</label>
-                            <InputText @bind-Value="settingsModel.WorkspaceName" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                            <label class="cda-field-label">Workspace name</label>
+                            <InputText @bind-Value="settingsModel.WorkspaceName" class="cda-input" />
                         </div>
-                        <div class="grid gap-4 md:grid-cols-2">
+                        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Default output format</label>
-                                <InputText @bind-Value="settingsModel.DefaultPromptOutputFormat" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                <label class="cda-field-label">Default output format</label>
+                                <InputText @bind-Value="settingsModel.DefaultPromptOutputFormat" class="cda-input" />
                             </div>
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Default provider</label>
-                                <InputSelect @bind-Value="settingsModel.DefaultProviderProfileId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                <label class="cda-field-label">Default provider</label>
+                                <InputSelect @bind-Value="settingsModel.DefaultProviderProfileId" class="cda-input">
                                     <option value="">None</option>
                                     @foreach (var provider in providers)
                                     {
@@ -50,23 +51,31 @@
                                     }
                                 </InputSelect>
                             </div>
-                        </div>
+                        </Grid>
                     </FormSection>
 
                     <FormSection Title="Workspace notes" Description="Keep any operating notes or setup caveats close to the defaults.">
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Notes</label>
-                            <InputTextArea @bind-Value="settingsModel.Notes" class="min-h-32 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                            <label class="cda-field-label">Notes</label>
+                            <InputTextArea @bind-Value="settingsModel.Notes" class="cda-input cda-input--textarea min-h-32" />
                         </div>
                     </FormSection>
 
                     <StickyActionFooter StatusLabel="Workspace defaults" StatusMessage="@settingsMessage" StatusTone="success">
                         <PrimaryActions>
-                            <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Save defaults</button>
+                            <Button Text="Save defaults" Type="submit" />
                         </PrimaryActions>
                     </StickyActionFooter>
-                </div>
+                </Stack>
             </EditForm>
+        }
+        else if (string.Equals(settingsTab, "data-sources", StringComparison.Ordinal))
+        {
+            <DatabaseSourcesSettingsPanel />
+        }
+        else if (string.Equals(settingsTab, "storage", StringComparison.Ordinal))
+        {
+            <StorageSettingsPanel />
         }
         else if (string.Equals(settingsTab, "secrets", StringComparison.Ordinal))
         {
@@ -74,12 +83,12 @@
                 <ListHeader>
                     <ListPanelHeader Title="Secret vault" Description="Encrypted secrets are stored once and referenced from other modules." Count="@($"{FilteredSecrets.Count} secret(s)")">
                         <Actions>
-                            <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ResetSecretAsync">New secret</button>
+                            <Button Text="New secret" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetSecretAsync" />
                         </Actions>
                         <Filters>
                             <FilterBar ResultText="@($"{FilteredSecrets.Count} matching secret(s)")">
-                                <input @bind="secretSearch" @bind:event="oninput" class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700" placeholder="Search secrets" />
-                                <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ResetSecretSearch">Reset</button>
+                                <input @bind="secretSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search secrets" />
+                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetSecretSearch" />
                             </FilterBar>
                         </Filters>
                     </ListPanelHeader>
@@ -92,7 +101,7 @@
                     }
                     else
                     {
-                        <div class="space-y-3">
+                        <Stack GapScale="LayoutGap.Medium">
                             @foreach (var secret in FilteredSecrets)
                             {
                                 <SelectionListItem Title="@secret.Name"
@@ -106,75 +115,75 @@
                                     </Status>
                                 </SelectionListItem>
                             }
-                        </div>
+                        </Stack>
                     }
                 </ListContent>
 
                 <DetailHeader>
-                    <div class="space-y-1">
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Secret editor</p>
-                        <h2 class="text-xl font-semibold text-slate-950">@(secretModel.Id.HasValue ? secretModel.Name : "New secret")</h2>
-                        <p class="text-sm leading-6 text-slate-600">Secrets stay encrypted at rest and can be referenced from providers, resources, or other modules.</p>
-                    </div>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Secret editor</p>
+                        <h2 class="cda-title-xl">@(secretModel.Id.HasValue ? secretModel.Name : "New secret")</h2>
+                        <p class="cda-body-muted">Secrets stay encrypted at rest and can be referenced from providers, resources, or other modules.</p>
+                    </Stack>
                 </DetailHeader>
 
                 <DetailContent>
                     <EditForm Model="secretModel" OnValidSubmit="SaveSecretAsync">
-                        <div class="flex min-h-full flex-col gap-6">
+                        <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
                             <FormSection Title="Secret metadata" Description="Name the secret clearly and capture its usage scope.">
-                                <div class="grid gap-4 md:grid-cols-2">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
-                                        <InputText @bind-Value="secretModel.Name" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Name</label>
+                                        <InputText @bind-Value="secretModel.Name" class="cda-input" />
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Kind</label>
-                                        <InputSelect @bind-Value="secretModel.Kind" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                        <label class="cda-field-label">Kind</label>
+                                        <InputSelect @bind-Value="secretModel.Kind" class="cda-input">
                                             @foreach (var kind in Enum.GetValues<SecretKind>())
                                             {
                                                 <option value="@kind">@kind</option>
                                             }
                                         </InputSelect>
                                     </div>
-                                </div>
-                                <div class="grid gap-4 md:grid-cols-2">
+                                </Grid>
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Scope</label>
-                                        <InputText @bind-Value="secretModel.Scope" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Scope</label>
+                                        <InputText @bind-Value="secretModel.Scope" class="cda-input" />
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Rotation note</label>
-                                        <InputText @bind-Value="secretModel.RotationNote" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Rotation note</label>
+                                        <InputText @bind-Value="secretModel.RotationNote" class="cda-input" />
                                     </div>
-                                </div>
+                                </Grid>
                             </FormSection>
 
                             <FormSection Title="Encrypted payload" Description="The raw value is only edited here, while other areas consume references to the saved record.">
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Secret value</label>
-                                    <InputText @bind-Value="secretModel.SecretValue" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" type="password" />
+                                    <label class="cda-field-label">Secret value</label>
+                                    <InputText @bind-Value="secretModel.SecretValue" class="cda-input" type="password" />
                                 </div>
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Metadata JSON</label>
-                                    <InputTextArea @bind-Value="secretModel.MetadataJson" class="min-h-24 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    <label class="cda-field-label">Metadata JSON</label>
+                                    <InputTextArea @bind-Value="secretModel.MetadataJson" class="cda-input cda-input--textarea min-h-24" />
                                 </div>
                             </FormSection>
 
                             <StickyActionFooter StatusLabel="Secret vault" StatusMessage="@secretMessage" StatusTone="success">
                                 <SecondaryActions>
-                                    <button type="button" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="ResetSecretAsync">Clear</button>
+                                    <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetSecretAsync" />
                                 </SecondaryActions>
                                 <PrimaryActions>
-                                    <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Save secret</button>
+                                    <Button Text="Save secret" Type="submit" />
                                 </PrimaryActions>
                                 <DangerActions>
                                     @if (secretModel.Id.HasValue)
                                     {
-                                        <button type="button" class="inline-flex items-center rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700" @onclick="DeleteSecretAsync">Delete</button>
+                                        <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="DeleteSecretAsync" />
                                     }
                                 </DangerActions>
                             </StickyActionFooter>
-                        </div>
+                        </Stack>
                     </EditForm>
                 </DetailContent>
             </ListDetailShell>
@@ -185,12 +194,12 @@
                 <ListHeader>
                     <ListPanelHeader Title="Provider profiles" Description="Provider-specific settings live here, while the rest of the product consumes the neutral provider contract." Count="@($"{FilteredProviders.Count} profile(s)")">
                         <Actions>
-                            <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ResetProviderAsync">New provider</button>
+                            <Button Text="New provider" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProviderAsync" />
                         </Actions>
                         <Filters>
                             <FilterBar ResultText="@($"{FilteredProviders.Count} matching profile(s)")">
-                                <input @bind="providerSearch" @bind:event="oninput" class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700" placeholder="Search providers" />
-                                <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ResetProviderSearch">Reset</button>
+                                <input @bind="providerSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search providers" />
+                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProviderSearch" />
                             </FilterBar>
                         </Filters>
                     </ListPanelHeader>
@@ -203,11 +212,11 @@
                     }
                     else
                     {
-                        <div class="space-y-3">
+                        <Stack GapScale="LayoutGap.Medium">
                             @foreach (var provider in FilteredProviders)
                             {
                                 <SelectionListItem Title="@provider.Name"
-                                                   Eyebrow="@provider.ProviderKind.ToString()"
+                                                   Eyebrow="@provider.ConnectorDisplayName"
                                                    Meta="@provider.DefaultModel"
                                                    Summary="@provider.BaseUrl"
                                                    IsSelected="@(providerModel.Id == provider.Id)"
@@ -217,54 +226,64 @@
                                     </Status>
                                 </SelectionListItem>
                             }
-                        </div>
+                        </Stack>
                     }
                 </ListContent>
 
                 <DetailHeader>
-                    <div class="space-y-1">
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Provider editor</p>
-                        <h2 class="text-xl font-semibold text-slate-950">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
-                        <p class="text-sm leading-6 text-slate-600">Profiles keep provider-specific transport, capability flags, and health status in one editor.</p>
-                    </div>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Provider editor</p>
+                        <h2 class="cda-title-xl">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
+                        <p class="cda-body-muted">Profiles keep connector transport, capability flags, and health status in one editor.</p>
+                    </Stack>
                 </DetailHeader>
 
                 <DetailContent>
                     <EditForm Model="providerModel" OnValidSubmit="SaveProviderAsync">
-                        <div class="flex min-h-full flex-col gap-6">
-                            <FormSection Title="Provider identity" Description="Define the provider kind, transport endpoint, and default model.">
-                                <div class="grid gap-4 md:grid-cols-2">
+                        <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
+                            <FormSection Title="Connector identity" Description="Choose the connector plugin first, then fill only the schema fields that plugin exposes.">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Profile name</label>
-                                        <InputText @bind-Value="providerModel.Name" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Profile name</label>
+                                        <InputText @bind-Value="providerModel.Name" class="cda-input" data-testid="provider-name-input" />
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Provider kind</label>
-                                        <InputSelect @bind-Value="providerModel.ProviderKind" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                                            @foreach (var kind in Enum.GetValues<ProviderKind>())
+                                        <label class="cda-field-label">Connector plugin</label>
+                                        <InputSelect @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" class="cda-input" data-testid="provider-plugin-select">
+                                            @foreach (var manifest in providerManifests)
                                             {
-                                                <option value="@kind">@kind</option>
+                                                <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                             }
                                         </InputSelect>
                                     </div>
-                                </div>
-                                <div class="grid gap-4 md:grid-cols-2">
-                                    <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Base URL</label>
-                                        <InputText @bind-Value="providerModel.BaseUrl" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                    </div>
-                                    <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Default model</label>
-                                        <InputText @bind-Value="providerModel.DefaultModel" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                    </div>
-                                </div>
+                                </Grid>
+
+                                @if (SelectedProviderManifest is not null)
+                                {
+                                    <Alert AlertStyle="AlertStyle.Info">
+                                        <p class="font-semibold">@SelectedProviderManifest.DisplayName</p>
+                                        <p class="mt-1 break-all">Plugin key: @SelectedProviderManifest.PluginKey</p>
+                                        <p class="mt-1">@SelectedProviderManifest.HealthCheck.Summary</p>
+                                    </Alert>
+                                }
+
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                    @foreach (var field in SelectedProviderFields)
+                                    {
+                                        <ConnectorConfigFieldEditor Field="field"
+                                                                    State="providerModel.Configuration"
+                                                                    Secrets="secrets"
+                                                                    InputClass="cda-input"
+                                                                    TestId="@ResolveProviderFieldTestId(field)" />
+                                    }
+                                </Grid>
                             </FormSection>
 
                             <FormSection Title="Auth and capabilities" Description="Attach the secret reference and advertise what the profile supports.">
-                                <div class="grid gap-4 md:grid-cols-2">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">API key secret</label>
-                                        <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                        <label class="cda-field-label">API key secret</label>
+                                        <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="cda-input" data-testid="provider-secret-select">
                                             <option value="">None</option>
                                             @foreach (var secret in secrets)
                                             {
@@ -272,45 +291,36 @@
                                             }
                                         </InputSelect>
                                     </div>
-                                    <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Timeout (seconds)</label>
-                                        <InputNumber @bind-Value="providerModel.TimeoutSeconds" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                    </div>
-                                </div>
+                                </Grid>
 
-                                <div class="grid gap-3 md:grid-cols-2">
-                                    <label class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="providerModel.IsEnabled" /> Enabled</label>
-                                    <label class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="providerModel.SupportsStreaming" /> Streaming</label>
-                                    <label class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="providerModel.SupportsToolCalling" /> Tool calling</label>
-                                    <label class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="providerModel.SupportsStructuredOutput" /> Structured output</label>
-                                    <label class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-700"><InputCheckbox @bind-Value="providerModel.SupportsVision" /> Vision</label>
-                                </div>
-
-                                <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Extra settings JSON</label>
-                                    <InputTextArea @bind-Value="providerModel.ExtraSettingsJson" class="min-h-24 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                                </div>
+                                <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                                    <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.IsEnabled" /> Enabled</label>
+                                    <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsStreaming" /> Streaming</label>
+                                    <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsToolCalling" /> Tool calling</label>
+                                    <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsStructuredOutput" /> Structured output</label>
+                                    <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsVision" /> Vision</label>
+                                </Grid>
                             </FormSection>
 
                             <StickyActionFooter StatusLabel="Provider profiles" StatusMessage="@providerMessage" StatusTone="success">
                                 <SecondaryActions>
-                                    <button type="button" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="ResetProviderAsync">Clear</button>
+                                    <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetProviderAsync" />
                                     @if (providerModel.Id.HasValue)
                                     {
-                                        <button type="button" class="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700" @onclick="@(() => TestProviderAsync(providerModel.Id.Value))">Health</button>
+                                        <Button Text="Health" ButtonStyle="ButtonStyle.Info" Click="@(() => TestProviderAsync(providerModel.Id.Value))" />
                                     }
                                 </SecondaryActions>
                                 <PrimaryActions>
-                                    <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Save provider</button>
+                                    <Button Text="Save provider" Type="submit" data-testid="provider-save-button" />
                                 </PrimaryActions>
                                 <DangerActions>
                                     @if (providerModel.Id.HasValue)
                                     {
-                                        <button type="button" class="inline-flex items-center rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700" @onclick="@(() => DeleteProviderAsync(providerModel.Id.Value))">Delete</button>
+                                        <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="@(() => DeleteProviderAsync(providerModel.Id.Value))" />
                                     }
                                 </DangerActions>
                             </StickyActionFooter>
-                        </div>
+                        </Stack>
                     </EditForm>
                 </DetailContent>
             </ListDetailShell>
@@ -322,167 +332,5 @@
     </ChildContent>
 </PageScaffold>
 
-@code {
-    private WorkspaceSettingsModel settingsModel = new();
-    private SecretEditorModel secretModel = NewSecret();
-    private ProviderProfileEditorModel providerModel = NewProvider();
-    private IReadOnlyList<ProviderProfileSummary> providers = [];
-    private IReadOnlyList<SecretListItem> secrets = [];
-    private string? settingsMessage;
-    private string? secretMessage;
-    private string? providerMessage;
-    private string settingsTab = "workspace";
-    private string secretSearch = string.Empty;
-    private string providerSearch = string.Empty;
-
-    private IReadOnlyList<SecondaryTabItem> SettingsTabs =>
-    [
-        new("workspace", "Workspace"),
-        new("secrets", "Secrets", secrets.Count.ToString()),
-        new("providers", "Providers", providers.Count.ToString()),
-        new("project-structure", "Project Structure MCP")
-    ];
-
-    private IReadOnlyList<SecretListItem> FilteredSecrets => secrets
-        .Where(secret =>
-            string.IsNullOrWhiteSpace(secretSearch) ||
-            secret.Name.Contains(secretSearch, StringComparison.OrdinalIgnoreCase) ||
-            secret.Scope.Contains(secretSearch, StringComparison.OrdinalIgnoreCase))
-        .OrderBy(secret => secret.Name)
-        .ToList();
-
-    private IReadOnlyList<ProviderProfileSummary> FilteredProviders => providers
-        .Where(provider =>
-            string.IsNullOrWhiteSpace(providerSearch) ||
-            provider.Name.Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
-            provider.DefaultModel.Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
-            provider.BaseUrl.Contains(providerSearch, StringComparison.OrdinalIgnoreCase))
-        .OrderBy(provider => provider.Name)
-        .ToList();
-
-    private string DefaultProviderLabel => providers.FirstOrDefault(provider => provider.Id == settingsModel.DefaultProviderProfileId)?.Name ?? "None";
-
-    protected override async Task OnInitializedAsync() => await LoadAsync();
-
-    private async Task LoadAsync()
-    {
-        settingsModel = await WorkspaceService.GetSettingsAsync();
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-        secrets = await WorkspaceService.ListSecretsAsync();
-    }
-
-    private async Task SaveSettingsAsync()
-    {
-        await WorkspaceService.SaveSettingsAsync(settingsModel);
-        settingsMessage = "Workspace defaults saved.";
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-    }
-
-    private async Task SaveSecretAsync()
-    {
-        var result = await SecretService.SaveAsync(secretModel);
-        secretMessage = result.IsSuccess ? "Secret saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-        if (result.IsSuccess)
-        {
-            secrets = await WorkspaceService.ListSecretsAsync();
-            await ResetSecretAsync();
-        }
-    }
-
-    private async Task EditSecretAsync(Guid id)
-    {
-        var model = await SecretService.GetAsync(id);
-        if (model is not null)
-        {
-            secretModel = model;
-        }
-    }
-
-    private async Task DeleteSecretAsync()
-    {
-        if (!secretModel.Id.HasValue)
-        {
-            return;
-        }
-
-        await SecretService.DeleteAsync(secretModel.Id.Value);
-        secrets = await WorkspaceService.ListSecretsAsync();
-        secretMessage = "Secret deleted.";
-        await ResetSecretAsync();
-    }
-
-    private Task ResetSecretAsync()
-    {
-        secretModel = NewSecret();
-        return Task.CompletedTask;
-    }
-
-    private async Task SaveProviderAsync()
-    {
-        var result = await WorkspaceService.SaveProviderAsync(providerModel);
-        providerMessage = result.IsSuccess ? "Provider profile saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-        if (result.IsSuccess)
-        {
-            providers = await WorkspaceService.ListProviderProfilesAsync();
-            await ResetProviderAsync();
-        }
-    }
-
-    private async Task EditProviderAsync(Guid id)
-    {
-        providerModel = await WorkspaceService.GetProviderAsync(id);
-    }
-
-    private async Task TestProviderAsync(Guid id)
-    {
-        var result = await WorkspaceService.TestProviderAsync(id);
-        providerMessage = result.Message;
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-    }
-
-    private async Task DeleteProviderAsync(Guid id)
-    {
-        await WorkspaceService.DeleteProviderAsync(id);
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-        providerMessage = "Provider profile deleted.";
-        await ResetProviderAsync();
-    }
-
-    private Task ResetProviderAsync()
-    {
-        providerModel = NewProvider();
-        return Task.CompletedTask;
-    }
-
-    private Task HandleSettingsTabChanged(string key)
-    {
-        settingsTab = key;
-        return Task.CompletedTask;
-    }
-
-    private void ResetSecretSearch() => secretSearch = string.Empty;
-
-    private void ResetProviderSearch() => providerSearch = string.Empty;
-
-    private static string FormatTimestamp(DateTimeOffset timestamp) => timestamp.LocalDateTime.ToString("g");
-
-    private static SecretEditorModel NewSecret() => new()
-    {
-        Kind = SecretKind.ApiKey,
-        Scope = "workspace"
-    };
-
-    private static ProviderProfileEditorModel NewProvider() => new()
-    {
-        ProviderKind = ProviderKind.OpenAi,
-        BaseUrl = "https://api.openai.com/v1/models",
-        DefaultModel = "gpt-4.1",
-        TimeoutSeconds = 45,
-        IsEnabled = true,
-        SupportsStreaming = true,
-        SupportsToolCalling = true,
-        SupportsStructuredOutput = true
-    };
-}
 
 

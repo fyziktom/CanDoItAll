@@ -23,7 +23,7 @@
                 var isActive = stepIndex == EffectiveValue;
                 var isCompleted = stepIndex < EffectiveValue;
                 var canSelectCurrent = CanSelectStep(stepIndex, item);
-                var iconCssClass = ResolveIconCssClass(item.Icon);
+                var iconName = ResolveIconName(item.Icon);
 
                 <li class="relative min-w-0">
                     @if (stepIndex > 0)
@@ -44,11 +44,11 @@
                         <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold shadow-sm @(ResolveStepBadgeCss(isActive, isCompleted, item.Disabled))">
                             @if (isCompleted)
                             {
-                                <span aria-hidden="true">&#10003;</span>
+                                <Icon Name="check" />
                             }
-                            else if (iconCssClass is not null)
+                            else if (iconName is not null)
                             {
-                                <i class="@($"rz-fa-icon {iconCssClass}")" aria-hidden="true"></i>
+                                <span class="rz-icon cda-material-icon material-icons" aria-hidden="true">@iconName</span>
                             }
                             else if (!string.IsNullOrWhiteSpace(item.Icon))
                             {
@@ -69,34 +69,41 @@
         @if (activeItem.ChildContent is not null)
         {
             <div class="rounded-[1.5rem] border border-slate-200/80 bg-slate-50/70 p-4 shadow-inner shadow-white md:p-5">
-                <div class="flex flex-col gap-4">
-                    <div class="flex flex-col gap-3 border-b border-slate-200/80 pb-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div class="min-w-0 space-y-2">
-                            <div class="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-violet-700">Step @(EffectiveValue + 1) of @items.Count</div>
+                <Stack GapScale="LayoutGap.Large">
+                    <Split Breakpoint="LayoutBreakpoint.Lg"
+                           Gap="LayoutGap.Medium"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Class="border-b border-slate-200/80 pb-4">
+                        <Stack GapScale="LayoutGap.Small"
+                               Class="min-w-0">
+                            <div class="cda-eyebrow text-violet-700 tracking-[0.26em]">Step @(EffectiveValue + 1) of @items.Count</div>
                             <div class="text-[1.7rem] font-semibold leading-tight text-slate-950">@activeItem.Text</div>
                             @if (!string.IsNullOrWhiteSpace(activeItem.Description))
                             {
                                 <p class="max-w-2xl text-sm leading-6 text-slate-600">@activeItem.Description</p>
                             }
-                        </div>
+                        </Stack>
 
                         @if (ShouldRenderNavigation(isTop: true))
                         {
-                            <div class="flex shrink-0 flex-wrap items-center gap-3">
+                            <Cluster Gap="LayoutGap.Medium" Class="shrink-0">
                                 @RenderNavigationButtons(isTop: true)
-                            </div>
+                            </Cluster>
                         }
-                    </div>
+                    </Split>
 
                     @activeItem.ChildContent
 
                     @if (ShouldRenderNavigation(isTop: false))
                     {
-                        <div class="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200/80 pt-4">
+                        <Cluster JustifyContent="JustifyContent.End"
+                                 Gap="LayoutGap.Medium"
+                                 Class="border-t border-slate-200/80 pt-4">
                             @RenderNavigationButtons(isTop: false)
-                        </div>
+                        </Cluster>
                     }
-                </div>
+                </Stack>
             </div>
         }
     </div>
@@ -368,11 +375,11 @@
         };
     }
 
-    private static string? ResolveIconCssClass(string? iconToken)
+    private static string? ResolveIconName(string? iconToken)
     {
-        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        if (MaterialIconCatalog.TryResolveIconName(iconToken, out var iconName))
         {
-            return cssClass;
+            return iconName;
         }
 
         return null;

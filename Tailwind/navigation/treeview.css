@@ -1,0 +1,106 @@
+@layer components {
+  .cda-treeview {
+    @apply min-w-0 w-full max-w-full;
+  }
+
+  .cda-treeview__list,
+  .cda-treeview__children {
+    @apply flex min-w-0 w-full max-w-full flex-col gap-1;
+  }
+
+  .cda-treeview__item {
+    @apply min-w-0 w-full max-w-full;
+  }
+
+  .cda-treeview__row-shell {
+    @apply flex min-w-0 w-full max-w-full items-center gap-1;
+    padding-left: calc(var(--cda-treeview-level, 0) * 0.85rem);
+  }
+
+  .cda-treeview__toggle {
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center transition;
+    border-radius: var(--cad-radius-control);
+    color: var(--cad-color-text-soft);
+  }
+
+  .cda-treeview__toggle:hover {
+    background: color-mix(in srgb, var(--cad-color-surface-soft) 80%, transparent);
+    color: var(--cad-color-text-muted);
+  }
+
+  .cda-treeview__toggle--placeholder {
+    @apply opacity-0;
+  }
+
+  .cda-treeview__row {
+    @apply flex min-w-0 w-full max-w-full flex-1 items-center gap-2 overflow-hidden border px-2.5 py-2 text-left text-sm transition;
+    border-radius: var(--cad-radius-control);
+    border-color: transparent;
+    color: var(--cad-color-text);
+  }
+
+  .cda-treeview__row:hover {
+    border-color: var(--cad-color-border-soft);
+    background: color-mix(in srgb, var(--cad-color-surface-soft) 80%, transparent);
+  }
+
+  .cda-treeview__row--branch {
+    @apply font-semibold;
+  }
+
+  .cda-treeview__row--selected {
+    border-color: var(--cad-tone-info-soft-border);
+    background: var(--cad-tone-info-soft-bg);
+    color: var(--cad-tone-info-soft-fg);
+  }
+
+  .cda-treeview__row--disabled {
+    @apply cursor-not-allowed opacity-45;
+  }
+
+  .cda-treeview__icon {
+    @apply inline-flex h-5 w-5 shrink-0 items-center justify-center;
+    color: var(--cad-color-text-soft);
+  }
+
+  .cda-treeview__text {
+    @apply min-w-0 flex-1 truncate;
+  }
+
+  .cda-treeview__badge {
+    @apply shrink-0 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em];
+    border-radius: 9999px;
+    background: var(--cad-tone-base-soft-bg);
+    color: var(--cad-tone-base-soft-fg);
+  }
+
+  .cda-treeview--workbench .cda-treeview__toggle {
+    color: var(--cad-color-text-soft);
+  }
+
+  .cda-treeview--workbench .cda-treeview__toggle:hover {
+    background: color-mix(in srgb, var(--cad-color-surface-soft) 68%, transparent);
+    color: var(--cad-color-text-strong);
+  }
+
+  .cda-treeview--workbench .cda-treeview__row {
+    border-color: color-mix(in srgb, var(--cad-color-border) 55%, transparent);
+    background: color-mix(in srgb, var(--cad-color-surface-soft) 72%, transparent);
+    color: var(--cad-color-text-strong);
+  }
+
+  .cda-treeview--workbench .cda-treeview__row--selected {
+    border-color: var(--cad-tone-primary-soft-border);
+    background: color-mix(in srgb, var(--cad-tone-primary-soft-bg) 88%, transparent);
+    color: var(--cad-tone-primary-soft-fg);
+  }
+
+  .cda-treeview--workbench .cda-treeview__icon {
+    color: var(--cad-color-text);
+  }
+
+  .cda-treeview--workbench .cda-treeview__badge {
+    background: color-mix(in srgb, var(--cad-tone-base-soft-bg) 72%, transparent);
+    color: var(--cad-tone-base-soft-fg);
+  }
+}

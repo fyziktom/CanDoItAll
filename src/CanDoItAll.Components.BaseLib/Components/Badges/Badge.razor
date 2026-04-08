@@ -57,16 +57,16 @@ else
     {
         var toneCss = Tone switch
         {
-            BadgeTone.Promo => "border-violet-200 bg-violet-50 text-violet-700",
-            BadgeTone.Success => "border-emerald-200 bg-emerald-50 text-emerald-700",
-            BadgeTone.Warn => "border-amber-200 bg-amber-50 text-amber-800",
-            BadgeTone.Accent => "border-sky-200 bg-sky-50 text-sky-700",
-            BadgeTone.Rank => "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700",
-            BadgeTone.Info => "border-cyan-200 bg-cyan-50 text-cyan-700",
-            _ => "border-slate-200 bg-slate-100 text-slate-700"
+            BadgeTone.Promo => "cda-badge--tone-secondary",
+            BadgeTone.Success => "cda-badge--tone-success",
+            BadgeTone.Warn => "cda-badge--tone-warning",
+            BadgeTone.Accent => "cda-badge--tone-info",
+            BadgeTone.Rank => "cda-badge--tone-secondary",
+            BadgeTone.Info => "cda-badge--tone-info",
+            _ => "cda-badge--tone-base"
         };
 
-        return $"inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] {toneCss}";
+        return $"cda-badge {toneCss}";
     }
 
     private RenderFragment RenderContent()

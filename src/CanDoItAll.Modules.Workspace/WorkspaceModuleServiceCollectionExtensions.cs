@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Modules.Workspace;
 
@@ -11,8 +12,13 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.AddScoped<IProviderAdapter, OllamaProviderAdapter>();
         services.AddScoped<IProviderAdapter, OllamaRemoteProviderAdapter>();
         services.AddScoped<ProviderRegistry>();
+        services.AddScoped<IConnectorManifestSource>(serviceProvider => serviceProvider.GetRequiredService<ProviderRegistry>());
+        services.TryAddScoped<ConnectorPluginRegistry>();
+        services.AddScoped<ConnectorCommandProcessor>();
+        services.AddScoped<ConnectorOutboxService>();
         services.AddScoped<ProviderExecutionService>();
         services.AddScoped<WorkspaceService>();
+        services.AddScoped<DatabaseProfileWorkspaceService>();
         services.AddScoped<ProjectStructureAgentAdministrationService>();
         services.AddScoped<IProjectManagementKnowledgeProvider, StaticProjectManagementKnowledgeProvider>();
         services.AddScoped<ProjectManagementKnowledgeService>();

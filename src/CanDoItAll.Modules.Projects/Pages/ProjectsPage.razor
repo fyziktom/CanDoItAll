@@ -9,1276 +9,598 @@ risks: route-driven-modal-state, modal-save-regressions
 tests: component:ProjectsPageTests, e2e:projects-smoke
 *@
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.SharedKernel
 @inject ProjectsService ProjectsService
+@inject IProjectGanttPreviewService ProjectGanttPreviewService
 @inject IProjectWorkbenchSeedService ProjectWorkbenchSeedService
 @inject NavigationManager Navigation
 
 <PageTitle>Projects</PageTitle>
 
 <PageScaffold>
-<Header>
-<div class="pr-20 sm:pr-24">
-<PageHeader Eyebrow="Projects"
-Compact="true"
-Title="Project workspace">
-</PageHeader>
-</div>
-</Header>
+    <Header>
+        <div class="pr-20 sm:pr-24">
+            <PageHeader Eyebrow="Projects"
+                        Compact="true"
+                        Title="Project workspace" />
+        </div>
+    </Header>
 
-<ChildContent>
-<section class="flex min-h-[26rem] flex-col overflow-hidden rounded-[1.85rem] border border-slate-200 bg-white/92 shadow-sm shadow-slate-200/60"
-         data-testid="projects-board"
-         style="height: calc(100vh - 15rem);">
-<div class="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 xl:flex-row xl:items-center xl:justify-between"
-     data-testid="projects-command-bar">
-<div class="min-w-0 space-y-3">
-<div class="flex flex-wrap items-center gap-2">
-<h2 class="text-lg font-semibold tracking-tight text-slate-950">Portfolio board</h2>
-<StatusBadge Tone="info" Text="@($"{FilteredProjectSummaries.Count} visible")" />
-</div>
-<p class="max-w-3xl text-sm leading-6 text-slate-600">Search, inspect, edit, and jump into dashboard, structure, or calendar from one compact board without losing the project list.</p>
-<div class="flex flex-wrap items-center gap-2 text-xs">
-<span class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 font-medium text-sky-700">
-<span class="text-[10px] font-bold uppercase tracking-[0.18em]">ACT</span>
-<span>@projectSummaries.Count(project => project.Status == ProjectStatus.Active) active</span>
-</span>
-<span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-600">
-<span class="text-[10px] font-bold uppercase tracking-[0.18em]">DRF</span>
-<span>@projectSummaries.Count(project => project.Status == ProjectStatus.Draft) draft</span>
-</span>
-<span class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 font-medium text-amber-700">
-<span class="text-[10px] font-bold uppercase tracking-[0.18em]">UPD</span>
-<span>@LatestUpdatedProjectLabel</span>
-</span>
-<span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600">
-<span class="text-[10px] font-bold uppercase tracking-[0.18em]">NOTE</span>
-<span>@LatestUpdatedProjectHelper</span>
-</span>
-</div>
-</div>
-
-<div class="flex w-full max-w-2xl flex-col gap-2">
-<div class="flex flex-wrap items-center justify-end gap-2">
-<button type="button"
-class="inline-flex h-9 items-center gap-2 rounded-xl bg-slate-900 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
-data-testid="projects-new-button"
-@onclick="OpenNewProjectAsync">
-<span aria-hidden="true" class="text-base font-bold leading-none">+</span>
-<span>New</span>
-</button>
-<button type="button"
-class="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-@onclick="NavigateHome">
-<span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">DB</span>
-<span>Dashboard</span>
-</button>
-</div>
-<label class="relative block min-w-0 flex-1">
-<span class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-FIND
-</span>
-<input @bind="projectSearch"
-@bind:event="oninput"
-class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 pl-14 text-sm text-slate-700 shadow-sm"
-placeholder="Search by name or current phase" />
-</label>
-<div class="flex flex-wrap items-center gap-2">
-<label class="relative min-w-[12rem] flex-1 sm:flex-none">
-<span class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-STATUS
-</span>
-<InputSelect @bind-Value="statusFilter" class="w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 py-2 pl-[4.6rem] pr-9 text-sm text-slate-700 shadow-sm">
-<option value="">All statuses</option>
-@foreach (var status in Enum.GetValues<ProjectStatus>())
-{
-<option value="@status.ToString()">@status</option>
-}
-</InputSelect>
-<span class="pointer-events-none absolute inset-y-0 right-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-V
-</span>
-</label>
-<label class="relative min-w-[14rem] flex-1 sm:flex-none">
-<span class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-PROJECT
-</span>
-<InputSelect @bind-Value="hierarchyFilterProjectId" class="w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 py-2 pl-[4.9rem] pr-9 text-sm text-slate-700 shadow-sm" data-testid="hierarchy-filter-project">
-<option value="">Any project</option>
-@foreach (var project in projectSummaries.OrderBy(project => project.Name))
-{
-<option value="@project.Id">@project.Name</option>
-}
-</InputSelect>
-<span class="pointer-events-none absolute inset-y-0 right-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-V
-</span>
-</label>
-<label class="relative min-w-[12rem] flex-1 sm:flex-none">
-<span class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-LINK
-</span>
-<InputSelect @bind-Value="hierarchyFilterMode" class="w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 py-2 pl-[3.8rem] pr-9 text-sm text-slate-700 shadow-sm" data-testid="hierarchy-filter-mode">
-<option value="">All links</option>
-<option value="children">Subprojects</option>
-<option value="parents">Parents</option>
-<option value="related">Related</option>
-</InputSelect>
-<span class="pointer-events-none absolute inset-y-0 right-3 inline-flex items-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-V
-</span>
-</label>
-<button type="button"
-class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-@onclick="ResetFilters">
-<span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">RST</span>
-<span>Reset</span>
-</button>
-</div>
-<p class="text-xs leading-5 text-slate-500">@HierarchyFilterHelper</p>
-</div>
-</div>
-
-<div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" data-testid="projects-cards-scroll">
-@if (FilteredProjectSummaries.Count == 0)
-{
-<EmptyState Eyebrow="No matching projects"
-Title="Adjust the filters or start a new project"
-Description="When projects match the current filters, they appear here as compact cards with overview and dashboard actions.">
-<Actions>
-<button type="button"
-class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-@onclick="OpenNewProjectAsync">
-New project
-</button>
-</Actions>
-</EmptyState>
-}
-else
-{
-<div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-@foreach (var project in FilteredProjectSummaries)
-{
-<article class="@GetProjectCardCss(project.Status)" data-testid="project-card">
-<div class="flex items-start gap-3">
-<div class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-xs font-bold uppercase tracking-[0.18em] text-slate-600 shadow-sm">
-@GetProjectMonogram(project.Name)
-</div>
-<div class="min-w-0 flex-1">
-<div class="flex items-start justify-between gap-3">
-<div class="min-w-0">
-<p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Project</p>
-<h3 class="mt-1 text-base font-bold tracking-tight text-slate-950">@project.Name</h3>
-</div>
-<StatusBadge Tone="@GetStatusTone(project.Status)" Text="@project.Status.ToString()" />
-</div>
-<p class="mt-2 text-sm leading-5 text-slate-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : project.CurrentPhase)</p>
-</div>
-</div>
-
-<div class="mt-4 grid gap-2 sm:grid-cols-4">
-<div class="rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5">
-<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Phases</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@project.PhaseCount</p>
-</div>
-<div class="rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5">
-<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Parents</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@project.ParentCount</p>
-</div>
-<div class="rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5">
-<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Subprojects</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@project.ChildCount</p>
-</div>
-<div class="rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5">
-<p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Updated</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@project.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
-</div>
-</div>
-
-<div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/70 pt-3">
-<div class="flex flex-wrap items-center gap-2">
-<button type="button"
-class="inline-flex h-9 items-center gap-2 rounded-xl bg-slate-900 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
-data-testid="project-card-details-button"
-@onclick="@(() => OpenProjectPreviewAsync(project.Id))">
-<span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">VIEW</span>
-<span>View</span>
-</button>
-<button type="button"
-class="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-data-testid="project-card-subprojects-button"
-@onclick="@(() => OpenHierarchyModalAsync(project.Id))">
-<span aria-hidden="true" class="text-[10px] font-bold uppercase tracking-[0.18em]">SUB</span>
-<span>Subprojects</span>
-</button>
-</div>
-<div class="flex flex-wrap items-center gap-1.5">
-<button type="button"
-class="@GetQuickActionButtonCss()"
-title="Open dashboard tab"
-aria-label="Open dashboard tab"
-@onclick="@(() => OpenProjectDashboard(project.Id))">
-<span aria-hidden="true">DB</span>
-</button>
-<button type="button"
-class="@GetQuickActionButtonCss()"
-title="Open structure"
-aria-label="Open structure"
-@onclick="@(() => OpenStructure(project.Id))">
-<span aria-hidden="true">ST</span>
-</button>
-<button type="button"
-class="@GetQuickActionButtonCss()"
-title="Open calendar"
-aria-label="Open calendar"
-@onclick="@(() => OpenCalendar(project.Id))">
-<span aria-hidden="true">CAL</span>
-</button>
-</div>
-</div>
-</article>
-}
-</div>
-}
-</div>
-</section>
-</ChildContent>
+    <ChildContent>
+        <ProjectsBoard ProjectSummaries="projectSummaries"
+                       FilteredProjectSummaries="FilteredProjectSummaries"
+                       ProjectSearch="@projectSearch"
+                       ProjectSearchChanged="@(value => { projectSearch = value; })"
+                       StatusFilter="@statusFilter"
+                       StatusFilterChanged="@(value => { statusFilter = value; })"
+                       RelatedPartyCategoryFilter="@relatedPartyCategoryFilter"
+                       RelatedPartyCategoryFilterChanged="HandleRelatedPartyCategoryFilterChanged"
+                       RelatedPartyValueFilter="@relatedPartyValueFilter"
+                       RelatedPartyValueFilterChanged="HandleRelatedPartyValueFilterChanged"
+                       AvailableRelatedPartyValues="@AvailableRelatedPartyValues"
+                       HierarchyFilterProjectId="@hierarchyFilterProjectId"
+                       HierarchyFilterProjectIdChanged="@(value => { hierarchyFilterProjectId = value; })"
+                       HierarchyFilterMode="@hierarchyFilterMode"
+                       HierarchyFilterModeChanged="@(value => { hierarchyFilterMode = value; })"
+                       HierarchyFilterHelper="@HierarchyFilterHelper"
+                       LatestUpdatedProjectLabel="@LatestUpdatedProjectLabel"
+                       LatestUpdatedProjectHelper="@LatestUpdatedProjectHelper"
+                       OpenNewProject="OpenNewProjectAsync"
+                       NavigateHome="NavigateHome"
+                       ResetFilters="ResetFilters"
+                       OpenProjectPreview="OpenProjectPreviewAsync"
+                       OpenHierarchyModal="OpenHierarchyModalAsync"
+                       OpenProjectDashboard="OpenProjectDashboard"
+                       OpenStructure="OpenStructure"
+                       OpenCalendar="OpenCalendar"
+                       OpenGanttPreview="OpenGanttPreviewAsync" />
+    </ChildContent>
 </PageScaffold>
 
-@if (showProjectModal)
+<ProjectModalHost IsOpen="showProjectModal"
+                  IsEditorMode="@(modalMode == ProjectModalMode.Editor)"
+                  Editor="editor"
+                  StarterObjects="starterObjects"
+                  StarterObjectKinds="starterObjectKinds"
+                  ProjectSummaries="projectSummaries"
+                  WizardStep="wizardStep"
+                  WizardSteps="wizardSteps"
+                  WizardTabs="WizardTabs"
+                  Message="@message"
+                  IsErrorMessage="IsErrorMessage"
+                  Close="CloseProjectModalAsync"
+                  SwitchToOverview="SwitchToOverview"
+                  SwitchToEditor="SwitchToEditor"
+                  WizardTabChanged="HandleWizardTabChanged"
+                  AddPhase="AddPhaseAsync"
+                  RemovePhase="RemovePhaseAsync"
+                  AddStarterObject="AddStarterObject"
+                  RemoveStarterObject="RemoveStarterObject"
+                  PreviousStep="PreviousStep"
+                  NextStep="NextStep"
+                  Save="SaveAsync"
+                  SaveAndOpenStructure="SaveAndOpenStructureAsync"
+                  Delete="DeleteAsync"
+                  OpenProjectDashboard="OpenProjectDashboardAsync"
+                  OpenStructure="OpenStructure"
+                  OpenCalendar="OpenCalendar" />
+
+<ProjectHierarchyModal State="hierarchyDialog"
+                       Close="CloseHierarchyModal"
+                       OpenProjectPreview="OpenProjectPreviewFromHierarchyAsync"
+                       OpenStructure="OpenStructure"
+                       OpenHierarchy="OpenHierarchyModalAsync" />
+
+@if (showGanttPreviewModal)
 {
-<div class="fixed inset-0 flex items-start justify-center overflow-y-auto p-4 sm:p-6" style="z-index: 140;">
-<div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" @onclick="CloseProjectModalAsync"></div>
+    <Dialog IsOpen="true"
+            Eyebrow="Mermaid Gantt"
+            Title="@(ganttPreviewDialog?.ProjectName ?? "Project Gantt preview")"
+            Subtitle="Review the dependency-aware Mermaid Gantt source generated from the project structure graph."
+            Size="ModalSize.Wide"
+            ShowCloseButton="false"
+            TestId="projects-gantt-modal"
+            OnClose="CloseGanttPreviewAsync">
+        <HeaderActions>
+            @if (ganttPreviewDialog is not null)
+            {
+                <StatusBadge Tone="info" Text="@($"{ganttPreviewDialog.RowCount} rows")" />
+                <StatusBadge Tone="neutral" Text="@($"{ganttPreviewDialog.DependencyCount} dependencies")" />
+                <Button ButtonStyle="ButtonStyle.Light"
+                        Text="Structure"
+                        data-testid="projects-gantt-open-structure-button"
+                        Click="OpenStructureFromGanttPreviewAsync" />
+            }
+            <Button ButtonStyle="ButtonStyle.Light"
+                    Text="Close"
+                    Click="CloseGanttPreviewAsync" />
+        </HeaderActions>
+        <ChildContent>
+            @if (!string.IsNullOrWhiteSpace(ganttPreviewError))
+            {
+                <EmptyState Eyebrow="Preview unavailable"
+                            Title="Unable to build the Mermaid Gantt preview"
+                            Description="@ganttPreviewError">
+                    <Actions>
+                        <Button Text="Close"
+                                Click="CloseGanttPreviewAsync" />
+                    </Actions>
+                </EmptyState>
+            }
+            else if (ganttPreviewDialog is not null)
+            {
+                <Grid Gap="LayoutGap.Large"
+                      ColumnTemplateLg="minmax(0,0.78fr) minmax(0,1.22fr)">
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Preview facts</p>
+                        <h3 class="mt-1 text-lg font-semibold text-slate-950">@ganttPreviewDialog.RootTitle</h3>
+                        <p class="mt-3 text-sm leading-6 text-slate-600">
+                            This Mermaid source follows the current structure graph, keeps dependency ordering, and falls back to the generated anchor date when tasks are unscheduled.
+                        </p>
 
-@if (modalMode == ProjectModalMode.Editor)
-{
-<EditForm Model="editor" OnValidSubmit="SaveAsync" class="relative flex w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/25" style="z-index: 141; max-height: min(92vh, calc(100% - 2rem));" data-testid="projects-editor-modal" @onclick:stopPropagation="true">
-<div class="border-b border-slate-200 px-6 py-5">
-<div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-<div class="space-y-2">
-<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Project editor</p>
-<h2 class="text-2xl font-semibold tracking-tight text-slate-950">@(editor.Id.HasValue ? editor.Name : "New project")</h2>
-<p class="max-w-3xl text-sm leading-6 text-slate-600">Use the editor only when you need to shape the project deeply. The main page stays dedicated to scanning cards and opening focused tabs.</p>
-</div>
+                        <Grid Gap="LayoutGap.Small"
+                              ColumnsSm="3"
+                              Class="mt-4">
+                            <MetricCard Label="Rows" Value="@ganttPreviewDialog.RowCount.ToString()" />
+                            <MetricCard Label="Dependencies" Value="@ganttPreviewDialog.DependencyCount.ToString()" />
+                            <MetricCard Label="Anchor" Value="@ganttPreviewDialog.AnchorDate.ToString("yyyy-MM-dd")" />
+                        </Grid>
+                    </SurfaceCard>
 
-<div class="flex flex-wrap items-center gap-2">
-@if (editor.Id.HasValue)
-{
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="SwitchToOverview">
-Back to details
-</button>
-}
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="CloseProjectModalAsync">
-Close
-</button>
-</div>
-</div>
-
-<div class="mt-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-<SecondaryTabs Items="WizardTabs"
-SelectedKey="@wizardStep.ToString()"
-SelectedKeyChanged="HandleWizardTabChanged" />
-
-<div class="flex flex-wrap items-center gap-2">
-<StatusBadge Tone="@GetStatusTone(editor.Status)" Text="@editor.Status.ToString()" />
-<StatusBadge Tone="neutral" Text="@($"{editor.Phases.Count} phase(s)")" />
-<StatusBadge Tone="info" Text="@($"{starterObjects.Count} starter object(s)")" />
-</div>
-</div>
-</div>
-
-<div class="flex-1 overflow-y-auto px-6 py-6">
-<div class="space-y-6">
-<SummaryTiles>
-<SummaryTile Label="Step" Value="@($"{wizardStep + 1} / {wizardSteps.Length}")" HelperText="@wizardSteps[wizardStep]" Tone="info" />
-<SummaryTile Label="Current phase" Value="@(string.IsNullOrWhiteSpace(editor.CurrentPhase) ? "Unset" : editor.CurrentPhase)" HelperText="The phase the workspace should foreground." />
-<SummaryTile Label="Target date" Value="@FormatDate(editor.TargetDateUtc)" HelperText="Leave empty when timing is still fluid." />
-<SummaryTile Label="Stack decisions" Value="@MeaningfulOptions.Count().ToString()" HelperText="Profile choices already captured for prompts and validation." />
-</SummaryTiles>
-
-@switch (wizardStep)
-{
-case 0:
-<FormSection Title="Identity"
-Description="Frame the project clearly before moving into phases and downstream workbench actions.">
-<div class="grid gap-4 lg:grid-cols-2">
-<div>
-<label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
-<InputText @bind-Value="editor.Name" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" data-testid="project-name-input" />
-</div>
-<div>
-<label class="mb-1 block text-sm font-medium text-slate-700">Current phase</label>
-<InputText @bind-Value="editor.CurrentPhase" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-</div>
-</div>
-
-<div class="grid gap-4 lg:grid-cols-2">
-<div>
-<label class="mb-1 block text-sm font-medium text-slate-700">Status</label>
-<InputSelect @bind-Value="editor.Status" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-@foreach (var status in Enum.GetValues<ProjectStatus>())
-{
-<option value="@status">@status</option>
-}
-</InputSelect>
-</div>
-<div>
-<label class="mb-1 block text-sm font-medium text-slate-700">Target date</label>
-<InputDate @bind-Value="editor.TargetDateUtc" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-</div>
-</div>
-
-<div>
-<label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-<InputTextArea @bind-Value="editor.Description" class="min-h-28 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-</div>
-
-<div>
-<label class="mb-1 block text-sm font-medium text-slate-700">Objective</label>
-<InputTextArea @bind-Value="editor.Objective" class="min-h-28 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-</div>
-</FormSection>
-break;
-case 1:
-<FormSection Title="Dates and phases"
-Description="Keep phase planning explicit so the project calendar and workbench stay aligned."
-Actions="PhaseActions">
-
-@if (editor.Phases.Count == 0)
-{
-<EmptyState Eyebrow="No phases"
-Title="Add the first phase"
-Description="Phases become the backbone for structure, validation, and calendar work.">
-<Actions>
-<button type="button"
-class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-@onclick="AddPhaseAsync">
-Add phase
-</button>
-</Actions>
-</EmptyState>
-}
-else
-{
-<div class="space-y-4">
-@foreach (var phase in editor.Phases)
-{
-<div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
-<div class="grid gap-3 xl:grid-cols-5">
-<InputText @bind-Value="phase.Name" class="rounded-xl border border-slate-300 px-3 py-2 text-sm xl:col-span-2" />
-<InputSelect @bind-Value="phase.Status" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-@foreach (var status in Enum.GetValues<ProjectPhaseStatus>())
-{
-<option value="@status">@status</option>
-}
-</InputSelect>
-<InputDate @bind-Value="phase.StartDateUtc" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-<InputDate @bind-Value="phase.EndDateUtc" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-<InputTextArea @bind-Value="phase.Goal" class="min-h-20 rounded-xl border border-slate-300 px-3 py-2 text-sm xl:col-span-4" />
-<button type="button"
-class="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700"
-@onclick="@(() => RemovePhaseAsync(phase))">
-Remove
-</button>
-</div>
-</div>
-}
-</div>
-}
-</FormSection>
-break;
-case 2:
-<FormSection Title="Stack profile"
-Description="Capture the main platform decisions once so downstream prompts and validations inherit the same context.">
-<div class="grid gap-4 lg:grid-cols-2">
-@foreach (var option in editor.Options.OrderBy(item => item.Category))
-{
-<div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
-<div class="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">@option.Category</div>
-<div class="grid gap-3">
-<InputText @bind-Value="option.OptionName" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-<InputText @bind-Value="option.Notes" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-</div>
-</div>
-}
-</div>
-</FormSection>
-break;
-case 3:
-<FormSection Title="Linked object planning"
-Description="Capture the first notes, milestones, repositories, or links that should appear when the structure workbench opens."
-Actions="StarterActions">
-
-@if (starterObjects.Count == 0)
-{
-<EmptyState Eyebrow="No starter objects"
-Title="Seed the first artifacts"
-Description="Add the initial objects you expect to create right after the project workspace is saved.">
-<Actions>
-<button type="button"
-class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-@onclick="AddStarterObject">
-Add planned object
-</button>
-</Actions>
-</EmptyState>
-}
-else
-{
-<div class="space-y-4">
-@foreach (var starter in starterObjects)
-{
-<div class="grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-4 xl:grid-cols-4">
-<InputSelect @bind-Value="starter.ObjectType" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-@foreach (var kind in starterObjectKinds)
-{
-<option value="@kind">@kind</option>
-}
-</InputSelect>
-<InputText @bind-Value="starter.Title" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-<InputText @bind-Value="starter.Subtitle" class="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-<button type="button"
-class="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700"
-@onclick="@(() => starterObjects.Remove(starter))">
-Remove
-</button>
-</div>
-}
-</div>
-}
-</FormSection>
-break;
-default:
-<FormSection Title="Review"
-Description="Confirm the project shape before opening the next workbench surface.">
-<div class="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-<div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Project summary</p>
-<p class="mt-2 text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(editor.Name) ? "Unnamed project" : editor.Name)</p>
-<p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(editor.Description) ? "No description captured yet." : editor.Description)</p>
-</div>
-
-<div class="rounded-[1.35rem] border border-sky-200 bg-sky-50/80 p-4 text-sm leading-6 text-sky-900">
-Saving keeps the card list current, preserves the modal context, and lets the user open structure or calendar tabs only when they actually need a larger work surface.
-</div>
-</div>
-
-<div class="grid gap-4 md:grid-cols-3">
-<div class="rounded-[1.2rem] bg-white px-4 py-3">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Status</p>
-<p class="mt-2 text-sm font-semibold text-slate-950">@editor.Status</p>
-</div>
-<div class="rounded-[1.2rem] bg-white px-4 py-3">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Phases</p>
-<p class="mt-2 text-sm font-semibold text-slate-950">@editor.Phases.Count</p>
-</div>
-<div class="rounded-[1.2rem] bg-white px-4 py-3">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Starter objects</p>
-<p class="mt-2 text-sm font-semibold text-slate-950">@starterObjects.Count</p>
-</div>
-</div>
-</FormSection>
-break;
-}
-</div>
-</div>
-
-<div class="border-t border-slate-200 bg-slate-50/90 px-6 py-4">
-<div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-<div class="space-y-1">
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Project save state</p>
-<p class="text-sm @(IsErrorMessage ? "text-rose-700" : "text-slate-600")">@(string.IsNullOrWhiteSpace(message) ? "Save keeps the grid in sync without leaving the page." : message)</p>
-</div>
-
-<div class="flex flex-wrap items-center gap-2">
-<button type="button"
-class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
-disabled="@(wizardStep == 0)"
-@onclick="PreviousStep">
-Back
-</button>
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-disabled="@(wizardStep == wizardSteps.Length - 1)"
-@onclick="NextStep">
-Next
-</button>
-<button type="submit"
-class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-data-testid="project-save-button">
-Save project
-</button>
-<button type="button"
-class="inline-flex items-center rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700"
-@onclick="SaveAndOpenStructureAsync">
-Save and open structure
-</button>
-@if (editor.Id.HasValue)
-{
-<button type="button"
-class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="OpenProjectDashboardAsync">
-Open dashboard tab
-</button>
-<button type="button"
-class="inline-flex items-center rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700"
-@onclick="DeleteAsync">
-Delete
-</button>
-}
-</div>
-</div>
-</div>
-</EditForm>
-}
-else
-{
-<div class="relative flex w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/25" style="z-index: 141; max-height: min(92vh, calc(100% - 2rem));" data-testid="projects-detail-modal" @onclick:stopPropagation="true">
-<div class="border-b border-slate-200 px-6 py-5">
-<div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-<div class="space-y-2">
-<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Project details</p>
-<h2 class="text-2xl font-semibold tracking-tight text-slate-950">@(string.IsNullOrWhiteSpace(editor.Name) ? "Project overview" : editor.Name)</h2>
-<p class="max-w-3xl text-sm leading-6 text-slate-600">This modal keeps the overview compact. Use the focused tabs only when the work really needs structure, calendar, or a dedicated dashboard route.</p>
-</div>
-
-<div class="flex flex-wrap items-center gap-2">
-<StatusBadge Tone="@GetStatusTone(editor.Status)" Text="@editor.Status.ToString()" />
-<StatusBadge Tone="neutral" Text="@($"{editor.Phases.Count} phase(s)")" />
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="CloseProjectModalAsync">
-Close
-</button>
-</div>
-</div>
-</div>
-
-<div class="flex-1 overflow-y-auto px-6 py-6">
-<div class="space-y-6">
-<SummaryTiles>
-<SummaryTile Label="Current phase" Value="@(string.IsNullOrWhiteSpace(editor.CurrentPhase) ? "Unset" : editor.CurrentPhase)" HelperText="The phase currently highlighted for delivery." Tone="info" />
-<SummaryTile Label="Target date" Value="@FormatDate(editor.TargetDateUtc)" HelperText="Leave flexible when the delivery window is still moving." />
-<SummaryTile Label="Last updated" Value="@FormatTimestamp(editor.Id.HasValue ? projectSummaries.FirstOrDefault(project => project.Id == editor.Id.Value)?.UpdatedAtUtc : null)" HelperText="Pulled from the live project list." />
-<SummaryTile Label="Stack decisions" Value="@MeaningfulOptions.Count().ToString()" HelperText="Filled stack-profile entries captured for this project." Tone="warning" />
-</SummaryTiles>
-
-<div class="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-<section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Description</p>
-<p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(editor.Description) ? "No description has been captured for this project yet." : editor.Description)</p>
-
-<p class="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Objective</p>
-<p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(editor.Objective) ? "No explicit objective has been recorded yet." : editor.Objective)</p>
-</section>
-
-<section class="rounded-[1.5rem] border border-slate-200 bg-slate-50/85 p-5 shadow-sm shadow-slate-200/40">
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Next actions</p>
-<div class="mt-4 grid gap-3">
-<button type="button"
-class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
-@onclick="SwitchToEditor">
-Edit project
-</button>
-<button type="button"
-class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
-@onclick="OpenProjectDashboardAsync">
-Open dashboard tab
-</button>
-<button type="button"
-class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
-@onclick="@(() => OpenStructure(editor.Id ?? Guid.Empty))"
-disabled="@(!editor.Id.HasValue)">
-Open structure
-</button>
-<button type="button"
-class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
-@onclick="@(() => OpenCalendar(editor.Id ?? Guid.Empty))"
-disabled="@(!editor.Id.HasValue)">
-Open calendar
-</button>
-</div>
-</section>
-</div>
-
-<section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
-<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-<div>
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Phase plan</p>
-<h3 class="mt-1 text-lg font-semibold text-slate-950">Delivery sequence</h3>
-</div>
-<StatusBadge Tone="neutral" Text="@($"{editor.Phases.Count} phase(s)")" />
-</div>
-
-@if (editor.Phases.Count == 0)
-{
-<p class="mt-4 text-sm leading-6 text-slate-600">No phase plan exists yet. Use the editor to map the first delivery stages before opening structure or calendar tabs.</p>
-}
-else
-{
-<div class="mt-4 grid gap-3 lg:grid-cols-2">
-@foreach (var phase in editor.Phases.OrderBy(GetPhaseOrderKey).ThenBy(item => item.Name))
-{
-<div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4">
-<div class="flex items-start justify-between gap-3">
-<div class="min-w-0">
-<p class="text-sm font-semibold text-slate-950">@phase.Name</p>
-<p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@phase.Status</p>
-</div>
-<StatusBadge Tone="@GetPhaseStatusTone(phase.Status)" Text="@phase.Status.ToString()" />
-</div>
-<p class="mt-3 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(phase.Goal) ? "No goal has been captured for this phase yet." : phase.Goal)</p>
-<p class="mt-3 text-xs font-medium text-slate-500">@($"{FormatDate(phase.StartDateUtc)} to {FormatDate(phase.EndDateUtc)}")</p>
-</div>
-}
-</div>
-}
-</section>
-
-<section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
-<div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-<div>
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Stack profile</p>
-<h3 class="mt-1 text-lg font-semibold text-slate-950">Captured platform choices</h3>
-</div>
-<StatusBadge Tone="warning" Text="@($"{MeaningfulOptions.Count()} filled")" />
-</div>
-
-@if (!MeaningfulOptions.Any())
-{
-<p class="mt-4 text-sm leading-6 text-slate-600">No stack profile has been captured yet. The editor can record platform, storage, testing, deployment, and external dependency choices.</p>
-}
-else
-{
-<div class="mt-4 grid gap-3 lg:grid-cols-2">
-@foreach (var option in MeaningfulOptions.OrderBy(item => item.Category).ThenBy(item => item.OptionName))
-{
-<div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4">
-<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">@option.Category</p>
-<p class="mt-2 text-sm font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(option.OptionName) ? "Not specified" : option.OptionName)</p>
-<p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(option.Notes) ? "No notes recorded." : option.Notes)</p>
-</div>
-}
-</div>
-}
-</section>
-</div>
-</div>
-
-<div class="border-t border-slate-200 bg-slate-50/90 px-6 py-4">
-<div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-<div class="space-y-1">
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Project dashboard</p>
-<p class="text-sm text-slate-600">Use the modal to inspect and decide. Use tabs only when you want the project overview or a deeper work surface to stay open alongside other work.</p>
-</div>
-
-<div class="flex flex-wrap items-center gap-2">
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="SwitchToEditor">
-Edit project
-</button>
-<button type="button"
-class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-@onclick="OpenProjectDashboardAsync">
-Open dashboard tab
-</button>
-</div>
-</div>
-</div>
-</div>
-}
-</div>
-}
-
-@if (hierarchyDialog is not null)
-{
-<div class="fixed inset-0 flex items-start justify-center overflow-y-auto p-4 sm:p-6" style="z-index: 145;">
-<div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" @onclick="CloseHierarchyModal"></div>
-
-<div class="relative flex w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/25" style="z-index: 146; max-height: min(92vh, calc(100% - 2rem));" data-testid="projects-hierarchy-modal" @onclick:stopPropagation="true">
-<div class="border-b border-slate-200 px-6 py-5">
-<div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-<div class="space-y-2">
-<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Project hierarchy</p>
-<h2 class="text-2xl font-semibold tracking-tight text-slate-950">@hierarchyDialog.ProjectName</h2>
-<p class="max-w-3xl text-sm leading-6 text-slate-600">Inspect direct parents, browse direct subprojects, and keep drilling into deeper project branches without leaving the Projects board.</p>
-</div>
-
-<div class="flex flex-wrap items-center gap-2">
-<StatusBadge Tone="neutral" Text="@($"{hierarchyDialog.ParentProjects.Count} parent(s)")" />
-<StatusBadge Tone="info" Text="@($"{hierarchyDialog.Subprojects.Count} subproject(s)")" />
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-@onclick="CloseHierarchyModal">
-Close
-</button>
-</div>
-</div>
-</div>
-
-<div class="flex-1 overflow-y-auto px-6 py-6">
-<div class="grid gap-4 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
-<section class="rounded-[1.5rem] border border-slate-200 bg-slate-50/85 p-5 shadow-sm shadow-slate-200/40">
-<div class="flex items-center justify-between gap-3">
-<div>
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Parents</p>
-<h3 class="mt-1 text-lg font-semibold text-slate-950">Direct parent projects</h3>
-</div>
-<StatusBadge Tone="neutral" Text="@($"{hierarchyDialog.ParentProjects.Count} linked")" />
-</div>
-
-@if (hierarchyDialog.ParentProjects.Count == 0)
-{
-<p class="mt-4 text-sm leading-6 text-slate-600">This project does not currently sit under any parent project.</p>
-}
-else
-{
-<div class="mt-4 space-y-3">
-@foreach (var parentProject in hierarchyDialog.ParentProjects.OrderBy(project => project.Name))
-{
-<article class="rounded-[1.2rem] border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/30">
-<div class="flex items-start justify-between gap-3">
-<div class="min-w-0">
-<p class="text-sm font-semibold text-slate-950">@parentProject.Name</p>
-<p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@(string.IsNullOrWhiteSpace(parentProject.CurrentPhase) ? "Parent project" : parentProject.CurrentPhase)</p>
-</div>
-<StatusBadge Tone="@GetStatusTone(parentProject.Status)" Text="@parentProject.Status.ToString()" />
-</div>
-<div class="mt-4 flex flex-wrap items-center gap-2">
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-@onclick="@(() => OpenProjectPreviewFromHierarchyAsync(parentProject.Id))">
-View
-</button>
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-@onclick="@(() => OpenStructure(parentProject.Id))">
-Structure
-</button>
-</div>
-</article>
-}
-</div>
-}
-</section>
-
-<section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
-<div class="flex items-center justify-between gap-3">
-<div>
-<p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Subprojects</p>
-<h3 class="mt-1 text-lg font-semibold text-slate-950">Direct child projects</h3>
-</div>
-<StatusBadge Tone="info" Text="@($"{hierarchyDialog.Subprojects.Count} linked")" />
-</div>
-
-@if (hierarchyDialog.Subprojects.Count == 0)
-{
-<p class="mt-4 text-sm leading-6 text-slate-600">No direct subprojects are connected to this project yet.</p>
-}
-else
-{
-<div class="mt-4 grid gap-3 md:grid-cols-2">
-@foreach (var subproject in hierarchyDialog.Subprojects.OrderBy(project => project.Name))
-{
-<article class="rounded-[1.35rem] border border-slate-200 bg-slate-50/80 p-4 shadow-sm shadow-slate-200/40" data-testid="hierarchy-subproject-card">
-<div class="flex items-start justify-between gap-3">
-<div class="min-w-0">
-<p class="text-sm font-semibold text-slate-950">@subproject.Name</p>
-<p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@(string.IsNullOrWhiteSpace(subproject.CurrentPhase) ? "Subproject" : subproject.CurrentPhase)</p>
-</div>
-<StatusBadge Tone="@GetStatusTone(subproject.Status)" Text="@subproject.Status.ToString()" />
-</div>
-
-<div class="mt-4 grid gap-2 sm:grid-cols-3">
-<div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-<p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Parents</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@subproject.ParentCount</p>
-</div>
-<div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-<p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Subprojects</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@subproject.ChildCount</p>
-</div>
-<div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-<p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Updated</p>
-<p class="mt-1 text-sm font-semibold text-slate-950">@subproject.UpdatedAtUtc.LocalDateTime.ToString("g")</p>
-</div>
-</div>
-
-<div class="mt-4 flex flex-wrap items-center gap-2">
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-@onclick="@(() => OpenProjectPreviewFromHierarchyAsync(subproject.Id))">
-View
-</button>
-<button type="button"
-class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-@onclick="@(() => OpenStructure(subproject.Id))">
-Structure
-</button>
-<button type="button"
-class="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
-data-testid="hierarchy-card-subprojects-button"
-@onclick="@(() => OpenHierarchyModalAsync(subproject.Id))">
-Subprojects
-</button>
-</div>
-</article>
-}
-</div>
-}
-</section>
-</div>
-</div>
-</div>
-</div>
+                    <SurfaceCard>
+                        <p class="cda-eyebrow">Mermaid source</p>
+                        <h3 class="mt-1 text-lg font-semibold text-slate-950">Gantt graph</h3>
+                        <pre class="mt-4 max-h-[32rem] overflow-auto rounded-[1.35rem] border border-slate-200 bg-slate-950 p-4 text-sm leading-6 text-slate-100"
+                             data-testid="projects-gantt-mermaid-source">@ganttPreviewDialog.MermaidText</pre>
+                    </SurfaceCard>
+                </Grid>
+            }
+        </ChildContent>
+    </Dialog>
 }
 
 @code {
-private static readonly string[] wizardSteps = ["Identity", "Dates and phases", "Stack profile", "Linked objects", "Review"];
+    private static readonly string[] wizardSteps = ["Identity", "Dates and phases", "Stack profile", "Linked objects", "Review"];
 
-private static readonly ProjectObjectType[] starterObjectKinds =
-[
-ProjectObjectType.Note,
-ProjectObjectType.Decision,
-ProjectObjectType.Milestone,
-ProjectObjectType.Repository,
-ProjectObjectType.Link
-];
+    private static readonly ProjectObjectType[] starterObjectKinds =
+    [
+        ProjectObjectType.Note,
+        ProjectObjectType.Decision,
+        ProjectObjectType.Milestone,
+        ProjectObjectType.Repository,
+        ProjectObjectType.Link
+    ];
 
-[SupplyParameterFromQuery(Name = "projectId")]
-public Guid? ProjectIdQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "projectId")]
+    public Guid? ProjectIdQuery { get; set; }
 
-private IReadOnlyList<ProjectSummary> projectSummaries = [];
-private IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks = [];
-private ProjectEditorModel editor = new();
-private readonly List<StarterObjectDraft> starterObjects = [];
-private string? message;
-private int wizardStep;
-private bool showProjectModal;
-private string projectSearch = string.Empty;
-private string statusFilter = string.Empty;
-private string hierarchyFilterMode = string.Empty;
-private string hierarchyFilterProjectId = string.Empty;
-private ProjectModalMode modalMode = ProjectModalMode.Overview;
-private bool modalOpenedFromRoute;
-private Guid? handledProjectQueryId;
-private ProjectHierarchyDialogState? hierarchyDialog;
+    private IReadOnlyList<ProjectSummary> projectSummaries = [];
+    private IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks = [];
+    private ProjectEditorModel editor = new();
+    private readonly List<StarterObjectDraft> starterObjects = [];
+    private string? message;
+    private int wizardStep;
+    private bool showProjectModal;
+    private string projectSearch = string.Empty;
+    private string statusFilter = string.Empty;
+    private string relatedPartyCategoryFilter = string.Empty;
+    private string relatedPartyValueFilter = string.Empty;
+    private string hierarchyFilterMode = string.Empty;
+    private string hierarchyFilterProjectId = string.Empty;
+    private ProjectModalMode modalMode = ProjectModalMode.Overview;
+    private bool modalOpenedFromRoute;
+    private Guid? handledProjectQueryId;
+    private ProjectHierarchyDialogState? hierarchyDialog;
+    private ProjectGanttPreview? ganttPreviewDialog;
+    private string? ganttPreviewError;
+    private bool showGanttPreviewModal;
 
-private IReadOnlyList<ProjectSummary> FilteredProjectSummaries => projectSummaries
-.Where(project =>
-(string.IsNullOrWhiteSpace(projectSearch) ||
-project.Name.Contains(projectSearch, StringComparison.OrdinalIgnoreCase) ||
-project.CurrentPhase.Contains(projectSearch, StringComparison.OrdinalIgnoreCase)) &&
-(string.IsNullOrWhiteSpace(statusFilter) ||
-string.Equals(project.Status.ToString(), statusFilter, StringComparison.OrdinalIgnoreCase)) &&
-MatchesHierarchyFilter(project))
-.OrderByDescending(project => project.UpdatedAtUtc)
-.ToList();
+    private IReadOnlyList<ProjectSummary> FilteredProjectSummaries => projectSummaries
+        .Where(project =>
+            (string.IsNullOrWhiteSpace(projectSearch) ||
+             project.Name.Contains(projectSearch, StringComparison.OrdinalIgnoreCase) ||
+             project.CurrentPhase.Contains(projectSearch, StringComparison.OrdinalIgnoreCase) ||
+             project.RelatedPartySearchText.Contains(projectSearch, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(statusFilter) ||
+             string.Equals(project.Status.ToString(), statusFilter, StringComparison.OrdinalIgnoreCase)) &&
+            MatchesRelatedPartyFilter(project) &&
+            MatchesHierarchyFilter(project))
+        .OrderByDescending(project => project.UpdatedAtUtc)
+        .ToList();
 
-private Guid? SelectedHierarchyFilterProjectId
-=> Guid.TryParse(hierarchyFilterProjectId, out var parsedProjectId) ? parsedProjectId : null;
+    private IReadOnlyList<string> AvailableRelatedPartyValues => projectSummaries
+        .SelectMany(project => project.RelatedParties ?? [])
+        .Where(item =>
+            string.IsNullOrWhiteSpace(relatedPartyCategoryFilter) ||
+            string.Equals(item.Category.ToString(), relatedPartyCategoryFilter, StringComparison.OrdinalIgnoreCase))
+        .Select(item => item.DisplayName)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+        .ToList();
 
-private string HierarchyFilterHelper
-=> !SelectedHierarchyFilterProjectId.HasValue
-? "Choose a project to filter direct subprojects, direct parents, or the immediate relationship neighborhood."
-: hierarchyFilterMode switch
-{
-"children" => $"Showing direct subprojects of {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
-"parents" => $"Showing direct parents of {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
-"related" => $"Showing the direct relationship neighborhood around {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
-_ => $"Project {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)} is selected. Pick Subprojects, Parents, or Related to narrow the board."
-};
+    private Guid? SelectedHierarchyFilterProjectId
+        => Guid.TryParse(hierarchyFilterProjectId, out var parsedProjectId) ? parsedProjectId : null;
 
-private IReadOnlyList<ProjectOptionEditorModel> MeaningfulOptions => editor.Options
-.Where(option => !string.IsNullOrWhiteSpace(option.OptionName) || !string.IsNullOrWhiteSpace(option.Notes))
-.ToList();
+    private string HierarchyFilterHelper
+        => !SelectedHierarchyFilterProjectId.HasValue
+            ? "Choose a project to filter direct subprojects, direct parents, or the immediate relationship neighborhood."
+            : hierarchyFilterMode switch
+            {
+                "children" => $"Showing direct subprojects of {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
+                "parents" => $"Showing direct parents of {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
+                "related" => $"Showing the direct relationship neighborhood around {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)}.",
+                _ => $"Project {ResolveProjectName(SelectedHierarchyFilterProjectId.Value)} is selected. Pick Subprojects, Parents, or Related to narrow the board."
+            };
 
-private IReadOnlyList<SecondaryTabItem> WizardTabs => wizardSteps
-.Select((step, index) => new SecondaryTabItem(index.ToString(), $"{index + 1}. {step}"))
-.ToList();
+    private IReadOnlyList<ProjectOptionEditorModel> MeaningfulOptions => editor.Options
+        .Where(option => !string.IsNullOrWhiteSpace(option.OptionName) || !string.IsNullOrWhiteSpace(option.Notes))
+        .ToList();
 
-private RenderFragment PhaseActions => @<button type="button"
-class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
-@onclick="AddPhaseAsync">
-Add phase
-</button>;
+    private IReadOnlyList<SecondaryTabItem> WizardTabs => wizardSteps
+        .Select((step, index) => new SecondaryTabItem(index.ToString(), $"{index + 1}. {step}"))
+        .ToList();
 
-private RenderFragment StarterActions => @<button type="button"
-class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
-@onclick="AddStarterObject">
-Add planned object
-</button>;
+    private bool IsErrorMessage
+        => !string.IsNullOrWhiteSpace(message) &&
+           (message.StartsWith("Unable", StringComparison.OrdinalIgnoreCase) ||
+            message.StartsWith("No ", StringComparison.OrdinalIgnoreCase));
 
-private bool IsErrorMessage
-=> !string.IsNullOrWhiteSpace(message) &&
-(message.StartsWith("Unable", StringComparison.OrdinalIgnoreCase) ||
-message.StartsWith("No ", StringComparison.OrdinalIgnoreCase));
+    private string LatestUpdatedProjectLabel
+        => projectSummaries.Count == 0
+            ? "No projects"
+            : projectSummaries.OrderByDescending(project => project.UpdatedAtUtc).First().UpdatedAtUtc.LocalDateTime.ToString("g");
 
-private string LatestUpdatedProjectLabel
-=> projectSummaries.Count == 0
-? "No projects"
-: projectSummaries.OrderByDescending(project => project.UpdatedAtUtc).First().UpdatedAtUtc.LocalDateTime.ToString("g");
+    private string LatestUpdatedProjectHelper
+        => projectSummaries.Count == 0
+            ? "Save the first project to populate the workspace."
+            : projectSummaries.OrderByDescending(project => project.UpdatedAtUtc).First().Name;
 
-private string LatestUpdatedProjectHelper
-=> projectSummaries.Count == 0
-? "Save the first project to populate the workspace."
-: projectSummaries.OrderByDescending(project => project.UpdatedAtUtc).First().Name;
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadProjectSummariesAsync();
 
-protected override async Task OnParametersSetAsync()
-{
-await LoadProjectSummariesAsync();
+        if (ProjectIdQuery == handledProjectQueryId)
+        {
+            return;
+        }
 
-if (ProjectIdQuery == handledProjectQueryId)
-{
-return;
+        handledProjectQueryId = ProjectIdQuery;
+
+        if (ProjectIdQuery.HasValue)
+        {
+            await LoadEditorAsync(ProjectIdQuery.Value);
+            modalMode = ProjectModalMode.Overview;
+            showProjectModal = true;
+            modalOpenedFromRoute = true;
+            message = null;
+            return;
+        }
+
+        if (modalOpenedFromRoute)
+        {
+            showProjectModal = false;
+            modalOpenedFromRoute = false;
+            message = null;
+        }
+    }
+
+    private Task HandleRelatedPartyCategoryFilterChanged(string value)
+    {
+        relatedPartyCategoryFilter = value;
+        if (!string.IsNullOrWhiteSpace(relatedPartyValueFilter) &&
+            !AvailableRelatedPartyValues.Contains(relatedPartyValueFilter, StringComparer.OrdinalIgnoreCase))
+        {
+            relatedPartyValueFilter = string.Empty;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRelatedPartyValueFilterChanged(string value)
+    {
+        relatedPartyValueFilter = value;
+        return Task.CompletedTask;
+    }
+
+    private bool MatchesRelatedPartyFilter(ProjectSummary project)
+    {
+        var relatedParties = project.RelatedParties ?? [];
+        if (!string.IsNullOrWhiteSpace(relatedPartyCategoryFilter) &&
+            !relatedParties.Any(item => string.Equals(item.Category.ToString(), relatedPartyCategoryFilter, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        return string.IsNullOrWhiteSpace(relatedPartyValueFilter) ||
+               relatedParties.Any(item => string.Equals(item.DisplayName, relatedPartyValueFilter, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task LoadProjectSummariesAsync()
+    {
+        projectSummaries = await ProjectsService.ListAsync();
+        hierarchyLinks = await ProjectsService.ListHierarchyLinksAsync();
+    }
+
+    private async Task LoadEditorAsync(Guid? projectId)
+    {
+        editor = await ProjectsService.GetAsync(projectId);
+        wizardStep = 0;
+
+        if (!projectId.HasValue)
+        {
+            starterObjects.Clear();
+        }
+    }
+
+    private async Task OpenNewProjectAsync()
+    {
+        await LoadEditorAsync(null);
+        showProjectModal = true;
+        modalMode = ProjectModalMode.Editor;
+        modalOpenedFromRoute = false;
+        message = null;
+
+        if (ProjectIdQuery.HasValue)
+        {
+            Navigation.NavigateTo("/projects", replace: true);
+        }
+    }
+
+    private async Task OpenProjectPreviewAsync(Guid id)
+    {
+        await LoadEditorAsync(id);
+        showProjectModal = true;
+        modalMode = ProjectModalMode.Overview;
+        modalOpenedFromRoute = false;
+        message = null;
+    }
+
+    private async Task OpenGanttPreviewAsync(Guid projectId)
+    {
+        ganttPreviewDialog = null;
+        ganttPreviewError = null;
+        showGanttPreviewModal = true;
+
+        try
+        {
+            ganttPreviewDialog = await ProjectGanttPreviewService.BuildAsync(projectId);
+        }
+        catch (Exception ex)
+        {
+            ganttPreviewError = ex.Message;
+        }
+    }
+
+    private void OpenProjectDashboard(Guid id)
+        => Navigation.NavigateTo($"/projects?projectId={id}");
+
+    private void OpenProjectDashboardAsync()
+    {
+        if (editor.Id.HasValue)
+        {
+            OpenProjectDashboard(editor.Id.Value);
+        }
+    }
+
+    private Task HandleWizardTabChanged(string key)
+    {
+        if (int.TryParse(key, out var parsed))
+        {
+            wizardStep = parsed;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void SwitchToOverview()
+        => modalMode = ProjectModalMode.Overview;
+
+    private void SwitchToEditor()
+    {
+        modalMode = ProjectModalMode.Editor;
+        message = null;
+    }
+
+    private Task CloseProjectModalAsync()
+    {
+        showProjectModal = false;
+        message = null;
+
+        if (modalOpenedFromRoute)
+        {
+            modalOpenedFromRoute = false;
+            Navigation.NavigateTo("/projects", replace: true);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task AddPhaseAsync()
+    {
+        editor.Phases.Add(new ProjectPhaseEditorModel());
+        return Task.CompletedTask;
+    }
+
+    private Task RemovePhaseAsync(ProjectPhaseEditorModel phase)
+    {
+        editor.Phases.Remove(phase);
+        return Task.CompletedTask;
+    }
+
+    private void AddStarterObject()
+        => starterObjects.Add(new StarterObjectDraft());
+
+    private void RemoveStarterObject(StarterObjectDraft starter)
+        => starterObjects.Remove(starter);
+
+    private void NextStep()
+        => wizardStep = Math.Min(wizardSteps.Length - 1, wizardStep + 1);
+
+    private void PreviousStep()
+        => wizardStep = Math.Max(0, wizardStep - 1);
+
+    private void ResetFilters()
+    {
+        projectSearch = string.Empty;
+        statusFilter = string.Empty;
+        hierarchyFilterMode = string.Empty;
+        hierarchyFilterProjectId = string.Empty;
+    }
+
+    private async Task SaveAsync()
+    {
+        var result = await ProjectsService.SaveAsync(editor);
+        message = result.IsSuccess ? "Project saved." : string.Join(" ", result.Errors.Select(error => error.Message));
+        await LoadProjectSummariesAsync();
+
+        if (!result.IsSuccess)
+        {
+            return;
+        }
+
+        if (starterObjects.Count > 0)
+        {
+            await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(
+                result.Value,
+                starterObjects
+                    .Where(item => !string.IsNullOrWhiteSpace(item.Title))
+                    .Select(item => new ProjectObjectSeedDraft(item.ObjectType, item.Title, item.Subtitle, item.Subtitle))
+                    .ToList());
+            starterObjects.Clear();
+            message = "Project saved and starter objects seeded to the structure workbench.";
+        }
+
+        editor = await ProjectsService.GetAsync(result.Value);
+
+        if (ProjectIdQuery.HasValue && ProjectIdQuery != result.Value)
+        {
+            Navigation.NavigateTo($"/projects?projectId={result.Value}");
+        }
+    }
+
+    private async Task SaveAndOpenStructureAsync()
+    {
+        await SaveAsync();
+
+        if (editor.Id.HasValue)
+        {
+            Navigation.NavigateTo($"/projects/{editor.Id.Value}/structure");
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!editor.Id.HasValue)
+        {
+            return;
+        }
+
+        await ProjectsService.DeleteAsync(editor.Id.Value);
+        await LoadProjectSummariesAsync();
+        showProjectModal = false;
+        message = "Project deleted.";
+
+        if (ProjectIdQuery.HasValue)
+        {
+            modalOpenedFromRoute = false;
+            Navigation.NavigateTo("/projects", replace: true);
+        }
+    }
+
+    private bool MatchesHierarchyFilter(ProjectSummary project)
+    {
+        if (!SelectedHierarchyFilterProjectId.HasValue || string.IsNullOrWhiteSpace(hierarchyFilterMode))
+        {
+            return true;
+        }
+
+        return hierarchyFilterMode switch
+        {
+            "children" => hierarchyLinks.Any(link => link.ParentProjectId == SelectedHierarchyFilterProjectId.Value && link.ChildProjectId == project.Id),
+            "parents" => hierarchyLinks.Any(link => link.ChildProjectId == SelectedHierarchyFilterProjectId.Value && link.ParentProjectId == project.Id),
+            "related" => hierarchyLinks.Any(link =>
+                (link.ParentProjectId == SelectedHierarchyFilterProjectId.Value && link.ChildProjectId == project.Id) ||
+                (link.ChildProjectId == SelectedHierarchyFilterProjectId.Value && link.ParentProjectId == project.Id)),
+            _ => true
+        };
+    }
+
+    private string ResolveProjectName(Guid projectId)
+        => projectSummaries.FirstOrDefault(project => project.Id == projectId)?.Name ?? "Selected project";
+
+    private async Task OpenHierarchyModalAsync(Guid projectId)
+    {
+        var project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
+
+        if (project is null)
+        {
+            await LoadProjectSummariesAsync();
+            project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
+
+            if (project is null)
+            {
+                return;
+            }
+        }
+
+        var hierarchy = await ProjectsService.GetHierarchyAsync(projectId);
+        hierarchyDialog = new ProjectHierarchyDialogState(
+            project.Id,
+            project.Name,
+            hierarchy.ParentProjects,
+            hierarchy.ChildProjects);
+    }
+
+    private void CloseHierarchyModal()
+        => hierarchyDialog = null;
+
+    private Task CloseGanttPreviewAsync()
+    {
+        showGanttPreviewModal = false;
+        ganttPreviewDialog = null;
+        ganttPreviewError = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenProjectPreviewFromHierarchyAsync(Guid projectId)
+    {
+        hierarchyDialog = null;
+        await OpenProjectPreviewAsync(projectId);
+    }
+
+    private void OpenStructure(Guid projectId)
+    {
+        if (projectId != Guid.Empty)
+        {
+            Navigation.NavigateTo($"/projects/{projectId}/structure");
+        }
+    }
+
+    private Task OpenStructureFromGanttPreviewAsync()
+    {
+        if (ganttPreviewDialog is not null)
+        {
+            OpenStructure(ganttPreviewDialog.ProjectId);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void OpenCalendar(Guid projectId)
+    {
+        if (projectId != Guid.Empty)
+        {
+            Navigation.NavigateTo($"/projects/{projectId}/calendar");
+        }
+    }
+
+    private void NavigateHome()
+        => Navigation.NavigateTo("/");
+
+    private enum ProjectModalMode
+    {
+        Overview,
+        Editor
+    }
 }
-
-handledProjectQueryId = ProjectIdQuery;
-
-if (ProjectIdQuery.HasValue)
-{
-await LoadEditorAsync(ProjectIdQuery.Value);
-modalMode = ProjectModalMode.Overview;
-showProjectModal = true;
-modalOpenedFromRoute = true;
-message = null;
-return;
-}
-
-if (modalOpenedFromRoute)
-{
-showProjectModal = false;
-modalOpenedFromRoute = false;
-message = null;
-}
-}
-
-private async Task LoadProjectSummariesAsync()
-{
-projectSummaries = await ProjectsService.ListAsync();
-hierarchyLinks = await ProjectsService.ListHierarchyLinksAsync();
-}
-
-private async Task LoadEditorAsync(Guid? projectId)
-{
-editor = await ProjectsService.GetAsync(projectId);
-wizardStep = 0;
-if (!projectId.HasValue)
-{
-starterObjects.Clear();
-}
-}
-
-private async Task OpenNewProjectAsync()
-{
-await LoadEditorAsync(null);
-showProjectModal = true;
-modalMode = ProjectModalMode.Editor;
-modalOpenedFromRoute = false;
-message = null;
-
-if (ProjectIdQuery.HasValue)
-{
-Navigation.NavigateTo("/projects", replace: true);
-}
-}
-
-private async Task OpenProjectPreviewAsync(Guid id)
-{
-await LoadEditorAsync(id);
-showProjectModal = true;
-modalMode = ProjectModalMode.Overview;
-modalOpenedFromRoute = false;
-message = null;
-}
-
-private void OpenProjectDashboard(Guid id)
-=> Navigation.NavigateTo($"/projects?projectId={id}");
-
-private void OpenProjectDashboardAsync()
-{
-if (editor.Id.HasValue)
-{
-OpenProjectDashboard(editor.Id.Value);
-}
-}
-
-private Task HandleWizardTabChanged(string key)
-{
-if (int.TryParse(key, out var parsed))
-{
-wizardStep = parsed;
-}
-
-return Task.CompletedTask;
-}
-
-private void SwitchToOverview()
-=> modalMode = ProjectModalMode.Overview;
-
-private void SwitchToEditor()
-{
-modalMode = ProjectModalMode.Editor;
-message = null;
-}
-
-private Task CloseProjectModalAsync()
-{
-showProjectModal = false;
-message = null;
-
-if (modalOpenedFromRoute)
-{
-modalOpenedFromRoute = false;
-Navigation.NavigateTo("/projects", replace: true);
-return Task.CompletedTask;
-}
-
-return Task.CompletedTask;
-}
-
-private Task AddPhaseAsync()
-{
-editor.Phases.Add(new ProjectPhaseEditorModel());
-return Task.CompletedTask;
-}
-
-private Task RemovePhaseAsync(ProjectPhaseEditorModel phase)
-{
-editor.Phases.Remove(phase);
-return Task.CompletedTask;
-}
-
-private void AddStarterObject()
-=> starterObjects.Add(new StarterObjectDraft());
-
-private void NextStep()
-=> wizardStep = Math.Min(wizardSteps.Length - 1, wizardStep + 1);
-
-private void PreviousStep()
-=> wizardStep = Math.Max(0, wizardStep - 1);
-
-private void ResetFilters()
-{
-projectSearch = string.Empty;
-statusFilter = string.Empty;
-hierarchyFilterMode = string.Empty;
-hierarchyFilterProjectId = string.Empty;
-}
-
-private async Task SaveAsync()
-{
-var result = await ProjectsService.SaveAsync(editor);
-message = result.IsSuccess ? "Project saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-await LoadProjectSummariesAsync();
-
-if (!result.IsSuccess)
-{
-return;
-}
-
-if (starterObjects.Count > 0)
-{
-await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(
-result.Value,
-starterObjects
-.Where(item => !string.IsNullOrWhiteSpace(item.Title))
-.Select(item => new ProjectObjectSeedDraft(item.ObjectType, item.Title, item.Subtitle, item.Subtitle))
-.ToList());
-starterObjects.Clear();
-message = "Project saved and starter objects seeded to the structure workbench.";
-}
-
-editor = await ProjectsService.GetAsync(result.Value);
-
-if (ProjectIdQuery.HasValue && ProjectIdQuery != result.Value)
-{
-Navigation.NavigateTo($"/projects?projectId={result.Value}");
-}
-}
-
-private async Task SaveAndOpenStructureAsync()
-{
-await SaveAsync();
-if (editor.Id.HasValue)
-{
-Navigation.NavigateTo($"/projects/{editor.Id.Value}/structure");
-}
-}
-
-private async Task DeleteAsync()
-{
-if (!editor.Id.HasValue)
-{
-return;
-}
-
-await ProjectsService.DeleteAsync(editor.Id.Value);
-await LoadProjectSummariesAsync();
-showProjectModal = false;
-message = "Project deleted.";
-
-if (ProjectIdQuery.HasValue)
-{
-modalOpenedFromRoute = false;
-Navigation.NavigateTo("/projects", replace: true);
-}
-}
-
-private bool MatchesHierarchyFilter(ProjectSummary project)
-{
-if (!SelectedHierarchyFilterProjectId.HasValue || string.IsNullOrWhiteSpace(hierarchyFilterMode))
-{
-return true;
-}
-
-return hierarchyFilterMode switch
-{
-"children" => hierarchyLinks.Any(link => link.ParentProjectId == SelectedHierarchyFilterProjectId.Value && link.ChildProjectId == project.Id),
-"parents" => hierarchyLinks.Any(link => link.ChildProjectId == SelectedHierarchyFilterProjectId.Value && link.ParentProjectId == project.Id),
-"related" => hierarchyLinks.Any(link =>
-(link.ParentProjectId == SelectedHierarchyFilterProjectId.Value && link.ChildProjectId == project.Id) ||
-(link.ChildProjectId == SelectedHierarchyFilterProjectId.Value && link.ParentProjectId == project.Id)),
-_ => true
-};
-}
-
-private string ResolveProjectName(Guid projectId)
-=> projectSummaries.FirstOrDefault(project => project.Id == projectId)?.Name ?? "Selected project";
-
-private async Task OpenHierarchyModalAsync(Guid projectId)
-{
-var project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
-if (project is null)
-{
-await LoadProjectSummariesAsync();
-project = projectSummaries.FirstOrDefault(item => item.Id == projectId);
-if (project is null)
-{
-return;
-}
-}
-
-var hierarchy = await ProjectsService.GetHierarchyAsync(projectId);
-hierarchyDialog = new ProjectHierarchyDialogState(
-project.Id,
-project.Name,
-hierarchy.ParentProjects,
-hierarchy.ChildProjects);
-}
-
-private void CloseHierarchyModal()
-=> hierarchyDialog = null;
-
-private async Task OpenProjectPreviewFromHierarchyAsync(Guid projectId)
-{
-hierarchyDialog = null;
-await OpenProjectPreviewAsync(projectId);
-}
-
-private void OpenStructure(Guid projectId)
-{
-if (projectId != Guid.Empty)
-{
-Navigation.NavigateTo($"/projects/{projectId}/structure");
-}
-}
-
-private void OpenCalendar(Guid projectId)
-{
-if (projectId != Guid.Empty)
-{
-Navigation.NavigateTo($"/projects/{projectId}/calendar");
-}
-}
-
-private void NavigateHome() => Navigation.NavigateTo("/");
-
-private static string GetProjectCardCss(ProjectStatus status)
-{
-var accent = status switch
-{
-ProjectStatus.Active => "border-emerald-200 bg-[linear-gradient(180deg,_rgba(236,253,245,0.96),_rgba(255,255,255,0.98))]",
-ProjectStatus.Completed => "border-sky-200 bg-[linear-gradient(180deg,_rgba(240,249,255,0.96),_rgba(255,255,255,0.98))]",
-ProjectStatus.OnHold => "border-amber-200 bg-[linear-gradient(180deg,_rgba(255,251,235,0.96),_rgba(255,255,255,0.98))]",
-ProjectStatus.Archived => "border-slate-300 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]",
-_ => "border-slate-200 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(255,255,255,0.98))]"
-};
-
-return $"flex min-h-[13.75rem] flex-col rounded-[1.5rem] border p-4 shadow-sm shadow-slate-200/60 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/70 {accent}";
-}
-
-private static string GetStatusTone(ProjectStatus status)
-=> status switch
-{
-ProjectStatus.Active => "success",
-ProjectStatus.Completed => "info",
-ProjectStatus.OnHold => "warning",
-ProjectStatus.Archived => "neutral",
-_ => "neutral"
-};
-
-private static string GetPhaseStatusTone(ProjectPhaseStatus status)
-=> status switch
-{
-ProjectPhaseStatus.Active => "success",
-ProjectPhaseStatus.Completed => "info",
-ProjectPhaseStatus.Blocked => "danger",
-_ => "neutral"
-};
-
-private static string FormatDate(DateTime? value)
-=> value.HasValue ? value.Value.ToString("MMM d, yyyy") : "Not set";
-
-private static string FormatTimestamp(DateTimeOffset? value)
-=> value.HasValue ? value.Value.LocalDateTime.ToString("g") : "Not available";
-
-private static DateTime GetPhaseOrderKey(ProjectPhaseEditorModel phase)
-=> phase.StartDateUtc ?? phase.EndDateUtc ?? DateTime.MaxValue;
-
-private static string GetQuickActionButtonCss()
-=> "inline-flex h-9 min-w-[2.85rem] items-center justify-center rounded-xl border border-slate-200 bg-white px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600 shadow-sm transition-colors hover:bg-slate-50";
-
-private static string GetProjectMonogram(string? name)
-{
-if (string.IsNullOrWhiteSpace(name))
-{
-return "PR";
-}
-
-var parts = name
-.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-.Where(part => part.Length > 0)
-.Take(2)
-.Select(part => char.ToUpperInvariant(part[0]))
-.ToArray();
-
-return parts.Length == 0 ? "PR" : new string(parts);
-}
-
-private sealed class StarterObjectDraft
-{
-public ProjectObjectType ObjectType { get; set; } = ProjectObjectType.Note;
-public string Title { get; set; } = string.Empty;
-public string Subtitle { get; set; } = string.Empty;
-}
-
-private sealed record ProjectHierarchyDialogState(
-Guid ProjectId,
-string ProjectName,
-IReadOnlyList<ProjectSummary> ParentProjects,
-IReadOnlyList<ProjectSummary> Subprojects);
-
-private enum ProjectModalMode
-{
-Overview,
-Editor
-}
-}
-
-

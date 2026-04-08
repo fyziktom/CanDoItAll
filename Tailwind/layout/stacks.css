@@ -1,0 +1,5 @@
+@layer components {
+  .cda-toolbar-row {
+    @apply flex flex-wrap items-center gap-2;
+  }
+}

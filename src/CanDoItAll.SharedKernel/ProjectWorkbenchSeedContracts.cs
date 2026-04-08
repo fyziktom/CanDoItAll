@@ -6,7 +6,8 @@ public sealed record ProjectObjectSeedDraft(
     string Subtitle,
     string Notes,
     DateTimeOffset? StartUtc = null,
-    DateTimeOffset? EndUtc = null);
+    DateTimeOffset? EndUtc = null,
+    int? DurationSeconds = null);
 
 public interface IProjectWorkbenchSeedService
 {

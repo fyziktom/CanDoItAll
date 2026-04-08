@@ -303,6 +303,7 @@ internal static class Program
         services.AddSingleton<AgentLogReducer>();
         services.AddSingleton<WorkflowGuidancePolicy>();
         services.AddSingleton<BootstrapDiagnosticsWriter>();
+        services.AddSingleton<TailwindCompanionCoordinator>();
         services.AddSingleton<RuntimeEndpointAllocator>();
         services.AddSingleton<ResourceScopePlanner>();
         services.AddSingleton<RuntimeSlotRegistry>();

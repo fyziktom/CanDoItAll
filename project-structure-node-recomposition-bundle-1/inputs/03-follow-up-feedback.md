@@ -1,7 +1,0 @@
-# Follow-up Feedback
-
-The user provided this follow-up after the first shipped recomposition pass:
-
-> it is on good way.
-> but it needs improvement. I think it should consider the level where it is. if I recompose from root, it must go in layers and expecially first layer it must do in clockwise and place each first layer node on proper "hour" based on how much nodes are in first layer. Then seconds and other layers are going in the way of "hour" of that first layer node. Even we are trying to recompose it to be seen as much as possible on available seen canvas, we still must prefer proper balance with distances between nodes so the groups of nodes are better distanced from each other group. Very large mindmaps will never fit on one screen. putting nodes too close to each other reduce readibility. Groups should have also colisions. it means that subnodes from one node should not cross with other subnodes from other node. Like imagine invisible buble around them and those bubble cannot has colision.
-> please analyze my feedback, then improve bundle and then execute bundle with [$candoitall-bundle-execution](C:\\Users\\lucys\\.codex\\skills\\candoitall-bundle-execution\\SKILL.md) and with [$candoitall-bundle-validator](C:\\Users\\lucys\\.codex\\skills\\candoitall-bundle-validator\\SKILL.md) validate it. Project "project-structure-mcp-validation-1 workbench" is large and good for those testings. right now it has wrong composition. nodes are facing just left side of root node and they are too close to each other.

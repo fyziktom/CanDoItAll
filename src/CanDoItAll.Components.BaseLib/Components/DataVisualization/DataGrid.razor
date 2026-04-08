@@ -40,7 +40,9 @@
 
     @if (AllowPaging && TotalPages > 1)
     {
-        <div class="mt-3 flex items-center justify-end gap-2 text-xs text-slate-600">
+        <Cluster JustifyContent="JustifyContent.End"
+                 Gap="LayoutGap.Small"
+                 Class="mt-3 text-xs text-slate-600">
             <button type="button"
                     class="rounded border border-slate-300 px-2 py-1 disabled:opacity-40"
                     disabled="@(currentPage == 0)"
@@ -50,7 +52,7 @@
                     class="rounded border border-slate-300 px-2 py-1 disabled:opacity-40"
                     disabled="@(currentPage >= TotalPages - 1)"
                     @onclick="NextPageAsync">Next</button>
-        </div>
+        </Cluster>
     }
 </div>
 

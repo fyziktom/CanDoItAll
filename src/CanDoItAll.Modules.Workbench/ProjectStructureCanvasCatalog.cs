@@ -27,7 +27,15 @@ internal sealed record ProjectStructureCreateLeafDefinition(
     IReadOnlyList<CanvasWorkbenchInputField>? InputFields = null,
     IReadOnlyList<CanvasWorkbenchInputValue>? DefaultInputValues = null);
 
-internal sealed record ProjectStructureInspectorCreateGroup(
+public sealed record ProjectStructureMutationTypeOption(
+    string ActionId,
+    string ObjectSubtype,
+    string Label,
+    string Description,
+    string Icon,
+    string Tone);
+
+public sealed record ProjectStructureInspectorCreateGroup(
     string Key,
     string Label,
     string Description,
@@ -127,68 +135,22 @@ internal static partial class ProjectStructureCanvasCatalog
     public static CanvasWorkbenchAction BuildComposerAction(ProjectStructureCreateLeafDefinition definition)
         => BuildCreateLeafAction(definition);
 
-    public static string ResolveNodeLabel(ProjectStructureNode node) => node.ObjectType switch
-    {
-        ProjectObjectType.ProjectRoot => "Project",
-        ProjectObjectType.Phase => "Phase",
-        ProjectObjectType.ProjectBlock => ResolveProjectBlockLabel(node.ObjectSubtype),
-        ProjectObjectType.Meeting => ResolveMeetingLabel(node.ObjectSubtype),
-        ProjectObjectType.Recording => "Recording",
-        ProjectObjectType.Transcript => "Transcript",
-        ProjectObjectType.Participant => ResolveParticipantLabel(node.ObjectSubtype),
-        ProjectObjectType.WorkItem => ResolveWorkItemLabel(node.ObjectSubtype),
-        ProjectObjectType.PromptFlow => "Prompt flow",
-        ProjectObjectType.PromptSession => "Prompt session",
-        ProjectObjectType.PromptStep => "Prompt step",
-        ProjectObjectType.Repository => ResolveRepositoryLabel(node.ObjectSubtype),
-        ProjectObjectType.File => ResolveFileLabel(node.ObjectSubtype),
-        ProjectObjectType.ImageAsset => "Image",
-        ProjectObjectType.VideoAsset => "Video",
-        ProjectObjectType.Link => "Link",
-        ProjectObjectType.Connector => "Connector",
-        ProjectObjectType.Script => ResolveScriptLabel(node.ObjectSubtype),
-        ProjectObjectType.Environment => ResolveEnvironmentLabel(node.ObjectSubtype),
-        ProjectObjectType.Infrastructure => ResolveInfrastructureLabel(node.ObjectSubtype),
-        ProjectObjectType.ValidationRun => "Validation",
-        ProjectObjectType.TestPlan => "Test plan",
-        ProjectObjectType.TestEvidence => "Test evidence",
-        ProjectObjectType.Milestone => "Milestone",
-        ProjectObjectType.Decision => "Decision",
-        ProjectObjectType.SecretReference => "Secret",
-        _ => node.ObjectType.ToString()
-    };
+    public static string ResolveNodeLabel(ProjectStructureNode node)
+        => ProjectNodeKindRegistry.ResolveLabel(node.ObjectType, node.ObjectSubtype);
 
-    public static string ResolveProjectBlockLabel(string subtype) => subtype switch
-    {
-        "feature" => "Feature block",
-        "architecture" => "Architecture block",
-        "implementation" => "Implementation block",
-        "revision" => "Revision block",
-        "testing" => "Testing block",
-        "prompting" => "Prompting block",
-        "research" => "Research block",
-        "financial" => "Financial block",
-        "marketing" => "Marketing block",
-        "operations" => "Operations block",
-        "delivery" => "Delivery block",
-        "risk" => "Risk block",
-        "compliance" => "Compliance block",
-        "support" => "Support block",
-        "deployment" => "Deployment block",
-        "repos" => "Repos block",
-        "dockers" => "Dockers block",
-        "task-flow" => "Task flow block",
-        "backlog" => "Backlog block",
-        "server" => "Server block",
-        _ => "Project block"
-    };
+    public static string ResolveProjectBlockLabel(string subtype)
+        => ProjectNodeKindRegistry.ResolveLabel(ProjectObjectType.ProjectBlock, subtype);
 
     public static IReadOnlyList<CanvasWorkbenchAction> BuildMenuCreateActions(ProjectObjectType? sourceType)
-        => BuildTopLevelMenuEntries(sourceType)
+    {
+        var actions = BuildTopLevelMenuEntries(sourceType)
             .Select(entry => entry.StartsWith("group:", StringComparison.Ordinal)
                 ? BuildCreateGroupAction(entry["group:".Length..], sourceType)
                 : BuildCreateLeafAction(entry))
             .ToList();
+
+        return ProjectStructureActionShortcuts.Apply(actions);
+    }
 
     public static IReadOnlyList<ProjectStructureInspectorCreateGroup> BuildInspectorCreateGroups(ProjectObjectType? sourceType)
     {
@@ -200,11 +162,65 @@ internal static partial class ProjectStructureCanvasCatalog
                 var actions = ResolveGroupLeafDefinitions(groupKey, sourceType)
                     .Select(BuildCreateLeafAction)
                     .ToList();
+                ProjectStructureActionShortcuts.Apply(actions);
 
                 return new ProjectStructureInspectorCreateGroup(group.Key, group.Label, group.Description, index < 2, actions);
             })
             .ToList();
     }
+
+    public static IReadOnlyList<ProjectStructureMutationTypeOption> BuildCommonBlockTypeOptions()
+        => ResolveBlockLeafDefinitions()
+            .Select(definition => new ProjectStructureMutationTypeOption(
+                definition.ActionId,
+                definition.ObjectSubtype,
+                definition.Label,
+                definition.Description,
+                definition.Icon,
+                definition.Tone))
+            .ToList();
+
+    public static IReadOnlyList<ProjectStructureMutationTypeOption> BuildNoteConversionOptions()
+        => ResolveLeafDefinitions(
+                "add-decision",
+                "add-work-task",
+                "add-work-issue",
+                "add-work-feedback",
+                "add-work-revision",
+                "add-work-payment",
+                "add-work-send",
+                "add-block-feature",
+                "add-block-architecture",
+                "add-block-implementation",
+                "add-block-revision",
+                "add-block-testing",
+                "add-block-prompting",
+                "add-block-research",
+                "add-block-financial",
+                "add-block-marketing",
+                "add-block-operations",
+                "add-block-delivery",
+                "add-block-risk",
+                "add-block-compliance",
+                "add-block-support",
+                "add-block-deployment",
+                "add-block-repos",
+                "add-block-dockers",
+                "add-block-task-flow",
+                "add-block-backlog",
+                "add-block-server",
+                "add-block-computer",
+                "add-block-router",
+                "add-block-wifi")
+            .Where(definition => ProjectNodeKindRegistry.CanReclassify(ProjectObjectType.Note, string.Empty, definition.ObjectType, definition.ObjectSubtype))
+            .Select(definition => new ProjectStructureMutationTypeOption(
+                definition.ActionId,
+                definition.ObjectSubtype,
+                definition.Label,
+                definition.Description,
+                definition.Icon,
+                definition.Tone))
+            .ToList();
 
     private static IReadOnlyList<string> BuildTopLevelMenuEntries(ProjectObjectType? sourceType) => sourceType switch
     {
@@ -304,6 +320,9 @@ internal static partial class ProjectStructureCanvasCatalog
                 "add-block-task-flow",
                 "add-block-backlog",
                 "add-block-server",
+                "add-block-computer",
+                "add-block-router",
+                "add-block-wifi",
                 "add-block-risk",
                 "add-block-compliance",
                 "add-block-support"
@@ -374,6 +393,7 @@ internal static partial class ProjectStructureCanvasCatalog
             "add-video-asset" => "Video",
             "add-link" => "Link",
             "add-file" => "File",
+            "add-file-docx" => "Word",
             "add-meeting-online" => "Online",
             "add-meeting-onsite" => "Onsite",
             "add-recording" => "Recording",

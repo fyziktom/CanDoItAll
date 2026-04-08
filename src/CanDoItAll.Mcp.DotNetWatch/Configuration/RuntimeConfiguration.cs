@@ -66,6 +66,9 @@ public sealed class RuntimeConfiguration
         RegistryPath = ResolvePath(WorkspaceRoot, options.Process.RegistryPath);
         ServerInstanceDirectory = Path.Combine(Path.GetDirectoryName(RegistryPath) ?? Path.Combine(WorkspaceRoot, ".mcp-state"), "server-instances");
         UsePollingFileWatcher = options.Process.UsePollingFileWatcher;
+        WatchSuppressBrowserRefresh = options.Process.WatchSuppressBrowserRefresh;
+        TailwindAutoDetect = options.Process.TailwindAutoDetect;
+        TailwindWatchDebounce = TimeSpan.FromMilliseconds(Math.Max(25, options.Process.TailwindWatchDebounceMilliseconds));
 
         BackendEnabled = options.Backend.Enabled;
         BackendBindHost = options.Backend.BindHost.Trim();
@@ -192,6 +195,12 @@ public sealed class RuntimeConfiguration
     public string ServerInstanceDirectory { get; }
 
     public bool UsePollingFileWatcher { get; }
+
+    public bool WatchSuppressBrowserRefresh { get; }
+
+    public bool TailwindAutoDetect { get; }
+
+    public TimeSpan TailwindWatchDebounce { get; }
 
     public bool BackendEnabled { get; }
 

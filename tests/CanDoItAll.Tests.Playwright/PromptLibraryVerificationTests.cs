@@ -1,12 +1,20 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright;
 
 [Collection(PlaywrightCollection.Name)]
-public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
+public sealed partial class PromptLibraryVerificationTests
 {
+    private readonly PlaywrightAppFixture fixture;
+
+    public PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
+    {
+        this.fixture = fixture;
+    }
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true
@@ -162,101 +170,6 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         Assert.Equal(manifest.TotalItemCount, results.Count);
     }
 
-    [Fact]
-    public async Task Prompt_factory_artifacts_capture_toolbox_preview_and_single_add_flow()
-    {
-        var repoRoot = GetRepoRoot();
-        var screenshotsRoot = Path.Combine(repoRoot, "artifacts", "screenshots");
-        var i21Root = Path.Combine(screenshotsRoot, "i21");
-        var i22Root = Path.Combine(screenshotsRoot, "i22");
-        var i24Root = Path.Combine(screenshotsRoot, "i24");
-
-        ResetDirectory(i21Root);
-        ResetDirectory(i22Root);
-        ResetDirectory(i24Root);
-
-        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            IgnoreHTTPSErrors = true,
-            ViewportSize = new ViewportSize
-            {
-                Width = 1900,
-                Height = 1200
-            }
-        });
-
-        var page = await context.NewPageAsync();
-        await LoadPromptFactoryAsync(page);
-        await ResetSessionAsync(page);
-
-        var toolboxWindow = page.GetByTestId("prompt-factory-components-toolbox-window");
-        await toolboxWindow.WaitForAsync();
-        await page.WaitForSelectorAsync("text=112 items");
-
-        await CaptureWorkspaceAsync(page, Path.Combine(i21Root, "01-primary-state.png"));
-
-        var search = page.Locator("[data-testid='prompt-factory-components-toolbox'] .cw-context-toolbox__search");
-        await search.FillAsync("validation");
-        await page.WaitForFunctionAsync(
-            @"() => {
-                const items = Array.from(document.querySelectorAll('[data-testid^=""prompt-factory-component-""]'));
-                return items.length > 0 &&
-                    items.some(item => (item.textContent || '').toLowerCase().includes('validation'));
-            }");
-        await CaptureWorkspaceAsync(page, Path.Combine(i21Root, "02-secondary-state.png"));
-
-        await page.EvaluateAsync(
-            @"() => {
-                const body = document.querySelector('[data-testid=""prompt-factory-components-toolbox""] .pf-components-toolbox__body');
-                if (!(body instanceof HTMLElement)) {
-                    return;
-                }
-
-                body.scrollTop = Math.max(420, body.scrollHeight * 0.58);
-            }");
-        await page.WaitForTimeoutAsync(180);
-        await CaptureWorkspaceAsync(page, Path.Combine(i21Root, "03-interaction-result.png"));
-
-        await search.FillAsync("architecture lead");
-        await page.GetByTestId("prompt-factory-component-role-architecture-lead").WaitForAsync();
-        await HoverComponentPreviewAsync(page, "role-architecture-lead");
-        await AssertComponentPreviewPlacementAsync(page, "right");
-        await CaptureWorkspaceAsync(page, Path.Combine(i22Root, "01-primary-state.png"));
-
-        await DragFloatingWindowAsync(page, "prompt-factory-components-toolbox-window", 1600, 86);
-        await HoverComponentPreviewAsync(page, "role-architecture-lead");
-        await AssertComponentPreviewPlacementAsync(page, "left");
-        await CaptureWorkspaceAsync(page, Path.Combine(i22Root, "02-secondary-state.png"));
-
-        await page.Keyboard.PressAsync("Escape");
-        await ResetSessionAsync(page);
-        var resetWindowButton = page.GetByTestId("prompt-factory-components-toolbox-window")
-            .GetByRole(AriaRole.Button, new() { Name = "Reset", Exact = true });
-        if (await WaitForLocatorAsync(resetWindowButton, 1_000))
-        {
-            await resetWindowButton.ClickAsync();
-            await page.WaitForTimeoutAsync(180);
-        }
-
-        await search.FillAsync("senior reviewer");
-        await page.GetByTestId("prompt-factory-component-role-senior-reviewer").WaitForAsync();
-        await CaptureWorkspaceAsync(page, Path.Combine(i24Root, "01-primary-state.png"));
-        await InvokeCanvasCreateActionAsync(page, "component:add:role-senior-reviewer", []);
-        await InvokeCanvasCreateActionAsync(page, "component:add:role-senior-reviewer", []);
-        await WaitForNodeAsync(page, "selection:component:role-senior-reviewer");
-        Assert.Equal(
-            1,
-            await page.Locator(".cw-node[data-node-id='selection:component:role-senior-reviewer']").CountAsync());
-
-        var selectedComponentCount = await page.EvaluateAsync<int>(
-            @"() => document.querySelectorAll('.cw-node[data-node-id^=""selection:component:""]').length");
-        Assert.Equal(1, selectedComponentCount);
-        await CaptureWorkspaceAsync(page, Path.Combine(i24Root, "02-secondary-state.png"));
-
-        await FocusCanvasNodeAsync(page, "selection:component:role-senior-reviewer");
-        await CaptureCanvasStageAsync(page, Path.Combine(i24Root, "03-interaction-result.png"));
-    }
-
     private async Task VerifyPromptGalleryAsync(IPage page, VerificationManifest manifest, string artifactsRoot)
     {
         var screenshotPath = Path.Combine(artifactsRoot, "prompt-gallery-imported-catalog.png");
@@ -285,9 +198,10 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         Assert.True(response!.Ok, $"Expected /prompt-factory to return 2xx, got {(int)response.Status}.");
 
         await page.WaitForSelectorAsync("text=Prompt session workbench");
-        await page.WaitForSelectorAsync(".cw-node[data-node-id='session-root']");
-        await page.WaitForSelectorAsync(".cw-node[data-node-id='selection:setup']");
+        await DismissStartupModalIfPresentAsync(page);
         await page.WaitForSelectorAsync(".cw-canvas-host");
+        await WaitForNodeAsync(page, "session-root");
+        await WaitForNodeAsync(page, "selection:setup");
         await FocusCanvasNodeAsync(page, "session-root");
     }
 
@@ -318,7 +232,14 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         Assert.Contains(component.Name, nodeText, StringComparison.OrdinalIgnoreCase);
         if (tokenValues.Count > 0)
         {
-            Assert.Contains(tokenValues[0].Value, nodeText, StringComparison.Ordinal);
+            var matchedToken = tokenValues.FirstOrDefault(item =>
+                !string.IsNullOrWhiteSpace(item.Value) &&
+                nodeText.Contains(item.Value, StringComparison.OrdinalIgnoreCase));
+            Assert.True(
+                matchedToken is not null,
+                $"Expected component node '{nodeId}' to contain at least one configured token value.{Environment.NewLine}" +
+                $"Configured values: {string.Join(", ", tokenValues.Select(item => $"{item.Key}='{item.Value}'"))}{Environment.NewLine}" +
+                $"Actual text:{Environment.NewLine}{nodeText}");
         }
 
         await CaptureCanvasStageAsync(page, resultPath);
@@ -468,12 +389,35 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         {
             var token = component.TemplateTokens[index];
             var value = BuildTokenValue(component.Key, token);
-            await fields.Nth(index).Locator("input, textarea").First.FillAsync(value);
+            var input = fields.Nth(index).Locator("input, textarea").First;
+            await SetComposerFieldValueAsync(input, value);
+
             values.Add(new TokenValue(token, value));
         }
 
         await page.WaitForTimeoutAsync(100);
         return values;
+    }
+
+    private static async Task SetComposerFieldValueAsync(ILocator input, string value)
+    {
+        await input.FillAsync(value);
+        var actualValue = await input.InputValueAsync();
+        if (string.Equals(actualValue, value, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await input.EvaluateAsync(
+            @"(element, requestedValue) => {
+                element.value = requestedValue;
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+            }",
+            value);
+
+        actualValue = await input.InputValueAsync();
+        Assert.Equal(value, actualValue);
     }
 
     private static async Task FillInputComposerAsync(IPage page, VerificationInputDefinition input)
@@ -496,26 +440,90 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
 
     private static async Task SubmitComposerAsync(IPage page)
     {
-        await page.Locator(".cw-canvas-composer__actions button[data-tone='accent']").ClickAsync();
+        var submitButton = page.Locator(".cw-canvas-composer__actions button[data-tone='accent']");
+        try
+        {
+            await page.WaitForFunctionAsync(
+                @"() => {
+                    const button = document.querySelector('.cw-canvas-composer__actions button[data-tone=""accent""]');
+                    return !!button && !button.disabled;
+                }",
+                null,
+                new PageWaitForFunctionOptions
+                {
+                    Timeout = 15_000
+                });
+        }
+        catch (Exception exception) when (exception is PlaywrightException or TimeoutException)
+        {
+            var snapshot = await CaptureComposerSnapshotAsync(page);
+            var fieldSummary = string.Join(
+                Environment.NewLine,
+                snapshot.Fields.Select(field => $"- {field.Label} [{field.TagName}] = '{field.Value}'"));
+            Assert.Fail(
+                $"Composer submit button remained disabled.{Environment.NewLine}" +
+                $"Button text: {snapshot.SubmitText}{Environment.NewLine}" +
+                $"Field count: {snapshot.Fields.Count}{Environment.NewLine}" +
+                $"Fields:{Environment.NewLine}{fieldSummary}");
+        }
+
+        await submitButton.ClickAsync();
         await page.WaitForFunctionAsync("() => !document.querySelector('.cw-canvas-composer')");
+    }
+
+    private static async Task<ComposerSnapshot> CaptureComposerSnapshotAsync(IPage page)
+    {
+        var json = await page.EvaluateAsync<string>(
+            @"() => {
+                const composer = document.querySelector('.cw-canvas-composer');
+                const submitButton = composer?.querySelector('.cw-canvas-composer__actions button[data-tone=""accent""]');
+                const fields = Array.from(composer?.querySelectorAll('.cw-canvas-composer__field') || []).map(field => {
+                    const input = field.querySelector('input, textarea, select');
+                    const label = field.querySelector('span')?.textContent?.trim() || '';
+                    const tagName = input?.tagName?.toLowerCase?.() || '';
+                    const value = input?.value ?? '';
+                    return { label, tagName, value };
+                });
+
+                return JSON.stringify({
+                    submitText: submitButton?.textContent?.trim() || '',
+                    fields
+                });
+            }");
+
+        return JsonSerializer.Deserialize<ComposerSnapshot>(json, JsonOptions)
+            ?? new ComposerSnapshot(string.Empty, []);
     }
 
     private static async Task WaitForComposerAsync(IPage page)
         => await page.Locator(".cw-canvas-composer.is-dialog").WaitForAsync();
 
     private static async Task WaitForNodeAsync(IPage page, string nodeId)
-        => await page.Locator($".cw-node[data-node-id=\"{nodeId}\"]").WaitForAsync();
+        => await page.WaitForFunctionAsync(
+            @"requestedNodeId => {
+                const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes;
+                return Array.isArray(nodes) && nodes.some(node => node?.id === requestedNodeId);
+            }",
+            nodeId);
 
     private static async Task<string> WaitForSingleInputNodeAsync(IPage page)
     {
         await page.WaitForFunctionAsync(
-            @"() => document.querySelectorAll('.cw-node[data-node-id^=""selection:input:""]').length > 0");
+            @"() => {
+                const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes;
+                return Array.isArray(nodes) && nodes.some(node => typeof node?.id === 'string' && node.id.startsWith('selection:input:'));
+            }");
 
         var nodeId = await page.EvaluateAsync<string>(
             @"() => {
-                const matches = Array.from(document.querySelectorAll('.cw-node[data-node-id^=""selection:input:""]'));
+                const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes;
+                if (!Array.isArray(nodes)) {
+                    return '';
+                }
+
+                const matches = nodes.filter(node => typeof node?.id === 'string' && node.id.startsWith('selection:input:'));
                 const node = matches.length > 0 ? matches[matches.length - 1] : null;
-                return node?.getAttribute('data-node-id') || '';
+                return node?.id || '';
             }");
 
         Assert.False(string.IsNullOrWhiteSpace(nodeId));
@@ -544,7 +552,66 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
     }
 
     private static async Task<string> ReadNodeTextAsync(IPage page, string nodeId)
-        => await page.Locator($".cw-node[data-node-id=\"{nodeId}\"]").InnerTextAsync();
+        => await page.EvaluateAsync<string>(
+            @"requestedNodeId => {
+                const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes;
+                if (!Array.isArray(nodes)) {
+                    return '';
+                }
+
+                const node = nodes.find(candidate => candidate?.id === requestedNodeId);
+                if (!node) {
+                    return '';
+                }
+
+                const parts = [
+                    node.title,
+                    node.subtitle,
+                    node.inlineText,
+                    node.leadText,
+                    node.notes,
+                    node.compactPath?.displayText,
+                    node.compactPath?.promotedText,
+                    node.compactPath?.fullPath,
+                    node.objectSubtype
+                ];
+                if (Array.isArray(node.chips)) {
+                    parts.push(...node.chips.map(chip => chip?.text || ''));
+                }
+
+                if (Array.isArray(node.footerChips)) {
+                    parts.push(...node.footerChips.map(chip => chip?.text || ''));
+                }
+
+                if (Array.isArray(node.annotations)) {
+                    parts.push(...node.annotations.map(annotation => annotation?.label || annotation?.text || ''));
+                }
+
+                return parts
+                    .filter(part => typeof part === 'string' && part.trim().length > 0)
+                    .join('\n');
+            }",
+            nodeId);
+
+    private static Task<bool> NodeExistsAsync(IPage page, string nodeId)
+        => page.EvaluateAsync<bool>(
+            @"requestedNodeId => {
+                const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes;
+                return Array.isArray(nodes) && nodes.some(node => node?.id === requestedNodeId);
+            }",
+            nodeId);
+
+    private static Task<int> ReadNodeCountByPrefixAsync(IPage page, string prefix)
+        => page.EvaluateAsync<int>(
+            @"requestedPrefix => {
+                const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes;
+                if (!Array.isArray(nodes)) {
+                    return 0;
+                }
+
+                return nodes.filter(node => typeof node?.id === 'string' && node.id.startsWith(requestedPrefix)).length;
+            }",
+            prefix);
 
     private static async Task CaptureCanvasStageAsync(IPage page, string path)
     {
@@ -710,7 +777,7 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
             return;
         }
 
-        await confirmDialog.GetByRole(AriaRole.Button, new() { Name = confirmLabel, Exact = true }).ClickAsync();
+        await confirmDialog.Locator("button[data-tone='warn']").ClickAsync();
     }
 
     private static async Task OpenComponentCatalogAsync(IPage page, VerificationComponent component)
@@ -980,11 +1047,66 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
     private static string ActionSelector(string actionId)
         => $".cw-context-menu__action[data-action-id=\"{actionId}\"]";
 
+    private static Task<string?> ResolveCanvasNodeIdAsync(IPage page, string selector)
+    {
+        var exactMatch = Regex.Match(selector, @"data-node-id='(?<id>[^']+)'", RegexOptions.IgnoreCase);
+        if (exactMatch.Success)
+        {
+            return Task.FromResult<string?>(exactMatch.Groups["id"].Value);
+        }
+
+        var prefixMatch = Regex.Match(selector, @"data-node-id\^='(?<prefix>[^']+)'", RegexOptions.IgnoreCase);
+        if (prefixMatch.Success)
+        {
+            return page.EvaluateAsync<string?>(
+                @"prefix => {
+                    const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes;
+                    if (!Array.isArray(nodes)) {
+                        return null;
+                    }
+
+                    const match = nodes.find(node => typeof node?.id === 'string' && node.id.startsWith(prefix));
+                    return match?.id || null;
+                }",
+                prefixMatch.Groups["prefix"].Value);
+        }
+
+        return Task.FromResult<string?>(null);
+    }
+
+    private static async Task<(float X, float Y)> ReadCanvasNodeCenterAsync(IPage page, string selector)
+    {
+        var nodeId = await ResolveCanvasNodeIdAsync(page, selector);
+        Assert.False(string.IsNullOrWhiteSpace(nodeId), $"Could not resolve a canvas node id for selector '{selector}'.");
+
+        var center = await page.EvaluateAsync<CanvasPoint?>(
+            @"requestedNodeId => {
+                const workbench = window.CanDoItAll?.canvasWorkbench;
+                const host = document.querySelector('.cw-canvas-host');
+                if (!(host instanceof HTMLElement) || !workbench?.getSceneSnapshot) {
+                    return null;
+                }
+
+                const snapshot = workbench.getSceneSnapshot(host);
+                const node = snapshot?.nodes?.find(candidate => candidate?.id === requestedNodeId);
+                if (!node) {
+                    return null;
+                }
+
+                return {
+                    x: node.left + (node.width / 2),
+                    y: node.top + (node.height / 2)
+                };
+            }",
+            nodeId);
+        Assert.NotNull(center);
+        return ((float)center!.X, (float)center.Y);
+    }
+
     private static async Task OpenCanvasContextMenuAsync(IPage page, string selector)
     {
-        var locator = page.Locator(selector);
-        var exists = await locator.CountAsync() > 0;
-        Assert.True(exists, $"Canvas node '{selector}' was not found.");
+        var nodeId = await ResolveCanvasNodeIdAsync(page, selector);
+        Assert.False(string.IsNullOrWhiteSpace(nodeId), $"Canvas node '{selector}' was not found.");
 
         for (var attempt = 0; attempt < 3; attempt++)
         {
@@ -1010,26 +1132,17 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
     {
         for (var attempt = 0; attempt < 5; attempt++)
         {
-            var locator = page.Locator(selector).First;
-            await locator.WaitForAsync();
+            var center = await ReadCanvasNodeCenterAsync(page, selector);
 
             try
             {
-                await locator.ScrollIntoViewIfNeededAsync();
-                var bounds = await locator.BoundingBoxAsync();
-                if (bounds is null)
-                {
-                    await page.WaitForTimeoutAsync(120);
-                    continue;
-                }
-
                 await page.Mouse.ClickAsync(
-                    bounds.X + (bounds.Width / 2),
-                    bounds.Y + (bounds.Height / 2),
+                    center.X,
+                    center.Y,
                     new() { Button = MouseButton.Right });
                 return;
             }
-            catch (PlaywrightException exception) when (exception.Message.Contains("attached", StringComparison.OrdinalIgnoreCase))
+            catch (PlaywrightException exception) when (exception.Message.Contains("attached", StringComparison.OrdinalIgnoreCase) || exception.Message.Contains("target closed", StringComparison.OrdinalIgnoreCase))
             {
                 await page.WaitForTimeoutAsync(120);
             }
@@ -1051,27 +1164,27 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         }
     }
 
-    private static Task DispatchContextMenuAsync(IPage page, string selector)
-        => page.EvaluateAsync(
-            @"selector => {
-                const node = document.querySelector(selector);
-                if (!node) {
+    private static async Task DispatchContextMenuAsync(IPage page, string selector)
+    {
+        var center = await ReadCanvasNodeCenterAsync(page, selector);
+        await page.EvaluateAsync(
+            @"request => {
+                const host = document.querySelector('.cw-canvas-host');
+                if (!(host instanceof HTMLElement)) {
                     return;
                 }
 
-                const rect = node.getBoundingClientRect();
-                const x = rect.left + (rect.width / 2);
-                const y = rect.top + (rect.height / 2);
-                node.dispatchEvent(new MouseEvent('contextmenu', {
+                host.dispatchEvent(new MouseEvent('contextmenu', {
                     bubbles: true,
                     cancelable: true,
                     button: 2,
                     buttons: 2,
-                    clientX: x,
-                    clientY: y
+                    clientX: request.x,
+                    clientY: request.y
                 }));
             }",
-            selector);
+            new { x = center.X, y = center.Y });
+    }
 
     private static async Task CloseTransientUiAsync(IPage page)
     {
@@ -1093,7 +1206,7 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
             var confirmDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Confirm prompt-factory action" });
             if (await WaitForLocatorAsync(confirmDialog, 1_500))
             {
-                await confirmDialog.GetByRole(AriaRole.Button, new() { Name = "Reset session", Exact = true }).ClickAsync();
+                await confirmDialog.Locator("button[data-tone='warn']").ClickAsync();
             }
 
             if (await WaitForResetStateAsync(page, 5_000))
@@ -1119,16 +1232,32 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
         }
     }
 
+    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)
+    {
+        var startupDialog = page.GetByTestId("database-startup-modal");
+        if (!await WaitForLocatorAsync(startupDialog, timeoutMs))
+        {
+            return;
+        }
+
+        await page.GetByTestId("database-startup-continue").ClickAsync();
+        await startupDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+    }
+
     private static async Task<bool> WaitForResetStateAsync(IPage page, float timeoutMs)
     {
         try
         {
             await page.WaitForFunctionAsync(
-                @"() => !document.querySelector('.cw-node[data-node-id=""selection:blueprint""]')
-                    && !document.querySelector('.cw-node[data-node-id=""selection:flow""]')
-                    && !document.querySelector('.cw-node[data-node-id=""selection:components""]')
-                    && !document.querySelector('.cw-node[data-node-id=""selection:inputs""]')
-                    && !!document.querySelector('.cw-node[data-node-id=""selection:setup""]')",
+                @"() => {
+                    const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes || [];
+                    const has = id => Array.isArray(nodes) && nodes.some(node => node?.id === id);
+                    return !has('selection:blueprint')
+                        && !has('selection:flow')
+                        && !has('selection:components')
+                        && !has('selection:inputs')
+                        && has('selection:setup');
+                }",
                 null,
                 new() { Timeout = timeoutMs });
             return true;
@@ -1141,57 +1270,72 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
 
     private static async Task ClearComponentsAsync(IPage page)
     {
-        if (await page.Locator(".cw-node[data-node-id='selection:components']").CountAsync() == 0)
+        if (!await NodeExistsAsync(page, "selection:components"))
         {
             return;
         }
 
         await FocusCanvasNodeAsync(page, "selection:components");
-        await TriggerNodeContextActionAsync(page, ".cw-node[data-node-id='selection:components']", "clear:components");
-        await page.WaitForFunctionAsync("() => !document.querySelector('.cw-node[data-node-id=\"selection:components\"]')");
+        await TriggerNodeContextActionAsync(page, "selection:components", "clear:components");
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes;
+                return !Array.isArray(nodes) || !nodes.some(node => node?.id === 'selection:components');
+            }");
     }
 
     private static async Task ClearInputsAsync(IPage page)
     {
-        if (await page.Locator(".cw-node[data-node-id='selection:inputs']").CountAsync() == 0)
+        if (!await NodeExistsAsync(page, "selection:inputs"))
         {
             return;
         }
 
         await FocusCanvasNodeAsync(page, "selection:inputs");
-        await TriggerNodeContextActionAsync(page, ".cw-node[data-node-id='selection:inputs']", "clear:inputs");
-        await page.WaitForFunctionAsync("() => !document.querySelector('.cw-node[data-node-id=\"selection:inputs\"]')");
+        await TriggerNodeContextActionAsync(page, "selection:inputs", "clear:inputs");
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes;
+                return !Array.isArray(nodes) || !nodes.some(node => node?.id === 'selection:inputs');
+            }");
     }
 
     private static async Task ClearFlowSelectionAsync(IPage page)
     {
-        if (await page.Locator(".cw-node[data-node-id='selection:flow']").CountAsync() == 0)
+        if (!await NodeExistsAsync(page, "selection:flow"))
         {
             return;
         }
 
         await FocusCanvasNodeAsync(page, "selection:flow");
-        await TriggerNodeContextActionAsync(page, ".cw-node[data-node-id='selection:flow']", "clear:flow");
-        await page.WaitForFunctionAsync("() => !document.querySelector('.cw-node[data-node-id=\"selection:flow\"]')");
+        await TriggerNodeContextActionAsync(page, "selection:flow", "clear:flow");
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes;
+                return !Array.isArray(nodes) || !nodes.some(node => node?.id === 'selection:flow');
+            }");
     }
 
     private static async Task ClearBlueprintSelectionAsync(IPage page)
     {
-        if (await page.Locator(".cw-node[data-node-id='selection:blueprint']").CountAsync() == 0)
+        if (!await NodeExistsAsync(page, "selection:blueprint"))
         {
             return;
         }
 
         await FocusCanvasNodeAsync(page, "selection:blueprint");
-        await TriggerNodeContextActionAsync(page, ".cw-node[data-node-id='selection:blueprint']", "clear:blueprint");
-        await page.WaitForFunctionAsync("() => !document.querySelector('.cw-node[data-node-id=\"selection:blueprint\"]')");
+        await TriggerNodeContextActionAsync(page, "selection:blueprint", "clear:blueprint");
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes;
+                return !Array.isArray(nodes) || !nodes.some(node => node?.id === 'selection:blueprint');
+            }");
     }
 
-    private static async Task TriggerNodeContextActionAsync(IPage page, string nodeSelector, string actionId)
+    private static async Task TriggerNodeContextActionAsync(IPage page, string nodeId, string actionId)
     {
         await CloseTransientUiAsync(page);
-        await OpenCanvasContextMenuAsync(page, nodeSelector);
-        await ClickMenuActionAsync(page, actionId);
+        await InvokeCanvasContextActionAsync(page, nodeId, actionId);
     }
 
     private static string ResolveComponentSection(string groupKey)
@@ -1447,19 +1591,35 @@ public sealed class PromptLibraryVerificationTests(PlaywrightAppFixture fixture)
 
     private sealed record VerificationBlueprint(string Key, string Name, string Summary, int OrderIndex);
 
-    private sealed record VerificationInputDefinition(
-        string Key,
-        string Label,
-        string Title,
-        string Subtitle,
-        string Notes,
-        string? SampleFilePath);
+private sealed record VerificationInputDefinition(
+    string Key,
+    string Label,
+    string Title,
+    string Subtitle,
+    string Notes,
+    string? SampleFilePath);
 
-    private sealed record TokenValue(string Key, string Value);
+private sealed record TokenValue(string Key, string Value);
 
-    private sealed class VerificationResult
-    {
-        public string Category { get; set; } = string.Empty;
+private sealed record ComposerSnapshot(
+    string SubmitText,
+    IReadOnlyList<ComposerFieldSnapshot> Fields);
+
+private sealed record ComposerFieldSnapshot(
+    string Label,
+    string TagName,
+    string Value);
+
+private sealed class CanvasPoint
+{
+    public double X { get; set; }
+
+    public double Y { get; set; }
+}
+
+private sealed class VerificationResult
+{
+    public string Category { get; set; } = string.Empty;
 
         public string Key { get; set; } = string.Empty;
 

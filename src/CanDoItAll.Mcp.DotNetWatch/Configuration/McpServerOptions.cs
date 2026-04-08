@@ -132,6 +132,12 @@ public sealed class ProcessOptions
     public string RegistryPath { get; set; } = ".mcp-state/process-registry.json";
 
     public bool UsePollingFileWatcher { get; set; }
+
+    public bool WatchSuppressBrowserRefresh { get; set; }
+
+    public bool TailwindAutoDetect { get; set; } = true;
+
+    public int TailwindWatchDebounceMilliseconds { get; set; } = 150;
 }
 
 public sealed class BackendOptions

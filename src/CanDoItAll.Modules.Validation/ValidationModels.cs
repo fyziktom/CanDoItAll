@@ -55,6 +55,8 @@ public sealed class ValidationRun
 
     public Guid? ProjectId { get; set; }
 
+    public Guid? ResponsiblePartyId { get; set; }
+
     public ValidationType ValidationType { get; set; }
 
     public string ArtifactTitle { get; set; } = string.Empty;
@@ -152,6 +154,8 @@ public sealed class ValidationRunEditorModel
     public Guid? Id { get; set; }
 
     public Guid? ProjectId { get; set; }
+
+    public Guid? ResponsiblePartyId { get; set; }
 
     public ValidationType ValidationType { get; set; } = ValidationType.Architecture;
 
@@ -255,6 +259,7 @@ public sealed class ValidationService(
         {
             Id = run.Id,
             ProjectId = run.ProjectId,
+            ResponsiblePartyId = run.ResponsiblePartyId,
             ValidationType = run.ValidationType,
             ChecklistId = run.ChecklistId,
             ArtifactTitle = run.ArtifactTitle,
@@ -300,6 +305,7 @@ public sealed class ValidationService(
 
         entity.ChecklistId = checklistId;
         entity.ProjectId = model.ProjectId;
+        entity.ResponsiblePartyId = model.ResponsiblePartyId;
         entity.ValidationType = model.ValidationType;
         entity.ArtifactTitle = model.ArtifactTitle.Trim();
         entity.ArtifactRoute = string.IsNullOrWhiteSpace(model.ArtifactRoute) ? "/projects" : model.ArtifactRoute.Trim();

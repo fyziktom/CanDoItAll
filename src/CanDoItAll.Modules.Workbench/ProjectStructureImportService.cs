@@ -98,6 +98,15 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
                 cancellationToken);
         }
 
+        if (createdNodeIds.Count > 1)
+        {
+            var recompositionResult = await projectWorkbenchService.RecomposeSubtreeAsync(request.ProjectId, container.Id, cancellationToken);
+            if (recompositionResult is null)
+            {
+                warnings.Add("Imported nodes were created, but the initial layout could not be recomposed automatically.");
+            }
+        }
+
         return new ProjectStructureImportResult(request.ProjectId, container.Id, sourceNodeId, createdNodeIds, warnings);
     }
 

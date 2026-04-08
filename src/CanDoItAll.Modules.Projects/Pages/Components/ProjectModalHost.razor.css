@@ -1,0 +1,110 @@
+.projects-modal-host ::deep [data-testid="projects-editor-modal"],
+.projects-modal-host ::deep [data-testid="projects-detail-modal"] {
+    z-index: 360 !important;
+    padding: clamp(1rem, 2.8vw, 2rem);
+    box-sizing: border-box;
+}
+
+.projects-modal-host ::deep [data-testid="projects-editor-modal"] > .absolute,
+.projects-modal-host ::deep [data-testid="projects-detail-modal"] > .absolute {
+    background:
+        radial-gradient(circle at top, rgba(148, 163, 184, 0.18), transparent 38%),
+        rgba(15, 23, 42, 0.62);
+    backdrop-filter: blur(16px);
+}
+
+.projects-modal-host ::deep [data-testid="projects-editor-modal"] .projects-modal-host__dialog,
+.projects-modal-host ::deep [data-testid="projects-detail-modal"] .projects-modal-host__dialog {
+    z-index: 361 !important;
+    border-radius: 2.15rem;
+    border-color: rgba(226, 232, 240, 0.9);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.97));
+    box-shadow:
+        0 42px 120px rgba(15, 23, 42, 0.28),
+        0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.projects-modal-host ::deep [data-testid="projects-editor-modal"] .projects-modal-host__dialog > header,
+.projects-modal-host ::deep [data-testid="projects-detail-modal"] .projects-modal-host__dialog > header {
+    padding: 1.55rem 1.7rem 1.3rem;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+}
+
+.projects-modal-host ::deep [data-testid="projects-editor-modal"] .projects-modal-host__dialog > div,
+.projects-modal-host ::deep [data-testid="projects-detail-modal"] .projects-modal-host__dialog > div {
+    padding: 1.45rem 1.7rem 1.7rem;
+}
+
+.projects-modal-host ::deep [data-testid="projects-editor-modal"] .projects-modal-host__dialog > footer,
+.projects-modal-host ::deep [data-testid="projects-detail-modal"] .projects-modal-host__dialog > footer {
+    background: rgba(248, 250, 252, 0.9);
+    backdrop-filter: blur(18px);
+}
+
+.projects-modal-host__header-actions {
+    align-items: center;
+}
+
+.projects-modal-host__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.85rem;
+    height: 2.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    color: #0f172a;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    transition:
+        transform 140ms ease,
+        background 140ms ease,
+        border-color 140ms ease,
+        box-shadow 140ms ease;
+}
+
+.projects-modal-host__close:hover {
+    transform: translateY(-1px);
+    border-color: rgba(96, 165, 250, 0.34);
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+}
+
+.projects-modal-host__close:focus-visible {
+    outline: 2px solid rgba(59, 130, 246, 0.4);
+    outline-offset: 3px;
+}
+
+.projects-modal-host__close .rz-icon,
+.projects-modal-host__close .rz-icon-fallback {
+    font-size: 1.05rem;
+}
+
+@media (max-width: 900px) {
+    .projects-modal-host ::deep [data-testid="projects-editor-modal"],
+    .projects-modal-host ::deep [data-testid="projects-detail-modal"] {
+        padding: 0.85rem;
+    }
+
+    .projects-modal-host ::deep [data-testid="projects-editor-modal"] .projects-modal-host__dialog,
+    .projects-modal-host ::deep [data-testid="projects-detail-modal"] .projects-modal-host__dialog {
+        border-radius: 1.6rem;
+    }
+
+    .projects-modal-host ::deep [data-testid="projects-editor-modal"] .projects-modal-host__dialog > header,
+    .projects-modal-host ::deep [data-testid="projects-detail-modal"] .projects-modal-host__dialog > header,
+    .projects-modal-host ::deep [data-testid="projects-editor-modal"] .projects-modal-host__dialog > div,
+    .projects-modal-host ::deep [data-testid="projects-detail-modal"] .projects-modal-host__dialog > div,
+    .projects-modal-host ::deep [data-testid="projects-editor-modal"] .projects-modal-host__dialog > footer,
+    .projects-modal-host ::deep [data-testid="projects-detail-modal"] .projects-modal-host__dialog > footer {
+        padding-left: 1.1rem;
+        padding-right: 1.1rem;
+    }
+
+    .projects-modal-host__close {
+        width: 2.65rem;
+        height: 2.65rem;
+    }
+}

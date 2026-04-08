@@ -1,4 +1,4 @@
-@page "/projects/{ProjectId:guid}/structure"
+﻿@page "/projects/{ProjectId:guid}/structure"
 @* codex-capsule
 kind: page
 name: ProjectStructurePage
@@ -11,20 +11,46 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
+@using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.Modules.Workbench.CanvasAdapters
 @using CanDoItAll.Modules.Workspace
+@using CanDoItAll.Infrastructure.Storage
 @using CanDoItAll.SharedKernel
 @inject ProjectsService ProjectsService
+@inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 @inject ProjectWorkbenchService ProjectWorkbenchService
+@inject IProjectWorkbenchSeedService ProjectWorkbenchSeedService
 @inject IProjectStructureLocalFileOpener LocalFileOpener
 @inject IProjectStructureRuntimeLauncher RuntimeLauncher
 @inject WorkspaceService WorkspaceService
 @inject ProviderExecutionService ProviderExecutionService
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <PageTitle>Project Structure</PageTitle>
 
-@if (surface is null || canvasSurface is null)
+@if (unavailableState is not null)
+{
+    <PageScaffold>
+        <Header>
+            <PageHeader Eyebrow="Workbench"
+                        Title="Project structure unavailable"
+                        Description="The requested project is not available in the active database profile." />
+        </Header>
+        <ChildContent>
+            <EmptyState Eyebrow="Switched profile"
+                        Title="@unavailableState.Title"
+                        Description="@unavailableState.Description">
+                <Actions>
+                    <Button Text="Open projects"
+                            Click="OpenUnavailableRouteAsync" />
+                </Actions>
+            </EmptyState>
+        </ChildContent>
+    </PageScaffold>
+}
+else if (surface is null || canvasSurface is null)
 {
     <CanvasWorkbenchStage Eyebrow="Structure canvas"
                           Title="Project structure workbench"
@@ -36,7 +62,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 }
 else
 {
-    <div class="space-y-6 project-structure-page">
+    <Stack Gap="1.5rem"
+           Class="project-structure-page">
         <PageHeader Eyebrow="Workbench"
                     Title="@($"{surface.ProjectName} structure")"
                     Compact="true" />
@@ -54,199 +81,72 @@ else
                                  CreateActionInvoked="HandleCreateActionAsync"
                                  NodeEdited="HandleNodeEditedAsync"
                                  NodeOpened="HandleNodeOpenedAsync"
-                                 StateChanged="HandleCanvasStateChangedAsync">
+                                 StateChanged="HandleCanvasStateChangedAsync"
+                                 ClipboardRequested="HandleClipboardRequestedAsync">
                     <ToolbarLeftContent>
-                        <div class="project-structure-toolbar-windows">
-                            <button type="button"
-                                    class="cw-toolbar-action project-structure-toolbar-toggle @(SelectionWindowState.IsVisible ? "is-active" : string.Empty)"
-                                    title="Show or hide the selection panel"
-                                    @onclick="@(() => ToggleWindowAsync(SelectionWindowKey))">
-                                Inspector
-                            </button>
-                            <button type="button"
-                                    class="cw-toolbar-action project-structure-toolbar-toggle @(HealthWindowState.IsVisible ? "is-active" : string.Empty)"
-                                    title="Show or hide canvas health"
-                                    @onclick="@(() => ToggleWindowAsync(HealthWindowKey))">
-                                Health
-                            </button>
-                            <button type="button"
-                                    class="cw-toolbar-action project-structure-toolbar-toggle @(ToolboxWindowState.IsVisible ? "is-active" : string.Empty)"
-                                    data-testid="project-structure-toolbox-toggle"
-                                    title="Show or hide the standard blocks toolbox"
-                                    @onclick="@(() => ToggleWindowAsync(ToolboxWindowKey))">
-                                Blocks
-                            </button>
-                            <button type="button"
-                                    class="cw-toolbar-action"
-                                    data-testid="project-structure-recompose-toolbar-button"
-                                    title="Redistribute descendants under the selected node without changing relationships."
-                                    disabled="@(!CanRecomposeSelectedBranch)"
-                                    @onclick="RecomposeSelectedBranchAsync">
-                                @(isSubtreeRecompositionInProgress ? "Recomposing" : "Recompose")
-                            </button>
-                        </div>
+                        <ProjectStructureToolbarActions SelectionWindowVisible="@SelectionWindowState.IsVisible"
+                                                       HealthWindowVisible="@HealthWindowState.IsVisible"
+                                                       ToolboxWindowVisible="@ToolboxWindowState.IsVisible"
+                                                       SignalsWindowVisible="@SignalsWindowState.IsVisible"
+                                                       ActiveTool="@canvasToolMode"
+                                                       CanUseDependencyTool="@(selectedNode is not null)"
+                                                       CanRecomposeSelectedBranch="@CanRecomposeSelectedBranch"
+                                                       IsSubtreeRecompositionInProgress="@isSubtreeRecompositionInProgress"
+                                                       SelectToolClicked="SelectCanvasToolAsync"
+                                                       DependencyToolClicked="EnableLinkModeAsync"
+                                                       DeleteToolClicked="EnableDeleteModeAsync"
+                                                       ToggleSelectionWindow="ToggleSelectionWindowAsync"
+                                                       ToggleHealthWindow="ToggleHealthWindowAsync"
+                                                       ToggleToolboxWindow="ToggleToolboxWindowAsync"
+                                                       ToggleSignalsWindow="ToggleSignalsWindowAsync"
+                                                       RecomposeBranch="RecomposeSelectedBranchAsync" />
                     </ToolbarLeftContent>
                     <OverlayContent>
                         @if (ToolboxWindowState.IsVisible)
                         {
-                            <CanvasFloatingWindow WindowId="@ToolboxWindowKey"
-                                                  TestId="project-structure-toolbox-window"
-                                                  AriaLabel="Project structure standard blocks toolbox"
-                                                  Kicker="Standard blocks"
-                                                  Title="Project structure toolbox"
-                                                  Summary="Search the shared block catalog, drag the window where you need it, and create against the currently selected source."
-                                                  BodyClass="project-structure-toolbox-window__body"
-                                                  DefaultPlacement="top-left"
-                                                  DefaultWidth="@ToolboxWindowDefaultWidth"
-                                                  DefaultHeight="420"
-                                                  MinWidth="320"
-                                                  MinHeight="240"
-                                                  MaxWidth="520"
-                                                  MaxHeight="520"
-                                                  State="@ToolboxWindowState"
-                                                  StateChanged="HandleToolboxWindowStateChangedAsync">
-                                <section class="cw-context-toolbox project-structure-toolbox"
-                                         data-testid="project-structure-standard-blocks-toolbox">
-                                    <div class="project-structure-toolbox__meta"
-                                         data-testid="project-structure-toolbox-meta">
-                                        <span class="cw-context-toolbox__count">@($"{ToolboxCreateGroups.Sum(group => group.Actions.Count)} items")</span>
-                                        <span class="cw-node__chip">@ToolboxSourceLabel</span>
-                                    </div>
-
-                                    <input class="cw-context-toolbox__search project-structure-toolbox__search"
-                                           type="search"
-                                           placeholder="Search blocks, files, runtime, or infrastructure"
-                                           @bind="structureToolboxSearchText"
-                                           @bind:event="oninput" />
-
-                                    <div class="cw-context-toolbox__body project-structure-toolbox__body">
-                                        <div class="cw-context-toolbox__sections project-structure-toolbox__sections">
-                                            @if (ToolboxCreateGroups.Count == 0)
-                                            {
-                                                <div class="cw-context-toolbox__empty">
-                                                    <strong>No blocks match the current search.</strong>
-                                                    <span>Clear the filter to restore the full catalog.</span>
-                                                </div>
-                                            }
-                                            else
-                                            {
-                                                @foreach (var group in ToolboxCreateGroups)
-                                                {
-                                                    <section class="cw-context-toolbox__section"
-                                                             data-testid="@($"project-structure-toolbox-group-shell-{group.Key}")">
-                                                        <button type="button"
-                                                                class="cw-context-toolbox__section-summary project-structure-toolbox__section-summary"
-                                                                data-testid="@($"project-structure-toolbox-group-{group.Key}")"
-                                                                aria-expanded="@(group.IsOpen ? "true" : "false")"
-                                                                @onclick="@(() => ExpandToolboxGroup(group.Key))">
-                                                            <span class="cw-context-toolbox__section-copy">
-                                                                <strong>@group.Label</strong>
-                                                                <small>@group.Description</small>
-                                                            </span>
-                                                            <span class="project-structure-toolbox__section-summary-meta">
-                                                                <span class="cw-context-toolbox__section-badge tone-accent">@group.Actions.Count</span>
-                                                                <span class="project-structure-toolbox__section-toggle-icon" aria-hidden="true">
-                                                                    <Icon Name="@(group.IsOpen ? "expand_less" : "expand_more")" />
-                                                                </span>
-                                                            </span>
-                                                        </button>
-                                                        @if (group.IsOpen)
-                                                        {
-                                                            <div class="cw-context-toolbox__section-body"
-                                                                 data-testid="@($"project-structure-toolbox-group-body-{group.Key}")">
-                                                                <div class="cw-context-toolbox__item-list">
-                                                                    @foreach (var action in group.Actions)
-                                                                    {
-                                                                        <button type="button"
-                                                                                class="cw-context-toolbox__item"
-                                                                                data-testid="@($"project-structure-toolbox-{action.ActionId}")"
-                                                                                @onclick="@(() => OpenCreateDialogAsync(action))">
-                                                                            <span class="cw-context-toolbox__item-icon">
-                                                                                <Icon Name="@action.Icon" />
-                                                                            </span>
-                                                                            <span class="cw-context-toolbox__item-body">
-                                                                                <strong>@action.Label</strong>
-                                                                                <small>@action.Description</small>
-                                                                            </span>
-                                                                        </button>
-                                                                    }
-                                                                </div>
-                                                            </div>
-                                                        }
-                                                    </section>
-                                                }
-                                            }
-                                        </div>
-                                    </div>
-                                </section>
-                            </CanvasFloatingWindow>
+                            <ProjectStructureToolboxWindow WindowId="@ToolboxWindowKey"
+                                                           TestId="project-structure-toolbox-window"
+                                                           AriaLabel="Project structure standard blocks toolbox"
+                                                           Kicker="Standard blocks Toolbox"
+                                                           Title="Project structure toolbox"
+                                                           Summary="Search the shared block catalog, drag the window where you need it, and keep typed creation close to the canvas."
+                                                           State="@ToolboxWindowState"
+                                                           StateChanged="HandleToolboxWindowStateChangedAsync"
+                                                           Groups="@ToolboxCreateGroups"
+                                                           SearchText="@structureToolboxSearchText"
+                                                           SearchTextChanged="@((string? value) => structureToolboxSearchText = value ?? string.Empty)"
+                                                           SourceLabel="@ToolboxSourceLabel"
+                                                           DefaultWidth="@ToolboxWindowDefaultWidth"
+                                                           OnToggleGroup="ExpandToolboxGroup"
+                                                           OnOpenAction="HandleToolboxActionSelectedAsync" />
                         }
                         @if (HealthWindowState.IsVisible)
                         {
-                            <CanvasFloatingWindow WindowId="@HealthWindowKey"
-                                                  TestId="project-structure-validation-window"
-                                                  AriaLabel="Project structure canvas health"
-                                                  Kicker="Canvas health"
-                                                  Title="Canvas health"
-                                                  Summary="Validation pressure stays in the canvas now, but the toolbar safe zone remains clear."
-                                                  DefaultPlacement="top-left"
-                                                  DefaultWidth="320"
-                                                  DefaultHeight="326"
-                                                  MinWidth="280"
-                                                  MinHeight="220"
-                                                  State="@HealthWindowState"
-                                                  StateChanged="HandleHealthWindowStateChangedAsync">
-                                <section class="project-structure-validation-overlay"
-                                         aria-label="Project structure validation overlay"
-                                         data-testid="project-structure-validation-overlay">
-                                    <div class="project-structure-validation-overlay__header">
-                                        <p class="cw-panel-kicker">Project validation overlay</p>
-                                        <h3 class="cw-panel-title">Canvas health</h3>
-                                        <p class="cw-panel-copy">Surface dependency and review issues directly in the structure canvas without blocking the toolbar.</p>
-                                    </div>
-                                    <div class="project-structure-validation-overlay__metrics">
-                                        <div class="project-structure-validation-overlay__metric" data-validation-metric="blocked">
-                                            <span>Blocked</span>
-                                            <strong>@canvasValidationOverlay.BlockedCount</strong>
-                                        </div>
-                                        <div class="project-structure-validation-overlay__metric" data-validation-metric="review">
-                                            <span>Review</span>
-                                            <strong>@canvasValidationOverlay.ReviewCount</strong>
-                                        </div>
-                                        <div class="project-structure-validation-overlay__metric" data-validation-metric="priority">
-                                            <span>Priority</span>
-                                            <strong>@canvasValidationOverlay.PriorityCount</strong>
-                                        </div>
-                                        <div class="project-structure-validation-overlay__metric" data-validation-metric="selection">
-                                            <span>Selected issues</span>
-                                            <strong>@canvasValidationOverlay.SelectedIssueCount</strong>
-                                        </div>
-                                    </div>
-                                    @if (canvasValidationOverlay.SpotlightNodes.Count > 0)
-                                    {
-                                        <div class="project-structure-validation-overlay__spotlight">
-                                            <span>Spotlight</span>
-                                            <ul>
-                                                @foreach (var nodeTitle in canvasValidationOverlay.SpotlightNodes)
-                                                {
-                                                    <li>@nodeTitle</li>
-                                                }
-                                            </ul>
-                                        </div>
-                                    }
-                                    @if (selectedNode is not null && canvasValidationOverlay.SelectedIssueCount > 0)
-                                    {
-                                        <div class="project-structure-validation-overlay__actions">
-                                            <button type="button"
-                                                    class="cw-button"
-                                                    data-tone="accent"
-                                                    @onclick="RunSelectedValidationAsync">
-                                                Validate selected
-                                            </button>
-                                        </div>
-                                    }
-                                </section>
-                            </CanvasFloatingWindow>
+                            <ProjectStructureCanvasHealthWindow WindowId="@HealthWindowKey"
+                                                                TestId="project-structure-validation-window"
+                                                                AriaLabel="Project structure canvas health"
+                                                                State="@HealthWindowState"
+                                                                StateChanged="HandleHealthWindowStateChangedAsync"
+                                                                SummaryState="@canvasValidationOverlay"
+                                                                CanValidateSelected="@(selectedNode is not null && canvasValidationOverlay.SelectedIssueCount > 0)"
+                                                                ValidateSelected="RunSelectedValidationAsync" />
+                        }
+                        @if (SignalsWindowState.IsVisible)
+                        {
+                            <ProjectStructureSignalsWindow WindowId="@SignalsWindowKey"
+                                                           TestId="project-structure-signals-window"
+                                                           AriaLabel="Project structure node signals"
+                                                           Kicker="Node signals"
+                                                           Title="Signals toolbox"
+                                                           Summary="Keep markers, progress, and priority close to the current selection without reopening the right-click menu every time."
+                                                           State="@SignalsWindowState"
+                                                           StateChanged="HandleSignalsWindowStateChangedAsync"
+                                                           Sections="@SignalsWindowSections"
+                                                           CanApplySignals="@CanApplySignals"
+                                                           SelectionLabel="@SignalsSelectionLabel"
+                                                           SelectionHint="@SignalsSelectionHint"
+                                                           DefaultWidth="@SignalsWindowDefaultWidth"
+                                                           OnApplyAction="HandleSignalsToolboxActionAsync" />
                         }
                         @if (SelectionWindowState.IsVisible)
                         {
@@ -264,821 +164,336 @@ else
                                                   MaxWidth="520"
                                                   State="@SelectionWindowState"
                                                   StateChanged="HandleSelectionWindowStateChangedAsync">
-                @if (selectedNodes.Count == 0)
-                {
-                    <div class="cw-empty-state">
-                        <p class="cw-panel-kicker">Canvas selection</p>
-                        <h3>Select a project object</h3>
-                        <p>Pick a node to edit its status, attachments, and next-step actions without leaving the canvas.</p>
-                        <div class="cw-chip-row">
-                            <span class="cw-node__chip">Click</span>
-                            <span class="cw-node__chip">Ctrl + Shift + click</span>
-                            <span class="cw-node__chip">Alt + drag</span>
-                            <span class="cw-node__chip">Right-click</span>
-                        </div>
-                    </div>
-                }
-                else if (selectedNodes.Count > 1)
-                {
-                    <div class="space-y-4">
-                        <div class="cw-panel-card">
-                            <p class="cw-panel-kicker">Multi-select</p>
-                            <h3 class="cw-panel-title">@($"{selectedNodes.Count} nodes selected")</h3>
-                            <p class="cw-panel-copy">Batch movement stays on the canvas. Shared status, progress, marker, priority, and grouping controls stay here.</p>
-                            <div class="cw-button-row">
-                                <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearSelectionAsync">Clear selection</button>
-                                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => SelectNodeAsync(selectedNodes[0].Id))">Focus first</button>
-                            </div>
-                        </div>
-
-                        <div class="cw-panel-card project-structure-batch-card">
-                            @if (CanApplySelectionStatus)
-                            {
-                                <div class="project-structure-action-band">
-                                    <span>Status</span>
-                                    <div class="cw-button-row">
-                                        <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplySelectionStatusAsync("In progress"))'>In progress</button>
-                                        <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplySelectionStatusAsync("Done"))'>Done</button>
-                                        <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplySelectionStatusAsync("N/A"))'>N/A</button>
-                                    </div>
-                                </div>
-                            }
-
-                            <div class="project-structure-action-band">
-                                <span>Progress</span>
-                                <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyProgressAsync(selectedNodeIds, "progress", 0))'>0%</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyProgressAsync(selectedNodeIds, "progress", 25))'>25%</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyProgressAsync(selectedNodeIds, "progress", 50))'>50%</button>
-                                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplyProgressAsync(selectedNodeIds, "progress", 100))'>100%</button>
-                                </div>
-                            </div>
-
-                            <div class="project-structure-action-band">
-                                <span>Marker</span>
-                                <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="accent" @onclick='@(() => ApplyMarkerAsync(selectedNodeIds, "question", "sky", "Question"))'>Question</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyMarkerAsync(selectedNodeIds, "idea", "accent", "Idea"))'>Idea</button>
-                                    <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplyMarkerAsync(selectedNodeIds, "risk", "danger", "Risk"))'>Risk</button>
-                                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplyMarkerAsync(selectedNodeIds, string.Empty, string.Empty, string.Empty))'>Clear</button>
-                                </div>
-                            </div>
-
-                            <div class="project-structure-action-band">
-                                <span>Priority</span>
-                                <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplyPriorityAsync(selectedNodeIds, 1))'>P1</button>
-                                    <button type="button" class="cw-button" data-tone="accent" @onclick='@(() => ApplyPriorityAsync(selectedNodeIds, 2))'>P2</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplyPriorityAsync(selectedNodeIds, 3))'>P3</button>
-                                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplyPriorityAsync(selectedNodeIds, 0))'>Clear</button>
-                                </div>
-                            </div>
-
-                            <div class="project-structure-action-band">
-                                <span>Grouping</span>
-                                <div class="space-y-3">
-                                    <input class="cw-context-toolbox__search"
-                                           type="text"
-                                           placeholder="Name this border"
-                                           @bind="selectionBorderName" />
-                                    <div class="cw-button-row">
-                                    <button type="button" class="cw-button" data-tone="sky" @onclick="CreateSelectionBorderAsync">Border</button>
-                                    <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearSelectionBordersAsync">Clear border</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="cw-panel-card">
-                            <p class="cw-panel-kicker">Selected nodes</p>
-                            <div class="cw-list">
-                                @foreach (var node in selectedNodes)
-                                {
-                                    <button type="button" class="cw-list-item" @onclick="@(() => SelectNodeAsync(node.Id))">
-                                        <strong>@node.Title</strong>
-                                        <span>@($"{ProjectStructureCanvasCatalog.ResolveNodeLabel(node)} - {node.Status}")</span>
-                                    </button>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                }
-                else if (selectedNode is not null)
-                {
-                    <div class="space-y-4">
-                        <div class="cw-panel-card project-structure-selected-card">
-                            <p class="cw-panel-kicker">@ProjectStructureCanvasCatalog.ResolveNodeLabel(selectedNode)</p>
-                            <h3 class="cw-panel-title">@selectedNode.Title</h3>
-                            <p class="cw-panel-copy">@SelectedNodeLeadText</p>
-
-                            <div class="cw-chip-row project-structure-selection-chip-row">
-                                
-                                <span class="cw-node__chip project-structure-selection-chip project-structure-selection-chip--status"
-                                      data-testid="project-structure-selection-status"
-                                      data-badge-style="Status">
-                                    @selectedNode.Status
-                                </span>
-                                @foreach (var badge in SelectedNodeBadgePresentations)
-                                {
-                                    <span class="cw-node__chip project-structure-selection-chip"
-                                          data-testid="@badge.TestId"
-                                          data-badge-style="@badge.Style">
-                                        @badge.Text
-                                    </span>
-                                }
-                            </div>
-
-                            @if (!string.IsNullOrWhiteSpace(linkModeSourceId))
-                            {
-                                <div class="cw-panel-card">
-                                    <p class="cw-panel-kicker">Connect mode</p>
-                                    <p class="cw-panel-copy">Select another node on the canvas or in the outline to create a dependency link from the active source.</p>
-                                </div>
-                            }
-
-                            @if (!string.IsNullOrWhiteSpace(reconnectNodeId))
-                            {
-                                <div class="cw-panel-card">
-                                    <p class="cw-panel-kicker">Reconnect mode</p>
-                                    <p class="cw-panel-copy">Select the new parent node for this branch. The hierarchy will be updated explicitly instead of creating a hidden duplicate link.</p>
-                                </div>
-                            }
-
-                            <div class="project-structure-quick-signals" data-testid="project-structure-quick-signals">
-                                <div class="project-structure-quick-signal">
-                                    <span>Progress</span>
-                                    <strong>@ResolveProgressLabel(selectedNode)</strong>
-                                </div>
-                                <div class="project-structure-quick-signal">
-                                    <span>Priority</span>
-                                    <strong>@ResolvePriorityLabel(selectedNode)</strong>
-                                </div>
-                                <div class="project-structure-quick-signal">
-                                    <span>Marker</span>
-                                    <strong>@ResolveMarkerLabel(selectedNode)</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        @if (HasManagedAttachment(selectedNode))
-                        {
-                            <div class="cw-panel-card">
-                                <p class="cw-panel-kicker">Attachment preview</p>
-                                <h3 class="cw-panel-title">@ResolveAttachmentDisplayName(selectedNode)</h3>
-                                <p class="cw-panel-copy">@ResolveAttachmentLeadCopy(selectedNode)</p>
-
-                                @switch (ResolveAttachmentPreviewKind(selectedNode))
-                                {
-                                    case AttachmentPreviewKind.Image:
-                                        <img class="cw-media-preview" src="@selectedNode.Route" alt="@selectedNode.Title" />
-                                        break;
-                                    case AttachmentPreviewKind.Video:
-                                        <video class="cw-media-preview" controls preload="metadata" src="@selectedNode.Route"></video>
-                                        break;
-                                    case AttachmentPreviewKind.Audio:
-                                        <audio class="project-structure-audio-preview" controls preload="metadata" src="@selectedNode.Route"></audio>
-                                        break;
-                                    case AttachmentPreviewKind.Document:
-                                        <iframe class="project-structure-document-preview"
-                                                src="@ResolveAttachmentPreviewSource(selectedNode)"
-                                                title="@($"{ResolveAttachmentDisplayName(selectedNode)} preview")"></iframe>
-                                        break;
-                                    default:
-                                        <div class="project-structure-preview-empty">
-                                            <strong>Inline preview is not available for this file type.</strong>
-                                            <span>Open the attachment in a new tab when you need the raw browser viewer.</span>
-                                        </div>
-                                        break;
-                                }
-
-                                <div class="cw-chip-row">
-                                    @if (!string.IsNullOrWhiteSpace(selectedNode.MediaOriginalFileName))
-                                    {
-                                        <span class="cw-node__chip">@selectedNode.MediaOriginalFileName</span>
-                                    }
-
-                                    @if (!string.IsNullOrWhiteSpace(ResolveAttachmentContentType(selectedNode)))
-                                    {
-                                        <span class="cw-node__chip">@ResolveAttachmentContentType(selectedNode)</span>
-                                    }
-                                </div>
-
-                                <div class="cw-button-row">
-                                    @if (CanShowLocalOpen(selectedNode))
-                                    {
-                                        <button type="button"
-                                                class="cw-button"
-                                                data-tone="primary"
-                                                @onclick="@(() => OpenAttachmentLocallyAsync(selectedNode))">
-                                            Open locally
-                                        </button>
-                                    }
-                                    @if (CanRenderAttachmentPreview(selectedNode))
-                                    {
-                                        <button type="button"
-                                                class="cw-button"
-                                                data-tone="accent"
-                                                @onclick="@(() => OpenAttachmentPreview(selectedNode))">
-                                            Expand preview
-                                        </button>
-                                    }
-
-                                    <a class="cw-button"
-                                       data-tone="ghost"
-                                       href="@selectedNode.Route"
-                                       target="_blank"
-                                       rel="noopener noreferrer">
-                                        Open in new tab
-                                    </a>
-                                </div>
-
-                                @if (IsLocalOpenFeedbackVisible(selectedNode))
-                                {
-                                    <div class="project-structure-inline-feedback" data-tone="@localOpenFeedbackTone">
-                                        @localOpenFeedback
-                                    </div>
-                                }
-                            </div>
-                        }
-
-                        @if (HasMermaidViewer(selectedNode))
-                        {
-                            <div class="cw-panel-card">
-                                <p class="cw-panel-kicker">Mermaid viewer</p>
-                                <h3 class="cw-panel-title">Diagram-aware source preview</h3>
-                                <p class="cw-panel-copy">Mermaid nodes stay typed on the canvas and can be opened with the detected diagram type still visible.</p>
-                                <div class="cw-button-row">
-                                    <button type="button"
-                                            class="cw-button"
-                                            data-tone="accent"
-                                            @onclick="@(() => OpenMermaidViewer(selectedNode))">
-                                        View Mermaid
-                                    </button>
-                                </div>
-                            </div>
-                        }
-
-                        <div class="cw-panel-card">
-                            <p class="cw-panel-kicker">Node actions</p>
-                            <div class="project-structure-node-action-grid"
-                                 data-testid="project-structure-node-actions">
-                                @foreach (var action in ResolveInspectorActions(selectedNode))
-                                {
-                                    <button type="button"
-                                            class="cw-button project-structure-node-action"
-                                            data-tone="@action.Tone"
-                                            @onclick="@(() => ExecuteInspectorActionAsync(selectedNode, action.ActionId))">
-                                        <span class="project-structure-node-action__icon" aria-hidden="true">
-                                            <Icon Name="@action.Icon" />
-                                        </span>
-                                        <span>@action.Label</span>
-                                    </button>
-                                }
-                            </div>
-                        </div>
-
-                        @if (!string.IsNullOrWhiteSpace(workflowFeedback))
-                        {
-                            <div class="project-structure-inline-feedback" data-tone="@workflowFeedbackTone">
-                                @workflowFeedback
-                            </div>
-                        }
-
-                        <div class="cw-panel-card">
-                            <p class="cw-panel-kicker">Create next to source</p>
-                            <h3 class="cw-panel-title">Use the floating toolbox</h3>
-                            <p class="cw-panel-copy">The toolbox owns the long-form block catalog now. It keeps grouping, search, and scrolling inside the canvas while placement still resolves from <strong>@selectedNode.Title</strong>.</p>
-                            <div class="cw-chip-row">
-                                <span class="cw-node__chip">Source: @selectedNode.Title</span>
-                                <span class="cw-node__chip">Mode: child placement</span>
-                            </div>
-                            <div class="cw-button-row">
-                                <button type="button"
-                                        class="cw-button"
-                                        data-tone="accent"
-                                        @onclick="OpenToolboxAsync">
-                                    Open standard blocks
-                                </button>
-                            </div>
-                        </div>
-
-                        @if (CanShowAdvancedDetails(selectedNode))
-                        {
-                            <details class="cw-panel-card project-structure-advanced-details"
-                                     data-testid="project-structure-advanced-details">
-                                <summary class="project-structure-advanced-details__summary">
-                                    <span class="project-structure-advanced-details__summary-copy">
-                                        <span class="project-structure-advanced-details__summary-heading">
-                                            <strong>Advanced details</strong>
-                                            <span class="project-structure-advanced-details__help"
-                                                  @onclick:stopPropagation="true"
-                                                  @onclick:preventDefault="true">
-                                                <HelpPopover RootClass="pf-help-popover project-structure-help-popover"
-                                                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
-                                                             PanelClass="pf-help-popover__panel pf-help-popover__panel--above-end"
-                                                             AriaLabel="Show advanced details help"
-                                                             Title="Show advanced details help"
-                                                             Heading="Advanced details"
-                                                             Body="@AdvancedDetailsHelpBody"
-                                                             Tip="@AdvancedDetailsHelpTip" />
-                                            </span>
-                                        </span>
-                                    </span>
-                                    <span class="project-structure-advanced-details__summary-icon" aria-hidden="true">
-                                        <Icon Name="expand_more" />
-                                    </span>
-                                </summary>
-                                <div class="project-structure-advanced-details__body">
-                                    <div class="cw-summary-grid project-structure-advanced-summary-grid">
-                                        <div class="cw-summary-tile">
-                                            <span>Artifact</span>
-                                            <strong>@selectedNode.ArtifactKind</strong>
-                                        </div>
-                                        <div class="cw-summary-tile">
-                                            <span>Location</span>
-                                            <strong>@($"{Math.Round(selectedNode.X)}, {Math.Round(selectedNode.Y)}")</strong>
-                                        </div>
-                                    </div>
-
-                                    @if (SelectedNodeFacts.Count > 0)
-                                    {
-                                        <div class="project-structure-facts-list"
-                                             data-testid="project-structure-node-facts">
-                                            @foreach (var fact in SelectedNodeFacts)
-                                            {
-                                                <div class="project-structure-fact-row">
-                                                    <span>@fact.Label</span>
-                                                    <strong>@fact.Value</strong>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                            </details>
-                        }
-                    </div>
-                }
+                                <ProjectStructureSelectionPanel State="@SelectionPanelState"
+                                                               ClearSelectionAsync="ClearSelectionAsync"
+                                                               SelectNodeAsync="SelectNodeAsync"
+                                                               ApplySelectionStatusAsync="ApplySelectionStatusAsync"
+                                                               ApplySelectionProgressAsync="ApplySelectionProgressAsync"
+                                                               ApplySelectionMarkerAsync="ApplySelectionMarkerAsync"
+                                                               ApplySelectionPriorityAsync="ApplySelectionPriorityAsync"
+                                                               SelectionBorderNameChangedAsync="UpdateSelectionBorderNameAsync"
+                                                               CreateSelectionBorderAsync="CreateSelectionBorderAsync"
+                                                               ClearSelectionBordersAsync="ClearSelectionBordersAsync"
+                                                               ExecuteInspectorActionAsync="ExecuteSelectedInspectorActionAsync"
+                                                               OpenToolboxAsync="OpenToolboxAsync"
+                                                               OpenAttachmentLocallyAsync="OpenSelectedAttachmentLocallyAsync"
+                                                               OpenAttachmentPreviewAsync="OpenSelectedAttachmentPreviewAsync"
+                                                               OpenMermaidViewerAsync="OpenSelectedMermaidViewerAsync"
+                                                               AdvancedDetailsHelpBody="@AdvancedDetailsHelpBody"
+                                                               AdvancedDetailsHelpTip="@AdvancedDetailsHelpTip" />
                             </CanvasFloatingWindow>
                         }
-                        @if (projectHierarchyDialog is not null)
-                        {
-                            <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseProjectHierarchyDialog">
-                                <div class="project-structure-preview-dialog project-structure-summary-dialog"
-                                     role="dialog"
-                                     aria-modal="true"
-                                     aria-label="@projectHierarchyDialog.Title"
-                                     data-testid="project-structure-hierarchy-dialog"
-                                     @onclick:stopPropagation="true">
-                                    <div class="project-structure-preview-dialog__header">
-                                        <div class="project-structure-preview-dialog__copy">
-                                            <p class="cw-panel-kicker">Project hierarchy</p>
-                                            <h3 class="cw-panel-title">@projectHierarchyDialog.Title</h3>
-                                            <p class="cw-panel-copy">@projectHierarchyDialog.Copy</p>
-                                        </div>
-                                        <div class="project-structure-preview-dialog__actions">
-                                            <button type="button"
-                                                    class="cw-button"
-                                                    data-tone="ghost"
-                                                    @onclick="CloseProjectHierarchyDialog">
-                                                Close
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="project-structure-preview-dialog__body">
-                                        @if (!string.IsNullOrWhiteSpace(projectHierarchyDialog.CurrentParentProjectTitle))
-                                        {
-                                            <div class="cw-panel-card">
-                                                <p class="cw-panel-kicker">Current parent</p>
-                                                <p class="cw-panel-copy">@projectHierarchyDialog.CurrentParentProjectTitle</p>
-                                            </div>
-                                        }
-                                        <div class="cw-panel-card">
-                                            <label class="cw-panel-copy" for="project-structure-hierarchy-project-select">
-                                                Project
-                                            </label>
-                                            <select id="project-structure-hierarchy-project-select"
-                                                    class="cw-context-toolbox__search"
-                                                    data-testid="project-structure-hierarchy-project-select"
-                                                    value="@(projectHierarchyDialog.SelectedProjectId?.ToString() ?? string.Empty)"
-                                                    @onchange="HandleProjectHierarchySelectionChanged">
-                                                <option value="">Select a project</option>
-                                                @foreach (var projectOption in projectHierarchyDialog.AvailableProjects)
-                                                {
-                                                    <option value="@projectOption.Id">
-                                                        @projectOption.Name
-                                                    </option>
-                                                }
-                                            </select>
-                                        </div>
-                                        @if (!string.IsNullOrWhiteSpace(projectHierarchyDialog.Error))
-                                        {
-                                            <div class="project-structure-inline-feedback" data-tone="warn">
-                                                @projectHierarchyDialog.Error
-                                            </div>
-                                        }
-                                    </div>
-                                    <div class="project-structure-preview-dialog__actions">
-                                        <button type="button"
-                                                class="cw-button"
-                                                data-tone="ghost"
-                                                @onclick="CloseProjectHierarchyDialog">
-                                            Cancel
-                                        </button>
-                                        <button type="button"
-                                                class="cw-button"
-                                                data-tone="accent"
-                                                data-testid="project-structure-hierarchy-submit"
-                                                disabled="@(projectHierarchyDialog.AvailableProjects.Count == 0)"
-                                                @onclick="ExecuteProjectHierarchyCommandAsync">
-                                            @projectHierarchyDialog.SubmitLabel
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                        @if (quickActionDialog is not null)
-                        {
-                            <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseQuickActionDialog">
-                                <div class="project-structure-preview-dialog project-structure-quick-action-dialog"
-                                     role="dialog"
-                                     aria-modal="true"
-                                     aria-label="@($"{quickActionDialog.Title} quick actions")"
-                                     data-testid="project-structure-node-quick-actions"
-                                     @onclick:stopPropagation="true">
-                                    <div class="project-structure-preview-dialog__header">
-                                        <div class="project-structure-preview-dialog__copy">
-                                            <p class="cw-panel-kicker">Node quick actions</p>
-                                            <h3 class="cw-panel-title">@quickActionDialog.Title</h3>
-                                            <p class="cw-panel-copy">@quickActionDialog.Copy</p>
-                                        </div>
-
-                                        <div class="project-structure-preview-dialog__actions">
-                                            <span class="cw-node__chip">@quickActionDialog.NodeLabel</span>
-                                            <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseQuickActionDialog">Close</button>
-                                        </div>
-                                    </div>
-
-                                    <div class="project-structure-preview-dialog__body project-structure-quick-action-dialog__body">
-                                        <div class="project-structure-quick-action-grid">
-                                            @foreach (var action in new[] { quickActionDialog.EditAction, quickActionDialog.PrimaryAction })
-                                            {
-                                                <button type="button"
-                                                        class="cw-button project-structure-quick-action-card"
-                                                        data-tone="@action.Tone"
-                                                        data-testid="@(action.ExecutionKind == ProjectStructureQuickActionExecutionKind.Edit ? "project-structure-quick-action-edit" : "project-structure-quick-action-primary")"
-                                                        disabled="@action.IsDisabled"
-                                                        @onclick="@(() => ExecuteQuickActionAsync(action))">
-                                                    <span class="project-structure-quick-action-card__icon" aria-hidden="true">
-                                                        <Icon Name="@action.Icon" />
-                                                    </span>
-                                                    <strong>@action.Label</strong>
-                                                    <small>@action.Description</small>
-                                                </button>
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                        @if (previewNode is not null)
-                        {
-                            <div class="project-structure-preview-backdrop project-structure-preview-backdrop--canvas" @onclick="CloseAttachmentPreview">
-                                <div class="project-structure-preview-dialog"
-                                     role="dialog"
-                                     aria-modal="true"
-                                     aria-label="@($"{ResolveAttachmentDisplayName(previewNode)} preview")"
-                                     @onclick:stopPropagation="true">
-                                    <div class="project-structure-preview-dialog__header">
-                                        <div class="project-structure-preview-dialog__copy">
-                                            <p class="cw-panel-kicker">Canvas preview</p>
-                                            <h3 class="cw-panel-title">@ResolveAttachmentDisplayName(previewNode)</h3>
-                                            <p class="cw-panel-copy">@ResolveAttachmentLeadCopy(previewNode)</p>
-                                        </div>
-
-                                        <div class="project-structure-preview-dialog__actions">
-                                            @if (CanShowLocalOpen(previewNode))
-                                            {
-                                                <button type="button"
-                                                        class="cw-button"
-                                                        data-tone="primary"
-                                                        @onclick="@(() => OpenAttachmentLocallyAsync(previewNode))">
-                                                    Open locally
-                                                </button>
-                                            }
-                                            <a class="cw-button"
-                                               data-tone="ghost"
-                                               href="@previewNode.Route"
-                                               target="_blank"
-                                               rel="noopener noreferrer">
-                                                Open in new tab
-                                            </a>
-                                            <button type="button" class="cw-button" data-tone="primary" @onclick="CloseAttachmentPreview">Close</button>
-                                        </div>
-                                    </div>
-
-                                    <div class="project-structure-preview-dialog__body">
-                                        @switch (ResolveAttachmentPreviewKind(previewNode))
-                                        {
-                                            case AttachmentPreviewKind.Image:
-                                                <img class="project-structure-preview-dialog__media"
-                                                     src="@previewNode.Route"
-                                                     alt="@previewNode.Title" />
-                                                break;
-                                            case AttachmentPreviewKind.Video:
-                                                <video class="project-structure-preview-dialog__media"
-                                                       controls
-                                                       preload="metadata"
-                                                       src="@previewNode.Route"></video>
-                                                break;
-                                            case AttachmentPreviewKind.Audio:
-                                                <audio class="project-structure-audio-preview project-structure-preview-dialog__audio"
-                                                       controls
-                                                       preload="metadata"
-                                                       src="@previewNode.Route"></audio>
-                                                break;
-                                            case AttachmentPreviewKind.Document:
-                                                <iframe class="project-structure-preview-dialog__frame"
-                                                        src="@ResolveAttachmentPreviewSource(previewNode)"
-                                                        title="@($"{ResolveAttachmentDisplayName(previewNode)} dialog preview")"></iframe>
-                                                break;
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        }
+                            <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
+                            <ProjectStructureCanvasDialogs ProjectHierarchyDialog="@projectHierarchyDialog"
+                                                           CloseProjectHierarchy="CloseProjectHierarchyDialog"
+                                                           ProjectHierarchySelectionChanged="HandleProjectHierarchySelectionChanged"
+                                                           ExecuteProjectHierarchyCommand="ExecuteProjectHierarchyCommandAsync"
+                                                           BlockMutationDialog="@blockMutationDialog"
+                                                           CloseBlockMutation="CloseBlockMutationDialog"
+                                                           BlockMutationSelectionChanged="HandleBlockMutationSelectionChanged"
+                                                           ExecuteBlockMutation="ExecuteBlockMutationAsync"
+                                                           SubprojectTransferDialog="@subprojectTransferDialog"
+                                                           CloseSubprojectTransfer="CloseSubprojectTransferDialog"
+                                                           SubprojectTransferNameChanged="HandleSubprojectTransferNameChanged"
+                                                           ExecuteSubprojectTransfer="ExecuteSubprojectTransferAsync"
+                                                           OpenProjectCreateDialog="OpenProjectCreateDialogAsync"
+                                                           QuickActionDialog="@quickActionDialog"
+                                                           CloseQuickActionDialog="CloseQuickActionDialog"
+                                                           ExecuteQuickAction="ExecuteQuickActionAsync"
+                                                           PreviewNode="@previewNode"
+                                                           CloseAttachmentPreview="CloseAttachmentPreview"
+                                                           OpenAttachmentLocally="OpenAttachmentLocallyAsync"
+                                                           CanShowLocalOpen="CanShowLocalOpen"
+                                                           ResolveAttachmentDisplayName="ResolveAttachmentDisplayName"
+                                                           ResolveAttachmentLeadCopy="ResolveAttachmentLeadCopy"
+                                                           ResolveAttachmentPreviewKind="ResolveAttachmentPreviewKind"
+                                                           ResolveAttachmentPreviewSource="ResolveAttachmentPreviewSource" />
+                        </ProjectStructureDeferredSurface>
                     </OverlayContent>
                 </CanvasWorkbench>
             </Canvas>
             <Supporting>
-                <div class="cw-panel-card project-structure-support-card project-structure-support-card--outline">
-                    <p class="cw-panel-kicker">Outline</p>
-                    <h3 class="cw-panel-title">Project object index</h3>
-                    <div class="cw-list project-structure-outline-list">
-                        @foreach (var node in outlineNodes)
-                        {
-                            <button type="button"
-                                    class="cw-list-item @(selectedNodeIds.Contains(node.Id, StringComparer.Ordinal) ? "is-active" : string.Empty)"
-                                    @onclick="@(() => SelectNodeAsync(node.Id))">
-                                <strong>@node.Title</strong>
-                                <span>@($"{ProjectStructureCanvasCatalog.ResolveNodeLabel(node)} - {node.Status}")</span>
-                            </button>
-                        }
-                    </div>
-                </div>
-
-                <div class="cw-panel-card project-structure-support-card project-structure-support-card--health">
-                    <p class="cw-panel-kicker">Canvas coverage</p>
-                    <h3 class="cw-panel-title">Graph health</h3>
-                    <div class="cw-summary-grid">
-                        <div class="cw-summary-tile">
-                            <span>Total nodes</span>
-                            <strong>@surface.Nodes.Count</strong>
-                        </div>
-                        <div class="cw-summary-tile">
-                            <span>Total links</span>
-                            <strong>@surface.Links.Count</strong>
-                        </div>
-                        <div class="cw-summary-tile">
-                            <span>Selected</span>
-                            <strong>@selectedNodeIds.Count</strong>
-                        </div>
-                    </div>
-                    <p class="cw-panel-copy">Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate.</p>
-                </div>
+                <ProjectStructureSupportPanels Nodes="@outlineNodes"
+                                              SelectedNodeIds="@selectedNodeIds"
+                                              OnSelectNode="SelectNodeAsync"
+                                              LinkCount="@surface.Links.Count" />
             </Supporting>
         </CanvasWorkbenchStage>
 
-        <div class="grid gap-5 xl:grid-cols-2">
-            <CanvasBoundaryCard TestHookId="project-structure-action-catalog-adapter"
-                                       Label="Project Structure action catalog adapter"
-                                       Title="Project Structure actions now flow through a dedicated domain catalog"
-                                       Summary="Quick create, node context, group actions, and inspector create groups no longer need to be rebuilt inline in the page."
-                                       StatePill="@(selectedNode is null ? "Canvas scope" : "Node scope")"
-                                       Metrics="@ActionCatalogMetrics">
-                <div class="grid gap-3 md:grid-cols-2">
-                    <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Quick create</p>
-                        <div class="mt-3 space-y-2">
-                            @foreach (var action in ActionCatalogPreviewQuickActions.Take(4))
-                            {
-                                <div class="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-800">@action.Label</div>
-                            }
-                        </div>
-                    </div>
-                    <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Context actions</p>
-                        <div class="mt-3 space-y-2">
-                            @foreach (var action in ActionCatalogPreviewContextActions.Take(4))
-                            {
-                                <div class="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-800">@action.Label</div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </CanvasBoundaryCard>
-
-            <CanvasBoundaryCard TestHookId="project-structure-placement-policy"
-                                       Label="Project Structure placement policy"
-                                       Title="Create placement now normalizes through a dedicated policy"
-                                       Summary="Sibling, child, and free-canvas placement resolve through one reusable rule set instead of living inline in create handlers."
-                                       StatePill="@PlacementPreviewMode"
-                                       Metrics="@PlacementPolicyMetrics">
-                <div class="grid gap-3 md:grid-cols-2">
-                    <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Resolved parent</p>
-                        <p class="mt-2 text-sm text-slate-950">@PlacementPreviewParentLabel</p>
-                    </div>
-                    <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Resolved coordinates</p>
-                        <p class="mt-2 text-sm text-slate-950">@PlacementPreviewCoordinates</p>
-                    </div>
-                </div>
-            </CanvasBoundaryCard>
-        </div>
-    </div>
-}
-
-@if (summaryDialog is not null)
-{
-    <div class="project-structure-preview-backdrop" @onclick="CloseSummary">
-        <div class="project-structure-preview-dialog project-structure-summary-dialog"
-             role="dialog"
-             aria-modal="true"
-             aria-label="@($"{summaryDialog.RootTitle} progress summary")"
-             @onclick:stopPropagation="true">
-            <div class="project-structure-preview-dialog__header">
-                <div class="project-structure-preview-dialog__copy">
-                    <p class="cw-panel-kicker">Progress summary</p>
-                    <h3 class="cw-panel-title">@summaryDialog.RootTitle</h3>
-                    <p class="cw-panel-copy">Hierarchy, inline status editing, and exports are generated from the same summary source.</p>
-                </div>
-                <div class="project-structure-preview-dialog__actions">
-                    <button type="button" class="cw-button" data-tone="accent" @onclick="ExportSummaryWorkbookAsync">Export XLSX</button>
-                    <button type="button" class="cw-button" data-tone="primary" @onclick="ExportSummaryGanttAsync">Export Gantt</button>
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseSummary">Close</button>
-                </div>
-            </div>
-
-            <div class="project-structure-preview-dialog__body">
-                <div class="cw-summary-grid">
-                    <div class="cw-summary-tile">
-                        <span>Done</span>
-                        <strong>@summaryDialog.Summary.CompletedCount</strong>
-                    </div>
-                    <div class="cw-summary-tile">
-                        <span>Active</span>
-                        <strong>@summaryDialog.Summary.ActiveCount</strong>
-                    </div>
-                    <div class="cw-summary-tile">
-                        <span>Blocked</span>
-                        <strong>@summaryDialog.Summary.BlockedCount</strong>
-                    </div>
-                    <div class="cw-summary-tile">
-                        <span>Review</span>
-                        <strong>@summaryDialog.Summary.ReviewCount</strong>
-                    </div>
-                    <div class="cw-summary-tile">
-                        <span>Undated</span>
-                        <strong>@summaryDialog.Summary.UndatedCount</strong>
-                    </div>
-                </div>
-
-                <div class="project-structure-summary-table">
-                    @foreach (var row in summaryDialog.Summary.Rows)
-                    {
-                        <div class="project-structure-summary-row" style="@($"--summary-depth:{row.Depth};")">
-                            <div class="project-structure-summary-row__node">
-                                <strong>@row.Title</strong>
-                                <span>@row.KindLabel</span>
-                            </div>
-                            <div class="project-structure-summary-row__meta">
-                                <span>@row.ProgressLabel</span>
-                                <span>@(row.StartUtc?.ToLocalTime().ToString("g") ?? "Undated")</span>
-                            </div>
-                            <select class="cw-context-toolbox__search project-structure-summary-row__select"
-                                    value="@row.Status"
-                                    @onchange="@(args => ChangeSummaryStatusAsync(row.NodeId, args))">
-                                @foreach (var statusOption in SummaryStatusOptions)
+        @if (CanShowPartyEditor)
+        {
+            <SectionCard Title="@PartyEditorTitle"
+                         Description="@PartyEditorDescription">
+                <div class="space-y-5"
+                     data-testid="project-structure-party-editor">
+                    <SurfaceCard Soft="true">
+                        <Stack GapScale="LayoutGap.Small">
+                            <Cluster>
+                                <StatusBadge Tone="@PartyEditorTone"
+                                             Text="@PartyEditorStatus" />
+                                @if (!string.IsNullOrWhiteSpace(PartyEditorLinkedPartyName))
                                 {
-                                    <option value="@statusOption">@statusOption</option>
+                                    <Pill Tone="PillTone.Info"
+                                          Text="@PartyEditorLinkedPartyName" />
                                 }
-                            </select>
-                        </div>
+                            </Cluster>
+                            <p class="text-sm text-slate-600">@PartyEditorLead</p>
+                        </Stack>
+                    </SurfaceCard>
+
+                    @if (isPartyEditorLoading)
+                    {
+                        <SurfaceCard Soft="true"
+                                     data-testid="project-structure-party-editor-loading">
+                            <p class="text-sm text-slate-600">Loading party relationships for the selected node.</p>
+                        </SurfaceCard>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(partyEditor.Message))
+                    {
+                        <SurfaceCard Soft="true">
+                            <p class="text-sm @(partyEditor.MessageTone == "danger" ? "text-rose-700" : "text-slate-700")"
+                               data-testid="project-structure-party-editor-message">@partyEditor.Message</p>
+                        </SurfaceCard>
+                    }
+
+                    @if (isPartyEditorLoading)
+                    {
+                        <SurfaceCard Soft="true">
+                            <p class="text-sm text-slate-600">Preparing the directory linkage controls.</p>
+                        </SurfaceCard>
+                    }
+                    else if (IsParticipantPartyEditor)
+                    {
+                        <SurfaceCard>
+                            <Stack GapScale="LayoutGap.Large">
+                                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                    <InputCheckbox @bind-Value="partyEditor.KeepProjectLocalOnly"
+                                                   data-testid="project-structure-participant-local-only" />
+                                    <span>Keep project-local only</span>
+                                </label>
+
+                                @if (!partyEditor.KeepProjectLocalOnly)
+                                {
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnsLg="2">
+                                        <FormField Text="Existing party">
+                                            <InputSelect @bind-Value="ParticipantPartyValue"
+                                                         class="cda-input"
+                                                         data-testid="project-structure-participant-party">
+                                                <option value="">Choose a party</option>
+                                                @foreach (var option in partyEditorOptions)
+                                                {
+                                                    <option value="@option.PartyId">@($"{option.DisplayName} ({option.PartyTypeLabel})")</option>
+                                                }
+                                            </InputSelect>
+                                        </FormField>
+                                        <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                            The synced party can drive reusable staffing, AI-agent reuse, and meeting defaults without forcing every participant node into the central directory.
+                                        </div>
+                                    </Grid>
+
+                                    <SurfaceCard Soft="true">
+                                        <Stack GapScale="LayoutGap.Medium">
+                                            <div>
+                                                <p class="cda-eyebrow">Quick create</p>
+                                                <p class="mt-1 text-sm text-slate-600">Create a directory record from the selected participant node when nothing reusable exists yet.</p>
+                                            </div>
+
+                                            <Grid Gap="LayoutGap.Medium"
+                                                  ColumnsLg="2">
+                                                <FormField Text="Kind">
+                                                    <InputSelect @bind-Value="partyEditor.QuickCreate.PartyKind"
+                                                                 class="cda-input"
+                                                                 data-testid="project-structure-participant-quick-kind">
+                                                        @foreach (var kind in Enum.GetValues<ProjectPartyQuickCreateKind>())
+                                                        {
+                                                            <option value="@kind">@ResolveQuickCreateKindLabel(kind)</option>
+                                                        }
+                                                    </InputSelect>
+                                                </FormField>
+                                                <FormField Text="Name">
+                                                    <InputText @bind-Value="partyEditor.QuickCreate.DisplayName"
+                                                               class="cda-input"
+                                                               data-testid="project-structure-participant-quick-name" />
+                                                </FormField>
+                                            </Grid>
+
+                                            <Grid Gap="LayoutGap.Medium"
+                                                  ColumnsLg="2">
+                                                <FormField Text="Email">
+                                                    <InputText @bind-Value="partyEditor.QuickCreate.Email"
+                                                               class="cda-input"
+                                                               data-testid="project-structure-participant-quick-email" />
+                                                </FormField>
+                                                <FormField Text="Phone">
+                                                    <InputText @bind-Value="partyEditor.QuickCreate.Phone"
+                                                               class="cda-input"
+                                                               data-testid="project-structure-participant-quick-phone" />
+                                                </FormField>
+                                            </Grid>
+
+                                            <FormField Text="Summary">
+                                                <InputTextArea @bind-Value="partyEditor.QuickCreate.Summary"
+                                                               class="cda-input cda-input--textarea min-h-24"
+                                                               data-testid="project-structure-participant-quick-summary" />
+                                            </FormField>
+
+                                            <Cluster>
+                                                <Button ButtonStyle="ButtonStyle.Light"
+                                                        Text="Create party"
+                                                        Disabled="@isPartyEditorBusy"
+                                                        data-testid="project-structure-participant-quick-create"
+                                                        Click="CreateParticipantPartyAsync" />
+                                            </Cluster>
+                                        </Stack>
+                                    </SurfaceCard>
+                                }
+
+                                <Cluster>
+                                    <Button Text="Save participant sync"
+                                            Disabled="@isPartyEditorBusy"
+                                            data-testid="project-structure-participant-save"
+                                            Click="SaveParticipantPartyAsync" />
+                                </Cluster>
+                            </Stack>
+                        </SurfaceCard>
+                    }
+                    else if (IsMeetingPartyEditor)
+                    {
+                        <SurfaceCard>
+                            <Stack GapScale="LayoutGap.Large">
+                                <Cluster>
+                                    <Button ButtonStyle="ButtonStyle.Light"
+                                            Text="Use project defaults"
+                                            Disabled="@isPartyEditorBusy"
+                                            data-testid="project-structure-meeting-project-defaults"
+                                            Click="ApplyMeetingProjectDefaultsAsync" />
+                                    <Pill Tone="PillTone.Neutral"
+                                          Text="@($"{partyEditor.SelectedMeetingPartyIds.Count} selected")" />
+                                </Cluster>
+
+                                <Grid Gap="LayoutGap.Medium"
+                                      ColumnsLg="2">
+                                    @foreach (var option in partyEditorOptions)
+                                    {
+                                        <label class="flex items-start gap-3 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                                               data-testid="project-structure-meeting-party-option">
+                                            <input type="checkbox"
+                                                   checked="@partyEditor.SelectedMeetingPartyIds.Contains(option.PartyId)"
+                                                   data-testid="project-structure-meeting-party-checkbox"
+                                                   @onchange="args => HandleMeetingPartyChanged(option.PartyId, args)" />
+                                            <span>
+                                                <span class="block font-semibold text-slate-950">@option.DisplayName</span>
+                                                <span class="block">@option.PartyTypeLabel</span>
+                                            </span>
+                                        </label>
+                                    }
+                                </Grid>
+
+                                <Cluster>
+                                    <Button Text="Save meeting parties"
+                                            Disabled="@isPartyEditorBusy"
+                                            data-testid="project-structure-meeting-save"
+                                            Click="SaveMeetingPartiesAsync" />
+                                </Cluster>
+                            </Stack>
+                        </SurfaceCard>
+                    }
+                    else if (IsWorkItemPartyEditor)
+                    {
+                        <SurfaceCard>
+                            <Stack GapScale="LayoutGap.Large">
+                                <FormField Text="Assignee party">
+                                    <InputSelect @bind-Value="WorkItemPartyValue"
+                                                 class="cda-input"
+                                                 data-testid="project-structure-work-item-party">
+                                        <option value="">No central assignee</option>
+                                        @foreach (var option in partyEditorOptions)
+                                        {
+                                            <option value="@option.PartyId">@($"{option.DisplayName} ({option.PartyTypeLabel})")</option>
+                                        }
+                                    </InputSelect>
+                                </FormField>
+
+                                <Cluster>
+                                    <Button Text="Save work-item assignee"
+                                            Disabled="@isPartyEditorBusy"
+                                            data-testid="project-structure-work-item-save"
+                                            Click="SaveWorkItemPartyAsync" />
+                                </Cluster>
+                            </Stack>
+                        </SurfaceCard>
                     }
                 </div>
-            </div>
-        </div>
-    </div>
+            </SectionCard>
+        }
+
+    </Stack>
 }
 
-@if (pendingDeletePrompt is not null)
-{
-    <div class="project-structure-preview-backdrop" @onclick="CancelDelete">
-        <div class="project-structure-preview-dialog project-structure-summary-dialog"
-             role="dialog"
-             aria-modal="true"
-             aria-label="@($"Delete {pendingDeletePrompt.Title}")"
-             @onclick:stopPropagation="true">
-            <div class="project-structure-preview-dialog__header">
-                <div class="project-structure-preview-dialog__copy">
-                    <p class="cw-panel-kicker">Delete node</p>
-                    <h3 class="cw-panel-title">@pendingDeletePrompt.Title</h3>
-                    <p class="cw-panel-copy">@pendingDeletePrompt.ImpactCopy</p>
-                </div>
-                <div class="project-structure-preview-dialog__actions">
-                    <button type="button" class="cw-button" data-tone="danger" @onclick="ConfirmDeleteAsync">Delete</button>
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick="CancelDelete">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
+<ProjectStructureDeferredSurface RenderKey="@SupportDialogRenderKey">
+    <ProjectStructureSupportDialogs SummaryDialog="@summaryDialog"
+                                    CloseSummary="CloseSummary"
+                                    ExportSummaryWorkbook="ExportSummaryWorkbookAsync"
+                                    ExportSummaryGantt="ExportSummaryGanttAsync"
+                                    ChangeSummaryStatus="HandleSummaryStatusChangedAsync"
+                                    SummaryStatuses="@SummaryStatusOptions"
+                                    PendingDeletePrompt="@pendingDeletePrompt"
+                                    ConfirmDelete="ConfirmDeleteAsync"
+                                    CancelDelete="CancelDelete"
+                                    PendingTranscriptAction="@pendingTranscriptAction"
+                                    ExecuteTranscriptAction="ExecuteTranscriptActionAsync"
+                                    CancelTranscriptAction="CancelTranscriptAction"
+                                    HandleTranscriptProviderChanged="HandleTranscriptProviderChanged"
+                                    MermaidPreviewNode="@mermaidPreviewNode"
+                                    CloseMermaidViewer="CloseMermaidViewer"
+                                    ResolveTranscriptActionLabel="ResolveTranscriptActionLabel" />
+</ProjectStructureDeferredSurface>
 
-@if (pendingTranscriptAction is not null)
-{
-    <div class="project-structure-preview-backdrop" @onclick="CancelTranscriptAction">
-        <div class="project-structure-preview-dialog project-structure-summary-dialog"
-             role="dialog"
-             aria-modal="true"
-             aria-label="@($"{ResolveTranscriptActionLabel(pendingTranscriptAction.ActionKind)} confirmation")"
-             @onclick:stopPropagation="true">
-            <div class="project-structure-preview-dialog__header">
-                <div class="project-structure-preview-dialog__copy">
-                    <p class="cw-panel-kicker">LLM confirmation</p>
-                    <h3 class="cw-panel-title">@ResolveTranscriptActionLabel(pendingTranscriptAction.ActionKind)</h3>
-                    <p class="cw-panel-copy">This action will send transcript content to an external or local provider. Confirmation and explicit provider selection are required.</p>
-                </div>
-                <div class="project-structure-preview-dialog__actions">
-                    <button type="button" class="cw-button" data-tone="accent" @onclick="ExecuteTranscriptActionAsync">Send request</button>
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick="CancelTranscriptAction">Cancel</button>
-                </div>
-            </div>
-
-            <div class="project-structure-preview-dialog__body">
-                <label class="cw-field-shell">
-                    <span class="cw-panel-kicker">Provider profile</span>
-                    <select class="cw-context-toolbox__search"
-                            value="@pendingTranscriptAction.SelectedProviderId"
-                            @onchange="HandleTranscriptProviderChanged">
-                        <option value="">Select a provider</option>
-                        @foreach (var provider in pendingTranscriptAction.Providers)
-                        {
-                            <option value="@provider.Id">@($"{provider.Name} ({provider.ProviderKind})")</option>
-                        }
-                    </select>
-                </label>
-
-                @if (!string.IsNullOrWhiteSpace(pendingTranscriptAction.LastProviderName))
-                {
-                    <div class="project-structure-inline-feedback" data-tone="accent">
-                        Last provider: @pendingTranscriptAction.LastProviderName
-                    </div>
-                }
-
-                @if (!string.IsNullOrWhiteSpace(pendingTranscriptAction.Error))
-                {
-                    <div class="project-structure-inline-feedback" data-tone="warn">
-                        @pendingTranscriptAction.Error
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-}
-
-@if (mermaidPreviewNode is not null)
-{
-    <div class="project-structure-preview-backdrop" @onclick="CloseMermaidViewer">
-        <div class="project-structure-preview-dialog project-structure-summary-dialog"
-             role="dialog"
-             aria-modal="true"
-             aria-label="@($"{mermaidPreviewNode.Title} Mermaid viewer")"
-             @onclick:stopPropagation="true">
-            <div class="project-structure-preview-dialog__header">
-                <div class="project-structure-preview-dialog__copy">
-                    <p class="cw-panel-kicker">Mermaid viewer</p>
-                    <h3 class="cw-panel-title">@mermaidPreviewNode.Title</h3>
-                    <p class="cw-panel-copy">Detected diagram type: @ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(mermaidPreviewNode.Notes)</p>
-                </div>
-                <div class="project-structure-preview-dialog__actions">
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick="CloseMermaidViewer">Close</button>
-                </div>
-            </div>
-
-            <div class="project-structure-preview-dialog__body">
-                <pre class="pf-components-toolbox__preview-content project-structure-mermaid-source">@mermaidPreviewNode.Notes</pre>
-            </div>
-        </div>
-    </div>
-}
+<ProjectModalHost IsOpen="@showProjectCreateModal"
+                  IsEditorMode="true"
+                  Editor="@projectCreateEditor"
+                  StarterObjects="@projectCreateStarterObjects"
+                  StarterObjectKinds="@ProjectCreateStarterObjectKinds"
+                  ProjectSummaries="@projectCreateProjectSummaries"
+                  WizardStep="@projectCreateWizardStep"
+                  WizardSteps="@ProjectCreateWizardSteps"
+                  WizardTabs="@ProjectCreateWizardTabs"
+                  Message="@projectCreateMessage"
+                  IsErrorMessage="@IsProjectCreateErrorMessage"
+                  Close="CloseProjectCreateDialogAsync"
+                  SwitchToOverview="IgnoreProjectCreateModeChangeAsync"
+                  SwitchToEditor="IgnoreProjectCreateModeChangeAsync"
+                  WizardTabChanged="HandleProjectCreateWizardTabChangedAsync"
+                  AddPhase="AddProjectCreatePhaseAsync"
+                  RemovePhase="RemoveProjectCreatePhaseAsync"
+                  AddStarterObject="AddProjectCreateStarterObject"
+                  RemoveStarterObject="RemoveProjectCreateStarterObject"
+                  PreviousStep="PreviousProjectCreateStep"
+                  NextStep="NextProjectCreateStep"
+                  Save="SaveProjectCreateAsync"
+                  SaveAndOpenStructure="SaveProjectCreateAndOpenStructureAsync"
+                  Delete="DeleteProjectCreateAsync"
+                  OpenProjectDashboard="OpenProjectCreateDashboardAsync"
+                  OpenStructure="OpenStructure"
+                  OpenCalendar="OpenCalendar" />
 
 @code {
+    private static class CanvasAuthoringMode
+    {
+        public const string Select = "authoring";
+        public const string Dependency = "dependency";
+        public const string Delete = "delete";
+    }
+
     private const string SelectionWindowKey = "project-structure.selection";
     private const string HealthWindowKey = "project-structure.health";
     private const double ToolboxWindowDefaultWidth = 430;
+    private const double SignalsWindowDefaultWidth = 388;
     private const double DefaultCanvasWindowMargin = 16;
     private const double DefaultCanvasWindowGap = 16;
-    private const double HealthWindowDefaultLeft = ToolboxWindowDefaultWidth + DefaultCanvasWindowMargin + DefaultCanvasWindowGap;
+    private const double SignalsWindowDefaultLeft = ToolboxWindowDefaultWidth + DefaultCanvasWindowMargin + DefaultCanvasWindowGap;
+    private const double HealthWindowDefaultLeft = SignalsWindowDefaultLeft + SignalsWindowDefaultWidth + DefaultCanvasWindowGap;
 
     [Parameter]
     public Guid ProjectId { get; set; }
@@ -1090,14 +505,19 @@ else
     private readonly ProjectStructureGraphAdapter graphAdapter = new();
     private readonly ProjectStructurePlacementPolicy placementPolicy = new();
     private List<string> selectedNodeIds = [];
+    private string canvasToolMode = CanvasAuthoringMode.Select;
     private string? linkModeSourceId;
     private string? currentViewStateJson;
+    private const int CanvasViewStatePersistDelayMs = 420;
+    private CancellationTokenSource? pendingCanvasViewStatePersistCts;
     private string? pendingClientSelectionId;
     private ProjectStructureNode? previewNode;
     private string? localOpenFeedback;
     private string? localOpenFeedbackNodeId;
     private string localOpenFeedbackTone = "neutral";
     private Guid loadedProjectId;
+    private string? pendingWorkbenchSelectionId;
+    private ProjectWorkbenchUnavailableState? unavailableState;
 
     private IReadOnlyList<CanvasWorkbenchStat> stageStats =>
     [
@@ -1143,54 +563,6 @@ else
             _ => "Batch-update shared fields, review the selection set, and keep grouping actions close to the canvas."
         };
     private bool CanApplySelectionStatus => selectedNodes.Count > 0 && selectedNodes.All(IsCanvasStatusMutable);
-    private ProjectStructureNode? ActionCatalogPreviewNode
-        => selectedNode ?? surface?.Nodes.FirstOrDefault(node => node.ObjectType != ProjectObjectType.ProjectRoot) ?? surface?.Nodes.FirstOrDefault();
-    private IReadOnlyList<CanvasWorkbenchAction> ActionCatalogPreviewQuickActions
-        => actionCatalog.BuildQuickCreateActions(ActionCatalogPreviewNode?.ObjectType);
-    private IReadOnlyList<CanvasWorkbenchAction> ActionCatalogPreviewContextActions
-        => ActionCatalogPreviewNode is null ? actionCatalog.BuildGroupContextActions() : actionCatalog.BuildNodeContextActions(ActionCatalogPreviewNode);
-    private CanvasWorkbenchCreateActionRequest PlacementPreviewRequest
-        => new(
-            "preview-create",
-            ActionCatalogPreviewNode?.Id,
-            ActionCatalogPreviewNode?.X ?? 120,
-            ActionCatalogPreviewNode?.Y ?? 120,
-            null,
-            "Preview node",
-            string.Empty,
-            string.Empty,
-            selectedNode is null ? "canvas" : "child",
-            "command",
-            string.Empty,
-            null);
-    private string PlacementPreviewMode => PlacementPreviewRequest.PlacementKind;
-    private string? PlacementPreviewParentId => ProjectStructurePlacementPolicy.ResolveParentNodeId(ActionCatalogPreviewNode, PlacementPreviewRequest);
-    private (double? X, double? Y) PlacementPreview
-        => placementPolicy.ResolveCreatePlacement(
-            surface?.Nodes ?? [],
-            ActionCatalogPreviewNode,
-            surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, PlacementPreviewParentId, StringComparison.Ordinal)),
-            PlacementPreviewRequest);
-    private string PlacementPreviewParentLabel => string.IsNullOrWhiteSpace(PlacementPreviewParentId) ? "Canvas root" : PlacementPreviewParentId;
-    private string PlacementPreviewCoordinates
-        => PlacementPreview.X.HasValue && PlacementPreview.Y.HasValue
-            ? $"{Math.Round(PlacementPreview.X.Value)}, {Math.Round(PlacementPreview.Y.Value)}"
-            : "Unresolved";
-    private IReadOnlyList<string> ActionCatalogMetrics =>
-    [
-        $"{ActionCatalogPreviewQuickActions.Count} quick create actions",
-        $"{ActionCatalogPreviewContextActions.Count} context actions",
-        $"{actionCatalog.BuildGroupContextActions().Count} group actions",
-        $"{BuildInspectorCreateGroups(ActionCatalogPreviewNode?.ObjectType).Count} inspector groups"
-    ];
-    private IReadOnlyList<string> PlacementPolicyMetrics =>
-    [
-        $"Parent: {PlacementPreviewParentLabel}",
-        $"Coords: {PlacementPreviewCoordinates}",
-        $"{surface?.Nodes.Count ?? 0} nodes in graph",
-        $"{PlacementPreviewMode} placement"
-    ];
-
     private Task RunSelectedValidationAsync()
         => selectedNode is null
             ? Task.CompletedTask
@@ -1203,6 +575,7 @@ else
             loadedProjectId = ProjectId;
             currentViewStateJson = null;
             selectedNodeIds = [];
+            canvasToolMode = CanvasAuthoringMode.Select;
             linkModeSourceId = null;
             pendingClientSelectionId = null;
         }
@@ -1212,10 +585,32 @@ else
 
     private async Task ReloadSurfaceAsync(string? preferredSelectionId = null)
     {
-        var reloadedSurface = await ProjectWorkbenchService.GetStructureAsync(ProjectId);
-        var uiState = !string.IsNullOrWhiteSpace(currentViewStateJson)
-            ? CanvasWorkbenchUiState.Parse(currentViewStateJson)
-            : CanvasWorkbenchUiState.Parse(reloadedSurface.ViewStateJson);
+        CancelPendingCanvasViewStatePersistence();
+        pendingWorkbenchSelectionId = null;
+        var loadStructureTask = ProjectWorkbenchService.TryGetStructureAsync(ProjectId);
+        var loadStorageCatalogTask = WorkspaceService.ListStorageCatalogAsync();
+        await Task.WhenAll(loadStructureTask, loadStorageCatalogTask);
+        storageCatalog = loadStorageCatalogTask.Result;
+        var loadResult = loadStructureTask.Result;
+        if (!loadResult.IsSuccess || loadResult.Surface is null)
+        {
+            unavailableState = loadResult.UnavailableState;
+            surface = null;
+            canvasSurface = null;
+            previewNode = null;
+            quickActionDialog = null;
+            currentViewStateJson = null;
+            selectedNodeIds = [];
+            pendingClientSelectionId = null;
+            return;
+        }
+
+        unavailableState = null;
+        var reloadedSurface = loadResult.Surface;
+        var uiState = NormalizePersistedCanvasUiState(
+            !string.IsNullOrWhiteSpace(currentViewStateJson)
+                ? CanvasWorkbenchUiState.Parse(currentViewStateJson)
+                : CanvasWorkbenchUiState.Parse(reloadedSurface.ViewStateJson));
         if (string.IsNullOrWhiteSpace(currentViewStateJson))
         {
             uiState.ShowMinimap = false;
@@ -1241,6 +636,7 @@ else
         {
             selectedNodeIds = [preferredSelectionId];
             pendingClientSelectionId = preferredSelectionId;
+            pendingWorkbenchSelectionId = preferredSelectionId;
         }
         else if (selectedNodeIds.Count == 0)
         {
@@ -1262,6 +658,74 @@ else
         surface = reloadedSurface with { ViewStateJson = uiState.ToJson() };
         currentViewStateJson = surface.ViewStateJson;
         RefreshCanvasSurface();
+        await LoadPartyEditorAsync();
+    }
+
+    private Task OpenUnavailableRouteAsync()
+    {
+        Navigation.NavigateTo(unavailableState?.SafeRoute ?? "/projects");
+        return Task.CompletedTask;
+    }
+
+    private async Task ApplySurfaceNodeUpdatesAsync(IReadOnlyCollection<ProjectStructureNode> updatedNodes)
+    {
+        if (surface is null || updatedNodes.Count == 0)
+        {
+            return;
+        }
+
+        var updatedById = updatedNodes
+            .Where(node => !string.IsNullOrWhiteSpace(node.Id))
+            .GroupBy(node => node.Id, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Last(), StringComparer.Ordinal);
+        if (updatedById.Count == 0)
+        {
+            return;
+        }
+
+        var patchedNodes = surface.Nodes
+            .Select(node => updatedById.TryGetValue(node.Id, out var updated) ? updated : node)
+            .ToList();
+        surface = surface with { Nodes = patchedNodes };
+
+        var availableNodeIds = patchedNodes
+            .Select(node => node.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        selectedNodeIds = selectedNodeIds
+            .Where(availableNodeIds.Contains)
+            .ToList();
+        pendingClientSelectionId = null;
+
+        if (previewNode is not null)
+        {
+            previewNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, previewNode.Id, StringComparison.Ordinal));
+        }
+
+        if (mermaidPreviewNode is not null)
+        {
+            mermaidPreviewNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, mermaidPreviewNode.Id, StringComparison.Ordinal));
+        }
+
+        if (quickActionDialog is not null)
+        {
+            var dialogNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, quickActionDialog.NodeId, StringComparison.Ordinal));
+            quickActionDialog = dialogNode is null ? null : BuildQuickActionDialog(dialogNode);
+        }
+
+        if (summaryDialog is not null)
+        {
+            var rootNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, summaryDialog.RootNodeId, StringComparison.Ordinal));
+            summaryDialog = rootNode is null
+                ? null
+                : summaryDialog with
+                {
+                    RootTitle = rootNode.Title,
+                    Summary = ProjectStructureSummaryBuilder.Build(surface, rootNode)
+                };
+        }
+
+        RefreshCanvasSurface();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void RefreshCanvasSurface()
@@ -1272,7 +736,7 @@ else
             return;
         }
 
-        var uiState = CanvasWorkbenchUiState.Parse(surface.ViewStateJson);
+        var uiState = NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(surface.ViewStateJson));
         uiState.SelectedNodeIds = [.. selectedNodeIds];
 
         canvasSurface = graphAdapter.BuildSurface(
@@ -1280,19 +744,32 @@ else
             uiState,
             new CanvasWorkbenchChrome
             {
-                HintText = "Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions.",
+                HintText = ResolveCanvasHintText(),
                 FocusActionLabel = "Focus root",
                 ChildNoteActionId = "add-note",
                 SiblingNoteActionId = "add-note",
                 InlineNotePlaceholder = "Write note",
+                CollapseOnDoubleClick = false,
                 QuickCreateActions = BuildQuickCreateActions().ToList(),
                 GroupContextActions = actionCatalog.BuildGroupContextActions().ToList()
             },
             actionCatalog);
+        canvasSurface.Mode = canvasToolMode;
+        canvasSurface.DependencySourceId = linkModeSourceId ?? string.Empty;
     }
 
     private async Task HandleSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
     {
+        if (!string.IsNullOrWhiteSpace(pendingClientSelectionId) &&
+            surface?.Nodes.Any(node => string.Equals(node.Id, pendingClientSelectionId, StringComparison.Ordinal)) == true &&
+            args.SelectedNodeIds.Count <= 1 &&
+            !args.SelectedNodeIds.Contains(pendingClientSelectionId, StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        pendingWorkbenchSelectionId = null;
+
         if (!string.IsNullOrWhiteSpace(reconnectNodeId) &&
             !string.IsNullOrWhiteSpace(args.PrimaryNodeId))
         {
@@ -1300,30 +777,40 @@ else
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(linkModeSourceId) &&
-            !string.IsNullOrWhiteSpace(args.PrimaryNodeId) &&
-            !string.Equals(linkModeSourceId, args.PrimaryNodeId, StringComparison.Ordinal))
-        {
-            await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, linkModeSourceId, args.PrimaryNodeId, ProjectObjectLinkKind.DependsOn);
-            linkModeSourceId = null;
-            await ReloadSurfaceAsync(args.PrimaryNodeId);
-            return;
-        }
-
         selectedNodeIds = args.SelectedNodeIds.ToList();
         pendingClientSelectionId = null;
+        await LoadPartyEditorAsync();
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
     {
-        foreach (var position in args.Positions)
+        var updatedNodeIds = await ProjectWorkbenchService.MoveObjectsAsync(
+            ProjectId,
+            args.Positions
+                .Select(position => new ProjectNodeMoveRequest(position.NodeId, position.X, position.Y))
+                .ToList());
+        if (updatedNodeIds.Count == 0)
         {
-            await ProjectWorkbenchService.MoveObjectAsync(ProjectId, position.NodeId, position.X, position.Y);
+            return;
         }
 
-        await ReloadSurfaceAsync();
-        await TryAdoptMovedNodesIntoBordersAsync(args);
+        var updatedNodeIdSet = updatedNodeIds.ToHashSet(StringComparer.Ordinal);
+        var committedPositions = args.Positions
+            .Where(position => updatedNodeIdSet.Contains(position.NodeId))
+            .ToList();
+        var requiresReload = surface is null ||
+            committedPositions.Count != updatedNodeIdSet.Count ||
+            committedPositions.Any(position => !surface.Nodes.Any(node => string.Equals(node.Id, position.NodeId, StringComparison.Ordinal)));
+        if (requiresReload)
+        {
+            await ReloadSurfaceAsync();
+            return;
+        }
+
+        TryPatchSurfaceNodePositions(committedPositions);
+        await TryAdoptMovedNodesIntoBordersAsync(new CanvasWorkbenchNodesMovedEventArgs(committedPositions));
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleCanvasStateChangedAsync(string stateJson)
@@ -1333,37 +820,82 @@ else
             return;
         }
 
-        var uiState = CanvasWorkbenchUiState.Parse(stateJson);
+        var uiState = NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(stateJson));
         if (!string.IsNullOrWhiteSpace(pendingClientSelectionId) &&
             surface.Nodes.Any(node => string.Equals(node.Id, pendingClientSelectionId, StringComparison.Ordinal)) &&
+            uiState.SelectedNodeIds.Count <= 1 &&
             !uiState.SelectedNodeIds.Contains(pendingClientSelectionId, StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        pendingWorkbenchSelectionId = null;
+
+        var normalizedStateJson = uiState.ToJson();
+        var persistedStateJson = NormalizePersistedCanvasStateJson(currentViewStateJson ?? surface.ViewStateJson);
+        if (string.Equals(persistedStateJson, normalizedStateJson, StringComparison.Ordinal))
         {
             return;
         }
 
         pendingClientSelectionId = null;
         selectedNodeIds = uiState.SelectedNodeIds.ToList();
-        currentViewStateJson = uiState.ToJson();
+        currentViewStateJson = normalizedStateJson;
         surface = surface with { ViewStateJson = currentViewStateJson };
-        RefreshCanvasSurface();
-        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
-    }
-
-    private Task HandleNodeOpenedAsync(string nodeId)
-    {
-        var node = ResolveNode(nodeId);
-        if (node?.ProjectRole is ProjectStructureProjectRole.Subproject or
-            ProjectStructureProjectRole.ParentProject or
-            ProjectStructureProjectRole.AdditionalParentProject)
+        if (canvasSurface is not null)
         {
-            return OpenProjectStructureInNewTabAsync(node);
+            canvasSurface.UiState = uiState;
         }
 
-        return ExecuteCommandAsync(ProjectStructureCommandKind.Open, nodeId, allowQuickActionDialog: true);
+        ScheduleCanvasViewStatePersistence();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleNodeOpenedAsync(string nodeId)
+    {
+        var node = ResolveNode(nodeId);
+        if (node is null)
+        {
+            return;
+        }
+
+        if (CanOpenRelatedProjectStructure(node))
+        {
+            CloseQuickActionDialog();
+            await OpenProjectStructureInNewTabAsync(node);
+            return;
+        }
+
+        if (CanRenderAttachmentPreview(node))
+        {
+            CloseQuickActionDialog();
+            OpenAttachmentPreview(node);
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        OpenQuickActionDialog(node);
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleContextActionAsync(CanvasWorkbenchContextActionRequest request)
-        => await HandleCanvasActionAsync(request.ActionId, request.NodeId, request.X, request.Y);
+    {
+        switch (request.ActionId)
+        {
+            case "tool-mode:select":
+                await SelectCanvasToolAsync();
+                break;
+            case "dependency:create":
+                await CreateDependencyAsync(request.LinkSourceId, request.NodeId ?? request.LinkTargetId);
+                break;
+            case "delete-link":
+                await DeleteDependencyAsync(request.LinkSourceId, request.LinkTargetId, request.LinkKind);
+                break;
+            default:
+                await HandleCanvasActionAsync(request.ActionId, request.NodeId, request.X, request.Y);
+                break;
+        }
+    }
 
     private async Task HandleCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
     {
@@ -1386,18 +918,32 @@ else
             return;
         }
 
-        await ProjectWorkbenchService.UpdateObjectAsync(
+        var updatedNode = await ProjectWorkbenchService.UpdateObjectAsync(
             ProjectId,
             targetNode.Id,
             BuildSimpleNoteTitle(request.Notes),
             string.Empty,
             request.Notes);
+        if (updatedNode is null)
+        {
+            return;
+        }
 
-        await ReloadSurfaceAsync(targetNode.Id);
+        await ApplySurfaceNodeUpdatesAsync([updatedNode]);
     }
 
     private async Task HandleCanvasActionAsync(string actionId, string? nodeId, double x, double y)
     {
+        if (await TryHandleCopyActionAsync(actionId, nodeId))
+        {
+            return;
+        }
+
+        if (await TryHandleNodeMutationActionAsync(actionId, nodeId))
+        {
+            return;
+        }
+
         if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition(actionId, out var definition))
         {
             await CreateObjectAsync(
@@ -1460,7 +1006,7 @@ else
                 }
                 break;
             case "connect":
-                linkModeSourceId = nodeId;
+                await EnterDependencyModeAsync(nodeId);
                 break;
             case "reconnect":
                 await BeginReconnectAsync(nodeId);
@@ -1618,23 +1164,26 @@ else
 
     private async Task SelectNodeAsync(string nodeId)
     {
-        if (!string.IsNullOrWhiteSpace(linkModeSourceId) &&
+        if (IsDependencyMode &&
+            !string.IsNullOrWhiteSpace(linkModeSourceId) &&
             !string.Equals(linkModeSourceId, nodeId, StringComparison.Ordinal))
         {
-            await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, linkModeSourceId, nodeId, ProjectObjectLinkKind.DependsOn);
-            linkModeSourceId = null;
-            await ReloadSurfaceAsync(nodeId);
+            await CreateDependencyAsync(linkModeSourceId, nodeId);
             return;
         }
 
         selectedNodeIds = [nodeId];
         await PersistSelectionAsync();
+        await LoadPartyEditorAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ClearSelectionAsync()
     {
         selectedNodeIds.Clear();
         await PersistSelectionAsync();
+        await LoadPartyEditorAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private static IReadOnlyList<ProjectStructureCommandKind> ResolveInspectorCommands(ProjectStructureNode node)
@@ -1677,15 +1226,98 @@ else
 
         var uiState = CanvasWorkbenchUiState.Parse(surface.ViewStateJson);
         uiState.SelectedNodeIds = [.. selectedNodeIds];
+        EnsureSelectionScopedToolboxWindowState(uiState);
         graphAdapter.ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
         currentViewStateJson = uiState.ToJson();
         surface = surface with { ViewStateJson = currentViewStateJson };
         RefreshCanvasSurface();
-        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
+        await PersistCurrentViewStateAsync();
     }
 
-    private void EnableLinkMode()
-        => linkModeSourceId = selectedNode?.Id;
+    private Task SelectCanvasToolAsync()
+    {
+        reconnectNodeId = null;
+        return SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
+    }
+
+    private Task EnableDeleteModeAsync()
+    {
+        reconnectNodeId = null;
+        return SetCanvasToolModeAsync(CanvasAuthoringMode.Delete);
+    }
+
+    private async Task EnableLinkModeAsync()
+    {
+        var selectedNodeId = await ResolveCurrentSelectedNodeIdAsync();
+        await EnterDependencyModeAsync(selectedNodeId);
+    }
+
+    private async Task EnterDependencyModeAsync(string? sourceNodeId = null)
+    {
+        var resolvedSourceNodeId = sourceNodeId ?? selectedNode?.Id;
+        if (string.IsNullOrWhiteSpace(resolvedSourceNodeId))
+        {
+            return;
+        }
+
+        reconnectNodeId = null;
+        linkModeSourceId = resolvedSourceNodeId;
+        await SetCanvasToolModeAsync(CanvasAuthoringMode.Dependency, keepDependencySource: true);
+    }
+
+    private async Task<string?> ResolveCurrentSelectedNodeIdAsync()
+    {
+        if (workbenchRef is not null)
+        {
+            var liveSelectedNodeIds = (await workbenchRef.GetSelectedNodeIdsAsync())
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            if (liveSelectedNodeIds.Count > 0)
+            {
+                selectedNodeIds = liveSelectedNodeIds;
+                return selectedNodeIds[0];
+            }
+        }
+
+        return selectedNodeIds.FirstOrDefault();
+    }
+
+    private async Task CreateDependencyAsync(string? sourceNodeId, string? targetNodeId)
+    {
+        if (string.IsNullOrWhiteSpace(sourceNodeId) ||
+            string.IsNullOrWhiteSpace(targetNodeId) ||
+            string.Equals(sourceNodeId, targetNodeId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, sourceNodeId, targetNodeId, ProjectObjectLinkKind.DependsOn);
+        workflowFeedback = "The dependency link was added.";
+        workflowFeedbackTone = "mint";
+        await SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
+        await ReloadSurfaceAsync(sourceNodeId);
+    }
+
+    private async Task SetCanvasToolModeAsync(string mode, bool keepDependencySource = false)
+    {
+        canvasToolMode = mode;
+        if (!string.Equals(canvasToolMode, CanvasAuthoringMode.Dependency, StringComparison.Ordinal) && !keepDependencySource)
+        {
+            linkModeSourceId = null;
+        }
+
+        RefreshCanvasSurface();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string ResolveCanvasHintText()
+        => canvasToolMode switch
+        {
+            CanvasAuthoringMode.Dependency => "Dependency tool: drag normally to move nodes, or click a second node to say the selected node depends on it.",
+            CanvasAuthoringMode.Delete => "Delete tool: hover a node or dependency arrow to highlight it, then click to delete. Connected branches may ask for confirmation.",
+            _ => "Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions."
+        };
 
     private IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions()
         => actionCatalog.BuildQuickCreateActions(selectedNode?.ObjectType);
@@ -1705,8 +1337,8 @@ else
             return;
         }
 
-        await ProjectWorkbenchService.UpdateObjectStatusesAsync(ProjectId, mutableNodeIds, status);
-        await ReloadSurfaceAsync();
+        var updatedNodes = await ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync(ProjectId, mutableNodeIds, status);
+        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
     }
 
     private async Task ApplyProgressAsync(IReadOnlyCollection<string> nodeIds, string progressMode, int progressPercent)
@@ -1716,8 +1348,8 @@ else
             return;
         }
 
-        await ProjectWorkbenchService.UpdateObjectProgressAsync(ProjectId, nodeIds, progressMode, progressPercent);
-        await ReloadSurfaceAsync();
+        var updatedNodes = await ProjectWorkbenchService.UpdateObjectProgressDetailedAsync(ProjectId, nodeIds, progressMode, progressPercent);
+        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
     }
 
     private async Task ApplyMarkerAsync(IReadOnlyCollection<string> nodeIds, string markerIcon, string markerTone, string markerLabel)
@@ -1727,8 +1359,10 @@ else
             return;
         }
 
-        await ProjectWorkbenchService.UpdateObjectMarkerAsync(ProjectId, nodeIds, markerIcon, markerTone, markerLabel);
-        await ReloadSurfaceAsync();
+        var updatedNodes = string.IsNullOrWhiteSpace(markerIcon)
+            ? await ProjectWorkbenchService.ClearObjectMarkersDetailedAsync(ProjectId, nodeIds)
+            : await ProjectWorkbenchService.AddObjectMarkerDetailedAsync(ProjectId, nodeIds, markerIcon, markerTone, markerLabel);
+        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
     }
 
     private async Task ApplyPriorityAsync(IReadOnlyCollection<string> nodeIds, int priority)
@@ -1738,8 +1372,8 @@ else
             return;
         }
 
-        await ProjectWorkbenchService.UpdateObjectPriorityAsync(ProjectId, nodeIds, priority);
-        await ReloadSurfaceAsync();
+        var updatedNodes = await ProjectWorkbenchService.UpdateObjectPriorityDetailedAsync(ProjectId, nodeIds, priority);
+        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
     }
 
     private async Task CreateSelectionBorderAsync()
@@ -1775,7 +1409,7 @@ else
     }
 
     private CanvasWorkbenchUiState ResolveEditableUiState()
-        => CanvasWorkbenchUiState.Parse(currentViewStateJson ?? surface?.ViewStateJson);
+        => NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(currentViewStateJson ?? surface?.ViewStateJson));
 
     private async Task PersistCanvasUiStateAsync(CanvasWorkbenchUiState uiState)
     {
@@ -1784,14 +1418,143 @@ else
             return;
         }
 
+        uiState = NormalizePersistedCanvasUiState(uiState);
         uiState.SelectedNodeIds = [.. selectedNodeIds];
         graphAdapter.ExpandSelectionAncestors(surface.Nodes, uiState, selectedNodeIds);
         currentViewStateJson = uiState.ToJson();
         surface = surface with { ViewStateJson = currentViewStateJson };
         RefreshCanvasSurface();
-        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
+        await PersistCurrentViewStateAsync();
         await InvokeAsync(StateHasChanged);
     }
+
+    private bool TryPatchSurfaceNodePositions(IReadOnlyCollection<CanvasWorkbenchNodePositionChange> positions)
+    {
+        if (surface is null || positions.Count == 0)
+        {
+            return false;
+        }
+
+        var positionsByNodeId = positions
+            .Where(position => !string.IsNullOrWhiteSpace(position.NodeId))
+            .GroupBy(position => position.NodeId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Last(), StringComparer.Ordinal);
+        if (positionsByNodeId.Count == 0)
+        {
+            return false;
+        }
+
+        var changed = false;
+        var patchedNodes = surface.Nodes
+            .Select(node =>
+            {
+                if (!positionsByNodeId.TryGetValue(node.Id, out var position) ||
+                    (Math.Abs(node.X - position.X) < 0.001 && Math.Abs(node.Y - position.Y) < 0.001))
+                {
+                    return node;
+                }
+
+                changed = true;
+                return node with
+                {
+                    X = position.X,
+                    Y = position.Y
+                };
+            })
+            .ToList();
+        if (!changed)
+        {
+            return false;
+        }
+
+        surface = surface with { Nodes = patchedNodes };
+
+        if (previewNode is not null)
+        {
+            previewNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, previewNode.Id, StringComparison.Ordinal));
+        }
+
+        if (mermaidPreviewNode is not null)
+        {
+            mermaidPreviewNode = patchedNodes.FirstOrDefault(node => string.Equals(node.Id, mermaidPreviewNode.Id, StringComparison.Ordinal));
+        }
+
+        RefreshCanvasSurface();
+        return true;
+    }
+
+    private void ScheduleCanvasViewStatePersistence()
+    {
+        if (surface is null || string.IsNullOrWhiteSpace(currentViewStateJson))
+        {
+            CancelPendingCanvasViewStatePersistence();
+            return;
+        }
+
+        CancelPendingCanvasViewStatePersistence();
+        var persistCts = new CancellationTokenSource();
+        pendingCanvasViewStatePersistCts = persistCts;
+        _ = PersistCanvasViewStateWhenIdleAsync(persistCts, currentViewStateJson);
+    }
+
+    private async Task PersistCanvasViewStateWhenIdleAsync(CancellationTokenSource persistCts, string? stateJson)
+    {
+        try
+        {
+            await Task.Delay(CanvasViewStatePersistDelayMs, persistCts.Token);
+            if (persistCts.IsCancellationRequested || string.IsNullOrWhiteSpace(stateJson))
+            {
+                return;
+            }
+
+            await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", stateJson);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(pendingCanvasViewStatePersistCts, persistCts))
+            {
+                pendingCanvasViewStatePersistCts = null;
+            }
+
+            persistCts.Dispose();
+        }
+    }
+
+    private void CancelPendingCanvasViewStatePersistence()
+    {
+        var persistCts = pendingCanvasViewStatePersistCts;
+        pendingCanvasViewStatePersistCts = null;
+        if (persistCts is null)
+        {
+            return;
+        }
+
+        persistCts.Cancel();
+        persistCts.Dispose();
+    }
+
+    private async Task PersistCurrentViewStateAsync()
+    {
+        CancelPendingCanvasViewStatePersistence();
+        if (string.IsNullOrWhiteSpace(currentViewStateJson))
+        {
+            return;
+        }
+
+        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
+    }
+
+    private static CanvasWorkbenchUiState NormalizePersistedCanvasUiState(CanvasWorkbenchUiState uiState)
+    {
+        uiState.ManualPositions = [];
+        return uiState;
+    }
+
+    private static string NormalizePersistedCanvasStateJson(string? stateJson)
+        => NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(stateJson)).ToJson();
 
     private CanvasWorkbenchWindowState ResolveWindowState(string key)
     {
@@ -1829,6 +1592,7 @@ else
             SelectionWindowKey => ResolveWindowState(key),
             HealthWindowKey => ResolveHealthWindowState(),
             ToolboxWindowKey => ResolveToolboxWindowState(),
+            SignalsWindowKey => ResolveSignalsWindowState(),
             _ => ResolveWindowState(key)
         };
 
@@ -1954,7 +1718,13 @@ else
             return "New note";
         }
 
-        var normalized = text.Trim();
+        var normalized = text
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault();
+        normalized = string.IsNullOrWhiteSpace(normalized)
+            ? text.Trim()
+            : normalized.Trim();
         return normalized.Length <= 64 ? normalized : $"{normalized[..61]}...";
     }
 
@@ -1967,7 +1737,13 @@ else
         => node.Priority > 0 ? $"P{node.Priority}" : "None";
 
     private static string ResolveMarkerLabel(ProjectStructureNode node)
-        => string.IsNullOrWhiteSpace(node.MarkerLabel) ? "None" : node.MarkerLabel;
+        => node.Markers.Count switch
+        {
+            0 => string.IsNullOrWhiteSpace(node.MarkerLabel) ? "None" : node.MarkerLabel,
+            1 => node.Markers[0].Label,
+            <= 3 => string.Join(", ", node.Markers.Select(marker => marker.Label)),
+            _ => $"{string.Join(", ", node.Markers.Take(3).Select(marker => marker.Label))} +{node.Markers.Count - 3}"
+        };
 
     private static string ResolveAttachmentKindLabel(ProjectStructureNode node)
         => ResolveAttachmentPreviewKind(node) switch
@@ -2014,15 +1790,17 @@ else
     private static bool HasManagedAttachment(ProjectStructureNode? node)
         => node is not null &&
             !string.IsNullOrWhiteSpace(node.Route) &&
-            (!string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
-             node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase));
+            (!string.IsNullOrWhiteSpace(node.StorageObjectReferenceJson) ||
+             !string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
+             node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase) ||
+             node.Route.StartsWith("/storage/objects/", StringComparison.OrdinalIgnoreCase));
 
     private static bool CanRenderAttachmentPreview(ProjectStructureNode? node)
         => ResolveAttachmentPreviewKind(node) is not AttachmentPreviewKind.None;
 
     private static AttachmentPreviewKind ResolveAttachmentPreviewKind(ProjectStructureNode? node)
     {
-        if (!HasManagedAttachment(node))
+        if (!HasManagedAttachment(node) || !SupportsInlinePreview(node))
         {
             return AttachmentPreviewKind.None;
         }
@@ -2065,6 +1843,24 @@ else
         }
 
         return ResolveAttachmentExtension(node) is ".pdf" or ".txt" or ".md" or ".json" or ".xml" or ".csv" or ".log" or ".yaml" or ".yml";
+    }
+
+    private static bool SupportsInlinePreview(ProjectStructureNode? node)
+    {
+        if (node is null)
+        {
+            return false;
+        }
+
+        if (StorageJson.TryParseReference(node.StorageObjectReferenceJson, out var reference) &&
+            reference is not null)
+        {
+            return reference.ProviderKind != StorageProviderKind.Ftp;
+        }
+
+        return !string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
+               node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase) ||
+               node.Route.StartsWith("/storage/objects/", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveAttachmentContentType(ProjectStructureNode node)
@@ -2147,14 +1943,8 @@ else
     private void CloseAttachmentPreview()
         => previewNode = null;
 
-    private enum AttachmentPreviewKind
-    {
-        None,
-        Image,
-        Video,
-        Audio,
-        Document
-    }
+    public void Dispose()
+        => CancelPendingCanvasViewStatePersistence();
 
 }
 

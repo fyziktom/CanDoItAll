@@ -20,7 +20,7 @@ public sealed class ManagerStatusResponseFactoryTests
     {
         var options = new ManagerOptions();
         var projectPath = GetWebProjectPath();
-        var workspaceRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var workspaceRoot = GetRepositoryRoot();
         var response = ManagerStatusResponseFactory.Create(
             "Development",
             "token-123",
@@ -35,6 +35,13 @@ public sealed class ManagerStatusResponseFactoryTests
                 1,
                 DateTimeOffset.UtcNow,
                 ["https://127.0.0.1:61770", "http://127.0.0.1:61771"]),
+            new TailwindWatchStatusSnapshot(
+                TailwindWatchState.Ready,
+                "Tailwind watch is running.",
+                7,
+                DateTimeOffset.UtcNow,
+                OutputExists: true,
+                OutputLastWriteUtc: DateTimeOffset.UtcNow),
             options,
             "http://127.0.0.1:6407");
 
@@ -42,8 +49,8 @@ public sealed class ManagerStatusResponseFactoryTests
 
         Assert.Equal("Degraded", webService.Health);
         Assert.False(webService.IsOk);
-        Assert.Contains("https://localhost:7271", webService.ExpectedUrls);
-        Assert.Contains("https://127.0.0.1:61770", webService.ActiveUrls);
+        Assert.Contains("https://localhost:7271", webService.ConfiguredTargets);
+        Assert.Contains("https://127.0.0.1:61770", webService.ActiveTargets);
     }
 
     [Fact]
@@ -63,6 +70,13 @@ public sealed class ManagerStatusResponseFactoryTests
                 1,
                 DateTimeOffset.UtcNow,
                 ["https://localhost:7271", "https://localhost", "http://localhost:5032"]),
+            new TailwindWatchStatusSnapshot(
+                TailwindWatchState.Ready,
+                "Tailwind output propagated.",
+                8,
+                DateTimeOffset.UtcNow,
+                OutputExists: true,
+                OutputLastWriteUtc: DateTimeOffset.UtcNow),
             new ManagerOptions
             {
                 WatchUrls = ["https://localhost:7271", "http://localhost:5032"],
@@ -77,6 +91,62 @@ public sealed class ManagerStatusResponseFactoryTests
         Assert.Contains("https://localhost:7271", webService.Links);
     }
 
+    [Fact]
+    public void Create_includes_tailwind_service_and_paths()
+    {
+        var workspaceRoot = @"C:\repos\CanDoItAll";
+        var response = ManagerStatusResponseFactory.Create(
+            "Development",
+            "token-123",
+            workspaceRoot,
+            @"C:\repos\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj",
+            new WatchStatusSnapshot(
+                WatchState.Ready,
+                "Ready",
+                4,
+                45,
+                1,
+                1,
+                DateTimeOffset.UtcNow,
+                ["https://localhost:7271", "http://localhost:5032"]),
+            new TailwindWatchStatusSnapshot(
+                TailwindWatchState.Ready,
+                "Tailwind output propagated to output.css.",
+                9,
+                DateTimeOffset.UtcNow,
+                OutputExists: true,
+                OutputLastWriteUtc: DateTimeOffset.UtcNow),
+            new ManagerOptions(),
+            "http://127.0.0.1:6407");
+
+        var tailwindService = Assert.Single(response.Services, service => service.Key == "tailwind");
+
+        Assert.Equal(TailwindWatchState.Ready.ToString(), response.Tailwind.StateName);
+        Assert.Equal(@"C:\repos\CanDoItAll\Tailwind", response.Tailwind.WorkspacePath);
+        Assert.Equal(@"C:\repos\CanDoItAll\Tailwind\input.css", response.Tailwind.InputFilePath);
+        Assert.Equal(@"C:\repos\CanDoItAll\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css", response.Tailwind.OutputFilePath);
+        Assert.Equal("Inputs", tailwindService.ConfiguredLabel);
+        Assert.Equal("Outputs", tailwindService.ActiveLabel);
+        Assert.Contains(response.Tailwind.OutputFilePath, tailwindService.ActiveTargets);
+    }
+
     private static string GetWebProjectPath()
-        => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "CanDoItAll.Web", "CanDoItAll.Web.csproj"));
+        => Path.Combine(GetRepositoryRoot(), "src", "CanDoItAll.Web", "CanDoItAll.Web.csproj");
+
+    private static string GetRepositoryRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            var candidatePath = Path.Combine(current.FullName, "src", "CanDoItAll.Web", "CanDoItAll.Web.csproj");
+            if (File.Exists(candidatePath))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Unable to locate the repository root from the test output directory.");
+    }
 }

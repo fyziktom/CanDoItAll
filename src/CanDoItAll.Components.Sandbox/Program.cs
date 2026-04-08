@@ -2,6 +2,7 @@ using CanDoItAll.Components.Sandbox.Components;
 using CanDoItAll.Components.BaseLib;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseStaticWebAssets();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

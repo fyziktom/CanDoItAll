@@ -1,0 +1,35 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes(ResolveCssClass(), ResolveStyle())'>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public AlignItems AlignItems { get; set; } = AlignItems.Center;
+
+    [Parameter]
+    public JustifyContent JustifyContent { get; set; } = JustifyContent.Start;
+
+    [Parameter]
+    public FlexWrap Wrap { get; set; } = FlexWrap.Wrap;
+
+    [Parameter]
+    public LayoutGap Gap { get; set; } = LayoutGap.Small;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveCssClass()
+    {
+        return BuildClass(
+            "flex min-w-0 [align-items:var(--cda-cluster-align)] [justify-content:var(--cda-cluster-justify)] [gap:var(--cda-cluster-gap)]",
+            Wrap == FlexWrap.Wrap ? "flex-wrap" : "flex-nowrap");
+    }
+
+    private string ResolveStyle()
+    {
+        return $"--cda-cluster-align:{LayoutValueResolver.ResolveAlignValue(AlignItems)};--cda-cluster-justify:{LayoutValueResolver.ResolveJustifyValue(JustifyContent)};--cda-cluster-gap:{LayoutValueResolver.ResolveGap(Gap)};";
+    }
+}

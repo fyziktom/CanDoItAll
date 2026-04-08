@@ -1,4 +1,5 @@
 @namespace CanDoItAll.Components
+@using CanDoItAll.Components.BaseLib
 <CascadingValue Value="this" IsFixed="true">
     <div style="display:none">
         @if (TabItems is not null)
@@ -15,19 +16,20 @@
 @if (items.Count > 0)
 {
     <div @attributes='AdditionalAttributes.WithClass("rz-tabs")'>
-        <div class="rz-tabs-nav mb-3 flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+        <Cluster Gap="LayoutGap.Small"
+                 Class="rz-tabs-nav mb-3 border-b border-slate-200 pb-2">
             @for (var index = 0; index < items.Count; index++)
             {
                 var tabIndex = index;
                 var tab = items[tabIndex];
                 var isActive = tabIndex == EffectiveSelectedIndex;
-                var iconCssClass = ResolveIconCssClass(tab.Icon);
+                var iconName = ResolveIconName(tab.Icon);
                 <button type="button"
                         class="rounded-md px-3 py-1.5 text-sm font-medium @(isActive ? "bg-indigo-100 text-indigo-900" : "bg-slate-100 text-slate-700")"
                         @onclick="() => SelectTabAsync(tabIndex)">
-                    @if (iconCssClass is not null)
+                    @if (iconName is not null)
                     {
-                        <i class="@($"rz-fa-icon {iconCssClass}")" aria-hidden="true"></i>
+                        <span class="rz-icon cda-material-icon material-icons" aria-hidden="true">@iconName</span>
                     }
                     else if (!string.IsNullOrWhiteSpace(tab.Icon))
                     {
@@ -36,7 +38,7 @@
                     @tab.Text
                 </button>
             }
-        </div>
+        </Cluster>
 
         @if (RenderMode == TabRenderMode.Client)
         {
@@ -115,11 +117,11 @@
         await SelectedIndexChanged.InvokeAsync(SelectedIndex);
     }
 
-    private static string? ResolveIconCssClass(string? iconToken)
+    private static string? ResolveIconName(string? iconToken)
     {
-        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        if (MaterialIconCatalog.TryResolveIconName(iconToken, out var iconName))
         {
-            return cssClass;
+            return iconName;
         }
 
         return null;

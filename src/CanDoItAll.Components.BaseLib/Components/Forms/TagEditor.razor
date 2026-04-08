@@ -1,22 +1,22 @@
 @namespace CanDoItAll.Components.BaseLib
 @using Microsoft.AspNetCore.Components.Web
 
-<div class="zy-tag-textedit" data-testid="@TestId">
-    <div class="zy-tag-textedit__surface @(Disabled ? "is-disabled" : string.Empty)">
+<div class="cad-tag-textedit zy-tag-textedit" data-testid="@TestId">
+    <div class="cad-tag-textedit__surface zy-tag-textedit__surface @(Disabled ? "is-disabled" : string.Empty)">
         @foreach (var tag in Value)
         {
-            <button class="zy-tag-textedit__chip zy-tag-textedit__chip--@GetChipColorIndex(tag)"
+            <button class="cad-tag-textedit__chip zy-tag-textedit__chip cad-tag-textedit__chip--@GetChipColorIndex(tag) zy-tag-textedit__chip--@GetChipColorIndex(tag)"
                     style="@GetChipStyle(tag)"
                     type="button"
                     @onclick="@(() => RemoveTagAsync(tag))"
                     disabled="@Disabled">
                 <span>@tag</span>
-                <span class="zy-tag-textedit__chip-x" aria-hidden="true">&times;</span>
+                <span class="cad-tag-textedit__chip-x zy-tag-textedit__chip-x" aria-hidden="true"><Icon Name="close" /></span>
             </button>
         }
 
         <input id="@InputId"
-               class="zy-tag-textedit__input"
+               class="cad-tag-textedit__input zy-tag-textedit__input"
                value="@pendingValue"
                @oninput="HandleInputAsync"
                @onkeydown="HandleKeyDownAsync"
@@ -30,10 +30,10 @@
 
     @if (isFocused && MatchingSuggestions.Count > 0)
     {
-        <div class="zy-tag-textedit__suggestions">
+        <div class="cad-tag-textedit__suggestions zy-tag-textedit__suggestions">
             @foreach (var suggestion in MatchingSuggestions)
             {
-                <button class="zy-tag-textedit__suggestion zy-tag-textedit__suggestion--@GetChipColorIndex(suggestion)"
+                <button class="cad-tag-textedit__suggestion zy-tag-textedit__suggestion cad-tag-textedit__suggestion--@GetChipColorIndex(suggestion) zy-tag-textedit__suggestion--@GetChipColorIndex(suggestion)"
                         style="@GetChipStyle(suggestion)"
                         type="button"
                         @onclick="@(() => AddSuggestedTagAsync(suggestion))"
@@ -46,7 +46,7 @@
 
     @if (!string.IsNullOrWhiteSpace(Hint))
     {
-        <div class="zy-tag-textedit__hint">@Hint</div>
+        <div class="cad-tag-textedit__hint zy-tag-textedit__hint">@Hint</div>
     }
 </div>
 

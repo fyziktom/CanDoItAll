@@ -5,6 +5,7 @@ using System.Text.Json;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -148,6 +149,88 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         Assert.Equal("api-test-agent", details.GetProperty("agentId").GetString());
         Assert.Equal("API Test Agent", details.GetProperty("agentName").GetString());
         Assert.Equal("api-test-machine", details.GetProperty("machineName").GetString());
+    }
+
+    [Fact]
+    public async Task ProjectStructureAgentApi_queries_dependency_readiness()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+
+        var project = await PostAndReadAsync<ProjectSummary>(
+            host.Client,
+            "/api/project-structure-mcp/projects",
+            new ProjectStructureProjectSaveRequest(
+                "Dependency API project",
+                "HTTP dependency validation",
+                "Query dependency readiness over the central API.",
+                "Execution",
+                ProjectStatus.Active));
+
+        var lease = await PostAndReadAsync<ProjectStructureLeaseSnapshot>(
+            host.Client,
+            "/api/project-structure-mcp/leases/acquire",
+            new ProjectStructureLeaseAcquireRequest(
+                ProjectStructureLeaseScopeKind.Project,
+                project.Id.ToString(),
+                "Create dependency graph",
+                15));
+
+        var note = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure-mcp/projects/{project.Id}/nodes",
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.Note,
+                "Architect note",
+                string.Empty,
+                "A top-level note dependency.",
+                $"project:{project.Id}",
+                360,
+                220,
+                null,
+                null,
+                null,
+                null,
+                null,
+                lease.LeaseToken));
+
+        var task = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure-mcp/projects/{project.Id}/nodes",
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.WorkItem,
+                "Implement feature",
+                string.Empty,
+                "Blocked until the note is completed.",
+                $"project:{project.Id}",
+                620,
+                340,
+                new DateTimeOffset(2026, 4, 3, 8, 0, 0, TimeSpan.Zero),
+                null,
+                "task",
+                null,
+                null,
+                lease.LeaseToken,
+                7200));
+
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+            await workbench.LinkObjectsAsync(project.Id, task.Id, note.Id, ProjectObjectLinkKind.DependsOn);
+        }
+
+        var dependencies = await PostAndReadAsync<ProjectStructureDependencyResponse>(
+            host.Client,
+            $"/api/project-structure-mcp/projects/{project.Id}/dependencies/query",
+            new ProjectStructureDependencyQueryRequest(DefaultDurationSeconds: 5400));
+
+        var noteItem = Assert.Single(dependencies.Items, item => item.NodeId == note.Id);
+        var taskItem = Assert.Single(dependencies.Items, item => item.NodeId == task.Id);
+
+        Assert.Equal(5400, dependencies.DefaultDurationSeconds);
+        Assert.True(noteItem.CanExecute);
+        Assert.False(taskItem.CanExecute);
+        Assert.Equal(7200, taskItem.DurationSeconds);
+        Assert.Contains(taskItem.Prerequisites, prerequisite => prerequisite.NodeId == note.Id && prerequisite.Reason == "depends-on");
     }
 
     private static async Task<T> PostAndReadAsync<T>(HttpClient client, string path, object request)

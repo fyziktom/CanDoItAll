@@ -16,7 +16,7 @@ public interface IProjectStructureLocalFileOpener
 public sealed record ProjectStructureLocalFileOpenResult(bool IsSuccess, string Message);
 
 public sealed class ProjectStructureLocalFileOpener(
-    IWorkspacePathResolver workspacePathResolver,
+    IWorkspacePathAccessGuard pathAccessGuard,
     ILogger<ProjectStructureLocalFileOpener> logger) : IProjectStructureLocalFileOpener
 {
     private static readonly HashSet<string> BlockedExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -97,19 +97,14 @@ public sealed class ProjectStructureLocalFileOpener(
             return false;
         }
 
-        var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
-        var managedRoot = Path.GetFullPath(workspacePathResolver.ResolveManagedFilesRoot());
-        var candidatePath = Path.GetFullPath(Path.Combine(workspaceRoot, relativePath));
-        var managedRootPrefix = managedRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            + Path.DirectorySeparatorChar;
-
-        if (!candidatePath.StartsWith(managedRootPrefix, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(candidatePath, managedRoot, StringComparison.OrdinalIgnoreCase))
+        var resolution = pathAccessGuard.ResolveManagedFilePath(relativePath);
+        if (!resolution.IsSuccess)
         {
             failureMessage = "Only files stored under managed project file roots can open locally.";
             return false;
         }
 
+        var candidatePath = resolution.FullPath;
         if (!File.Exists(candidatePath))
         {
             failureMessage = "The managed file is no longer available on disk.";
@@ -122,6 +117,18 @@ public sealed class ProjectStructureLocalFileOpener(
 
     private static string ResolveRelativePath(ProjectStructureNode node)
     {
+        if (StorageJson.TryParseReference(node.StorageObjectReferenceJson, out var storageReference) &&
+            storageReference is not null &&
+            storageReference.ProviderKind == StorageProviderKind.FileSystem &&
+            storageReference.LocatorKind == StorageLocatorKind.RelativePath &&
+            !string.IsNullOrWhiteSpace(storageReference.Locator))
+        {
+            return storageReference.Locator
+                .Trim()
+                .Replace('/', Path.DirectorySeparatorChar)
+                .TrimStart(Path.DirectorySeparatorChar);
+        }
+
         if (!string.IsNullOrWhiteSpace(node.MediaRelativePath))
         {
             return node.MediaRelativePath

@@ -1,0 +1,272 @@
+@layer components {
+  .cda-button {
+    @apply inline-flex items-center justify-center gap-2 border font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    border-radius: var(--cad-radius-control);
+  }
+
+  .cda-button--size-sm {
+    @apply px-3 py-2 text-xs;
+  }
+
+  .cda-button--size-md {
+    @apply px-4 py-2 text-sm;
+  }
+
+  .cda-button--size-lg {
+    @apply px-4 py-2.5 text-base;
+  }
+
+  .cda-button--filled.cda-button--tone-primary {
+    border-color: var(--cad-tone-primary-solid-border);
+    background: var(--cad-tone-primary-solid-bg);
+    color: var(--cad-tone-primary-solid-fg);
+    box-shadow: var(--cad-shadow-soft);
+  }
+
+  .cda-button--filled.cda-button--tone-primary:hover {
+    border-color: var(--cad-tone-primary-solid-hover);
+    background: var(--cad-tone-primary-solid-hover);
+  }
+
+  .cda-button--outlined.cda-button--tone-primary {
+    border-color: var(--cad-tone-primary-soft-border);
+    background: var(--cad-tone-primary-soft-bg);
+    color: var(--cad-tone-primary-soft-fg);
+  }
+
+  .cda-button--outlined.cda-button--tone-primary:hover {
+    background: var(--cad-tone-primary-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-light,
+  .cda-button--outlined.cda-button--tone-light,
+  .cda-button--filled.cda-button--tone-base,
+  .cda-button--outlined.cda-button--tone-base,
+  .cda-button--filled.cda-button--tone-dark,
+  .cda-button--outlined.cda-button--tone-dark {
+    border-color: var(--cad-tone-light-soft-border);
+    background: var(--cad-tone-light-soft-bg);
+    color: var(--cad-tone-light-soft-fg);
+  }
+
+  .cda-button--filled.cda-button--tone-secondary,
+  .cda-button--outlined.cda-button--tone-secondary {
+    border-color: var(--cad-tone-secondary-soft-border);
+    background: var(--cad-tone-secondary-soft-bg);
+    color: var(--cad-tone-secondary-soft-fg);
+  }
+
+  .cda-button--filled.cda-button--tone-success,
+  .cda-button--outlined.cda-button--tone-success {
+    border-color: var(--cad-tone-success-soft-border);
+    background: var(--cad-tone-success-soft-bg);
+    color: var(--cad-tone-success-soft-fg);
+  }
+
+  .cda-button--filled.cda-button--tone-info,
+  .cda-button--outlined.cda-button--tone-info {
+    border-color: var(--cad-tone-info-soft-border);
+    background: var(--cad-tone-info-soft-bg);
+    color: var(--cad-tone-info-soft-fg);
+  }
+
+  .cda-button--filled.cda-button--tone-warning,
+  .cda-button--outlined.cda-button--tone-warning {
+    border-color: var(--cad-tone-warning-soft-border);
+    background: var(--cad-tone-warning-soft-bg);
+    color: var(--cad-tone-warning-soft-fg);
+  }
+
+  .cda-button--filled.cda-button--tone-danger,
+  .cda-button--outlined.cda-button--tone-danger {
+    border-color: var(--cad-tone-danger-soft-border);
+    background: var(--cad-tone-danger-soft-bg);
+    color: var(--cad-tone-danger-soft-fg);
+  }
+
+  .cda-button--filled.cda-button--tone-light:hover,
+  .cda-button--outlined.cda-button--tone-light:hover {
+    background: var(--cad-tone-light-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-base,
+  .cda-button--outlined.cda-button--tone-base {
+    border-color: var(--cad-tone-base-soft-border);
+    background: var(--cad-tone-base-soft-bg);
+    color: var(--cad-tone-base-soft-fg);
+  }
+
+  .cda-button--filled.cda-button--tone-base:hover,
+  .cda-button--outlined.cda-button--tone-base:hover {
+    background: var(--cad-tone-base-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-dark,
+  .cda-button--outlined.cda-button--tone-dark {
+    border-color: var(--cad-tone-dark-soft-border);
+    background: var(--cad-tone-dark-soft-bg);
+    color: var(--cad-tone-dark-soft-fg);
+  }
+
+  .cda-button--filled.cda-button--tone-dark:hover,
+  .cda-button--outlined.cda-button--tone-dark:hover {
+    background: var(--cad-tone-dark-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-secondary:hover,
+  .cda-button--outlined.cda-button--tone-secondary:hover {
+    background: var(--cad-tone-secondary-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-success:hover,
+  .cda-button--outlined.cda-button--tone-success:hover {
+    background: var(--cad-tone-success-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-info:hover,
+  .cda-button--outlined.cda-button--tone-info:hover {
+    background: var(--cad-tone-info-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-warning:hover,
+  .cda-button--outlined.cda-button--tone-warning:hover {
+    background: var(--cad-tone-warning-soft-hover);
+  }
+
+  .cda-button--filled.cda-button--tone-danger:hover,
+  .cda-button--outlined.cda-button--tone-danger:hover {
+    background: var(--cad-tone-danger-soft-hover);
+  }
+
+  .cda-button--text {
+    @apply border-transparent bg-transparent shadow-none;
+  }
+
+  .cda-button--text.cda-button--tone-danger {
+    color: var(--cad-tone-danger-soft-fg);
+  }
+
+  .cda-button--text.cda-button--tone-danger:hover {
+    background: color-mix(in srgb, var(--cad-tone-danger-soft-bg) 78%, transparent);
+  }
+
+  .cda-button--text.cda-button--tone-secondary {
+    color: var(--cad-tone-secondary-soft-fg);
+  }
+
+  .cda-button--text.cda-button--tone-secondary:hover {
+    background: color-mix(in srgb, var(--cad-tone-secondary-soft-bg) 78%, transparent);
+  }
+
+  .cda-button--text.cda-button--tone-success {
+    color: var(--cad-tone-success-soft-fg);
+  }
+
+  .cda-button--text.cda-button--tone-success:hover {
+    background: color-mix(in srgb, var(--cad-tone-success-soft-bg) 78%, transparent);
+  }
+
+  .cda-button--text.cda-button--tone-info {
+    color: var(--cad-tone-info-soft-fg);
+  }
+
+  .cda-button--text.cda-button--tone-info:hover {
+    background: color-mix(in srgb, var(--cad-tone-info-soft-bg) 78%, transparent);
+  }
+
+  .cda-button--text.cda-button--tone-warning {
+    color: var(--cad-tone-warning-soft-fg);
+  }
+
+  .cda-button--text.cda-button--tone-warning:hover {
+    background: color-mix(in srgb, var(--cad-tone-warning-soft-bg) 78%, transparent);
+  }
+
+  .cda-button--text.cda-button--tone-primary,
+  .cda-button--text.cda-button--tone-light,
+  .cda-button--text.cda-button--tone-base,
+  .cda-button--text.cda-button--tone-dark {
+    color: var(--cad-tone-primary-soft-fg);
+  }
+
+  .cda-button--text.cda-button--tone-primary:hover,
+  .cda-button--text.cda-button--tone-light:hover,
+  .cda-button--text.cda-button--tone-base:hover,
+  .cda-button--text.cda-button--tone-dark:hover {
+    background: color-mix(in srgb, var(--cad-tone-primary-soft-bg) 82%, transparent);
+  }
+
+  .cda-button__spinner {
+    @apply inline-flex h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent;
+  }
+
+  .cda-button__token {
+    @apply text-[10px] font-bold uppercase tracking-[0.18em];
+  }
+
+  .cda-button--quick {
+    @apply h-9 w-11 justify-center px-0 text-[10px] font-bold uppercase tracking-[0.18em];
+  }
+
+  .cad-card-button,
+  .zy-card-button {
+    @apply inline-flex h-9 items-center justify-center gap-2 border px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-tone-light-soft-border);
+    background: var(--cad-tone-light-soft-bg);
+    color: var(--cad-tone-light-soft-fg);
+  }
+
+  .cad-card-button:hover,
+  .zy-card-button:hover {
+    background: var(--cad-tone-light-soft-hover);
+  }
+
+  .cad-card-button--ghost,
+  .zy-card-button--ghost {
+    @apply bg-transparent shadow-none;
+  }
+
+  .cad-card-button--warn,
+  .zy-card-button--warn {
+    border-color: var(--cad-tone-danger-soft-border);
+    background: var(--cad-tone-danger-soft-bg);
+    color: var(--cad-tone-danger-soft-fg);
+  }
+
+  .cad-card-button--warn:hover,
+  .zy-card-button--warn:hover {
+    background: var(--cad-tone-danger-soft-hover);
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 border px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    border-radius: var(--cad-radius-control);
+    border-color: var(--cad-tone-light-soft-border);
+    background: var(--cad-tone-light-soft-bg);
+    color: var(--cad-tone-light-soft-fg);
+  }
+
+  .btn:hover {
+    background: var(--cad-tone-light-soft-hover);
+  }
+
+  .btn.ghost {
+    @apply bg-transparent shadow-none;
+  }
+
+  .btn.xs {
+    @apply px-3 py-2 text-xs;
+  }
+
+  .btn.primary {
+    border-color: var(--cad-tone-primary-solid-border);
+    background: var(--cad-tone-primary-solid-bg);
+    color: var(--cad-tone-primary-solid-fg);
+  }
+
+  .btn.primary:hover {
+    border-color: var(--cad-tone-primary-solid-hover);
+    background: var(--cad-tone-primary-solid-hover);
+  }
+}

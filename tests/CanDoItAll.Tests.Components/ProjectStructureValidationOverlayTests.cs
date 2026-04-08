@@ -69,6 +69,7 @@ public sealed class ProjectStructureValidationOverlayTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             priority);
 }
 

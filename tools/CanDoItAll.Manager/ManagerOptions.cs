@@ -6,6 +6,16 @@ public sealed class ManagerOptions
 
     public string WatchProjectPath { get; set; } = "src\\CanDoItAll.Web\\CanDoItAll.Web.csproj";
 
+    public string TailwindWorkspacePath { get; set; } = "Tailwind";
+
+    public string TailwindInputPath { get; set; } = "Tailwind\\input.css";
+
+    public string TailwindOutputPath { get; set; } = "src\\CanDoItAll.Components.BaseLib\\wwwroot\\css\\output.css";
+
+    public string[] TailwindContentWatchPaths { get; set; } = ["src\\CanDoItAll.Components.BaseLib"];
+
+    public int TailwindWatchDebounceMilliseconds { get; set; } = 150;
+
     public string WatchLaunchProfile { get; set; } = "https";
 
     public string[] WatchUrls { get; set; } = [];
@@ -15,6 +25,8 @@ public sealed class ManagerOptions
     public int ReadinessTimeoutSeconds { get; set; } = 90;
 
     public bool AutoStartWatch { get; set; } = true;
+
+    public bool AutoStartTailwindWatch { get; set; } = true;
 
     public bool CleanupWorkspaceProcessesOnStart { get; set; } = true;
 
@@ -26,9 +38,15 @@ public sealed class ManagerOptions
 
     public bool WatchDisableAppHost { get; set; } = true;
 
-    public bool WatchDisableBuildServers { get; set; } = true;
+    public bool WatchDisableBuildServers { get; set; }
 
-    public bool WatchDisableSharedCompilation { get; set; } = true;
+    public bool WatchDisableSharedCompilation { get; set; }
+
+    public bool WatchSuppressBrowserRefresh { get; set; }
+
+    public bool TailwindEchoOutputToConsole { get; set; } = true;
+
+    public bool TailwindInstallDependenciesIfMissing { get; set; } = true;
 
     public bool TuningModeEnabled { get; set; }
 

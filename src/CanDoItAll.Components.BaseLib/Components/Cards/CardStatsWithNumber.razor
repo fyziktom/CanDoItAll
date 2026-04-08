@@ -4,12 +4,12 @@
          style="@ComputedStyle">
     @if (IsWithIcon && !string.IsNullOrWhiteSpace(Icon))
     {
-        <span class="zy-stat-card__icon">
+        <span class="cad-stat-card__icon zy-stat-card__icon">
             <Icon Name="@Icon" />
         </span>
     }
-    <span class="zy-stat-card__label">@Label</span>
-    <strong class="zy-stat-card__value">@Value</strong>
+    <span class="cad-stat-card__label zy-stat-card__label">@Label</span>
+    <strong class="cad-stat-card__value zy-stat-card__value">@Value</strong>
 </article>
 
 @code {
@@ -41,13 +41,13 @@
     {
         var sizeCss = Size switch
         {
-            "large" => "zy-stat-card--lg",
+            "large" => "cad-stat-card--lg zy-stat-card--lg",
             "normal" => string.Empty,
-            _ => "zy-stat-card--sm"
+            _ => "cad-stat-card--sm zy-stat-card--sm"
         };
 
         return CssClassBuilder.Join(
-            "zy-stat-card",
+            "cad-stat-card zy-stat-card",
             sizeCss,
             CssClass);
     }

@@ -1,6 +1,7 @@
 @namespace CanDoItAll.Components.Sandbox.Components
 @page "/groups/actions"
 @inherits CatalogPageBase
+@using CanDoItAll.Components.Common
 
 <PageTitle>Actions</PageTitle>
 
@@ -30,12 +31,12 @@
         else
         {
             <SectionCard Title="Primary hierarchy" Description="The top-level actions should scan in the right order immediately.">
-                <div class="flex flex-wrap gap-3">
+                <Cluster Gap="LayoutGap.Medium">
                     <Button Text="@PrimaryText" IsBusy="@IsBusy" Disabled="@IsDisabled" />
                     <Button Text="Save draft" ButtonStyle="@(ButtonStyle.Light)" Variant="@(Variant.Outlined)" Disabled="@IsDisabled" />
                     <Button Text="Request changes" ButtonStyle="@(ButtonStyle.Warning)" Variant="@(Variant.Outlined)" Disabled="@IsDisabled" />
                     <Button Text="Archive" ButtonStyle="@(ButtonStyle.Danger)" Variant="@(Variant.Text)" Disabled="@IsDisabled" />
-                </div>
+                </Cluster>
             </SectionCard>
 
             <SectionCard Title="Inline review actions" Description="Action rows often live next to dense metadata and need to remain coherent.">
@@ -50,10 +51,11 @@
                                 <StatusBadge Text="@item.Status" Tone="@item.Tone" />
                             </Status>
                             <Actions>
-                                <div class="flex items-center gap-2">
+                                <Cluster Wrap="FlexWrap.NoWrap"
+                                         Gap="LayoutGap.Small">
                                     <Button Text="Open" ButtonStyle="@(ButtonStyle.Light)" Variant="@(Variant.Outlined)" Disabled="@IsDisabled" />
                                     <Button Text="Promote" Disabled="@IsDisabled" IsBusy="@item.IsBusy" />
-                                </div>
+                                </Cluster>
                             </Actions>
                         </SelectionListItem>
                     }

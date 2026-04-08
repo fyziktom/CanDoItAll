@@ -42,7 +42,7 @@ public sealed class WorkbenchStateServiceTests
         Assert.False(service.Tabs.First(tab => tab.TabId == "dashboard").IsSleeping);
         Assert.True(service.Tabs.First(tab => tab.TabId == "projects").IsSleeping);
         Assert.NotNull(store.SavedSnapshot);
-        Assert.Equal("candoitall.workbench.v3", store.SavedSnapshot!.CompatibilityMarker);
+        Assert.Equal("candoitall.workbench.v4", store.SavedSnapshot!.CompatibilityMarker);
     }
 
     [Fact]
@@ -64,6 +64,32 @@ public sealed class WorkbenchStateServiceTests
         Assert.Equal("Validation Review", validationTabs[0].Title);
         Assert.Equal(validationTabs[0].TabId, service.ActiveTabId);
         Assert.False(validationTabs[0].IsSleeping);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_ignores_snapshots_with_an_incompatible_compatibility_marker()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero));
+        var store = new TestWorkbenchStateStore
+        {
+            Snapshot = new WorkbenchSessionSnapshot(
+                3,
+                "dashboard",
+                [new WorkbenchTabState("legacy", "Legacy", "/legacy")],
+                CompatibilityMarker: "candoitall.workbench.v3")
+        };
+        var service = new WorkbenchStateService(
+            store,
+            Options.Create(new WorkbenchOptions { MaxWarmTabs = 3, SleepAfterMinutes = 15 }),
+            clock);
+
+        await service.InitializeAsync([new WorkbenchTabState("dashboard", "Dashboard", "/")]);
+
+        Assert.Single(service.Tabs);
+        Assert.Equal("dashboard", service.Tabs[0].TabId);
+        Assert.NotNull(service.LastRestoreReport);
+        Assert.Single(service.LastRestoreReport!.Failures);
+        Assert.Contains("incompatible session format", service.LastRestoreReport.Failures[0].Summary, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class TestWorkbenchStateStore : IWorkbenchStateStore

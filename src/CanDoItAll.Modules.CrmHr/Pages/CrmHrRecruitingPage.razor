@@ -1,0 +1,647 @@
+@page "/crm-hr/recruiting"
+@inject RecruitingService RecruitingService
+@inject NavigationManager Navigation
+@using CanDoItAll.SharedKernel
+
+<PageTitle>CRM / HR Recruiting</PageTitle>
+
+<PageScaffold>
+    <Header>
+        <PageHeader Eyebrow="CRM / HR"
+                    Title="Recruiting workspace"
+                    Description="Create candidate records in the shared registry, move them through stage with history, capture interviews and feedback, and hand off to workforce without duplicating the person.">
+            <Actions>
+                @if (SelectedPartyId.HasValue)
+                {
+                    <Button Text="Open workforce"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="OpenWorkforceAsync"
+                            data-testid="crmhr-recruiting-open-workforce" />
+                }
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Large">
+            <CrmHrSecondaryTabs SelectedKey="recruiting" />
+
+            <SummaryTiles>
+                <SummaryTile Label="Applications" Value="@(currentWorkspace?.Applications.Count.ToString() ?? "0")" HelperText="Candidate pipelines tracked on the shared registry." />
+                <SummaryTile Label="Interviewing" Value="@(currentWorkspace?.Applications.Count(item => item.Stage == RecruitmentStage.Interviewing).ToString() ?? "0")" HelperText="Candidates currently in interview loops." Tone="info" />
+                <SummaryTile Label="Offer or hired" Value="@(currentWorkspace?.Applications.Count(item => item.Stage is RecruitmentStage.Offer or RecruitmentStage.Hired).ToString() ?? "0")" HelperText="Applications close enough to require controlled handoff." Tone="success" />
+                <SummaryTile Label="Open tasks" Value="@(currentWorkspace?.LifecycleTasks.Count(item => item.Status is not LifecycleTaskStatus.Completed and not LifecycleTaskStatus.Cancelled).ToString() ?? "0")" HelperText="Selected candidate onboarding or offboarding actions." Tone="warning" />
+            </SummaryTiles>
+
+            @if (!string.IsNullOrWhiteSpace(message))
+            {
+                <div class="@ResolveMessageClasses()" data-testid="crmhr-recruiting-message">@message</div>
+            }
+
+            <ListDetailShell ListPaneWidth="30rem">
+                <ListHeader>
+                    <ListPanelHeader Title="Recruitment applications"
+                                     Description="Select an existing candidate pipeline or create a new one directly from this route."
+                                     Count="@($"{FilteredApplications.Count} visible application(s)")">
+                        <Filters>
+                            <FilterBar ResultText="@($"{FilteredApplications.Count} matching application(s)")">
+                                <input @bind="searchText" @bind:event="oninput" class="cda-input min-w-[16rem] flex-1" placeholder="Search candidate, role, recruiter, manager, source, or email" data-testid="crmhr-recruiting-search" />
+                                <InputSelect @bind-Value="stageFilter" class="cda-input" data-testid="crmhr-recruiting-stage-filter">
+                                    <option value="">All stages</option>
+                                    @foreach (var stage in Enum.GetValues<RecruitmentStage>())
+                                    {
+                                        <option value="@stage.ToString()">@stage</option>
+                                    }
+                                </InputSelect>
+                                <Button Text="New application" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="CreateNewApplicationAsync" data-testid="crmhr-recruiting-new-button" />
+                            </FilterBar>
+                        </Filters>
+                    </ListPanelHeader>
+                </ListHeader>
+
+                <ListContent>
+                    @if (FilteredApplications.Count == 0)
+                    {
+                        <EmptyState Eyebrow="No recruitment applications" Title="Create the first candidate" Description="New candidates and application stages appear here after the first recruitment application is saved." />
+                    }
+                    else
+                    {
+                        <Stack GapScale="LayoutGap.Medium">
+                            @foreach (var item in FilteredApplications)
+                            {
+                                <div data-testid="crmhr-recruiting-application-item">
+                                    <SelectionListItem Title="@item.CandidateName"
+                                                       Eyebrow="@BuildApplicationEyebrow(item)"
+                                                       Meta="@BuildApplicationMeta(item)"
+                                                       Summary="@BuildApplicationSummary(item)"
+                                                       IsSelected="@(currentWorkspace?.Application.Id == item.Id)"
+                                                       OnSelect="@(() => SelectApplicationAsync(item.Id))">
+                                        <Status>
+                                            <Cluster Gap="LayoutGap.Small">
+                                                <StatusBadge Tone="@ResolveStageTone(item.Stage)" Text="@item.Stage.ToString()" />
+                                                <StatusBadge Tone="@ResolveDecisionTone(item.Decision)" Text="@item.Decision.ToString()" />
+                                                @if (item.HasWorkforceProfile)
+                                                {
+                                                    <StatusBadge Tone="success" Text="Workforce" />
+                                                }
+                                            </Cluster>
+                                        </Status>
+                                    </SelectionListItem>
+                                </div>
+                            }
+                        </Stack>
+                    }
+                </ListContent>
+
+                <DetailHeader>
+                    @if (currentWorkspace?.HasSelectedApplication == true)
+                    {
+                        <SurfaceCard>
+                            <Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.SpaceBetween">
+                                <div class="min-w-0">
+                                    <p class="cda-eyebrow">Candidate summary</p>
+                                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@currentWorkspace.CandidateDisplayName</h2>
+                                    @if (!string.IsNullOrWhiteSpace(currentWorkspace.CandidateSummary))
+                                    {
+                                        <p class="mt-3 text-sm leading-6 text-slate-600">@currentWorkspace.CandidateSummary</p>
+                                    }
+                                </div>
+                                <Cluster Gap="LayoutGap.Small">
+                                    <StatusBadge Tone="@ResolveStageTone(applicationEditor.Stage)" Text="@applicationEditor.Stage.ToString()" />
+                                    <StatusBadge Tone="@ResolveDecisionTone(applicationEditor.Decision)" Text="@applicationEditor.Decision.ToString()" />
+                                </Cluster>
+                            </Split>
+
+                            <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-5">
+                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Email</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(currentWorkspace.CandidatePrimaryEmail)</p></div>
+                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Phone</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(currentWorkspace.CandidatePrimaryPhone)</p></div>
+                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Recruiter</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(ResolveSelectedPartyName(currentWorkspace.RecruiterOptions, applicationEditor.RecruiterPartyId))</p></div>
+                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Hiring manager</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(ResolveSelectedPartyName(currentWorkspace.HiringManagerOptions, applicationEditor.HiringManagerPartyId))</p></div>
+                            </Grid>
+                        </SurfaceCard>
+                    }
+                    else
+                    {
+                        <SurfaceCard Soft="true">
+                            <p class="cda-eyebrow">Recruiting workspace ready</p>
+                            <h2 class="mt-1 text-lg font-semibold text-slate-950">Create or choose a candidate pipeline</h2>
+                            <p class="mt-3 text-sm leading-6 text-slate-600">Candidate setup, interviews, lifecycle tasks, and workforce conversion all stay on this route once the first application is saved.</p>
+                        </SurfaceCard>
+                    }
+                </DetailHeader>
+
+                <DetailContent>
+                    @if (currentWorkspace is null)
+                    {
+                        <EmptyState Eyebrow="Loading recruiting workspace" Title="Loading..." Description="Recruiting data is being loaded." />
+                    }
+                    else
+                    {
+                        <Stack GapScale="LayoutGap.Large">
+                            <CandidatePipeline Draft="applicationEditor"
+                                               CandidateOptions="currentWorkspace.CandidateOptions"
+                                               RecruiterOptions="currentWorkspace.RecruiterOptions"
+                                               HiringManagerOptions="currentWorkspace.HiringManagerOptions"
+                                               TargetUnitOptions="currentWorkspace.TargetUnitOptions"
+                                               StageHistory="currentWorkspace.StageHistory"
+                                               HasWorkforceProfile="currentWorkspace.HasWorkforceProfile"
+                                               SaveApplication="SaveApplicationAsync"
+                                               ResetApplication="ResetApplicationAsync" />
+
+                            <InterviewSchedulePanel Draft="interviewEditor"
+                                                    InterviewerOptions="currentWorkspace.SupportOptions"
+                                                    Interviews="currentWorkspace.Interviews"
+                                                    SaveInterview="SaveInterviewAsync"
+                                                    ResetInterview="ResetInterviewAsync"
+                                                    DeleteInterview="DeleteInterviewAsync" />
+
+                            <OnboardingChecklistPanel SupportDraft="supportEditor"
+                                                      CurrentAssignments="currentWorkspace.SupportAssignments"
+                                                      TaskDraft="taskEditor"
+                                                      SupportOptions="currentWorkspace.SupportOptions"
+                                                      ProjectOptions="currentWorkspace.ProjectOptions"
+                                                      Tasks="currentWorkspace.LifecycleTasks"
+                                                      SaveSupportAssignments="SaveSupportAssignmentsAsync"
+                                                      SaveTask="SaveTaskAsync"
+                                                      ResetTask="ResetTaskAsync"
+                                                      DeleteTask="DeleteTaskAsync" />
+
+                            <FormSection Title="Hiring conversion"
+                                         Description="Turn a hired candidate into a workforce profile on the same Party identity so recruiting handoff does not create duplicates.">
+                                @if (!currentWorkspace.HasSelectedApplication)
+                                {
+                                    <EmptyState Eyebrow="No candidate selected" Title="Choose or save an application first" Description="Conversion becomes available once the recruitment application exists." />
+                                }
+                                else
+                                {
+                                    <SurfaceCard>
+                                        @if (currentWorkspace.HasWorkforceProfile)
+                                        {
+                                            <div class="rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700" data-testid="crmhr-recruiting-convert-existing-callout">
+                                                This candidate already has a workforce profile. Saving conversion updates that existing identity instead of creating another person.
+                                            </div>
+                                        }
+
+                                        <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
+                                            <FormField Text="Workforce kind">
+                                                <InputSelect @bind-Value="conversionEditor.WorkforceKind" class="cda-input" data-testid="crmhr-recruiting-convert-kind">
+                                                    @foreach (var workforceKind in Enum.GetValues<WorkforceKind>())
+                                                    {
+                                                        <option value="@workforceKind">@workforceKind</option>
+                                                    }
+                                                </InputSelect>
+                                            </FormField>
+                                            <FormField Text="Job title">
+                                                <InputText @bind-Value="conversionEditor.JobTitle" class="cda-input" data-testid="crmhr-recruiting-convert-job-title" />
+                                            </FormField>
+                                            <FormField Text="Discipline">
+                                                <InputText @bind-Value="conversionEditor.Discipline" class="cda-input" data-testid="crmhr-recruiting-convert-discipline" />
+                                            </FormField>
+                                        </Grid>
+
+                                        <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
+                                            <FormField Text="Seniority">
+                                                <InputText @bind-Value="conversionEditor.Seniority" class="cda-input" data-testid="crmhr-recruiting-convert-seniority" />
+                                            </FormField>
+                                            <FormField Text="Home unit">
+                                                <InputSelect @bind-Value="conversionEditor.HomeUnitPartyId" class="cda-input" data-testid="crmhr-recruiting-convert-home-unit">
+                                                    <option value="">Choose home unit</option>
+                                                    @foreach (var option in currentWorkspace.TargetUnitOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
+                                                    {
+                                                        <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
+                                                    }
+                                                </InputSelect>
+                                            </FormField>
+                                            <FormField Text="Manager">
+                                                <InputSelect @bind-Value="conversionEditor.ManagerPartyId" class="cda-input" data-testid="crmhr-recruiting-convert-manager">
+                                                    <option value="">Choose manager</option>
+                                                    @foreach (var option in currentWorkspace.SupportOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
+                                                    {
+                                                        <option value="@option.Id">@option.DisplayName</option>
+                                                    }
+                                                </InputSelect>
+                                            </FormField>
+                                        </Grid>
+
+                                        <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
+                                            <FormField Text="Start date"><InputDate @bind-Value="conversionEditor.StartDate" class="cda-input" data-testid="crmhr-recruiting-convert-start-date" /></FormField>
+                                            <FormField Text="Location"><InputText @bind-Value="conversionEditor.Location" class="cda-input" data-testid="crmhr-recruiting-convert-location" /></FormField>
+                                            <FormField Text="Time zone"><InputText @bind-Value="conversionEditor.TimeZone" class="cda-input" data-testid="crmhr-recruiting-convert-timezone" /></FormField>
+                                            <FormField Text="Capacity h/week"><InputNumber @bind-Value="conversionEditor.CapacityHoursPerWeek" class="cda-input" data-testid="crmhr-recruiting-convert-capacity" /></FormField>
+                                        </Grid>
+
+                                        <div class="mt-4">
+                                            <FormField Text="Notes">
+                                                <InputTextArea @bind-Value="conversionEditor.Notes" class="cda-input min-h-[7rem]" data-testid="crmhr-recruiting-convert-notes" />
+                                            </FormField>
+                                        </div>
+
+                                        <Cluster Gap="LayoutGap.Small" Class="mt-4">
+                                            <Button Text="Convert to workforce" Click="ConvertCandidateAsync" data-testid="crmhr-recruiting-convert-save-button" />
+                                            @if (SelectedPartyId.HasValue)
+                                            {
+                                                <Button Text="Open workforce" ButtonStyle="ButtonStyle.Light" Click="OpenWorkforceAsync" data-testid="crmhr-recruiting-convert-open-workforce" />
+                                            }
+                                        </Cluster>
+                                    </SurfaceCard>
+                                }
+                            </FormSection>
+                        </Stack>
+                    }
+                </DetailContent>
+            </ListDetailShell>
+        </Stack>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    [SupplyParameterFromQuery]
+    private Guid? ApplicationId { get; set; }
+
+    private RecruitmentWorkspaceModel? currentWorkspace;
+    private RecruitmentApplicationEditorModel applicationEditor = new();
+    private RecruitmentInterviewEditorModel interviewEditor = new();
+    private LifecycleTaskEditorModel taskEditor = new();
+    private RecruitmentSupportAssignmentsEditorModel supportEditor = new();
+    private RecruitmentConversionEditorModel conversionEditor = new();
+    private string message = string.Empty;
+    private bool isError;
+    private string searchText = string.Empty;
+    private string stageFilter = string.Empty;
+
+    private Guid? SelectedPartyId => currentWorkspace?.HasSelectedApplication == true ? currentWorkspace.Application.PartyId : null;
+    private IReadOnlyList<RecruitmentApplicationListItemModel> FilteredApplications => currentWorkspace?.Applications.Where(MatchesApplicationFilters).ToList() ?? [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        currentWorkspace = await RecruitingService.GetRecruitmentWorkspaceAsync(ApplicationId);
+        ApplyWorkspace(currentWorkspace);
+    }
+
+    private void ApplyWorkspace(RecruitmentWorkspaceModel workspace)
+    {
+        applicationEditor = CloneApplication(workspace.Application);
+        interviewEditor = workspace.HasSelectedApplication && workspace.Application.Id.HasValue
+            ? CreateInterviewDraft(workspace.Application.Id.Value)
+            : new RecruitmentInterviewEditorModel();
+        taskEditor = workspace.HasSelectedApplication && workspace.Application.PartyId.HasValue
+            ? CreateTaskDraft(workspace.Application.PartyId.Value)
+            : new LifecycleTaskEditorModel();
+        supportEditor = workspace.HasSelectedApplication
+            ? new RecruitmentSupportAssignmentsEditorModel
+            {
+                PartyId = workspace.SupportAssignments.PartyId,
+                ManagerPartyId = workspace.SupportAssignments.ManagerPartyId,
+                BuddyPartyId = workspace.SupportAssignments.BuddyPartyId,
+                MentorPartyId = workspace.SupportAssignments.MentorPartyId
+            }
+            : new RecruitmentSupportAssignmentsEditorModel();
+        conversionEditor = CloneConversion(workspace.Conversion);
+    }
+
+    private bool MatchesApplicationFilters(RecruitmentApplicationListItemModel item)
+    {
+        if (!string.IsNullOrWhiteSpace(stageFilter) && !string.Equals(item.Stage.ToString(), stageFilter, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            return true;
+        }
+
+        var search = searchText.Trim();
+        return item.CandidateName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               item.DesiredRole.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               item.RecruiterName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               item.HiringManagerName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               item.TargetUnitName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               item.PrimaryEmail.Contains(search, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private Task SelectApplicationAsync(Guid applicationId)
+    {
+        Navigation.NavigateTo($"/crm-hr/recruiting?applicationId={applicationId:D}");
+        return Task.CompletedTask;
+    }
+
+    private Task CreateNewApplicationAsync()
+    {
+        Navigation.NavigateTo("/crm-hr/recruiting");
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveApplicationAsync()
+    {
+        var result = await RecruitingService.SaveRecruitmentApplicationAsync(applicationEditor);
+        if (!result.IsSuccess)
+        {
+            SetError(result.Errors);
+            return;
+        }
+
+        message = "Recruitment application saved.";
+        isError = false;
+        if (ApplicationId != result.Value)
+        {
+            Navigation.NavigateTo($"/crm-hr/recruiting?applicationId={result.Value:D}");
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private Task ResetApplicationAsync()
+    {
+        applicationEditor = currentWorkspace?.HasSelectedApplication == true ? CloneApplication(currentWorkspace.Application) : new RecruitmentApplicationEditorModel();
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveInterviewAsync()
+    {
+        if (currentWorkspace?.HasSelectedApplication != true || !currentWorkspace.Application.Id.HasValue)
+        {
+            SetError([Error.Validation("Save or select an application first.")]);
+            return;
+        }
+
+        interviewEditor.ApplicationId = currentWorkspace.Application.Id.Value;
+        var result = await RecruitingService.SaveRecruitmentInterviewAsync(interviewEditor);
+        if (!result.IsSuccess)
+        {
+            SetError(result.Errors);
+            return;
+        }
+
+        message = "Interview saved.";
+        isError = false;
+        await LoadAsync();
+    }
+
+    private Task ResetInterviewAsync()
+    {
+        interviewEditor = currentWorkspace?.HasSelectedApplication == true && currentWorkspace.Application.Id.HasValue
+            ? CreateInterviewDraft(currentWorkspace.Application.Id.Value)
+            : new RecruitmentInterviewEditorModel();
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteInterviewAsync(Guid interviewId)
+    {
+        await RecruitingService.DeleteRecruitmentInterviewAsync(interviewId);
+        message = "Interview deleted.";
+        isError = false;
+        await LoadAsync();
+    }
+
+    private async Task SaveTaskAsync()
+    {
+        if (currentWorkspace?.HasSelectedApplication != true || !currentWorkspace.Application.PartyId.HasValue)
+        {
+            SetError([Error.Validation("Save or select an application first.")]);
+            return;
+        }
+
+        taskEditor.PartyId = currentWorkspace.Application.PartyId.Value;
+        var result = await RecruitingService.SaveLifecycleTaskAsync(taskEditor);
+        if (!result.IsSuccess)
+        {
+            SetError(result.Errors);
+            return;
+        }
+
+        message = "Lifecycle task saved.";
+        isError = false;
+        await LoadAsync();
+    }
+
+    private Task ResetTaskAsync()
+    {
+        taskEditor = currentWorkspace?.HasSelectedApplication == true && currentWorkspace.Application.PartyId.HasValue
+            ? CreateTaskDraft(currentWorkspace.Application.PartyId.Value)
+            : new LifecycleTaskEditorModel();
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteTaskAsync(Guid taskId)
+    {
+        await RecruitingService.DeleteLifecycleTaskAsync(taskId);
+        message = "Lifecycle task deleted.";
+        isError = false;
+        await LoadAsync();
+    }
+
+    private async Task SaveSupportAssignmentsAsync()
+    {
+        if (currentWorkspace?.HasSelectedApplication != true || !currentWorkspace.Application.PartyId.HasValue)
+        {
+            SetError([Error.Validation("Save or select an application first.")]);
+            return;
+        }
+
+        supportEditor.PartyId = currentWorkspace.Application.PartyId.Value;
+        var result = await RecruitingService.SaveSupportAssignmentsAsync(supportEditor);
+        if (!result.IsSuccess)
+        {
+            SetError(result.Errors);
+            return;
+        }
+
+        message = "Support assignments saved.";
+        isError = false;
+        await LoadAsync();
+    }
+
+    private async Task ConvertCandidateAsync()
+    {
+        if (currentWorkspace?.HasSelectedApplication != true || !currentWorkspace.Application.Id.HasValue)
+        {
+            SetError([Error.Validation("Save or select an application first.")]);
+            return;
+        }
+
+        conversionEditor.ApplicationId = currentWorkspace.Application.Id.Value;
+        var result = await RecruitingService.ConvertCandidateAsync(conversionEditor);
+        if (!result.IsSuccess)
+        {
+            SetError(result.Errors);
+            return;
+        }
+
+        message = "Candidate converted to workforce.";
+        isError = false;
+        await LoadAsync();
+    }
+
+    private Task OpenWorkforceAsync()
+    {
+        if (SelectedPartyId.HasValue)
+        {
+            Navigation.NavigateTo($"/crm-hr/workforce?partyId={SelectedPartyId.Value:D}");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void SetError(IReadOnlyList<Error> errors)
+    {
+        message = errors.Count == 0 ? "The operation failed." : string.Join(" ", errors.Select(item => item.Message));
+        isError = true;
+    }
+
+    private string ResolveMessageClasses()
+    {
+        return isError
+            ? "rounded-[1.2rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700"
+            : "rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700";
+    }
+
+    private static RecruitmentApplicationEditorModel CloneApplication(RecruitmentApplicationEditorModel source)
+    {
+        return new RecruitmentApplicationEditorModel
+        {
+            Id = source.Id,
+            PartyId = source.PartyId,
+            CandidateName = source.CandidateName,
+            CandidateEmail = source.CandidateEmail,
+            CandidatePhone = source.CandidatePhone,
+            CandidateSummary = source.CandidateSummary,
+            TargetUnitPartyId = source.TargetUnitPartyId,
+            RecruiterPartyId = source.RecruiterPartyId,
+            HiringManagerPartyId = source.HiringManagerPartyId,
+            DesiredRole = source.DesiredRole,
+            Source = source.Source,
+            Stage = source.Stage,
+            AvailableFrom = source.AvailableFrom,
+            Decision = source.Decision,
+            StageNotes = source.StageNotes,
+            Notes = source.Notes,
+            LastChangedBy = source.LastChangedBy
+        };
+    }
+
+    private static RecruitmentConversionEditorModel CloneConversion(RecruitmentConversionEditorModel source)
+    {
+        return new RecruitmentConversionEditorModel
+        {
+            ApplicationId = source.ApplicationId,
+            WorkforceKind = source.WorkforceKind,
+            JobTitle = source.JobTitle,
+            Discipline = source.Discipline,
+            Seniority = source.Seniority,
+            HomeUnitPartyId = source.HomeUnitPartyId,
+            ManagerPartyId = source.ManagerPartyId,
+            StartDate = source.StartDate,
+            Location = source.Location,
+            TimeZone = source.TimeZone,
+            CapacityHoursPerWeek = source.CapacityHoursPerWeek,
+            Status = source.Status,
+            Notes = source.Notes,
+            LastChangedBy = source.LastChangedBy
+        };
+    }
+
+    private static RecruitmentInterviewEditorModel CreateInterviewDraft(Guid applicationId)
+    {
+        return new RecruitmentInterviewEditorModel
+        {
+            ApplicationId = applicationId,
+            ScheduledAtLocal = DateTime.Today.AddHours(9),
+            InterviewType = RecruitmentInterviewType.Screening,
+            Outcome = RecruitmentInterviewOutcome.Pending
+        };
+    }
+
+    private static LifecycleTaskEditorModel CreateTaskDraft(Guid partyId)
+    {
+        return new LifecycleTaskEditorModel
+        {
+            PartyId = partyId,
+            TaskKind = LifecycleTaskKind.Onboarding,
+            Status = LifecycleTaskStatus.NotStarted,
+            DueDate = DateOnly.FromDateTime(DateTime.Today.AddDays(7))
+        };
+    }
+
+    private static string BuildApplicationEyebrow(RecruitmentApplicationListItemModel item)
+    {
+        return string.IsNullOrWhiteSpace(item.DesiredRole) ? "Recruitment application" : item.DesiredRole;
+    }
+
+    private static string BuildApplicationMeta(RecruitmentApplicationListItemModel item)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(item.RecruiterName))
+        {
+            parts.Add($"Recruiter {item.RecruiterName}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.HiringManagerName))
+        {
+            parts.Add($"Manager {item.HiringManagerName}");
+        }
+
+        if (item.AvailableFrom.HasValue)
+        {
+            parts.Add($"Available {item.AvailableFrom.Value:yyyy-MM-dd}");
+        }
+
+        return string.Join(" / ", parts);
+    }
+
+    private static string BuildApplicationSummary(RecruitmentApplicationListItemModel item)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(item.PrimaryEmail))
+        {
+            parts.Add(item.PrimaryEmail);
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.TargetUnitName))
+        {
+            parts.Add(item.TargetUnitName);
+        }
+
+        return parts.Count == 0 ? "No additional candidate detail yet." : string.Join(" / ", parts);
+    }
+
+    private static string ResolveStageTone(RecruitmentStage stage)
+    {
+        return stage switch
+        {
+            RecruitmentStage.Hired => "success",
+            RecruitmentStage.Offer => "primary",
+            RecruitmentStage.Interviewing => "info",
+            RecruitmentStage.Rejected => "danger",
+            RecruitmentStage.Withdrawn => "warning",
+            _ => "base"
+        };
+    }
+
+    private static string ResolveDecisionTone(RecruitmentDecision decision)
+    {
+        return decision switch
+        {
+            RecruitmentDecision.Approved => "success",
+            RecruitmentDecision.Rejected => "danger",
+            RecruitmentDecision.Withdrawn => "warning",
+            _ => "base"
+        };
+    }
+
+    private static string ResolveSelectedPartyName(IReadOnlyList<PartyOptionModel> options, Guid? selectedId)
+    {
+        return selectedId.HasValue ? options.FirstOrDefault(item => item.Id == selectedId.Value)?.DisplayName ?? string.Empty : string.Empty;
+    }
+
+    private static string FormatValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
+    }
+}

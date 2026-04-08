@@ -444,6 +444,8 @@ public sealed class PromptSessionAttachmentSummary
 
     public string MediaOriginalFileName { get; set; } = string.Empty;
 
+    public string StorageObjectReferenceJson { get; set; } = string.Empty;
+
     public string MetadataJson { get; set; } = string.Empty;
 }
 

@@ -1,0 +1,21 @@
+@if (ChildContent is not null)
+{
+    @ChildContent
+}
+
+@code {
+    private string? lastRenderKey;
+
+    [Parameter, EditorRequired]
+    public string RenderKey { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    protected override bool ShouldRender()
+        => lastRenderKey is null ||
+           !string.Equals(lastRenderKey, RenderKey, StringComparison.Ordinal);
+
+    protected override void OnAfterRender(bool firstRender)
+        => lastRenderKey = RenderKey;
+}

@@ -1,14 +1,38 @@
 @namespace CanDoItAll.Components.BaseLib
-<div @attributes='AdditionalAttributes.WithClass("rz-layout min-h-dvh")'>
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes(ResolveCssClass(), ResolveStyle())'>
     @ChildContent
 </div>
 
 @code {
     [Parameter]
+    public bool FitViewport { get; set; }
+
+    [Parameter]
+    public string ViewportOffset { get; set; } = "0px";
+
+    [Parameter]
+    public bool LockOverflow { get; set; } = true;
+
+    [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
-    [Parameter(CaptureUnmatchedValues = true)]
-    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+    private string ResolveCssClass()
+        => BuildClass(
+            "rz-layout",
+            FitViewport ? "min-h-0" : "min-h-dvh");
+
+    private string? ResolveStyle()
+    {
+        if (!FitViewport)
+        {
+            return null;
+        }
+
+        var overflowStyle = LockOverflow ? "overflow:hidden;" : string.Empty;
+        return $"height:calc(100svh - {ViewportOffset});min-height:0;{overflowStyle}";
+    }
 }
 
 

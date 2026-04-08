@@ -1,0 +1,173 @@
+@using CanDoItAll.Modules.Projects
+
+@if (Opportunity is not null)
+{
+    <Dialog IsOpen="@IsOpen"
+            Title="Convert won opportunity"
+            Eyebrow="CRM / HR"
+            Subtitle="Create or attach the project context once the deal is closed won so party linkage survives the handoff."
+            Size="ModalSize.Wide"
+            TestId="crmhr-opportunity-conversion-dialog"
+            OnClose="HandleCloseAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Large">
+                @if (!string.IsNullOrWhiteSpace(Message))
+                {
+                    <div class="rounded-[1.25rem] border px-4 py-4 text-sm @(IsErrorMessage ? "border-rose-200 bg-rose-50 text-rose-700" : "border-emerald-200 bg-emerald-50 text-emerald-700")">
+                        @Message
+                    </div>
+                }
+
+                <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Opportunity</p>
+                        <h3 class="mt-1 text-lg font-semibold text-slate-950">@Opportunity.Title</h3>
+                        <p class="mt-3 text-sm leading-6 text-slate-600">
+                            @Opportunity.AccountDisplayName / @Opportunity.OpportunitySource / @Opportunity.Stage
+                        </p>
+                        @if (!string.IsNullOrWhiteSpace(Opportunity.Summary))
+                        {
+                            <p class="mt-3 text-sm leading-6 text-slate-600">@Opportunity.Summary</p>
+                        }
+                    </SurfaceCard>
+
+                    <SurfaceCard>
+                        <label class="flex items-center gap-3 text-sm font-medium text-slate-700">
+                            <InputCheckbox @bind-Value="Model.LinkExistingProject"
+                                           data-testid="crmhr-opportunity-conversion-link-existing" />
+                            <span>Link an existing project instead of creating a new one.</span>
+                        </label>
+
+                        @if (Model.LinkExistingProject)
+                        {
+                            <div class="mt-5">
+                                <label class="cda-field-label">Existing project</label>
+                                <InputSelect @bind-Value="Model.ExistingProjectId"
+                                             class="cda-input"
+                                             data-testid="crmhr-opportunity-conversion-project">
+                                    <option value="">Select project</option>
+                                    @foreach (var project in ProjectSummaries.OrderBy(item => item.Name))
+                                    {
+                                        <option value="@project.Id">@project.Name</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        }
+                        else
+                        {
+                            <Stack GapScale="LayoutGap.Medium" Class="mt-5">
+                                <div>
+                                    <label class="cda-field-label">Project name</label>
+                                    <InputText @bind-Value="Model.ProjectName"
+                                               class="cda-input"
+                                               data-testid="crmhr-opportunity-conversion-name" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Description</label>
+                                    <InputTextArea @bind-Value="Model.ProjectDescription"
+                                                   class="cda-input min-h-[7rem]"
+                                                   data-testid="crmhr-opportunity-conversion-description" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Objective</label>
+                                    <InputTextArea @bind-Value="Model.ProjectObjective"
+                                                   class="cda-input min-h-[7rem]"
+                                                   data-testid="crmhr-opportunity-conversion-objective" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Current phase</label>
+                                    <InputText @bind-Value="Model.CurrentPhase"
+                                               class="cda-input"
+                                               data-testid="crmhr-opportunity-conversion-phase" />
+                                </div>
+                            </Stack>
+                        }
+                    </SurfaceCard>
+                </Grid>
+
+                <SurfaceCard>
+                    <p class="cda-eyebrow">Projected party handoff</p>
+                    <h3 class="mt-1 text-lg font-semibold text-slate-950">Assignments carried into the project</h3>
+
+                    <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                        <div class="rounded-[1.15rem] border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-700">
+                            Customer: @Opportunity.AccountDisplayName
+                        </div>
+                        <div class="rounded-[1.15rem] border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-700">
+                            Owner: @Opportunity.OwnerDisplayName
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Opportunity.DeliveryUnitDisplayName))
+                        {
+                            <div class="rounded-[1.15rem] border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-700">
+                                Delivery unit: @Opportunity.DeliveryUnitDisplayName
+                            </div>
+                        }
+                        @foreach (var party in Opportunity.Parties)
+                        {
+                            <div class="rounded-[1.15rem] border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-700">
+                                @party.Role: @party.DisplayName
+                            </div>
+                        }
+                    </Stack>
+                </SurfaceCard>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Split Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween">
+                <p class="text-sm leading-6 text-slate-600">The opportunity stays on CRM history while project context receives the linked parties for handoff.</p>
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Cancel"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="HandleCloseAsync"
+                            data-testid="crmhr-opportunity-conversion-cancel" />
+                    <Button Text="Save conversion"
+                            ButtonStyle="ButtonStyle.Info"
+                            Disabled="@IsBusy"
+                            Click="HandleSaveAsync"
+                            data-testid="crmhr-opportunity-conversion-save" />
+                </Cluster>
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public CrmOpportunityDetailModel? Opportunity { get; set; }
+
+    [Parameter, EditorRequired]
+    public CrmOpportunityConversionEditorModel Model { get; set; } = new();
+
+    [Parameter]
+    public IReadOnlyList<ProjectSummary> ProjectSummaries { get; set; } = [];
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public bool IsErrorMessage { get; set; }
+
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    [Parameter]
+    public EventCallback Save { get; set; }
+
+    private Task HandleCloseAsync()
+    {
+        return Close.InvokeAsync();
+    }
+
+    private Task HandleSaveAsync()
+    {
+        return Save.InvokeAsync();
+    }
+}

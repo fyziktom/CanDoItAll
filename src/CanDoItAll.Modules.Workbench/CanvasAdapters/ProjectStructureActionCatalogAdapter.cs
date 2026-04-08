@@ -1,4 +1,5 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.CanvasAdapters;
@@ -15,14 +16,18 @@ public sealed class ProjectStructureActionCatalogAdapter
         var actions = new List<CanvasWorkbenchAction>
         {
             new() { ActionId = "open", Label = "Open", MenuLabel = "Open", Description = "Open the linked artifact or routed workspace.", Icon = "open", Tone = "accent" },
+            new() { ActionId = "copy-id", Label = "Copy id", MenuLabel = "Copy id", Description = "Copy this node id to the clipboard.", Icon = "copy", Tone = "ghost" },
+            new() { ActionId = "copy-info", Label = "Copy info", MenuLabel = "Copy info", Description = "Copy this node as type_title:id-hash.", Icon = "copy", Tone = "primary" },
+            new() { ActionId = "copy-subtree-ids", Label = "Copy tree ids", MenuLabel = "Copy tree", Description = "Copy this node and descendants as type_title:id-hash entries.", Icon = "copy", Tone = "sky" },
             new() { ActionId = "summary", Label = "Summary", MenuLabel = "Summary", Description = "Open the hierarchical progress summary and export tools.", Icon = "summary", Tone = "sky" },
             new() { ActionId = "connect", Label = "Connect", MenuLabel = "Connect", Description = "Use the selected node as the source for a dependency link.", Icon = "link", Tone = "neutral" },
             new() { ActionId = "reconnect", Label = "Reconnect", MenuLabel = "Reconnect", Description = "Pick a new parent node for this branch explicitly.", Icon = "relink", Tone = "primary" },
             new() { ActionId = "disconnect", Label = "Disconnect", MenuLabel = "Disconnect", Description = "Move this node back to the project root without deleting it.", Icon = "unlink", Tone = "ghost" },
+            new() { ActionId = "move-descendants-to-subproject", Label = "To subproject", MenuLabel = "To subproject", Description = "Move this node's descendants into a new subproject while leaving the selected node in place.", Icon = "fork", Tone = "primary" },
             BuildProgressAction(),
             BuildMarkerAction(),
             BuildPriorityAction(),
-            new() { ActionId = "validate", Label = "Validate", MenuLabel = "Validate", Description = "Open project validation tooling from this node.", Icon = "qa", Tone = "mint" },
+            new() { ActionId = "validate", Label = "Validate", MenuLabel = "Validate", Description = "Open project validation tooling from this node.", Icon = "fact_check", Tone = "mint" },
             new() { ActionId = "test", Label = "Test", MenuLabel = "Test", Description = "Open test planning and evidence flows.", Icon = "test", Tone = "warn" },
             new() { ActionId = "delete", Label = "Delete", MenuLabel = "Delete", Description = "Delete this node, with confirmation when the impact is not trivial.", Icon = "delete", Tone = "danger" }
         };
@@ -87,12 +92,39 @@ public sealed class ProjectStructureActionCatalogAdapter
             ]);
         }
 
+        if (node.ObjectType == ProjectObjectType.ProjectBlock)
+        {
+            actions.Add(new CanvasWorkbenchAction
+            {
+                ActionId = "block:change-type",
+                Label = "Change block",
+                MenuLabel = "Change block",
+                Description = "Change this block to another common block type without recreating the node.",
+                Icon = "swap_horiz",
+                Tone = "accent"
+            });
+        }
+
+        if (node.ObjectType == ProjectObjectType.Note)
+        {
+            actions.Add(new CanvasWorkbenchAction
+            {
+                ActionId = "note:convert-to-block",
+                Label = "Convert",
+                MenuLabel = "Convert",
+                Description = "Convert this note into a typed node while keeping the note text.",
+                Icon = "swap_horiz",
+                Tone = "accent"
+            });
+        }
+
         actions.AddRange(ProjectStructureCanvasCatalog.BuildMenuCreateActions(node.ObjectType));
-        return actions;
+        return ProjectStructureActionShortcuts.Apply(ProjectStructureMenuComposition.OrderNodeContextActions(node, actions));
     }
 
     public IReadOnlyList<CanvasWorkbenchAction> BuildGroupContextActions()
-        =>
+    {
+        List<CanvasWorkbenchAction> actions =
         [
             new CanvasWorkbenchAction
             {
@@ -116,6 +148,9 @@ public sealed class ProjectStructureActionCatalogAdapter
             BuildMarkerAction(),
             BuildPriorityAction()
         ];
+
+        return ProjectStructureActionShortcuts.Apply(actions);
+    }
 
     public IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions(ProjectObjectType? sourceType)
         => ProjectStructureCanvasCatalog.BuildMenuCreateActions(sourceType);
@@ -161,7 +196,7 @@ public sealed class ProjectStructureActionCatalogAdapter
         {
             "marker:none" => (string.Empty, string.Empty, string.Empty),
             "marker:question" => ("question", "sky", "Question"),
-            "marker:alert" => ("alert", "danger", "Alert"),
+            "marker:alert" => ("alert", "danger", "Exclamation"),
             "marker:thumbs-up" => ("thumbs-up", "mint", "Approved"),
             "marker:thumbs-down" => ("thumbs-down", "danger", "Rejected"),
             "marker:pause" => ("pause", "warn", "Paused"),
@@ -203,13 +238,52 @@ public sealed class ProjectStructureActionCatalogAdapter
             },
             new()
             {
+                ActionId = "copy-id",
+                Label = "Copy id",
+                MenuLabel = "Copy id",
+                Description = "Copy this project node id to the clipboard.",
+                Icon = "copy",
+                Tone = "ghost"
+            },
+            new()
+            {
+                ActionId = "copy-info",
+                Label = "Copy info",
+                MenuLabel = "Copy info",
+                Description = "Copy this project node as type_title:id-hash.",
+                Icon = "copy",
+                Tone = "primary"
+            },
+            new()
+            {
+                ActionId = "copy-subtree-ids",
+                Label = "Copy tree ids",
+                MenuLabel = "Copy tree",
+                Description = "Copy this project node and descendants as type_title:id-hash entries.",
+                Icon = "copy",
+                Tone = "sky"
+            },
+            new()
+            {
                 ActionId = "summary",
                 Label = "Summary",
                 MenuLabel = "Summary",
                 Description = "Review the project summary and exported hierarchy details.",
                 Icon = "summary",
                 Tone = "sky"
-            }
+            },
+            new()
+            {
+                ActionId = "connect",
+                Label = "Connect",
+                MenuLabel = "Connect",
+                Description = "Use the selected project as the source for a dependency link.",
+                Icon = "link",
+                Tone = "neutral"
+            },
+            BuildProgressAction(),
+            BuildMarkerAction(),
+            BuildPriorityAction()
         };
 
         if (node.ProjectRole is ProjectStructureProjectRole.Subproject or ProjectStructureProjectRole.ParentProject or ProjectStructureProjectRole.AdditionalParentProject)
@@ -256,7 +330,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             actions.AddRange(ProjectStructureCanvasCatalog.BuildMenuCreateActions(node.ObjectType));
         }
 
-        return actions;
+        return ProjectStructureActionShortcuts.Apply(ProjectStructureMenuComposition.OrderNodeContextActions(node, actions));
     }
 
     private static CanvasWorkbenchAction BuildProgressAction()
@@ -330,8 +404,8 @@ public sealed class ProjectStructureActionCatalogAdapter
         => new()
         {
             ActionId = "marker",
-            Label = "Marker",
-            MenuLabel = "Marker",
+            Label = "Markers",
+            MenuLabel = "Markers",
             Description = "Attach a fast visual note marker to the selected item or active selection.",
             Icon = "marker",
             Tone = "primary",
@@ -339,8 +413,8 @@ public sealed class ProjectStructureActionCatalogAdapter
             Children =
             [
                 new() { ActionId = "marker:none", Label = "Clear", MenuLabel = "Clear", Description = "Remove the current marker.", Icon = "marker-none", Tone = "ghost", MenuSize = "compact" },
-                new() { ActionId = "marker:question", Label = "Question", MenuLabel = "Ask", Description = "Mark this node as an open question.", Icon = "marker-question", Tone = "sky", MenuSize = "compact" },
-                new() { ActionId = "marker:alert", Label = "Alert", MenuLabel = "Warn", Description = "Mark this node as needing attention.", Icon = "marker-alert", Tone = "danger", MenuSize = "compact" },
+                new() { ActionId = "marker:question", Label = "Question", MenuLabel = "Question", Description = "Mark this node as an open question.", Icon = "marker-question", Tone = "sky", MenuSize = "compact" },
+                new() { ActionId = "marker:alert", Label = "Exclamation", MenuLabel = "Exclamation", Description = "Mark this node as needing attention.", Icon = "marker-alert", Tone = "danger", MenuSize = "compact" },
                 new() { ActionId = "marker:thumbs-up", Label = "Approved", MenuLabel = "Good", Description = "Mark this node as looking good.", Icon = "marker-thumbs-up", Tone = "mint", MenuSize = "compact" },
                 new() { ActionId = "marker:thumbs-down", Label = "Rejected", MenuLabel = "Bad", Description = "Mark this node as needing a rework or rejection.", Icon = "marker-thumbs-down", Tone = "danger", MenuSize = "compact" },
                 new() { ActionId = "marker:pause", Label = "Paused", MenuLabel = "Pause", Description = "Mark this node as paused.", Icon = "marker-pause", Tone = "warn", MenuSize = "compact" },

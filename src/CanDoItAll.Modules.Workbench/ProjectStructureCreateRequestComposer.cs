@@ -23,6 +23,7 @@ internal static class ProjectStructureCreateRequestComposer
             .GroupBy(item => item.Key.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Last().Value?.Trim() ?? string.Empty, StringComparer.OrdinalIgnoreCase);
         var metadata = new ProjectObjectMetadataEnvelope();
+        var nodeReferences = new ProjectNodeReferenceCollection();
         var pendingLinks = new List<ProjectStructurePendingLink>();
         var notes = ResolveNotes(definition, request, inputValues);
         var startUtc = ParseDateTimeOffset(inputValues, "startUtc");
@@ -62,21 +63,19 @@ internal static class ProjectStructureCreateRequestComposer
             case ProjectObjectType.Participant:
                 metadata.Participant = new ProjectParticipantMetadata
                 {
-                    ParticipantKind = ParseEnum(inputValues, "participantKind", MapParticipantKind(subtype)),
+                    ParticipantKind = ParseEnum(inputValues, "participantKind", ProjectNodeKindRegistry.ResolveParticipantKind(subtype)),
                     Role = GetValue(inputValues, "role"),
                     Organization = GetValue(inputValues, "organization"),
                     Email = GetValue(inputValues, "email"),
-                    Phone = GetValue(inputValues, "phone"),
-                    ParentParticipantArtifactId = ParseNodeGuid(inputValues, "parentParticipantRef")
+                    Phone = GetValue(inputValues, "phone")
                 };
+                nodeReferences.ParticipantParentNodeId = ParseNodeGuid(inputValues, "parentParticipantRef");
                 AddLinkIfPresent(pendingLinks, inputValues, "parentParticipantRef", ProjectObjectLinkKind.BelongsTo);
                 break;
             case ProjectObjectType.WorkItem:
                 metadata.WorkItem = new ProjectWorkItemMetadata
                 {
-                    WorkItemKind = ParseEnum(inputValues, "workItemKind", MapWorkItemKind(subtype)),
-                    AssigneeParticipantArtifactId = ParseNodeGuid(inputValues, "assigneeRef"),
-                    RepositoryResourceId = ParseNodeGuid(inputValues, "repositoryRef"),
+                    WorkItemKind = ParseEnum(inputValues, "workItemKind", ProjectNodeKindRegistry.ResolveWorkItemKind(subtype)),
                     SendKind = TryParseNullableEnum<ProjectSendKind>(inputValues, "sendKind"),
                     DeliveryChannel = ParseEnum(inputValues, "deliveryChannel", ProjectMessageChannel.None),
                     Amount = ParseDecimalNullable(inputValues, "amount"),
@@ -84,24 +83,26 @@ internal static class ProjectStructureCreateRequestComposer
                     Description = notes,
                     DueUtc = ParseDateTimeOffset(inputValues, "dueUtc")
                 };
+                nodeReferences.WorkItemAssigneeNodeId = ParseNodeGuid(inputValues, "assigneeRef");
+                nodeReferences.WorkItemRepositoryResourceId = ParseNodeGuid(inputValues, "repositoryRef");
                 AddLinkIfPresent(pendingLinks, inputValues, "assigneeRef", ProjectObjectLinkKind.Uses);
                 AddLinkIfPresent(pendingLinks, inputValues, "repositoryRef", ProjectObjectLinkKind.Uses);
                 break;
             case ProjectObjectType.Repository:
                 metadata.Repository = new ProjectRepositoryMetadata
                 {
-                    RepositoryMode = ParseEnum(inputValues, "repositoryMode", MapRepositoryMode(subtype)),
+                    RepositoryMode = ParseEnum(inputValues, "repositoryMode", ProjectNodeKindRegistry.ResolveRepositoryMode(subtype)),
                     RepositoryUrl = GetValue(inputValues, "repositoryUrl"),
                     LocalPath = GetValue(inputValues, "localPath"),
                     DefaultBranch = GetValue(inputValues, "defaultBranch"),
-                    RelativePath = GetValue(inputValues, "relativePath"),
-                    ResourceId = ParseNodeGuid(inputValues, "resourceRef")
+                    RelativePath = GetValue(inputValues, "relativePath")
                 };
+                nodeReferences.RepositoryResourceId = ParseNodeGuid(inputValues, "resourceRef");
                 break;
             case ProjectObjectType.File:
                 metadata.File = new ProjectFileMetadata
                 {
-                    FileSubtype = ParseEnum(inputValues, "fileSubtype", MapFileSubtype(subtype)),
+                    FileSubtype = ParseEnum(inputValues, "fileSubtype", ProjectNodeKindRegistry.ResolveFileSubtype(ProjectObjectType.File, subtype)),
                     MermaidDiagramKind = string.Equals(subtype, "mermaid", StringComparison.OrdinalIgnoreCase)
                         ? ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(notes)
                         : MermaidDiagramKind.Unknown,
@@ -113,7 +114,7 @@ internal static class ProjectStructureCreateRequestComposer
             case ProjectObjectType.Script:
                 metadata.Script = new ProjectScriptMetadata
                 {
-                    ScriptKind = ParseEnum(inputValues, "scriptKind", MapScriptKind(subtype)),
+                    ScriptKind = ParseEnum(inputValues, "scriptKind", ProjectNodeKindRegistry.ResolveScriptKind(subtype)),
                     ScriptPath = GetValue(inputValues, "scriptPath"),
                     Command = GetValue(inputValues, "command"),
                     Arguments = GetValue(inputValues, "arguments"),
@@ -124,21 +125,21 @@ internal static class ProjectStructureCreateRequestComposer
             case ProjectObjectType.Environment:
                 metadata.Environment = new ProjectEnvironmentMetadata
                 {
-                    EnvironmentKind = ParseEnum(inputValues, "environmentKind", MapEnvironmentKind(subtype)),
+                    EnvironmentKind = ParseEnum(inputValues, "environmentKind", ProjectNodeKindRegistry.ResolveEnvironmentKind(subtype)),
                     PythonProvider = TryParseNullableEnum<ProjectPythonProvider>(inputValues, "pythonProvider"),
                     EnvironmentName = GetValue(inputValues, "environmentName"),
                     ProjectPath = GetValue(inputValues, "projectPath"),
                     LaunchProfileName = GetValue(inputValues, "launchProfileName"),
                     RuntimeProtocol = ParseEnum(inputValues, "runtimeProtocol", ProjectRuntimeProtocol.Https),
-                    LocalhostUrl = GetValue(inputValues, "localhostUrl"),
-                    RepositoryResourceId = ParseNodeGuid(inputValues, "repositoryRef")
+                    LocalhostUrl = GetValue(inputValues, "localhostUrl")
                 };
+                nodeReferences.EnvironmentRepositoryResourceId = ParseNodeGuid(inputValues, "repositoryRef");
                 AddLinkIfPresent(pendingLinks, inputValues, "repositoryRef", ProjectObjectLinkKind.Uses);
                 break;
             case ProjectObjectType.Infrastructure:
                 metadata.Infrastructure = new ProjectInfrastructureMetadata
                 {
-                    InfrastructureKind = ParseEnum(inputValues, "infrastructureKind", MapInfrastructureKind(subtype)),
+                    InfrastructureKind = ParseEnum(inputValues, "infrastructureKind", ProjectNodeKindRegistry.ResolveInfrastructureKind(subtype)),
                     Host = GetValue(inputValues, "host"),
                     Port = ParseNullableInt(inputValues, "port"),
                     ProviderName = GetValue(inputValues, "providerName"),
@@ -158,10 +159,13 @@ internal static class ProjectStructureCreateRequestComposer
                     DatabaseType = GetValue(inputValues, "databaseType"),
                     ConnectionReference = GetValue(inputValues, "connectionReference"),
                     FolderPath = GetValue(inputValues, "folderPath"),
+                    StoragePurpose = GetValue(inputValues, "storagePurpose"),
+                    StoragePathPrefix = GetValue(inputValues, "storagePathPrefix"),
                     AiReferenceKind = TryParseNullableEnum<ProjectAiReferenceKind>(inputValues, "aiReferenceKind"),
-                    AiReferenceUrl = GetValue(inputValues, "aiReferenceUrl"),
-                    SecretReferenceArtifactId = ParseNodeGuid(inputValues, "secretRef")
+                    AiReferenceUrl = GetValue(inputValues, "aiReferenceUrl")
                 };
+                nodeReferences.InfrastructureStorageCatalogId = ParseGuid(inputValues, "storageCatalogId");
+                nodeReferences.InfrastructureSecretReferenceId = ParseNodeGuid(inputValues, "secretRef");
                 AddLinkIfPresent(pendingLinks, inputValues, "secretRef", ProjectObjectLinkKind.Uses);
                 break;
             case ProjectObjectType.Link:
@@ -190,7 +194,9 @@ internal static class ProjectStructureCreateRequestComposer
                 request.UploadedFile is null
                     ? null
                     : new ProjectObjectMediaPayload(request.UploadedFile.FileName, request.UploadedFile.ContentType, request.UploadedFile.Base64Data),
-                metadataJson),
+                metadataJson,
+                null,
+                nodeReferences.IsEmpty ? null : nodeReferences),
             pendingLinks);
     }
 
@@ -245,6 +251,9 @@ internal static class ProjectStructureCreateRequestComposer
             ? parsed
             : null;
 
+    private static Guid? ParseGuid(IReadOnlyDictionary<string, string> inputValues, string key)
+        => inputValues.TryGetValue(key, out var value) && Guid.TryParse(value, out var parsed) ? parsed : null;
+
     private static TEnum ParseEnum<TEnum>(IReadOnlyDictionary<string, string> inputValues, string key, TEnum fallback)
         where TEnum : struct, Enum
         => inputValues.TryGetValue(key, out var value) && Enum.TryParse<TEnum>(value, true, out var parsed) ? parsed : fallback;
@@ -253,75 +262,4 @@ internal static class ProjectStructureCreateRequestComposer
         where TEnum : struct, Enum
         => inputValues.TryGetValue(key, out var value) && Enum.TryParse<TEnum>(value, true, out var parsed) ? parsed : null;
 
-    private static ProjectParticipantKind MapParticipantKind(string subtype) => subtype switch
-    {
-        "hr" => ProjectParticipantKind.Hr,
-        "team-block" => ProjectParticipantKind.TeamBlock,
-        "team-section" => ProjectParticipantKind.TeamSection,
-        "freelancer" => ProjectParticipantKind.Freelancer,
-        "partner" => ProjectParticipantKind.Partner,
-        "ai-agent" => ProjectParticipantKind.AiAgent,
-        _ => ProjectParticipantKind.Hr
-    };
-
-    private static ProjectWorkItemKind MapWorkItemKind(string subtype) => subtype switch
-    {
-        "issue" => ProjectWorkItemKind.Issue,
-        "revision" => ProjectWorkItemKind.Revision,
-        "feedback" => ProjectWorkItemKind.Feedback,
-        "payment" => ProjectWorkItemKind.Payment,
-        "send" => ProjectWorkItemKind.Send,
-        _ => ProjectWorkItemKind.Task
-    };
-
-    private static ProjectRepositoryMode MapRepositoryMode(string subtype) => subtype switch
-    {
-        "remote" => ProjectRepositoryMode.RemoteGitHub,
-        "folder" => ProjectRepositoryMode.LocalFolder,
-        _ => ProjectRepositoryMode.LocalRepository
-    };
-
-    private static ProjectFileSubtype MapFileSubtype(string subtype) => subtype switch
-    {
-        "pdf" => ProjectFileSubtype.Pdf,
-        "excel" => ProjectFileSubtype.Excel,
-        "docx" => ProjectFileSubtype.Docx,
-        "text" => ProjectFileSubtype.Text,
-        "json" => ProjectFileSubtype.Json,
-        "markdown" => ProjectFileSubtype.Markdown,
-        "mermaid" => ProjectFileSubtype.Mermaid,
-        "screenshot" => ProjectFileSubtype.Screenshot,
-        "log" => ProjectFileSubtype.Log,
-        "archive" => ProjectFileSubtype.Archive,
-        "audio" => ProjectFileSubtype.Audio,
-        _ => ProjectFileSubtype.Unknown
-    };
-
-    private static ProjectScriptKind MapScriptKind(string subtype) => subtype switch
-    {
-        "powershell" => ProjectScriptKind.PowerShell,
-        "ef-migration" => ProjectScriptKind.EfMigration,
-        "tailwind-watch" => ProjectScriptKind.TailwindWatch,
-        _ => ProjectScriptKind.Console
-    };
-
-    private static ProjectEnvironmentKind MapEnvironmentKind(string subtype) => subtype switch
-    {
-        "python" => ProjectEnvironmentKind.PythonEnvironment,
-        "dotnet-watch" => ProjectEnvironmentKind.DotNetWatch,
-        "dotnet-release" => ProjectEnvironmentKind.DotNetRelease,
-        _ => ProjectEnvironmentKind.DotNetRuntime
-    };
-
-    private static ProjectInfrastructureKind MapInfrastructureKind(string subtype) => subtype switch
-    {
-        "domain" => ProjectInfrastructureKind.Domain,
-        "dns-record" => ProjectInfrastructureKind.DnsRecord,
-        "docker-mode" => ProjectInfrastructureKind.DockerMode,
-        "database" => ProjectInfrastructureKind.Database,
-        "deployment-folder" => ProjectInfrastructureKind.DeploymentFolder,
-        "key-reference" => ProjectInfrastructureKind.KeyReference,
-        "ai-link" => ProjectInfrastructureKind.AiLink,
-        _ => ProjectInfrastructureKind.RemoteServer
-    };
 }

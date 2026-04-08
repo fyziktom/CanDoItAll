@@ -10,12 +10,6 @@ public partial class ProjectStructurePage
 
     private ProjectStructureProjectHierarchyDialogState? projectHierarchyDialog;
 
-    private enum ProjectStructureProjectHierarchyDialogMode
-    {
-        AddSubproject,
-        ReconnectSubproject
-    }
-
     private async Task OpenAddSubprojectDialogAsync(ProjectStructureNode node)
         => await OpenProjectHierarchyDialogAsync(node, ProjectStructureProjectHierarchyDialogMode.AddSubproject);
 
@@ -113,12 +107,8 @@ public partial class ProjectStructurePage
         ProjectStructureNode node,
         ProjectStructureProjectHierarchyDialogMode mode)
     {
+        CloseQuickActionDialog();
         var subjectProjectId = node.RelatedProjectId ?? ProjectId;
-        var availableProjects = (await ProjectsService.ListAsync())
-            .Where(project => project.Id != subjectProjectId)
-            .OrderBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(project => project.Id)
-            .ToList();
         Guid? currentParentProjectId = null;
         var currentParentProjectTitle = string.Empty;
 
@@ -134,21 +124,153 @@ public partial class ProjectStructurePage
             }
 
             currentParentProjectTitle = ResolveProjectTitle(currentParentProjectId.Value);
-            availableProjects = availableProjects
-                .Where(project => project.Id != currentParentProjectId.Value)
-                .ToList();
         }
 
-        projectHierarchyDialog = new ProjectStructureProjectHierarchyDialogState(
+        projectHierarchyDialog = await BuildProjectHierarchyDialogStateAsync(
             mode,
             subjectProjectId,
             node.Title,
             currentParentProjectId,
             currentParentProjectTitle,
-            availableProjects,
-            null,
-            string.Empty);
+            null);
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task<ProjectStructureProjectHierarchyDialogState> BuildProjectHierarchyDialogStateAsync(
+        ProjectStructureProjectHierarchyDialogMode mode,
+        Guid subjectProjectId,
+        string subjectProjectTitle,
+        Guid? currentParentProjectId,
+        string currentParentProjectTitle,
+        Guid? selectedProjectId)
+    {
+        var availableProjects = await LoadProjectHierarchyAvailableProjectsAsync(mode, subjectProjectId, currentParentProjectId);
+        if (selectedProjectId.HasValue &&
+            availableProjects.All(project => project.Id != selectedProjectId.Value))
+        {
+            selectedProjectId = null;
+        }
+
+        return new ProjectStructureProjectHierarchyDialogState(
+            mode,
+            subjectProjectId,
+            subjectProjectTitle,
+            currentParentProjectId,
+            currentParentProjectTitle,
+            availableProjects,
+            selectedProjectId,
+            string.Empty);
+    }
+
+    private async Task<ProjectStructureProjectHierarchyDialogState> RefreshProjectHierarchyDialogAsync(
+        ProjectStructureProjectHierarchyDialogState dialogState,
+        Guid? selectedProjectId = null)
+        => await BuildProjectHierarchyDialogStateAsync(
+            dialogState.Mode,
+            dialogState.SubjectProjectId,
+            dialogState.SubjectProjectTitle,
+            dialogState.CurrentParentProjectId,
+            dialogState.CurrentParentProjectTitle,
+            selectedProjectId ?? dialogState.SelectedProjectId);
+
+    private async Task<IReadOnlyList<ProjectSummary>> LoadProjectHierarchyAvailableProjectsAsync(
+        ProjectStructureProjectHierarchyDialogMode mode,
+        Guid subjectProjectId,
+        Guid? currentParentProjectId)
+    {
+        var projects = await ProjectsService.ListAsync();
+        var hierarchyLinks = await ProjectsService.ListHierarchyLinksAsync();
+
+        return projects
+            .Where(project => CanSelectHierarchyProject(project.Id, mode, subjectProjectId, currentParentProjectId, hierarchyLinks))
+            .OrderBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(project => project.Id)
+            .ToList();
+    }
+
+    private static bool CanSelectHierarchyProject(
+        Guid candidateProjectId,
+        ProjectStructureProjectHierarchyDialogMode mode,
+        Guid subjectProjectId,
+        Guid? currentParentProjectId,
+        IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks)
+    {
+        if (candidateProjectId == subjectProjectId)
+        {
+            return false;
+        }
+
+        return mode switch
+        {
+            ProjectStructureProjectHierarchyDialogMode.AddSubproject =>
+                CanAttachProjectAsSubproject(subjectProjectId, candidateProjectId, hierarchyLinks),
+            ProjectStructureProjectHierarchyDialogMode.ReconnectSubproject =>
+                CanReconnectProjectToParent(subjectProjectId, candidateProjectId, currentParentProjectId, hierarchyLinks),
+            _ => false
+        };
+    }
+
+    private static bool CanAttachProjectAsSubproject(
+        Guid parentProjectId,
+        Guid candidateChildProjectId,
+        IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks)
+    {
+        if (hierarchyLinks.Any(link =>
+                link.ParentProjectId == parentProjectId &&
+                link.ChildProjectId == candidateChildProjectId))
+        {
+            return false;
+        }
+
+        var ancestorIds = ExpandReachableProjectIds(parentProjectId, hierarchyLinks, walkToParents: true);
+        return !ancestorIds.Contains(candidateChildProjectId);
+    }
+
+    private static bool CanReconnectProjectToParent(
+        Guid childProjectId,
+        Guid candidateParentProjectId,
+        Guid? currentParentProjectId,
+        IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks)
+    {
+        if (currentParentProjectId.HasValue &&
+            candidateParentProjectId == currentParentProjectId.Value)
+        {
+            return false;
+        }
+
+        var descendantIds = ExpandReachableProjectIds(childProjectId, hierarchyLinks, walkToParents: false);
+        return !descendantIds.Contains(candidateParentProjectId);
+    }
+
+    private static HashSet<Guid> ExpandReachableProjectIds(
+        Guid startProjectId,
+        IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks,
+        bool walkToParents)
+    {
+        var visited = new HashSet<Guid>();
+        var pending = new Queue<Guid>();
+        pending.Enqueue(startProjectId);
+
+        while (pending.Count > 0)
+        {
+            var currentProjectId = pending.Dequeue();
+            if (!visited.Add(currentProjectId))
+            {
+                continue;
+            }
+
+            foreach (var relatedProjectId in hierarchyLinks
+                         .Where(link => walkToParents
+                             ? link.ChildProjectId == currentProjectId
+                             : link.ParentProjectId == currentProjectId)
+                         .Select(link => walkToParents ? link.ParentProjectId : link.ChildProjectId))
+            {
+                pending.Enqueue(relatedProjectId);
+            }
+        }
+
+        visited.Remove(startProjectId);
+        return visited;
     }
 
     private Guid? ResolveVisibleProjectParentId(ProjectStructureNode node)
@@ -170,34 +292,4 @@ public partial class ProjectStructurePage
 
     private static string BuildProjectChildNodeKey(Guid projectId)
         => $"{ProjectChildNodePrefix}{projectId}";
-
-    private sealed record ProjectStructureProjectHierarchyDialogState(
-        ProjectStructureProjectHierarchyDialogMode Mode,
-        Guid SubjectProjectId,
-        string SubjectProjectTitle,
-        Guid? CurrentParentProjectId,
-        string CurrentParentProjectTitle,
-        IReadOnlyList<ProjectSummary> AvailableProjects,
-        Guid? SelectedProjectId,
-        string Error)
-    {
-        public string Title => Mode switch
-        {
-            ProjectStructureProjectHierarchyDialogMode.AddSubproject => $"Add subproject under {SubjectProjectTitle}",
-            _ => $"Reconnect {SubjectProjectTitle}"
-        };
-
-        public string Copy => Mode switch
-        {
-            ProjectStructureProjectHierarchyDialogMode.AddSubproject =>
-                "Choose an existing project to attach beneath the selected project node.",
-            _ => $"Choose the new parent project for {SubjectProjectTitle}."
-        };
-
-        public string SubmitLabel => Mode switch
-        {
-            ProjectStructureProjectHierarchyDialogMode.AddSubproject => "Add subproject",
-            _ => "Reconnect project"
-        };
-    }
 }

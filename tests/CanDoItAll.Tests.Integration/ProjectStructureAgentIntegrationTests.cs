@@ -156,6 +156,71 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
+    public async Task AgentService_GetDependenciesAsync_reports_readiness_and_default_durations()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+
+        var projectId = await CreateProjectAsync(projects, "Dependency readiness");
+        var note = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Architect note",
+                string.Empty,
+                "This note must be finished first.",
+                $"project:{projectId}",
+                360,
+                240));
+        var task = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Implement feature",
+                string.Empty,
+                "Blocked by the architect note.",
+                $"project:{projectId}",
+                620,
+                360,
+                new DateTimeOffset(2026, 4, 3, 8, 0, 0, TimeSpan.Zero),
+                null,
+                "task",
+                null,
+                null,
+                7200));
+
+        await workbench.LinkObjectsAsync(projectId, task.Id, note.Id, ProjectObjectLinkKind.DependsOn);
+
+        var beforeCompletion = await agentService.GetDependenciesAsync(
+            projectId,
+            new ProjectStructureDependencyQueryRequest(DefaultDurationSeconds: 5400));
+        var noteItem = Assert.Single(beforeCompletion.Items, item => item.NodeId == note.Id);
+        var taskItem = Assert.Single(beforeCompletion.Items, item => item.NodeId == task.Id);
+
+        Assert.True(noteItem.CanExecute);
+        Assert.Null(noteItem.DurationSeconds);
+        Assert.Equal(5400, noteItem.EffectiveDurationSeconds);
+        Assert.False(taskItem.CanExecute);
+        Assert.Equal(7200, taskItem.DurationSeconds);
+        Assert.Equal(new DateTimeOffset(2026, 4, 3, 10, 0, 0, TimeSpan.Zero), taskItem.EndUtc);
+        Assert.Contains(taskItem.Prerequisites, prerequisite => prerequisite.NodeId == note.Id && prerequisite.Reason == "depends-on" && !prerequisite.IsFinished);
+
+        await workbench.UpdateObjectProgressAsync(projectId, [note.Id], "complete", 100);
+
+        var afterCompletion = await agentService.GetDependenciesAsync(
+            projectId,
+            new ProjectStructureDependencyQueryRequest(DefaultDurationSeconds: 5400));
+        var readyTask = Assert.Single(afterCompletion.Items, item => item.NodeId == task.Id);
+
+        Assert.True(readyTask.CanExecute);
+        Assert.Contains(readyTask.Prerequisites, prerequisite => prerequisite.NodeId == note.Id && prerequisite.IsFinished);
+        Assert.Contains(noteItem.Dependents, dependent => dependent.NodeId == task.Id && dependent.Reason == "required-for");
+    }
+
+    [Fact]
     public async Task AgentService_CreateAssetRevisionAsync_creates_child_asset_and_derivedfrom_link()
     {
         await using var application = await TestApplication.CreateAsync();

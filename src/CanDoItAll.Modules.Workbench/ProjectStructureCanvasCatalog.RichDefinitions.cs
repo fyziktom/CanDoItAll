@@ -1,10 +1,105 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
 
 internal static partial class ProjectStructureCanvasCatalog
 {
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> MeetingChannelOptions =
+    [
+        Option("msTeams", "MS Teams"),
+        Option("googleMeet", "Google Meet"),
+        Option("zoom", "Zoom"),
+        Option("whatsApp", "WhatsApp"),
+        Option("telegram", "Telegram")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> RepeatCadenceOptions =
+    [
+        Option("none", "No repeat"),
+        Option("daily", "Daily"),
+        Option("weekly", "Weekly"),
+        Option("biWeekly", "Every 2 weeks"),
+        Option("monthly", "Monthly")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> PythonProviderOptions =
+    [
+        Option("python", "Python"),
+        Option("conda", "Conda")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> RuntimeProtocolOptions =
+    [
+        Option("https", "HTTPS"),
+        Option("http", "HTTP"),
+        Option("both", "HTTP + HTTPS")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DeliveryChannelOptions =
+    [
+        Option("none", "None"),
+        Option("email", "Email"),
+        Option("whatsApp", "WhatsApp"),
+        Option("telegram", "Telegram"),
+        Option("teams", "Teams"),
+        Option("sms", "SMS")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> SendKindOptions =
+    [
+        Option("file", "File"),
+        Option("offer", "Offer"),
+        Option("email", "Email"),
+        Option("message", "Message"),
+        Option("invoice", "Invoice"),
+        Option("money", "Money")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DnsRecordTypeOptions =
+    [
+        Option("A", "A"),
+        Option("AAAA", "AAAA"),
+        Option("CNAME", "CNAME"),
+        Option("TXT", "TXT"),
+        Option("MX", "MX")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DockerModeOptions =
+    [
+        Option("compose", "Compose"),
+        Option("swarm", "Swarm"),
+        Option("devContainer", "Dev container")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DatabaseTypeOptions =
+    [
+        Option("postgresql", "PostgreSQL"),
+        Option("sqlServer", "SQL Server"),
+        Option("mysql", "MySQL"),
+        Option("sqlite", "SQLite")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> AiReferenceOptions =
+    [
+        Option("chatGptConversation", "ChatGPT conversation"),
+        Option("codexThread", "Codex thread"),
+        Option("localLlm", "Local LLM")
+    ];
+
+    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> StoragePurposeOptions =
+    [
+        Option(nameof(StorageUsagePurpose.ProjectAsset), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.ProjectAsset)),
+        Option(nameof(StorageUsagePurpose.PromptAttachment), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.PromptAttachment)),
+        Option(nameof(StorageUsagePurpose.PromptExport), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.PromptExport)),
+        Option(nameof(StorageUsagePurpose.Evidence), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.Evidence)),
+        Option(nameof(StorageUsagePurpose.RecordingMedia), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.RecordingMedia)),
+        Option(nameof(StorageUsagePurpose.SnapshotPackage), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.SnapshotPackage)),
+        Option(nameof(StorageUsagePurpose.ReleasePackage), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.ReleasePackage)),
+        Option(nameof(StorageUsagePurpose.DeploymentMirror), StoragePresentation.DescribeUsagePurpose(StorageUsagePurpose.DeploymentMirror))
+    ];
+
     private static readonly ProjectStructureCreateLeafDefinition[] RichCreateLeafDefinitions =
     [
         new("add-block-deployment", ProjectObjectType.ProjectBlock, "deployment", "blocks", "Deployment block", "Map rollout work, release gates, and deployment readiness.", "ship", "warn", "Deployment block", "Block name", "Deployment lane", "Release", "Target release or environment", "Description", "What this deployment block covers"),
@@ -13,6 +108,9 @@ internal static partial class ProjectStructureCanvasCatalog
         new("add-block-task-flow", ProjectObjectType.ProjectBlock, "task-flow", "blocks", "Task flow block", "Describe delivery flow, ownership lanes, and throughput checkpoints.", "flow", "primary", "Task flow block", "Block name", "Delivery flow", "Owner", "Team or stream", "Description", "How work moves through this flow"),
         new("add-block-backlog", ProjectObjectType.ProjectBlock, "backlog", "blocks", "Backlog block", "Group pending work, prioritization, and intake for future delivery.", "backlog", "sky", "Backlog block", "Block name", "Backlog lane", "Owner", "Queue owner", "Description", "What belongs in this backlog"),
         new("add-block-server", ProjectObjectType.ProjectBlock, "server", "blocks", "Server block", "Group server operations, environments, and infrastructure planning.", "server", "danger", "Server block", "Block name", "Server lane", "Scope", "Cluster, host, or service", "Description", "What this server block represents"),
+        new("add-block-computer", ProjectObjectType.ProjectBlock, "computer", "blocks", "Computer block", "Group workstation, machine, or endpoint responsibilities without hiding them in generic notes.", "computer", "primary", "Computer block", "Block name", "Computer lane", "Scope", "Machine, workstation, or device", "Description", "What this computer block represents"),
+        new("add-block-router", ProjectObjectType.ProjectBlock, "router", "blocks", "Router block", "Track router topology, routing rules, and network ownership on the canvas.", "router", "sky", "Router block", "Block name", "Router lane", "Scope", "Gateway, VLAN, or network segment", "Description", "What this router block covers"),
+        new("add-block-wifi", ProjectObjectType.ProjectBlock, "wifi", "blocks", "WiFi block", "Track WiFi coverage, SSID planning, and wireless rollout work as a typed block.", "wifi", "mint", "WiFi block", "Block name", "WiFi lane", "Scope", "SSID, AP zone, or wireless slice", "Description", "What this WiFi block represents"),
 
         new(
             "add-meeting-online",
@@ -169,90 +267,9 @@ internal static partial class ProjectStructureCanvasCatalog
         new("add-infrastructure-docker", ProjectObjectType.Infrastructure, "docker-mode", "infrastructure", "Docker", "Track Docker mode and proxy provider without burying them in notes.", "docker", "mint", "Docker", "Docker", "Compose stack", "Environment", "Host or repo", "Notes", "Any container context", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("dockerMode", "Docker")]), Field("dockerMode", "Mode", "select", "Compose or swarm", true, DockerModeOptions), Field("proxyProvider", "Proxy provider", "text", "Traefik")], [DefaultValue("infrastructureKind", "dockerMode")]),
         new("add-infrastructure-database", ProjectObjectType.Infrastructure, "database", "infrastructure", "Database", "Track database type and connection reference as typed infrastructure.", "database", "primary", "Database", "Database", "PostgreSQL", "Environment", "Host or service", "Notes", "Any schema or migration context", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("database", "Database")]), Field("databaseType", "Database type", "select", "Choose database", true, DatabaseTypeOptions), Field("connectionReference", "Connection reference", "text", "Server=...;Database=..."), Field("secretRef", "Secret reference", "select", "Optional secret")], [DefaultValue("infrastructureKind", "database")]),
         new("add-infrastructure-folder", ProjectObjectType.Infrastructure, "deployment-folder", "infrastructure", "Deployment folder", "Track deployment folders explicitly on the infrastructure subtree.", "folder", "primary", "Deployment folder", "Folder", "/srv/app/current", "Environment", "Host or service", "Notes", "Any mount or sync context", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("deploymentFolder", "Deployment folder")]), Field("folderPath", "Folder path", "text", "/srv/app/current", true)], [DefaultValue("infrastructureKind", "deploymentFolder")]),
+        new("add-infrastructure-storage", ProjectObjectType.Infrastructure, "storage-system", "infrastructure", "Storage", "Track workspace storage lanes, usage purpose, and path ownership as typed infrastructure.", "storage", "mint", "Storage lane", "Storage", "Project assets lane", "Purpose", "Storage role or owner", "Notes", "What this storage lane supports", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("storageSystem", "Storage")]), Field("storageCatalogId", "Storage catalog", "select", "Choose storage target", true), Field("storagePurpose", "Usage purpose", "select", "Choose purpose", true, StoragePurposeOptions), Field("storagePathPrefix", "Path prefix", "text", "projects/demo/assets"), Field("connectionReference", "Connection reference", "text", "/storage/assets")], [DefaultValue("infrastructureKind", "storageSystem"), DefaultValue("storagePurpose", nameof(StorageUsagePurpose.ProjectAsset))]),
         new("add-infrastructure-key", ProjectObjectType.Infrastructure, "key-reference", "infrastructure", "Key reference", "Track a key or secret reference without storing the secret itself.", "key", "danger", "Key reference", "Key", "Deployment key", "Owner", "Who owns this key", "Notes", "Usage context", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("keyReference", "Key reference")]), Field("connectionReference", "Reference", "text", "GitHub Actions secret", true), Field("secretRef", "Secret reference", "select", "Optional secret")], [DefaultValue("infrastructureKind", "keyReference")]),
         new("add-infrastructure-ai", ProjectObjectType.Infrastructure, "ai-link", "infrastructure", "AI link", "Track AI conversations and local LLM references as typed infrastructure nodes.", "ai", "accent", "AI link", "Reference", "ChatGPT design review", "Owner", "Project or operator", "Notes", "Why this AI reference matters", false, string.Empty, "Drop a file here or choose one.", true, "Add infrastructure", [Field("infrastructureKind", "Kind", "select", "Choose infrastructure", true, [Option("aiLink", "AI link")]), Field("aiReferenceKind", "Reference kind", "select", "Choose AI reference", true, AiReferenceOptions), Field("aiReferenceUrl", "Reference URL", "url", "https://..."), Field("providerName", "Tool", "text", "ChatGPT / Codex / Ollama")], [DefaultValue("infrastructureKind", "aiLink")])
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> MeetingChannelOptions =
-    [
-        Option("msTeams", "MS Teams"),
-        Option("googleMeet", "Google Meet"),
-        Option("zoom", "Zoom"),
-        Option("whatsApp", "WhatsApp"),
-        Option("telegram", "Telegram")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> RepeatCadenceOptions =
-    [
-        Option("none", "No repeat"),
-        Option("daily", "Daily"),
-        Option("weekly", "Weekly"),
-        Option("biWeekly", "Every 2 weeks"),
-        Option("monthly", "Monthly")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> PythonProviderOptions =
-    [
-        Option("python", "Python"),
-        Option("conda", "Conda")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> RuntimeProtocolOptions =
-    [
-        Option("https", "HTTPS"),
-        Option("http", "HTTP"),
-        Option("both", "HTTP + HTTPS")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DeliveryChannelOptions =
-    [
-        Option("none", "None"),
-        Option("email", "Email"),
-        Option("whatsApp", "WhatsApp"),
-        Option("telegram", "Telegram"),
-        Option("teams", "Teams"),
-        Option("sms", "SMS")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> SendKindOptions =
-    [
-        Option("file", "File"),
-        Option("offer", "Offer"),
-        Option("email", "Email"),
-        Option("message", "Message"),
-        Option("invoice", "Invoice"),
-        Option("money", "Money")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DnsRecordTypeOptions =
-    [
-        Option("A", "A"),
-        Option("AAAA", "AAAA"),
-        Option("CNAME", "CNAME"),
-        Option("TXT", "TXT"),
-        Option("MX", "MX")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DockerModeOptions =
-    [
-        Option("compose", "Compose"),
-        Option("swarm", "Swarm"),
-        Option("devContainer", "Dev container")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> DatabaseTypeOptions =
-    [
-        Option("postgresql", "PostgreSQL"),
-        Option("sqlServer", "SQL Server"),
-        Option("mysql", "MySQL"),
-        Option("sqlite", "SQLite")
-    ];
-
-    private static readonly IReadOnlyList<CanvasWorkbenchInputOption> AiReferenceOptions =
-    [
-        Option("chatGptConversation", "ChatGPT conversation"),
-        Option("codexThread", "Codex thread"),
-        Option("localLlm", "Local LLM")
     ];
 
     private static IReadOnlyList<ProjectStructureCreateLeafDefinition> ResolveMeetingLeafDefinitions()
@@ -286,6 +303,7 @@ internal static partial class ProjectStructureCanvasCatalog
             "add-infrastructure-docker",
             "add-infrastructure-database",
             "add-infrastructure-folder",
+            "add-infrastructure-storage",
             "add-infrastructure-key",
             "add-infrastructure-ai");
 
@@ -378,98 +396,6 @@ internal static partial class ProjectStructureCanvasCatalog
         {
             Key = key,
             Value = value
-        };
-
-    private static string ResolveMeetingLabel(string subtype)
-        => subtype switch
-        {
-            "online" => "Online meeting",
-            "onsite" => "Onsite meeting",
-            _ => "Meeting"
-        };
-
-    private static string ResolveParticipantLabel(string subtype)
-        => subtype switch
-        {
-            "hr" => "HR",
-            "team-block" => "Team block",
-            "team-section" => "Team section",
-            "freelancer" => "Freelancer",
-            "partner" => "Partner",
-            "ai-agent" => "AI agent",
-            _ => "Participant"
-        };
-
-    private static string ResolveWorkItemLabel(string subtype)
-        => subtype switch
-        {
-            "task" => "Task",
-            "issue" => "Issue",
-            "revision" => "Revision",
-            "feedback" => "Feedback",
-            "payment" => "Payment",
-            "send" => "Send",
-            _ => "Work item"
-        };
-
-    private static string ResolveRepositoryLabel(string subtype)
-        => subtype switch
-        {
-            "remote" => "Remote repo",
-            "local" => "Local repo",
-            "folder" => "Local folder",
-            _ => "Repository"
-        };
-
-    private static string ResolveFileLabel(string subtype)
-        => subtype switch
-        {
-            "pdf" => "PDF",
-            "excel" => "Excel",
-            "docx" => "Docx",
-            "text" => "Text",
-            "json" => "JSON",
-            "markdown" => "Markdown",
-            "mermaid" => "Mermaid",
-            "screenshot" => "Screenshot",
-            "log" => "Log",
-            "archive" => "Archive",
-            "audio" => "Audio",
-            _ => "File"
-        };
-
-    private static string ResolveScriptLabel(string subtype)
-        => subtype switch
-        {
-            "powershell" => "PowerShell",
-            "console" => "Console script",
-            "ef-migration" => "EF migration",
-            "tailwind-watch" => "Tailwind watch",
-            _ => "Script"
-        };
-
-    private static string ResolveEnvironmentLabel(string subtype)
-        => subtype switch
-        {
-            "python" => "Python env",
-            "dotnet-runtime" => ".NET runtime",
-            "dotnet-watch" => "dotnet watch",
-            "dotnet-release" => "Release run",
-            _ => "Environment"
-        };
-
-    private static string ResolveInfrastructureLabel(string subtype)
-        => subtype switch
-        {
-            "remote-server" => "Remote server",
-            "domain" => "Domain",
-            "dns-record" => "DNS record",
-            "docker-mode" => "Docker",
-            "database" => "Database",
-            "deployment-folder" => "Deployment folder",
-            "key-reference" => "Key reference",
-            "ai-link" => "AI link",
-            _ => "Infrastructure"
         };
 
     private static string ResolveParticipantKindLabel(ProjectParticipantKind kind)

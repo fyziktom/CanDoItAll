@@ -11,15 +11,14 @@ public sealed class ProjectStructureChecklistService(ProjectWorkbenchService pro
     {
         var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
         var warnings = new List<string>();
-        var effectivePriorities = ProjectStructureChecklistRules.BuildEffectivePriorityMap(surface.Nodes);
-        var nodesById = surface.Nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
+        var dependencyAnalysis = ProjectStructureDependencyAnalyzer.Build(surface);
 
-        var items = surface.Nodes
-            .Where(node => node.ObjectType != ProjectObjectType.ProjectRoot)
-            .Where(node => !ProjectStructureChecklistRules.IsFinished(node))
-            .Where(node => request.IncludePaused || !ProjectStructureChecklistRules.IsPausedOrStopped(node))
-            .Where(node => request.ObjectTypes is null || request.ObjectTypes.Count == 0 || request.ObjectTypes.Contains(node.ObjectType))
-            .Select(node => MapItem(node, nodesById, surface.Links, effectivePriorities))
+        var items = dependencyAnalysis.Nodes
+            .Where(item => item.Node.ObjectType != ProjectObjectType.ProjectRoot)
+            .Where(item => !item.IsFinished)
+            .Where(item => request.IncludePaused || !item.IsPausedOrStopped)
+            .Where(item => request.ObjectTypes is null || request.ObjectTypes.Count == 0 || request.ObjectTypes.Contains(item.Node.ObjectType))
+            .Select(MapItem)
             .Where(item => !request.MaxPriority.HasValue || item.EffectivePriority > 0 && item.EffectivePriority <= request.MaxPriority.Value)
             .OrderBy(item => item.EffectivePriority == 0 ? int.MaxValue : item.EffectivePriority)
             .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
@@ -34,86 +33,30 @@ public sealed class ProjectStructureChecklistService(ProjectWorkbenchService pro
         return new ProjectStructureChecklistResponse(surface.ProjectId, surface.ProjectName, items, warnings);
     }
 
-    private static ProjectStructureChecklistItem MapItem(
-        ProjectStructureNode node,
-        IReadOnlyDictionary<string, ProjectStructureNode> nodesById,
-        IReadOnlyList<ProjectStructureLink> links,
-        IReadOnlyDictionary<string, int> effectivePriorities)
+    private static ProjectStructureChecklistItem MapItem(ProjectStructureDependencyNodeAnalysis analysis)
     {
-        var prerequisites = BuildPrerequisites(node, nodesById, links, effectivePriorities);
         return new ProjectStructureChecklistItem(
-            node.Id,
-            node.ParentId,
-            node.ObjectType,
-            node.ObjectSubtype,
-            node.Title,
-            node.Status,
-            node.ProgressMode,
-            node.ProgressPercent,
-            node.MarkerLabel,
-            node.Priority,
-            effectivePriorities.GetValueOrDefault(node.Id),
-            node.Route,
-            prerequisites);
-    }
-
-    private static IReadOnlyList<ProjectStructureChecklistPrerequisite> BuildPrerequisites(
-        ProjectStructureNode node,
-        IReadOnlyDictionary<string, ProjectStructureNode> nodesById,
-        IReadOnlyList<ProjectStructureLink> links,
-        IReadOnlyDictionary<string, int> effectivePriorities)
-    {
-        var prerequisites = new List<ProjectStructureChecklistPrerequisite>();
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        var currentParentId = node.ParentId;
-
-        while (!string.IsNullOrWhiteSpace(currentParentId) &&
-               nodesById.TryGetValue(currentParentId, out var parent) &&
-               seen.Add(parent.Id))
-        {
-            if (!ProjectStructureChecklistRules.IsFinished(parent))
-            {
-                prerequisites.Add(CreatePrerequisite(parent, "parent", effectivePriorities));
-            }
-
-            currentParentId = parent.ParentId;
-        }
-
-        foreach (var link in links)
-        {
-            if (link.Kind == ProjectObjectLinkKind.DependsOn &&
-                string.Equals(link.SourceId, node.Id, StringComparison.Ordinal) &&
-                nodesById.TryGetValue(link.TargetId, out var dependsOnNode) &&
-                seen.Add(dependsOnNode.Id) &&
-                !ProjectStructureChecklistRules.IsFinished(dependsOnNode))
-            {
-                prerequisites.Add(CreatePrerequisite(dependsOnNode, "depends-on", effectivePriorities));
-            }
-
-            if (link.Kind == ProjectObjectLinkKind.Blocks &&
-                string.Equals(link.TargetId, node.Id, StringComparison.Ordinal) &&
-                nodesById.TryGetValue(link.SourceId, out var blockingNode) &&
-                seen.Add(blockingNode.Id) &&
-                !ProjectStructureChecklistRules.IsFinished(blockingNode))
-            {
-                prerequisites.Add(CreatePrerequisite(blockingNode, "blocked-by", effectivePriorities));
-            }
-        }
-
-        return prerequisites;
-    }
-
-    private static ProjectStructureChecklistPrerequisite CreatePrerequisite(
-        ProjectStructureNode node,
-        string reason,
-        IReadOnlyDictionary<string, int> effectivePriorities)
-    {
-        return new ProjectStructureChecklistPrerequisite(
-            node.Id,
-            node.Title,
-            node.Status,
-            effectivePriorities.GetValueOrDefault(node.Id),
-            reason);
+            analysis.Node.Id,
+            analysis.Node.ParentId,
+            analysis.Node.ObjectType,
+            analysis.Node.ObjectSubtype,
+            analysis.Node.Title,
+            analysis.Node.Status,
+            analysis.Node.ProgressMode,
+            analysis.Node.ProgressPercent,
+            analysis.Node.MarkerLabel,
+            analysis.Node.Priority,
+            analysis.EffectivePriority,
+            analysis.Node.Route,
+            analysis.Prerequisites
+                .Where(item => !item.IsFinished)
+                .Select(item => new ProjectStructureChecklistPrerequisite(
+                    item.NodeId,
+                    item.Title,
+                    item.Status,
+                    item.EffectivePriority,
+                    item.Reason))
+                .ToList());
     }
 }
 

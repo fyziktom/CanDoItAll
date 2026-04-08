@@ -173,7 +173,8 @@ public sealed class ProjectStructureAgentService(
                         request.EndUtc,
                         request.ObjectSubtype,
                         request.Media,
-                        request.MetadataJson),
+                        request.MetadataJson,
+                        request.DurationSeconds),
                     cancellationToken);
                 return MapNodeSummary(createdNode, createdNode.Priority, FullNodeReadRequest);
             },
@@ -204,7 +205,8 @@ public sealed class ProjectStructureAgentService(
                         request.Notes,
                         request.StartUtc,
                         request.EndUtc,
-                        request.MetadataJson ?? existingNode.MetadataJson),
+                        request.MetadataJson ?? existingNode.MetadataJson,
+                        request.DurationSeconds),
                     cancellationToken);
                 return MapRequiredNode(updatedNode, nodeId);
             },
@@ -231,7 +233,7 @@ public sealed class ProjectStructureAgentService(
                     request.MetadataJson,
                     request.Notes,
                     request.Status,
-                    cancellationToken);
+                    cancellationToken: cancellationToken);
                 return MapRequiredNode(updatedNode, nodeId);
             },
             cancellationToken);
@@ -312,6 +314,33 @@ public sealed class ProjectStructureAgentService(
             {
                 await projectWorkbenchService.MoveObjectAsync(projectId, request.NodeId, request.X, request.Y, cancellationToken);
                 return 0;
+            },
+            cancellationToken);
+    }
+
+    public async Task<ProjectStructureSubtreeRecompositionResult> RecomposeNodeAsync(
+        Guid projectId,
+        ProjectStructureNodeRecomposeInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        return await leaseService.RunWithProjectMutationLeaseAsync(
+            projectId,
+            request.LeaseToken,
+            agent,
+            "recompose-structure-node",
+            async cancellationToken =>
+            {
+                var result = await projectWorkbenchService.RecomposeSubtreeAsync(projectId, request.RootNodeId, cancellationToken);
+                if (result is null)
+                {
+                    throw new ProjectStructureAgentException(
+                        400,
+                        "RecompositionUnavailable",
+                        $"Node '{request.RootNodeId}' could not be recomposed because it has no descendants or does not exist.");
+                }
+
+                return result;
             },
             cancellationToken);
     }
@@ -403,7 +432,8 @@ public sealed class ProjectStructureAgentService(
                         null,
                         "approval-request",
                         null,
-                        metadataJson),
+                        metadataJson,
+                        null),
                     cancellationToken);
 
                 return MapNodeSummary(createdNode, createdNode.Priority, FullNodeReadRequest);
@@ -417,6 +447,39 @@ public sealed class ProjectStructureAgentService(
         CancellationToken cancellationToken = default)
     {
         return checklistService.GetChecklistAsync(projectId, request, cancellationToken);
+    }
+
+    public async Task<ProjectStructureDependencyResponse> GetDependenciesAsync(
+        Guid projectId,
+        ProjectStructureDependencyQueryRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
+        var warnings = new List<string>();
+        var dependencyAnalysis = ProjectStructureDependencyAnalyzer.Build(surface, request.DefaultDurationSeconds ?? 3600);
+        var selectedNodeIds = request.NodeIds?
+            .Where(nodeId => !string.IsNullOrWhiteSpace(nodeId))
+            .Select(nodeId => nodeId.Trim())
+            .ToHashSet(StringComparer.Ordinal);
+
+        var items = dependencyAnalysis.Nodes
+            .Where(item => selectedNodeIds is null || selectedNodeIds.Contains(item.Node.Id))
+            .Where(item => request.IncludeFinished || !item.IsFinished)
+            .OrderBy(item => item.Node.Title, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (request.Take.HasValue && items.Count > request.Take.Value)
+        {
+            items = items.Take(Math.Max(1, request.Take.Value)).ToList();
+            warnings.Add($"Dependency result truncated to {request.Take.Value} nodes.");
+        }
+
+        return new ProjectStructureDependencyResponse(
+            surface.ProjectId,
+            surface.ProjectName,
+            dependencyAnalysis.DefaultDurationSeconds,
+            items.Select(MapDependencyItem).ToList(),
+            warnings);
     }
 
     public async Task<ProjectStructureAssetDescriptor> GetAssetAsync(Guid projectId, string nodeId, CancellationToken cancellationToken = default)
@@ -464,7 +527,8 @@ public sealed class ProjectStructureAgentService(
                         null,
                         string.IsNullOrWhiteSpace(request.ObjectSubtype) ? originalNode.ObjectSubtype : request.ObjectSubtype,
                         request.Media,
-                        string.IsNullOrWhiteSpace(request.MetadataJson) ? originalAsset.MetadataJson : request.MetadataJson),
+                        string.IsNullOrWhiteSpace(request.MetadataJson) ? originalAsset.MetadataJson : request.MetadataJson,
+                        originalNode.DurationSeconds),
                     cancellationToken);
 
                 await projectWorkbenchService.LinkObjectsAsync(projectId, createdRevision.Id, nodeId, ProjectObjectLinkKind.DerivedFrom, cancellationToken);
@@ -694,6 +758,45 @@ public sealed class ProjectStructureAgentService(
             node.RelatedProjectId,
             node.ParentProjectCount,
             options.IncludeLayout ? node.X : null,
-            options.IncludeLayout ? node.Y : null);
+            options.IncludeLayout ? node.Y : null,
+            node.DurationSeconds);
+    }
+
+    private static ProjectStructureDependencyItem MapDependencyItem(ProjectStructureDependencyNodeAnalysis analysis)
+    {
+        return new ProjectStructureDependencyItem(
+            analysis.Node.Id,
+            analysis.Node.ParentId,
+            analysis.Node.ObjectType,
+            analysis.Node.ObjectSubtype,
+            analysis.Node.Title,
+            analysis.Node.Status,
+            analysis.Node.ProgressMode,
+            analysis.Node.ProgressPercent,
+            analysis.Node.MarkerLabel,
+            analysis.Node.Priority,
+            analysis.EffectivePriority,
+            analysis.IsFinished,
+            analysis.IsPausedOrStopped,
+            analysis.CanExecute,
+            analysis.DurationSeconds,
+            analysis.EffectiveDurationSeconds,
+            analysis.Node.StartUtc,
+            analysis.Node.EndUtc,
+            analysis.Node.Route,
+            analysis.Prerequisites.Select(item => new ProjectStructureDependencyRelationSummary(
+                item.NodeId,
+                item.Title,
+                item.Status,
+                item.EffectivePriority,
+                item.IsFinished,
+                item.Reason)).ToList(),
+            analysis.Dependents.Select(item => new ProjectStructureDependencyRelationSummary(
+                item.NodeId,
+                item.Title,
+                item.Status,
+                item.EffectivePriority,
+                item.IsFinished,
+                item.Reason)).ToList());
     }
 }

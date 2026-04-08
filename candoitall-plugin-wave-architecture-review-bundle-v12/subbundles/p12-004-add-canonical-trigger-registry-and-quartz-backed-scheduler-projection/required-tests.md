@@ -1,0 +1,5 @@
+# Required tests
+
+- `Automation_trigger_definition_round_trips_with_cron_timezone_and_misfire_policy`
+- `Quartz_scheduler_bridge_rehydrates_canonical_triggers_on_startup`
+- `Quartz_trigger_fire_publishes_durable_work_instead_of_running_plugin_logic_inline`

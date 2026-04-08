@@ -1,0 +1,34 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+
+<Stack GapScale="LayoutGap.Medium">
+    @foreach (var detailSection in Sections)
+    {
+        <PanelCard Soft="true">
+            <Stack GapScale="LayoutGap.Small">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="@detailSection.Title" />
+                <Stack GapScale="LayoutGap.Small"
+                       Class="min-w-0">
+                    @foreach (var item in detailSection.Items)
+                    {
+                        <Split Breakpoint="LayoutBreakpoint.Sm"
+                               Gap="LayoutGap.Small"
+                               AlignItems="AlignItems.Start"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap"
+                               Class="min-w-0 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+                            <TextBlock TextStyle="TextStyle.Footer" Value="@item.Label" />
+                            <TextBlock TextStyle="TextStyle.Note" Value="@item.Value" Class="min-w-0 break-words text-right" />
+                        </Split>
+                    }
+                </Stack>
+            </Stack>
+        </PanelCard>
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProjectStructureDetailSection> Sections { get; set; } = [];
+}
