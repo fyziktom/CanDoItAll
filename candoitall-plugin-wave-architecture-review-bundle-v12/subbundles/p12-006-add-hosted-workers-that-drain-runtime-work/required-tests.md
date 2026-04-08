@@ -1,5 +1,0 @@
-# Required tests
-
-- `Connector_outbox_pending_commands_are_processed_by_a_hosted_worker`
-- `Queued_background_work_is_consumed_by_a_runtime_worker`
-- `Due_triggers_are_dispatched_without_manual_invocation`

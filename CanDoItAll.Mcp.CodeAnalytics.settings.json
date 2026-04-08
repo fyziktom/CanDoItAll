@@ -1,0 +1,13 @@
+{
+  "Server": {
+    "Name": "CanDoItAll.Mcp.CodeAnalytics"
+  },
+  "Analysis": {
+    "RepositoryRoot": ".",
+    "DefaultSolutionPath": "CanDoItAll.slnx",
+    "OutputRootPath": ".artifacts\\code-analytics",
+    "GeneratorVersion": "0.1.0",
+    "MaxRecentSnapshots": 20,
+    "MaxDiagramNodes": 80
+  }
+}

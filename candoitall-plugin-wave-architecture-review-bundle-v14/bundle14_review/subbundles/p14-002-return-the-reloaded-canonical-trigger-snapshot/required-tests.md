@@ -1,3 +1,0 @@
-# Required tests
-
-- `Trigger_registry_save_returns_reloaded_next_fire_time_after_quartz_projection`

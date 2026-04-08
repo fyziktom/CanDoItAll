@@ -36,9 +36,18 @@
       ],
       "cwd": "${workspaceFolder}"
     },
+    "candoitall_codeanalytics": {
+      "type": "stdio",
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.CodeAnalytics\\current\\CanDoItAll.Mcp.CodeAnalytics.exe",
+      "args": [
+        "--settings",
+        "${workspaceFolder}\\CanDoItAll.Mcp.CodeAnalytics.settings.json"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
     "candoitall_projectstructure": {
       "type": "stdio",
-      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\20260405-013848\\CanDoItAll.Mcp.ProjectStructure.exe",
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.ProjectStructure\\20260408-224430\\CanDoItAll.Mcp.ProjectStructure.exe",
       "args": [
         "--settings",
         "${workspaceFolder}\\CanDoItAll.Mcp.ProjectStructure.settings.local.json"
