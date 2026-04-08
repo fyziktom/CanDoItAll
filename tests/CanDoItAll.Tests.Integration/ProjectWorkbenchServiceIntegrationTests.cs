@@ -1,7 +1,12 @@
+using System.Text.Json;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.Resources;
+using CanDoItAll.Modules.TestLab;
+using CanDoItAll.Modules.Validation;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Infrastructure.Persistence;
@@ -86,6 +91,154 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task GetStructureAsync_and_GetCalendarAsync_surface_external_artifacts_without_persisting_projection_rows()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var resourcesService = scope.ServiceProvider.GetRequiredService<ResourcesService>();
+        var validationService = scope.ServiceProvider.GetRequiredService<ValidationService>();
+        var testLabService = scope.ServiceProvider.GetRequiredService<TestLabService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var saveResult = await projects.SaveAsync(new ProjectEditorModel
+        {
+            Name = "Workbench Projection Assembly",
+            Description = "Exercise projection-only structure and calendar assembly.",
+            Objective = "Ensure external artifacts appear without mirrored canonical rows.",
+            CurrentPhase = "Execution",
+            Phases =
+            [
+                new ProjectPhaseEditorModel
+                {
+                    Name = "Execution",
+                    Goal = "Assemble structure and calendar surfaces in memory.",
+                    Status = ProjectPhaseStatus.Active,
+                    StartDateUtc = new DateTime(2026, 4, 2),
+                    EndDateUtc = new DateTime(2026, 4, 4)
+                }
+            ]
+        });
+
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var resourceResult = await resourcesService.SaveAsync(new ResourceEditorModel
+        {
+            ProjectId = projectId,
+            ConnectorPluginKey = "resource.folder",
+            ConfigSchemaVersion = "1.0",
+            Name = "Implementation notes",
+            Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["folderPath"] = @"C:\repositories\CanDoItAll\docs\implementation"
+            }),
+            ValidationStatus = ResourceValidationStatus.Valid,
+            Sensitivity = ResourceSensitivity.Normal,
+            SupportsPreview = true,
+            SupportsIndexing = true
+        });
+        Assert.True(resourceResult.IsSuccess);
+
+        var validationResult = await validationService.RunAsync(new ValidationRunEditorModel
+        {
+            ProjectId = projectId,
+            ValidationType = ValidationType.Architecture,
+            ArtifactTitle = "Architecture review",
+            ArtifactRoute = "/validation",
+            SourceContent = "Validate that workbench projections assemble without persisting mirrored read-model rows."
+        });
+        Assert.True(validationResult.IsSuccess);
+
+        var testPlanResult = await testLabService.SaveAsync(new TestPlanEditorModel
+        {
+            ProjectId = projectId,
+            Title = "Plugin wave proof",
+            Phase = "Execution",
+            CoverageGoal = "Cover structure and calendar projection assembly."
+        });
+        Assert.True(testPlanResult.IsSuccess);
+
+        var structure = await workbench.GetStructureAsync(projectId);
+        var calendar = await workbench.GetCalendarAsync(projectId);
+
+        Assert.Contains(structure.Nodes, node => node.ObjectType == ProjectObjectType.ProjectRoot);
+        Assert.Contains(structure.Nodes, node => node.ObjectType == ProjectObjectType.Phase && node.Title == "Execution");
+        Assert.Contains(structure.Nodes, node => node.Title == "Implementation notes" && node.ArtifactKind == "resource");
+        Assert.Contains(structure.Nodes, node => node.Title == "Architecture review" && node.ObjectType == ProjectObjectType.ValidationRun);
+        Assert.Contains(structure.Nodes, node => node.Title == "Plugin wave proof" && node.ObjectType == ProjectObjectType.TestPlan);
+        Assert.Contains(calendar.Events, item => item.Title == "Execution" && item.ObjectType == ProjectObjectType.Phase);
+        Assert.Contains(calendar.Events, item => item.Title == "Architecture review" && item.ObjectType == ProjectObjectType.ValidationRun);
+        Assert.Contains(calendar.Events, item => item.Title == "Plugin wave proof" && item.ObjectType == ProjectObjectType.TestPlan);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        Assert.Empty(await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == projectId)
+            .ToListAsync());
+        Assert.Empty(await dbContext.Set<ProjectObjectLinkRecord>()
+            .Where(item => item.ProjectId == projectId)
+            .ToListAsync());
+        Assert.Empty(await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
+            .Where(item => item.ProjectId == projectId)
+            .ToListAsync());
+    }
+
+    [Fact]
+    public async Task MoveObjectsAsync_stores_projection_layout_overrides_without_promoting_projection_nodes_to_canonical_rows()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var resourcesService = scope.ServiceProvider.GetRequiredService<ResourcesService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projects, "Workbench Projection Layout");
+        var resourceResult = await resourcesService.SaveAsync(new ResourceEditorModel
+        {
+            ProjectId = projectId,
+            ConnectorPluginKey = "resource.folder",
+            ConfigSchemaVersion = "1.0",
+            Name = "Design archive",
+            Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["folderPath"] = @"C:\repositories\CanDoItAll\docs\design"
+            }),
+            ValidationStatus = ResourceValidationStatus.Valid,
+            Sensitivity = ResourceSensitivity.Normal,
+            SupportsPreview = true,
+            SupportsIndexing = true
+        });
+        Assert.True(resourceResult.IsSuccess);
+
+        var initialSurface = await workbench.GetStructureAsync(projectId);
+        var resourceNode = Assert.Single(initialSurface.Nodes, node => node.Title == "Design archive");
+        var movedX = resourceNode.X + 180d;
+        var movedY = resourceNode.Y + 95d;
+
+        var movedNodeIds = await workbench.MoveObjectsAsync(
+            projectId,
+            [new ProjectNodeMoveRequest(resourceNode.Id, movedX, movedY)]);
+
+        Assert.Contains(resourceNode.Id, movedNodeIds);
+
+        var updatedSurface = await workbench.GetStructureAsync(projectId);
+        var updatedNode = Assert.Single(updatedSurface.Nodes, node => node.Id == resourceNode.Id);
+        Assert.Equal(movedX, updatedNode.X);
+        Assert.Equal(movedY, updatedNode.Y);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        Assert.Empty(await dbContext.Set<ProjectObjectRecord>()
+            .Where(item => item.ProjectId == projectId)
+            .ToListAsync());
+        var layout = await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
+            .SingleAsync(item => item.ProjectId == projectId && item.NodeKey == resourceNode.Id);
+        Assert.Equal(movedX, layout.PositionX);
+        Assert.Equal(movedY, layout.PositionY);
+    }
+
+    [Fact]
     public async Task GetStructureAsync_recreates_missing_workbench_tables_for_existing_sqlite_databases()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -108,6 +261,9 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         {
             await dbContext.Database.ExecuteSqlRawAsync("""DROP TABLE IF EXISTS "Workbench_ProjectObjectLinks";""");
             await dbContext.Database.ExecuteSqlRawAsync("""DROP TABLE IF EXISTS "Workbench_ProjectObjects";""");
+            await dbContext.Database.ExecuteSqlRawAsync("""DROP TABLE IF EXISTS "Workbench_ProjectNodeBindings";""");
+            await dbContext.Database.ExecuteSqlRawAsync("""DROP TABLE IF EXISTS "Workbench_ProjectNodeReferences";""");
+            await dbContext.Database.ExecuteSqlRawAsync("""DROP TABLE IF EXISTS "Workbench_ProjectProjectionLayouts";""");
             await dbContext.Database.ExecuteSqlRawAsync("""DROP TABLE IF EXISTS "Workbench_ViewStates";""");
         }
 
@@ -123,13 +279,116 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                 SELECT "name"
                 FROM "sqlite_master"
                 WHERE "type" = 'table'
-                  AND "name" IN ('Workbench_ProjectObjects', 'Workbench_ProjectObjectLinks', 'Workbench_ViewStates');
+                  AND "name" IN ('Workbench_ProjectObjects', 'Workbench_ProjectObjectLinks', 'Workbench_ProjectNodeBindings', 'Workbench_ProjectNodeReferences', 'Workbench_ProjectProjectionLayouts', 'Workbench_ViewStates');
                 """)
             .ToListAsync();
 
         Assert.Contains("Workbench_ProjectObjects", tableNames);
         Assert.Contains("Workbench_ProjectObjectLinks", tableNames);
+        Assert.Contains("Workbench_ProjectNodeBindings", tableNames);
+        Assert.Contains("Workbench_ProjectNodeReferences", tableNames);
+        Assert.Contains("Workbench_ProjectProjectionLayouts", tableNames);
         Assert.Contains("Workbench_ViewStates", tableNames);
+    }
+
+    [Fact]
+    public async Task GetStructureAsync_normalizes_legacy_carrier_payload_without_changing_coordinates_or_markers()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projects, "Legacy carrier normalization");
+        var providerId = Guid.NewGuid();
+        var nodeKey = Guid.NewGuid().ToString("D");
+        var createdAtUtc = new DateTimeOffset(2026, 4, 4, 18, 30, 0, TimeSpan.Zero);
+        var metadataJson = JsonSerializer.Serialize(new
+        {
+            transcript = new
+            {
+                transcriptText = "Legacy transcript payload.",
+                lastProviderProfileId = providerId,
+                lastProviderName = "Offline provider"
+            }
+        });
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            dbContext.Set<ProjectObjectRecord>().Add(new ProjectObjectRecord
+            {
+                ProjectId = projectId,
+                NodeKey = nodeKey,
+                ObjectType = ProjectObjectType.Transcript,
+                Title = "Legacy transcript",
+                Subtitle = "Pre-binding row",
+                Status = "Review",
+                Notes = "Normalize this row through the structure load seam.",
+                ObjectSubtype = string.Empty,
+                ProgressMode = "progress",
+                ProgressPercent = 35,
+                MarkersJson = """[{"icon":"risk","tone":"danger","label":"Critical"}]""",
+                MetadataJson = metadataJson,
+                ParentNodeKey = BuildProjectRootNodeKey(projectId),
+                PositionX = 610,
+                PositionY = 345,
+                CreatedAtUtc = createdAtUtc,
+                UpdatedAtUtc = createdAtUtc
+            });
+            dbContext.Set<ProjectObjectLinkRecord>().Add(new ProjectObjectLinkRecord
+            {
+                ProjectId = projectId,
+                SourceNodeKey = BuildProjectRootNodeKey(projectId),
+                TargetNodeKey = nodeKey,
+                LinkKind = ProjectObjectLinkKind.Contains,
+                CreatedAtUtc = createdAtUtc
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var normalizedNode = Assert.Single(surface.Nodes, node => node.Id == nodeKey);
+
+        Assert.Equal(610, normalizedNode.X);
+        Assert.Equal(345, normalizedNode.Y);
+        Assert.Equal("risk", normalizedNode.MarkerIcon);
+        Assert.Equal("danger", normalizedNode.MarkerTone);
+        Assert.Equal("Critical", normalizedNode.MarkerLabel);
+        Assert.Equal($"/projects/{projectId}/structure", normalizedNode.Route);
+        Assert.Equal(ProjectObjectType.Transcript.ToString(), normalizedNode.ArtifactKind);
+
+        var normalizedMetadata = ProjectObjectMetadataSerializer.Parse(normalizedNode.MetadataJson);
+        Assert.NotNull(normalizedMetadata.Transcript);
+        Assert.NotNull(normalizedNode.NodeReferences);
+        Assert.Equal(providerId, normalizedNode.NodeReferences!.TranscriptProviderProfileId);
+        Assert.Equal("Offline provider", normalizedMetadata.Transcript.LastProviderName);
+        using (var normalizedMetadataDocument = JsonDocument.Parse(normalizedNode.MetadataJson))
+        {
+            var transcriptElement = normalizedMetadataDocument.RootElement.GetProperty("transcript");
+            Assert.False(transcriptElement.TryGetProperty("lastProviderProfileId", out _));
+        }
+
+        await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
+        var carrier = await verificationContext.Set<ProjectObjectRecord>()
+            .SingleAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey);
+        Assert.Equal(610, carrier.PositionX);
+        Assert.Equal(345, carrier.PositionY);
+        Assert.Equal("""[{"icon":"risk","tone":"danger","label":"Critical"}]""", carrier.MarkersJson);
+
+        var persistedMetadata = ProjectObjectMetadataSerializer.Parse(carrier.MetadataJson);
+        Assert.NotNull(persistedMetadata.Transcript);
+        Assert.Equal("Offline provider", persistedMetadata.Transcript.LastProviderName);
+        using (var persistedMetadataDocument = JsonDocument.Parse(carrier.MetadataJson))
+        {
+            var transcriptElement = persistedMetadataDocument.RootElement.GetProperty("transcript");
+            Assert.True(transcriptElement.TryGetProperty("lastProviderProfileId", out _));
+        }
+
+        Assert.False(await verificationContext.Set<ProjectNodeBindingRecord>()
+            .AnyAsync(item => item.ProjectObjectId == carrier.Id));
+        Assert.False(await verificationContext.Set<ProjectNodeReferenceRecord>()
+            .AnyAsync(item => item.ProjectObjectId == carrier.Id));
     }
 
     [Fact]
@@ -402,9 +661,11 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         {
             var record = await dbContext.Set<ProjectObjectRecord>()
                 .FirstAsync(item => item.ProjectId == saveResult.Value && item.NodeKey == created.Id);
-            record.Route = $"/projects/{saveResult.Value}/structure";
-            record.ExternalArtifactKind = ProjectObjectType.PromptFlow.ToString();
-            record.ExternalArtifactId = null;
+            var binding = await dbContext.Set<ProjectNodeBindingRecord>()
+                .FirstAsync(item => item.ProjectObjectId == record.Id);
+            binding.Route = $"/projects/{saveResult.Value}/structure";
+            binding.ExternalArtifactKind = ProjectObjectType.PromptFlow.ToString();
+            binding.ExternalArtifactId = null;
             await dbContext.SaveChangesAsync();
         }
 
@@ -428,6 +689,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         await using var scope = application.Services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var saveResult = await projects.SaveAsync(new ProjectEditorModel
         {
@@ -474,6 +736,20 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.NotNull(nodeReference);
         Assert.Equal(StorageProviderKind.FileSystem, nodeReference!.ProviderKind);
         Assert.Contains("Uploaded", fileNode.Badges);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var carrier = await dbContext.Set<ProjectObjectRecord>()
+            .SingleAsync(item => item.ProjectId == saveResult.Value && item.NodeKey == created.Id);
+        Assert.Equal(created.Id, carrier.NodeKey);
+
+        var binding = await dbContext.Set<ProjectNodeBindingRecord>()
+            .SingleAsync(item => item.ProjectObjectId == carrier.Id);
+        Assert.Equal(created.Route, binding.Route);
+        Assert.Equal(created.ArtifactKind, binding.ExternalArtifactKind);
+        Assert.Equal(created.MediaRelativePath, binding.MediaRelativePath);
+        Assert.Equal(created.MediaContentType, binding.MediaContentType);
+        Assert.Equal(created.MediaOriginalFileName, binding.MediaOriginalFileName);
+        Assert.Equal(created.StorageObjectReferenceJson, binding.StorageObjectReferenceJson);
     }
 
     [Fact]
@@ -483,6 +759,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         await using var scope = application.Services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var saveResult = await projects.SaveAsync(new ProjectEditorModel
         {
@@ -516,6 +793,17 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             string.Equals(link.SourceId, projectRootNodeKey, StringComparison.Ordinal) &&
             string.Equals(link.TargetId, created.Id, StringComparison.Ordinal) &&
             link.Kind == ProjectObjectLinkKind.Contains);
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var persistedHierarchyLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+                .Where(item =>
+                    item.ProjectId == projectId &&
+                    item.TargetNodeKey == created.Id &&
+                    !item.IsSystemManaged &&
+                    (item.LinkKind == ProjectObjectLinkKind.Contains || item.LinkKind == ProjectObjectLinkKind.BelongsTo))
+                .ToListAsync();
+            Assert.Empty(persistedHierarchyLinks);
+        }
 
         var child = await workbench.CreateObjectAsync(
             projectId,
@@ -547,6 +835,17 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             string.Equals(link.SourceId, created.Id, StringComparison.Ordinal) &&
             string.Equals(link.TargetId, child.Id, StringComparison.Ordinal) &&
             (link.Kind == ProjectObjectLinkKind.BelongsTo || link.Kind == ProjectObjectLinkKind.Contains));
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var persistedHierarchyLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+                .Where(item =>
+                    item.ProjectId == projectId &&
+                    item.TargetNodeKey == child.Id &&
+                    !item.IsSystemManaged &&
+                    (item.LinkKind == ProjectObjectLinkKind.Contains || item.LinkKind == ProjectObjectLinkKind.BelongsTo))
+                .ToListAsync();
+            Assert.Empty(persistedHierarchyLinks);
+        }
     }
 
     [Fact]
@@ -775,6 +1074,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         await using var scope = application.Services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var saveResult = await projects.SaveAsync(new ProjectEditorModel
         {
@@ -820,7 +1120,6 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                 SummaryText = "Alice owns the checklist before Friday.",
                 MyTasksText = "- Review the rollout checklist",
                 OthersDeliveriesText = "- Alice: rollout checklist",
-                LastProviderProfileId = providerId,
                 LastProviderName = "Local llama",
                 LastActionKind = ProjectLlmActionKind.FindMyTasks
             }
@@ -831,7 +1130,11 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             transcript.Id,
             updatedMetadata,
             notes: "Alice owes the rollout checklist.",
-            status: "Review");
+            status: "Review",
+            nodeReferences: new ProjectNodeReferenceCollection
+            {
+                TranscriptProviderProfileId = providerId
+            });
 
         Assert.NotNull(updated);
         Assert.Equal("Review", updated!.Status);
@@ -844,11 +1147,28 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
 
         var parsedMetadata = ProjectObjectMetadataSerializer.Parse(persistedTranscript.MetadataJson);
         Assert.NotNull(parsedMetadata.Transcript);
-        Assert.Equal(providerId, parsedMetadata.Transcript!.LastProviderProfileId);
+        Assert.NotNull(persistedTranscript.NodeReferences);
+        Assert.Equal(providerId, persistedTranscript.NodeReferences!.TranscriptProviderProfileId);
         Assert.Equal("Local llama", parsedMetadata.Transcript.LastProviderName);
         Assert.Equal(ProjectLlmActionKind.FindMyTasks, parsedMetadata.Transcript.LastActionKind);
         Assert.Equal("- Review the rollout checklist", parsedMetadata.Transcript.MyTasksText);
         Assert.Equal("- Alice: rollout checklist", parsedMetadata.Transcript.OthersDeliveriesText);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var carrier = await dbContext.Set<ProjectObjectRecord>()
+            .SingleAsync(item => item.ProjectId == projectId && item.NodeKey == transcript.Id);
+        var persistedMetadata = ProjectObjectMetadataSerializer.Parse(carrier.MetadataJson);
+        Assert.NotNull(persistedMetadata.Transcript);
+        Assert.Equal("Local llama", persistedMetadata.Transcript.LastProviderName);
+        using (var persistedMetadataDocument = JsonDocument.Parse(carrier.MetadataJson))
+        {
+            var transcriptElement = persistedMetadataDocument.RootElement.GetProperty("transcript");
+            Assert.False(transcriptElement.TryGetProperty("lastProviderProfileId", out _));
+        }
+
+        var providerBinding = await dbContext.Set<ProjectNodeReferenceRecord>()
+            .SingleAsync(item => item.ProjectObjectId == carrier.Id);
+        Assert.Equal(providerId.ToString("D"), providerBinding.ReferenceId);
     }
 
     [Fact]
@@ -952,6 +1272,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         await using var scope = application.Services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var saveResult = await projects.SaveAsync(new ProjectEditorModel
         {
@@ -999,6 +1320,176 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.Equal("Deploy gateway", persistedNode.Title);
         Assert.Equal(noteBody, persistedNode.Notes);
         Assert.Equal(ProjectObjectPaletteKeys.Info, persistedNode.VisualProfile.PaletteKey);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var lifecycleEvent = Assert.Single(await dbContext.Set<ProjectNodeLifecycleEventRecord>()
+            .Where(item => item.ProjectId == saveResult.Value && item.NodeKey == created.Id)
+            .ToListAsync());
+        Assert.Equal(ProjectNodeLifecycleTransitionMode.NotePromotion, lifecycleEvent.TransitionMode);
+        Assert.Equal(ProjectNodeKindFamily.None, lifecycleEvent.SourceFamily);
+        Assert.Equal(ProjectNodeKindFamily.ProjectBlock, lifecycleEvent.TargetFamily);
+
+        using var targetSnapshotDocument = JsonDocument.Parse(lifecycleEvent.TargetSnapshotJson);
+        Assert.Equal("Deploy gateway", targetSnapshotDocument.RootElement.GetProperty("Title").GetString());
+        Assert.Equal(noteBody, targetSnapshotDocument.RootElement.GetProperty("Notes").GetString());
+    }
+
+    [Fact]
+    public async Task ReclassifyObjectAsync_promotes_notes_to_tasks_and_records_family_history()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projects, "Workbench note to task");
+        const string noteBody = "Confirm the migration path\r\nTrack owners and due date.";
+        var created = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Migration note",
+                string.Empty,
+                noteBody,
+                $"project:{projectId}",
+                320,
+                220));
+
+        var updated = await workbench.ReclassifyObjectAsync(
+            projectId,
+            created.Id,
+            new ProjectObjectReclassificationRequest(
+                ProjectObjectType.WorkItem,
+                "task",
+                "Confirm the migration path",
+                string.Empty,
+                noteBody,
+                "{}"));
+
+        Assert.NotNull(updated);
+        Assert.Equal(ProjectObjectType.WorkItem, updated!.ObjectType);
+        Assert.Equal("task", updated.ObjectSubtype);
+
+        var metadata = ProjectObjectMetadataSerializer.Parse(updated.MetadataJson);
+        Assert.NotNull(metadata.WorkItem);
+        Assert.Equal(ProjectWorkItemKind.Task, metadata.WorkItem!.WorkItemKind);
+        Assert.Equal(noteBody, metadata.WorkItem.Description);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var lifecycleEvent = Assert.Single(await dbContext.Set<ProjectNodeLifecycleEventRecord>()
+            .Where(item => item.ProjectId == projectId && item.NodeKey == created.Id)
+            .ToListAsync());
+        Assert.Equal(ProjectNodeLifecycleTransitionMode.NotePromotion, lifecycleEvent.TransitionMode);
+        Assert.Equal(ProjectNodeKindFamily.WorkItem, lifecycleEvent.TargetFamily);
+    }
+
+    [Fact]
+    public async Task ReclassifyObjectAsync_promotes_notes_to_decisions_without_carrying_foreign_metadata()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projects, "Workbench note to decision");
+        const string noteBody = "Use the plugin registry before adding another enum.";
+        var created = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Registry note",
+                string.Empty,
+                noteBody,
+                $"project:{projectId}",
+                340,
+                220));
+
+        var updated = await workbench.ReclassifyObjectAsync(
+            projectId,
+            created.Id,
+            new ProjectObjectReclassificationRequest(
+                ProjectObjectType.Decision,
+                string.Empty,
+                "Use the plugin registry before adding another enum.",
+                string.Empty,
+                noteBody,
+                "{}"));
+
+        Assert.NotNull(updated);
+        Assert.Equal(ProjectObjectType.Decision, updated!.ObjectType);
+
+        var metadata = ProjectObjectMetadataSerializer.Parse(updated.MetadataJson);
+        Assert.Null(metadata.WorkItem);
+        Assert.Null(metadata.Participant);
+        Assert.Null(metadata.Repository);
+    }
+
+    [Fact]
+    public async Task ReclassifyObjectAsync_changes_work_item_subtype_and_preserves_work_item_metadata()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projects, "Workbench subtype change");
+        var dueUtc = new DateTimeOffset(2026, 4, 12, 14, 30, 0, TimeSpan.Zero);
+        var created = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Confirm rollout",
+                string.Empty,
+                "Original work item description",
+                $"project:{projectId}",
+                520,
+                260,
+                null,
+                null,
+                "task",
+                null,
+                ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                {
+                    WorkItem = new ProjectWorkItemMetadata
+                    {
+                        WorkItemKind = ProjectWorkItemKind.Task,
+                        Description = "Original work item description",
+                        CurrencyCode = "USD",
+                        DueUtc = dueUtc
+                    }
+                })));
+
+        var updated = await workbench.ReclassifyObjectAsync(
+            projectId,
+            created.Id,
+            new ProjectObjectReclassificationRequest(
+                ProjectObjectType.WorkItem,
+                "issue",
+                "Confirm rollout",
+                string.Empty,
+                "Original work item description",
+                "{}"));
+
+        Assert.NotNull(updated);
+        Assert.Equal(ProjectObjectType.WorkItem, updated!.ObjectType);
+        Assert.Equal("issue", updated.ObjectSubtype);
+
+        var metadata = ProjectObjectMetadataSerializer.Parse(updated.MetadataJson);
+        Assert.NotNull(metadata.WorkItem);
+        Assert.Equal(ProjectWorkItemKind.Issue, metadata.WorkItem!.WorkItemKind);
+        Assert.Equal("Original work item description", metadata.WorkItem.Description);
+        Assert.Equal("USD", metadata.WorkItem.CurrencyCode);
+        Assert.Equal(dueUtc, metadata.WorkItem.DueUtc);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var lifecycleEvent = Assert.Single(await dbContext.Set<ProjectNodeLifecycleEventRecord>()
+            .Where(item => item.ProjectId == projectId && item.NodeKey == created.Id)
+            .ToListAsync());
+        Assert.Equal(ProjectNodeLifecycleTransitionMode.SubtypeChange, lifecycleEvent.TransitionMode);
+        Assert.Equal(ProjectNodeKindFamily.WorkItem, lifecycleEvent.SourceFamily);
+        Assert.Equal(ProjectNodeKindFamily.WorkItem, lifecycleEvent.TargetFamily);
     }
 
     [Fact]
@@ -1162,11 +1653,11 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.Contains(targetSurface.Links, link =>
             string.Equals(link.SourceId, BuildProjectRootNodeKey(targetProjectId), StringComparison.Ordinal) &&
             string.Equals(link.TargetId, childNote.Id, StringComparison.Ordinal) &&
-            link.IsUserAuthored);
+            link.Kind == ProjectObjectLinkKind.Contains);
         Assert.Contains(targetSurface.Links, link =>
             string.Equals(link.SourceId, BuildProjectRootNodeKey(targetProjectId), StringComparison.Ordinal) &&
             string.Equals(link.TargetId, wifiBlock.Id, StringComparison.Ordinal) &&
-            link.IsUserAuthored);
+            link.Kind == ProjectObjectLinkKind.Contains);
         Assert.Contains(targetSurface.Links, link =>
             string.Equals(link.SourceId, childNote.Id, StringComparison.Ordinal) &&
             string.Equals(link.TargetId, wifiBlock.Id, StringComparison.Ordinal) &&
@@ -1186,6 +1677,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
         var partyDirectory = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
         var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var projectId = await CreateProjectAsync(projects, "Delete subtree assignments");
         var participantPartyId = await CreatePartyAsync(partyDirectory, PartyType.Person, "Delete subtree participant");
@@ -1257,10 +1749,17 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var assignments = await bridge.ListAssignmentsDetailedAsync(projectId);
         Assert.DoesNotContain(assignments, item => string.Equals(item.NodeKey, participantNode.Id, StringComparison.Ordinal));
         Assert.DoesNotContain(assignments, item => string.Equals(item.NodeKey, workItemNode.Id, StringComparison.Ordinal));
+
+        await AssertMutationStatusAsync(
+            dbContextFactory,
+            projectId,
+            parentBlock.Id,
+            ProjectCrossModuleMutationKind.DeleteSubtree,
+            ProjectCrossModuleMutationStatus.Completed);
     }
 
     [Fact]
-    public async Task DeleteObjectAsync_restores_workbench_subtree_when_assignment_cleanup_fails()
+    public async Task DeleteObjectAsync_marks_durable_failure_when_assignment_cleanup_fails_after_workbench_commit()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -1268,6 +1767,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
         var partyDirectory = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
         var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         var failingWorkbench = CreateWorkbenchService(
             scope.ServiceProvider,
             new ThrowingProjectPartyIntegrationBridge(bridge, failDeleteForNodes: true, failMoveForNodes: false));
@@ -1280,7 +1780,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                 ProjectObjectType.ProjectBlock,
                 "Delete branch",
                 string.Empty,
-                "Rollback should restore this subtree.",
+                "Durable failure should not restore this subtree.",
                 $"project:{projectId}",
                 360,
                 220,
@@ -1293,7 +1793,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                 ProjectObjectType.Participant,
                 "Delete participant",
                 string.Empty,
-                "Child node should remain after compensation.",
+                "Child node should stay deleted when canonical cleanup fails after commit.",
                 parentBlock.Id,
                 560,
                 260,
@@ -1314,16 +1814,26 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             failingWorkbench.DeleteObjectAsync(projectId, parentBlock.Id));
 
-        Assert.Contains("restored", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("committed the Workbench change", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("marked failed for retry", exception.Message, StringComparison.OrdinalIgnoreCase);
 
         var surface = await workbench.GetStructureAsync(projectId);
-        Assert.Contains(surface.Nodes, node => string.Equals(node.Id, parentBlock.Id, StringComparison.Ordinal));
-        Assert.Contains(surface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(surface.Nodes, node => string.Equals(node.Id, parentBlock.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(surface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
 
         var assignments = await bridge.ListAssignmentsDetailedAsync(projectId);
         Assert.Contains(assignments, item =>
             string.Equals(item.NodeKey, participantNode.Id, StringComparison.Ordinal) &&
             item.PartyId == participantPartyId);
+
+        await AssertMutationStatusAsync(
+            dbContextFactory,
+            projectId,
+            parentBlock.Id,
+            ProjectCrossModuleMutationKind.DeleteSubtree,
+            ProjectCrossModuleMutationStatus.Failed,
+            expectedAttemptCount: 1,
+            expectCompletedAtUtc: false);
     }
 
     [Fact]
@@ -1335,6 +1845,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
         var partyDirectory = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
         var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var sourceProjectId = await CreateProjectAsync(projects, "Source canonical move");
         var targetProjectId = await CreateProjectAsync(projects, "Target canonical move");
@@ -1418,10 +1929,28 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             string.Equals(item.NodeKey, workItemNode.Id, StringComparison.Ordinal) &&
             item.PartyId == workItemPartyId &&
             item.Role == ProjectPartyAssignmentRole.WorkItemAssignee);
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var persistedHierarchyLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+                .Where(item =>
+                    item.ProjectId == targetProjectId &&
+                    (item.TargetNodeKey == participantNode.Id || item.TargetNodeKey == workItemNode.Id) &&
+                    !item.IsSystemManaged &&
+                    (item.LinkKind == ProjectObjectLinkKind.Contains || item.LinkKind == ProjectObjectLinkKind.BelongsTo))
+                .ToListAsync();
+            Assert.Empty(persistedHierarchyLinks);
+        }
+
+        await AssertMutationStatusAsync(
+            dbContextFactory,
+            sourceProjectId,
+            parentBlock.Id,
+            ProjectCrossModuleMutationKind.MoveDescendants,
+            ProjectCrossModuleMutationStatus.Completed);
     }
 
     [Fact]
-    public async Task MoveDescendantsToProjectAsync_restores_workbench_state_when_assignment_transfer_fails()
+    public async Task MoveDescendantsToProjectAsync_marks_durable_failure_when_assignment_transfer_fails_after_workbench_commit()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -1429,6 +1958,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
         var partyDirectory = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
         var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         var failingWorkbench = CreateWorkbenchService(
             scope.ServiceProvider,
             new ThrowingProjectPartyIntegrationBridge(bridge, failDeleteForNodes: false, failMoveForNodes: true));
@@ -1443,7 +1973,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                 ProjectObjectType.ProjectBlock,
                 "Move branch",
                 string.Empty,
-                "Parent block stays put when compensation runs.",
+                "Parent block stays put while descendants move before durable reconciliation.",
                 $"project:{sourceProjectId}",
                 360,
                 220,
@@ -1456,7 +1986,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
                 ProjectObjectType.Participant,
                 "Move participant",
                 string.Empty,
-                "Moved child should return to source project after compensation.",
+                "Moved child should remain in the target project if canonical reconciliation fails after commit.",
                 parentBlock.Id,
                 560,
                 260,
@@ -1477,13 +2007,14 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             failingWorkbench.MoveDescendantsToProjectAsync(sourceProjectId, parentBlock.Id, targetProjectId));
 
-        Assert.Contains("canonical assignment reconciliation", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("committed the Workbench change", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("marked failed for retry", exception.Message, StringComparison.OrdinalIgnoreCase);
 
         var sourceSurface = await workbench.GetStructureAsync(sourceProjectId);
-        Assert.Contains(sourceSurface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(sourceSurface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
 
         var targetSurface = await workbench.GetStructureAsync(targetProjectId);
-        Assert.DoesNotContain(targetSurface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
+        Assert.Contains(targetSurface.Nodes, node => string.Equals(node.Id, participantNode.Id, StringComparison.Ordinal));
 
         var sourceAssignments = await bridge.ListAssignmentsDetailedAsync(sourceProjectId);
         Assert.Contains(sourceAssignments, item =>
@@ -1492,6 +2023,15 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
 
         var targetAssignments = await bridge.ListAssignmentsDetailedAsync(targetProjectId);
         Assert.DoesNotContain(targetAssignments, item => string.Equals(item.NodeKey, participantNode.Id, StringComparison.Ordinal));
+
+        await AssertMutationStatusAsync(
+            dbContextFactory,
+            sourceProjectId,
+            parentBlock.Id,
+            ProjectCrossModuleMutationKind.MoveDescendants,
+            ProjectCrossModuleMutationStatus.Failed,
+            expectedAttemptCount: 1,
+            expectCompletedAtUtc: false);
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
@@ -1527,12 +2067,83 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         IServiceProvider serviceProvider,
         IProjectPartyIntegrationBridge bridge)
     {
-        return new ProjectWorkbenchService(
-            serviceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>(),
-            serviceProvider.GetRequiredService<IClock>(),
-            serviceProvider.GetRequiredService<IStoragePlacementService>(),
+        var dbContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var clock = serviceProvider.GetRequiredService<IClock>();
+        var assemblyService = serviceProvider.GetRequiredService<ProjectStructureAssemblyService>();
+        var mutationCoordinator = serviceProvider.GetRequiredService<ProjectCrossModuleMutationCoordinator>();
+        var mutationProcessor = new ProjectCrossModuleMutationProcessor(
+            dbContextFactory,
+            bridge,
+            mutationCoordinator);
+        var crossModuleMutationService = new ProjectWorkbenchCrossModuleMutationService(
+            dbContextFactory,
+            clock,
+            mutationCoordinator,
+            mutationProcessor);
+        var relationService = new ProjectWorkbenchRelationService(
+            dbContextFactory,
+            clock,
+            assemblyService);
+        var lifecycleService = new ProjectWorkbenchLifecycleService(
+            dbContextFactory,
+            clock);
+        var commandService = new ProjectWorkbenchCommandService(
+            dbContextFactory,
+            clock,
             serviceProvider.GetRequiredService<PromptFactoryService>(),
-            bridge);
+            assemblyService);
+        return new ProjectWorkbenchService(
+            dbContextFactory,
+            clock,
+            serviceProvider.GetRequiredService<IStoragePlacementService>(),
+            assemblyService,
+            relationService,
+            lifecycleService,
+            commandService,
+            crossModuleMutationService);
+    }
+
+    private static async Task AssertMutationStatusAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid projectId,
+        string scopeNodeKey,
+        ProjectCrossModuleMutationKind mutationKind,
+        ProjectCrossModuleMutationStatus expectedStatus,
+        int? expectedAttemptCount = null,
+        bool? expectCompletedAtUtc = null)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var mutation = (await dbContext.Set<ProjectCrossModuleMutationRecord>()
+            .Where(item =>
+                item.ProjectId == projectId &&
+                item.ScopeNodeKey == scopeNodeKey &&
+                item.MutationKind == mutationKind)
+            .ToListAsync())
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .FirstOrDefault();
+
+        Assert.NotNull(mutation);
+        Assert.True(
+            mutation!.Status == expectedStatus,
+            $"Expected mutation status '{expectedStatus}' but found '{mutation.Status}'. Error: {mutation.ErrorMessage}");
+        Assert.NotEqual(DateTimeOffset.MinValue, mutation.CreatedAtUtc);
+        Assert.NotEqual(DateTimeOffset.MinValue, mutation.UpdatedAtUtc);
+        if (expectedAttemptCount.HasValue)
+        {
+            Assert.Equal(expectedAttemptCount.Value, mutation.AttemptCount);
+        }
+
+        if (expectCompletedAtUtc.HasValue)
+        {
+            if (expectCompletedAtUtc.Value)
+            {
+                Assert.NotNull(mutation.CompletedAtUtc);
+            }
+            else
+            {
+                Assert.Null(mutation.CompletedAtUtc);
+            }
+        }
     }
 
     private static string BuildProjectRootNodeKey(Guid projectId)

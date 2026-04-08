@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using AngleSharp.Dom;
 using Bunit;
@@ -67,7 +68,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
-    public async Task Convert_note_to_block_patches_surface_without_structure_reload()
+    public async Task Convert_note_to_task_patches_surface_without_structure_reload()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithCreateCounter);
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -93,36 +94,36 @@ public sealed class ProjectStructurePageSimpleMutationTests
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
 
-        cut.WaitForAssertion(() => Assert.Contains("Convert to block", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains("Convert", cut.Markup));
         createCounter.Reset();
 
-        FindButtonByLabel(cut, "Convert to block", "[data-testid='project-structure-node-actions'] button").Click();
+        FindButtonByLabel(cut, "Convert", "[data-testid='project-structure-node-actions'] button").Click();
 
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("project-structure-block-mutation-dialog", cut.Markup);
         });
 
-        cut.Find("[data-testid='project-structure-block-mutation-select']").Change("add-block-deployment");
+        cut.Find("[data-testid='project-structure-block-mutation-select']").Change("add-work-task");
         cut.Find("[data-testid='project-structure-block-mutation-submit']").Click();
 
         cut.WaitForAssertion(() =>
         {
             var updatedNode = Assert.Single(canvasWorkbench.Instance.Surface.Nodes, node => string.Equals(node.Id, noteNode.Id, StringComparison.Ordinal));
             Assert.Equal("Deploy edge gateway", updatedNode.Title);
-            Assert.Equal("Deployment block", updatedNode.Kind);
-            Assert.Equal(ProjectObjectPaletteKeys.Info, updatedNode.PaletteKey);
+            Assert.Equal("Task", updatedNode.Kind);
+            Assert.Equal(ProjectObjectPaletteKeys.Warning, updatedNode.PaletteKey);
             Assert.False(updatedNode.IsInlineTextNode);
             Assert.DoesNotContain("project-structure-block-mutation-dialog", cut.Markup, StringComparison.Ordinal);
-            Assert.Contains("was converted to deployment block.", cut.Markup);
+            Assert.Contains("was converted to task.", cut.Markup);
         });
 
         Assert.Equal(1, createCounter.CreateCount);
 
         var persistedSurface = await workbenchService.GetStructureAsync(projectId);
         var persistedNode = Assert.Single(persistedSurface.Nodes, node => string.Equals(node.Id, noteNode.Id, StringComparison.Ordinal));
-        Assert.Equal(ProjectObjectType.ProjectBlock, persistedNode.ObjectType);
-        Assert.Equal("deployment", persistedNode.ObjectSubtype);
+        Assert.Equal(ProjectObjectType.WorkItem, persistedNode.ObjectType);
+        Assert.Equal("task", persistedNode.ObjectSubtype);
         Assert.Equal("Deploy edge gateway", persistedNode.Title);
         Assert.Equal(noteBody, persistedNode.Notes);
     }
@@ -263,6 +264,223 @@ public sealed class ProjectStructurePageSimpleMutationTests
         });
 
         Assert.Equal(1, createCounter.CreateCount);
+    }
+
+    [Fact]
+    public async Task Artifact_create_sequence_persists_mermaid_file_after_prior_artifact_actions()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Artifact create sequence");
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+
+        string projectRootId = string.Empty;
+        cut.WaitForAssertion(() =>
+        {
+            projectRootId = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => !string.IsNullOrWhiteSpace(node.Id) &&
+                    node.Id.StartsWith("project:", StringComparison.Ordinal)).Id;
+        });
+
+        var recordingId = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-recording",
+            projectRootId,
+            projectRootId,
+            "Kickoff recording",
+            "Discovery sync",
+            "Recording captured for transcript and LLM validation.",
+            [
+                new CanvasWorkbenchInputValue { Key = "recordingSource", Value = "Teams recording" },
+                new CanvasWorkbenchInputValue { Key = "storageReference", Value = "workspace://meetings/kickoff.mp4" },
+                new CanvasWorkbenchInputValue { Key = "durationMinutes", Value = "52" }
+            ]);
+
+        _ = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-transcript",
+            recordingId,
+            recordingId,
+            "Kickoff transcript",
+            "Discovery sync transcript",
+            string.Empty,
+            [
+                new CanvasWorkbenchInputValue { Key = "recordingRef", Value = recordingId },
+                new CanvasWorkbenchInputValue
+                {
+                    Key = "transcriptText",
+                    Value = "Alice: We need the toolbox redesign validated in the browser.\n" +
+                        "Bob: Export progress workbook and Gantt evidence from the same summary source.\n" +
+                        "Chris: Keep provider confirmation explicit before any transcript action."
+                }
+            ]);
+
+        var featureId = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-block-feature",
+            projectRootId,
+            projectRootId,
+            "Canvas editor rollout",
+            "Validation track",
+            "Use this branch for reconnect, summary, export, and delete confirmation evidence.");
+
+        _ = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-work-task",
+            featureId,
+            featureId,
+            "Capture screenshot evidence",
+            "QA stream",
+            "Capture the required evidence for the bundle.",
+            [
+                new CanvasWorkbenchInputValue { Key = "dueUtc", Value = "2026-04-10T15:00:00+00:00" }
+            ]);
+
+        _ = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-work-task",
+            featureId,
+            featureId,
+            "Export workbook and Gantt",
+            "Reporting",
+            "Use the progress summary modal exports for proof.",
+            [
+                new CanvasWorkbenchInputValue { Key = "dueUtc", Value = "2026-04-11T16:30:00+00:00" }
+            ]);
+
+        _ = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-work-task",
+            projectRootId,
+            projectRootId,
+            "Reconnect detached follow-up",
+            "Backlog",
+            "This task will be reparented into the feature branch.",
+            [
+                new CanvasWorkbenchInputValue { Key = "dueUtc", Value = "2026-04-12T12:00:00+00:00" }
+            ]);
+
+        _ = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-file-pdf",
+            projectRootId,
+            projectRootId,
+            "Architecture evidence PDF",
+            "docs/architecture",
+            "Typed PDF validation node.",
+            uploadedFile: BuildUploadedFile(
+                "architecture-evidence.pdf",
+                "application/pdf",
+                "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF"));
+
+        _ = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-file-excel",
+            projectRootId,
+            projectRootId,
+            "Validation workbook",
+            "reports",
+            "Typed spreadsheet validation node.",
+            uploadedFile: BuildUploadedFile(
+                "validation-workbook.csv",
+                "text/csv",
+                "name,status\nexports,ready\nsummary,ready"));
+
+        _ = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-file-docx",
+            projectRootId,
+            projectRootId,
+            "Project brief docx",
+            "docs/briefs",
+            "Typed docx validation node.",
+            uploadedFile: BuildUploadedFile(
+                "project-brief.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "Fake docx payload for UI evidence only."));
+
+        _ = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-file-text",
+            projectRootId,
+            projectRootId,
+            "Runbook text",
+            "docs/runbooks",
+            "Operator checklist and rollout notes.");
+
+        _ = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-file-json",
+            projectRootId,
+            projectRootId,
+            "Settings JSON",
+            "config",
+            "{\n  \"toolbox\": true,\n  \"validation\": \"strict\"\n}");
+
+        _ = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-file-markdown",
+            projectRootId,
+            projectRootId,
+            "Evidence README",
+            "docs",
+            "# Validation evidence\n\nCapture screenshots and exports.");
+
+        const string mermaidTitle = "Validation flow diagram";
+        const string mermaidNotes = "gantt\n" +
+            "    title Bundle validation timeline\n" +
+            "    dateFormat YYYY-MM-DD\n" +
+            "    section Evidence\n" +
+            "    Capture screenshots :done, a1, 2026-04-08, 2d\n" +
+            "    Export workbook :active, a2, 2026-04-10, 2d";
+        var mermaidId = await InvokeCreateActionAsync(
+            cut,
+            canvasWorkbench,
+            "add-file-mermaid",
+            projectRootId,
+            projectRootId,
+            mermaidTitle,
+            "docs/diagrams",
+            string.Empty,
+            [
+                new CanvasWorkbenchInputValue { Key = "mermaidText", Value = mermaidNotes }
+            ]);
+
+        cut.WaitForAssertion(() =>
+        {
+            var runtimeNode = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Id, mermaidId, StringComparison.Ordinal));
+            Assert.Equal(mermaidTitle, runtimeNode.Title);
+            Assert.Equal("Mermaid", runtimeNode.Kind);
+            Assert.Equal(mermaidNotes, runtimeNode.InlineText);
+        });
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        var persistedMermaidNode = Assert.Single(
+            persistedSurface.Nodes,
+            node => string.Equals(node.Id, mermaidId, StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.File, persistedMermaidNode.ObjectType);
+        Assert.Equal("mermaid", persistedMermaidNode.ObjectSubtype);
+        Assert.Equal(mermaidTitle, persistedMermaidNode.Title);
+        Assert.Equal(mermaidNotes, persistedMermaidNode.Notes);
     }
 
     [Fact]
@@ -862,12 +1080,63 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 }
             }.ToJson());
 
+    private static async Task<string> InvokeCreateActionAsync(
+        IRenderedComponent<ProjectStructurePage> cut,
+        IRenderedComponent<CanvasWorkbench> canvasWorkbench,
+        string actionId,
+        string sourceNodeId,
+        string parentNodeId,
+        string title,
+        string subtitle,
+        string notes,
+        IReadOnlyList<CanvasWorkbenchInputValue>? inputValues = null,
+        CanvasWorkbenchUploadedFile? uploadedFile = null)
+    {
+        var sourceNode = Assert.Single(
+            canvasWorkbench.Instance.Surface.Nodes,
+            node => string.Equals(node.Id, sourceNodeId, StringComparison.Ordinal));
+        var request = new CanvasWorkbenchCreateActionRequest(
+            actionId,
+            sourceNodeId,
+            sourceNode.X,
+            sourceNode.Y,
+            parentNodeId,
+            title,
+            subtitle,
+            notes,
+            "child",
+            uploadedFile is not null || inputValues?.Count > 0 ? "dialog" : "create",
+            string.Empty,
+            uploadedFile,
+            inputValues);
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(request)));
+
+        string createdNodeId = string.Empty;
+        cut.WaitForAssertion(() =>
+        {
+            createdNodeId = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Title, title, StringComparison.Ordinal)).Id;
+        });
+
+        return createdNodeId;
+    }
+
     private static IElement FindButtonByLabel(
         IRenderedFragment cut,
         string label,
         string selector = "button")
         => cut.FindAll(selector)
             .First(button => button.TextContent.Contains(label, StringComparison.Ordinal));
+
+    private static CanvasWorkbenchUploadedFile BuildUploadedFile(string fileName, string contentType, string content)
+        => new()
+        {
+            FileName = fileName,
+            ContentType = contentType,
+            Base64Data = Convert.ToBase64String(Encoding.UTF8.GetBytes(content))
+        };
 
     private static void WrapDbContextFactoryWithCreateCounter(IServiceCollection services)
     {

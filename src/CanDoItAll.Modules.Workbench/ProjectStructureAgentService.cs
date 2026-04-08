@@ -233,7 +233,7 @@ public sealed class ProjectStructureAgentService(
                     request.MetadataJson,
                     request.Notes,
                     request.Status,
-                    cancellationToken);
+                    cancellationToken: cancellationToken);
                 return MapRequiredNode(updatedNode, nodeId);
             },
             cancellationToken);

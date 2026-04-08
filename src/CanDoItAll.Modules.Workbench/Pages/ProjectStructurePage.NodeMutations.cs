@@ -41,10 +41,14 @@ public partial class ProjectStructurePage
 
     private async Task OpenBlockMutationDialogAsync(ProjectStructureNode node, ProjectStructureBlockMutationDialogMode mode)
     {
-        var options = ProjectStructureCanvasCatalog.BuildCommonBlockTypeOptions();
+        var options = mode == ProjectStructureBlockMutationDialogMode.ChangeBlockType
+            ? ProjectStructureCanvasCatalog.BuildCommonBlockTypeOptions()
+            : ProjectStructureCanvasCatalog.BuildNoteConversionOptions();
         if (options.Count == 0)
         {
-            workflowFeedback = "Common block types are not available on this canvas.";
+            workflowFeedback = mode == ProjectStructureBlockMutationDialogMode.ChangeBlockType
+                ? "Common block types are not available on this canvas."
+                : "Conversion targets are not available on this canvas.";
             workflowFeedbackTone = "warn";
             await InvokeAsync(StateHasChanged);
             return;
@@ -114,7 +118,7 @@ public partial class ProjectStructurePage
                 node.Notes,
                 "{}"),
             _ => new ProjectObjectReclassificationRequest(
-                ProjectObjectType.ProjectBlock,
+                definition.ObjectType,
                 definition.ObjectSubtype,
                 BuildSimpleNoteTitle(string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes),
                 string.Empty,

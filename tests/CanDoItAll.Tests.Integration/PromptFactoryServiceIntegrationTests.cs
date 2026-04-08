@@ -1,5 +1,6 @@
 using System.Data;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.BackgroundJobs;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Factory;
@@ -246,6 +247,51 @@ public sealed class PromptFactoryServiceIntegrationTests
         Assert.True(File.Exists(exportResult.Value));
         var markdown = await File.ReadAllTextAsync(exportResult.Value!);
         Assert.Contains("Architecture Lead", markdown, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task PromptFactory_does_not_use_legacy_background_queue_for_new_work()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var factory = scope.ServiceProvider.GetRequiredService<PromptFactoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var backgroundJobQueue = scope.ServiceProvider.GetRequiredService<IBackgroundJobQueue>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Prompt factory queue retirement");
+        var blueprint = (await factory.ListBlueprintsAsync()).Single(item => item.Key == "architecture-spec");
+        var flow = (await factory.ListTemplatesAsync()).Single(item => item.Key == "architecture-review-plan-implement-validate");
+        var recommendedIds = await factory.GetRecommendedBlockIdsAsync(blueprint.Id, flow.Id, "architecture");
+
+        var exportResult = await factory.ExportAsync(new PromptFactoryEditorModel
+        {
+            ProjectId = projectId,
+            SessionName = "Legacy queue retirement",
+            Phase = "architecture",
+            BlueprintId = blueprint.Id,
+            FlowTemplateId = flow.Id,
+            SelectedBlockIds = recommendedIds.ToList(),
+            DraftTitle = "Legacy queue retirement draft",
+            CanvasUiStateJson = "{}",
+            ComponentCustomizations = [],
+            SessionAttachments = []
+        });
+
+        Assert.True(exportResult.IsSuccess, string.Join(" ", exportResult.Errors.Select(error => error.Message)));
+
+        using var dequeueTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(150));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            async () => await backgroundJobQueue.DequeueAsync(dequeueTimeout.Token).AsTask());
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var trackedJob = (await dbContext.Set<BackgroundJobRecord>()
+                .Where(item => item.JobType == "prompt-export")
+                .ToListAsync())
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .First();
+
+        Assert.Equal(BackgroundJobState.Succeeded.ToString(), trackedJob.State);
     }
 
     private static async Task<HashSet<string>> ReadColumnNamesAsync(AppDbContext dbContext, string tableName)

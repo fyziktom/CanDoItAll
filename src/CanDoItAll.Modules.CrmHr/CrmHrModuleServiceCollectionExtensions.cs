@@ -14,8 +14,9 @@ public static class CrmHrModuleServiceCollectionExtensions
         services.AddScoped<HrService>();
         services.AddScoped<RecruitingService>();
         services.AddScoped<AiAgentService>();
+        services.AddScoped<ProjectPartyAssignmentNodePolicy>();
         services.AddScoped<ProjectPartyIntegrationService>();
-        services.AddScoped<IAutomationSignalProvider, CrmHrAutomationSignalProvider>();
+        services.AddScoped<IAutomationSignalSource, CrmHrAutomationSignalProvider>();
         services.AddScoped<IProjectPartyIntegrationBridge>(serviceProvider => serviceProvider.GetRequiredService<ProjectPartyIntegrationService>());
         return services;
     }

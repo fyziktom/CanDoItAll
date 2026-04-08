@@ -593,7 +593,7 @@ public sealed class AiAgentProfileEditorModel
 public sealed record AiProviderOptionModel(
     Guid Id,
     string Name,
-    ProviderKind ProviderKind,
+    string ProviderLabel,
     string DefaultModel,
     bool IsEnabled);
 
@@ -3922,15 +3922,16 @@ public sealed partial class AiAgentService(
             .ToListAsync(cancellationToken);
         var profile = await dbContext.Set<AiAgentProfile>()
             .SingleOrDefaultAsync(item => item.PartyId == partyId, cancellationToken);
-        var providerOptions = await dbContext.Set<ProviderProfile>()
+        var providerOptions = (await dbContext.Set<ProviderProfile>()
             .OrderBy(item => item.Name)
+            .ToListAsync(cancellationToken))
             .Select(item => new AiProviderOptionModel(
                 item.Id,
                 item.Name,
-                item.ProviderKind,
+                item.ProviderKind?.ToString() ?? item.ConnectorPluginKey,
                 item.DefaultModel,
                 item.IsEnabled))
-            .ToListAsync(cancellationToken);
+            .ToList();
         var ownerOptions = await dbContext.Set<Party>()
             .Where(item => item.Id != partyId && item.PartyType == PartyType.Person)
             .OrderBy(item => item.DisplayName)
@@ -4226,7 +4227,7 @@ public sealed partial class AiAgentService(
 public sealed class ProjectPartyIntegrationService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     PartyDirectoryService partyDirectoryService,
-    IProjectNodeScopeBridge projectNodeScopeBridge) : IProjectPartyIntegrationBridge
+    ProjectPartyAssignmentNodePolicy projectPartyAssignmentNodePolicy) : IProjectPartyIntegrationBridge
 {
     public async Task<IReadOnlyList<ProjectPartyAssignmentSummaryModel>> ListAssignmentsAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
@@ -4449,10 +4450,20 @@ public sealed class ProjectPartyIntegrationService(
         }
 
         var normalizedNodeKey = request.NodeKey?.Trim() ?? string.Empty;
-        var nodeScopeError = await ValidateNodeScopeAsync(request.Role, request.ProjectId, normalizedNodeKey, cancellationToken);
+        var (nodeScope, nodeScopeError) = await projectPartyAssignmentNodePolicy.ResolveScopeAsync(
+            request.ProjectId,
+            normalizedNodeKey,
+            [request.Role],
+            allowUnresolvedNamedScope: true,
+            cancellationToken);
         if (nodeScopeError is not null)
         {
             return Result<Guid>.Failure(nodeScopeError);
+        }
+        var roleError = projectPartyAssignmentNodePolicy.ValidateRole(request.Role, nodeScope);
+        if (roleError is not null)
+        {
+            return Result<Guid>.Failure(roleError);
         }
 
         var assignmentKind = MapRole(request.Role);
@@ -4543,6 +4554,17 @@ public sealed class ProjectPartyIntegrationService(
                 "crmhr.project-assignment.target-role-mismatch"));
         }
 
+        var (nodeScope, nodeScopeError) = await projectPartyAssignmentNodePolicy.ResolveScopeAsync(
+            projectId,
+            normalizedNodeKey,
+            targetRoleSet.ToList(),
+            allowUnresolvedNamedScope: false,
+            cancellationToken);
+        if (nodeScopeError is not null)
+        {
+            return Result.Failure(nodeScopeError);
+        }
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var projectExists = await dbContext.Set<Project>()
             .AnyAsync(item => item.Id == projectId, cancellationToken);
@@ -4591,14 +4613,10 @@ public sealed class ProjectPartyIntegrationService(
                     "crmhr.project-assignment.node-mismatch"));
             }
 
-            var nodeScopeError = await ValidateNodeScopeAsync(
-                desiredAssignment.Role,
-                projectId,
-                normalizedNodeKey,
-                cancellationToken);
-            if (nodeScopeError is not null)
+            var roleError = projectPartyAssignmentNodePolicy.ValidateRole(desiredAssignment.Role, nodeScope);
+            if (roleError is not null)
             {
-                return Result.Failure(nodeScopeError);
+                return Result.Failure(roleError);
             }
         }
 
@@ -4882,56 +4900,6 @@ public sealed class ProjectPartyIntegrationService(
             ProjectPartyAssignmentRole.AiAgent => ProjectPartyAssignmentKind.AiAgent,
             ProjectPartyAssignmentRole.BillingContact => ProjectPartyAssignmentKind.BillingContact,
             _ => ProjectPartyAssignmentKind.TechnicalContact
-        };
-    }
-
-    private async Task<Error?> ValidateNodeScopeAsync(
-        ProjectPartyAssignmentRole role,
-        Guid projectId,
-        string nodeKey,
-        CancellationToken cancellationToken)
-    {
-        if (!RequiresCanonicalNode(role))
-        {
-            return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(nodeKey))
-        {
-            return Error.Validation("A node is required for this assignment.", "crmhr.project-assignment.node-required");
-        }
-
-        var nodeScope = await projectNodeScopeBridge.ResolveAsync(
-            projectId,
-            new ProjectNodeReference(nodeKey),
-            cancellationToken);
-        if (!nodeScope.ExistsInProject)
-        {
-            return nodeScope.ExistsInOtherProject
-                ? Error.Validation("The selected node belongs to another project.", "crmhr.project-assignment.node-project-mismatch")
-                : Error.Validation("The selected node was not found.", "crmhr.project-assignment.node-not-found");
-        }
-
-        if (nodeScope.ObjectType is null || !IsAllowedNodeType(role, nodeScope.ObjectType.Value))
-        {
-            return Error.Validation("The selected node does not allow this assignment role.", "crmhr.project-assignment.node-role-not-allowed");
-        }
-
-        return null;
-    }
-
-    private static bool RequiresCanonicalNode(ProjectPartyAssignmentRole role)
-    {
-        return role is ProjectPartyAssignmentRole.MeetingParticipant or ProjectPartyAssignmentRole.WorkItemAssignee;
-    }
-
-    private static bool IsAllowedNodeType(ProjectPartyAssignmentRole role, ProjectObjectType objectType)
-    {
-        return role switch
-        {
-            ProjectPartyAssignmentRole.MeetingParticipant => objectType == ProjectObjectType.Meeting,
-            ProjectPartyAssignmentRole.WorkItemAssignee => objectType == ProjectObjectType.WorkItem,
-            _ => true
         };
     }
 

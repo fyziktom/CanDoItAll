@@ -1,5 +1,7 @@
 @namespace CanDoItAll.Components.BaseLib
-<span class="@ResolveCssClass()">@Text</span>
+@inherits StyledComponentBase
+
+<span @attributes='BuildAttributes(ResolveCssClass(), ResolveBadgeStyle())'>@Text</span>
 
 @code {
     [Parameter, EditorRequired]
@@ -36,6 +38,9 @@
 
         return $"cda-status-badge {toneCss}";
     }
+
+    private static string ResolveBadgeStyle()
+        => "max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:center;";
 }
 
 

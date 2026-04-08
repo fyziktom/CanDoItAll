@@ -37,6 +37,9 @@ else
     public bool Section { get; set; }
 
     [Parameter]
+    public bool FillHeight { get; set; }
+
+    [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
     private string ResolveStackStyle()
@@ -72,7 +75,23 @@ else
                 ? "0"
                 : Gap;
 
-        return $"display:flex;flex-direction:{direction};align-items:{align};justify-content:{justify};flex-wrap:{wrap};gap:{gap};";
+        var styles = new List<string>
+        {
+            "display:flex",
+            $"flex-direction:{direction}",
+            $"align-items:{align}",
+            $"justify-content:{justify}",
+            $"flex-wrap:{wrap}",
+            $"gap:{gap}"
+        };
+
+        if (FillHeight)
+        {
+            styles.Add("height:100%");
+            styles.Add("min-height:0");
+        }
+
+        return string.Join(';', styles) + ';';
     }
 }
 

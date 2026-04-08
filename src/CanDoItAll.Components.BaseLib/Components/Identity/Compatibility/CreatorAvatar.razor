@@ -1,11 +1,13 @@
 @namespace CanDoItAll.Components.BaseLib
 
 <Avatar Class="@Class"
-        ImageUrl="@ImageUrl"
-        Alt="@Alt"
-        FallbackText="@FallbackText"
-        Size="AvatarSize.Medium"
-        Shape="AvatarShape.Rounded" />
+ImageUrl="@ImageUrl"
+Alt="@Alt"
+FallbackText="@FallbackText"
+DefaultImageSeed="@DefaultImageSeed"
+UseDefaultImageWhenMissing="@UseDefaultImageWhenMissing"
+Size="AvatarSize.Medium"
+Shape="AvatarShape.Rounded" />
 
 @code {
     [Parameter]
@@ -17,6 +19,12 @@
     [Parameter]
     public string? Alt { get; set; }
 
-    [Parameter]
-    public string? FallbackText { get; set; }
+[Parameter]
+public string? FallbackText { get; set; }
+
+[Parameter]
+public string? DefaultImageSeed { get; set; }
+
+[Parameter]
+public bool UseDefaultImageWhenMissing { get; set; } = true;
 }

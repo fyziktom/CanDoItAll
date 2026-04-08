@@ -57,7 +57,7 @@ public partial class ProjectStructurePage
             return null;
         }
 
-        var storage = FindStorageCatalog(metadata.Infrastructure.StorageCatalogId);
+        var storage = FindStorageCatalog(node.NodeReferences?.InfrastructureStorageCatalogId);
         return new StorageSummaryModel
         {
             Eyebrow = "Infrastructure storage lane",

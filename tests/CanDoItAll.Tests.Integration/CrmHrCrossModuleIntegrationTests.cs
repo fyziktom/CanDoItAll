@@ -6,6 +6,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Validation;
+using CanDoItAll.Modules.Workspace;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
@@ -214,9 +215,13 @@ public sealed class CrmHrCrossModuleIntegrationTests
             ProjectId = projectId,
             OwnerPartyId = ownerId,
             MaintainerPartyId = maintainerId,
-            ResourceKind = ResourceKind.Folder,
+            ConnectorPluginKey = "resource.folder",
+            ConfigSchemaVersion = "1.0",
             Name = "Implementation notes",
-            FolderPath = @"C:\repositories\CanDoItAll\docs\implementation",
+            Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["folderPath"] = @"C:\repositories\CanDoItAll\docs\implementation"
+            }),
             ValidationStatus = ResourceValidationStatus.Valid,
             Sensitivity = ResourceSensitivity.Normal,
             SupportsPreview = true,

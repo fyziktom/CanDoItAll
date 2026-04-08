@@ -1,10 +1,12 @@
 @namespace CanDoItAll.Components.BaseLib
-<div class="@ResolveContainerClass()">
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes(ResolveContainerClass(), ResolveContainerStyle())'>
     @if (Header is not null)
     {
         <Stack GapScale="LayoutGap.Medium"
                AlignItems="AlignItems.Stretch"
-               Class="w-full">
+               Class="@ResolveHeaderClass()">
             @Header
         </Stack>
     }
@@ -13,7 +15,7 @@
     {
         <Stack GapScale="LayoutGap.Large"
                AlignItems="AlignItems.Stretch"
-               Class="w-full">
+               Class="@ResolveLeadClass()">
             @Lead
         </Stack>
     }
@@ -21,15 +23,17 @@
     @if (SecondaryRail is not null)
     {
         <Grid Gap="LayoutGap.XXLarge"
+              Class="@ResolveScaffoldGridClass()"
               ColumnTemplate2Xl="minmax(0,1fr) 18rem">
             <Stack GapScale="LayoutGap.XXLarge"
                    AlignItems="AlignItems.Stretch"
-                   Class="min-w-0 w-full">
+                   Class="@ResolvePrimaryContentClass()">
                 @ChildContent
             </Stack>
 
             <Stack Section="true"
-                   GapScale="LayoutGap.Large">
+                   GapScale="LayoutGap.Large"
+                   Class="@ResolveSecondaryRailClass()">
                 @SecondaryRail
             </Stack>
         </Grid>
@@ -38,7 +42,7 @@
     {
         <Stack GapScale="LayoutGap.XXLarge"
                AlignItems="AlignItems.Stretch"
-               Class="w-full">
+               Class="@ResolvePrimaryContentClass()">
             @ChildContent
         </Stack>
     }
@@ -50,6 +54,9 @@
 
     [Parameter]
     public string? MaxWidthClass { get; set; }
+
+    [Parameter]
+    public bool FillHeight { get; set; }
 
     [Parameter]
     public RenderFragment? Header { get; set; }
@@ -72,8 +79,45 @@
                 : "max-w-[1720px] 2xl:max-w-[1820px]";
 
         var spacingClass = Mode == PageScaffoldMode.FocusWorkbench ? "gap-3" : "gap-3.5 xl:gap-4";
-        return $"mx-auto flex w-full min-w-0 flex-col {spacingClass} {maxWidthClass}";
+        return CssClassBuilder.Join(
+            "mx-auto flex h-full min-h-0 w-full min-w-0 flex-col",
+            spacingClass,
+            maxWidthClass,
+            FillHeight ? "flex-1 overflow-hidden" : "overflow-y-auto");
     }
+
+    private string ResolveContainerStyle()
+    {
+        var styles = new List<string>
+        {
+            "height:100%",
+            "min-height:0"
+        };
+
+        if (!FillHeight)
+        {
+            styles.Add("scrollbar-gutter:stable");
+        }
+
+        return string.Join(';', styles) + ';';
+    }
+
+    private string ResolveHeaderClass()
+        => FillHeight ? "w-full shrink-0" : "w-full";
+
+    private string ResolveLeadClass()
+        => FillHeight ? "w-full shrink-0" : "w-full";
+
+    private string ResolveScaffoldGridClass()
+        => FillHeight ? "min-h-0 flex-1 overflow-hidden" : string.Empty;
+
+    private string ResolvePrimaryContentClass()
+        => CssClassBuilder.Join(
+            "min-w-0 w-full",
+            FillHeight ? "min-h-0 flex-1 overflow-hidden" : null);
+
+    private string ResolveSecondaryRailClass()
+        => FillHeight ? "min-h-0 overflow-hidden" : string.Empty;
 }
 
 

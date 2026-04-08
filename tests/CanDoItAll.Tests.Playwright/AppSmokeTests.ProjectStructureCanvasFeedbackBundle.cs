@@ -203,7 +203,7 @@ public sealed partial class AppSmokeTests
         await ClickSelectionWindowActionAsync(page, "Copy tree ids");
         await WaitForCanvasClipboardTextAsync(
             page,
-            $"{copyRootId}\n  {copyChildId}\n    {copyGrandchildId}");
+            $"{BuildClipboardTreeEntry("router", "Network hub", copyRootId)}\n  {BuildClipboardTreeEntry("wifi", "Office WiFi", copyChildId)}\n    {BuildClipboardTreeEntry("task", "Survey AP layout", copyGrandchildId)}");
 
         var mutableBlockId = await InvokeStructureCreateActionAsync(
             page,
@@ -233,8 +233,7 @@ public sealed partial class AppSmokeTests
             node => string.Equals(node.PaletteKey, "info", StringComparison.Ordinal) &&
                 string.Equals(node.Title, "Mutable delivery block", StringComparison.Ordinal),
             "block changed to router");
-        await page.GetByTestId("project-structure-selection-window")
-            .GetByText("Router block", new LocatorGetByTextOptions { Exact = true })
+        await page.GetByTestId("project-structure-selection-badge-router-block")
             .WaitForAsync();
         Assert.Equal("info", changedBlock.PaletteKey);
 
@@ -265,12 +264,12 @@ public sealed partial class AppSmokeTests
                 string.Equals(NormalizeLineEndings(node.Title), "Site survey\nCheck AP placement", StringComparison.Ordinal),
             "multiline note stored");
 
-        await ClickSelectionWindowActionAsync(page, "Convert to block");
+        await ClickSelectionWindowActionAsync(page, "Convert");
         blockMutationDialog = page.GetByTestId("project-structure-block-mutation-dialog");
         await blockMutationDialog.WaitForAsync();
         blockMutationSelect = blockMutationDialog.Locator("[data-testid='project-structure-block-mutation-select']");
-        await blockMutationSelect.SelectOptionAsync("add-block-deployment");
-        Assert.Equal("add-block-deployment", await blockMutationSelect.InputValueAsync());
+        await blockMutationSelect.SelectOptionAsync("add-work-task");
+        Assert.Equal("add-work-task", await blockMutationSelect.InputValueAsync());
         await CaptureLocatorAsync(blockMutationDialog, Path.Combine(artifactsDir, "04-convert-note-dialog.png"));
         await blockMutationDialog
             .GetByTestId("project-structure-block-mutation-submit")
@@ -281,16 +280,12 @@ public sealed partial class AppSmokeTests
             page,
             noteId,
             node => !node.IsInlineTextNode &&
-                string.Equals(node.PaletteKey, "info", StringComparison.Ordinal) &&
+                string.Equals(node.PaletteKey, "warning", StringComparison.Ordinal) &&
                 string.Equals(node.Title, "Site survey", StringComparison.Ordinal),
-            "note converted to deployment block");
-        await page.GetByTestId("project-structure-selection-window")
-            .GetByText("Deployment block", new LocatorGetByTextOptions { Exact = true })
+            "note converted to task");
+        await page.GetByTestId("project-structure-selection-badge-task")
             .WaitForAsync();
-        Assert.Equal("info", convertedNote.PaletteKey);
-        await page.GetByTestId("project-structure-selection-window")
-            .GetByRole(AriaRole.Button, new() { Name = "Change block", Exact = true })
-            .WaitForAsync();
+        Assert.Equal("warning", convertedNote.PaletteKey);
 
         await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "05-mutation-results.png"));
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
@@ -606,6 +601,56 @@ public sealed partial class AppSmokeTests
 
         throw new InvalidOperationException(
             $"Timed out waiting for clipboard text containing '{normalizedFragment}'. Last value was '{lastValue ?? string.Empty}'.");
+    }
+
+    private static string BuildClipboardTreeEntry(string typeToken, string title, string nodeId)
+    {
+        return $"{typeToken}_{SanitizeClipboardTitle(title)}:{ExtractClipboardNodeHash(nodeId)}";
+    }
+
+    private static string SanitizeClipboardTitle(string title)
+    {
+        var builder = new System.Text.StringBuilder(title.Length);
+        var previousWasSeparator = false;
+        foreach (var character in title.Trim())
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(character);
+                previousWasSeparator = false;
+                continue;
+            }
+
+            if (builder.Length == 0 || previousWasSeparator)
+            {
+                continue;
+            }
+
+            builder.Append('-');
+            previousWasSeparator = true;
+        }
+
+        while (builder.Length > 0 && builder[^1] == '-')
+        {
+            builder.Length--;
+        }
+
+        return builder.Length == 0
+            ? "Untitled"
+            : builder.ToString();
+    }
+
+    private static string ExtractClipboardNodeHash(string nodeId)
+    {
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            return string.Empty;
+        }
+
+        var separatorIndex = nodeId.LastIndexOf(':');
+        return separatorIndex >= 0 && separatorIndex < nodeId.Length - 1
+            ? nodeId[(separatorIndex + 1)..]
+            : nodeId;
     }
 
     private static async Task<string> ReadNodeAccentColorAsync(IPage page, string nodeId)

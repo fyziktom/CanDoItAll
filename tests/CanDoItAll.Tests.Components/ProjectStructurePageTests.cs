@@ -40,7 +40,6 @@ public sealed class ProjectStructurePageTests
         var metadata = new ProjectObjectMetadataEnvelope {
             Infrastructure = new ProjectInfrastructureMetadata {
                 InfrastructureKind = ProjectInfrastructureKind.StorageSystem,
-                StorageCatalogId = storageSave.Value,
                 StoragePurpose = nameof(StorageUsagePurpose.ProjectAsset),
                 StoragePathPrefix = "projects/component-tests/assets",
                 ConnectionReference = "/storage/assets"
@@ -61,7 +60,12 @@ public sealed class ProjectStructurePageTests
                 null,
                 "storage-system",
                 null,
-                ProjectObjectMetadataSerializer.Serialize(metadata)));
+                ProjectObjectMetadataSerializer.Serialize(metadata),
+                null,
+                new ProjectNodeReferenceCollection
+                {
+                    InfrastructureStorageCatalogId = storageSave.Value
+                }));
 
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
@@ -1029,6 +1033,85 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Summary_dialog_can_export_workbook_and_then_gantt_from_the_same_open_dialog()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Sequential summary exports");
+        var feature = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Execution feature",
+                "Delivery branch",
+                "Use this node as the summary root.",
+                $"project:{projectId}",
+                520,
+                240,
+                null,
+                null,
+                "feature"));
+        _ = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Ship checklist",
+                "Ready for release",
+                "Confirm the rollout tasks.",
+                feature.Id,
+                780,
+                340,
+                new DateTimeOffset(2026, 3, 28, 9, 0, 0, TimeSpan.Zero),
+                new DateTimeOffset(2026, 3, 29, 18, 0, 0, TimeSpan.Zero),
+                "task"));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, feature.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Execution feature", cut.Markup);
+            Assert.Contains(">Summary<", cut.Markup);
+        });
+
+        FindButtonByLabel(cut, "Summary").Click();
+        cut.WaitForAssertion(() => Assert.Contains("Export XLSX", cut.Markup));
+
+        FindButtonByLabel(cut, "Export XLSX").Click();
+        cut.WaitForAssertion(() =>
+            Assert.Contains("was exported as an Excel attachment.", cut.Markup));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Export XLSX", cut.Markup);
+            Assert.Contains("Export Gantt", cut.Markup);
+        });
+
+        FindButtonByLabel(cut, "Export Gantt").Click();
+        cut.WaitForAssertion(() =>
+            Assert.Contains("was exported as a Mermaid Gantt node.", cut.Markup));
+
+        var updatedSurface = await workbenchService.GetStructureAsync(projectId);
+        var workbookNode = Assert.Single(
+            updatedSurface.Nodes,
+            node => node.ObjectType == ProjectObjectType.File &&
+                    string.Equals(node.ObjectSubtype, "excel", StringComparison.Ordinal) &&
+                    string.Equals(node.ParentId, feature.Id, StringComparison.Ordinal));
+        var ganttNode = Assert.Single(
+            updatedSurface.Nodes,
+            node => node.ObjectType == ProjectObjectType.File &&
+                    string.Equals(node.ObjectSubtype, "mermaid", StringComparison.Ordinal) &&
+                    string.Equals(node.ParentId, feature.Id, StringComparison.Ordinal));
+
+        Assert.Equal("Execution feature progress workbook", workbookNode.Title);
+        Assert.Equal("Execution feature gantt", ganttNode.Title);
+    }
+
+    [Fact]
     public async Task Selected_mermaid_nodes_open_viewer_modal_with_detected_diagram_type()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -1112,10 +1195,14 @@ public sealed class ProjectStructurePageTests
         var providerSave = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = "Local llama",
-            ProviderKind = ProviderKind.OllamaLocal,
-            BaseUrl = "http://localhost:11434",
-            DefaultModel = "llama3.1",
-            TimeoutSeconds = 30,
+            ConnectorPluginKey = OllamaProviderAdapter.PluginKey,
+            ConfigSchemaVersion = "1.0",
+            Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["baseUrl"] = "http://localhost:11434",
+                ["defaultModel"] = "llama3.1",
+                ["timeoutSeconds"] = "30"
+            }),
             IsEnabled = true
         });
 
@@ -1623,8 +1710,7 @@ public sealed class ProjectStructurePageTests
                         ProjectPath = @"C:\repos\api\Api.csproj",
                         LaunchProfileName = "https",
                         RuntimeProtocol = ProjectRuntimeProtocol.Https,
-                        LocalhostUrl = "https://localhost:7143",
-                        RepositoryResourceId = Guid.NewGuid()
+                        LocalhostUrl = "https://localhost:7143"
                     }
                 })));
 
@@ -2032,7 +2118,7 @@ public sealed class ProjectStructurePageTests
 
         Assert.NotNull(adaptedNode.CompactPath);
         Assert.DoesNotContain(@"C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench", adaptedNode.LeadText, StringComparison.Ordinal);
-        Assert.Contains("Mode: git", adaptedNode.LeadText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("URL: https://github.com/example/CanDoItAll", adaptedNode.LeadText, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, adaptedNode.CompactPath!.PromotedText);
     }
 

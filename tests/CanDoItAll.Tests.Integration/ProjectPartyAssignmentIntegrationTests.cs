@@ -204,6 +204,83 @@ public sealed class ProjectPartyAssignmentIntegrationTests
         Assert.Contains(invalidWorkItemRole.Errors, error => error.Code == "crmhr.project-assignment.node-role-not-allowed");
     }
 
+    [Fact]
+    public async Task Bridge_rejects_projection_only_node_targets_and_uses_participant_capabilities_for_optional_node_scope()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Participant role policy");
+        var teamMemberId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Taylor Team Member");
+        var partnerId = await CreatePartyAsync(partyDirectoryService, PartyType.Organization, "Partner Org");
+        var participantNode = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Participant,
+                "Freelancer node",
+                string.Empty,
+                "Participant node for optional node scope validation.",
+                null,
+                420,
+                260,
+                null,
+                null,
+                "freelancer"));
+
+        var projectionOnlyResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = teamMemberId,
+            Role = ProjectPartyAssignmentRole.TeamMember,
+            NodeKey = $"project:{projectId}",
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.False(projectionOnlyResult.IsSuccess);
+        Assert.Contains(projectionOnlyResult.Errors, error => error.Code == "crmhr.project-assignment.node-projection-not-allowed");
+
+        var invalidParticipantRole = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = partnerId,
+            Role = ProjectPartyAssignmentRole.Partner,
+            NodeKey = participantNode.Id,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.False(invalidParticipantRole.IsSuccess);
+        Assert.Contains(invalidParticipantRole.Errors, error => error.Code == "crmhr.project-assignment.node-role-not-allowed");
+
+        var validParticipantRole = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = teamMemberId,
+            Role = ProjectPartyAssignmentRole.TeamMember,
+            NodeKey = participantNode.Id,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(validParticipantRole.IsSuccess);
+
+        var projectLevelRole = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = teamMemberId,
+            Role = ProjectPartyAssignmentRole.TeamMember,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(projectLevelRole.IsSuccess);
+    }
+
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {
         var result = await projectsService.SaveAsync(new ProjectEditorModel

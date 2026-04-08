@@ -295,9 +295,12 @@ public partial class ProjectStructurePage
         {
             Transcript = new ProjectTranscriptMetadata
             {
-                RecordingNodeArtifactId = recordingArtifactId,
                 TranscriptText = string.Empty
             }
+        };
+        var nodeReferences = new ProjectNodeReferenceCollection
+        {
+            TranscriptRecordingNodeId = recordingArtifactId
         };
 
         var created = await ProjectWorkbenchService.CreateObjectAsync(
@@ -314,7 +317,9 @@ public partial class ProjectStructurePage
                 null,
                 string.Empty,
                 null,
-                ProjectObjectMetadataSerializer.Serialize(metadata)));
+                ProjectObjectMetadataSerializer.Serialize(metadata),
+                null,
+                nodeReferences));
 
         await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, targetNode.Id, created.Id, ProjectObjectLinkKind.DerivedFrom);
         await ReloadSurfaceAsync(created.Id);
@@ -332,7 +337,7 @@ public partial class ProjectStructurePage
         var providers = (await WorkspaceService.ListProviderProfilesAsync())
             .Where(profile => profile.IsEnabled)
             .ToList();
-        var selectedProviderId = metadata.Transcript?.LastProviderProfileId ?? providers.FirstOrDefault()?.Id;
+        var selectedProviderId = transcriptNode.NodeReferences?.TranscriptProviderProfileId ?? providers.FirstOrDefault()?.Id;
 
         pendingTranscriptAction = new ProjectStructureTranscriptActionDialogState(
             transcriptNode.Id,
@@ -402,9 +407,10 @@ public partial class ProjectStructurePage
         metadata.Transcript ??= new ProjectTranscriptMetadata();
         metadata.Transcript.TranscriptText = transcriptText;
         metadata.Transcript.LastActionKind = pendingTranscriptAction.ActionKind;
-        metadata.Transcript.LastProviderProfileId = provider.Id;
         metadata.Transcript.LastProviderName = provider.Name;
         metadata.Transcript.LastGeneratedAtUtc = DateTimeOffset.UtcNow;
+        var updatedReferences = transcriptNode.NodeReferences?.Clone() ?? new ProjectNodeReferenceCollection();
+        updatedReferences.TranscriptProviderProfileId = provider.Id;
 
         switch (pendingTranscriptAction.ActionKind)
         {
@@ -423,7 +429,8 @@ public partial class ProjectStructurePage
             ProjectId,
             transcriptNode.Id,
             ProjectObjectMetadataSerializer.Serialize(metadata),
-            status: "Review");
+            status: "Review",
+            nodeReferences: updatedReferences);
 
         workflowFeedback = $"{ResolveTranscriptActionLabel(pendingTranscriptAction.ActionKind)} completed through {provider.Name}.";
         workflowFeedbackTone = result.Value.ContainsWarnings ? "warn" : "mint";

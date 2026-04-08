@@ -2,6 +2,7 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Security
+@using CanDoItAll.Modules.Workspace.Pages.Components
 @inject ResourcesService ResourcesService
 @inject ProjectsService ProjectsService
 @inject SecretService SecretService
@@ -43,11 +44,11 @@
                                     <option value="@project.Id.ToString()">@project.Name</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="kindFilter" class="cda-input">
-                                <option value="">All kinds</option>
-                                @foreach (var kind in Enum.GetValues<ResourceKind>())
+                            <InputSelect @bind-Value="connectorFilter" class="cda-input">
+                                <option value="">All connectors</option>
+                                @foreach (var manifest in resourceManifests)
                                 {
-                                    <option value="@kind.ToString()">@kind</option>
+                                    <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                 }
                             </InputSelect>
                             <InputSelect @bind-Value="validationFilter" class="cda-input">
@@ -80,7 +81,7 @@
                         @foreach (var resource in FilteredResources)
                         {
                             <SelectionListItem Title="@resource.Name"
-                                               Eyebrow="@resource.ResourceKind.ToString()"
+                                               Eyebrow="@resource.ConnectorDisplayName"
                                                Meta="@BuildResourceMeta(resource)"
                                                Summary="@resource.LocationOrIdentifier"
                                                IsSelected="@(editor.Id == resource.Id)"
@@ -104,7 +105,7 @@
                         </Stack>
                         <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Tone="@ResolveTone(editor.ValidationStatus)" Text="@editor.ValidationStatus.ToString()" />
-                            <StatusBadge Tone="neutral" Text="@editor.ResourceKind.ToString()" />
+                            <StatusBadge Tone="neutral" Text="@SelectedResourceConnectorLabel" />
                             @if (!string.IsNullOrWhiteSpace(SelectedProjectName))
                             {
                                 <StatusBadge Tone="info" Text="@SelectedProjectName" />
@@ -112,17 +113,21 @@
                         </Cluster>
                     </Split>
 
-                    <Alert AlertStyle="AlertStyle.Info">
-                        <p class="font-semibold">@Descriptor.DisplayName</p>
-                        <p class="mt-1">@Descriptor.Summary</p>
-                    </Alert>
+                    @if (SelectedResourceManifest is not null)
+                    {
+                        <Alert AlertStyle="AlertStyle.Info">
+                            <p class="font-semibold">@SelectedResourceManifest.DisplayName</p>
+                            <p class="mt-1 break-all">Plugin key: @SelectedResourceManifest.PluginKey</p>
+                            <p class="mt-1">@SelectedResourceManifest.HealthCheck.Summary</p>
+                        </Alert>
+                    }
                 </Stack>
             </DetailHeader>
 
             <DetailContent>
                 <EditForm Model="editor" OnValidSubmit="SaveAsync">
                     <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
-                        <FormSection Title="Identity and ownership" Description="Link the resource to the correct project and choose its typed shape before editing connector fields.">
+                        <FormSection Title="Identity and ownership" Description="Link the resource to the correct project and choose the connector plugin before editing manifest fields.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">Project</label>
@@ -135,11 +140,11 @@
                                     </InputSelect>
                                 </div>
                                 <div>
-                                    <label class="cda-field-label">Kind</label>
-                                    <InputSelect @bind-Value="editor.ResourceKind" class="cda-input" data-testid="resource-kind-select">
-                                        @foreach (var kind in Enum.GetValues<ResourceKind>())
+                                    <label class="cda-field-label">Connector plugin</label>
+                                    <InputSelect @bind-Value="editor.ConnectorPluginKey" class="cda-input" data-testid="resource-plugin-select" @bind-Value:after="HandleConnectorPluginChangedAsync">
+                                        @foreach (var manifest in resourceManifests)
                                         {
-                                            <option value="@kind">@kind</option>
+                                            <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                         }
                                     </InputSelect>
                                 </div>
@@ -186,148 +191,17 @@
                             </Grid>
                         </FormSection>
 
-                        <FormSection Title="Location and connector details" Description="The typed editor only shows the fields that matter for the selected resource kind.">
-                            @switch (editor.ResourceKind)
-                            {
-                                case ResourceKind.Repository:
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="3">
-                                        <div class="md:col-span-2">
-                                            <label class="cda-field-label">Repository URL</label>
-                                            <InputText @bind-Value="editor.RepositoryUrl" class="cda-input" data-testid="resource-primary-input" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Default branch</label>
-                                            <InputText @bind-Value="editor.DefaultBranch" class="cda-input" />
-                                        </div>
-                                    </Grid>
-                                    <div>
-                                        <label class="cda-field-label">Relative path</label>
-                                        <InputText @bind-Value="editor.RelativePath" class="cda-input" />
-                                    </div>
-                                    break;
-                                case ResourceKind.Folder:
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                        <div>
-                                            <label class="cda-field-label">Folder path</label>
-                                            <InputText @bind-Value="editor.FolderPath" class="cda-input" data-testid="resource-primary-input" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Working directory</label>
-                                            <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
-                                        </div>
-                                    </Grid>
-                                    break;
-                                case ResourceKind.File:
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                        <div>
-                                            <label class="cda-field-label">File path</label>
-                                            <InputText @bind-Value="editor.FilePath" class="cda-input" data-testid="resource-primary-input" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Working directory</label>
-                                            <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
-                                        </div>
-                                    </Grid>
-                                    break;
-                                case ResourceKind.WebLink:
-                                    <Grid Gap="LayoutGap.Large">
-                                        <div>
-                                            <label class="cda-field-label">URL</label>
-                                            <InputText @bind-Value="editor.WebUrl" class="cda-input" data-testid="resource-primary-input" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Title hint</label>
-                                            <InputText @bind-Value="editor.UrlTitleHint" class="cda-input" />
-                                        </div>
-                                    </Grid>
-                                    break;
-                                case ResourceKind.Ftp:
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="4">
-                                        <div class="md:col-span-2">
-                                            <label class="cda-field-label">Host</label>
-                                            <InputText @bind-Value="editor.Host" class="cda-input" data-testid="resource-primary-input" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Port</label>
-                                            <InputNumber @bind-Value="editor.Port" class="cda-input" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">User</label>
-                                            <InputText @bind-Value="editor.UserName" class="cda-input" />
-                                        </div>
-                                    </Grid>
-                                    <div>
-                                        <label class="cda-field-label">Remote path</label>
-                                        <InputText @bind-Value="editor.RemotePath" class="cda-input" />
-                                    </div>
-                                    break;
-                                case ResourceKind.Ssh:
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="4">
-                                        <div class="md:col-span-2">
-                                            <label class="cda-field-label">Host</label>
-                                            <InputText @bind-Value="editor.Host" class="cda-input" data-testid="resource-primary-input" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Port</label>
-                                            <InputNumber @bind-Value="editor.Port" class="cda-input" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">User</label>
-                                            <InputText @bind-Value="editor.UserName" class="cda-input" />
-                                        </div>
-                                    </Grid>
-                                    <div>
-                                        <label class="cda-field-label">Working directory</label>
-                                        <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
-                                    </div>
-                                    break;
-                                case ResourceKind.PowerShellScript:
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                        <div>
-                                            <label class="cda-field-label">Script path</label>
-                                            <InputText @bind-Value="editor.ScriptPath" class="cda-input" data-testid="resource-primary-input" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Working directory</label>
-                                            <InputText @bind-Value="editor.WorkingDirectory" class="cda-input" />
-                                        </div>
-                                    </Grid>
-                                    <div>
-                                        <label class="cda-field-label">Arguments</label>
-                                        <InputText @bind-Value="editor.ScriptArguments" class="cda-input" />
-                                    </div>
-                                    break;
-                                case ResourceKind.DockerCompose:
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                        <div>
-                                            <label class="cda-field-label">Compose file</label>
-                                            <InputText @bind-Value="editor.ComposeFilePath" class="cda-input" data-testid="resource-primary-input" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Service name</label>
-                                            <InputText @bind-Value="editor.ComposeService" class="cda-input" />
-                                        </div>
-                                    </Grid>
-                                    break;
-                                case ResourceKind.SecretLink:
-                                    <div>
-                                        <label class="cda-field-label">Secret purpose</label>
-                                        <InputText @bind-Value="editor.SecretPurpose" class="cda-input" data-testid="resource-primary-input" />
-                                    </div>
-                                    break;
-                                case ResourceKind.PromptLink:
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                        <div>
-                                            <label class="cda-field-label">Prompt reference</label>
-                                            <InputText @bind-Value="editor.PromptReference" class="cda-input" data-testid="resource-primary-input" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Prompt title hint</label>
-                                            <InputText @bind-Value="editor.PromptTitleHint" class="cda-input" />
-                                        </div>
-                                    </Grid>
-                                    break;
-                            }
+                        <FormSection Title="Location and connector details" Description="The manifest schema drives which connector fields appear for the selected resource plugin.">
+                            <Stack GapScale="LayoutGap.Medium">
+                                @foreach (var field in SelectedResourceFields)
+                                {
+                                    <ConnectorConfigFieldEditor Field="field"
+                                                                State="editor.Configuration"
+                                                                Secrets="secrets"
+                                                                InputClass="cda-input"
+                                                                TestId="@ResolveResourceFieldTestId(field, SelectedResourceFields)" />
+                                }
+                            </Stack>
 
                             <div class="cda-panel-card--soft">
                                 <p class="cda-eyebrow cda-eyebrow--tight">Stored identifier preview</p>
@@ -388,155 +262,5 @@
         </ListDetailShell>
     </ChildContent>
 </PageScaffold>
-
-@code {
-    [SupplyParameterFromQuery(Name = "resourceId")]
-    public Guid? ResourceIdQuery { get; set; }
-
-    [SupplyParameterFromQuery(Name = "projectId")]
-    public Guid? ProjectIdQuery { get; set; }
-
-    private IReadOnlyList<ResourceSummary> resources = [];
-    private IReadOnlyList<ProjectSummary> projects = [];
-    private IReadOnlyList<SecretListItem> secrets = [];
-    private IReadOnlyList<ProjectPartyOption> responsiblePartyOptions = [];
-    private ResourceEditorModel editor = new();
-    private string? message;
-    private string resourceSearch = string.Empty;
-    private string projectFilter = string.Empty;
-    private string kindFilter = string.Empty;
-    private string validationFilter = string.Empty;
-
-    private ResourceDescriptor Descriptor => ResourceDescriptorRegistry.Get(editor.ResourceKind);
-
-    private IReadOnlyList<ResourceSummary> FilteredResources => resources
-        .Where(resource =>
-            (string.IsNullOrWhiteSpace(resourceSearch) ||
-             resource.Name.Contains(resourceSearch, StringComparison.OrdinalIgnoreCase) ||
-             resource.ProjectName.Contains(resourceSearch, StringComparison.OrdinalIgnoreCase) ||
-             resource.LocationOrIdentifier.Contains(resourceSearch, StringComparison.OrdinalIgnoreCase)) &&
-            (string.IsNullOrWhiteSpace(projectFilter) || string.Equals(resource.ProjectId.ToString(), projectFilter, StringComparison.OrdinalIgnoreCase)) &&
-            (string.IsNullOrWhiteSpace(kindFilter) || string.Equals(resource.ResourceKind.ToString(), kindFilter, StringComparison.OrdinalIgnoreCase)) &&
-            (string.IsNullOrWhiteSpace(validationFilter) || string.Equals(resource.ValidationStatus.ToString(), validationFilter, StringComparison.OrdinalIgnoreCase)))
-        .OrderBy(resource => resource.ProjectName)
-        .ThenBy(resource => resource.Name)
-        .ToList();
-
-    private string PreviewLocation => editor.ResourceKind switch
-    {
-        ResourceKind.Repository => editor.RepositoryUrl,
-        ResourceKind.Folder => editor.FolderPath,
-        ResourceKind.File => editor.FilePath,
-        ResourceKind.WebLink => editor.WebUrl,
-        ResourceKind.Ftp => $"{editor.Host}{(editor.Port.HasValue ? $":{editor.Port.Value}" : string.Empty)}{(string.IsNullOrWhiteSpace(editor.RemotePath) ? string.Empty : $"/{editor.RemotePath.Trim().TrimStart('/')}")}",
-        ResourceKind.Ssh => $"{editor.Host}{(editor.Port.HasValue ? $":{editor.Port.Value}" : string.Empty)}{(string.IsNullOrWhiteSpace(editor.WorkingDirectory) ? string.Empty : $"/{editor.WorkingDirectory.Trim().TrimStart('/')}")}",
-        ResourceKind.PowerShellScript => editor.ScriptPath,
-        ResourceKind.DockerCompose => editor.ComposeFilePath,
-        ResourceKind.SecretLink => editor.SecretPurpose,
-        ResourceKind.PromptLink => editor.PromptReference,
-        _ => editor.LocationOrIdentifier
-    };
-
-    private string EditorTitle => editor.Id.HasValue ? editor.Name : "New resource";
-
-    private string? SelectedProjectName => projects.FirstOrDefault(project => project.Id == editor.ProjectId)?.Name;
-
-    protected override async Task OnParametersSetAsync() => await LoadAsync(ResourceIdQuery, ProjectIdQuery);
-
-    private async Task LoadAsync(Guid? resourceId = null, Guid? projectId = null)
-    {
-        resources = await ResourcesService.ListAsync();
-        projects = await ProjectsService.ListAsync();
-        secrets = await SecretService.ListForPickerAsync();
-        editor = resourceId.HasValue ? await ResourcesService.GetAsync(resourceId.Value) : new ResourceEditorModel { ProjectId = projectId };
-        await LoadResponsiblePartyOptionsAsync();
-    }
-
-    private async Task CreateNewAsync()
-    {
-        editor = new ResourceEditorModel { ProjectId = ProjectIdQuery };
-        message = null;
-        await LoadResponsiblePartyOptionsAsync();
-    }
-
-    private async Task EditAsync(Guid id)
-    {
-        editor = await ResourcesService.GetAsync(id);
-        await LoadResponsiblePartyOptionsAsync();
-        message = null;
-    }
-
-    private async Task SaveAsync()
-    {
-        var result = await ResourcesService.SaveAsync(editor);
-        message = result.IsSuccess ? "Resource saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-        resources = await ResourcesService.ListAsync();
-        if (result.IsSuccess)
-        {
-            editor = await ResourcesService.GetAsync(result.Value);
-        }
-    }
-
-    private async Task DeleteAsync()
-    {
-        if (!editor.Id.HasValue)
-        {
-            return;
-        }
-
-        await ResourcesService.DeleteAsync(editor.Id.Value);
-        await LoadAsync(null, ProjectIdQuery);
-        message = "Resource deleted.";
-    }
-
-    private void ResetFilters()
-    {
-        resourceSearch = string.Empty;
-        projectFilter = string.Empty;
-        kindFilter = string.Empty;
-        validationFilter = string.Empty;
-    }
-
-    private static string BuildResourceMeta(ResourceSummary resource) => $"{resource.ProjectName} / {resource.ResourceKind}";
-
-    private async Task LoadResponsiblePartyOptionsAsync()
-    {
-        responsiblePartyOptions = editor.ProjectId.HasValue
-            ? await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(editor.ProjectId.Value)
-            : [];
-
-        if (editor.OwnerPartyId.HasValue && responsiblePartyOptions.All(option => option.PartyId != editor.OwnerPartyId.Value))
-        {
-            var owner = await ProjectPartyIntegrationBridge.GetPartyOptionAsync(editor.OwnerPartyId.Value);
-            if (owner is not null)
-            {
-                responsiblePartyOptions = responsiblePartyOptions.Append(owner)
-                    .DistinctBy(option => option.PartyId)
-                    .OrderBy(option => option.DisplayName)
-                    .ToList();
-            }
-        }
-
-        if (editor.MaintainerPartyId.HasValue && responsiblePartyOptions.All(option => option.PartyId != editor.MaintainerPartyId.Value))
-        {
-            var maintainer = await ProjectPartyIntegrationBridge.GetPartyOptionAsync(editor.MaintainerPartyId.Value);
-            if (maintainer is not null)
-            {
-                responsiblePartyOptions = responsiblePartyOptions.Append(maintainer)
-                    .DistinctBy(option => option.PartyId)
-                    .OrderBy(option => option.DisplayName)
-                    .ToList();
-            }
-        }
-    }
-
-    private static string ResolveTone(ResourceValidationStatus status) => status switch
-    {
-        ResourceValidationStatus.Valid => "success",
-        ResourceValidationStatus.Warning => "warning",
-        ResourceValidationStatus.Invalid => "danger",
-        _ => "neutral"
-    };
-}
 
 

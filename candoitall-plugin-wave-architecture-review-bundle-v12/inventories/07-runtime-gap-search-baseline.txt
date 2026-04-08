@@ -1,0 +1,35 @@
+### automation signal provider wiring
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Automation/AutomationModuleServiceCollectionExtensions.cs:12:        services.TryAddScoped<IAutomationSignalProvider, NullAutomationSignalProvider>();
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Automation/AutomationModels.cs:12:    IAutomationSignalProvider automationSignalProvider)
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.SharedKernel/AutomationSignals.cs:12:public interface IAutomationSignalProvider
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.SharedKernel/AutomationSignals.cs:17:public sealed class NullAutomationSignalProvider : IAutomationSignalProvider
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.CrmHr/CrmHrAutomationSignals.cs:7:internal sealed class CrmHrAutomationSignalProvider(
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.CrmHr/CrmHrAutomationSignals.cs:9:    IClock clock) : IAutomationSignalProvider
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.CrmHr/CrmHrModuleServiceCollectionExtensions.cs:19:        services.AddScoped<IAutomationSignalProvider, CrmHrAutomationSignalProvider>();
+
+### background jobs and hosted workers
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs:98:        services.AddSingleton<IBackgroundJobQueue, InMemoryBackgroundJobQueue>();
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs:15:public interface IBackgroundJobQueue
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs:19:    ValueTask<BackgroundJobRequest> DequeueAsync(CancellationToken cancellationToken = default);
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs:93:public sealed class InMemoryBackgroundJobQueue : IBackgroundJobQueue
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs:100:    public ValueTask<BackgroundJobRequest> DequeueAsync(CancellationToken cancellationToken = default)
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs:109:deps: AppDbContext, IBackgroundJobQueue, IClock
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs:117:    IBackgroundJobQueue queue,
+
+### connector outbox drainers
+/mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workspace/ConnectorOutboxService.cs:326:    public async Task<int> ProcessPendingAsync(
+
+### scheduler / quartz / mqtt / ingress
+
+### phase10-required proof removed from current but present in previous upload
+# current
+
+# previous
+/mnt/data/repo_prev_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/WorkbenchModuleServiceCollectionExtensions.cs:19:        services.AddScoped<ProjectStructureProjectionMaintenanceService>();
+/mnt/data/repo_prev_extract/CanDoItAll-canonical-model-refactor/src/CanDoItAll.Modules.Workbench/ProjectStructureProjectionMaintenanceService.cs:15:public sealed class ProjectStructureProjectionMaintenanceService(
+/mnt/data/repo_prev_extract/CanDoItAll-canonical-model-refactor/tests/CanDoItAll.Tests.Integration/UnknownConnectorManifestIntegrationTests.cs:19:    public async Task Unknown_connector_manifest_fields_round_trip_without_page_specific_code()
+/mnt/data/repo_prev_extract/CanDoItAll-canonical-model-refactor/tests/CanDoItAll.Tests.Integration/ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:15:    public async Task GetStructureAsync_does_not_delete_stale_system_managed_projection_rows()
+/mnt/data/repo_prev_extract/CanDoItAll-canonical-model-refactor/tests/CanDoItAll.Tests.Integration/ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:71:    public async Task GetStructureAsync_does_not_delete_stale_projection_layout_rows()
+/mnt/data/repo_prev_extract/CanDoItAll-canonical-model-refactor/tests/CanDoItAll.Tests.Integration/ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:206:        var maintenance = scope.ServiceProvider.GetRequiredService<ProjectStructureProjectionMaintenanceService>();
+/mnt/data/repo_prev_extract/CanDoItAll-canonical-model-refactor/tests/CanDoItAll.Tests.Components/SettingsPageProvidersTests.cs:47:    public async Task Settings_page_renders_unknown_provider_manifest_fields_through_shared_field_editor()
+/mnt/data/repo_prev_extract/CanDoItAll-canonical-model-refactor/tests/CanDoItAll.Tests.Components/ResourcesPageTests.cs:71:    public async Task Resources_page_renders_unknown_resource_manifest_fields_through_shared_field_editor()

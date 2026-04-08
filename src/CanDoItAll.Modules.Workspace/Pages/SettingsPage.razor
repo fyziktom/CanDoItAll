@@ -216,7 +216,7 @@
                             @foreach (var provider in FilteredProviders)
                             {
                                 <SelectionListItem Title="@provider.Name"
-                                                   Eyebrow="@provider.ProviderKind.ToString()"
+                                                   Eyebrow="@provider.ConnectorDisplayName"
                                                    Meta="@provider.DefaultModel"
                                                    Summary="@provider.BaseUrl"
                                                    IsSelected="@(providerModel.Id == provider.Id)"
@@ -234,38 +234,48 @@
                     <Stack GapScale="LayoutGap.Tiny">
                         <p class="cda-eyebrow">Provider editor</p>
                         <h2 class="cda-title-xl">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
-                        <p class="cda-body-muted">Profiles keep provider-specific transport, capability flags, and health status in one editor.</p>
+                        <p class="cda-body-muted">Profiles keep connector transport, capability flags, and health status in one editor.</p>
                     </Stack>
                 </DetailHeader>
 
                 <DetailContent>
                     <EditForm Model="providerModel" OnValidSubmit="SaveProviderAsync">
                         <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
-                            <FormSection Title="Provider identity" Description="Define the provider kind, transport endpoint, and default model.">
+                            <FormSection Title="Connector identity" Description="Choose the connector plugin first, then fill only the schema fields that plugin exposes.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Profile name</label>
-                                        <InputText @bind-Value="providerModel.Name" class="cda-input" />
+                                        <InputText @bind-Value="providerModel.Name" class="cda-input" data-testid="provider-name-input" />
                                     </div>
                                     <div>
-                                        <label class="cda-field-label">Provider kind</label>
-                                        <InputSelect @bind-Value="providerModel.ProviderKind" class="cda-input">
-                                            @foreach (var kind in Enum.GetValues<ProviderKind>())
+                                        <label class="cda-field-label">Connector plugin</label>
+                                        <InputSelect @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" class="cda-input" data-testid="provider-plugin-select">
+                                            @foreach (var manifest in providerManifests)
                                             {
-                                                <option value="@kind">@kind</option>
+                                                <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                             }
                                         </InputSelect>
                                     </div>
                                 </Grid>
+
+                                @if (SelectedProviderManifest is not null)
+                                {
+                                    <Alert AlertStyle="AlertStyle.Info">
+                                        <p class="font-semibold">@SelectedProviderManifest.DisplayName</p>
+                                        <p class="mt-1 break-all">Plugin key: @SelectedProviderManifest.PluginKey</p>
+                                        <p class="mt-1">@SelectedProviderManifest.HealthCheck.Summary</p>
+                                    </Alert>
+                                }
+
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                    <div>
-                                        <label class="cda-field-label">Base URL</label>
-                                        <InputText @bind-Value="providerModel.BaseUrl" class="cda-input" />
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">Default model</label>
-                                        <InputText @bind-Value="providerModel.DefaultModel" class="cda-input" />
-                                    </div>
+                                    @foreach (var field in SelectedProviderFields)
+                                    {
+                                        <ConnectorConfigFieldEditor Field="field"
+                                                                    State="providerModel.Configuration"
+                                                                    Secrets="secrets"
+                                                                    InputClass="cda-input"
+                                                                    TestId="@ResolveProviderFieldTestId(field)" />
+                                    }
                                 </Grid>
                             </FormSection>
 
@@ -273,17 +283,13 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">API key secret</label>
-                                        <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="cda-input">
+                                        <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="cda-input" data-testid="provider-secret-select">
                                             <option value="">None</option>
                                             @foreach (var secret in secrets)
                                             {
                                                 <option value="@secret.Id">@secret.Name</option>
                                             }
                                         </InputSelect>
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">Timeout (seconds)</label>
-                                        <InputNumber @bind-Value="providerModel.TimeoutSeconds" class="cda-input" />
                                     </div>
                                 </Grid>
 
@@ -294,11 +300,6 @@
                                     <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsStructuredOutput" /> Structured output</label>
                                     <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsVision" /> Vision</label>
                                 </Grid>
-
-                                <div>
-                                    <label class="cda-field-label">Extra settings JSON</label>
-                                    <InputTextArea @bind-Value="providerModel.ExtraSettingsJson" class="cda-input cda-input--textarea min-h-24" />
-                                </div>
                             </FormSection>
 
                             <StickyActionFooter StatusLabel="Provider profiles" StatusMessage="@providerMessage" StatusTone="success">
@@ -310,7 +311,7 @@
                                     }
                                 </SecondaryActions>
                                 <PrimaryActions>
-                                    <Button Text="Save provider" Type="submit" />
+                                    <Button Text="Save provider" Type="submit" data-testid="provider-save-button" />
                                 </PrimaryActions>
                                 <DangerActions>
                                     @if (providerModel.Id.HasValue)
@@ -331,203 +332,5 @@
     </ChildContent>
 </PageScaffold>
 
-@code {
-    [SupplyParameterFromQuery(Name = "tab")]
-    public string? RequestedTab { get; set; }
-
-    private WorkspaceSettingsModel settingsModel = new();
-    private SecretEditorModel secretModel = NewSecret();
-    private ProviderProfileEditorModel providerModel = NewProvider();
-    private IReadOnlyList<ProviderProfileSummary> providers = [];
-    private IReadOnlyList<SecretListItem> secrets = [];
-    private string? settingsMessage;
-    private string? secretMessage;
-    private string? providerMessage;
-    private string settingsTab = "workspace";
-    private string secretSearch = string.Empty;
-    private string providerSearch = string.Empty;
-
-    private IReadOnlyList<SecondaryTabItem> SettingsTabs =>
-    [
-        new("workspace", "Workspace"),
-        new("data-sources", "Data Sources"),
-        new("storage", "Storage"),
-        new("secrets", "Secrets", secrets.Count.ToString()),
-        new("providers", "Providers", providers.Count.ToString()),
-        new("project-structure", "Project Structure MCP")
-    ];
-
-    private IReadOnlyList<SecretListItem> FilteredSecrets => secrets
-        .Where(secret =>
-            string.IsNullOrWhiteSpace(secretSearch) ||
-            secret.Name.Contains(secretSearch, StringComparison.OrdinalIgnoreCase) ||
-            secret.Scope.Contains(secretSearch, StringComparison.OrdinalIgnoreCase))
-        .OrderBy(secret => secret.Name)
-        .ToList();
-
-    private IReadOnlyList<ProviderProfileSummary> FilteredProviders => providers
-        .Where(provider =>
-            string.IsNullOrWhiteSpace(providerSearch) ||
-            provider.Name.Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
-            provider.DefaultModel.Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
-            provider.BaseUrl.Contains(providerSearch, StringComparison.OrdinalIgnoreCase))
-        .OrderBy(provider => provider.Name)
-        .ToList();
-
-    protected override async Task OnInitializedAsync() => await LoadAsync();
-
-    protected override void OnParametersSet()
-    {
-        ApplyRequestedTab();
-    }
-
-    private async Task LoadAsync()
-    {
-        settingsModel = await WorkspaceService.GetSettingsAsync();
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-        secrets = await WorkspaceService.ListSecretsAsync();
-        ApplyRequestedTab();
-    }
-
-    private async Task SaveSettingsAsync()
-    {
-        await WorkspaceService.SaveSettingsAsync(settingsModel);
-        settingsMessage = "Workspace defaults saved.";
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-    }
-
-    private async Task SaveSecretAsync()
-    {
-        var result = await SecretService.SaveAsync(secretModel);
-        secretMessage = result.IsSuccess ? "Secret saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-        if (result.IsSuccess)
-        {
-            secrets = await WorkspaceService.ListSecretsAsync();
-            await ResetSecretAsync();
-        }
-    }
-
-    private async Task EditSecretAsync(Guid id)
-    {
-        var model = await SecretService.GetAsync(id);
-        if (model is not null)
-        {
-            secretModel = model;
-        }
-    }
-
-    private async Task DeleteSecretAsync()
-    {
-        if (!secretModel.Id.HasValue)
-        {
-            return;
-        }
-
-        await SecretService.DeleteAsync(secretModel.Id.Value);
-        secrets = await WorkspaceService.ListSecretsAsync();
-        secretMessage = "Secret deleted.";
-        await ResetSecretAsync();
-    }
-
-    private Task ResetSecretAsync()
-    {
-        secretModel = NewSecret();
-        return Task.CompletedTask;
-    }
-
-    private async Task SaveProviderAsync()
-    {
-        var result = await WorkspaceService.SaveProviderAsync(providerModel);
-        providerMessage = result.IsSuccess ? "Provider profile saved." : string.Join(" ", result.Errors.Select(error => error.Message));
-        if (result.IsSuccess)
-        {
-            providers = await WorkspaceService.ListProviderProfilesAsync();
-            await ResetProviderAsync();
-        }
-    }
-
-    private async Task EditProviderAsync(Guid id)
-    {
-        providerModel = await WorkspaceService.GetProviderAsync(id);
-    }
-
-    private async Task TestProviderAsync(Guid id)
-    {
-        var result = await WorkspaceService.TestProviderAsync(id);
-        providerMessage = result.Message;
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-    }
-
-    private async Task DeleteProviderAsync(Guid id)
-    {
-        await WorkspaceService.DeleteProviderAsync(id);
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-        providerMessage = "Provider profile deleted.";
-        await ResetProviderAsync();
-    }
-
-    private Task ResetProviderAsync()
-    {
-        providerModel = NewProvider();
-        return Task.CompletedTask;
-    }
-
-    private Task HandleSettingsTabChanged(string key)
-    {
-        settingsTab = key;
-        Navigation.NavigateTo(BuildSettingsRoute(key), replace: true);
-        return Task.CompletedTask;
-    }
-
-    private void ApplyRequestedTab()
-    {
-        if (IsValidSettingsTab(RequestedTab))
-        {
-            settingsTab = RequestedTab!;
-            return;
-        }
-
-        if (!IsValidSettingsTab(settingsTab))
-        {
-            settingsTab = "workspace";
-        }
-    }
-
-    private static bool IsValidSettingsTab(string? key)
-    {
-        return key is "workspace" or "data-sources" or "storage" or "secrets" or "providers" or "project-structure";
-    }
-
-    private static string BuildSettingsRoute(string key)
-    {
-        return string.Equals(key, "workspace", StringComparison.Ordinal)
-            ? "/settings"
-            : $"/settings?tab={Uri.EscapeDataString(key)}";
-    }
-
-    private void ResetSecretSearch() => secretSearch = string.Empty;
-
-    private void ResetProviderSearch() => providerSearch = string.Empty;
-
-    private static string FormatTimestamp(DateTimeOffset timestamp) => timestamp.LocalDateTime.ToString("g");
-
-    private static SecretEditorModel NewSecret() => new()
-    {
-        Kind = SecretKind.ApiKey,
-        Scope = "workspace"
-    };
-
-    private static ProviderProfileEditorModel NewProvider() => new()
-    {
-        ProviderKind = ProviderKind.OpenAi,
-        BaseUrl = "https://api.openai.com/v1/models",
-        DefaultModel = "gpt-4.1",
-        TimeoutSeconds = 45,
-        IsEnabled = true,
-        SupportsStreaming = true,
-        SupportsToolCalling = true,
-        SupportsStructuredOutput = true
-    };
-}
 
 

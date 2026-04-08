@@ -50,14 +50,14 @@ public sealed record ProjectStructureBlockMutationDialogState(
     ProjectStructureBlockMutationDialogMode Mode,
     string NodeId,
     string NodeTitle,
-    IReadOnlyList<ProjectStructureBlockTypeOption> Options,
+    IReadOnlyList<ProjectStructureMutationTypeOption> Options,
     string SelectedActionId,
     string Error)
 {
     public string Title => Mode switch
     {
         ProjectStructureBlockMutationDialogMode.ChangeBlockType => $"Change block type for {NodeTitle}",
-        _ => $"Convert {NodeTitle} to a block"
+        _ => $"Convert {NodeTitle}"
     };
 
     public string Copy => Mode switch
@@ -65,13 +65,19 @@ public sealed record ProjectStructureBlockMutationDialogState(
         ProjectStructureBlockMutationDialogMode.ChangeBlockType =>
             "Choose the common block type that should replace the current block subtype.",
         _ =>
-            "Choose the common block type that should replace this note while keeping its text."
+            "Choose the typed node kind that should replace this note while keeping its text."
     };
 
     public string SubmitLabel => Mode switch
     {
         ProjectStructureBlockMutationDialogMode.ChangeBlockType => "Change block type",
-        _ => "Convert note"
+        _ => "Convert"
+    };
+
+    public string SelectionLabel => Mode switch
+    {
+        ProjectStructureBlockMutationDialogMode.ChangeBlockType => "Block type",
+        _ => "Target kind"
     };
 }
 

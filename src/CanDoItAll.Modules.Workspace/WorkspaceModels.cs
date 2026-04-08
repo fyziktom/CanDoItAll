@@ -7,13 +7,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.Workspace;
 
-public enum ProviderKind
-{
-    OpenAi,
-    OllamaLocal,
-    OllamaRemote
-}
-
 public sealed class WorkspaceSettings
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -35,7 +28,11 @@ public sealed class ProviderProfile
 
     public string Name { get; set; } = string.Empty;
 
-    public ProviderKind ProviderKind { get; set; }
+    public ProviderKind? ProviderKind { get; set; }
+
+    public string ConnectorPluginKey { get; set; } = string.Empty;
+
+    public string ConfigSchemaVersion { get; set; } = string.Empty;
 
     public string BaseUrl { get; set; } = string.Empty;
 
@@ -82,6 +79,8 @@ internal sealed class ProviderProfileConfiguration : IEntityTypeConfiguration<Pr
         builder.HasKey(profile => profile.Id);
         builder.Property(profile => profile.Name).HasMaxLength(200).IsRequired();
         builder.Property(profile => profile.BaseUrl).HasMaxLength(500).IsRequired();
+        builder.Property(profile => profile.ConnectorPluginKey).HasMaxLength(160).IsRequired();
+        builder.Property(profile => profile.ConfigSchemaVersion).HasMaxLength(40).IsRequired();
         builder.Property(profile => profile.DefaultModel).HasMaxLength(120);
         builder.Property(profile => profile.LastHealthStatus).HasMaxLength(120);
         builder.Property(profile => profile.ExtraSettingsJson).HasColumnType("TEXT");
@@ -102,7 +101,9 @@ public sealed class WorkspaceSettingsModel
 public sealed record ProviderProfileSummary(
     Guid Id,
     string Name,
-    ProviderKind ProviderKind,
+    ProviderKind? LegacyProviderKind,
+    string ConnectorPluginKey,
+    string ConnectorDisplayName,
     string BaseUrl,
     string DefaultModel,
     bool IsEnabled,
@@ -115,15 +116,11 @@ public sealed class ProviderProfileEditorModel
 
     public string Name { get; set; } = string.Empty;
 
-    public ProviderKind ProviderKind { get; set; } = ProviderKind.OpenAi;
+    public string ConnectorPluginKey { get; set; } = string.Empty;
 
-    public string BaseUrl { get; set; } = string.Empty;
+    public string ConfigSchemaVersion { get; set; } = string.Empty;
 
     public Guid? ApiKeySecretId { get; set; }
-
-    public string DefaultModel { get; set; } = string.Empty;
-
-    public int TimeoutSeconds { get; set; } = 45;
 
     public bool IsEnabled { get; set; } = true;
 
@@ -135,7 +132,7 @@ public sealed class ProviderProfileEditorModel
 
     public bool SupportsVision { get; set; }
 
-    public string ExtraSettingsJson { get; set; } = "{}";
+    public ConnectorConfigState Configuration { get; set; } = new();
 }
 
 public sealed record ProviderHealthResult(bool Success, string Message);
@@ -196,21 +193,34 @@ public sealed partial class WorkspaceService(
             Route: "/settings"), cancellationToken);
     }
 
+    public IReadOnlyList<ConnectorPluginManifest> ListProviderManifests()
+    {
+        return providerRegistry.ListManifests();
+    }
+
     public async Task<IReadOnlyList<ProviderProfileSummary>> ListProviderProfilesAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await dbContext.Set<ProviderProfile>()
+        var profiles = await dbContext.Set<ProviderProfile>()
             .OrderBy(profile => profile.Name)
-            .Select(profile => new ProviderProfileSummary(
+            .ToListAsync(cancellationToken);
+        return profiles
+            .Select(profile =>
+            {
+                var providerPlugin = providerRegistry.Resolve(profile);
+                return new ProviderProfileSummary(
                 profile.Id,
                 profile.Name,
                 profile.ProviderKind,
+                providerPlugin?.Manifest.PluginKey ?? profile.ConnectorPluginKey,
+                providerPlugin?.Manifest.DisplayName ?? profile.ConnectorPluginKey,
                 profile.BaseUrl,
                 profile.DefaultModel,
                 profile.IsEnabled,
                 profile.LastHealthStatus,
-                profile.LastHealthCheckAtUtc))
-            .ToListAsync(cancellationToken);
+                profile.LastHealthCheckAtUtc);
+            })
+            .ToList();
     }
 
     public async Task<ProviderProfileEditorModel> GetProviderAsync(Guid? id, CancellationToken cancellationToken = default)
@@ -231,17 +241,15 @@ public sealed partial class WorkspaceService(
         {
             Id = provider.Id,
             Name = provider.Name,
-            ProviderKind = provider.ProviderKind,
-            BaseUrl = provider.BaseUrl,
+            ConnectorPluginKey = providerRegistry.Resolve(provider)?.Manifest.PluginKey ?? provider.ConnectorPluginKey,
+            ConfigSchemaVersion = provider.ConfigSchemaVersion,
             ApiKeySecretId = provider.ApiKeySecretId,
-            DefaultModel = provider.DefaultModel,
-            TimeoutSeconds = provider.TimeoutSeconds,
             IsEnabled = provider.IsEnabled,
             SupportsStreaming = provider.SupportsStreaming,
             SupportsToolCalling = provider.SupportsToolCalling,
             SupportsStructuredOutput = provider.SupportsStructuredOutput,
             SupportsVision = provider.SupportsVision,
-            ExtraSettingsJson = provider.ExtraSettingsJson
+            Configuration = BuildProviderConfiguration(provider)
         };
     }
 
@@ -252,17 +260,31 @@ public sealed partial class WorkspaceService(
             return Result<Guid>.Failure(Error.Validation("Provider profile name is required."));
         }
 
-        if (string.IsNullOrWhiteSpace(model.BaseUrl))
+        var configuredBaseUrl = model.Configuration.GetText(ProviderConnectorFieldKeys.BaseUrl);
+        if (string.IsNullOrWhiteSpace(configuredBaseUrl))
         {
             return Result<Guid>.Failure(Error.Validation("Provider base URL is required."));
         }
 
-        if (model.ProviderKind == ProviderKind.OpenAi && !model.ApiKeySecretId.HasValue)
+        var providerResolutionError = TryResolveProviderPlugin(
+            model,
+            out var providerPlugin,
+            out var providerManifest,
+            out var configSchemaVersion);
+        if (providerResolutionError is not null)
         {
-            return Result<Guid>.Failure(Error.Validation("OpenAI profiles require an API key secret reference."));
+            return Result<Guid>.Failure(providerResolutionError);
         }
 
-        if (model.TimeoutSeconds < 5)
+        var requiresSecret = providerManifest.SecretRequirements.Any(requirement => requirement.IsRequired);
+        if (requiresSecret && !model.ApiKeySecretId.HasValue)
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                $"{providerManifest.DisplayName} requires a secret reference."));
+        }
+
+        var configuredTimeoutSeconds = model.Configuration.GetNumber(ProviderConnectorFieldKeys.TimeoutSeconds) ?? 45;
+        if (configuredTimeoutSeconds < 5)
         {
             return Result<Guid>.Failure(Error.Validation("Provider timeout must be at least five seconds."));
         }
@@ -279,24 +301,30 @@ public sealed partial class WorkspaceService(
         }
 
         entity.Name = model.Name.Trim();
-        entity.ProviderKind = model.ProviderKind;
-        entity.BaseUrl = model.BaseUrl.Trim().TrimEnd('/');
+        entity.ConnectorPluginKey = providerPlugin.Manifest.PluginKey;
+        entity.ProviderKind = providerPlugin.LegacyProviderKind;
+        entity.ConfigSchemaVersion = configSchemaVersion;
+        entity.BaseUrl = configuredBaseUrl.Trim().TrimEnd('/');
         entity.ApiKeySecretId = model.ApiKeySecretId;
-        entity.DefaultModel = ResolveDefaultModel(model);
-        entity.TimeoutSeconds = Math.Max(5, model.TimeoutSeconds);
+        entity.DefaultModel = ResolveDefaultModel(model, providerPlugin.Manifest.PluginKey);
+        entity.TimeoutSeconds = Math.Max(5, configuredTimeoutSeconds);
         entity.IsEnabled = model.IsEnabled;
-        entity.SupportsStreaming = model.ProviderKind == ProviderKind.OpenAi || model.SupportsStreaming;
-        entity.SupportsToolCalling = model.ProviderKind == ProviderKind.OpenAi || model.SupportsToolCalling;
-        entity.SupportsStructuredOutput = model.ProviderKind == ProviderKind.OpenAi || model.SupportsStructuredOutput;
-        entity.SupportsVision = model.ProviderKind == ProviderKind.OpenAi && model.SupportsVision;
-        entity.ExtraSettingsJson = string.IsNullOrWhiteSpace(model.ExtraSettingsJson) ? "{}" : model.ExtraSettingsJson;
+        var isOpenAiPlugin = string.Equals(
+            providerPlugin.Manifest.PluginKey,
+            OpenAiProviderAdapter.PluginKey,
+            StringComparison.OrdinalIgnoreCase);
+        entity.SupportsStreaming = isOpenAiPlugin || model.SupportsStreaming;
+        entity.SupportsToolCalling = isOpenAiPlugin || model.SupportsToolCalling;
+        entity.SupportsStructuredOutput = isOpenAiPlugin || model.SupportsStructuredOutput;
+        entity.SupportsVision = isOpenAiPlugin && model.SupportsVision;
+        entity.ExtraSettingsJson = model.Configuration.ToJson();
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await activityStream.RecordAsync(new ActivityWriteRequest(
             "providers",
             model.Id.HasValue ? "update" : "create",
             $"{(model.Id.HasValue ? "Updated" : "Created")} provider profile",
-            $"{entity.Name} ({entity.ProviderKind})",
+            $"{entity.Name} ({providerPlugin.Manifest.DisplayName})",
             ArtifactKind: "provider-profile",
             ArtifactId: entity.Id,
             Route: "/settings"), cancellationToken);
@@ -333,10 +361,10 @@ public sealed partial class WorkspaceService(
             return new ProviderHealthResult(false, "Provider profile not found.");
         }
 
-        var adapter = providerRegistry.Resolve(provider.ProviderKind);
+        var adapter = providerRegistry.Resolve(provider);
         if (adapter is null)
         {
-            return new ProviderHealthResult(false, $"No adapter is registered for {provider.ProviderKind}.");
+            return new ProviderHealthResult(false, $"No adapter is registered for provider profile '{provider.Name}'.");
         }
 
         var secretValue = provider.ApiKeySecretId.HasValue
@@ -374,27 +402,79 @@ public sealed partial class WorkspaceService(
 
     private static ProviderProfileEditorModel NewProvider() => new()
     {
-        BaseUrl = "https://api.openai.com/v1/models",
-        DefaultModel = "gpt-4.1",
+        ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
+        ConfigSchemaVersion = "1.0",
+        Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [ProviderConnectorFieldKeys.BaseUrl] = "https://api.openai.com/v1/models",
+            [ProviderConnectorFieldKeys.DefaultModel] = "gpt-4.1",
+            [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
+        }),
         IsEnabled = true,
         SupportsStreaming = true,
         SupportsToolCalling = true,
         SupportsStructuredOutput = true
     };
 
-    private static string ResolveDefaultModel(ProviderProfileEditorModel model)
+    private static string ResolveDefaultModel(ProviderProfileEditorModel model, string pluginKey)
     {
-        if (!string.IsNullOrWhiteSpace(model.DefaultModel))
+        var configuredModel = model.Configuration.GetText(ProviderConnectorFieldKeys.DefaultModel);
+        if (!string.IsNullOrWhiteSpace(configuredModel))
         {
-            return model.DefaultModel.Trim();
+            return configuredModel.Trim();
         }
 
-        return model.ProviderKind switch
+        return pluginKey.Trim() switch
         {
-            ProviderKind.OpenAi => "gpt-4.1",
-            ProviderKind.OllamaLocal or ProviderKind.OllamaRemote => "llama3.1",
+            OpenAiProviderAdapter.PluginKey => "gpt-4.1",
+            OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => "llama3.1",
             _ => "unknown"
         };
+    }
+
+    private Error? TryResolveProviderPlugin(
+        ProviderProfileEditorModel model,
+        out IProviderAdapter providerPlugin,
+        out ConnectorPluginManifest manifest,
+        out string configSchemaVersion)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        providerPlugin = default!;
+        manifest = default!;
+        configSchemaVersion = string.Empty;
+
+        var requestedPluginKey = model.ConnectorPluginKey?.Trim();
+        if (!providerRegistry.TryResolve(requestedPluginKey, out providerPlugin))
+        {
+            return Error.Validation(
+                string.IsNullOrWhiteSpace(requestedPluginKey)
+                    ? "Select a connector plugin for the provider profile."
+                    : $"No provider adapter is registered for plugin '{requestedPluginKey}'.");
+        }
+
+        manifest = providerPlugin.Manifest;
+        configSchemaVersion = string.IsNullOrWhiteSpace(model.ConfigSchemaVersion)
+            ? manifest.ConfigurationSchema.Version
+            : model.ConfigSchemaVersion.Trim();
+        if (!string.Equals(configSchemaVersion, manifest.ConfigurationSchema.Version, StringComparison.Ordinal))
+        {
+            return Error.Validation(
+                $"Provider plugin '{manifest.PluginKey}' requires config schema version '{manifest.ConfigurationSchema.Version}', but '{configSchemaVersion}' was supplied.");
+        }
+
+        return null;
+    }
+
+    private static ConnectorConfigState BuildProviderConfiguration(ProviderProfile provider)
+    {
+        var configuration = ConnectorConfigState.FromJson(provider.ExtraSettingsJson);
+
+        configuration.SetText(ProviderConnectorFieldKeys.BaseUrl, provider.BaseUrl);
+        configuration.SetText(ProviderConnectorFieldKeys.DefaultModel, provider.DefaultModel);
+        configuration.SetNumber(ProviderConnectorFieldKeys.TimeoutSeconds, provider.TimeoutSeconds);
+
+        return configuration;
     }
 }
 
