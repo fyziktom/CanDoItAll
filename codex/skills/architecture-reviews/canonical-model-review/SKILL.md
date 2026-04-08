@@ -46,15 +46,15 @@ Always treat the following as different categories until proven otherwise:
 
 # Prefer these tools
 
-If available, prefer **SharpTools MCP** for:
+If available, prefer **CanDoItAll CodeAnalytics MCP** for:
 
 - solution / project graph analysis
 - symbol search and reference tracing
 - dependency inspection
-- targeted build / test execution
-- startup or runtime checks
+- document and symbol inspection
+- focused context around architectural hotspots
 
-If SharpTools is unavailable, fall back to normal repo inspection and shell commands.
+Use SharpTools only as a backup if CodeAnalytics has a real unresolved capability gap. Do not switch to SharpTools merely because CodeAnalytics transport needs a restart or reinstall.
 
 If the optional custom agents from this skillset are installed, you may explicitly spawn:
 
@@ -109,7 +109,7 @@ Collect evidence for:
 
 You may use:
 
-- SharpTools solution analysis
+- CanDoItAll CodeAnalytics MCP
 - `python codex/skills/architecture-reviews/canonical-model-review/scripts/solution_inventory.py --root . --output architecture/reviews/_inventory.json`
 
 Do not trust the inventory script as the source of truth. It is a heuristic helper only.

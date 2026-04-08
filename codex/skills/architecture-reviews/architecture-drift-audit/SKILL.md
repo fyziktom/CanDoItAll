@@ -28,8 +28,10 @@ If no prior review exists, use the current codebase as the baseline.
 
 You may use:
 
-- SharpTools MCP
+- CanDoItAll CodeAnalytics MCP
 - `python codex/skills/architecture-reviews/architecture-drift-audit/scripts/solution_inventory.py --root . --output architecture/reviews/_inventory.json`
+
+Use SharpTools only as a backup if CodeAnalytics has a real unresolved capability gap. Do not switch to SharpTools merely because CodeAnalytics transport needs a restart or reinstall.
 
 Look for:
 

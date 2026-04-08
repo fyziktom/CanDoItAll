@@ -407,7 +407,13 @@ function Update-CodexConfig {
         [Parameter(Mandatory = $true)]
         [string]$CodeAnalyticsEntrypoint,
         [Parameter(Mandatory = $true)]
-        [string]$ProjectStructureEntrypoint
+        [string]$ProjectStructureEntrypoint,
+        [Parameter(Mandatory = $true)]
+        [string]$SharpToolsEntrypoint,
+        [Parameter(Mandatory = $true)]
+        [string]$SharpToolsWorkingDirectory,
+        [Parameter(Mandatory = $true)]
+        [string]$SharpToolsLogDirectory
     )
 
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -420,6 +426,9 @@ function Update-CodexConfig {
     $escapedComponentsEntrypoint = $ComponentsEntrypoint.Replace("\", "\\")
     $escapedCodeAnalyticsEntrypoint = $CodeAnalyticsEntrypoint.Replace("\", "\\")
     $escapedProjectStructureEntrypoint = $ProjectStructureEntrypoint.Replace("\", "\\")
+    $escapedSharpToolsEntrypoint = $SharpToolsEntrypoint.Replace("\", "\\")
+    $escapedSharpToolsWorkingDirectory = $SharpToolsWorkingDirectory.Replace("\", "\\")
+    $escapedSharpToolsLogDirectory = $SharpToolsLogDirectory.Replace("\", "\\")
 
     $dotNetWatchSection = @"
 [mcp_servers.candoitall_dotnetwatch]
@@ -495,11 +504,30 @@ tool_timeout_sec = 1800
 enabled = true
 "@
 
+    $sharpToolsSection = @"
+[mcp_servers.sharptools]
+# Backup only. Keep disabled unless CanDoItAll CodeAnalytics has a real capability gap
+# that cannot be repaired or solved in-session.
+command = "$escapedSharpToolsEntrypoint"
+cwd = "$escapedSharpToolsWorkingDirectory"
+args = [
+  "--log-directory",
+  "$escapedSharpToolsLogDirectory",
+  "--log-level",
+  "Information",
+  "--disable-git"
+]
+startup_timeout_sec = 45
+tool_timeout_sec = 120
+enabled = false
+"@
+
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_dotnetwatch" -SectionContent $dotNetWatchSection
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_sshops" -SectionContent $sshOpsSection
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_components" -SectionContent $componentsSection
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_codeanalytics" -SectionContent $codeAnalyticsSection
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_projectstructure" -SectionContent $projectStructureSection
+    Set-TomlSection -Path $Path -SectionName "mcp_servers.sharptools" -SectionContent $sharpToolsSection
 }
 
 function Sync-RepoSkills {
@@ -634,6 +662,10 @@ $managerProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "tools\CanDoItAl
 $trayProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "tools\CanDoItAll.Mcp.DotNetWatch.Tray\CanDoItAll.Mcp.DotNetWatch.Tray.csproj")
 $repoSkillRoot = Resolve-AbsolutePath (Join-Path $RepoRoot "codex\skills")
 $userSkillRoot = Resolve-AbsolutePath (Join-Path $env:USERPROFILE ".codex\skills")
+$repoParentRoot = Split-Path -Parent $RepoRoot
+$sharpToolsEntrypoint = Resolve-AbsolutePath (Join-Path $repoParentRoot "SharpToolsMCP\SharpTools.StdioServer\bin\Release\net8.0\SharpTools.StdioServer.exe")
+$sharpToolsWorkingDirectory = Resolve-AbsolutePath (Join-Path $repoParentRoot "SharpToolsMCP\SharpTools.StdioServer\bin\Release\net8.0")
+$sharpToolsLogDirectory = Resolve-AbsolutePath (Join-Path $repoParentRoot "codex-logs\sharptools")
 $installRoot = Resolve-AbsolutePath (Join-Path $RepoRoot ".artifacts\mcp-installs")
 $projectStructureInstallRoot = New-VersionedInstallPath -InstallBasePath (Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.ProjectStructure"))
 $componentsInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.Components\current")
@@ -816,7 +848,7 @@ if (-not $SkipVsCodeConfig.IsPresent) {
 
 if (-not $SkipUserConfig.IsPresent) {
     Write-Status "Updating Codex config"
-    Update-CodexConfig -Path $UserConfigPath -SshOpsEntrypoint $sshOpsEntrypoint -ComponentsEntrypoint $componentsEntrypoint -CodeAnalyticsEntrypoint $codeAnalyticsEntrypoint -ProjectStructureEntrypoint $projectStructureEntrypoint
+    Update-CodexConfig -Path $UserConfigPath -SshOpsEntrypoint $sshOpsEntrypoint -ComponentsEntrypoint $componentsEntrypoint -CodeAnalyticsEntrypoint $codeAnalyticsEntrypoint -ProjectStructureEntrypoint $projectStructureEntrypoint -SharpToolsEntrypoint $sharpToolsEntrypoint -SharpToolsWorkingDirectory $sharpToolsWorkingDirectory -SharpToolsLogDirectory $sharpToolsLogDirectory
 }
 
 Write-Status "Resetup completed."

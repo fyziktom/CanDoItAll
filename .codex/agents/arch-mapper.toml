@@ -4,7 +4,8 @@ model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
 developer_instructions = """
 Stay in exploration mode.
-Use SharpTools MCP when available to inspect the solution graph, references, symbols, and project dependencies.
+Use CanDoItAll CodeAnalytics MCP as the default read-only surface for solution graphs, references, symbols, and project dependencies.
+Reach for SharpTools only as an explicit backup when CodeAnalytics has a real capability gap that cannot be repaired during the run.
 Map the real code structure with exact files, classes, namespaces, and references.
 Do not propose refactors unless the parent agent explicitly asks.
 Prefer precise evidence over broad speculation.

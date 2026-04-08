@@ -1,6 +1,6 @@
 ---
 name: candoitall-codeanalytics-mcp
-description: Use when inspecting C# solutions through the CanDoItAll codeanalytics MCP, especially for solution/project inventory, DI, persistence, symbol lookup, file inspection, and SharpTools-style read-only analysis without falling back to SharpTools.
+description: Use when inspecting C# solutions through the CanDoItAll codeanalytics MCP, especially for solution/project inventory, DI, persistence, symbol lookup, file inspection, and SharpTools-style read-only analysis while keeping SharpTools as a disabled backup only.
 ---
 
 # CanDoItAll CodeAnalytics MCP

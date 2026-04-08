@@ -87,17 +87,15 @@ Suggested prompt:
 - **Before each new feature wave**: canonical-model-review
 - **Before release / monthly**: architecture-drift-audit
 
-## SharpTools MCP
+## CodeAnalytics First
 
-These skills are written to **prefer SharpTools MCP when it is available** for:
+These skills are written to **prefer CanDoItAll CodeAnalytics MCP** for:
 
 - solution graph inspection
 - symbol navigation
 - project reference analysis
-- targeted test execution
-- startup and runtime evidence gathering
 
-If SharpTools is not available, the skills still work with standard shell / repo inspection.
+SharpTools is backup-only and should remain disabled by default. Enable it only if CodeAnalytics has a real unresolved capability gap that cannot be repaired during the run.
 
 ## Optional review output location
 
