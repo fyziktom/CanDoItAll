@@ -9,6 +9,7 @@
     <Project Path="src/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
     <Project Path="src/CanDoItAll.Mcp.Core/CanDoItAll.Mcp.Core.csproj" />
     <Project Path="src/CanDoItAll.Mcp.Components/CanDoItAll.Mcp.Components.csproj" />
+    <Project Path="src/CanDoItAll.Mcp.CodeAnalytics/CanDoItAll.Mcp.CodeAnalytics.csproj" />
     <Project Path="src/CanDoItAll.Mcp.DotNetWatch/CanDoItAll.Mcp.DotNetWatch.csproj" />
     <Project Path="src/CanDoItAll.Mcp.LocalRuntime/CanDoItAll.Mcp.LocalRuntime.csproj" />
     <Project Path="src/CanDoItAll.Mcp.ProjectStructure/CanDoItAll.Mcp.ProjectStructure.csproj" />

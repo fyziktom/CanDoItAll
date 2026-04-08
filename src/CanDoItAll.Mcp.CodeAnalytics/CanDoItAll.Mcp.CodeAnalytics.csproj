@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>CanDoItAll.Mcp.CodeAnalytics</AssemblyName>
+    <RootNamespace>CanDoItAll.Mcp.CodeAnalytics</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj" />
+    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Abstractions\CanDoItAll.CodeAnalytics.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Analysis\CanDoItAll.CodeAnalytics.Analysis.csproj" />
+    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Application\CanDoItAll.CodeAnalytics.Application.csproj" />
+    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Facts\CanDoItAll.CodeAnalytics.Facts.csproj" />
+    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Rendering\CanDoItAll.CodeAnalytics.Rendering.csproj" />
+    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Storage\CanDoItAll.CodeAnalytics.Storage.csproj" />
+    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Workspace\CanDoItAll.CodeAnalytics.Workspace.csproj" />
+  </ItemGroup>
+
+</Project>
