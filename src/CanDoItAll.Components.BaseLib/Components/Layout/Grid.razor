@@ -106,12 +106,16 @@ else
     public bool Section { get; set; }
 
     [Parameter]
+    public bool FillHeight { get; set; }
+
+    [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
     private string ResolveCssClass()
     {
         return BuildClass(
             "min-w-0 [&>*]:min-w-0 [gap:var(--cda-grid-gap)] [column-gap:var(--cda-grid-column-gap)] [row-gap:var(--cda-grid-row-gap)] [align-items:var(--cda-grid-align)] [justify-content:var(--cda-grid-justify)]",
+            FillHeight ? "min-h-0" : null,
             "[grid-template-columns:var(--cda-grid-columns)]",
             HasResponsiveColumns(ColumnsSm, ColumnTemplateSm) ? "sm:[grid-template-columns:var(--cda-grid-columns-sm)]" : null,
             HasResponsiveColumns(ColumnsMd, ColumnTemplateMd) ? "md:[grid-template-columns:var(--cda-grid-columns-md)]" : null,
@@ -143,6 +147,12 @@ else
             "--cda-grid-columns:minmax(0,1fr)"
         };
 
+        if (FillHeight)
+        {
+            styles.Add("height:100%");
+            styles.Add("min-height:0");
+        }
+
         AppendTrackStyle(styles, "--cda-grid-columns", Columns, ColumnTemplate);
         AppendTrackStyle(styles, "--cda-grid-columns-sm", ColumnsSm, ColumnTemplateSm);
         AppendTrackStyle(styles, "--cda-grid-columns-md", ColumnsMd, ColumnTemplateMd);
@@ -157,7 +167,7 @@ else
         AppendTrackStyle(styles, "--cda-grid-rows-xl", RowsXl, RowTemplateXl);
         AppendTrackStyle(styles, "--cda-grid-rows-2xl", Rows2Xl, RowTemplate2Xl);
 
-        return string.Join(';', styles) + ';';
+        return string.Join(';', styles.Where(static value => !string.IsNullOrWhiteSpace(value))) + ';';
     }
 
     private bool HasBaseColumns() => HasResponsiveColumns(Columns, ColumnTemplate);

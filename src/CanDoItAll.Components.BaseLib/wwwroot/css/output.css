@@ -386,11 +386,17 @@
   .h-\[94vh\] {
     height: 94vh;
   }
+  .h-full {
+    height: 100%;
+  }
   .h-px {
     height: 1px;
   }
   .max-h-\[94vh\] {
     max-height: 94vh;
+  }
+  .min-h-0 {
+    min-height: calc(var(--spacing) * 0);
   }
   .min-h-\[14rem\] {
     min-height: 14rem;
