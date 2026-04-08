@@ -1,14 +1,16 @@
 @namespace CanDoItAll.Components.BaseLib
-<div class="grid gap-5 xl:grid-cols-[minmax(0,var(--list-pane-width))_minmax(0,1fr)]" style="@($"--list-pane-width:{ListPaneWidth};")">
+<Grid Gap="LayoutGap.XLarge"
+      ColumnTemplateXl="minmax(0,var(--list-pane-width)) minmax(0,1fr)"
+      Style="@($"--list-pane-width:{ListPaneWidth};")">
     <section class="@ResolvePaneClass(ListPaneClass)">
         @if (ListHeader is not null)
         {
-            <div class="border-b border-slate-200 px-5 py-4">
+            <div class="border-b border-slate-200 px-4 py-3.5">
                 @ListHeader
             </div>
         }
 
-        <div class="flex-1 px-5 py-5">
+        <div class="flex-1 px-4 py-4">
             @ListContent
         </div>
     </section>
@@ -16,16 +18,16 @@
     <section class="@ResolvePaneClass(DetailPaneClass)">
         @if (DetailHeader is not null)
         {
-            <div class="border-b border-slate-200 px-5 py-4">
+            <div class="border-b border-slate-200 px-4 py-3.5">
                 @DetailHeader
             </div>
         }
 
-        <div class="flex-1 px-5 py-5">
+        <div class="flex-1 px-4 py-4">
             @DetailContent
         </div>
     </section>
-</div>
+</Grid>
 
 @code {
     [Parameter]
@@ -51,7 +53,7 @@
 
     private static string ResolvePaneClass(string? customClass)
     {
-        var baseClass = "flex min-h-[28rem] min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/90 shadow-sm shadow-slate-200/60";
+        var baseClass = "flex min-h-[26rem] min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/90 shadow-sm shadow-slate-200/60";
         return string.IsNullOrWhiteSpace(customClass) ? baseClass : $"{baseClass} {customClass}";
     }
 }

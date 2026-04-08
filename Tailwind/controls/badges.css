@@ -1,0 +1,60 @@
+@layer components {
+  .cda-badge {
+    @apply inline-flex items-center gap-1 border px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em];
+    border-radius: 9999px;
+  }
+
+  .cda-status-badge {
+    @apply inline-flex items-center border px-2.5 py-1 text-xs font-medium;
+    border-radius: 9999px;
+  }
+
+  .cda-badge--tone-primary,
+  .cda-status-badge--tone-primary {
+    border-color: var(--cad-tone-primary-solid-border);
+    background: var(--cad-tone-primary-solid-bg);
+    color: var(--cad-tone-primary-solid-fg);
+  }
+
+  .cda-badge--tone-base,
+  .cda-status-badge--tone-base {
+    border-color: var(--cad-tone-base-soft-border);
+    background: var(--cad-tone-base-soft-bg);
+    color: var(--cad-tone-base-soft-fg);
+  }
+
+  .cda-badge--tone-secondary,
+  .cda-status-badge--tone-secondary {
+    border-color: var(--cad-tone-secondary-soft-border);
+    background: var(--cad-tone-secondary-soft-bg);
+    color: var(--cad-tone-secondary-soft-fg);
+  }
+
+  .cda-badge--tone-success,
+  .cda-status-badge--tone-success {
+    border-color: var(--cad-tone-success-soft-border);
+    background: var(--cad-tone-success-soft-bg);
+    color: var(--cad-tone-success-soft-fg);
+  }
+
+  .cda-badge--tone-info,
+  .cda-status-badge--tone-info {
+    border-color: var(--cad-tone-info-soft-border);
+    background: var(--cad-tone-info-soft-bg);
+    color: var(--cad-tone-info-soft-fg);
+  }
+
+  .cda-badge--tone-warning,
+  .cda-status-badge--tone-warning {
+    border-color: var(--cad-tone-warning-soft-border);
+    background: var(--cad-tone-warning-soft-bg);
+    color: var(--cad-tone-warning-soft-fg);
+  }
+
+  .cda-badge--tone-danger,
+  .cda-status-badge--tone-danger {
+    border-color: var(--cad-tone-danger-soft-border);
+    background: var(--cad-tone-danger-soft-bg);
+    color: var(--cad-tone-danger-soft-fg);
+  }
+}

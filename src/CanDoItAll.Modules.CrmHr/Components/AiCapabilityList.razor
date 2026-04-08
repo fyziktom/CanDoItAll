@@ -1,0 +1,92 @@
+<Stack GapScale="LayoutGap.Medium">
+    <Split Gap="LayoutGap.Medium"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween">
+        <div>
+            <p class="cda-eyebrow">Capabilities and guardrails</p>
+            <p class="mt-1 text-sm leading-6 text-slate-600">Capture what the agent can do, where it is safe to use it, which tools it may touch, and the limits that delivery teams need to respect.</p>
+        </div>
+        <Button Text="Add capability"
+                ButtonStyle="ButtonStyle.Light"
+                Size="ButtonSize.Small"
+                Click="AddCapability"
+                data-testid="crmhr-agent-capability-add" />
+    </Split>
+
+    @if (Capabilities.Count == 0)
+    {
+        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+            No capabilities captured yet.
+        </div>
+    }
+    else
+    {
+        @for (var index = 0; index < Capabilities.Count; index++)
+        {
+            var rowIndex = index;
+            var capability = Capabilities[rowIndex];
+            <PanelCard Soft="true">
+                <Grid Gap="LayoutGap.Medium" ColumnsLg="2">
+                    <div>
+                        <label class="cda-field-label">Capability</label>
+                        <InputText @bind-Value="capability.Name"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-agent-capability-name-{rowIndex}")" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Scope</label>
+                        <InputText @bind-Value="capability.Scope"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-agent-capability-scope-{rowIndex}")" />
+                    </div>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
+                    <div>
+                        <label class="cda-field-label">Tool access</label>
+                        <InputText @bind-Value="capability.ToolAccess"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-agent-capability-tool-access-{rowIndex}")" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Limitations</label>
+                        <InputText @bind-Value="capability.Limitations"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-agent-capability-limitations-{rowIndex}")" />
+                    </div>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
+                    <div>
+                        <label class="cda-field-label">Notes</label>
+                        <InputTextArea @bind-Value="capability.Notes"
+                                       class="cda-input min-h-[7rem]"
+                                       data-testid="@($"crmhr-agent-capability-notes-{rowIndex}")" />
+                    </div>
+                    <div class="flex items-end justify-end">
+                        <Button Text="Remove"
+                                ButtonStyle="ButtonStyle.Danger"
+                                Size="ButtonSize.Small"
+                                Click="@(() => RemoveCapability(rowIndex))"
+                                data-testid="@($"crmhr-agent-capability-remove-{rowIndex}")" />
+                    </div>
+                </Grid>
+            </PanelCard>
+        }
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public IList<AiCapabilityEditorModel> Capabilities { get; set; } = default!;
+
+    private void AddCapability()
+    {
+        Capabilities.Add(new AiCapabilityEditorModel());
+    }
+
+    private void RemoveCapability(int index)
+    {
+        Capabilities.RemoveAt(index);
+    }
+}

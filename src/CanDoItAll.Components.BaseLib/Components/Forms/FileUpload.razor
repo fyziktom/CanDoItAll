@@ -1,0 +1,201 @@
+@namespace CanDoItAll.Components.BaseLib
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inherits StyledComponentBase
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<div @ref="rootElement"
+     @attributes='BuildAttributes("w-full min-w-0")'
+     data-testid="@RootTestHookId">
+    <div class="relative flex min-h-[14rem] w-full items-center justify-center rounded-[1.5rem] border border-dashed border-slate-400/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.98)_54%,rgba(241,245,249,0.96)_100%)] p-7 text-center transition duration-150 data-[drag-active=true]:-translate-y-px data-[drag-active=true]:border-emerald-500/90 data-[drag-active=true]:bg-[linear-gradient(135deg,rgba(236,253,245,0.96)_0%,rgba(219,252,231,0.97)_100%)] data-[drag-active=true]:shadow-[0_22px_48px_-32px_rgba(5,150,105,0.38)] data-[disabled=true]:border-solid data-[disabled=true]:border-slate-300 data-[disabled=true]:bg-[linear-gradient(135deg,rgba(248,250,252,0.96)_0%,rgba(241,245,249,0.98)_100%)] data-[disabled=true]:shadow-none"
+         style="@DropZoneStyle"
+         data-cda-file-upload-zone
+         data-drag-active="false"
+         data-disabled="@(Disabled ? "true" : "false")"
+         data-testid="@DropZoneTestHookId"
+         aria-disabled="@Disabled">
+        <div class="flex w-full max-w-sm flex-col items-center gap-3.5 data-[disabled=true]:opacity-70"
+             style="@ContentStyle"
+             data-disabled="@(Disabled ? "true" : "false")">
+            @if (!string.IsNullOrWhiteSpace(Icon))
+            {
+                <span class="inline-flex h-14 w-14 items-center justify-center rounded-full bg-slate-900/5 text-slate-900/80"
+                      style="@IconStyle"
+                      aria-hidden="true">
+                    <Icon Name="@Icon" Class="text-[1.5rem]" />
+                </span>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(PrimaryText))
+            {
+                <p class="m-0 text-base font-semibold leading-6 text-slate-950">@PrimaryText</p>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(SecondaryText))
+            {
+                <p class="m-0 text-[0.94rem] leading-7 text-slate-600">@SecondaryText</p>
+            }
+
+            <div class="relative mt-[0.15rem] inline-flex" style="@ButtonWrapStyle" data-testid="@ButtonTestHookId">
+                <span class="pointer-events-none rz-button cda-button cda-button--size-md cda-button--outlined cda-button--tone-light">
+                    <span class="rz-button-text">@ButtonText</span>
+                </span>
+
+                <InputFile id="@inputId"
+                           OnChange="HandleChangeAsync"
+                           class="cda-file-upload__input"
+                           style="@InputStyle"
+                           @attributes="ResolveInputAttributes()" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly string inputId = $"cda-file-upload-{Guid.NewGuid():N}";
+    private ElementReference rootElement;
+    private IJSObjectReference? module;
+
+    [Parameter]
+    public string PrimaryText { get; set; } = "Drag and drop files here";
+
+    [Parameter]
+    public string SecondaryText { get; set; } = "or browse from disk.";
+
+    [Parameter]
+    public string ButtonText { get; set; } = "Choose file";
+
+    [Parameter]
+    public string? Accept { get; set; }
+
+    [Parameter]
+    public bool Multiple { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public bool Compact { get; set; }
+
+    [Parameter]
+    public string Icon { get; set; } = "upload_file";
+
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    [Parameter]
+    public string? RootTestHookId { get; set; }
+
+    [Parameter]
+    public string? DropZoneTestHookId { get; set; }
+
+    [Parameter]
+    public string? ButtonTestHookId { get; set; }
+
+    [Parameter]
+    public string? InputTestHookId { get; set; }
+
+    [Parameter]
+    public EventCallback<InputFileChangeEventArgs> Change { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        module = await JS.InvokeAsync<IJSObjectReference>(
+            "import",
+            "./_content/CanDoItAll.Components.BaseLib/js/fileUpload.js");
+        await module.InvokeVoidAsync("initializeFileUpload", rootElement, inputId);
+    }
+
+    private Task HandleChangeAsync(InputFileChangeEventArgs args)
+    {
+        return Change.InvokeAsync(args);
+    }
+
+    private IReadOnlyDictionary<string, object> ResolveInputAttributes()
+    {
+        var attributes = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["aria-label"] = ResolveAriaLabel()
+        };
+
+        if (!string.IsNullOrWhiteSpace(Accept))
+        {
+            attributes["accept"] = Accept;
+        }
+
+        if (Multiple)
+        {
+            attributes["multiple"] = true;
+        }
+
+        if (Disabled)
+        {
+            attributes["disabled"] = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(InputTestHookId))
+        {
+            attributes["data-testid"] = InputTestHookId;
+        }
+
+        return attributes;
+    }
+
+    private string ResolveAriaLabel()
+    {
+        if (!string.IsNullOrWhiteSpace(AriaLabel))
+        {
+            return AriaLabel;
+        }
+
+        return !string.IsNullOrWhiteSpace(PrimaryText)
+            ? PrimaryText
+            : ButtonText;
+    }
+
+    private string InputStyle => Disabled
+        ? "position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:not-allowed;"
+        : "position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;";
+
+    private string? DropZoneStyle => Compact
+        ? "min-height:9.5rem;padding:1.25rem;"
+        : null;
+
+    private string? ContentStyle => Compact
+        ? "max-width:100%;gap:0.75rem;"
+        : null;
+
+    private string? IconStyle => Compact
+        ? "height:2.75rem;width:2.75rem;"
+        : null;
+
+    private string? ButtonWrapStyle => Compact
+        ? "margin-top:0;"
+        : null;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await module.InvokeVoidAsync("disposeFileUpload", rootElement);
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (InvalidOperationException exception) when (exception.Message.Contains("disconnected", StringComparison.OrdinalIgnoreCase))
+        {
+        }
+    }
+}

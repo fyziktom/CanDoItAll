@@ -96,6 +96,184 @@ public sealed class ProjectWorkbenchSubtreeRecompositionIntegrationTests
             ]);
     }
 
+    [Fact]
+    public async Task RecomposeSubtreeAsync_with_single_child_branch_keeps_descendants_compact_and_below_root()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projects, "Single-branch subtree recomposition");
+        var projectRootId = BuildProjectRootNodeKey(projectId);
+        var plan = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Backfilled execution plan",
+                "JsonOutline import",
+                "Compact single-branch plan.",
+                projectRootId,
+                860,
+                360,
+                null,
+                null,
+                "delivery"));
+        var acceptanceScope = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Acceptance scope",
+                string.Empty,
+                "Validation scope.",
+                plan.Id,
+                1160,
+                240,
+                null,
+                null,
+                "delivery"));
+        var acceptanceTask = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Document the regression scope",
+                string.Empty,
+                "Acceptance scope task.",
+                acceptanceScope.Id,
+                1380,
+                220,
+                null,
+                null,
+                "task"));
+        var validationProof = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Validation proof",
+                string.Empty,
+                "Collect build and browser proof.",
+                plan.Id,
+                1180,
+                320,
+                null,
+                null,
+                "delivery"));
+        var validationTask = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Run build and browser checks",
+                string.Empty,
+                "Validation task.",
+                validationProof.Id,
+                1410,
+                300,
+                null,
+                null,
+                "task"));
+        var objective = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Objective",
+                string.Empty,
+                "Root objective.",
+                plan.Id,
+                1200,
+                400,
+                null,
+                null,
+                "task"));
+        var prerequisites = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Prerequisites",
+                string.Empty,
+                "Reopen dependencies if proof is weak.",
+                plan.Id,
+                1220,
+                480,
+                null,
+                null,
+                "delivery"));
+        var prerequisitesTask = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Verify bundle dependencies",
+                string.Empty,
+                "Prerequisite task.",
+                prerequisites.Id,
+                1450,
+                500,
+                null,
+                null,
+                "task"));
+        var dependencyImpact = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Dependency impact",
+                string.Empty,
+                "Review downstream risk.",
+                plan.Id,
+                1240,
+                560,
+                null,
+                null,
+                "delivery"));
+
+        var surfaceBefore = await workbench.GetStructureAsync(projectId);
+        var root = Assert.Single(surfaceBefore.Nodes, node => node.Id == projectRootId);
+
+        var createdNodeIds = new[]
+        {
+            plan.Id,
+            acceptanceScope.Id,
+            acceptanceTask.Id,
+            validationProof.Id,
+            validationTask.Id,
+            objective.Id,
+            prerequisites.Id,
+            prerequisitesTask.Id,
+            dependencyImpact.Id
+        };
+
+        var result = await workbench.RecomposeSubtreeAsync(projectId, projectRootId);
+
+        Assert.NotNull(result);
+        Assert.Equal(createdNodeIds.Length, result!.DescendantCount);
+        Assert.True(result.RepositionedNodeCount > 0);
+
+        var surfaceAfter = await workbench.GetStructureAsync(projectId);
+        var nodesById = surfaceAfter.Nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
+        var reloadedRoot = nodesById[projectRootId];
+        var reloadedPlan = nodesById[plan.Id];
+        var descendants = createdNodeIds
+            .Select(nodeId => nodesById[nodeId])
+            .ToList();
+        var descendantBounds = ResolveBounds(descendants);
+        var descendantWidth = descendantBounds.Right - descendantBounds.Left;
+        var descendantHeight = descendantBounds.Bottom - descendantBounds.Top;
+
+        Assert.Equal(root.X, reloadedRoot.X);
+        Assert.Equal(root.Y, reloadedRoot.Y);
+        Assert.True(reloadedPlan.Y > reloadedRoot.Y + 120d, "The single branch root should move below the selected root.");
+        Assert.True(reloadedPlan.Y < reloadedRoot.Y + 1200d, "The single branch root should stay within a compact distance from the selected root.");
+        Assert.True(descendantWidth < 2600d, $"Single-branch recomposition should stay compact, but width was {descendantWidth:F1}.");
+        Assert.True(descendantHeight < 2600d, $"Single-branch recomposition should stay compact, but height was {descendantHeight:F1}.");
+
+        foreach (var descendant in descendants)
+        {
+            Assert.True(
+                descendant.Y > reloadedRoot.Y + 40d,
+                $"{descendant.Title} should stay below the selected root in a single-branch recomposition.");
+        }
+
+        AssertNoOverlaps([reloadedRoot, .. descendants]);
+    }
+
     private static async Task<BranchFixture> CreateBranchAsync(
         ProjectWorkbenchService workbench,
         Guid projectId,

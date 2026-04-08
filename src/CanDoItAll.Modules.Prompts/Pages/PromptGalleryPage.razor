@@ -1,6 +1,7 @@
 @page "/prompt-gallery"
 @using System.Text.Json
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
 @inject PromptsService PromptsService
 
 <PageTitle>Prompt Gallery</PageTitle>
@@ -9,10 +10,10 @@
     <Header>
         <PageHeader Eyebrow="Prompt Library"
                     Title="Prompt gallery and versions"
-                    Description="Manage prompt drafts, immutable versions, collections, tags, and clone flows through one shared library layout.">
+                    Description="Manage prompt drafts, immutable versions, collections, tags, and clone flows without burying the working surface under reference content.">
             <Actions>
-                <button type="button" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" @onclick="CreateNewAsync">New prompt</button>
-                <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateCollectionAsync">Add collection</button>
+                <Button Text="New prompt" Click="CreateNewAsync" />
+                <Button Text="Add collection" ButtonStyle="ButtonStyle.Light" Click="CreateCollectionAsync" />
             </Actions>
         </PageHeader>
     </Header>
@@ -23,86 +24,36 @@
             <SummaryTile Label="Final" Value="@prompts.Count(item => item.Status == PromptArtifactStatus.Final).ToString()" HelperText="Prompts with at least one finalized version." Tone="success" />
             <SummaryTile Label="Collections" Value="@collections.Count.ToString()" HelperText="Available prompt groupings." />
             <SummaryTile Label="Versions" Value="@prompts.Sum(item => item.VersionCount).ToString()" HelperText="Immutable prompt versions stored in the library." Tone="info" />
-            <SummaryTile Label="Components" Value="@libraryCatalog.ComponentCount.ToString()" HelperText="Imported prompt components available in the wizard." Tone="accent" />
-            <SummaryTile Label="Flows" Value="@libraryCatalog.FlowCount.ToString()" HelperText="Imported flow templates available in the wizard." Tone="info" />
-            <SummaryTile Label="Blueprints" Value="@libraryCatalog.BlueprintCount.ToString()" HelperText="Imported blueprints available in the wizard." Tone="success" />
         </SummaryTiles>
-
-        <section class="grid gap-6 xl:grid-cols-3">
-            <div class="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Imported components</p>
-                <h2 class="mt-2 text-lg font-semibold text-slate-950">Library groups</h2>
-                <div class="mt-4 space-y-3">
-                    @foreach (var group in libraryCatalog.Groups.OrderBy(item => item.Order))
-                    {
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                            <p class="text-sm font-semibold text-slate-950">@group.Name</p>
-                            <p class="mt-1 text-xs leading-5 text-slate-600">@group.Purpose</p>
-                            <p class="mt-2 text-xs font-semibold text-slate-500">@($"{group.ComponentCount} component(s)")</p>
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <div class="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Imported flows</p>
-                <h2 class="mt-2 text-lg font-semibold text-slate-950">Prompt flow templates</h2>
-                <div class="mt-4 space-y-3">
-                    @foreach (var flow in libraryCatalog.Flows.OrderBy(item => item.OrderIndex))
-                    {
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                            <p class="text-sm font-semibold text-slate-950">@flow.Name</p>
-                            <p class="mt-1 text-xs leading-5 text-slate-600">@flow.Summary</p>
-                            <p class="mt-2 text-xs font-semibold text-slate-500">@($"{flow.AgentSequence.Count} agent step(s) · {flow.BlockKeys.Count} block(s)")</p>
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <div class="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Imported blueprints</p>
-                <h2 class="mt-2 text-lg font-semibold text-slate-950">Prompt blueprints</h2>
-                <div class="mt-4 space-y-3">
-                    @foreach (var blueprint in libraryCatalog.Blueprints.OrderBy(item => item.OrderIndex))
-                    {
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                            <p class="text-sm font-semibold text-slate-950">@blueprint.Name</p>
-                            <p class="mt-1 text-xs leading-5 text-slate-600">@blueprint.Guidance</p>
-                            <p class="mt-2 text-xs font-semibold text-slate-500">@($"{blueprint.PromptType} · flow: {blueprint.RecommendedFlowKey}")</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </section>
 
         <ListDetailShell ListPaneWidth="25rem">
             <ListHeader>
                 <ListPanelHeader Title="Saved prompts" Description="Select a prompt to edit it, review versions, or inspect recent usage." Count="@($"{FilteredPrompts.Count} prompt(s)")">
                     <Filters>
                         <FilterBar ResultText="@($"{FilteredPrompts.Count} matching prompt(s)")">
-                            <input @bind="promptSearch" @bind:event="oninput" class="min-w-[14rem] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700" placeholder="Search prompts" />
-                            <InputSelect @bind-Value="collectionFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                            <input @bind="promptSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search prompts" />
+                            <InputSelect @bind-Value="collectionFilter" class="cda-input">
                                 <option value="">All collections</option>
                                 @foreach (var collection in collections)
                                 {
                                     <option value="@collection.Name">@collection.Name</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="phaseFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                            <InputSelect @bind-Value="phaseFilter" class="cda-input">
                                 <option value="">All phases</option>
                                 @foreach (var phase in prompts.Select(item => item.Phase).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(item => item))
                                 {
                                     <option value="@phase">@phase</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="statusFilter" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+                            <InputSelect @bind-Value="statusFilter" class="cda-input">
                                 <option value="">All statuses</option>
                                 @foreach (var status in Enum.GetValues<PromptArtifactStatus>())
                                 {
                                     <option value="@status.ToString()">@status</option>
                                 }
                             </InputSelect>
-                            <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700" @onclick="ResetFilters">Reset</button>
+                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetFilters" />
                         </FilterBar>
                     </Filters>
                 </ListPanelHeader>
@@ -115,7 +66,7 @@
                 }
                 else
                 {
-                    <div class="space-y-3">
+                    <Stack GapScale="LayoutGap.Medium">
                         @foreach (var prompt in FilteredPrompts)
                         {
                             <SelectionListItem Title="@prompt.Title"
@@ -129,49 +80,49 @@
                                 </Status>
                             </SelectionListItem>
                         }
-                    </div>
+                    </Stack>
                 }
             </ListContent>
 
             <DetailHeader>
-                <div class="space-y-3">
-                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div class="space-y-1">
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Prompt editor</p>
-                            <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
-                            <p class="text-sm leading-6 text-slate-600">Draft editing, immutable versions, and recent usage stay together in one detail pane.</p>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2">
+                <Stack GapScale="LayoutGap.Medium">
+                    <Split Gap="LayoutGap.Medium">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <p class="cda-eyebrow">Prompt editor</p>
+                            <h2 class="cda-title-xl">@EditorTitle</h2>
+                            <p class="cda-body-muted">Draft editing, immutable versions, and recent usage stay together in one detail pane.</p>
+                        </Stack>
+                        <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Tone="@EditorStatusTone" Text="@EditorStatusLabel" />
                             <StatusBadge Tone="neutral" Text="@($"{editor.Versions.Count} version(s)")" />
                             <StatusBadge Tone="info" Text="@($"{editor.UsageHistory.Count} usage record(s)")" />
-                        </div>
-                    </div>
+                        </Cluster>
+                    </Split>
 
                     <SecondaryTabs Items="DetailTabs" SelectedKey="@detailTab" SelectedKeyChanged="HandleDetailTabChanged" />
-                </div>
+                </Stack>
             </DetailHeader>
 
             <DetailContent>
                 <EditForm Model="editor" OnValidSubmit="SaveDraftAsync">
-                    <div class="flex min-h-full flex-col gap-6">
+                    <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
                         @if (string.Equals(detailTab, "overview", StringComparison.Ordinal))
                         {
                             <FormSection Title="Prompt identity" Description="Keep the prompt title, collection, and tags close to the draft itself.">
-                                <div class="grid gap-4 md:grid-cols-2">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Title</label>
-                                        <InputText @bind-Value="editor.Title" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Title</label>
+                                        <InputText @bind-Value="editor.Title" class="cda-input" />
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Phase</label>
-                                        <InputText @bind-Value="editor.Phase" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Phase</label>
+                                        <InputText @bind-Value="editor.Phase" class="cda-input" />
                                     </div>
-                                </div>
-                                <div class="grid gap-4 md:grid-cols-2">
+                                </Grid>
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Collection</label>
-                                        <InputSelect @bind-Value="editor.CollectionId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                        <label class="cda-field-label">Collection</label>
+                                        <InputSelect @bind-Value="editor.CollectionId" class="cda-input">
                                             <option value="">None</option>
                                             @foreach (var collection in collections)
                                             {
@@ -180,20 +131,20 @@
                                         </InputSelect>
                                     </div>
                                     <div>
-                                        <label class="mb-1 block text-sm font-medium text-slate-700">Tags</label>
-                                        <InputText @bind-Value="editor.TagsCsv" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                        <label class="cda-field-label">Tags</label>
+                                        <InputText @bind-Value="editor.TagsCsv" class="cda-input" />
                                     </div>
-                                </div>
+                                </Grid>
                             </FormSection>
 
                             <FormSection Title="Draft content" Description="The editable draft remains separate from immutable finalized versions.">
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Draft text</label>
-                                    <InputTextArea @bind-Value="editor.DraftText" class="min-h-80 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-sm" />
+                                    <label class="cda-field-label">Draft text</label>
+                                    <InputTextArea @bind-Value="editor.DraftText" class="cda-input cda-input--textarea cda-input--mono min-h-80" />
                                 </div>
                                 <div>
-                                    <label class="mb-1 block text-sm font-medium text-slate-700">Finalization reason</label>
-                                    <InputText @bind-Value="editor.FinalizationReason" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                                    <label class="cda-field-label">Finalization reason</label>
+                                    <InputText @bind-Value="editor.FinalizationReason" class="cda-input" />
                                 </div>
                             </FormSection>
                         }
@@ -206,18 +157,22 @@
                                 }
                                 else
                                 {
-                                    <div class="space-y-3">
+                                    <Stack GapScale="LayoutGap.Medium">
                                         @foreach (var version in editor.Versions)
                                         {
-                                            <div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
-                                                <div class="flex flex-wrap items-center justify-between gap-3">
-                                                    <p class="text-sm font-semibold text-slate-950">Version @version.VersionNumber</p>
-                                                    <p class="text-xs text-slate-500">@version.CreatedAtUtc.LocalDateTime:g</p>
-                                                </div>
-                                                <p class="mt-2 text-sm leading-6 text-slate-600">@version.CreationReason</p>
+                                            <div class="cda-panel-card">
+                                                <Split Breakpoint="LayoutBreakpoint.None"
+                                                       Gap="LayoutGap.Medium"
+                                                       AlignItems="AlignItems.Center"
+                                                       JustifyContent="JustifyContent.SpaceBetween"
+                                                       Wrap="FlexWrap.Wrap">
+                                                    <p class="cda-copy-strong">Version @version.VersionNumber</p>
+                                                    <p class="cda-text-block cda-text-block--caption">@version.CreatedAtUtc.LocalDateTime:g</p>
+                                                </Split>
+                                                <p class="cda-body-muted mt-2">@version.CreationReason</p>
                                             </div>
                                         }
-                                    </div>
+                                    </Stack>
                                 }
                             </FormSection>
                         }
@@ -230,42 +185,113 @@
                                 }
                                 else
                                 {
-                                    <div class="space-y-3">
+                                    <Stack GapScale="LayoutGap.Medium">
                                         @foreach (var usage in editor.UsageHistory)
                                         {
-                                            <div class="rounded-[1.35rem] border border-slate-200 bg-white p-4">
-                                                <div class="flex flex-wrap items-center justify-between gap-3">
-                                                    <p class="text-sm font-semibold text-slate-950">@usage.ProviderName</p>
-                                                    <p class="text-xs text-slate-500">@usage.CreatedAtUtc.LocalDateTime:g</p>
-                                                </div>
-                                                <p class="mt-2 text-sm text-slate-600">@usage.RepositoryName / @usage.CommitSha</p>
-                                                <p class="mt-3 text-sm leading-6 text-slate-600">@usage.UsageNote</p>
+                                            <div class="cda-panel-card">
+                                                <Split Breakpoint="LayoutBreakpoint.None"
+                                                       Gap="LayoutGap.Medium"
+                                                       AlignItems="AlignItems.Center"
+                                                       JustifyContent="JustifyContent.SpaceBetween"
+                                                       Wrap="FlexWrap.Wrap">
+                                                    <p class="cda-copy-strong">@usage.ProviderName</p>
+                                                    <p class="cda-text-block cda-text-block--caption">@usage.CreatedAtUtc.LocalDateTime:g</p>
+                                                </Split>
+                                                <p class="cda-text-block cda-text-block--caption mt-2">@usage.RepositoryName / @usage.CommitSha</p>
+                                                <p class="cda-body-muted mt-3">@usage.UsageNote</p>
                                             </div>
                                         }
-                                    </div>
+                                    </Stack>
                                 }
                             </FormSection>
                         }
 
                         <StickyActionFooter StatusLabel="Prompt library" StatusMessage="@message" StatusTone="success">
                             <SecondaryActions>
-                                <button type="button" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CreateNewAsync">Reset</button>
+                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
                             </SecondaryActions>
                             <PrimaryActions>
-                                <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Save draft</button>
-                                <button type="button" class="inline-flex items-center rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700" @onclick="FinalizeAsync">Create final version</button>
+                                <Button Text="Save draft" Type="submit" />
+                                <Button Text="Create final version" ButtonStyle="ButtonStyle.Success" Click="FinalizeAsync" />
                             </PrimaryActions>
                             <DangerActions>
                                 @if (editor.Id.HasValue)
                                 {
-                                    <button type="button" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700" @onclick="CloneAsync">Clone</button>
+                                    <Button Text="Clone" ButtonStyle="ButtonStyle.Light" Click="CloneAsync" />
                                 }
                             </DangerActions>
                         </StickyActionFooter>
-                    </div>
+                    </Stack>
                 </EditForm>
             </DetailContent>
         </ListDetailShell>
+
+        <SectionCard Title="Imported prompt library"
+                     Description="Reference packs, flow templates, and blueprints stay close to the editor, but they no longer push the primary prompt list below the fold.">
+            <HeaderActions>
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <StatusBadge Tone="accent" Text="@($"{libraryCatalog.ComponentCount} components")" />
+                    <StatusBadge Tone="info" Text="@($"{libraryCatalog.FlowCount} flows")" />
+                    <StatusBadge Tone="success" Text="@($"{libraryCatalog.BlueprintCount} blueprints")" />
+                    <HelpPopover AriaLabel="Show imported library help"
+                                 Title="Show imported library help"
+                                 Heading="Imported library"
+                                 Body="These references stay available for prompt assembly, but the primary editing surface now takes the first-screen priority."
+                                 Tip="Use the three panels below to scan groups, flow templates, and blueprints without losing the main library editor." />
+                </Cluster>
+            </HeaderActions>
+            <ChildContent>
+                <Grid Section="true" Gap="LayoutGap.XXLarge" ColumnsXl="3">
+                    <div class="cda-panel-card h-full p-6 shadow-sm">
+                        <p class="cda-eyebrow">Imported components</p>
+                        <h2 class="cda-title-lg mt-2">Library groups</h2>
+                        <Stack GapScale="LayoutGap.Medium"
+                               Class="mt-4 max-h-[26rem] overflow-auto pr-1">
+                            @foreach (var group in libraryCatalog.Groups.OrderBy(item => item.Order))
+                            {
+                                <div class="cda-panel-card--soft px-4 py-3">
+                                    <p class="cda-copy-strong">@group.Name</p>
+                                    <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@group.Purpose</p>
+                                    <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{group.ComponentCount} component(s)")</p>
+                                </div>
+                            }
+                        </Stack>
+                    </div>
+
+                    <div class="cda-panel-card h-full p-6 shadow-sm">
+                        <p class="cda-eyebrow">Imported flows</p>
+                        <h2 class="cda-title-lg mt-2">Prompt flow templates</h2>
+                        <Stack GapScale="LayoutGap.Medium"
+                               Class="mt-4 max-h-[26rem] overflow-auto pr-1">
+                            @foreach (var flow in libraryCatalog.Flows.OrderBy(item => item.OrderIndex))
+                            {
+                                <div class="cda-panel-card--soft px-4 py-3">
+                                    <p class="cda-copy-strong">@flow.Name</p>
+                                    <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@flow.Summary</p>
+                                    <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{flow.AgentSequence.Count} agent step(s) · {flow.BlockKeys.Count} block(s)")</p>
+                                </div>
+                            }
+                        </Stack>
+                    </div>
+
+                    <div class="cda-panel-card h-full p-6 shadow-sm">
+                        <p class="cda-eyebrow">Imported blueprints</p>
+                        <h2 class="cda-title-lg mt-2">Prompt blueprints</h2>
+                        <Stack GapScale="LayoutGap.Medium"
+                               Class="mt-4 max-h-[26rem] overflow-auto pr-1">
+                            @foreach (var blueprint in libraryCatalog.Blueprints.OrderBy(item => item.OrderIndex))
+                            {
+                                <div class="cda-panel-card--soft px-4 py-3">
+                                    <p class="cda-copy-strong">@blueprint.Name</p>
+                                    <p class="cda-text-block cda-text-block--caption mt-1 leading-5">@blueprint.Guidance</p>
+                                    <p class="cda-text-block cda-text-block--caption mt-2 font-semibold">@($"{blueprint.PromptType} · flow: {blueprint.RecommendedFlowKey}")</p>
+                                </div>
+                            }
+                        </Stack>
+                    </div>
+                </Grid>
+            </ChildContent>
+        </SectionCard>
     </ChildContent>
 </PageScaffold>
 

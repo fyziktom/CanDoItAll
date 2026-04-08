@@ -8,6 +8,7 @@ public static class ShellNavigation
     [
         new("Dashboard", "/", "DB", "Operational summary, provider health, and recent work.", PinnedByDefault: true),
         new("Projects", "/projects", "PR", "Project setup, phases, stack profile, and delivery context.", PinnedByDefault: false),
+        new("CRM / HR", "/crm-hr", "CH", "Unified party directory, CRM, workforce, recruiting, agents, and assignments.", PinnedByDefault: false),
         new("Resources", "/resources", "RS", "Typed resources, connectors, and validation status.", PinnedByDefault: false),
         new("Prompt Gallery", "/prompt-gallery", "PG", "Prompt library, collections, versions, and usage.", PinnedByDefault: false),
         new("Prompt Factory", "/prompt-factory", "PF", "Guided prompt assembly with flow templates and blueprints.", PinnedByDefault: false),

@@ -134,7 +134,8 @@ public sealed record ProjectStructureNodeSummary(
     Guid? RelatedProjectId,
     int ParentProjectCount,
     double? X,
-    double? Y);
+    double? Y,
+    int? DurationSeconds = null);
 
 public sealed record ProjectStructureLinkSummary(
     string SourceId,
@@ -162,7 +163,8 @@ public sealed record ProjectStructureNodeCreateInput(
     string? ObjectSubtype = null,
     ProjectObjectMediaPayload? Media = null,
     string? MetadataJson = null,
-    string? LeaseToken = null);
+    string? LeaseToken = null,
+    int? DurationSeconds = null);
 
 public sealed record ProjectStructureNodeEditInput(
     string Title,
@@ -171,7 +173,8 @@ public sealed record ProjectStructureNodeEditInput(
     DateTimeOffset? StartUtc = null,
     DateTimeOffset? EndUtc = null,
     string? MetadataJson = null,
-    string? LeaseToken = null);
+    string? LeaseToken = null,
+    int? DurationSeconds = null);
 
 public sealed record ProjectStructureNodeMetadataInput(
     string MetadataJson,
@@ -206,6 +209,10 @@ public sealed record ProjectStructureNodeMoveInput(
     string NodeId,
     double X,
     double Y,
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureNodeRecomposeInput(
+    string RootNodeId,
     string? LeaseToken = null);
 
 public sealed record ProjectStructureNodeReparentInput(
@@ -282,6 +289,50 @@ public sealed record ProjectStructureChecklistResponse(
     Guid ProjectId,
     string ProjectName,
     IReadOnlyList<ProjectStructureChecklistItem> Items,
+    IReadOnlyList<string> Warnings);
+
+public sealed record ProjectStructureDependencyQueryRequest(
+    IReadOnlyList<string>? NodeIds = null,
+    bool IncludeFinished = true,
+    int? DefaultDurationSeconds = null,
+    int? Take = null);
+
+public sealed record ProjectStructureDependencyRelationSummary(
+    string NodeId,
+    string Title,
+    string Status,
+    int EffectivePriority,
+    bool IsFinished,
+    string Reason);
+
+public sealed record ProjectStructureDependencyItem(
+    string NodeId,
+    string? ParentNodeId,
+    ProjectObjectType ObjectType,
+    string ObjectSubtype,
+    string Title,
+    string Status,
+    string ProgressMode,
+    int ProgressPercent,
+    string MarkerLabel,
+    int Priority,
+    int EffectivePriority,
+    bool IsFinished,
+    bool IsPausedOrStopped,
+    bool CanExecute,
+    int? DurationSeconds,
+    int EffectiveDurationSeconds,
+    DateTimeOffset? StartUtc,
+    DateTimeOffset? EndUtc,
+    string Route,
+    IReadOnlyList<ProjectStructureDependencyRelationSummary> Prerequisites,
+    IReadOnlyList<ProjectStructureDependencyRelationSummary> Dependents);
+
+public sealed record ProjectStructureDependencyResponse(
+    Guid ProjectId,
+    string ProjectName,
+    int DefaultDurationSeconds,
+    IReadOnlyList<ProjectStructureDependencyItem> Items,
     IReadOnlyList<string> Warnings);
 
 public enum ProjectStructureImportSourceKind

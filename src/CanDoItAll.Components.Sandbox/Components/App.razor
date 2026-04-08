@@ -6,54 +6,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
+    <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.BaseLib/css/material-icons.css"]" />
     <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.BaseLib/css/output.css"]" />
-    <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.CanvasLib/canvas-workbench.css"]" />
+    <CanvasLibHeadAssets />
     <link rel="stylesheet" href="@Assets["sandbox.css"]" />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
     <Routes @rendermode="InteractiveServer" />
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/text-block-primitive.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/container-primitive.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/image-primitive.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/node-card-composer.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/connector-path-primitive.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/context-menu-host.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/create-action-palette.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/floating-inspector-host.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/canvas-floating-window.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/group-frame-overlay.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/inline-editor-composer.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/drag-drop-controller.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/grid-backdrop.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/hit-test-service.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/hover-focus-router.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/keyboard-shortcut-router.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/layout-engine.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/text-measure-service.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/viewport-controller.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/animation-timeline.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/zy-canvas-primitives.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/zy-canvas-calendar.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/selection-model.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/accessibility-mirror-layer.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/diagnostics-overlay.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/minimap-overview.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/clipboard-bridge.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/tooltip-popover-host.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/marquee-selection-overlay.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/snap-guide-system.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/connector-anchor-overlay.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/transform-handles-overlay.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/calendar-crud-bridge.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/calendar-event-editor-modal.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/calendar-export-menu.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/calendar-mini-month-navigator.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/calendar-selection-panel.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/calendar-time-grid-renderer.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/canvasCalendarInterop.js"]"></script>
-    <script src="@Assets["_content/CanDoItAll.Components.CanvasLib/js/canvasWorkbenchInterop.js"]"></script>
+    <CanvasLibBodyAssets IncludePreviewAssets="true" IncludeCalendarAssets="true" />
     <script src="_framework/blazor.web.js"></script>
 </body>
 

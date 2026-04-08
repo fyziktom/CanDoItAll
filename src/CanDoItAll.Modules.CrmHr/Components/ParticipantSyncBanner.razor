@@ -1,0 +1,49 @@
+@using CanDoItAll.Components.BaseLib
+
+<SurfaceCard Soft="true"
+             data-testid="@TestId">
+    <Stack GapScale="LayoutGap.Small">
+        <Cluster>
+            <StatusBadge Tone="@Tone"
+                         Text="@StatusText" />
+            @if (!string.IsNullOrWhiteSpace(LinkedPartyName))
+            {
+                <Pill Tone="PillTone.Info"
+                      Text="@LinkedPartyName" />
+            }
+        </Cluster>
+
+        <div class="space-y-1 text-sm text-slate-600">
+            <p>@Description</p>
+            @if (!string.IsNullOrWhiteSpace(SecondaryText))
+            {
+                <p>@SecondaryText</p>
+            }
+        </div>
+    </Stack>
+</SurfaceCard>
+
+@code {
+    [Parameter]
+    public string TestId { get; set; } = "crmhr-participant-sync-banner";
+
+    [Parameter]
+    public bool IsLocalOnly { get; set; }
+
+    [Parameter]
+    public string LinkedPartyName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Description { get; set; } = string.Empty;
+
+    [Parameter]
+    public string SecondaryText { get; set; } = string.Empty;
+
+    private string StatusText => IsLocalOnly || string.IsNullOrWhiteSpace(LinkedPartyName)
+        ? "Project local"
+        : "Directory linked";
+
+    private string Tone => IsLocalOnly || string.IsNullOrWhiteSpace(LinkedPartyName)
+        ? "neutral"
+        : "mint";
+}

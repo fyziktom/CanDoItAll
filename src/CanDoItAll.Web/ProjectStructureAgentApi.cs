@@ -308,6 +308,27 @@ public static class ProjectStructureAgentApi
                 requiredCapability: ProjectStructureAgentCapability.MutateStructure,
                 enforceMutationApproval: true));
 
+        group.MapPost("/projects/{projectId:guid}/nodes/recompose", async (
+            Guid projectId,
+            HttpContext httpContext,
+            ProjectStructureNodeRecomposeInput request,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.node-recompose",
+                projectId,
+                request.RootNodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                request,
+                (agent, cancellationToken) => agentService.RecomposeNodeAsync(projectId, request, agent, cancellationToken),
+                cancellationToken,
+                requiredCapability: ProjectStructureAgentCapability.MutateStructure,
+                enforceMutationApproval: true));
+
         group.MapPost("/projects/{projectId:guid}/nodes/reparent", async (
             Guid projectId,
             HttpContext httpContext,
@@ -388,6 +409,25 @@ public static class ProjectStructureAgentApi
                 null,
                 request,
                 (_, cancellationToken) => agentService.GetChecklistAsync(projectId, request, cancellationToken),
+                cancellationToken));
+
+        group.MapPost("/projects/{projectId:guid}/dependencies/query", async (
+            Guid projectId,
+            HttpContext httpContext,
+            ProjectStructureDependencyQueryRequest request,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "dependencies.query",
+                projectId,
+                null,
+                null,
+                null,
+                request,
+                (_, cancellationToken) => agentService.GetDependenciesAsync(projectId, request, cancellationToken),
                 cancellationToken));
 
         group.MapGet("/projects/{projectId:guid}/assets/{nodeId}", async (

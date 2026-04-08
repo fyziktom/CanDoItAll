@@ -1,0 +1,426 @@
+@using CanDoItAll.Modules.Projects
+
+<FormSection Title="Project allocations"
+             Description="Allocate people or delivery units through the same project-party bridge used by the project module so staffing commitments stay bidirectional.">
+    <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+        <SurfaceCard Soft="true">
+            <p class="cda-eyebrow">Candidate search</p>
+            <h3 class="mt-1 text-lg font-semibold text-slate-950">Find staffing candidates</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">
+                Search by skill, proficiency text, location, seniority, and availability before pushing someone into the project allocation draft.
+            </p>
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
+                <FormField Text="Search">
+                    <InputText @bind-Value="CandidateSearchValue"
+                               class="cda-input"
+                               data-testid="crmhr-allocation-candidate-search" />
+                </FormField>
+                <FormField Text="Skill">
+                    <InputSelect @bind-Value="CandidateSkillValue"
+                                 class="cda-input"
+                                 data-testid="crmhr-allocation-candidate-skill">
+                        <option value="">All skills</option>
+                        @foreach (var skill in SkillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name))
+                        {
+                            <option value="@skill.Id.ToString("D")">@skill.Name (@skill.Category)</option>
+                        }
+                    </InputSelect>
+                </FormField>
+            </Grid>
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
+                <FormField Text="Availability">
+                    <InputSelect @bind-Value="CandidateAvailabilityValue"
+                                 class="cda-input"
+                                 data-testid="crmhr-allocation-candidate-availability">
+                        <option value="">Any state</option>
+                        @foreach (var availabilityState in Enum.GetValues<WorkforceAvailabilityState>())
+                        {
+                            <option value="@availabilityState.ToString()">@availabilityState</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <Cluster AlignItems="AlignItems.End"
+                         JustifyContent="JustifyContent.Start">
+                    <Button Text="Refresh candidates"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="SearchCandidates"
+                            data-testid="crmhr-allocation-candidate-search-button" />
+                    <Button Text="Reset"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="ResetCandidateFilters"
+                            data-testid="crmhr-allocation-candidate-reset-button" />
+                </Cluster>
+            </Grid>
+
+            @if (Candidates.Count == 0)
+            {
+                <p class="mt-4 text-sm leading-6 text-slate-600">No workforce candidates matched the current filters.</p>
+            }
+            else
+            {
+                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                    @foreach (var candidate in Candidates)
+                    {
+                        <PanelCard data-testid="crmhr-staffing-candidate-item">
+                            <Split Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween">
+                                <div class="min-w-0 space-y-1">
+                                    <p class="text-base font-semibold text-slate-950">@candidate.DisplayName</p>
+                                    <p class="text-sm text-slate-600">@BuildCandidateMeta(candidate)</p>
+                                    @if (!string.IsNullOrWhiteSpace(candidate.SkillSummary))
+                                    {
+                                        <p class="text-sm leading-6 text-slate-600">@candidate.SkillSummary</p>
+                                    }
+                                </div>
+                                <Cluster Gap="LayoutGap.Small">
+                                    <StatusBadge Tone="@ResolveAvailabilityTone(candidate.AvailabilityState)"
+                                                 Text="@candidate.AvailabilityState.ToString()" />
+                                    <Button Text="Use candidate"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => SelectCandidate(candidate))"
+                                            data-testid="crmhr-allocation-use-candidate" />
+                                </Cluster>
+                            </Split>
+                        </PanelCard>
+                    }
+                </Stack>
+            }
+        </SurfaceCard>
+
+        <SurfaceCard>
+            <p class="cda-eyebrow">Allocation draft</p>
+            <h3 class="mt-1 text-lg font-semibold text-slate-950">Commit capacity to the selected project</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">
+                Save through the project assignment bridge so allocations remain visible from both CRM-HR and the project workspace.
+            </p>
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
+                <FormField Text="Allocation role">
+                    <InputSelect @bind-Value="Draft.Role"
+                                 class="cda-input"
+                                 data-testid="crmhr-allocation-role">
+                        @foreach (var role in AllocationRoles)
+                        {
+                            <option value="@role">@ResolveRoleLabel(role)</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <div>
+                    <p class="cda-field-label">Selected party</p>
+                    <PartyPicker Label="Party"
+                                 TestIdPrefix="crmhr-allocation-party"
+                                 Options="PartyOptions"
+                                 SelectedPartyId="Draft.PartyId"
+                                 SelectedPartyIdChanged="HandlePartyChanged" />
+                </div>
+            </Grid>
+
+            @if (SelectedCandidate is not null)
+            {
+                <div class="@ResolveSelectedCandidateClasses()"
+                     data-testid="crmhr-allocation-candidate-warning">
+                    @BuildSelectedCandidateMessage(SelectedCandidate)
+                </div>
+            }
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
+                <FormField Text="Allocation %">
+                    <InputNumber @bind-Value="Draft.AllocationPercent"
+                                 class="cda-input"
+                                 data-testid="crmhr-allocation-percent" />
+                </FormField>
+                <FormField Text="Starts on">
+                    <InputDate @bind-Value="Draft.StartsOn"
+                               class="cda-input"
+                               data-testid="crmhr-allocation-start-date" />
+                </FormField>
+                <FormField Text="Ends on">
+                    <InputDate @bind-Value="Draft.EndsOn"
+                               class="cda-input"
+                               data-testid="crmhr-allocation-end-date" />
+                </FormField>
+            </Grid>
+
+            <div class="mt-4">
+                <FormField Text="Notes">
+                    <InputTextArea @bind-Value="Draft.Notes"
+                                   class="cda-input min-h-[7rem]"
+                                   data-testid="crmhr-allocation-notes" />
+                </FormField>
+            </div>
+
+            <label class="mt-4 inline-flex items-center gap-2 text-sm text-slate-700">
+                <InputCheckbox @bind-Value="Draft.IsPrimary"
+                               data-testid="crmhr-allocation-primary" />
+                <span>Mark as primary</span>
+            </label>
+
+            <Cluster Gap="LayoutGap.Small" Class="mt-4">
+                <Button Text="Save allocation"
+                        Click="SaveAllocation"
+                        data-testid="crmhr-allocation-save-button" />
+                <Button Text="Reset"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="ResetAllocation"
+                        data-testid="crmhr-allocation-reset-button" />
+            </Cluster>
+        </SurfaceCard>
+    </Grid>
+
+    <SurfaceCard Soft="true" Class="mt-6">
+        <p class="cda-eyebrow">Current project allocations</p>
+        <h3 class="mt-1 text-lg font-semibold text-slate-950">@Allocations.Count allocation record(s)</h3>
+
+        @if (Allocations.Count == 0)
+        {
+            <p class="mt-4 text-sm leading-6 text-slate-600">No allocation records are saved for the selected project yet.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                @foreach (var allocation in Allocations)
+                {
+                    <PanelCard data-testid="crmhr-allocation-item">
+                        <Split Gap="LayoutGap.Medium"
+                               AlignItems="AlignItems.Start"
+                               JustifyContent="JustifyContent.SpaceBetween">
+                            <div class="min-w-0 space-y-1">
+                                <p class="text-base font-semibold text-slate-950">@allocation.PartyDisplayName</p>
+                                <p class="text-sm text-slate-600">@BuildAllocationMeta(allocation)</p>
+                                @if (!string.IsNullOrWhiteSpace(allocation.Notes))
+                                {
+                                    <p class="text-sm leading-6 text-slate-600">@allocation.Notes</p>
+                                }
+                            </div>
+                            <Cluster Gap="LayoutGap.Small">
+                                @if (allocation.IsPrimary)
+                                {
+                                    <StatusBadge Tone="info"
+                                                 Text="Primary" />
+                                }
+                                <Button Text="Delete"
+                                        ButtonStyle="ButtonStyle.Danger"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => DeleteAllocation.InvokeAsync(allocation.Id))"
+                                        data-testid="crmhr-allocation-delete-button" />
+                            </Cluster>
+                        </Split>
+                    </PanelCard>
+                }
+            </Stack>
+        }
+    </SurfaceCard>
+</FormSection>
+
+@code {
+    private static readonly IReadOnlyList<ProjectPartyAssignmentRole> AllocationRoles =
+    [
+        ProjectPartyAssignmentRole.TeamMember,
+        ProjectPartyAssignmentRole.DeliveryUnit,
+        ProjectPartyAssignmentRole.Manager,
+        ProjectPartyAssignmentRole.AiAgent,
+        ProjectPartyAssignmentRole.Reviewer,
+        ProjectPartyAssignmentRole.WorkItemAssignee
+    ];
+
+    [Parameter]
+    public ProjectPartyAssignmentUpsertRequest Draft { get; set; } = new();
+
+    [Parameter]
+    public IReadOnlyList<ProjectPartyOption> PartyOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<ProjectPartyAssignmentDetail> Allocations { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<SkillCatalogItemModel> SkillCatalog { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<StaffingCandidateItemModel> Candidates { get; set; } = [];
+
+    [Parameter]
+    public string CandidateSearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> CandidateSearchTextChanged { get; set; }
+
+    [Parameter]
+    public string CandidateSkillFilter { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> CandidateSkillFilterChanged { get; set; }
+
+    [Parameter]
+    public string CandidateAvailabilityFilter { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> CandidateAvailabilityFilterChanged { get; set; }
+
+    [Parameter]
+    public EventCallback SearchCandidates { get; set; }
+
+    [Parameter]
+    public EventCallback ResetCandidateFilters { get; set; }
+
+    [Parameter]
+    public EventCallback SaveAllocation { get; set; }
+
+    [Parameter]
+    public EventCallback ResetAllocation { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> DeleteAllocation { get; set; }
+
+    private StaffingCandidateItemModel? SelectedCandidate => Candidates.FirstOrDefault(item => item.PartyId == Draft.PartyId);
+
+    private string CandidateSearchValue
+    {
+        get => CandidateSearchText;
+        set => _ = CandidateSearchTextChanged.InvokeAsync(value);
+    }
+
+    private string CandidateSkillValue
+    {
+        get => CandidateSkillFilter;
+        set => _ = CandidateSkillFilterChanged.InvokeAsync(value);
+    }
+
+    private string CandidateAvailabilityValue
+    {
+        get => CandidateAvailabilityFilter;
+        set => _ = CandidateAvailabilityFilterChanged.InvokeAsync(value);
+    }
+
+    private Task HandlePartyChanged(Guid? partyId)
+    {
+        Draft.PartyId = partyId ?? Guid.Empty;
+        return Task.CompletedTask;
+    }
+
+    private void SelectCandidate(StaffingCandidateItemModel candidate)
+    {
+        Draft.PartyId = candidate.PartyId;
+        Draft.Role = candidate.PartyType == PartyType.OrganizationUnit
+            ? ProjectPartyAssignmentRole.DeliveryUnit
+            : ProjectPartyAssignmentRole.TeamMember;
+    }
+
+    private string ResolveSelectedCandidateClasses()
+    {
+        if (SelectedCandidate is null)
+        {
+            return "hidden";
+        }
+
+        return SelectedCandidate.AvailabilityState == WorkforceAvailabilityState.Overallocated
+            || Draft.AllocationPercent.HasValue && Draft.AllocationPercent.Value > SelectedCandidate.AvailablePercent
+                ? "mt-4 rounded-[1.2rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm font-medium text-rose-700"
+                : "mt-4 rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm font-medium text-emerald-700";
+    }
+
+    private string BuildSelectedCandidateMessage(StaffingCandidateItemModel candidate)
+    {
+        if (candidate.AvailabilityState == WorkforceAvailabilityState.Overallocated)
+        {
+            return $"{candidate.DisplayName} is already overallocated. Save only if this overlap is intentional and will be resolved immediately.";
+        }
+
+        if (Draft.AllocationPercent.HasValue && Draft.AllocationPercent.Value > candidate.AvailablePercent)
+        {
+            return $"{candidate.DisplayName} only shows {candidate.AvailablePercent:0.##}% available, which is below the requested {Draft.AllocationPercent.Value:0.##}%.";
+        }
+
+        return $"{candidate.DisplayName} currently shows {candidate.AvailablePercent:0.##}% available with state {candidate.AvailabilityState}.";
+    }
+
+    private static string BuildCandidateMeta(StaffingCandidateItemModel candidate)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(candidate.JobTitle))
+        {
+            parts.Add(candidate.JobTitle);
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.Discipline))
+        {
+            parts.Add(candidate.Discipline);
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.Seniority))
+        {
+            parts.Add(candidate.Seniority);
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.Location))
+        {
+            parts.Add(candidate.Location);
+        }
+
+        parts.Add($"{candidate.AvailablePercent:0.##}% available");
+
+        if (candidate.NextAvailabilityOn.HasValue)
+        {
+            parts.Add($"Next {candidate.NextAvailabilityOn.Value:yyyy-MM-dd}");
+        }
+
+        return string.Join(" / ", parts);
+    }
+
+    private static string BuildAllocationMeta(ProjectPartyAssignmentDetail allocation)
+    {
+        var parts = new List<string>
+        {
+            ResolveRoleLabel(allocation.Role)
+        };
+
+        if (allocation.AllocationPercent.HasValue)
+        {
+            parts.Add($"{allocation.AllocationPercent.Value:0.##}%");
+        }
+
+        if (allocation.StartsAtUtc.HasValue || allocation.EndsAtUtc.HasValue)
+        {
+            parts.Add($"{FormatDate(allocation.StartsAtUtc)} -> {FormatDate(allocation.EndsAtUtc)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(allocation.NodeKey))
+        {
+            parts.Add($"Node {allocation.NodeKey}");
+        }
+
+        return string.Join(" / ", parts);
+    }
+
+    private static string ResolveAvailabilityTone(WorkforceAvailabilityState availabilityState)
+    {
+        return availabilityState switch
+        {
+            WorkforceAvailabilityState.Overallocated => "danger",
+            WorkforceAvailabilityState.Bench => "success",
+            WorkforceAvailabilityState.NearAvailable => "warning",
+            _ => "info"
+        };
+    }
+
+    private static string ResolveRoleLabel(ProjectPartyAssignmentRole role)
+    {
+        return role switch
+        {
+            ProjectPartyAssignmentRole.CustomerContact => "Customer contact",
+            ProjectPartyAssignmentRole.DeliveryUnit => "Delivery unit",
+            ProjectPartyAssignmentRole.TeamMember => "Team member",
+            ProjectPartyAssignmentRole.WorkItemAssignee => "Work-item assignee",
+            ProjectPartyAssignmentRole.AiAgent => "AI agent",
+            _ => role.ToString()
+        };
+    }
+
+    private static string FormatDate(DateTimeOffset? value)
+    {
+        return value.HasValue ? value.Value.UtcDateTime.ToString("yyyy-MM-dd") : "Open";
+    }
+}

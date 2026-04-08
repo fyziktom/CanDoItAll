@@ -14,8 +14,11 @@ public enum BadgeTone
 public enum PillTone
 {
     Default,
+    Neutral,
     Ok,
+    Info,
     Warn,
+    Plain,
     Label
 }
 

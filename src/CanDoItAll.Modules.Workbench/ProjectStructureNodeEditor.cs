@@ -44,6 +44,7 @@ internal static class ProjectStructureNodeEditor
             .ToDictionary(group => group.Key, group => group.Last().Value?.Trim() ?? string.Empty, StringComparer.OrdinalIgnoreCase);
         var submittedKeys = inputValues.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
+        var nodeReferences = node.NodeReferences?.Clone() ?? new ProjectNodeReferenceCollection();
         var notes = ResolveNotes(definition, node, request, inputValues);
         var startUtc = ResolveDate(node.StartUtc, inputValues, submittedKeys, "startUtc");
         var endUtc = ResolveDate(node.EndUtc, inputValues, submittedKeys, "endUtc");
@@ -74,7 +75,7 @@ internal static class ProjectStructureNodeEditor
                     inputValues,
                     submittedKeys,
                     "participantKind",
-                    metadata.Participant.ParticipantKind == default ? MapParticipantKind(node.ObjectSubtype) : metadata.Participant.ParticipantKind);
+                    metadata.Participant.ParticipantKind == default ? ProjectNodeKindRegistry.ResolveParticipantKind(node.ObjectSubtype) : metadata.Participant.ParticipantKind);
                 metadata.Participant.Role = ResolveString(inputValues, submittedKeys, "role", metadata.Participant.Role);
                 metadata.Participant.Organization = ResolveString(inputValues, submittedKeys, "organization", metadata.Participant.Organization);
                 metadata.Participant.Email = ResolveString(inputValues, submittedKeys, "email", metadata.Participant.Email);
@@ -86,7 +87,7 @@ internal static class ProjectStructureNodeEditor
                     inputValues,
                     submittedKeys,
                     "workItemKind",
-                    metadata.WorkItem.WorkItemKind == default ? MapWorkItemKind(node.ObjectSubtype) : metadata.WorkItem.WorkItemKind);
+                    metadata.WorkItem.WorkItemKind == default ? ProjectNodeKindRegistry.ResolveWorkItemKind(node.ObjectSubtype) : metadata.WorkItem.WorkItemKind);
                 metadata.WorkItem.SendKind = ResolveNullableEnum(inputValues, submittedKeys, "sendKind", metadata.WorkItem.SendKind);
                 metadata.WorkItem.DeliveryChannel = ResolveEnum(inputValues, submittedKeys, "deliveryChannel", metadata.WorkItem.DeliveryChannel);
                 metadata.WorkItem.Amount = ResolveNullableDecimal(inputValues, submittedKeys, "amount", metadata.WorkItem.Amount);
@@ -100,7 +101,7 @@ internal static class ProjectStructureNodeEditor
                     inputValues,
                     submittedKeys,
                     "repositoryMode",
-                    metadata.Repository.RepositoryMode == default ? MapRepositoryMode(node.ObjectSubtype) : metadata.Repository.RepositoryMode);
+                    metadata.Repository.RepositoryMode == default ? ProjectNodeKindRegistry.ResolveRepositoryMode(node.ObjectSubtype) : metadata.Repository.RepositoryMode);
                 metadata.Repository.RepositoryUrl = ResolveString(inputValues, submittedKeys, "repositoryUrl", metadata.Repository.RepositoryUrl);
                 metadata.Repository.LocalPath = ResolveString(inputValues, submittedKeys, "localPath", metadata.Repository.LocalPath);
                 metadata.Repository.DefaultBranch = ResolveString(inputValues, submittedKeys, "defaultBranch", metadata.Repository.DefaultBranch);
@@ -119,7 +120,7 @@ internal static class ProjectStructureNodeEditor
                     inputValues,
                     submittedKeys,
                     "scriptKind",
-                    metadata.Script.ScriptKind == default ? MapScriptKind(node.ObjectSubtype) : metadata.Script.ScriptKind);
+                    metadata.Script.ScriptKind == default ? ProjectNodeKindRegistry.ResolveScriptKind(node.ObjectSubtype) : metadata.Script.ScriptKind);
                 metadata.Script.ScriptPath = ResolveString(inputValues, submittedKeys, "scriptPath", metadata.Script.ScriptPath);
                 metadata.Script.Command = ResolveString(inputValues, submittedKeys, "command", metadata.Script.Command);
                 metadata.Script.Arguments = ResolveString(inputValues, submittedKeys, "arguments", metadata.Script.Arguments);
@@ -131,7 +132,7 @@ internal static class ProjectStructureNodeEditor
                     inputValues,
                     submittedKeys,
                     "environmentKind",
-                    metadata.Environment.EnvironmentKind == default ? MapEnvironmentKind(node.ObjectSubtype) : metadata.Environment.EnvironmentKind);
+                    metadata.Environment.EnvironmentKind == default ? ProjectNodeKindRegistry.ResolveEnvironmentKind(node.ObjectSubtype) : metadata.Environment.EnvironmentKind);
                 metadata.Environment.PythonProvider = ResolveNullableEnum(inputValues, submittedKeys, "pythonProvider", metadata.Environment.PythonProvider);
                 metadata.Environment.EnvironmentName = ResolveString(inputValues, submittedKeys, "environmentName", metadata.Environment.EnvironmentName);
                 metadata.Environment.ProjectPath = ResolveString(inputValues, submittedKeys, "projectPath", metadata.Environment.ProjectPath);
@@ -145,7 +146,7 @@ internal static class ProjectStructureNodeEditor
                     inputValues,
                     submittedKeys,
                     "infrastructureKind",
-                    metadata.Infrastructure.InfrastructureKind == default ? MapInfrastructureKind(node.ObjectSubtype) : metadata.Infrastructure.InfrastructureKind);
+                    metadata.Infrastructure.InfrastructureKind == default ? ProjectNodeKindRegistry.ResolveInfrastructureKind(node.ObjectSubtype) : metadata.Infrastructure.InfrastructureKind);
                 metadata.Infrastructure.Host = ResolveString(inputValues, submittedKeys, "host", metadata.Infrastructure.Host);
                 metadata.Infrastructure.Port = ResolveNullableInt(inputValues, submittedKeys, "port", metadata.Infrastructure.Port);
                 metadata.Infrastructure.ProviderName = ResolveString(inputValues, submittedKeys, "providerName", metadata.Infrastructure.ProviderName);
@@ -165,6 +166,13 @@ internal static class ProjectStructureNodeEditor
                 metadata.Infrastructure.DatabaseType = ResolveString(inputValues, submittedKeys, "databaseType", metadata.Infrastructure.DatabaseType);
                 metadata.Infrastructure.ConnectionReference = ResolveString(inputValues, submittedKeys, "connectionReference", metadata.Infrastructure.ConnectionReference);
                 metadata.Infrastructure.FolderPath = ResolveString(inputValues, submittedKeys, "folderPath", metadata.Infrastructure.FolderPath);
+                nodeReferences.InfrastructureStorageCatalogId = ResolveNullableGuid(
+                    inputValues,
+                    submittedKeys,
+                    "storageCatalogId",
+                    nodeReferences.InfrastructureStorageCatalogId);
+                metadata.Infrastructure.StoragePurpose = ResolveString(inputValues, submittedKeys, "storagePurpose", metadata.Infrastructure.StoragePurpose);
+                metadata.Infrastructure.StoragePathPrefix = ResolveString(inputValues, submittedKeys, "storagePathPrefix", metadata.Infrastructure.StoragePathPrefix);
                 metadata.Infrastructure.AiReferenceKind = ResolveNullableEnum(inputValues, submittedKeys, "aiReferenceKind", metadata.Infrastructure.AiReferenceKind);
                 metadata.Infrastructure.AiReferenceUrl = ResolveString(inputValues, submittedKeys, "aiReferenceUrl", metadata.Infrastructure.AiReferenceUrl);
                 break;
@@ -181,7 +189,9 @@ internal static class ProjectStructureNodeEditor
             notes,
             startUtc,
             endUtc,
-            ProjectObjectMetadataSerializer.Serialize(metadata));
+            ProjectObjectMetadataSerializer.Serialize(metadata),
+            null,
+            nodeReferences.IsEmpty ? null : nodeReferences);
     }
 
     private static string ResolveFieldValue(string key, ProjectStructureNode node, ProjectObjectMetadataEnvelope metadata)
@@ -198,36 +208,36 @@ internal static class ProjectStructureNodeEditor
             "storageReference" => metadata.Recording?.StorageReference ?? string.Empty,
             "durationMinutes" => metadata.Recording?.DurationMinutes > 0 ? metadata.Recording.DurationMinutes.ToString(CultureInfo.InvariantCulture) : string.Empty,
             "transcriptText" => metadata.Transcript?.TranscriptText ?? node.Notes,
-            "participantKind" => ToCamelCaseToken(metadata.Participant?.ParticipantKind == default ? MapParticipantKind(node.ObjectSubtype) : metadata.Participant?.ParticipantKind),
+            "participantKind" => ToCamelCaseToken(metadata.Participant?.ParticipantKind == default ? ProjectNodeKindRegistry.ResolveParticipantKind(node.ObjectSubtype) : metadata.Participant?.ParticipantKind),
             "role" => metadata.Participant?.Role ?? string.Empty,
             "organization" => metadata.Participant?.Organization ?? string.Empty,
             "email" => metadata.Participant?.Email ?? string.Empty,
             "phone" => metadata.Participant?.Phone ?? string.Empty,
-            "workItemKind" => ToCamelCaseToken(metadata.WorkItem?.WorkItemKind == default ? MapWorkItemKind(node.ObjectSubtype) : metadata.WorkItem?.WorkItemKind),
+            "workItemKind" => ToCamelCaseToken(metadata.WorkItem?.WorkItemKind == default ? ProjectNodeKindRegistry.ResolveWorkItemKind(node.ObjectSubtype) : metadata.WorkItem?.WorkItemKind),
             "dueUtc" => FormatDateTimeLocal(metadata.WorkItem?.DueUtc),
             "sendKind" => ToCamelCaseToken(metadata.WorkItem?.SendKind),
             "deliveryChannel" => ToCamelCaseToken(metadata.WorkItem?.DeliveryChannel),
             "amount" => metadata.WorkItem?.Amount?.ToString("0.##", CultureInfo.InvariantCulture) ?? string.Empty,
             "currencyCode" => metadata.WorkItem?.CurrencyCode ?? string.Empty,
-            "repositoryMode" => ToCamelCaseToken(metadata.Repository?.RepositoryMode == default ? MapRepositoryMode(node.ObjectSubtype) : metadata.Repository?.RepositoryMode),
+            "repositoryMode" => ToCamelCaseToken(metadata.Repository?.RepositoryMode == default ? ProjectNodeKindRegistry.ResolveRepositoryMode(node.ObjectSubtype) : metadata.Repository?.RepositoryMode),
             "repositoryUrl" => metadata.Repository?.RepositoryUrl ?? string.Empty,
             "localPath" => metadata.Repository?.LocalPath ?? string.Empty,
             "defaultBranch" => metadata.Repository?.DefaultBranch ?? string.Empty,
             "relativePath" => metadata.Repository?.RelativePath ?? string.Empty,
             "mermaidText" => node.Notes,
-            "scriptKind" => ToCamelCaseToken(metadata.Script?.ScriptKind == default ? MapScriptKind(node.ObjectSubtype) : metadata.Script?.ScriptKind),
+            "scriptKind" => ToCamelCaseToken(metadata.Script?.ScriptKind == default ? ProjectNodeKindRegistry.ResolveScriptKind(node.ObjectSubtype) : metadata.Script?.ScriptKind),
             "scriptPath" => metadata.Script?.ScriptPath ?? string.Empty,
             "command" => metadata.Script?.Command ?? string.Empty,
             "arguments" => metadata.Script?.Arguments ?? string.Empty,
             "workingDirectory" => metadata.Script?.WorkingDirectory ?? string.Empty,
-            "environmentKind" => ToCamelCaseToken(metadata.Environment?.EnvironmentKind == default ? MapEnvironmentKind(node.ObjectSubtype) : metadata.Environment?.EnvironmentKind),
+            "environmentKind" => ToCamelCaseToken(metadata.Environment?.EnvironmentKind == default ? ProjectNodeKindRegistry.ResolveEnvironmentKind(node.ObjectSubtype) : metadata.Environment?.EnvironmentKind),
             "pythonProvider" => ToCamelCaseToken(metadata.Environment?.PythonProvider),
             "environmentName" => metadata.Environment?.EnvironmentName ?? string.Empty,
             "projectPath" => metadata.Environment?.ProjectPath ?? string.Empty,
             "launchProfileName" => metadata.Environment?.LaunchProfileName ?? string.Empty,
             "runtimeProtocol" => ToCamelCaseToken(metadata.Environment?.RuntimeProtocol),
             "localhostUrl" => metadata.Environment?.LocalhostUrl ?? string.Empty,
-            "infrastructureKind" => ToCamelCaseToken(metadata.Infrastructure?.InfrastructureKind == default ? MapInfrastructureKind(node.ObjectSubtype) : metadata.Infrastructure?.InfrastructureKind),
+            "infrastructureKind" => ToCamelCaseToken(metadata.Infrastructure?.InfrastructureKind == default ? ProjectNodeKindRegistry.ResolveInfrastructureKind(node.ObjectSubtype) : metadata.Infrastructure?.InfrastructureKind),
             "host" => metadata.Infrastructure?.Host ?? string.Empty,
             "port" => metadata.Infrastructure?.Port?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
             "providerName" => metadata.Infrastructure?.ProviderName ?? string.Empty,
@@ -247,6 +257,9 @@ internal static class ProjectStructureNodeEditor
             "databaseType" => metadata.Infrastructure?.DatabaseType ?? string.Empty,
             "connectionReference" => metadata.Infrastructure?.ConnectionReference ?? string.Empty,
             "folderPath" => metadata.Infrastructure?.FolderPath ?? string.Empty,
+            "storageCatalogId" => node.NodeReferences?.InfrastructureStorageCatalogId?.ToString("D") ?? string.Empty,
+            "storagePurpose" => metadata.Infrastructure?.StoragePurpose ?? string.Empty,
+            "storagePathPrefix" => metadata.Infrastructure?.StoragePathPrefix ?? string.Empty,
             "aiReferenceKind" => ToCamelCaseToken(metadata.Infrastructure?.AiReferenceKind),
             "aiReferenceUrl" => metadata.Infrastructure?.AiReferenceUrl ?? string.Empty,
             _ => string.Empty
@@ -313,6 +326,17 @@ internal static class ProjectStructureNodeEditor
                 ? parsed
                 : null;
 
+    private static Guid? ResolveNullableGuid(
+        IReadOnlyDictionary<string, string> inputValues,
+        IReadOnlySet<string> submittedKeys,
+        string key,
+        Guid? currentValue)
+        => !submittedKeys.Contains(key)
+            ? currentValue
+            : inputValues.TryGetValue(key, out var value) && Guid.TryParse(value, out var parsed)
+                ? parsed
+                : null;
+
     private static DateTimeOffset? ResolveDate(
         DateTimeOffset? currentValue,
         IReadOnlyDictionary<string, string> inputValues,
@@ -365,58 +389,4 @@ internal static class ProjectStructureNodeEditor
             : char.ToLowerInvariant(token[0]) + token[1..];
     }
 
-    private static ProjectParticipantKind MapParticipantKind(string subtype) => subtype switch
-    {
-        "team-block" => ProjectParticipantKind.TeamBlock,
-        "team-section" => ProjectParticipantKind.TeamSection,
-        "freelancer" => ProjectParticipantKind.Freelancer,
-        "partner" => ProjectParticipantKind.Partner,
-        "ai-agent" => ProjectParticipantKind.AiAgent,
-        _ => ProjectParticipantKind.Hr
-    };
-
-    private static ProjectWorkItemKind MapWorkItemKind(string subtype) => subtype switch
-    {
-        "issue" => ProjectWorkItemKind.Issue,
-        "revision" => ProjectWorkItemKind.Revision,
-        "feedback" => ProjectWorkItemKind.Feedback,
-        "payment" => ProjectWorkItemKind.Payment,
-        "send" => ProjectWorkItemKind.Send,
-        _ => ProjectWorkItemKind.Task
-    };
-
-    private static ProjectRepositoryMode MapRepositoryMode(string subtype) => subtype switch
-    {
-        "remote" => ProjectRepositoryMode.RemoteGitHub,
-        "folder" => ProjectRepositoryMode.LocalFolder,
-        _ => ProjectRepositoryMode.LocalRepository
-    };
-
-    private static ProjectScriptKind MapScriptKind(string subtype) => subtype switch
-    {
-        "powershell" => ProjectScriptKind.PowerShell,
-        "ef-migration" => ProjectScriptKind.EfMigration,
-        "tailwind-watch" => ProjectScriptKind.TailwindWatch,
-        _ => ProjectScriptKind.Console
-    };
-
-    private static ProjectEnvironmentKind MapEnvironmentKind(string subtype) => subtype switch
-    {
-        "python" => ProjectEnvironmentKind.PythonEnvironment,
-        "dotnet-watch" => ProjectEnvironmentKind.DotNetWatch,
-        "dotnet-release" => ProjectEnvironmentKind.DotNetRelease,
-        _ => ProjectEnvironmentKind.DotNetRuntime
-    };
-
-    private static ProjectInfrastructureKind MapInfrastructureKind(string subtype) => subtype switch
-    {
-        "domain" => ProjectInfrastructureKind.Domain,
-        "dns-record" => ProjectInfrastructureKind.DnsRecord,
-        "docker-mode" => ProjectInfrastructureKind.DockerMode,
-        "database" => ProjectInfrastructureKind.Database,
-        "deployment-folder" => ProjectInfrastructureKind.DeploymentFolder,
-        "key-reference" => ProjectInfrastructureKind.KeyReference,
-        "ai-link" => ProjectInfrastructureKind.AiLink,
-        _ => ProjectInfrastructureKind.RemoteServer
-    };
 }

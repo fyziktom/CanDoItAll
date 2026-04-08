@@ -1,9 +1,14 @@
 @namespace CanDoItAll.Components.BaseLib
 @inherits StyledComponentBase
 
-<div @attributes='BuildAttributes("grid gap-3 md:grid-cols-2 xl:grid-cols-4")'>
+<Grid Gap="LayoutGap.Medium"
+      ColumnsMd="2"
+      ColumnsXl="4"
+      Class="@Class"
+      Style="@Style"
+      @attributes="AdditionalAttributes">
     @ChildContent
-</div>
+</Grid>
 
 @code {
     [Parameter]

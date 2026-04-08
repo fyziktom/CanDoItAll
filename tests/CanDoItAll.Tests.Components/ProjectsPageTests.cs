@@ -1,6 +1,8 @@
 using Bunit;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -40,6 +42,31 @@ public sealed class ProjectsPageTests
             Assert.NotEmpty(cut.FindAll("[data-testid='project-card']"));
             Assert.Contains("Open dashboard tab", cut.Markup);
         });
+    }
+
+    [Fact]
+    public async Task Project_overview_modal_explains_that_header_uses_saved_project_name()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var projectId = await CreateProjectAsync(projectsService, "Explained Project");
+
+        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var projectCard = cut.FindAll("[data-testid='project-card']")
+            .Single(card => card.TextContent.Contains("Explained Project", StringComparison.Ordinal));
+
+        projectCard.QuerySelector("[data-testid='project-card-details-button']")!.Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var modal = cut.Find("[data-testid='projects-detail-modal']");
+
+            Assert.Contains("Explained Project", modal.TextContent);
+            Assert.Contains("This header uses the saved project name.", modal.TextContent);
+            Assert.Contains("Edit name and details", modal.TextContent);
+        });
+
+        Assert.NotEqual(Guid.Empty, projectId);
     }
 
     [Fact]
@@ -102,6 +129,56 @@ public sealed class ProjectsPageTests
             var modal = cut.Find("[data-testid='projects-hierarchy-modal']");
 
             Assert.Contains("Nested grandchild", modal.TextContent);
+        });
+    }
+
+    [Fact]
+    public async Task Project_card_opens_mermaid_gantt_modal()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projectsService, "Gantt preview project");
+        var prerequisiteNote = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Architect plan",
+                "Draft note",
+                "Create the plan before implementation starts.",
+                $"project:{projectId}",
+                420,
+                240));
+        var implementationTask = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Implement feature",
+                "Execution",
+                "Build the project-card Mermaid Gantt preview.",
+                $"project:{projectId}",
+                X: 700,
+                Y: 260,
+                ObjectSubtype: "task",
+                DurationSeconds: 7200));
+        await workbenchService.LinkObjectsAsync(projectId, implementationTask.Id, prerequisiteNote.Id, ProjectObjectLinkKind.DependsOn);
+
+        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var projectCard = cut.FindAll("[data-testid='project-card']")
+            .Single(card => card.TextContent.Contains("Gantt preview project", StringComparison.Ordinal));
+
+        projectCard.QuerySelector("[data-testid='project-card-gantt-button']")!.Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var modal = cut.Find("[data-testid='projects-gantt-modal']");
+            var source = cut.Find("[data-testid='projects-gantt-mermaid-source']");
+
+            Assert.Contains("Gantt preview project", modal.TextContent);
+            Assert.Contains("Architect plan", source.TextContent);
+            Assert.Contains("Implement feature", source.TextContent);
+            Assert.Contains("gantt", source.TextContent, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("after", source.TextContent, StringComparison.OrdinalIgnoreCase);
         });
     }
 

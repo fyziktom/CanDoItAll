@@ -1,0 +1,81 @@
+=== Phase12 recovery + plugin-runtime gate check ===
+Repo: /mnt/data/repo_current_extract/CanDoItAll-canonical-model-refactor
+
+Hard-gate failures:
+- HG-12-01 FAIL: transitive mutation detected in LoadAsync: SaveChangesAsync
+- HG-12-01 FAIL: transitive mutation detected in LoadAsync: dbContext.RemoveRange
+- HG-12-01 FAIL: transitive mutation detected in LoadAsync -> RetireLegacyProjectionRowsAsync: SaveChangesAsync
+- HG-12-01 FAIL: transitive mutation detected in LoadAsync -> RetireLegacyProjectionRowsAsync: dbContext.RemoveRange
+- HG-12-01 FAIL: LoadAsync still calls RetireLegacyProjectionRowsAsync from the read path.
+- HG-12-01 FAIL: LoadAsync still deletes stale projection layouts and saves during reads.
+- HG-12-01 FAIL: ProjectStructureProjectionMaintenanceService.cs is missing.
+- HG-12-01 FAIL: Workbench DI no longer registers ProjectStructureProjectionMaintenanceService.
+- HG-12-01 FAIL: required zero-write/repair test is missing: GetStructureAsync_does_not_delete_stale_system_managed_projection_rows
+- HG-12-01 FAIL: required zero-write/repair test is missing: GetStructureAsync_does_not_delete_stale_projection_layout_rows
+- HG-12-01 FAIL: required zero-write/repair test is missing: GetStructureAsync_does_not_write_when_legacy_marker_and_reference_fallback_is_used
+- HG-12-01 FAIL: required zero-write/repair test is missing: Explicit_projection_repair_removes_stale_system_managed_rows_and_orphan_layouts_idempotently
+- HG-12-02 FAIL: SettingsPage no longer passes secret options into ConnectorConfigFieldEditor.
+- HG-12-02 FAIL: ConnectorConfigFieldEditor boolean branch no longer exposes a shared data-testid hook.
+- HG-12-02 FAIL: SettingsPage no longer assigns generic test ids for unknown provider manifest fields.
+- HG-12-02 FAIL: ResourcesPage no longer assigns generic test ids for unknown resource manifest fields.
+- HG-12-02 FAIL: required unknown-plugin proof test is missing: Settings_page_renders_unknown_provider_manifest_fields_through_shared_field_editor
+- HG-12-02 FAIL: required unknown-plugin proof test is missing: Resources_page_renders_unknown_resource_manifest_fields_through_shared_field_editor
+- HG-12-02 FAIL: required unknown-plugin proof test is missing: Unknown_connector_manifest_fields_round_trip_without_page_specific_code
+- HG-12-03 FAIL: no multi-source automation signal aggregation seam detected (expected IEnumerable<IAutomationSignalSource/Provider> or CompositeAutomationSignalProvider).
+- HG-12-03 FAIL: automation workspace still appears to consume a singular IAutomationSignalProvider.
+- HG-12-03 FAIL: required test is missing: Operational_messages_do_not_materialize_workbench_nodes_by_default
+- HG-12-03 FAIL: required test is missing: Explicit_materializer_can_turn_an_execution_result_into_a_domain_artifact
+- HG-12-03 FAIL: required test is missing: AutomationWorkspaceService_aggregates_multiple_signal_sources_without_last_registration_wins
+- HG-12-04 FAIL: required scheduler symbol is missing from src: AutomationTriggerRecord
+- HG-12-04 FAIL: required scheduler symbol is missing from src: IAutomationTriggerRegistry
+- HG-12-04 FAIL: required scheduler symbol is missing from src: QuartzAutomationSchedulerBridge
+- HG-12-04 FAIL: required scheduler symbol is missing from src: AutomationTriggerFireRequest
+- HG-12-04 FAIL: no Quartz integration detected.
+- HG-12-04 FAIL: required test is missing: Automation_trigger_definition_round_trips_with_cron_timezone_and_misfire_policy
+- HG-12-04 FAIL: required test is missing: Quartz_scheduler_bridge_rehydrates_canonical_triggers_on_startup
+- HG-12-04 FAIL: required test is missing: Quartz_trigger_fire_publishes_durable_work_instead_of_running_plugin_logic_inline
+- HG-12-05 FAIL: required durable message-plane symbol is missing from src: AutomationEnvelopeRecord
+- HG-12-05 FAIL: required durable message-plane symbol is missing from src: AutomationDeadLetterRecord
+- HG-12-05 FAIL: required durable message-plane symbol is missing from src: IAutomationMessagePublisher
+- HG-12-05 FAIL: required durable message-plane symbol is missing from src: IAutomationMessageDispatcher
+- HG-12-05 FAIL: required durable message-plane symbol is missing from src: IAutomationMessageHandler
+- HG-12-05 FAIL: required durable message-plane symbol is missing from src: AutomationSubscriptionRegistry
+- HG-12-05 FAIL: required test is missing: Internal_message_dispatch_retries_then_dead_letters_failed_handlers_idempotently
+- HG-12-05 FAIL: required test is missing: Internal_message_publish_fans_out_to_multiple_subscribers
+- HG-12-05 FAIL: required test is missing: Internal_message_delivery_survives_restart_boundary
+- HG-12-06 FAIL: no hosted worker/runtime service detected.
+- HG-12-06 FAIL: background work dequeue side still has no visible consumer.
+- HG-12-06 FAIL: connector outbox pending processor still has no visible runtime caller.
+- HG-12-06 FAIL: required test is missing: Connector_outbox_pending_commands_are_processed_by_a_hosted_worker
+- HG-12-06 FAIL: required test is missing: Queued_background_work_is_consumed_by_a_runtime_worker
+- HG-12-06 FAIL: required test is missing: Due_triggers_are_dispatched_without_manual_invocation
+- HG-12-07 FAIL: required plugin ingress symbol is missing from src: PluginIngressEnvelopeRecord
+- HG-12-07 FAIL: required plugin ingress symbol is missing from src: PluginIngressCursorRecord
+- HG-12-07 FAIL: required plugin ingress symbol is missing from src: IPluginIngressInbox
+- HG-12-07 FAIL: required plugin ingress symbol is missing from src: IPluginIngressMaterializer
+- HG-12-07 FAIL: required test is missing: Plugin_ingress_inbox_deduplicates_external_envelopes
+- HG-12-07 FAIL: required test is missing: Plugin_ingress_cursor_progress_is_persisted_across_runs
+- HG-12-07 FAIL: required test is missing: Ingress_envelope_can_remain_unmaterialized_until_explicit_handler_runs
+- HG-12-08 FAIL: required execution/telemetry symbol is missing from src: AutomationExecutionLogRecord
+- HG-12-08 FAIL: required execution/telemetry symbol is missing from src: AutomationDeliveryAttemptRecord
+- HG-12-08 FAIL: required execution/telemetry symbol is missing from src: IAutomationTelemetryPublisher
+- HG-12-08 FAIL: required test is missing: Execution_telemetry_preserves_correlation_and_causation_across_dispatch
+- HG-12-08 FAIL: required test is missing: Dead_letter_items_are_visible_to_operators
+- HG-12-08 FAIL: required test is missing: Core_runtime_still_functions_when_mqtt_bridge_is_disabled
+
+Warnings:
+- ADV WARNING: no optional MQTT telemetry bridge detected yet. This is acceptable only until HG-12-08 is fully implemented.
+- ADV WARNING: marker compatibility fallback from metadata is still active: src/CanDoItAll.Modules.Workbench/ProjectStructureAssemblyService.cs
+- ADV WARNING: reference compatibility fallback from metadata is still active: src/CanDoItAll.Modules.Workbench/ProjectNodeBindings.cs
+- ADV WARNING: hotspot 'src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs' is still large (4970 lines > 4000).
+- ADV WARNING: hotspot 'src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs' is still large (1148 lines > 1000).
+=== Phase12 recovery + plugin-runtime gate check ===
+Repo: C:\repositories\CanDoItAll
+
+No hard-gate failures detected.
+
+Warnings:
+- ADV WARNING: marker compatibility fallback from metadata is still active: src/CanDoItAll.Modules.Workbench/ProjectStructureAssemblyService.cs
+- ADV WARNING: reference compatibility fallback from metadata is still active: src/CanDoItAll.Modules.Workbench/ProjectNodeBindings.cs
+- ADV WARNING: hotspot 'src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs' is still large (4970 lines > 4000).
+- ADV WARNING: hotspot 'src/CanDoItAll.Modules.Workbench/ProjectWorkbenchModels.cs' is still large (1148 lines > 1000).

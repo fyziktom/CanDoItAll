@@ -1,13 +1,28 @@
 @namespace CanDoItAll.Components.BaseLib
 @inherits StyledComponentBase
 
-<main @attributes='BuildAttributes("rz-body")'>
+<main @attributes='BuildAttributes(ResolveCssClass(), ResolveStyle())'>
     @ChildContent
 </main>
 
 @code {
     [Parameter]
+    public bool FillHeight { get; set; }
+
+    [Parameter]
+    public bool Scrollable { get; set; }
+
+    [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveCssClass()
+        => BuildClass(
+            "rz-body",
+            FillHeight ? "min-h-0" : null,
+            Scrollable ? "overflow-y-auto" : FillHeight ? "overflow-hidden" : null);
+
+    private string? ResolveStyle()
+        => FillHeight ? "height:100%;min-height:0;" : null;
 }
 
 

@@ -335,7 +335,7 @@ public partial class PromptFactoryPage
     }
 
     private static string ResolveResourceListSummary(ResourceSummary resource)
-        => $"{resource.ResourceKind} | {resource.ValidationStatus} | {resource.Sensitivity}";
+        => $"{DescribeResource(resource)} | {resource.ValidationStatus} | {resource.Sensitivity}";
 
     private bool ShouldExpandGovernanceGroup(GovernanceGroupViewModel group)
     {
@@ -528,9 +528,12 @@ public partial class PromptFactoryPage
 
     private static bool MatchesResourceSearch(ResourceSummary item, string term)
         => item.Name.Contains(term, StringComparison.OrdinalIgnoreCase)
-           || item.ResourceKind.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
+           || DescribeResource(item).Contains(term, StringComparison.OrdinalIgnoreCase)
            || item.ValidationStatus.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
            || item.Sensitivity.ToString().Contains(term, StringComparison.OrdinalIgnoreCase);
+
+    private static string DescribeResource(ResourceSummary resource)
+        => resource.LegacyResourceKind?.ToString() ?? resource.ConnectorDisplayName;
 
     private static bool Contains(string? value, string term)
         => !string.IsNullOrWhiteSpace(value) && value.Contains(term, StringComparison.OrdinalIgnoreCase);

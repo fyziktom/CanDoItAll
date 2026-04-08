@@ -1,137 +1,76 @@
 using Bunit;
 using CanDoItAll.Components.BaseLib;
-using CanDoItAll.Infrastructure.DependencyInjection;
-using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.Activity;
-using CanDoItAll.Modules.Automation;
-using CanDoItAll.Modules.Factory;
-using CanDoItAll.Modules.Projects;
-using CanDoItAll.Modules.Prompts;
-using CanDoItAll.Modules.Resources;
-using CanDoItAll.Modules.Security;
-using CanDoItAll.Modules.TestLab;
-using CanDoItAll.Modules.Validation;
-using CanDoItAll.Modules.Workbench;
-using CanDoItAll.Modules.Workspace;
-using CanDoItAll.SharedKernel;
-using CanDoItAll.Web.Composition;
 using CanDoItAll.Web.Infrastructure;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Hosting;
+using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Components;
 
 internal sealed class ComponentTestHarness : IAsyncDisposable
 {
-    private ComponentTestHarness(string rootPath, TestContext context)
+    private readonly bool _ownsTestEnvironment;
+
+    private ComponentTestHarness(
+        CanDoItAllTestEnvironment testEnvironment,
+        bool ownsTestEnvironment,
+        TestDatabaseProfile activeProfile,
+        TestContext context)
     {
-        RootPath = rootPath;
+        TestEnvironment = testEnvironment;
+        _ownsTestEnvironment = ownsTestEnvironment;
+        ActiveProfile = activeProfile;
+        RootPath = testEnvironment.RootPath;
         Context = context;
     }
 
     public string RootPath { get; }
 
+    public CanDoItAllTestEnvironment TestEnvironment { get; }
+
+    public TestDatabaseProfile ActiveProfile { get; }
+
     public TestContext Context { get; }
 
-    public static async Task<ComponentTestHarness> CreateAsync(Action<IServiceCollection>? configureServices = null)
+    public static async Task<ComponentTestHarness> CreateAsync(
+        Action<IServiceCollection>? configureServices = null,
+        TestHarnessOptions? options = null)
     {
-        var rootPath = Path.Combine(Path.GetTempPath(), "candoitall-component-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(rootPath);
+        if (options?.ActiveProfile is not null && options.TestEnvironment is null)
+        {
+            throw new InvalidOperationException("TestEnvironment must be supplied when ActiveProfile is provided.");
+        }
+
+        var ownsTestEnvironment = options?.TestEnvironment is null;
+        var testEnvironment = options?.TestEnvironment ?? CanDoItAllTestEnvironment.Create("candoitall-component-tests");
+        var activeProfile = options?.ActiveProfile ?? testEnvironment.CreateManagedSqliteProfile("primary");
 
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
+        var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile, options?.ConfigurationOverrides);
 
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Database:Provider"] = "Sqlite",
-                ["Database:ConnectionString"] = $"Data Source={Path.Combine(rootPath, "candoitall.components.db")}",
-                ["Storage:WorkspaceRoot"] = Path.Combine(rootPath, "workspace"),
-                ["Storage:ManagedFilesFolder"] = "managed-files",
-                ["Storage:ExportsFolder"] = "exports",
-                ["Storage:EvidenceFolder"] = "evidence",
-                ["Storage:ManagerArtifactsFolder"] = ".artifacts/codex-manager",
-                ["Workbench:MaxWarmTabs"] = "3",
-                ["Workbench:SleepAfterMinutes"] = "15",
-                ["DevelopmentManager:TuningModeEnabled"] = "true",
-                ["DevelopmentManager:ReviewBeforeSend"] = "true",
-                ["DevelopmentManager:ManagerBaseUrl"] = "http://127.0.0.1:6407"
-            })
-            .Build();
-
-        context.Services.AddLogging();
-        context.Services.AddCanDoItAllInfrastructure(configuration, new TestHostEnvironment(rootPath), ModuleAssemblies.All);
-        context.Services.AddScoped<IWorkbenchStateStore, InMemoryWorkbenchStateStore>();
+        TestApplicationBootstrap.ConfigureDefaultServices(
+            context.Services,
+            configuration,
+            testEnvironment.CreateHostEnvironment("CanDoItAll.Tests.Components"));
         context.Services.AddScoped<TuningCoordinator>();
         context.Services.AddHttpClient<DevelopmentManagerClient>();
-        context.Services.AddSecurityModule();
-        context.Services.AddWorkspaceModule();
-        context.Services.AddProjectsModule();
-        context.Services.AddWorkbenchModule();
-        context.Services.AddResourcesModule();
-        context.Services.AddPromptsModule();
-        context.Services.AddFactoryModule();
-        context.Services.AddValidationModule();
-        context.Services.AddTestLabModule();
-        context.Services.AddActivityModule();
-        context.Services.AddAutomationModule();
         configureServices?.Invoke(context.Services);
 
-        var dbContextFactory = context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        await dbContext.Database.EnsureCreatedAsync();
-        await WorkspaceSchemaInitializer.EnsureAsync(dbContext);
-        await ProjectsSchemaInitializer.EnsureAsync(dbContext);
+        await TestApplicationBootstrap.InitializeSchemaAsync(
+            context.Services,
+            options?.SchemaModules ?? TestSchemaBootstrapModules.Default);
 
-        return new ComponentTestHarness(rootPath, context);
+        return new ComponentTestHarness(testEnvironment, ownsTestEnvironment, activeProfile, context);
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         Context.Dispose();
-        SqliteConnection.ClearAllPools();
-        if (Directory.Exists(RootPath))
+
+        if (_ownsTestEnvironment)
         {
-            DeleteDirectoryWithRetry(RootPath);
+            await TestEnvironment.DisposeAsync();
         }
-
-        return ValueTask.CompletedTask;
-    }
-
-    private static void DeleteDirectoryWithRetry(string path)
-    {
-        const int maxAttempts = 5;
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            try
-            {
-                Directory.Delete(path, recursive: true);
-                return;
-            }
-            catch (IOException) when (attempt < maxAttempts)
-            {
-                Thread.Sleep(100 * attempt);
-            }
-            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
-            {
-                Thread.Sleep(100 * attempt);
-            }
-        }
-    }
-
-    private sealed class TestHostEnvironment(string contentRootPath) : IHostEnvironment
-    {
-        public string EnvironmentName { get; set; } = Environments.Development;
-
-        public string ApplicationName { get; set; } = "CanDoItAll.Tests.Components";
-
-        public string ContentRootPath { get; set; } = contentRootPath;
-
-        public IFileProvider ContentRootFileProvider { get; set; } = new PhysicalFileProvider(contentRootPath);
     }
 }
 

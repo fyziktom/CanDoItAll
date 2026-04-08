@@ -1,10 +1,9 @@
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Hosting;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -13,53 +12,27 @@ public sealed class DatabaseConfigurationTests
     [Fact]
     public async Task AddCanDoItAllInfrastructure_UsesInMemoryProvider_WhenConfigured()
     {
-        var rootPath = Path.Combine(Path.GetTempPath(), "candoitall-inmemory-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(rootPath);
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-inmemory-tests");
+        var profile = testEnvironment.CreateInMemoryProfile("unit", "rpi3-validation");
+        var configuration = TestApplicationBootstrap.BuildConfiguration(profile);
 
-        try
+        var services = new ServiceCollection();
+        TestApplicationBootstrap.ConfigureDefaultServices(
+            services,
+            configuration,
+            testEnvironment.CreateHostEnvironment("CanDoItAll.Tests.Unit"));
+
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
         {
-            var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["Database:Provider"] = "InMemory",
-                    ["Database:ConnectionString"] = "rpi3-validation",
-                    ["Storage:WorkspaceRoot"] = Path.Combine(rootPath, "workspace"),
-                    ["Storage:ManagedFilesFolder"] = "managed-files",
-                    ["Storage:ExportsFolder"] = "exports",
-                    ["Storage:EvidenceFolder"] = "evidence",
-                    ["Storage:ManagerArtifactsFolder"] = ".artifacts/codex-manager",
-                    ["Workbench:MaxWarmTabs"] = "3",
-                    ["Workbench:SleepAfterMinutes"] = "15",
-                    ["DevelopmentManager:TuningModeEnabled"] = "true",
-                    ["DevelopmentManager:ReviewBeforeSend"] = "true",
-                    ["DevelopmentManager:ManagerBaseUrl"] = "http://127.0.0.1:6407"
-                })
-                .Build();
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
 
-            var services = new ServiceCollection();
-            services.AddLogging();
-            services.AddCanDoItAllInfrastructure(configuration, new TestHostEnvironment(rootPath), []);
+        await using var scope = provider.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
 
-            await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
-            {
-                ValidateOnBuild = true,
-                ValidateScopes = true
-            });
-
-            await using var scope = provider.CreateAsyncScope();
-            var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-            await dbContext.Database.EnsureCreatedAsync();
-
-            Assert.Equal("Microsoft.EntityFrameworkCore.InMemory", dbContext.Database.ProviderName);
-        }
-        finally
-        {
-            if (Directory.Exists(rootPath))
-            {
-                Directory.Delete(rootPath, recursive: true);
-            }
-        }
+        Assert.Equal("Microsoft.EntityFrameworkCore.InMemory", dbContext.Database.ProviderName);
     }
 
     [Fact]
@@ -85,14 +58,61 @@ public sealed class DatabaseConfigurationTests
         }
     }
 
-    private sealed class TestHostEnvironment(string contentRootPath) : IHostEnvironment
+    [Fact]
+    public void AppDbContextFactory_UsesSqliteMigrationsAssembly_WhenConfiguredViaEnvironment()
     {
-        public string EnvironmentName { get; set; } = Environments.Development;
+        const string providerVariable = "CANDOITALL_DATABASE_PROVIDER";
+        const string connectionVariable = "CANDOITALL_DATABASE_CONNECTION";
+        var originalProvider = Environment.GetEnvironmentVariable(providerVariable);
+        var originalConnection = Environment.GetEnvironmentVariable(connectionVariable);
 
-        public string ApplicationName { get; set; } = "CanDoItAll.Tests.Unit";
+        try
+        {
+            Environment.SetEnvironmentVariable(providerVariable, "Sqlite");
+            Environment.SetEnvironmentVariable(connectionVariable, "Data Source=:memory:");
 
-        public string ContentRootPath { get; set; } = contentRootPath;
+            using var context = new AppDbContextFactory().CreateDbContext([]);
+            Assert.Equal(
+                "CanDoItAll.Migrations.Sqlite",
+                GetRelationalOptions(context).MigrationsAssembly);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(providerVariable, originalProvider);
+            Environment.SetEnvironmentVariable(connectionVariable, originalConnection);
+        }
+    }
 
-        public IFileProvider ContentRootFileProvider { get; set; } = new PhysicalFileProvider(contentRootPath);
+    [Fact]
+    public void AppDbContextFactory_UsesPostgreSqlMigrationsAssembly_WhenConfiguredViaEnvironment()
+    {
+        const string providerVariable = "CANDOITALL_DATABASE_PROVIDER";
+        const string connectionVariable = "CANDOITALL_DATABASE_CONNECTION";
+        var originalProvider = Environment.GetEnvironmentVariable(providerVariable);
+        var originalConnection = Environment.GetEnvironmentVariable(connectionVariable);
+
+        try
+        {
+            Environment.SetEnvironmentVariable(providerVariable, "PostgreSql");
+            Environment.SetEnvironmentVariable(
+                connectionVariable,
+                "Host=127.0.0.1;Database=candoitall;Username=postgres;Password=postgres");
+
+            using var context = new AppDbContextFactory().CreateDbContext([]);
+            Assert.Equal(
+                "CanDoItAll.Migrations.PostgreSql",
+                GetRelationalOptions(context).MigrationsAssembly);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(providerVariable, originalProvider);
+            Environment.SetEnvironmentVariable(connectionVariable, originalConnection);
+        }
+    }
+
+    private static RelationalOptionsExtension GetRelationalOptions(AppDbContext context)
+    {
+        var dbContextOptions = context.GetService<IDbContextOptions>();
+        return Assert.Single(dbContextOptions.Extensions.OfType<RelationalOptionsExtension>());
     }
 }

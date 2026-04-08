@@ -1,0 +1,251 @@
+@layer components {
+  .cad-tag-textedit,
+  .zy-tag-textedit {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    flex: 1 1 0%;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .cad-tag-textedit:focus-within,
+  .zy-tag-textedit:focus-within {
+    z-index: 5;
+  }
+
+  .cad-tag-textedit__surface,
+  .zy-tag-textedit__surface {
+    display: flex;
+    min-height: 2.35rem;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.34);
+    background: rgba(255, 255, 255, 0.96);
+    padding: 0.28rem 0.55rem;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  }
+
+  .cad-sheet-field .cad-tag-textedit__surface,
+  .cad-sheet-field .zy-tag-textedit__surface,
+  .zy-sheet-field .cad-tag-textedit__surface,
+  .zy-sheet-field .zy-tag-textedit__surface {
+    flex: 1 1 auto;
+    min-height: auto;
+    flex-wrap: wrap;
+    align-items: center;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .cad-sheet-field .cad-tag-textedit__hint,
+  .cad-sheet-field .zy-tag-textedit__hint,
+  .zy-sheet-field .cad-tag-textedit__hint,
+  .zy-sheet-field .zy-tag-textedit__hint {
+    display: none;
+  }
+
+  .cad-tag-textedit__surface:focus-within,
+  .zy-tag-textedit__surface:focus-within {
+    border-color: rgba(16, 185, 129, 0.82);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+  }
+
+  .cad-tag-textedit__surface.is-disabled,
+  .zy-tag-textedit__surface.is-disabled {
+    opacity: 0.64;
+  }
+
+  .cad-tag-textedit__chip,
+  .zy-tag-textedit__chip,
+  .cad-tag-textedit__suggestion,
+  .zy-tag-textedit__suggestion {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    border: 1px solid;
+    border-radius: 999px;
+    padding: 0.08rem 0.4rem;
+    font-size: 0.64rem;
+    font-weight: 700;
+    line-height: 1;
+    min-height: 1.15rem !important;
+    white-space: nowrap;
+    text-transform: none;
+    user-select: none;
+    box-shadow: none;
+  }
+
+  .cad-tag-textedit__chip,
+  .zy-tag-textedit__chip {
+    cursor: pointer;
+  }
+
+  .cad-tag-textedit__suggestion,
+  .zy-tag-textedit__suggestion {
+    cursor: pointer;
+  }
+
+  .cad-tag-textedit__chip--0,
+  .zy-tag-textedit__chip--0,
+  .cad-tag-textedit__suggestion--0,
+  .zy-tag-textedit__suggestion--0 {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    color: #0c4a6e;
+  }
+
+  .cad-tag-textedit__chip--1,
+  .zy-tag-textedit__chip--1,
+  .cad-tag-textedit__suggestion--1,
+  .zy-tag-textedit__suggestion--1 {
+    background: #fce7f3;
+    border-color: #f9a8d4;
+    color: #831843;
+  }
+
+  .cad-tag-textedit__chip--2,
+  .zy-tag-textedit__chip--2,
+  .cad-tag-textedit__suggestion--2,
+  .zy-tag-textedit__suggestion--2 {
+    background: #d1fae5;
+    border-color: #6ee7b7;
+    color: #064e3b;
+  }
+
+  .cad-tag-textedit__chip--3,
+  .zy-tag-textedit__chip--3,
+  .cad-tag-textedit__suggestion--3,
+  .zy-tag-textedit__suggestion--3 {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    color: #78350f;
+  }
+
+  .cad-tag-textedit__chip--4,
+  .zy-tag-textedit__chip--4,
+  .cad-tag-textedit__suggestion--4,
+  .zy-tag-textedit__suggestion--4 {
+    background: #ede9fe;
+    border-color: #c4b5fd;
+    color: #4c1d95;
+  }
+
+  .cad-tag-textedit__chip--5,
+  .zy-tag-textedit__chip--5,
+  .cad-tag-textedit__suggestion--5,
+  .zy-tag-textedit__suggestion--5 {
+    background: #ffedd5;
+    border-color: #fdba74;
+    color: #7c2d12;
+  }
+
+  .cad-tag-textedit__chip--6,
+  .zy-tag-textedit__chip--6,
+  .cad-tag-textedit__suggestion--6,
+  .zy-tag-textedit__suggestion--6 {
+    background: #e0e7ff;
+    border-color: #a5b4fc;
+    color: #312e81;
+  }
+
+  .cad-tag-textedit__chip--7,
+  .zy-tag-textedit__chip--7,
+  .cad-tag-textedit__suggestion--7,
+  .zy-tag-textedit__suggestion--7 {
+    background: #ccfbf1;
+    border-color: #5eead4;
+    color: #134e4a;
+  }
+
+  .cad-tag-textedit__chip--8,
+  .zy-tag-textedit__chip--8,
+  .cad-tag-textedit__suggestion--8,
+  .zy-tag-textedit__suggestion--8 {
+    background: #fce4ec;
+    border-color: #f48fb1;
+    color: #880e4f;
+  }
+
+  .cad-tag-textedit__chip--9,
+  .zy-tag-textedit__chip--9,
+  .cad-tag-textedit__suggestion--9,
+  .zy-tag-textedit__suggestion--9 {
+    background: #e8f5e9;
+    border-color: #81c784;
+    color: #1b5e20;
+  }
+
+  .cad-tag-textedit__chip:disabled,
+  .zy-tag-textedit__chip:disabled,
+  .cad-tag-textedit__suggestion:disabled,
+  .zy-tag-textedit__suggestion:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+
+  .cad-tag-textedit__chip-x,
+  .zy-tag-textedit__chip-x {
+    display: inline-flex;
+    width: 0.72rem;
+    height: 0.72rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.08);
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .cad-tag-textedit__input,
+  .zy-tag-textedit__input {
+    min-width: 4rem;
+    flex: 1 1 6rem;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: #0f172a;
+    padding: 0.14rem 0.2rem !important;
+    font-family: inherit;
+    font-size: 0.82rem !important;
+    outline: none;
+    box-shadow: none !important;
+    min-height: auto !important;
+  }
+
+  .cad-tag-textedit__input::placeholder,
+  .zy-tag-textedit__input::placeholder {
+    color: #64748b;
+  }
+
+  .cad-tag-textedit__suggestions,
+  .zy-tag-textedit__suggestions {
+    position: absolute;
+    top: calc(100% + 0.2rem);
+    left: 0;
+    right: 0;
+    z-index: 50;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    min-width: 0;
+    padding: 0.48rem;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.99);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  }
+
+  .cad-tag-textedit__hint,
+  .zy-tag-textedit__hint {
+    color: #64748b;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+}

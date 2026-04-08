@@ -1,5 +1,7 @@
 using Bunit;
+using AngleSharp.Dom;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
@@ -14,6 +16,76 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructurePageTests
 {
+    [Fact]
+    public async Task Storage_infrastructure_nodes_render_workspace_storage_summary_in_selection_panel() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var workspaceService = harness.Context.Services.GetRequiredService<WorkspaceService>();
+        var storageRoot = Path.Combine(harness.ActiveProfile.WorkspaceRootPath, "storage", "component-assets");
+        Directory.CreateDirectory(storageRoot);
+
+        var storageSave = await workspaceService.SaveStorageAsync(new StorageCatalogEditorModel {
+            Name = "Project assets storage",
+            ProviderKind = StorageProviderKind.FileSystem,
+            ConnectionMode = StorageConnectionMode.Local,
+            EndpointOrRoot = storageRoot,
+            DisplayOrder = 10,
+            DefaultPurposes = [StorageUsagePurpose.ProjectAsset]
+        });
+
+        Assert.True(storageSave.IsSuccess, string.Join(" | ", storageSave.Errors.Select(error => error.Message)));
+
+        var projectId = await CreateProjectAsync(projectsService, "Storage summary project");
+        var metadata = new ProjectObjectMetadataEnvelope {
+            Infrastructure = new ProjectInfrastructureMetadata {
+                InfrastructureKind = ProjectInfrastructureKind.StorageSystem,
+                StoragePurpose = nameof(StorageUsagePurpose.ProjectAsset),
+                StoragePathPrefix = "projects/component-tests/assets",
+                ConnectionReference = "/storage/assets"
+            }
+        };
+
+        await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Infrastructure,
+                "Project assets lane",
+                "Storage infrastructure",
+                "Routes editable assets through the workspace storage catalog.",
+                $"project:{projectId}",
+                460,
+                260,
+                null,
+                null,
+                "storage-system",
+                null,
+                ProjectObjectMetadataSerializer.Serialize(metadata),
+                null,
+                new ProjectNodeReferenceCollection
+                {
+                    InfrastructureStorageCatalogId = storageSave.Value
+                }));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => {
+            Assert.Contains("Project assets lane", cut.Markup);
+        });
+
+        FindButtonByLabel(cut, "Project assets lane").Click();
+
+        cut.WaitForAssertion(() => {
+            Assert.Contains("project-structure-storage-summary", cut.Markup);
+            Assert.Contains("Project assets storage", cut.Markup);
+            Assert.Contains("Project assets", cut.Markup);
+            Assert.Contains("projects/component-tests/assets", cut.Markup);
+            Assert.Contains("/storage/assets", cut.Markup);
+            Assert.Contains("File system", cut.Markup);
+        });
+    }
+
     [Fact]
     public async Task Renders_selection_window_and_toolbar_toggles_without_stage_inspector_column()
     {
@@ -49,17 +121,18 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Inspector", cut.Markup);
             Assert.Contains("Health", cut.Markup);
             Assert.Contains("Blocks", cut.Markup);
+            Assert.Contains("Signals", cut.Markup);
             Assert.Contains("project-structure-selection-window", cut.Markup);
             Assert.DoesNotContain("cw-minimap", cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain("project-structure-validation-window", cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain("project-structure-toolbox-window", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("project-structure-signals-window", cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain("project-structure-standard-blocks-toolbox", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("project-structure-signals-toolbox", cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain("cw-inspector-column", cut.Markup, StringComparison.Ordinal);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Health", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Health").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -76,6 +149,57 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Project structure toolbox", cut.Markup);
             Assert.Contains("Search the shared block catalog, drag the window where you need it", cut.Markup);
         });
+
+        cut.Find("[data-testid='project-structure-signals-toggle']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-signals-window", cut.Markup);
+            Assert.Contains("project-structure-signals-toolbox", cut.Markup);
+            Assert.Contains("Signals toolbox", cut.Markup);
+            Assert.Contains("Markers", cut.Markup);
+            Assert.Contains("Progress", cut.Markup);
+            Assert.Contains("Priority", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task Selection_panel_component_skips_rerender_when_the_page_rerenders_without_selection_changes()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Selection Render Isolation");
+        var note = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Selection node",
+                "Render isolation",
+                "Keep the panel stable when only the page rerenders.",
+                $"project:{projectId}",
+                420,
+                260));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, note.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Selection node", cut.Markup);
+            Assert.Contains("project-structure-selection-window", cut.Markup);
+        });
+
+        var selectionPanel = cut.FindComponent<ProjectStructureSelectionPanel>();
+        var selectionPanelRenderCount = selectionPanel.RenderCount;
+
+        cut.Render();
+
+        selectionPanel = cut.FindComponent<ProjectStructureSelectionPanel>();
+        Assert.Equal(selectionPanelRenderCount, selectionPanel.RenderCount);
     }
 
     [Fact]
@@ -102,15 +226,13 @@ public sealed class ProjectStructurePageTests
             Assert.DoesNotContain("project-structure-validation-window", cut.Markup, StringComparison.Ordinal);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Health", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Health").Click();
 
         cut.WaitForAssertion(() =>
         {
             var windows = cut.FindComponents<CanvasFloatingWindow>();
             var healthWindow = Assert.Single(windows, candidate => string.Equals(candidate.Instance.TestId, "project-structure-validation-window", StringComparison.Ordinal));
-            Assert.Equal(462d, healthWindow.Instance.State.Left);
+            Assert.Equal(866d, healthWindow.Instance.State.Left);
             Assert.True(healthWindow.Instance.State.IsVisible);
         });
     }
@@ -153,8 +275,8 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Project object index", cut.Markup);
             Assert.Contains("Graph health", cut.Markup);
             Assert.Contains("Architecture note", cut.Markup);
-            Assert.Single(cut.FindAll("[data-testid='project-structure-action-catalog-adapter']"));
-            Assert.Single(cut.FindAll("[data-testid='project-structure-placement-policy']"));
+            Assert.DoesNotContain("project-structure-action-catalog-adapter", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("project-structure-placement-policy", cut.Markup, StringComparison.Ordinal);
         });
 
         cut.FindAll("button")
@@ -167,7 +289,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Open standard blocks", cut.Markup);
             Assert.Contains("Architecture note", cut.Markup);
             Assert.Contains("Tracks the first implementation idea", cut.Markup);
-            Assert.DoesNotContain("project-structure-standard-blocks-toolbox", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("project-structure-standard-blocks-toolbox", cut.Markup);
         });
 
         cut.FindAll("button")
@@ -190,7 +312,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("project-structure-toolbox-group-body-work", cut.Markup);
             Assert.Contains(">Task<", cut.Markup);
             Assert.Contains(">Issue<", cut.Markup);
-            Assert.Contains("fa-list-check", cut.Markup);
+            Assert.Contains("project-structure-toolbox-add-work-task", cut.Markup);
             Assert.DoesNotContain("project-structure-toolbox-group-body-capture", cut.Markup, StringComparison.Ordinal);
         });
 
@@ -208,8 +330,8 @@ public sealed class ProjectStructurePageTests
         {
             Assert.Contains("project-structure-toolbox-group-body-assets", cut.Markup);
             Assert.Contains("project-structure-toolbox-add-file-pdf", cut.Markup);
-            Assert.Contains("fa-file-pdf", cut.Markup);
-            Assert.Contains("project-structure-toolbox-meta", cut.Markup);
+            Assert.Contains(">PDF<", cut.Markup);
+            Assert.Contains("Search blocks, files, runtime, or infrastructure", cut.Markup);
             Assert.DoesNotContain("Unknown icon token", cut.Markup, StringComparison.Ordinal);
         });
     }
@@ -257,12 +379,78 @@ public sealed class ProjectStructurePageTests
             Assert.Contains(">Wizard<", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Wizard", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Wizard").Click();
 
         Assert.Contains("/prompt-factory?sessionId=", navigation.Uri, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(created.ArtifactId!.Value.ToString(), navigation.Uri, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Copy_actions_write_rich_info_format_to_the_clipboard()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Clipboard Info Project");
+        var deploymentNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Main servers",
+                "Runtime cluster",
+                "Parent node for copy formatting coverage.",
+                $"project:{projectId}",
+                560,
+                220,
+                null,
+                null,
+                "deployment"));
+        var taskNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "API rollout",
+                "Execution",
+                "Child node for tree formatting coverage.",
+                deploymentNode.Id,
+                860,
+                420,
+                null,
+                null,
+                "task"));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Main servers", cut.Markup));
+
+        await InvokeCanvasContextActionAsync(cut, deploymentNode.Id, "copy-info");
+        await InvokeCanvasContextActionAsync(cut, deploymentNode.Id, "copy-subtree-ids");
+
+        cut.WaitForAssertion(() =>
+        {
+            var clipboardWrites = harness.Context.JSInterop.Invocations
+                .Where(invocation => string.Equals(invocation.Identifier, "navigator.clipboard.writeText", StringComparison.Ordinal))
+                .ToList();
+
+            Assert.Equal(2, clipboardWrites.Count);
+
+            var copiedInfo = Assert.IsType<string>(clipboardWrites[0].Arguments[0]);
+            var copiedTree = Assert.IsType<string>(clipboardWrites[1].Arguments[0]);
+
+            Assert.Equal($"deployment_Main-servers:{ExtractNodeHash(deploymentNode.Id)}", copiedInfo);
+            Assert.Equal(
+                string.Join(
+                    Environment.NewLine,
+                    [
+                        $"deployment_Main-servers:{ExtractNodeHash(deploymentNode.Id)}",
+                        $"  task_API-rollout:{ExtractNodeHash(taskNode.Id)}"
+                    ]),
+                copiedTree);
+
+            Assert.Contains("Main servers tree info was copied.", cut.Markup);
+        });
     }
 
     [Fact]
@@ -431,9 +619,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Add subproject", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Add subproject", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Add subproject").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -452,6 +638,128 @@ public sealed class ProjectStructurePageTests
         Assert.Contains(surface.Nodes, node =>
             node.ProjectRole == ProjectStructureProjectRole.Subproject &&
             node.RelatedProjectId == childProjectId);
+    }
+
+    [Fact]
+    public async Task Canvas_context_action_can_open_add_subproject_dialog_for_project_nodes()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+
+        var currentProjectId = await CreateProjectAsync(projectsService, "Context action parent");
+        var availableChildProjectId = await CreateProjectAsync(projectsService, "Context action child");
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, currentProjectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Context action parent structure", cut.Markup);
+        });
+
+        await InvokeCanvasContextActionAsync(cut, BuildProjectRootNodeKey(currentProjectId), "project:add-subproject");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-hierarchy-dialog", cut.Markup);
+            Assert.Contains("Create new project", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-hierarchy-project-select']").Change(availableChildProjectId.ToString());
+        cut.Find("[data-testid='project-structure-hierarchy-submit']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Context action child is now visible under Context action parent.", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task Add_subproject_dialog_filters_out_direct_children_and_parent_projects()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+
+        var currentProjectId = await CreateProjectAsync(projectsService, "Current project");
+        var directChildProjectId = await CreateProjectAsync(projectsService, "Direct child");
+        var remainingProjectId = await CreateProjectAsync(projectsService, "Remaining project");
+
+        Assert.True((await projectsService.AddSubprojectAsync(currentProjectId, directChildProjectId)).IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, currentProjectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Direct child", cut.Markup);
+        });
+
+        await InvokeCanvasContextActionAsync(cut, BuildProjectRootNodeKey(currentProjectId), "project:add-subproject");
+
+        cut.WaitForAssertion(() =>
+        {
+            var options = ReadHierarchyProjectOptions(cut);
+            Assert.DoesNotContain(options, option => option.Value == directChildProjectId.ToString());
+            Assert.Contains(options, option => option.Value == remainingProjectId.ToString());
+        });
+
+        await InvokeCanvasContextActionAsync(cut, BuildProjectChildNodeKey(directChildProjectId), "project:add-subproject");
+
+        cut.WaitForAssertion(() =>
+        {
+            var options = ReadHierarchyProjectOptions(cut);
+            Assert.DoesNotContain(options, option => option.Value == currentProjectId.ToString());
+            Assert.Contains(options, option => option.Value == remainingProjectId.ToString());
+        });
+    }
+
+    [Fact]
+    public async Task Hierarchy_dialog_can_create_a_project_and_refresh_the_candidate_list()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+
+        var currentProjectId = await CreateProjectAsync(projectsService, "Current project");
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, currentProjectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Current project structure", cut.Markup);
+        });
+
+        await InvokeCanvasContextActionAsync(cut, BuildProjectRootNodeKey(currentProjectId), "project:add-subproject");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-hierarchy-dialog", cut.Markup);
+            Assert.Contains("Create new project", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-hierarchy-create-project']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("projects-editor-modal", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-name-input']").Change("Created from hierarchy");
+        cut.Find("[data-testid='project-save-button']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-hierarchy-dialog", cut.Markup);
+            var options = ReadHierarchyProjectOptions(cut);
+            Assert.Contains(options, option => string.Equals(option.Label, "Created from hierarchy", StringComparison.Ordinal));
+        });
+
+        cut.Find("[data-testid='project-structure-hierarchy-submit']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Created from hierarchy is now visible under Current project.", cut.Markup);
+        });
     }
 
     [Fact]
@@ -476,9 +784,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Reconnect parent", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Reconnect parent", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Reconnect parent").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -632,9 +938,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains(">Summary<", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Summary", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Summary").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -642,6 +946,169 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Export Gantt", cut.Markup);
             Assert.Contains("Ship checklist", cut.Markup);
         });
+    }
+
+    [Fact]
+    public async Task Export_gantt_creates_mermaid_file_with_dependency_order_and_default_duration()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Dependency Gantt Export");
+        var feature = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Execution feature",
+                "Delivery branch",
+                "Use this node as the summary root.",
+                $"project:{projectId}",
+                520,
+                240,
+                null,
+                null,
+                "feature"));
+
+        var dependencyNote = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Architect dependency note",
+                "Prerequisite note",
+                "A note can still block a downstream task.",
+                feature.Id,
+                760,
+                340));
+
+        var deliveryTask = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Ship canvas dependency flow",
+                "Implementation task",
+                "Create the dependency UX and delete mode.",
+                feature.Id,
+                780,
+                420,
+                null,
+                null,
+                "task",
+                null,
+                null,
+                7200));
+
+        await workbenchService.LinkObjectsAsync(projectId, deliveryTask.Id, dependencyNote.Id, ProjectObjectLinkKind.DependsOn);
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, feature.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Execution feature", cut.Markup);
+            Assert.Contains(">Summary<", cut.Markup);
+        });
+
+        FindButtonByLabel(cut, "Summary").Click();
+        cut.WaitForAssertion(() => Assert.Contains("Export Gantt", cut.Markup));
+
+        FindButtonByLabel(cut, "Export Gantt").Click();
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("was exported as a Mermaid Gantt node.", cut.Markup));
+
+        var updatedSurface = await workbenchService.GetStructureAsync(projectId);
+        var exportedNode = Assert.Single(
+            updatedSurface.Nodes,
+            node => node.ObjectType == ProjectObjectType.File &&
+                    string.Equals(node.ObjectSubtype, "mermaid", StringComparison.Ordinal) &&
+                    string.Equals(node.ParentId, feature.Id, StringComparison.Ordinal));
+
+        Assert.Equal("Execution feature gantt", exportedNode.Title);
+        Assert.Contains(">[Unscheduled] Architect dependency note (Draft) :task2, ", exportedNode.Notes, StringComparison.Ordinal);
+        Assert.Contains(">Ship canvas dependency flow (Draft) :task3, after task2, 2h", exportedNode.Notes, StringComparison.Ordinal);
+        Assert.Contains("task2, 202", exportedNode.Notes, StringComparison.Ordinal);
+        Assert.Contains(", 1h", exportedNode.Notes, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Summary_dialog_can_export_workbook_and_then_gantt_from_the_same_open_dialog()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Sequential summary exports");
+        var feature = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Execution feature",
+                "Delivery branch",
+                "Use this node as the summary root.",
+                $"project:{projectId}",
+                520,
+                240,
+                null,
+                null,
+                "feature"));
+        _ = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Ship checklist",
+                "Ready for release",
+                "Confirm the rollout tasks.",
+                feature.Id,
+                780,
+                340,
+                new DateTimeOffset(2026, 3, 28, 9, 0, 0, TimeSpan.Zero),
+                new DateTimeOffset(2026, 3, 29, 18, 0, 0, TimeSpan.Zero),
+                "task"));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, feature.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Execution feature", cut.Markup);
+            Assert.Contains(">Summary<", cut.Markup);
+        });
+
+        FindButtonByLabel(cut, "Summary").Click();
+        cut.WaitForAssertion(() => Assert.Contains("Export XLSX", cut.Markup));
+
+        FindButtonByLabel(cut, "Export XLSX").Click();
+        cut.WaitForAssertion(() =>
+            Assert.Contains("was exported as an Excel attachment.", cut.Markup));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Export XLSX", cut.Markup);
+            Assert.Contains("Export Gantt", cut.Markup);
+        });
+
+        FindButtonByLabel(cut, "Export Gantt").Click();
+        cut.WaitForAssertion(() =>
+            Assert.Contains("was exported as a Mermaid Gantt node.", cut.Markup));
+
+        var updatedSurface = await workbenchService.GetStructureAsync(projectId);
+        var workbookNode = Assert.Single(
+            updatedSurface.Nodes,
+            node => node.ObjectType == ProjectObjectType.File &&
+                    string.Equals(node.ObjectSubtype, "excel", StringComparison.Ordinal) &&
+                    string.Equals(node.ParentId, feature.Id, StringComparison.Ordinal));
+        var ganttNode = Assert.Single(
+            updatedSurface.Nodes,
+            node => node.ObjectType == ProjectObjectType.File &&
+                    string.Equals(node.ObjectSubtype, "mermaid", StringComparison.Ordinal) &&
+                    string.Equals(node.ParentId, feature.Id, StringComparison.Ordinal));
+
+        Assert.Equal("Execution feature progress workbook", workbookNode.Title);
+        Assert.Equal("Execution feature gantt", ganttNode.Title);
     }
 
     [Fact]
@@ -697,9 +1164,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("View Mermaid", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "View Mermaid", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "View Mermaid").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -730,10 +1195,14 @@ public sealed class ProjectStructurePageTests
         var providerSave = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = "Local llama",
-            ProviderKind = ProviderKind.OllamaLocal,
-            BaseUrl = "http://localhost:11434",
-            DefaultModel = "llama3.1",
-            TimeoutSeconds = 30,
+            ConnectorPluginKey = OllamaProviderAdapter.PluginKey,
+            ConfigSchemaVersion = "1.0",
+            Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["baseUrl"] = "http://localhost:11434",
+                ["defaultModel"] = "llama3.1",
+                ["timeoutSeconds"] = "30"
+            }),
             IsEnabled = true
         });
 
@@ -776,9 +1245,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains(">Find others delivery to me<", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Find my tasks", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Find my tasks").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -850,9 +1317,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Open in new tab", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Open", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Expand preview").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -973,6 +1438,116 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Canvas_state_changes_ignore_manual_position_only_updates()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projectsService, "Manual Position Ignore");
+        var rootNodeId = $"project:{projectId}";
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, rootNodeId);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var baselineSurface = await workbenchService.GetStructureAsync(projectId);
+        var baselineState = CanvasWorkbenchUiState.Parse(baselineSurface.ViewStateJson);
+
+        var transientState = new CanvasWorkbenchUiState
+        {
+            SelectedNodeIds = [rootNodeId],
+            ManualPositions = new Dictionary<string, CanvasWorkbenchPoint>(StringComparer.Ordinal)
+            {
+                [rootNodeId] = new CanvasWorkbenchPoint
+                {
+                    X = 960,
+                    Y = 640
+                }
+            }
+        };
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnStateChanged(transientState.ToJson()));
+
+        var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+        var persistedState = CanvasWorkbenchUiState.Parse(persistedSurface.ViewStateJson);
+
+        Assert.Empty(persistedState.ManualPositions);
+        Assert.Equal(baselineState.SelectedNodeIds, persistedState.SelectedNodeIds);
+        Assert.Equal(baselineState.Zoom, persistedState.Zoom, 3);
+        Assert.Equal(baselineState.PanX, persistedState.PanX, 3);
+        Assert.Equal(baselineState.PanY, persistedState.PanY, 3);
+        Assert.Equal(baselineState.ShowMinimap, persistedState.ShowMinimap);
+        Assert.Empty(cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState.ManualPositions);
+    }
+
+    [Fact]
+    public async Task Canvas_state_changes_persist_viewport_without_manual_positions()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projectsService, "Viewport Persistence");
+        var rootNodeId = $"project:{projectId}";
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, rootNodeId);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+
+        var stateChange = new CanvasWorkbenchUiState
+        {
+            SelectedNodeIds = [rootNodeId],
+            ManualPositions = new Dictionary<string, CanvasWorkbenchPoint>(StringComparer.Ordinal)
+            {
+                [rootNodeId] = new CanvasWorkbenchPoint
+                {
+                    X = 720,
+                    Y = 480
+                }
+            },
+            Zoom = 1.25,
+            PanX = 240,
+            PanY = 180,
+            ShowMinimap = false
+        };
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnStateChanged(stateChange.ToJson()));
+
+        CanvasWorkbenchUiState? persistedState = null;
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            var persistedSurface = await workbenchService.GetStructureAsync(projectId);
+            persistedState = CanvasWorkbenchUiState.Parse(persistedSurface.ViewStateJson);
+            if (Math.Abs(persistedState.Zoom - 1.25) < 0.001 &&
+                Math.Abs(persistedState.PanX - 240) < 0.001 &&
+                Math.Abs(persistedState.PanY - 180) < 0.001 &&
+                persistedState.SelectedNodeIds.SequenceEqual([rootNodeId], StringComparer.Ordinal) &&
+                !persistedState.ShowMinimap)
+            {
+                break;
+            }
+
+            await Task.Delay(100);
+        }
+
+        Assert.NotNull(persistedState);
+        Assert.Empty(persistedState!.ManualPositions);
+        Assert.Equal(1.25, persistedState.Zoom, 3);
+        Assert.Equal(240, persistedState.PanX, 3);
+        Assert.Equal(180, persistedState.PanY, 3);
+        Assert.Equal([rootNodeId], persistedState.SelectedNodeIds);
+        Assert.False(persistedState.ShowMinimap);
+
+        var renderedState = cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState;
+        Assert.Empty(renderedState.ManualPositions);
+        Assert.Equal(1.25, renderedState.Zoom, 3);
+        Assert.Equal(240, renderedState.PanX, 3);
+        Assert.Equal(180, renderedState.PanY, 3);
+    }
+
+    [Fact]
     public async Task Selected_nodes_render_advanced_details_and_keep_delete_last_in_action_order()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -1025,8 +1600,8 @@ public sealed class ProjectStructurePageTests
         var actionLabels = cut.FindAll("[data-testid='project-structure-node-actions'] button")
             .Select(button => button.TextContent.Trim())
             .ToList();
-        Assert.Contains("Edit", actionLabels);
-        Assert.Equal("Delete", actionLabels.Last());
+        Assert.Contains(actionLabels, label => label.Contains("Edit", StringComparison.Ordinal));
+        Assert.Contains("Delete", actionLabels.Last(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1078,7 +1653,7 @@ public sealed class ProjectStructurePageTests
 
         var advancedDetails = cut.Find("[data-testid='project-structure-advanced-details']");
         Assert.DoesNotContain("Kind", advancedDetails.TextContent, StringComparison.Ordinal);
-        Assert.Empty(cut.FindAll("[data-testid='project-structure-node-facts']"));
+        Assert.Contains("project-structure-storage-summary", cut.Markup);
 
         var excelBadge = cut.Find("[data-testid='project-structure-selection-badge-excel']");
         Assert.Equal("FileExcel", excelBadge.GetAttribute("data-badge-style"));
@@ -1135,8 +1710,7 @@ public sealed class ProjectStructurePageTests
                         ProjectPath = @"C:\repos\api\Api.csproj",
                         LaunchProfileName = "https",
                         RuntimeProtocol = ProjectRuntimeProtocol.Https,
-                        LocalhostUrl = "https://localhost:7143",
-                        RepositoryResourceId = Guid.NewGuid()
+                        LocalhostUrl = "https://localhost:7143"
                     }
                 })));
 
@@ -1150,9 +1724,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Edit", cut.Markup);
         });
 
-        cut.FindAll("[data-testid='project-structure-node-actions'] button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Edit", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Edit", "[data-testid='project-structure-node-actions'] button").Click();
 
         harness.Context.JSInterop.VerifyInvoke("CanDoItAll.canvasWorkbench.openCreateComposer");
 
@@ -1321,9 +1893,7 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Open PowerShell (Admin)", cut.Markup);
         });
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Open PowerShell (Admin)", StringComparison.Ordinal))
-            .Click();
+        FindButtonByLabel(cut, "Open PowerShell (Admin)").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -1548,7 +2118,7 @@ public sealed class ProjectStructurePageTests
 
         Assert.NotNull(adaptedNode.CompactPath);
         Assert.DoesNotContain(@"C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench", adaptedNode.LeadText, StringComparison.Ordinal);
-        Assert.Contains("Mode: git", adaptedNode.LeadText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("URL: https://github.com/example/CanDoItAll", adaptedNode.LeadText, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, adaptedNode.CompactPath!.PromotedText);
     }
 
@@ -1585,6 +2155,14 @@ public sealed class ProjectStructurePageTests
     private static string BuildProjectChildNodeKey(Guid projectId)
         => $"project-child:{projectId}";
 
+    private static string ExtractNodeHash(string nodeId)
+    {
+        var separatorIndex = nodeId.IndexOf(':', StringComparison.Ordinal);
+        return separatorIndex >= 0 && separatorIndex < nodeId.Length - 1
+            ? nodeId[(separatorIndex + 1)..]
+            : nodeId;
+    }
+
     private static CanvasWorkbenchNode BuildCanvasNode(ProjectStructureSurface surface, string nodeId)
     {
         var adapter = new ProjectStructureGraphAdapter();
@@ -1599,6 +2177,26 @@ public sealed class ProjectStructurePageTests
 
     private static Task OpenNodeFromCanvasAsync(IRenderedComponent<ProjectStructurePage> cut, string nodeId)
         => cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnNodeOpened(nodeId));
+
+    private static IElement FindButtonByLabel(
+        IRenderedFragment cut,
+        string label,
+        string selector = "button")
+        => cut.FindAll(selector)
+            .First(button =>
+                button.TextContent.Contains(label, StringComparison.Ordinal)
+                || (button.GetAttribute("title")?.Contains(label, StringComparison.Ordinal) ?? false)
+                || (button.GetAttribute("aria-label")?.Contains(label, StringComparison.Ordinal) ?? false));
+
+    private static Task InvokeCanvasContextActionAsync(IRenderedComponent<ProjectStructurePage> cut, string nodeId, string actionId)
+        => cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnContextAction(nodeId, actionId, 0, 0));
+
+    private static IReadOnlyList<(string Value, string Label)> ReadHierarchyProjectOptions(IRenderedComponent<ProjectStructurePage> cut)
+        => cut.FindAll("[data-testid='project-structure-hierarchy-project-select'] option")
+            .Select(option => (option.GetAttribute("value") ?? string.Empty, option.TextContent.Trim()))
+            .Where(option => !string.IsNullOrWhiteSpace(option.Item1))
+            .Select(option => (Value: option.Item1, Label: option.Item2))
+            .ToList();
 
     private sealed class TestRuntimeLauncher : IProjectStructureRuntimeLauncher
     {

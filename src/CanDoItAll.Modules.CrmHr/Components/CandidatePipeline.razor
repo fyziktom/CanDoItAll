@@ -1,0 +1,246 @@
+<FormSection Title="Candidate pipeline"
+             Description="Keep candidate identity in the shared registry, move stage explicitly, and preserve stage evidence without splitting recruiting into a disconnected tool.">
+    <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+        <SurfaceCard>
+            <p class="cda-eyebrow">Application editor</p>
+            <h3 class="mt-1 text-lg font-semibold text-slate-950">Candidate and stage</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">
+                Select an existing person or create a new candidate inline, then keep role, ownership, stage, and decision on the same record.
+            </p>
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
+                <FormField Text="Candidate">
+                    <InputSelect @bind-Value="Draft.PartyId"
+                                 class="cda-input"
+                                 data-testid="crmhr-recruiting-candidate-party">
+                        <option value="">Create a new candidate</option>
+                        @foreach (var option in CandidateOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
+                        {
+                            <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <FormField Text="Desired role">
+                    <InputText @bind-Value="Draft.DesiredRole"
+                               class="cda-input"
+                               data-testid="crmhr-recruiting-role" />
+                </FormField>
+            </Grid>
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
+                <FormField Text="New candidate name">
+                    <InputText @bind-Value="Draft.CandidateName"
+                               class="cda-input"
+                               data-testid="crmhr-recruiting-candidate-name" />
+                </FormField>
+                <FormField Text="Email">
+                    <InputText @bind-Value="Draft.CandidateEmail"
+                               class="cda-input"
+                               data-testid="crmhr-recruiting-candidate-email" />
+                </FormField>
+                <FormField Text="Phone">
+                    <InputText @bind-Value="Draft.CandidatePhone"
+                               class="cda-input"
+                               data-testid="crmhr-recruiting-candidate-phone" />
+                </FormField>
+            </Grid>
+
+            <div class="mt-4">
+                <FormField Text="Candidate summary">
+                    <InputTextArea @bind-Value="Draft.CandidateSummary"
+                                   class="cda-input min-h-[6rem]"
+                                   data-testid="crmhr-recruiting-candidate-summary" />
+                </FormField>
+            </div>
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
+                <FormField Text="Stage">
+                    <InputSelect @bind-Value="Draft.Stage"
+                                 class="cda-input"
+                                 data-testid="crmhr-recruiting-stage">
+                        @foreach (var stage in Enum.GetValues<RecruitmentStage>())
+                        {
+                            <option value="@stage">@stage</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <FormField Text="Decision">
+                    <InputSelect @bind-Value="Draft.Decision"
+                                 class="cda-input"
+                                 data-testid="crmhr-recruiting-decision">
+                        @foreach (var decision in Enum.GetValues<RecruitmentDecision>())
+                        {
+                            <option value="@decision">@decision</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <FormField Text="Available from">
+                    <InputDate @bind-Value="Draft.AvailableFrom"
+                               class="cda-input"
+                               data-testid="crmhr-recruiting-available-from" />
+                </FormField>
+            </Grid>
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
+                <FormField Text="Recruiter">
+                    <InputSelect @bind-Value="Draft.RecruiterPartyId"
+                                 class="cda-input"
+                                 data-testid="crmhr-recruiting-recruiter">
+                        <option value="">Choose recruiter</option>
+                        @foreach (var option in RecruiterOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
+                        {
+                            <option value="@option.Id">@option.DisplayName</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <FormField Text="Hiring manager">
+                    <InputSelect @bind-Value="Draft.HiringManagerPartyId"
+                                 class="cda-input"
+                                 data-testid="crmhr-recruiting-hiring-manager">
+                        <option value="">Choose hiring manager</option>
+                        @foreach (var option in HiringManagerOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
+                        {
+                            <option value="@option.Id">@option.DisplayName</option>
+                        }
+                    </InputSelect>
+                </FormField>
+            </Grid>
+
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
+                <FormField Text="Target unit">
+                    <InputSelect @bind-Value="Draft.TargetUnitPartyId"
+                                 class="cda-input"
+                                 data-testid="crmhr-recruiting-target-unit">
+                        <option value="">Choose target unit</option>
+                        @foreach (var option in TargetUnitOptions.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
+                        {
+                            <option value="@option.Id">@option.DisplayName (@option.PartyType)</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <FormField Text="Source">
+                    <InputText @bind-Value="Draft.Source"
+                               class="cda-input"
+                               data-testid="crmhr-recruiting-source" />
+                </FormField>
+            </Grid>
+
+            <div class="mt-4">
+                <FormField Text="Stage note">
+                    <InputTextArea @bind-Value="Draft.StageNotes"
+                                   class="cda-input min-h-[5rem]"
+                                   data-testid="crmhr-recruiting-stage-notes" />
+                </FormField>
+            </div>
+
+            <div class="mt-4">
+                <FormField Text="Notes">
+                    <InputTextArea @bind-Value="Draft.Notes"
+                                   class="cda-input min-h-[7rem]"
+                                   data-testid="crmhr-recruiting-notes" />
+                </FormField>
+            </div>
+
+            <Cluster Gap="LayoutGap.Small" Class="mt-4">
+                <Button Text="Save application"
+                        Click="SaveApplication"
+                        data-testid="crmhr-recruiting-save-button" />
+                <Button Text="Reset"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="ResetApplication"
+                        data-testid="crmhr-recruiting-reset-button" />
+            </Cluster>
+        </SurfaceCard>
+
+        <SurfaceCard Soft="true">
+            <Split Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween">
+                <div>
+                    <p class="cda-eyebrow">Stage history</p>
+                    <h3 class="mt-1 text-lg font-semibold text-slate-950">@StageHistory.Count update(s)</h3>
+                </div>
+                @if (HasWorkforceProfile)
+                {
+                    <StatusBadge Tone="success"
+                                 Text="Workforce profile exists" />
+                }
+            </Split>
+
+            @if (StageHistory.Count == 0)
+            {
+                <div class="mt-4">
+                    <EmptyState Eyebrow="No stage updates"
+                                Title="Save the application first"
+                                Description="Recruitment creation and every stage transition appear here after the application has been saved." />
+                </div>
+            }
+            else
+            {
+                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                    @foreach (var item in StageHistory)
+                    {
+                        <PanelCard data-testid="crmhr-recruiting-stage-history-item">
+                            <Split Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween">
+                                <div class="min-w-0 space-y-1">
+                                    <p class="text-base font-semibold text-slate-950">@item.Summary</p>
+                                    <p class="text-sm text-slate-600">@item.ChangedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") / @item.ChangedBy</p>
+                                    @if (!string.IsNullOrWhiteSpace(item.Notes))
+                                    {
+                                        <p class="text-sm leading-6 text-slate-600">@item.Notes</p>
+                                    }
+                                </div>
+                                <StatusBadge Tone="@ResolveStageTone(item.Stage)"
+                                             Text="@item.Stage.ToString()" />
+                            </Split>
+                        </PanelCard>
+                    }
+                </Stack>
+            }
+        </SurfaceCard>
+    </Grid>
+</FormSection>
+
+@code {
+    [Parameter]
+    public RecruitmentApplicationEditorModel Draft { get; set; } = new();
+
+    [Parameter]
+    public IReadOnlyList<PartyOptionModel> CandidateOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<PartyOptionModel> RecruiterOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<PartyOptionModel> HiringManagerOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<PartyOptionModel> TargetUnitOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<RecruitmentStageHistoryItemModel> StageHistory { get; set; } = [];
+
+    [Parameter]
+    public bool HasWorkforceProfile { get; set; }
+
+    [Parameter]
+    public EventCallback SaveApplication { get; set; }
+
+    [Parameter]
+    public EventCallback ResetApplication { get; set; }
+
+    private static string ResolveStageTone(RecruitmentStage stage)
+    {
+        return stage switch
+        {
+            RecruitmentStage.Hired => "success",
+            RecruitmentStage.Offer => "primary",
+            RecruitmentStage.Interviewing => "info",
+            RecruitmentStage.Rejected => "danger",
+            RecruitmentStage.Withdrawn => "warning",
+            _ => "base"
+        };
+    }
+}

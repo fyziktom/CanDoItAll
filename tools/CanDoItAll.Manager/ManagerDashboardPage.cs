@@ -219,6 +219,7 @@ public static class ManagerDashboardPage
       <div class="strip">
         <a class="link" href="/api/status" target="_blank" rel="noreferrer">Status JSON</a>
         <a class="link" href="/api/watch/logs" target="_blank" rel="noreferrer">Watch Logs JSON</a>
+        <a class="link" href="/api/tailwind/logs" target="_blank" rel="noreferrer">Tailwind Logs JSON</a>
         <a class="link" href="/api/capsules/coverage" target="_blank" rel="noreferrer">Capsule Coverage</a>
 """
         );
@@ -264,6 +265,24 @@ public static class ManagerDashboardPage
       </article>
 
       <article class="panel">
+        <h2>Tailwind</h2>
+        <dl>
+          <dt>State</dt>
+          <dd id="tailwind-state"></dd>
+          <dt>Summary</dt>
+          <dd id="tailwind-summary"></dd>
+          <dt>Workspace</dt>
+          <dd id="tailwind-workspace"></dd>
+          <dt>Input</dt>
+          <dd id="tailwind-input"></dd>
+          <dt>Output</dt>
+          <dd id="tailwind-output"></dd>
+          <dt>Output Updated</dt>
+          <dd id="tailwind-output-updated"></dd>
+        </dl>
+      </article>
+
+      <article class="panel">
         <h2>Capsules</h2>
         <dl>
           <dt>Covered</dt>
@@ -287,6 +306,11 @@ public static class ManagerDashboardPage
       <h2>Recent Watch Output</h2>
       <pre id="watch-log">Loading...</pre>
     </section>
+
+    <section class="panel" style="margin-top: 18px;">
+      <h2>Recent Tailwind Output</h2>
+      <pre id="tailwind-log">Loading...</pre>
+    </section>
   </main>
 
   <script id="manager-status-bootstrap" type="application/json">__BOOTSTRAP_STATUS__</script>
@@ -304,10 +328,10 @@ public static class ManagerDashboardPage
       while (node.firstChild) node.removeChild(node.firstChild);
     }
 
-    function renderUrlList(node, urls, emptyText) {
+    function renderItemList(node, items, emptyText) {
       if (!node) return;
       clearNode(node);
-      if (!urls || urls.length === 0) {
+      if (!items || items.length === 0) {
         const span = document.createElement("span");
         span.className = "empty";
         span.textContent = emptyText;
@@ -317,9 +341,9 @@ public static class ManagerDashboardPage
 
       const list = document.createElement("ul");
       list.className = "url-list";
-      urls.forEach(url => {
+      items.forEach(itemValue => {
         const item = document.createElement("li");
-        item.textContent = url;
+        item.textContent = itemValue;
         list.appendChild(item);
       });
       node.appendChild(list);
@@ -395,19 +419,19 @@ public static class ManagerDashboardPage
         const meta = document.createElement("div");
         meta.className = "service-meta";
 
-        const expected = document.createElement("div");
-        expected.innerHTML = "<strong>Configured:</strong>";
-        const expectedList = document.createElement("div");
-        renderUrlList(expectedList, service.expectedUrls, "No configured URLs.");
-        expected.appendChild(expectedList);
+        const configured = document.createElement("div");
+        configured.innerHTML = `<strong>${service.configuredLabel || "Configured"}:</strong>`;
+        const configuredList = document.createElement("div");
+        renderItemList(configuredList, service.configuredTargets, "No configured items.");
+        configured.appendChild(configuredList);
 
         const active = document.createElement("div");
-        active.innerHTML = "<strong>Active:</strong>";
+        active.innerHTML = `<strong>${service.activeLabel || "Active"}:</strong>`;
         const activeList = document.createElement("div");
-        renderUrlList(activeList, service.activeUrls, "No active URLs yet.");
+        renderItemList(activeList, service.activeTargets, "No active items yet.");
         active.appendChild(activeList);
 
-        meta.appendChild(expected);
+        meta.appendChild(configured);
         meta.appendChild(active);
 
         card.appendChild(head);
@@ -430,8 +454,14 @@ public static class ManagerDashboardPage
       const expected = status.watch?.expectedWatchIteration ?? "n/a";
       const confirmed = status.watch?.confirmedWatchIteration ?? "n/a";
       setText("watch-iteration", `${expected} -> ${confirmed}`);
-      renderUrlList(document.getElementById("configured-urls"), status.configuredApplicationUrls || [], "No configured URLs.");
-      renderUrlList(document.getElementById("watch-urls"), status.watch?.activeUrls || [], "No active URLs yet.");
+      renderItemList(document.getElementById("configured-urls"), status.configuredApplicationUrls || [], "No configured URLs.");
+      renderItemList(document.getElementById("watch-urls"), status.watch?.activeUrls || [], "No active URLs yet.");
+      setText("tailwind-state", status.tailwind?.stateName || status.tailwind?.state);
+      setText("tailwind-summary", status.tailwind?.summary);
+      setText("tailwind-workspace", status.tailwind?.workspacePath);
+      setText("tailwind-input", status.tailwind?.inputFilePath);
+      setText("tailwind-output", status.tailwind?.outputFilePath);
+      setText("tailwind-output-updated", status.tailwind?.outputLastWriteUtc || (status.tailwind?.outputExists ? "Present" : "Not generated yet"));
 
       const watchCallout = document.getElementById("watch-callout");
       if (watchCallout) {
@@ -463,9 +493,9 @@ public static class ManagerDashboardPage
       setText("capsules-refreshed", coverage.refreshedAtUtc);
     }
 
-    async function loadLogs() {
+    async function loadLogText(endpoint, targetId) {
       try {
-        const response = await fetch("/api/watch/logs?take=60", { cache: "no-store" });
+        const response = await fetch(endpoint, { cache: "no-store" });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const logs = await response.json();
         const text = logs
@@ -473,9 +503,9 @@ public static class ManagerDashboardPage
           .reverse()
           .map(entry => `[${entry.timestampUtc}] ${entry.line}`)
           .join("\\n");
-        setText("watch-log", text || "No watch output yet.");
+        setText(targetId, text || "No output yet.");
       } catch (error) {
-        setText("watch-log", `Unable to load watch logs. ${error}`);
+        setText(targetId, `Unable to load logs. ${error}`);
       }
     }
 
@@ -489,7 +519,10 @@ public static class ManagerDashboardPage
         if (coverageResponse.ok) applyCoverage(await coverageResponse.json());
       } catch {}
 
-      await loadLogs();
+      await Promise.all([
+        loadLogText("/api/watch/logs?take=60", "watch-log"),
+        loadLogText("/api/tailwind/logs?take=60", "tailwind-log")
+      ]);
     }
 
     applyStatus(bootstrapStatus);

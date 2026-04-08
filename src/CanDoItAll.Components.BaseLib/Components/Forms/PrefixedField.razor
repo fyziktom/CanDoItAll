@@ -1,0 +1,73 @@
+@namespace CanDoItAll.Components.BaseLib
+@using System.Globalization
+@inherits StyledComponentBase
+
+<label @attributes='BuildAttributes(ResolveCssClass(), ResolveFieldStyle())'>
+    @if (!string.IsNullOrWhiteSpace(Prefix))
+    {
+        <span class="cda-prefixed-field__prefix">@Prefix</span>
+    }
+
+    @ChildContent
+
+    @if (!string.IsNullOrWhiteSpace(Suffix))
+    {
+        <span class="cda-prefixed-field__suffix">@Suffix</span>
+    }
+</label>
+
+@code {
+    [Parameter]
+    public string? Prefix { get; set; }
+
+    [Parameter]
+    public string? Suffix { get; set; }
+
+    [Parameter]
+    public double? PrefixPaddingRem { get; set; }
+
+    [Parameter]
+    public double? SuffixPaddingRem { get; set; }
+
+    [Parameter]
+    public bool StackOnMobile { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveCssClass()
+    {
+        return BuildClass(
+            "cda-prefixed-field",
+            StackOnMobile ? "cda-prefixed-field--stack-mobile" : null);
+    }
+
+    private string? ResolveFieldStyle()
+    {
+        var prefixPadding = ResolvePadding(Prefix, PrefixPaddingRem, 1.7, 0.45);
+        var suffixPadding = ResolvePadding(Suffix, SuffixPaddingRem, 1.8, 0.5);
+
+        return BuildStyle(
+            prefixPadding.HasValue
+                ? $"--cda-prefixed-field-prefix-pad:{prefixPadding.Value.ToString("0.##", CultureInfo.InvariantCulture)}rem;"
+                : null,
+            suffixPadding.HasValue
+                ? $"--cda-prefixed-field-suffix-pad:{suffixPadding.Value.ToString("0.##", CultureInfo.InvariantCulture)}rem;"
+                : null);
+    }
+
+    private static double? ResolvePadding(string? token, double? explicitPaddingRem, double baseRem, double perCharacterRem)
+    {
+        if (explicitPaddingRem.HasValue)
+        {
+            return explicitPaddingRem;
+        }
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return null;
+        }
+
+        return baseRem + token.Trim().Length * perCharacterRem;
+    }
+}

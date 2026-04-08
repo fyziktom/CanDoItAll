@@ -181,6 +181,7 @@ public partial class PromptFactoryPage : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        CancelPendingCanvasUiStatePersistence();
         if (historyShortcutReference is not null)
         {
             try

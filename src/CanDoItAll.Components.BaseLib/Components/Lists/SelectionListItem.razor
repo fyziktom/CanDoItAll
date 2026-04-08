@@ -1,25 +1,32 @@
 @namespace CanDoItAll.Components.BaseLib
 <div class="@ResolveContainerClass()">
-    <div class="flex items-start gap-3">
+    <Cluster AlignItems="AlignItems.Start"
+             Wrap="FlexWrap.NoWrap"
+             Gap="LayoutGap.Medium">
         <button type="button"
                 class="min-w-0 flex-1 text-left"
                 data-testid="@DataTestId"
                 @onclick="HandleSelectAsync">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div class="min-w-0 space-y-1">
-                    <div class="flex flex-wrap items-center gap-2">
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Start"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <Stack GapScale="LayoutGap.Tiny"
+                       Class="min-w-0">
+                    <Cluster>
                         <p class="truncate text-sm font-semibold text-slate-950">@Title</p>
                         @if (!string.IsNullOrWhiteSpace(Eyebrow))
                         {
-                            <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">@Eyebrow</span>
+                            <Pill Tone="PillTone.Label" Text="@Eyebrow" />
                         }
-                    </div>
+                    </Cluster>
 
                     @if (!string.IsNullOrWhiteSpace(Meta))
                     {
                         <p class="text-xs text-slate-500">@Meta</p>
                     }
-                </div>
+                </Stack>
 
                 @if (Status is not null)
                 {
@@ -27,7 +34,7 @@
                         @Status
                     </div>
                 }
-            </div>
+            </Split>
 
             @if (!string.IsNullOrWhiteSpace(Summary))
             {
@@ -48,7 +55,7 @@
                 @Actions
             </div>
         }
-    </div>
+    </Cluster>
 </div>
 
 @code {

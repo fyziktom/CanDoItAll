@@ -36,6 +36,7 @@ public sealed class CanvasAdapterTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0);
         var noteNode = new ProjectStructureNode(
             "note-1",
@@ -61,6 +62,7 @@ public sealed class CanvasAdapterTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0);
 
         var surface = new ProjectStructureSurface(
@@ -123,6 +125,7 @@ public sealed class CanvasAdapterTests
             string.Empty,
             string.Empty,
             string.Empty,
+            [],
             0);
         var siblingNode = sourceNode with { Id = "sibling" };
         var request = new CanvasWorkbenchCreateActionRequest(
@@ -142,7 +145,7 @@ public sealed class CanvasAdapterTests
         var placement = new ProjectStructurePlacementPolicy().ResolveCreatePlacement([sourceNode, siblingNode], sourceNode, null, request);
 
         Assert.Equal(300, placement.X);
-        Assert.Equal(332, placement.Y);
+        Assert.Equal(480, placement.Y);
     }
 
     [Fact]

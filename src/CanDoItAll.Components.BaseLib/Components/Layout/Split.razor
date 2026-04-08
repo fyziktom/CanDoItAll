@@ -1,0 +1,68 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes(ResolveCssClass(), ResolveStyle())'>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public LayoutBreakpoint Breakpoint { get; set; } = LayoutBreakpoint.Lg;
+
+    [Parameter]
+    public AlignItems AlignItems { get; set; } = AlignItems.Start;
+
+    [Parameter]
+    public JustifyContent JustifyContent { get; set; } = JustifyContent.SpaceBetween;
+
+    [Parameter]
+    public FlexWrap Wrap { get; set; } = FlexWrap.NoWrap;
+
+    [Parameter]
+    public LayoutGap Gap { get; set; } = LayoutGap.Medium;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ResolveCssClass()
+    {
+        return BuildClass(
+            Breakpoint == LayoutBreakpoint.None
+                ? "flex min-w-0 flex-row [gap:var(--cda-split-gap)]"
+                : "flex min-w-0 flex-col [gap:var(--cda-split-gap)]",
+            LayoutValueResolver.PrefixUtility(Breakpoint, "flex-row"),
+            LayoutValueResolver.PrefixUtility(Breakpoint, ResolveAlignClass()),
+            LayoutValueResolver.PrefixUtility(Breakpoint, ResolveJustifyClass()),
+            Wrap == FlexWrap.Wrap
+                ? LayoutValueResolver.PrefixUtility(Breakpoint, "flex-wrap")
+                : null);
+    }
+
+    private string ResolveStyle()
+    {
+        return $"--cda-split-gap:{LayoutValueResolver.ResolveGap(Gap)};";
+    }
+
+    private string ResolveAlignClass()
+    {
+        return AlignItems switch
+        {
+            AlignItems.Center => "items-center",
+            AlignItems.End => "items-end",
+            AlignItems.Stretch => "items-stretch",
+            _ => "items-start"
+        };
+    }
+
+    private string ResolveJustifyClass()
+    {
+        return JustifyContent switch
+        {
+            JustifyContent.Center => "justify-center",
+            JustifyContent.End => "justify-end",
+            JustifyContent.SpaceAround => "justify-around",
+            JustifyContent.SpaceBetween => "justify-between",
+            _ => "justify-start"
+        };
+    }
+}

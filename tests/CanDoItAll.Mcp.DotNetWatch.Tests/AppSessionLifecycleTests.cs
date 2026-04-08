@@ -105,6 +105,29 @@ public sealed class AppSessionLifecycleTests
     }
 
     [Fact]
+    public void StaticAssetHotReload_SettlesWithoutExpectingNewRuntimeGeneration()
+    {
+        var session = CreateWatchSession();
+        session.MarkHealthy(CreateHealthySnapshot(watchIteration: 4, runtimePid: 4100, hotReloadGeneration: 3));
+
+        session.NoteLog(CreateLogEntry(45, "dotnet watch : File updated: .\\wwwroot\\css\\output.css"));
+        session.NoteLog(CreateLogEntry(46, "dotnet watch : Hot reload of static assets succeeded."));
+        session.NoteLog(CreateLogEntry(47, "dotnet watch : No C# changes to apply."));
+
+        var status = session.ToStatusData();
+
+        Assert.NotNull(status.Watch);
+        Assert.False(status.Watch!.PendingChange);
+        Assert.Equal(WatchProcessingState.WaitingForChanges, status.Watch.State);
+        Assert.Equal(HotReloadOutcome.Succeeded, status.Watch.LastHotReloadOutcome);
+        Assert.Equal(3, status.Watch.ExpectedHotReloadGeneration);
+        Assert.Equal(3, status.Watch.ConfirmedHotReloadGeneration);
+        Assert.True(status.Watch.IsReadyForHotReload);
+        Assert.True(status.Health!.IsReady);
+        Assert.Equal(3, status.Health.HotReloadGeneration);
+    }
+
+    [Fact]
     public void MarkHealthy_DoesNotExposeWatchReadyUntilWaitingForChangesLogArrives()
     {
         var session = CreateWatchSession();

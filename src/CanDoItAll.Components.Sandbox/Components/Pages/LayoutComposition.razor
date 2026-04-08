@@ -1,0 +1,411 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@page "/groups/layout/composition"
+@inherits CatalogPageBase
+@using System.Globalization
+
+<PageTitle>Layout Composition</PageTitle>
+
+<CatalogPageFrame Group="@Group"
+                  Scenario="@CurrentScenario"
+                  Frame="@CurrentFrame"
+                  ExampleCount="@Examples.Count"
+                  HeroTitle="Compare the same control panel through four shared layout compositions."
+                  HeroSummary="This page keeps the former Progress hero experiments inside the sandbox so we can compare Stack, Grid, and Row/Column structure without leaving a product page in an experimental state."
+                  DemoTitle="Layout composition lab"
+                  DemoSummary="The same analytics panel is rebuilt four ways so we can compare structure, breakpoint behavior, and how far the shared layout primitives can take us before page-local CSS becomes necessary."
+                  ScenarioChanged="NavigateScenario"
+                  FrameChanged="NavigateFrame">
+    <Notes>
+        <div class="sandbox-proof-list">
+            <p>Prefer shared layout primitives over one-off structural wrappers.</p>
+            <p>Use `Columns*`, `ColumnTemplate*`, `Gap`, `JustifyContent`, and `AlignItems` before reaching for raw layout utilities.</p>
+            <p>The responsive Row/Column variant is the preferred pattern when same-row columns must collapse and expand across breakpoints.</p>
+        </div>
+    </Notes>
+
+    <ChildContent>
+        @if (CurrentScenario == SandboxScenarioKey.LoadingState)
+        {
+            <LoadingState Eyebrow="Layout composition"
+                          Title="Preparing comparison variants"
+                          Description="The sandbox is loading the shared layout comparison panels." />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.XLarge">
+                <SectionCard Title="1. Stack baseline"
+                             Description="Useful when the structure is mostly linear and the right-side region can remain a stack of actions.">
+                    <div class="@HeroSurfaceClass" data-testid="layout-composition-stack">
+                        <Stack Orientation="Orientation.Vertical" Class="w-full" Gap="1.25rem">
+                            <Stack Orientation="Orientation.Horizontal" Class="w-full">
+                                <Stack Orientation="Orientation.Vertical" Gap="1rem">
+                                    <span class="cda-shell-pill cda-shell-pill--neutral">@HeroEyebrow</span>
+                                    <div class="space-y-2">
+                                        <p class="text-base font-semibold text-slate-950">@HeroTitle</p>
+                                        <p class="text-sm leading-6 text-slate-600">@HeroDescription</p>
+                                    </div>
+                                </Stack>
+
+                                <Stack Orientation="Orientation.Vertical" Class="w-full" Gap="1rem">
+                                    <Stack Orientation="Orientation.Horizontal"
+                                           JustifyContent="JustifyContent.End"
+                                           Class="w-full"
+                                           Gap="1rem">
+                                        <PillList>
+                                            <Pill>@SelectedModeLabel</Pill>
+                                            <Pill>@WindowLabel</Pill>
+                                            <Pill>@FreshnessLabel</Pill>
+                                        </PillList>
+                                    </Stack>
+
+                                    <Stack Orientation="Orientation.Horizontal"
+                                           JustifyContent="JustifyContent.End"
+                                           Class="w-full"
+                                           Gap="1rem">
+                                        <Button Text="Refresh"
+                                                Icon="refresh"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Click="HandleRefreshAsync"
+                                                Disabled="@ActionsDisabled" />
+                                        <Button Text="Reset Data"
+                                                Icon="delete"
+                                                ButtonStyle="ButtonStyle.Danger"
+                                                Click="HandleResetAsync"
+                                                Disabled="@ActionsDisabled" />
+                                    </Stack>
+                                </Stack>
+                            </Stack>
+
+                            <FormRow Split="true" Class="w-full">
+                                <FormField Text="Mode" ContainerClass="w-full">
+                                    <ChildContent>
+                                        <DropDown TValue="string"
+                                                  Data="@ModeOptions"
+                                                  Value="@selectedMode"
+                                                  Change="OnModeChanged"
+                                                  Style="width:100%" />
+                                    </ChildContent>
+                                </FormField>
+                                <FormField Text="Time Window" ContainerClass="w-full">
+                                    <ChildContent>
+                                        <DropDown TValue="int"
+                                                  Data="@WindowOptions"
+                                                  Value="@selectedWindowDays"
+                                                  Change="OnWindowChanged"
+                                                  Style="width:100%" />
+                                    </ChildContent>
+                                </FormField>
+                            </FormRow>
+                        </Stack>
+                    </div>
+                </SectionCard>
+
+                <SectionCard Title="2. Grid version"
+                             Description="A good middle ground when the surface needs track-based composition, but the right side still reads well as nested stacks.">
+                    <div class="@HeroSurfaceClass" data-testid="layout-composition-grid">
+                        <Grid Gap="LayoutGap.XLarge" Class="w-full">
+                            <Grid Gap="LayoutGap.XLarge"
+                                  ColumnTemplateLg="max-content minmax(0,1fr)"
+                                  Class="w-full">
+                                <Stack Orientation="Orientation.Vertical" Gap="1rem">
+                                    <span class="cda-shell-pill cda-shell-pill--neutral">@HeroEyebrow</span>
+                                    <div class="space-y-2">
+                                        <p class="text-base font-semibold text-slate-950">@HeroTitle</p>
+                                        <p class="text-sm leading-6 text-slate-600">@HeroDescription</p>
+                                    </div>
+                                </Stack>
+
+                                <Stack Orientation="Orientation.Vertical" Class="w-full" Gap="1rem">
+                                    <Stack Orientation="Orientation.Horizontal"
+                                           JustifyContent="JustifyContent.End"
+                                           Wrap="FlexWrap.Wrap"
+                                           Class="w-full"
+                                           Gap="1rem">
+                                        <PillList>
+                                            <Pill>@SelectedModeLabel</Pill>
+                                            <Pill>@WindowLabel</Pill>
+                                            <Pill>@FreshnessLabel</Pill>
+                                        </PillList>
+                                    </Stack>
+
+                                    <Stack Orientation="Orientation.Horizontal"
+                                           JustifyContent="JustifyContent.End"
+                                           Wrap="FlexWrap.Wrap"
+                                           Class="w-full"
+                                           Gap="1rem">
+                                        <Button Text="Refresh"
+                                                Icon="refresh"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Click="HandleRefreshAsync"
+                                                Disabled="@ActionsDisabled" />
+                                        <Button Text="Reset Data"
+                                                Icon="delete"
+                                                ButtonStyle="ButtonStyle.Danger"
+                                                Click="HandleResetAsync"
+                                                Disabled="@ActionsDisabled" />
+                                    </Stack>
+                                </Stack>
+                            </Grid>
+
+                            <FormRow Split="true" Class="w-full">
+                                <FormField Text="Mode" ContainerClass="w-full">
+                                    <ChildContent>
+                                        <DropDown TValue="string"
+                                                  Data="@ModeOptions"
+                                                  Value="@selectedMode"
+                                                  Change="OnModeChanged"
+                                                  Style="width:100%" />
+                                    </ChildContent>
+                                </FormField>
+
+                                <FormField Text="Time Window" ContainerClass="w-full">
+                                    <ChildContent>
+                                        <DropDown TValue="int"
+                                                  Data="@WindowOptions"
+                                                  Value="@selectedWindowDays"
+                                                  Change="OnWindowChanged"
+                                                  Style="width:100%" />
+                                    </ChildContent>
+                                </FormField>
+                            </FormRow>
+                        </Grid>
+                    </div>
+                </SectionCard>
+
+                <SectionCard Title="3. Grid + Row + Column"
+                             Description="This version keeps the whole composition inside the shared layout primitives, but it stays rigid at narrow widths because the rows keep two tracks.">
+                    <div class="@HeroSurfaceClass" data-testid="layout-composition-row-column-fixed">
+                        <Grid Rows="2"
+                              ColumnTemplate="max-content minmax(0,1fr)"
+                              Gap="LayoutGap.XLarge"
+                              Class="w-full">
+                            <Row GapScale="LayoutGap.XLarge">
+                                <Column GapScale="LayoutGap.Medium" JustifyContent="JustifyContent.Center">
+                                    <span class="cda-shell-pill cda-shell-pill--neutral">@HeroEyebrow</span>
+                                    <p class="text-base font-semibold text-slate-950">@HeroTitle</p>
+                                    <p class="text-sm leading-6 text-slate-600">@HeroDescription</p>
+                                </Column>
+
+                                <Column GapScale="LayoutGap.Large"
+                                        AlignItems="AlignItems.End"
+                                        JustifyContent="JustifyContent.SpaceBetween">
+                                    <PillList>
+                                        <Pill>@SelectedModeLabel</Pill>
+                                        <Pill>@WindowLabel</Pill>
+                                        <Pill>@FreshnessLabel</Pill>
+                                    </PillList>
+
+                                    <Row Columns="2" GapScale="LayoutGap.Large">
+                                        <Column>
+                                            <Button Text="Refresh"
+                                                    Icon="refresh"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Click="HandleRefreshAsync"
+                                                    Disabled="@ActionsDisabled" />
+                                        </Column>
+                                        <Column>
+                                            <Button Text="Reset Data"
+                                                    Icon="delete"
+                                                    ButtonStyle="ButtonStyle.Danger"
+                                                    Click="HandleResetAsync"
+                                                    Disabled="@ActionsDisabled" />
+                                        </Column>
+                                    </Row>
+                                </Column>
+                            </Row>
+
+                            <Row Columns="2" GapScale="LayoutGap.XLarge">
+                                <Column>
+                                    <FormField Text="Mode" ContainerClass="w-full">
+                                        <ChildContent>
+                                            <DropDown TValue="string"
+                                                      Data="@ModeOptions"
+                                                      Value="@selectedMode"
+                                                      Change="OnModeChanged"
+                                                      Style="width:100%" />
+                                        </ChildContent>
+                                    </FormField>
+                                </Column>
+
+                                <Column>
+                                    <FormField Text="Time Window" ContainerClass="w-full">
+                                        <ChildContent>
+                                            <DropDown TValue="int"
+                                                      Data="@WindowOptions"
+                                                      Value="@selectedWindowDays"
+                                                      Change="OnWindowChanged"
+                                                      Style="width:100%" />
+                                        </ChildContent>
+                                    </FormField>
+                                </Column>
+                            </Row>
+                        </Grid>
+                    </div>
+                </SectionCard>
+
+                <SectionCard Title="4. Responsive Grid + Row + Column"
+                             Description="Preferred pattern. The same-row columns inherit and override tracks through the shared primitives, so the layout can collapse to one column and expand again without custom structural CSS.">
+                    <div class="@HeroSurfaceClass" data-testid="layout-composition-row-column-responsive">
+                        <Grid Rows="2"
+                              Columns="1"
+                              ColumnsSm="1"
+                              ColumnsMd="2"
+                              ColumnTemplateLg="max-content minmax(0,1fr)"
+                              Gap="LayoutGap.XLarge"
+                              Class="w-full">
+                            <Row GapScale="LayoutGap.XLarge">
+                                <Column GapScale="LayoutGap.Medium" JustifyContent="JustifyContent.Center">
+                                    <span class="cda-shell-pill cda-shell-pill--neutral">@HeroEyebrow</span>
+                                    <p class="text-base font-semibold text-slate-950">@HeroTitle</p>
+                                    <p class="text-sm leading-6 text-slate-600">@HeroDescription</p>
+                                </Column>
+
+                                <Column GapScale="LayoutGap.Large"
+                                        AlignItems="AlignItems.End"
+                                        JustifyContent="JustifyContent.SpaceBetween">
+                                    <PillList>
+                                        <Pill>@SelectedModeLabel</Pill>
+                                        <Pill>@WindowLabel</Pill>
+                                        <Pill>@FreshnessLabel</Pill>
+                                    </PillList>
+
+                                    <Row Columns="1" ColumnsSm="2" GapScale="LayoutGap.Large">
+                                        <Column>
+                                            <Button Text="Refresh"
+                                                    Icon="refresh"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Click="HandleRefreshAsync"
+                                                    Disabled="@ActionsDisabled" />
+                                        </Column>
+                                        <Column>
+                                            <Button Text="Reset Data"
+                                                    Icon="delete"
+                                                    ButtonStyle="ButtonStyle.Danger"
+                                                    Click="HandleResetAsync"
+                                                    Disabled="@ActionsDisabled" />
+                                        </Column>
+                                    </Row>
+                                </Column>
+                            </Row>
+
+                            <Row Columns="1"
+                                 ColumnsSm="1"
+                                 ColumnsMd="2"
+                                 ColumnTemplateLg="repeat(2,minmax(0,1fr))"
+                                 GapScale="LayoutGap.XLarge">
+                                <Column>
+                                    <FormField Text="Mode" ContainerClass="w-full">
+                                        <ChildContent>
+                                            <DropDown TValue="string"
+                                                      Data="@ModeOptions"
+                                                      Value="@selectedMode"
+                                                      Change="OnModeChanged"
+                                                      Style="width:100%" />
+                                        </ChildContent>
+                                    </FormField>
+                                </Column>
+
+                                <Column>
+                                    <FormField Text="Time Window" ContainerClass="w-full">
+                                        <ChildContent>
+                                            <DropDown TValue="int"
+                                                      Data="@WindowOptions"
+                                                      Value="@selectedWindowDays"
+                                                      Change="OnWindowChanged"
+                                                      Style="width:100%" />
+                                        </ChildContent>
+                                    </FormField>
+                                </Column>
+                            </Row>
+                        </Grid>
+                    </div>
+                </SectionCard>
+            </Stack>
+        }
+    </ChildContent>
+</CatalogPageFrame>
+
+@code {
+    private static readonly SandboxGroupDefinition Group = SandboxCatalogRegistry.GetGroup(SandboxGroupKey.Layout);
+    private static readonly IReadOnlyList<SandboxExampleDefinition> Examples = SandboxCatalogRegistry.GetExamples(SandboxGroupKey.Layout);
+    private static readonly IReadOnlyList<string> ModeOptions = ["All modes", "Interval speed", "Harmony", "Sight reading"];
+    private static readonly IReadOnlyList<int> WindowOptions = [7, 14, 30, 90, 180];
+
+    private const string HeroSurfaceClass =
+        "rounded-[1.75rem] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.98)_0%,rgba(244,249,255,0.98)_56%,rgba(220,243,255,0.96)_100%)] p-5 shadow-[0_24px_60px_-34px_rgba(14,116,144,0.3)]";
+
+    private string selectedMode = ModeOptions[0];
+    private int selectedWindowDays = 30;
+    private DateTimeOffset lastUpdated = new(2026, 4, 4, 11, 9, 0, TimeSpan.FromHours(-4));
+
+    private string HeroEyebrow => CurrentScenario == SandboxScenarioKey.LongText
+        ? "Practice analytics composition"
+        : "Practice analytics";
+
+    private string HeroTitle => CurrentScenario == SandboxScenarioKey.LongText
+        ? "Switch the active practice mode or time window without losing scan rhythm."
+        : "Switch the mode or time window.";
+
+    private string HeroDescription => CurrentScenario switch
+    {
+        SandboxScenarioKey.DenseContent => "Dense metadata and action controls should still read as one coherent control surface.",
+        SandboxScenarioKey.EmptyState => "Even with no fresh activity, the layout should remain oriented and calm.",
+        SandboxScenarioKey.DisabledState => "Disabled controls should preserve hierarchy instead of collapsing the composition.",
+        SandboxScenarioKey.LongText => "Longer explanatory copy should wrap cleanly while the filters, pills, and actions stay aligned.",
+        _ => "Compare how the same content behaves when the structure moves from simple stacks to responsive rows and columns."
+    };
+
+    private string SelectedModeLabel => CurrentScenario == SandboxScenarioKey.LongText
+        ? "All note-identification modes"
+        : selectedMode;
+
+    private string WindowLabel => $"{selectedWindowDays}-day window";
+
+    private string FreshnessLabel => CurrentScenario == SandboxScenarioKey.EmptyState
+        ? "No attempts yet"
+        : $"Updated {lastUpdated.ToString("M/d/yyyy h:mm tt", CultureInfo.InvariantCulture)}";
+
+    private bool ActionsDisabled => CurrentScenario == SandboxScenarioKey.DisabledState;
+
+    private Task OnModeChanged(object value)
+    {
+        selectedMode = value?.ToString() ?? selectedMode;
+        return Task.CompletedTask;
+    }
+
+    private Task OnWindowChanged(object value)
+    {
+        if (value is int days)
+        {
+            selectedWindowDays = days;
+        }
+        else if (int.TryParse(value?.ToString(), out var parsedDays))
+        {
+            selectedWindowDays = parsedDays;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRefreshAsync()
+    {
+        if (!ActionsDisabled && CurrentScenario != SandboxScenarioKey.EmptyState)
+        {
+            lastUpdated = lastUpdated.AddMinutes(12);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task HandleResetAsync()
+    {
+        if (!ActionsDisabled)
+        {
+            selectedMode = ModeOptions[0];
+            selectedWindowDays = 30;
+            lastUpdated = new DateTimeOffset(2026, 4, 4, 11, 9, 0, TimeSpan.FromHours(-4));
+        }
+
+        return Task.CompletedTask;
+    }
+}

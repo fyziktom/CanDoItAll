@@ -1,11 +1,13 @@
 using CanDoItAll.Components;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Readiness;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.Automation;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Prompts;
@@ -22,7 +24,6 @@ using CanDoItAll.Web.Infrastructure;
 using CanDoItAll.Web;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 var detailedErrorsEnabled = builder.Configuration.GetValue<bool?>("DetailedErrors") ?? builder.Environment.IsDevelopment();
@@ -36,6 +37,7 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddCanDoItAllBaseLib();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, ModuleAssemblies.All);
+builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
 builder.Services.AddScoped<IWorkbenchStateStore, BrowserWorkspaceStateStore>();
 builder.Services.AddScoped<TuningCoordinator>();
@@ -56,6 +58,7 @@ builder.Services.AddValidationModule();
 builder.Services.AddTestLabModule();
 builder.Services.AddActivityModule();
 builder.Services.AddAutomationModule();
+builder.Services.AddCrmHrModule();
 
 var app = builder.Build();
 
@@ -71,12 +74,7 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseHttpsRedirection();
 app.UseAntiforgery();
 app.MapStaticAssets();
-var workspaceResolver = app.Services.GetRequiredService<IWorkspacePathResolver>();
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(workspaceResolver.ResolveManagedFilesRoot()),
-    RequestPath = "/managed-files"
-});
+app.MapCanDoItAllManagedFiles();
 
 if (app.Environment.IsDevelopment())
 {
@@ -104,6 +102,140 @@ if (app.Environment.IsDevelopment())
             snapshot.ActiveUrls
         });
     });
+
+    app.MapGet("/_dev/database/selection", (IDatabaseProfileRuntimeAccessor profileAccessor) =>
+    {
+        var profile = profileAccessor.ResolveCurrentProfile();
+        return Results.Ok(new
+        {
+            profile.Profile.Id,
+            profile.Profile.DisplayName,
+            profile.Profile.ProviderKind,
+            profile.Profile.SourceKind,
+            profile.Profile.Runtime.Fingerprint,
+            profile.Profile.Storage.WorkspaceRoot,
+            profile.ConnectionString
+        });
+    });
+
+    app.MapPost("/_dev/database/profiles/managed-sqlite", async (
+        IDatabaseProfileService profileService,
+        IDatabaseProfileRuntimeAccessor profileAccessor,
+        IAppDatabaseBootstrapper bootstrapper) =>
+    {
+        var saveResult = await profileService.SaveAsync(new CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileEditorModel
+        {
+            DisplayName = $"Managed sqlite {Guid.NewGuid():N}"[..22],
+            ProviderKind = DatabaseProviderKind.Sqlite,
+            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
+        });
+        if (saveResult.IsFailure)
+        {
+            return Results.BadRequest(saveResult.Errors.Select(error => error.Message).ToArray());
+        }
+
+        var profile = profileAccessor.ResolveProfile(saveResult.Value);
+        await bootstrapper.EnsureProfileReadyAsync(profile);
+
+        return Results.Ok(new
+        {
+            profile.Profile.Id,
+            profile.Profile.DisplayName,
+            profile.Profile.ProviderKind,
+            profile.Profile.SourceKind,
+            profile.Profile.Runtime.Fingerprint,
+            profile.Profile.Storage.WorkspaceRoot,
+            profile.ConnectionString
+        });
+    });
+
+    app.MapPost("/_dev/database/switch/{profileId:guid}", async (
+        Guid profileId,
+        IDatabaseSwitchCoordinator switchCoordinator,
+        IDatabaseProfileRuntimeAccessor profileAccessor) =>
+    {
+        var switchResult = await switchCoordinator.SwitchAsync(profileId);
+        if (switchResult.IsFailure)
+        {
+            return Results.BadRequest(switchResult.Errors.Select(error => error.Message).ToArray());
+        }
+
+        var profile = profileAccessor.ResolveCurrentProfile();
+        return Results.Ok(new
+        {
+            switchResult.Value!.Generation,
+            switchResult.Value.CurrentProfileId,
+            profile.Profile.DisplayName,
+            profile.Profile.Runtime.Fingerprint,
+            profile.Profile.Storage.WorkspaceRoot,
+            profile.ConnectionString
+        });
+    });
+
+    app.MapPost("/_dev/database/seed-profile", async (
+        string? label,
+        ProjectsService projectsService,
+        IManagedArtifactStore managedArtifactStore) =>
+    {
+        var seedLabel = string.IsNullOrWhiteSpace(label)
+            ? $"Seed {Guid.NewGuid():N}"[..12]
+            : label.Trim();
+        var saveResult = await projectsService.SaveAsync(new ProjectEditorModel
+        {
+            Name = $"{seedLabel} Project",
+            Description = $"{seedLabel} description",
+            Objective = $"{seedLabel} objective",
+            CurrentPhase = "Execution"
+        });
+        if (saveResult.IsFailure)
+        {
+            return Results.BadRequest(saveResult.Errors.Select(error => error.Message).ToArray());
+        }
+
+        var fileName = string.Concat(seedLabel.Select(character =>
+            Path.GetInvalidFileNameChars().Contains(character) ? '-' : character));
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            fileName = "seed";
+        }
+
+        var relativePath = managedArtifactStore.GetRelativePath("profile-seeds", $"{fileName}.txt");
+        var content = $"seed:{seedLabel}";
+        var fullPath = await managedArtifactStore.SaveTextAsync("profile-seeds", $"{fileName}.txt", content);
+
+        return Results.Ok(new
+        {
+            saveResult.Value,
+            ProjectName = $"{seedLabel} Project",
+            ManagedFileRelativePath = relativePath,
+            ManagedFileFullPath = fullPath,
+            ManagedFileContent = content
+        });
+    });
+
+    app.MapPost("/_dev/projects", async (
+        string? name,
+        string? phase,
+        ProjectsService projectsService) =>
+    {
+        var saveResult = await projectsService.SaveAsync(new ProjectEditorModel
+        {
+            Name = string.IsNullOrWhiteSpace(name) ? $"Runtime Switch {Guid.NewGuid():N}"[..24] : name.Trim(),
+            Description = "Development-only runtime switch proof project.",
+            Objective = "Drive stale-route recovery proof.",
+            CurrentPhase = string.IsNullOrWhiteSpace(phase) ? "Execution" : phase.Trim()
+        });
+        if (saveResult.IsFailure)
+        {
+            return Results.BadRequest(saveResult.Errors.Select(error => error.Message).ToArray());
+        }
+
+        return Results.Ok(new
+        {
+            ProjectId = saveResult.Value,
+            Route = $"/projects/{saveResult.Value:D}/structure"
+        });
+    });
 }
 
 app.MapProjectStructureAgentApi();
@@ -117,14 +249,8 @@ await using (var scope = app.Services.CreateAsyncScope())
     var readiness = scope.ServiceProvider.GetRequiredService<IRuntimeReadinessService>();
     readiness.MarkStarting(app.Environment.EnvironmentName, app.Urls.Count > 0 ? app.Urls : ["https://localhost"]);
 
-    var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
-    await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-    await dbContext.Database.EnsureCreatedAsync();
-    await WorkspaceSchemaInitializer.EnsureAsync(dbContext);
-    await ProjectsSchemaInitializer.EnsureAsync(dbContext);
-    await PromptFactorySchemaInitializer.EnsureAsync(dbContext);
-    await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext);
-    await ProjectStructureAgentSchemaInitializer.EnsureAsync(dbContext);
+    var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+    await bootstrapper.EnsureCurrentProfileReadyAsync();
 
     readiness.MarkReady(app.Environment.EnvironmentName, urls: app.Urls.Count > 0 ? app.Urls : ["https://localhost"]);
 }

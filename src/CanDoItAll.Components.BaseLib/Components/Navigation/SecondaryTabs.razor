@@ -1,7 +1,7 @@
 @namespace CanDoItAll.Components.BaseLib
 @if (Items.Count > 0)
 {
-    <div class="space-y-4">
+    <Stack GapScale="LayoutGap.Large">
         @if (Header is not null)
         {
             <div>
@@ -9,7 +9,7 @@
             </div>
         }
 
-        <div class="flex flex-wrap gap-2">
+        <Cluster Gap="LayoutGap.Small">
             @foreach (var item in Items)
             {
                 var isSelected = string.Equals(item.Key, SelectedKey, StringComparison.Ordinal);
@@ -23,13 +23,13 @@
                     }
                 </button>
             }
-        </div>
+        </Cluster>
 
         @if (ActiveItem?.Description is { Length: > 0 } description)
         {
             <p class="text-sm leading-6 text-slate-600">@description</p>
         }
-    </div>
+    </Stack>
 }
 
 @code {

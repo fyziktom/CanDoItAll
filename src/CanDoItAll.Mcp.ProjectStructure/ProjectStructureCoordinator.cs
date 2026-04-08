@@ -21,9 +21,13 @@ public interface IProjectStructureCoordinator
 
     Task<ProjectStructureChecklistResponse> GetChecklistAsync(Guid projectId, ProjectStructureChecklistRequest request, CancellationToken cancellationToken = default);
 
+    Task<ProjectStructureDependencyResponse> GetDependenciesAsync(Guid projectId, ProjectStructureDependencyQueryRequest request, CancellationToken cancellationToken = default);
+
     Task<ProjectStructureNodeSummary> CreateNodeAsync(Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes, CancellationToken cancellationToken = default);
 
     Task<ProjectStructureNodeSummary> UpdateNodeAsync(Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes, CancellationToken cancellationToken = default);
+
+    Task<ProjectStructureSubtreeRecompositionResult> RecomposeNodeAsync(Guid projectId, ProjectStructureNodeRecomposeInput request, int? estimatedMinutes, CancellationToken cancellationToken = default);
 
     Task<ProjectStructureNodeSummary> ReparentNodeAsync(Guid projectId, ProjectStructureNodeReparentInput request, int? estimatedMinutes, CancellationToken cancellationToken = default);
 
@@ -111,6 +115,14 @@ public sealed class ProjectStructureCoordinator(
             cancellationToken: cancellationToken);
     }
 
+    public Task<ProjectStructureDependencyResponse> GetDependenciesAsync(Guid projectId, ProjectStructureDependencyQueryRequest request, CancellationToken cancellationToken = default)
+    {
+        return httpClient.PostAsync<ProjectStructureDependencyQueryRequest, ProjectStructureDependencyResponse>(
+            $"/api/project-structure-mcp/projects/{projectId}/dependencies/query",
+            request,
+            cancellationToken: cancellationToken);
+    }
+
     public Task<ProjectStructureNodeSummary> CreateNodeAsync(Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes, CancellationToken cancellationToken = default)
     {
         return httpClient.PostAsync<ProjectStructureNodeCreateInput, ProjectStructureNodeSummary>(
@@ -124,6 +136,15 @@ public sealed class ProjectStructureCoordinator(
     {
         return httpClient.PutAsync<ProjectStructureNodeEditInput, ProjectStructureNodeSummary>(
             $"/api/project-structure-mcp/projects/{projectId}/nodes/{Uri.EscapeDataString(nodeId)}",
+            request,
+            estimatedMinutes,
+            cancellationToken);
+    }
+
+    public Task<ProjectStructureSubtreeRecompositionResult> RecomposeNodeAsync(Guid projectId, ProjectStructureNodeRecomposeInput request, int? estimatedMinutes, CancellationToken cancellationToken = default)
+    {
+        return httpClient.PostAsync<ProjectStructureNodeRecomposeInput, ProjectStructureSubtreeRecompositionResult>(
+            $"/api/project-structure-mcp/projects/{projectId}/nodes/recompose",
             request,
             estimatedMinutes,
             cancellationToken);
@@ -266,6 +287,7 @@ public sealed class ProjectStructureCoordinator(
             node.MediaRelativePath,
             node.MediaContentType,
             node.X,
-            node.Y);
+            node.Y,
+            node.DurationSeconds);
     }
 }

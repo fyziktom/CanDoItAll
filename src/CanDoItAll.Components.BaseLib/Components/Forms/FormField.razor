@@ -1,24 +1,26 @@
 @namespace CanDoItAll.Components.BaseLib
 @inherits StyledComponentBase
 
-<div @attributes='BuildAttributes(BuildClass("rz-form-field flex flex-col gap-2", ContainerClass))'>
+<div @attributes='BuildAttributes(BuildClass("rz-form-field cda-form-field", ContainerClass))'>
     @if (!string.IsNullOrWhiteSpace(Text))
     {
-        <label class="@BuildClass("text-xs font-semibold uppercase tracking-wide text-slate-500", LabelClass)">@Text</label>
+        <label id="@ResolvedLabelId" class="@BuildClass("cda-form-field__label", LabelClass)">@Text</label>
     }
-    <div class="@BuildClass("flex items-center gap-2", ContentClass)">
-        @if (Start is not null)
-        {
-            <div class="rz-form-field-start">@Start</div>
-        }
-        <div class="flex-1">
-            @ChildContent
+    <CascadingValue Name="FormFieldLabelId" Value="ResolvedLabelId" IsFixed="true">
+        <div class="@BuildClass("cda-form-field__content", ContentClass)">
+            @if (Start is not null)
+            {
+                <div class="rz-form-field-start">@Start</div>
+            }
+            <div class="flex-1">
+                @ChildContent
+            </div>
+            @if (End is not null)
+            {
+                <div class="rz-form-field-end">@End</div>
+            }
         </div>
-        @if (End is not null)
-        {
-            <div class="rz-form-field-end">@End</div>
-        }
-    </div>
+    </CascadingValue>
 </div>
 
 @code {
@@ -42,6 +44,11 @@
 
     [Parameter]
     public string? ContentClass { get; set; }
+
+    private readonly string labelId = $"cda-form-field-{Guid.NewGuid():N}";
+
+    private string? ResolvedLabelId
+        => string.IsNullOrWhiteSpace(Text) ? null : labelId;
 }
 
 

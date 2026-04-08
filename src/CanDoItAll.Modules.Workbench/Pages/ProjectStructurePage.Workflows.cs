@@ -34,6 +34,8 @@ public partial class ProjectStructurePage
            ProjectStructureSummaryBuilder.Build(surface, selectedNode).Rows.Count > 1;
 
     private bool IsReconnectMode => !string.IsNullOrWhiteSpace(reconnectNodeId);
+    private bool IsDependencyMode => string.Equals(canvasToolMode, CanvasAuthoringMode.Dependency, StringComparison.Ordinal);
+    private bool IsDeleteMode => string.Equals(canvasToolMode, CanvasAuthoringMode.Delete, StringComparison.Ordinal);
 
     private bool CanCreateTranscript(ProjectStructureNode? node)
         => node?.ObjectType == ProjectObjectType.Recording;
@@ -49,7 +51,7 @@ public partial class ProjectStructurePage
     private async Task BeginReconnectAsync(string? nodeId = null)
     {
         reconnectNodeId = nodeId ?? selectedNode?.Id;
-        linkModeSourceId = null;
+        await SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -64,6 +66,28 @@ public partial class ProjectStructurePage
         reconnectNodeId = null;
         await ProjectWorkbenchService.ReparentObjectAsync(ProjectId, targetNode.Id, null);
         await ReloadSurfaceAsync(targetNode.Id);
+    }
+
+    private async Task DeleteDependencyAsync(string? sourceNodeId, string? targetNodeId, string? linkKind)
+    {
+        if (string.IsNullOrWhiteSpace(sourceNodeId) ||
+            string.IsNullOrWhiteSpace(targetNodeId) ||
+            !Enum.TryParse<ProjectObjectLinkKind>(linkKind, ignoreCase: true, out var parsedKind))
+        {
+            return;
+        }
+
+        var removed = await ProjectWorkbenchService.UnlinkObjectsAsync(ProjectId, sourceNodeId, targetNodeId, parsedKind);
+        if (!removed)
+        {
+            workflowFeedback = "The selected dependency could not be deleted.";
+            workflowFeedbackTone = "warn";
+            return;
+        }
+
+        workflowFeedback = "The dependency link was deleted.";
+        workflowFeedbackTone = "mint";
+        await ReloadSurfaceAsync(sourceNodeId);
     }
 
     private async Task DeleteNodeAsync(string? nodeId = null)
@@ -132,19 +156,8 @@ public partial class ProjectStructurePage
             return;
         }
 
-        await ProjectWorkbenchService.UpdateObjectStatusesAsync(ProjectId, [nodeId], status);
-        await ReloadSurfaceAsync(nodeId);
-        var rootNode = ResolveNode(summaryDialog.RootNodeId);
-        if (rootNode is null || surface is null)
-        {
-            summaryDialog = null;
-            return;
-        }
-
-        summaryDialog = summaryDialog with
-        {
-            Summary = ProjectStructureSummaryBuilder.Build(surface, rootNode)
-        };
+        var updatedNodes = await ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync(ProjectId, [nodeId], status);
+        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
     }
 
     private async Task ExportSummaryWorkbookAsync()
@@ -282,9 +295,12 @@ public partial class ProjectStructurePage
         {
             Transcript = new ProjectTranscriptMetadata
             {
-                RecordingNodeArtifactId = recordingArtifactId,
                 TranscriptText = string.Empty
             }
+        };
+        var nodeReferences = new ProjectNodeReferenceCollection
+        {
+            TranscriptRecordingNodeId = recordingArtifactId
         };
 
         var created = await ProjectWorkbenchService.CreateObjectAsync(
@@ -301,7 +317,9 @@ public partial class ProjectStructurePage
                 null,
                 string.Empty,
                 null,
-                ProjectObjectMetadataSerializer.Serialize(metadata)));
+                ProjectObjectMetadataSerializer.Serialize(metadata),
+                null,
+                nodeReferences));
 
         await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, targetNode.Id, created.Id, ProjectObjectLinkKind.DerivedFrom);
         await ReloadSurfaceAsync(created.Id);
@@ -319,7 +337,7 @@ public partial class ProjectStructurePage
         var providers = (await WorkspaceService.ListProviderProfilesAsync())
             .Where(profile => profile.IsEnabled)
             .ToList();
-        var selectedProviderId = metadata.Transcript?.LastProviderProfileId ?? providers.FirstOrDefault()?.Id;
+        var selectedProviderId = transcriptNode.NodeReferences?.TranscriptProviderProfileId ?? providers.FirstOrDefault()?.Id;
 
         pendingTranscriptAction = new ProjectStructureTranscriptActionDialogState(
             transcriptNode.Id,
@@ -389,9 +407,10 @@ public partial class ProjectStructurePage
         metadata.Transcript ??= new ProjectTranscriptMetadata();
         metadata.Transcript.TranscriptText = transcriptText;
         metadata.Transcript.LastActionKind = pendingTranscriptAction.ActionKind;
-        metadata.Transcript.LastProviderProfileId = provider.Id;
         metadata.Transcript.LastProviderName = provider.Name;
         metadata.Transcript.LastGeneratedAtUtc = DateTimeOffset.UtcNow;
+        var updatedReferences = transcriptNode.NodeReferences?.Clone() ?? new ProjectNodeReferenceCollection();
+        updatedReferences.TranscriptProviderProfileId = provider.Id;
 
         switch (pendingTranscriptAction.ActionKind)
         {
@@ -406,16 +425,20 @@ public partial class ProjectStructurePage
                 break;
         }
 
-        await ProjectWorkbenchService.UpdateObjectMetadataAsync(
+        var updatedTranscriptNode = await ProjectWorkbenchService.UpdateObjectMetadataAsync(
             ProjectId,
             transcriptNode.Id,
             ProjectObjectMetadataSerializer.Serialize(metadata),
-            status: "Review");
+            status: "Review",
+            nodeReferences: updatedReferences);
 
         workflowFeedback = $"{ResolveTranscriptActionLabel(pendingTranscriptAction.ActionKind)} completed through {provider.Name}.";
         workflowFeedbackTone = result.Value.ContainsWarnings ? "warn" : "mint";
         pendingTranscriptAction = null;
-        await ReloadSurfaceAsync(transcriptNode.Id);
+        if (updatedTranscriptNode is not null)
+        {
+            await ApplySurfaceNodeUpdatesAsync([updatedTranscriptNode]);
+        }
     }
 
     private void HandleTranscriptProviderChanged(ChangeEventArgs args)
@@ -544,13 +567,32 @@ public partial class ProjectStructurePage
     private ProjectStructureDeletePrompt BuildDeletePrompt(ProjectStructureNode node)
     {
         var descendantCount = CountDescendants(node.Id);
+        var linkedNodeCount = CountLinkedNodes(node.Id);
+        var dependencyLinkCount = CountDependencyLinks(node.Id);
         var requiresConfirmation = node.ObjectType != ProjectObjectType.Note ||
                                    descendantCount > 0 ||
+                                   linkedNodeCount > 1 ||
                                    HasManagedAttachment(node) ||
                                    node.ArtifactId.HasValue;
-        var impactCopy = descendantCount > 0
-            ? $"This will delete {descendantCount + 1} nodes including child items."
-            : "This will delete this node and its visible relationships.";
+        var impactParts = new List<string>();
+        if (descendantCount > 0)
+        {
+            impactParts.Add($"This will delete {descendantCount + 1} nodes including child items.");
+        }
+        else
+        {
+            impactParts.Add("This will delete this node.");
+        }
+
+        if (dependencyLinkCount > 0)
+        {
+            impactParts.Add(
+                linkedNodeCount > 0
+                    ? $"It also removes {dependencyLinkCount} visible dependency link{(dependencyLinkCount == 1 ? string.Empty : "s")} touching {linkedNodeCount} connected node{(linkedNodeCount == 1 ? string.Empty : "s")}."
+                    : $"It also removes {dependencyLinkCount} visible dependency link{(dependencyLinkCount == 1 ? string.Empty : "s")}.");
+        }
+
+        var impactCopy = string.Join(" ", impactParts);
 
         return new ProjectStructureDeletePrompt(
             node.Id,
@@ -591,6 +633,35 @@ public partial class ProjectStructurePage
         }
 
         return count;
+    }
+
+    private int CountLinkedNodes(string nodeId)
+    {
+        if (surface is null)
+        {
+            return 0;
+        }
+
+        return surface.Links
+            .Where(link => string.Equals(link.SourceId, nodeId, StringComparison.Ordinal) ||
+                           string.Equals(link.TargetId, nodeId, StringComparison.Ordinal))
+            .Select(link => string.Equals(link.SourceId, nodeId, StringComparison.Ordinal) ? link.TargetId : link.SourceId)
+            .Where(otherNodeId => !string.IsNullOrWhiteSpace(otherNodeId))
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+    }
+
+    private int CountDependencyLinks(string nodeId)
+    {
+        if (surface is null)
+        {
+            return 0;
+        }
+
+        return surface.Links.Count(link =>
+            link.Kind == ProjectObjectLinkKind.DependsOn &&
+            (string.Equals(link.SourceId, nodeId, StringComparison.Ordinal) ||
+             string.Equals(link.TargetId, nodeId, StringComparison.Ordinal)));
     }
 
     private ProjectStructureNode? ResolveNode(string? nodeId)
@@ -636,24 +707,4 @@ public partial class ProjectStructurePage
             .ToLowerInvariant();
     }
 
-    private sealed record ProjectStructureDeletePrompt(
-        string NodeId,
-        string Title,
-        int DescendantCount,
-        bool RequiresConfirmation,
-        string ImpactCopy);
-
-    private sealed record ProjectStructureSummaryDialogState(
-        string RootNodeId,
-        string RootTitle,
-        ProjectStructureSummary Summary);
-
-    private sealed record ProjectStructureTranscriptActionDialogState(
-        string NodeId,
-        string NodeTitle,
-        ProjectLlmActionKind ActionKind,
-        Guid? SelectedProviderId,
-        string LastProviderName,
-        IReadOnlyList<ProviderProfileSummary> Providers,
-        string Error);
 }

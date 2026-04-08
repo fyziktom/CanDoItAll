@@ -1,28 +1,32 @@
 @namespace CanDoItAll.Components.BaseLib
-<div class="space-y-4">
-    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div class="space-y-1">
-            <div class="flex flex-wrap items-center gap-2">
-                <h2 class="text-lg font-semibold text-slate-950">@Title</h2>
+<Stack GapScale="LayoutGap.Medium">
+    <Split Breakpoint="LayoutBreakpoint.Md"
+           Gap="LayoutGap.Small"
+           AlignItems="AlignItems.Start"
+           JustifyContent="JustifyContent.SpaceBetween">
+        <Stack GapScale="LayoutGap.Tiny"
+               Class="min-w-0">
+            <Cluster>
+                <h2 class="text-base font-semibold text-slate-950 xl:text-lg">@Title</h2>
                 @if (!string.IsNullOrWhiteSpace(Count))
                 {
-                    <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">@Count</span>
+                    <Pill Tone="PillTone.Label" Text="@Count" />
                 }
-            </div>
+            </Cluster>
 
             @if (!string.IsNullOrWhiteSpace(Description))
             {
-                <p class="text-sm leading-6 text-slate-600">@Description</p>
+                <p class="max-w-3xl text-sm leading-5 text-slate-600">@Description</p>
             }
-        </div>
+        </Stack>
 
         @if (Actions is not null)
         {
-            <div class="flex flex-wrap items-center gap-2">
+            <Cluster>
                 @Actions
-            </div>
+            </Cluster>
         }
-    </div>
+    </Split>
 
     @if (Filters is not null)
     {
@@ -30,7 +34,7 @@
             @Filters
         </div>
     }
-</div>
+</Stack>
 
 @code {
     [Parameter, EditorRequired]

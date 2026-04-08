@@ -19,7 +19,7 @@
                 var isActive = stepIndex == EffectiveValue;
                 var isCompleted = stepIndex < EffectiveValue;
                 var canSelectCurrent = CanSelect && !item.Disabled;
-                var iconCssClass = ResolveIconCssClass(item.Icon);
+                var iconName = ResolveIconName(item.Icon);
 
                 <li class="flex items-center gap-2">
                     <button type="button"
@@ -27,9 +27,9 @@
                             class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 @(ResolveStepCss(isActive, isCompleted))"
                             @onclick="() => TrySelectAsync(stepIndex)">
                         <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-current text-xs font-semibold">@(index + 1)</span>
-                        @if (iconCssClass is not null)
+                        @if (iconName is not null)
                         {
-                            <i class="@($"rz-fa-icon {iconCssClass}")" aria-hidden="true"></i>
+                            <span class="rz-icon cda-material-icon material-icons" aria-hidden="true">@iconName</span>
                         }
                         else if (!string.IsNullOrWhiteSpace(item.Icon))
                         {
@@ -150,11 +150,11 @@
         return "border-slate-300 bg-white text-slate-700 hover:bg-slate-50";
     }
 
-    private static string? ResolveIconCssClass(string? iconToken)
+    private static string? ResolveIconName(string? iconToken)
     {
-        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        if (MaterialIconCatalog.TryResolveIconName(iconToken, out var iconName))
         {
-            return cssClass;
+            return iconName;
         }
 
         return null;

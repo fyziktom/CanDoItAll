@@ -11,31 +11,6 @@ public partial class ProjectStructurePage
 
     private ProjectStructureQuickActionDialogState? quickActionDialog;
 
-    private sealed record ProjectStructureQuickActionDialogState(
-        string NodeId,
-        string Title,
-        string NodeLabel,
-        string Copy,
-        ProjectStructureQuickActionButton EditAction,
-        ProjectStructureQuickActionButton PrimaryAction);
-
-    private sealed record ProjectStructureQuickActionButton(
-        ProjectStructureQuickActionExecutionKind ExecutionKind,
-        string Label,
-        string Description,
-        string Icon,
-        string Tone,
-        string ActionId = "",
-        ProjectStructureCommandKind? CommandKind = null,
-        bool IsDisabled = false);
-
-    private enum ProjectStructureQuickActionExecutionKind
-    {
-        Edit,
-        InspectorAction,
-        CommandInNewTab
-    }
-
     private void OpenQuickActionDialog(ProjectStructureNode node)
         => quickActionDialog = BuildQuickActionDialog(node);
 
@@ -72,9 +47,7 @@ public partial class ProjectStructurePage
 
     private ProjectStructureQuickActionButton ResolvePrimaryQuickAction(ProjectStructureNode node)
     {
-        if (node.ProjectRole is ProjectStructureProjectRole.Subproject or
-            ProjectStructureProjectRole.ParentProject or
-            ProjectStructureProjectRole.AdditionalParentProject)
+        if (CanOpenRelatedProjectStructure(node))
         {
             return BuildInspectorQuickAction(
                 "Open Structure in New Tab",
@@ -147,6 +120,11 @@ public partial class ProjectStructurePage
                 "summary")
         };
     }
+
+    private static bool CanOpenRelatedProjectStructure(ProjectStructureNode node)
+        => node.ProjectRole is ProjectStructureProjectRole.Subproject or
+           ProjectStructureProjectRole.ParentProject or
+           ProjectStructureProjectRole.AdditionalParentProject;
 
     private static bool CanOpenNodeInNewTab(ProjectStructureNode node)
         => !string.IsNullOrWhiteSpace(node.Route) &&

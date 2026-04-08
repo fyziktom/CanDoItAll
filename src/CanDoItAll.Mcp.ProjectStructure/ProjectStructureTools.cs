@@ -60,6 +60,13 @@ public sealed class ProjectStructureTools(IProjectStructureCoordinator coordinat
         return ExecuteAsync("project_structure_checklist", () => coordinator.GetChecklistAsync(projectId, request ?? new ProjectStructureChecklistRequest(), cancellationToken));
     }
 
+    [McpServerTool(Name = "project_structure_dependencies_query", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Returns dependency readiness, prerequisite chains, dependents, and effective durations so agents can decide whether work can start or should wait.")]
+    public Task<McpToolEnvelope<ProjectStructureDependencyResponse>> ProjectStructureDependenciesQueryAsync(Guid projectId, ProjectStructureDependencyQueryRequest? request = null, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("project_structure_dependencies_query", () => coordinator.GetDependenciesAsync(projectId, request ?? new ProjectStructureDependencyQueryRequest(), cancellationToken));
+    }
+
     [McpServerTool(Name = "project_structure_node_create", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
     [Description("Creates a new project-structure node through the central API. Provide estimatedMinutes when approval thresholds are configured.")]
     public Task<McpToolEnvelope<ProjectStructureNodeSummary>> ProjectStructureNodeCreateAsync(Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
@@ -72,6 +79,13 @@ public sealed class ProjectStructureTools(IProjectStructureCoordinator coordinat
     public Task<McpToolEnvelope<ProjectStructureNodeSummary>> ProjectStructureNodeUpdateAsync(Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
     {
         return ExecuteAsync("project_structure_node_update", () => coordinator.UpdateNodeAsync(projectId, nodeId, request, estimatedMinutes, cancellationToken));
+    }
+
+    [McpServerTool(Name = "project_structure_node_recompose", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Redistributes a selected branch after imports or manual edits so the resulting project mindmap opens in a readable layout.")]
+    public Task<McpToolEnvelope<ProjectStructureSubtreeRecompositionResult>> ProjectStructureNodeRecomposeAsync(Guid projectId, ProjectStructureNodeRecomposeInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync("project_structure_node_recompose", () => coordinator.RecomposeNodeAsync(projectId, request, estimatedMinutes, cancellationToken));
     }
 
     [McpServerTool(Name = "project_structure_node_reparent", ReadOnly = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]

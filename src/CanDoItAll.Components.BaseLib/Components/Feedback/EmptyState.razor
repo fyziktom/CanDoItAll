@@ -10,9 +10,12 @@
 
     @if (Actions is not null)
     {
-        <div class="mt-5 flex flex-wrap items-center justify-center gap-2">
+        <Cluster AlignItems="AlignItems.Center"
+                 JustifyContent="JustifyContent.Center"
+                 Gap="LayoutGap.Small"
+                 Class="mt-5">
             @Actions
-        </div>
+        </Cluster>
     }
 </div>
 

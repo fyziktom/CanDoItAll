@@ -1,0 +1,111 @@
+<Stack GapScale="LayoutGap.Medium">
+    <Split Gap="LayoutGap.Medium"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween">
+        <div>
+            <p class="cda-eyebrow">Addresses</p>
+            <p class="mt-1 text-sm leading-6 text-slate-600">Capture legal, billing, shipping, or work addresses without creating duplicate parties.</p>
+        </div>
+        <Button Text="Add address"
+                ButtonStyle="ButtonStyle.Light"
+                Size="ButtonSize.Small"
+                Click="AddAddress"
+                data-testid="crmhr-address-add" />
+    </Split>
+
+    @if (Addresses.Count == 0)
+    {
+        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+            No addresses saved yet.
+        </div>
+    }
+    else
+    {
+        @for (var index = 0; index < Addresses.Count; index++)
+        {
+            var item = Addresses[index];
+            <PanelCard Soft="true">
+                <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
+                    <div>
+                        <label class="cda-field-label">Type</label>
+                        <InputText @bind-Value="item.AddressType"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-address-type-{index}")" />
+                    </div>
+                    <div class="lg:col-span-2">
+                        <label class="cda-field-label">Line 1</label>
+                        <InputText @bind-Value="item.Line1"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-address-line1-{index}")" />
+                    </div>
+                    <div class="flex items-end">
+                        <Button Text="Remove"
+                                ButtonStyle="ButtonStyle.Danger"
+                                Size="ButtonSize.Small"
+                                Click="@(() => RemoveAddress(index))"
+                                data-testid="@($"crmhr-address-remove-{index}")" />
+                    </div>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium" ColumnsLg="4" Class="mt-4">
+                    <div>
+                        <label class="cda-field-label">Line 2</label>
+                        <InputText @bind-Value="item.Line2"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-address-line2-{index}")" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">City</label>
+                        <InputText @bind-Value="item.City"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-address-city-{index}")" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Region</label>
+                        <InputText @bind-Value="item.Region"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-address-region-{index}")" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Postal code</label>
+                        <InputText @bind-Value="item.PostalCode"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-address-postal-{index}")" />
+                    </div>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
+                    <div>
+                        <label class="cda-field-label">Country code</label>
+                        <InputText @bind-Value="item.CountryCode"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-address-country-{index}")" />
+                    </div>
+                    <label class="cda-inline-option">
+                        <InputCheckbox @bind-Value="item.IsPrimary"
+                                       data-testid="@($"crmhr-address-primary-{index}")" />
+                        Primary address
+                    </label>
+                </Grid>
+            </PanelCard>
+        }
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public IList<PartyAddressEditorModel> Addresses { get; set; } = default!;
+
+    private void AddAddress()
+    {
+        Addresses.Add(new PartyAddressEditorModel
+        {
+            AddressType = "Work"
+        });
+    }
+
+    private void RemoveAddress(int index)
+    {
+        Addresses.RemoveAt(index);
+    }
+}

@@ -133,6 +133,50 @@ public sealed class ProjectStructureToolsTests
         Assert.Equal("parent-1", result.Data!.ParentId);
     }
 
+    [Fact]
+    public async Task ProjectStructureDependenciesQueryAsync_returns_successful_structured_content()
+    {
+        var projectId = Guid.NewGuid();
+        var tools = new ProjectStructureTools(new StubCoordinator
+        {
+            OnGetDependencies = (_, _, _) => Task.FromResult(new ProjectStructureDependencyResponse(
+                projectId,
+                "Delivery graph",
+                3600,
+                [
+                    new ProjectStructureDependencyItem(
+                        "task-1",
+                        null,
+                        ProjectObjectType.WorkItem,
+                        "task",
+                        "Ship release",
+                        "Draft",
+                        "percent",
+                        0,
+                        string.Empty,
+                        1,
+                        1,
+                        false,
+                        false,
+                        true,
+                        null,
+                        3600,
+                        null,
+                        null,
+                        "/projects/test",
+                        [],
+                        [])
+                ],
+                []))
+        }, NullLogger<ProjectStructureTools>.Instance);
+
+        var result = await tools.ProjectStructureDependenciesQueryAsync(projectId);
+
+        Assert.True(result.Ok);
+        Assert.Equal(3600, result.Data!.DefaultDurationSeconds);
+        Assert.Single(result.Data.Items);
+    }
+
     private sealed class StubCoordinator : IProjectStructureCoordinator
     {
         public Func<CancellationToken, Task<IReadOnlyList<ProjectSummary>>>? OnListProjects { get; init; }
@@ -149,11 +193,15 @@ public sealed class ProjectStructureToolsTests
 
         public Func<Guid, ProjectStructureChecklistRequest, CancellationToken, Task<ProjectStructureChecklistResponse>>? OnGetChecklist { get; init; }
 
+        public Func<Guid, ProjectStructureDependencyQueryRequest, CancellationToken, Task<ProjectStructureDependencyResponse>>? OnGetDependencies { get; init; }
+
         public Func<Guid, ProjectStructureNodeCreateInput, int?, CancellationToken, Task<ProjectStructureNodeSummary>>? OnCreateNode { get; init; }
 
         public Func<Guid, string, ProjectStructureNodeEditInput, int?, CancellationToken, Task<ProjectStructureNodeSummary>>? OnUpdateNode { get; init; }
 
         public Func<Guid, ProjectStructureNodeReparentInput, int?, CancellationToken, Task<ProjectStructureNodeSummary>>? OnReparentNode { get; init; }
+
+        public Func<Guid, ProjectStructureNodeRecomposeInput, int?, CancellationToken, Task<ProjectStructureSubtreeRecompositionResult>>? OnRecomposeNode { get; init; }
 
         public Func<Guid, ProjectStructureApprovalRequestCreateInput, CancellationToken, Task<ProjectStructureNodeSummary>>? OnCreateApprovalRequest { get; init; }
 
@@ -210,6 +258,12 @@ public sealed class ProjectStructureToolsTests
             throw new NotImplementedException();
         }
 
+        public Task<ProjectStructureDependencyResponse> GetDependenciesAsync(Guid projectId, ProjectStructureDependencyQueryRequest request, CancellationToken cancellationToken = default)
+        {
+            return OnGetDependencies?.Invoke(projectId, request, cancellationToken)
+                ?? Task.FromResult(new ProjectStructureDependencyResponse(projectId, "Test project", 3600, [], []));
+        }
+
         public Task<ProjectStructureNodeSummary> CreateNodeAsync(Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
@@ -254,6 +308,12 @@ public sealed class ProjectStructureToolsTests
                     0,
                     null,
                     null));
+        }
+
+        public Task<ProjectStructureSubtreeRecompositionResult> RecomposeNodeAsync(Guid projectId, ProjectStructureNodeRecomposeInput request, int? estimatedMinutes, CancellationToken cancellationToken = default)
+        {
+            return OnRecomposeNode?.Invoke(projectId, request, estimatedMinutes, cancellationToken)
+                ?? Task.FromResult(new ProjectStructureSubtreeRecompositionResult(request.RootNodeId, 0, 0));
         }
 
         public Task<ProjectStructureNodeSummary> CreateApprovalRequestAsync(Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken = default)

@@ -1,0 +1,30 @@
+@namespace CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Components.CanvasLib
+
+<CanvasBoundaryCard TestHookId="@Snapshot.TestHookId"
+                           Label="@Snapshot.Label"
+                           Title="@Snapshot.Title"
+                           Summary="@Snapshot.Summary"
+                           StatePill="@Snapshot.StatePill"
+                           Metrics="@Snapshot.Metrics">
+    <div class="cw-preview-chip-row">
+        @foreach (var chip in Snapshot.Chips)
+        {
+            <span class="cw-preview-chip" data-tone="@chip.Tone">
+                @if (!string.IsNullOrWhiteSpace(chip.Icon))
+                {
+                    <Icon Name="@chip.Icon" class="cw-preview-chip__icon" />
+                }
+
+                <span>@chip.Text</span>
+            </span>
+        }
+    </div>
+</CanvasBoundaryCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ChipBadgePrimitiveSnapshot Snapshot { get; set; } = default!;
+}
+
+

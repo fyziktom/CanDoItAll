@@ -1,0 +1,106 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+
+<div class="@ResolveBackdropCssClass()" @onclick="HandleCloseAsync">
+    <div class="@ResolveDialogCssClass()"
+         role="dialog"
+         aria-modal="true"
+         aria-label="@AriaLabel"
+         data-testid="@DataTestId"
+         @onclick:stopPropagation="true">
+        <Stack GapScale="LayoutGap.Large">
+            <Split Breakpoint="LayoutBreakpoint.Lg"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Start"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap"
+                   Class="project-structure-preview-dialog__header">
+                <Stack GapScale="LayoutGap.Tiny"
+                       Class="project-structure-preview-dialog__copy">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="@Kicker" />
+                    <TextBlock TextStyle="TextStyle.H5" Value="@Title" Class="cw-panel-title" />
+                    @if (!string.IsNullOrWhiteSpace(Summary))
+                    {
+                        <TextBlock TextStyle="TextStyle.Note" Value="@Summary" Class="cw-panel-copy" />
+                    }
+                </Stack>
+
+                @if (Actions is not null)
+                {
+                    <Cluster JustifyContent="JustifyContent.End"
+                             Gap="LayoutGap.Small"
+                             Class="project-structure-preview-dialog__actions">
+                        @Actions
+                    </Cluster>
+                }
+            </Split>
+
+            @if (Body is not null)
+            {
+                <div class="@ResolveBodyCssClass() w-full">
+                    @Body
+                </div>
+            }
+        </Stack>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Kicker { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Summary { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool CanvasScoped { get; set; }
+
+    [Parameter]
+    public string DialogClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string BodyClass { get; set; } = string.Empty;
+
+    [Parameter]
+    public string DataTestId { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    [Parameter]
+    public RenderFragment? Body { get; set; }
+
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    private Task HandleCloseAsync()
+        => Close.InvokeAsync();
+
+    private string ResolveBackdropCssClass()
+    {
+        return CanvasScoped
+            ? "project-structure-preview-backdrop project-structure-preview-backdrop--canvas"
+            : "project-structure-preview-backdrop";
+    }
+
+    private string ResolveDialogCssClass()
+    {
+        return string.IsNullOrWhiteSpace(DialogClass)
+            ? "project-structure-preview-dialog"
+            : $"project-structure-preview-dialog {DialogClass}";
+    }
+
+    private string ResolveBodyCssClass()
+    {
+        return string.IsNullOrWhiteSpace(BodyClass)
+            ? "project-structure-preview-dialog__body"
+            : $"project-structure-preview-dialog__body {BodyClass}";
+    }
+}

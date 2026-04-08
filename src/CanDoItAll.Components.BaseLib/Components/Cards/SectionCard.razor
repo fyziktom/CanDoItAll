@@ -1,29 +1,33 @@
 @namespace CanDoItAll.Components.BaseLib
-<div class="h-full rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm shadow-slate-200/60">
+<Stack GapScale="LayoutGap.Large"
+       Class="cda-section-card w-full">
     @if (!string.IsNullOrWhiteSpace(Title))
     {
-        <div class="mb-4 flex items-start justify-between gap-3">
-            <div class="space-y-1">
-                <h2 class="text-lg font-semibold text-slate-950">@Title</h2>
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Start"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap"
+               Class="mb-4">
+            <Stack GapScale="LayoutGap.Tiny">
+                <h2 class="cda-section-card__title">@Title</h2>
                 @if (!string.IsNullOrWhiteSpace(Description))
                 {
-                    <p class="text-sm text-slate-600">@Description</p>
+                    <p class="cda-section-card__description">@Description</p>
                 }
-            </div>
+            </Stack>
 
             @if (HeaderActions is not null)
             {
-                <div class="flex flex-wrap items-center gap-2">
+                <Cluster>
                     @HeaderActions
-                </div>
+                </Cluster>
             }
-        </div>
+        </Split>
     }
 
-    <div class="space-y-4">
-        @ChildContent
-    </div>
-</div>
+    @ChildContent
+</Stack>
 
 @code {
     [Parameter]

@@ -1,7 +1,7 @@
 @namespace CanDoItAll.Components.BaseLib
 @inherits StyledComponentBase
 @{
-    var iconCssClass = ResolveIconCssClass(Icon);
+    var iconName = ResolveIconName(Icon);
 }
 
 @if (IsAnchor)
@@ -12,7 +12,7 @@
        aria-disabled="@IsDisabled"
        @attributes="BuildAttributes(ResolveButtonCssClass())"
        @onclick="OnClickAsync">
-        @RenderButtonContent(iconCssClass)
+        @RenderButtonContent(iconName)
     </a>
 }
 else
@@ -21,13 +21,16 @@ else
             disabled="@IsDisabled"
             @attributes="BuildAttributes(ResolveButtonCssClass())"
             @onclick="OnClickAsync">
-        @RenderButtonContent(iconCssClass)
+        @RenderButtonContent(iconName)
     </button>
 }
 
 @code {
     [Parameter]
     public string? Text { get; set; }
+
+    [Parameter]
+    public string? Token { get; set; }
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
@@ -83,11 +86,11 @@ else
         }
     }
 
-    private static string? ResolveIconCssClass(string? iconToken)
+    private static string? ResolveIconName(string? iconToken)
     {
-        if (FontAwesomeIconCatalog.TryResolveCssClass(iconToken, out var cssClass))
+        if (MaterialIconCatalog.TryResolveIconName(iconToken, out var resolvedIconName))
         {
-            return cssClass;
+            return resolvedIconName;
         }
 
         return null;
@@ -111,9 +114,9 @@ else
         {
             return Look switch
             {
-                ButtonLook.SheetCard => "zy-card-button",
-                ButtonLook.SheetCardGhost => "zy-card-button zy-card-button--ghost",
-                ButtonLook.SheetCardWarn => "zy-card-button zy-card-button--warn",
+                ButtonLook.SheetCard => "cad-card-button zy-card-button",
+                ButtonLook.SheetCardGhost => "cad-card-button zy-card-button cad-card-button--ghost zy-card-button--ghost",
+                ButtonLook.SheetCardWarn => "cad-card-button zy-card-button cad-card-button--warn zy-card-button--warn",
                 ButtonLook.Legacy => "btn",
                 ButtonLook.LegacyGhost => "btn ghost",
                 ButtonLook.LegacyExtraSmall => "btn xs",
@@ -123,19 +126,10 @@ else
             };
         }
 
-        var baseCss = "rz-button inline-flex items-center justify-center gap-2 rounded-md border font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
-        var sizeCss = Size switch
-        {
-            ButtonSize.Small => "px-2.5 py-1.5 text-xs",
-            ButtonSize.Large => "px-4 py-2.5 text-base",
-            _ => "px-3.5 py-2 text-sm"
-        };
-
-        var styleCss = ResolveStyleCss();
-        return $"{baseCss} {sizeCss} {styleCss}";
+        return $"rz-button cda-button {ResolveSizeCssClass()} {ResolveVariantCssClass()} {ResolveToneCssClass()}";
     }
 
-    private RenderFragment RenderButtonContent(string? iconCssClass)
+    private RenderFragment RenderButtonContent(string? iconName)
     {
         return builder =>
         {
@@ -144,14 +138,15 @@ else
             if (IsBusy)
             {
                 builder.OpenElement(sequence++, "span");
-                builder.AddAttribute(sequence++, "class", "inline-flex h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent");
+                builder.AddAttribute(sequence++, "class", "cda-button__spinner");
                 builder.CloseElement();
             }
-            else if (iconCssClass is not null)
+            else if (iconName is not null)
             {
-                builder.OpenElement(sequence++, "i");
-                builder.AddAttribute(sequence++, "class", $"rz-fa-icon {iconCssClass}");
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "rz-icon cda-material-icon material-icons");
                 builder.AddAttribute(sequence++, "aria-hidden", "true");
+                builder.AddContent(sequence++, iconName);
                 builder.CloseElement();
             }
             else if (!string.IsNullOrWhiteSpace(Icon))
@@ -161,6 +156,14 @@ else
                 builder.AddAttribute(sequence++, "title", $"Unknown icon token: {Icon}");
                 builder.AddAttribute(sequence++, "aria-hidden", "true");
                 builder.AddContent(sequence++, Icon);
+                builder.CloseElement();
+            }
+
+            if (!string.IsNullOrWhiteSpace(Token))
+            {
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "cda-button__token");
+                builder.AddContent(sequence++, Token);
                 builder.CloseElement();
             }
 
@@ -194,17 +197,43 @@ else
 
     private string ResolveStyleCss()
     {
-        return (Variant, ButtonStyle) switch
+        return ButtonStyle switch
         {
-            (Variant.Text, _) => "border-transparent bg-transparent text-slate-700 hover:bg-slate-100",
-            (_, ButtonStyle.Light) => "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200",
-            (_, ButtonStyle.Secondary) => "border-fuchsia-300 bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-200",
-            (_, ButtonStyle.Success) => "border-emerald-300 bg-emerald-100 text-emerald-800 hover:bg-emerald-200",
-            (_, ButtonStyle.Info) => "border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200",
-            (_, ButtonStyle.Warning) => "border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200",
-            (_, ButtonStyle.Danger) => "border-red-300 bg-red-100 text-red-800 hover:bg-red-200",
-            _ => "border-indigo-300 bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
+            ButtonStyle.Light => "cda-button--tone-light",
+            ButtonStyle.Secondary => "cda-button--tone-secondary",
+            ButtonStyle.Success => "cda-button--tone-success",
+            ButtonStyle.Info => "cda-button--tone-info",
+            ButtonStyle.Warning => "cda-button--tone-warning",
+            ButtonStyle.Danger => "cda-button--tone-danger",
+            ButtonStyle.Dark => "cda-button--tone-dark",
+            ButtonStyle.Base => "cda-button--tone-base",
+            _ => "cda-button--tone-primary"
         };
+    }
+
+    private string ResolveSizeCssClass()
+    {
+        return Size switch
+        {
+            ButtonSize.Small => "cda-button--size-sm",
+            ButtonSize.Large => "cda-button--size-lg",
+            _ => "cda-button--size-md"
+        };
+    }
+
+    private string ResolveVariantCssClass()
+    {
+        return Variant switch
+        {
+            Variant.Outlined => "cda-button--outlined",
+            Variant.Text => "cda-button--text",
+            _ => "cda-button--filled"
+        };
+    }
+
+    private string ResolveToneCssClass()
+    {
+        return ResolveStyleCss();
     }
 }
 

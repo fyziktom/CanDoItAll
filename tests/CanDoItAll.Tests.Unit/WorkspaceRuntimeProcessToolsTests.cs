@@ -46,7 +46,6 @@ public sealed class WorkspaceRuntimeProcessToolsTests
                 "--project",
                 projectPath,
                 "--no-restore",
-                "--disable-build-servers",
                 "run",
                 "--launch-profile",
                 "https"
@@ -80,11 +79,30 @@ public sealed class WorkspaceRuntimeProcessToolsTests
                 "--project",
                 projectPath,
                 "--no-restore",
-                "--disable-build-servers",
                 "run",
                 "--no-launch-profile"
             ],
             arguments);
+    }
+
+    [Fact]
+    public void BuildWatchArgumentList_includes_disable_build_servers_when_requested()
+    {
+        using var workspace = new TestWorkspace();
+        var projectPath = workspace.CreateProject(
+            @"src\CanDoItAll.Web\CanDoItAll.Web.csproj",
+            "<Project Sdk=\"Microsoft.NET.Sdk.Web\"></Project>",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 0, 0, DateTimeKind.Utc));
+        workspace.CreateAssetsFile(
+            @"src\CanDoItAll.Web\obj\project.assets.json",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 5, 0, DateTimeKind.Utc));
+
+        var arguments = WorkspaceRuntimeProcessTools.BuildWatchArgumentList(
+            workspace.RootPath,
+            projectPath,
+            new ManagerOptions { WatchDisableBuildServers = true });
+
+        Assert.Contains("--disable-build-servers", arguments);
     }
 
     [Fact]
@@ -157,6 +175,85 @@ public sealed class WorkspaceRuntimeProcessToolsTests
         var value = WorkspaceRuntimeProcessTools.BuildWatchUrlsEnvironmentValue(options);
 
         Assert.Equal("https://127.0.0.1:0;http://127.0.0.1:0", value);
+    }
+
+    [Fact]
+    public void BuildWatchEnvironmentVariables_uses_fast_defaults()
+    {
+        var variables = WorkspaceRuntimeProcessTools.BuildWatchEnvironmentVariables(new ManagerOptions(), "Development");
+
+        Assert.Equal("1", variables["DOTNET_WATCH_SUPPRESS_EMOJIS"]);
+        Assert.Equal("Development", variables["ASPNETCORE_ENVIRONMENT"]);
+        Assert.Equal("Development", variables["DOTNET_ENVIRONMENT"]);
+        Assert.Equal("false", variables["UseAppHost"]);
+        Assert.Equal("true", variables["DetailedErrors"]);
+        Assert.Equal("true", variables["ASPNETCORE_DETAILEDERRORS"]);
+        Assert.DoesNotContain("DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH", variables.Keys);
+        Assert.DoesNotContain("DOTNET_CLI_USE_MSBUILD_SERVER", variables.Keys);
+        Assert.DoesNotContain("UseSharedCompilation", variables.Keys);
+        Assert.DoesNotContain("ASPNETCORE_URLS", variables.Keys);
+    }
+
+    [Fact]
+    public void BuildWatchEnvironmentVariables_honors_opt_in_slow_overrides()
+    {
+        var variables = WorkspaceRuntimeProcessTools.BuildWatchEnvironmentVariables(
+            new ManagerOptions
+            {
+                WatchDisableBuildServers = true,
+                WatchDisableSharedCompilation = true,
+                WatchSuppressBrowserRefresh = true,
+                WatchUrls = ["https://127.0.0.1:7271", "http://127.0.0.1:5032"]
+            },
+            "Development");
+
+        Assert.Equal("1", variables["DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH"]);
+        Assert.Equal("0", variables["DOTNET_CLI_USE_MSBUILD_SERVER"]);
+        Assert.Equal("false", variables["UseSharedCompilation"]);
+        Assert.Equal("https://127.0.0.1:7271;http://127.0.0.1:5032", variables["ASPNETCORE_URLS"]);
+    }
+
+    [Fact]
+    public void BuildTailwindWatchArgumentList_targets_input_and_output_files()
+    {
+        var arguments = WorkspaceRuntimeProcessTools.BuildTailwindWatchArgumentList(
+            @"C:\repos\CanDoItAll\Tailwind\input.css",
+            @"C:\repos\CanDoItAll\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css");
+
+        Assert.Equal(
+            [
+                "-i",
+                @"C:\repos\CanDoItAll\Tailwind\input.css",
+                "-o",
+                @"C:\repos\CanDoItAll\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css",
+                "--watch=always"
+            ],
+            arguments);
+    }
+
+    [Fact]
+    public void BuildTailwindBuildArgumentList_targets_input_and_output_files_without_watch_mode()
+    {
+        var arguments = WorkspaceRuntimeProcessTools.BuildTailwindBuildArgumentList(
+            @"Tailwind\input.css",
+            @"..\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css");
+
+        Assert.Equal(
+            [
+                "-i",
+                @"Tailwind\input.css",
+                "-o",
+                @"..\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css"
+            ],
+            arguments);
+    }
+
+    [Fact]
+    public void ResolveTailwindCliPath_points_to_workspace_local_binary()
+    {
+        var path = WorkspaceRuntimeProcessTools.ResolveTailwindCliPath(@"C:\repos\CanDoItAll\Tailwind");
+
+        Assert.EndsWith(@"Tailwind\node_modules\.bin\tailwindcss.cmd", path, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]

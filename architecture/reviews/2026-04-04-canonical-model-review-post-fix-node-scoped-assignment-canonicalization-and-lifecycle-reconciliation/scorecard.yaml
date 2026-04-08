@@ -1,0 +1,26 @@
+review_kind: canonical-model-review
+scope: "post-fix node-scoped assignment canonicalization and lifecycle reconciliation"
+scores:
+  source_of_truth_integrity: 4
+  boundary_clarity: 3
+  invariant_enforcement: 4
+  projection_discipline: 3
+  integration_isolation: 3
+  runtime_state_separation: 4
+  ai_policy_separation: 4
+  testable_architecture: 4
+  change_safety: 3
+  overall_stability: 3
+findings:
+  critical: []
+  high:
+    - "Lifecycle reconciliation is still non-atomic across the Workbench and CRM/HR persistence boundary."
+    - "The universal Workbench node remains a broad, overloaded primitive."
+  medium:
+    - "Workbench metadata still persists canonical-looking party identifiers and names as duplicate projection data."
+    - "`NodeKey` remains the cross-module identity bridge even after scope-resolution hardening."
+  low: []
+  open_questions:
+    - "Should party-related Workbench metadata fields be formally reduced to projection-only summaries?"
+    - "Will the next feature wave require a typed project-node reference instead of raw node strings?"
+    - "How much farther is the universal Workbench node allowed to grow before typed families or capability contracts are needed?"

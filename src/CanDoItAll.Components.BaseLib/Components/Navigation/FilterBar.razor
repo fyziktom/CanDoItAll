@@ -1,13 +1,16 @@
 @namespace CanDoItAll.Components.BaseLib
-<div class="rounded-[1.35rem] border border-slate-200 bg-slate-50/90 px-4 py-3">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+<div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/90 px-3.5 py-2.5">
+    <Split Breakpoint="LayoutBreakpoint.Lg"
+           Gap="LayoutGap.Small"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween">
+        <Cluster Class="min-w-0 flex-1">
             @ChildContent
-        </div>
+        </Cluster>
 
         @if (Actions is not null || !string.IsNullOrWhiteSpace(ResultText))
         {
-            <div class="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
+            <Cluster Class="text-[11px] font-medium text-slate-500">
                 @if (!string.IsNullOrWhiteSpace(ResultText))
                 {
                     <span>@ResultText</span>
@@ -17,9 +20,9 @@
                 {
                     @Actions
                 }
-            </div>
+            </Cluster>
         }
-    </div>
+    </Split>
 </div>
 
 @code {

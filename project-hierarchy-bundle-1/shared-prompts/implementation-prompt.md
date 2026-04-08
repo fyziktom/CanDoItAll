@@ -1,3 +1,0 @@
-# Implementation Prompt
-
-Read the bundle root README, `plan/01-phase-plan.md`, the relevant traceability rows, and the selected subbundle README before editing code. Implement only the selected subbundle. Preserve the literal scope of the raw notes, especially the many-parent hierarchy requirement and the demand for real Playwright proof. Favor the smallest correct change, keep boundaries clear between the Projects module and Workbench module, reject invalid hierarchy operations explicitly, and update the bundle docs, analytics rows, and raw-note closure state as the proof lands. If implementation reality exposes a missing requirement, repair the bundle before continuing instead of silently narrowing scope.

@@ -77,7 +77,9 @@ public sealed record WorkbenchSessionSnapshot(
     string? CompatibilityMarker = null,
     DateTimeOffset? SavedAtUtc = null,
     IReadOnlyList<WorkbenchRestoreFailure>? RestoreFailures = null,
-    IReadOnlyList<WorkbenchTabState>? RecentTabs = null);
+    IReadOnlyList<WorkbenchTabState>? RecentTabs = null,
+    Guid? ProfileId = null,
+    string? ProfileFingerprint = null);
 
 public interface IWorkbenchStateStore
 {

@@ -1,0 +1,269 @@
+@page "/groups/canvas/benchmark"
+@using System.Globalization
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@namespace CanDoItAll.Components.Sandbox.Components
+
+<div class="sandbox-page">
+    <PageScaffold MaxWidthClass="max-w-[1720px]">
+        <Header>
+            <PageHeader Eyebrow="Components Sandbox"
+                        Title="Canvas Renderer Benchmark"
+                        Description="P3-01 stays isolated here: compare the retained DOM-SVG workbench create path against a narrow HTML5 canvas prototype before making any renderer decisions.">
+                <Actions>
+                    <StatusBadge Text="P3-01 optional spike" Tone="warning" />
+                    <StatusBadge Text="@($"{Definitions.Count} deterministic tiers")" Tone="info" />
+                </Actions>
+            </PageHeader>
+        </Header>
+
+        <Lead>
+            <Alert AlertStyle="@(AlertStyle.Info)">
+                This spike only measures initial scene materialization on the same typed <code>CanvasWorkbenchSurface</code> payloads. It does not claim feature parity for overlays, accessibility, export, or editor workflows.
+            </Alert>
+        </Lead>
+
+        <SecondaryRail>
+            <SectionCard Title="Decision Rule" Description="Do not replace the shipped renderer on intuition.">
+                <div class="sandbox-proof-list">
+                    <p>Use the real retained runtime for the baseline, not a reconstructed approximation.</p>
+                    <p>Treat the 2D canvas prototype as draw-cost evidence only. It is missing accessibility mirrors, overlay composition, and export reuse.</p>
+                    <p>A raw draw win is not enough by itself to replace the retained renderer.</p>
+                </div>
+            </SectionCard>
+
+            <SectionCard Title="Current Selection" Description="Preview the tier before or after the benchmark run.">
+                <div class="space-y-3">
+                    <StatusBadge Text="@SelectedDefinition.Label" Tone="info" />
+                    <p class="text-sm leading-6 text-slate-600">@SelectedDefinition.Summary</p>
+                    <SummaryTiles>
+                        <SummaryTile Label="Nodes" Value="@SelectedDefinition.NodeCount.ToString(CultureInfo.InvariantCulture)" HelperText="Typed workbench nodes rendered by both paths." Tone="info" />
+                        <SummaryTile Label="Links" Value="@SelectedDefinition.LinkCount.ToString(CultureInfo.InvariantCulture)" HelperText="Connector count used by the retained and prototype scenes." Tone="success" />
+                    </SummaryTiles>
+                </div>
+            </SectionCard>
+        </SecondaryRail>
+
+        <ChildContent>
+            <SectionCard Title="Benchmark Controls" Description="Choose a preview tier, then run the full three-tier suite.">
+                <div class="flex flex-wrap items-center gap-3">
+                    @foreach (var definition in Definitions)
+                    {
+                        <Button Text="@definition.Label"
+                                ButtonStyle="@(definition.Key == selectedTierKey ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                Variant="@(definition.Key == selectedTierKey ? Variant.Filled : Variant.Outlined)"
+                                Click="@(() => SelectTier(definition.Key))"
+                                data-testid="@($"canvas-benchmark-tier-{definition.Key}")" />
+                    }
+
+                    <Button Text="Run benchmark"
+                            ButtonStyle="@(ButtonStyle.Success)"
+                            IsBusy="@isRunning"
+                            Click="RunBenchmarkAsync"
+                            data-testid="canvas-benchmark-run" />
+
+                    @if (!string.IsNullOrWhiteSpace(lastMeasuredLabel))
+                    {
+                        <StatusBadge Text="@lastMeasuredLabel" Tone="success" />
+                    }
+                </div>
+            </SectionCard>
+
+            <div class="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+                <SectionCard Title="Retained DOM-SVG Preview" Description="Visible proof that the benchmark tiers use the real shared workbench component.">
+                    <div class="rounded-[1.75rem] border border-slate-200 bg-slate-50/80 p-3" data-testid="canvas-benchmark-retained-preview">
+                        <CanvasWorkbench Surface="@SelectedDefinition.Surface" />
+                    </div>
+                </SectionCard>
+
+                <SectionCard Title="True-Canvas Prototype Preview" Description="A deliberately narrow 2D draw pass with the same typed nodes and links.">
+                    <div class="space-y-3">
+                        <canvas @ref="prototypeCanvas"
+                                class="h-[44rem] w-full rounded-[1.75rem] border border-slate-200 bg-slate-950"
+                                data-testid="canvas-benchmark-prototype-canvas"></canvas>
+                        <Alert AlertStyle="@(AlertStyle.Light)">
+                            The prototype draws node rectangles, titles, links, and group frames. It intentionally omits selection mirrors, floating overlays, export, and semantic accessibility layers.
+                        </Alert>
+                    </div>
+                </SectionCard>
+            </div>
+
+            <SectionCard Title="Measured Results" Description="Three deterministic graph tiers using the same typed surface payloads for both benchmark paths.">
+                @if (runResult is null)
+                {
+                    <Alert AlertStyle="@(AlertStyle.Light)">
+                        Run the benchmark to capture retained-versus-canvas materialization timings and the explicit go or no-go recommendation.
+                    </Alert>
+                }
+                else
+                {
+                    <div class="overflow-x-auto" data-testid="canvas-benchmark-results">
+                        <table class="min-w-full divide-y divide-slate-200 text-sm">
+                            <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                <tr>
+                                    <th class="px-4 py-3">Tier</th>
+                                    <th class="px-4 py-3">Scene</th>
+                                    <th class="px-4 py-3">Retained Avg</th>
+                                    <th class="px-4 py-3">Canvas Avg</th>
+                                    <th class="px-4 py-3">Delta</th>
+                                    <th class="px-4 py-3">Retained DOM</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 bg-white">
+                                @foreach (var measurement in runResult.Tiers)
+                                {
+                                    <tr>
+                                        <td class="px-4 py-3 font-semibold text-slate-900">@measurement.Label</td>
+                                        <td class="px-4 py-3 text-slate-600">@($"{measurement.NodeCount} nodes / {measurement.LinkCount} links")</td>
+                                        <td class="px-4 py-3 text-slate-900">@FormatDuration(measurement.RetainedAverageMs)</td>
+                                        <td class="px-4 py-3 text-slate-900">@FormatDuration(measurement.CanvasAverageMs)</td>
+                                        <td class="px-4 py-3">
+                                            <StatusBadge Text="@FormatDelta(measurement.ImprovementRatio)" Tone="@(measurement.ImprovementRatio >= 0 ? "success" : "warning")" />
+                                        </td>
+                                        <td class="px-4 py-3 text-slate-600">@measurement.RetainedDomNodeCount.ToString(CultureInfo.InvariantCulture)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <Alert AlertStyle="@(AlertStyle.Warning)" data-testid="canvas-benchmark-decision">
+                        <strong class="font-semibold">@runResult.Recommendation:</strong>
+                        <span class="ml-2">@runResult.Summary</span>
+                    </Alert>
+                }
+            </SectionCard>
+        </ChildContent>
+    </PageScaffold>
+</div>
+
+@code {
+    private readonly IReadOnlyList<CanvasBenchmarkSurfaceDefinition> definitions = CanvasBenchmarkSamples.CreateDefinitions();
+    private string selectedTierKey = CanvasBenchmarkSamples.DefaultTierKey;
+    private bool previewNeedsRender = true;
+    private bool isRunning;
+    private string? lastMeasuredLabel;
+    private ElementReference prototypeCanvas;
+    private IJSObjectReference? module;
+    private CanvasBenchmarkRunResult? runResult;
+
+    private IReadOnlyList<CanvasBenchmarkSurfaceDefinition> Definitions => definitions;
+
+    private CanvasBenchmarkSurfaceDefinition SelectedDefinition => CanvasBenchmarkSamples.GetDefinition(selectedTierKey);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "/js/canvasBenchmarkPage.js");
+            previewNeedsRender = true;
+        }
+
+        if (!previewNeedsRender || module is null)
+        {
+            return;
+        }
+
+        previewNeedsRender = false;
+        await module.InvokeVoidAsync("renderPrototype", prototypeCanvas, SelectedDefinition);
+    }
+
+    private void SelectTier(string key)
+    {
+        if (string.Equals(selectedTierKey, key, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        selectedTierKey = key;
+        previewNeedsRender = true;
+    }
+
+    private async Task RunBenchmarkAsync()
+    {
+        if (isRunning || module is null)
+        {
+            return;
+        }
+
+        isRunning = true;
+        StateHasChanged();
+
+        try
+        {
+            runResult = await module.InvokeAsync<CanvasBenchmarkRunResult>(
+                "runBenchmarkSuite",
+                prototypeCanvas,
+                Definitions,
+                4);
+            lastMeasuredLabel = $"Measured {DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm} UTC";
+        }
+        finally
+        {
+            isRunning = false;
+            previewNeedsRender = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static string FormatDuration(double value)
+    {
+        return $"{value:F2} ms";
+    }
+
+    private static string FormatDelta(double value)
+    {
+        var percent = value * 100d;
+        return percent >= 0
+            ? $"{percent:F1}% faster"
+            : $"{Math.Abs(percent):F1}% slower";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    public sealed class CanvasBenchmarkRunResult
+    {
+        public List<CanvasBenchmarkMeasurement> Tiers { get; set; } = [];
+
+        public string Recommendation { get; set; } = string.Empty;
+
+        public string Summary { get; set; } = string.Empty;
+    }
+
+    public sealed class CanvasBenchmarkMeasurement
+    {
+        public string Key { get; set; } = string.Empty;
+
+        public string Label { get; set; } = string.Empty;
+
+        public int NodeCount { get; set; }
+
+        public int LinkCount { get; set; }
+
+        public double RetainedAverageMs { get; set; }
+
+        public double CanvasAverageMs { get; set; }
+
+        public double ImprovementRatio { get; set; }
+
+        public int RetainedDomNodeCount { get; set; }
+    }
+}

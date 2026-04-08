@@ -1,0 +1,136 @@
+.project-structure-signals-window {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.9rem;
+}
+
+.project-structure-signals-window__header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.project-structure-signals-window__empty {
+    align-self: start;
+}
+
+.project-structure-signals-window__sections {
+    min-height: 0;
+    overflow: auto;
+    display: grid;
+    gap: 0.85rem;
+    padding-right: 0.3rem;
+}
+
+.project-structure-signals-window__section {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.85rem 0.9rem;
+    border-radius: 1.05rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.92));
+}
+
+.project-structure-signals-window__section-copy {
+    display: grid;
+    gap: 0.18rem;
+}
+
+.project-structure-signals-window__section-copy strong {
+    color: #0f172a;
+    font-size: 0.92rem;
+}
+
+.project-structure-signals-window__section-copy p {
+    margin: 0;
+    color: rgba(71, 85, 105, 0.86);
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+.project-structure-signals-window__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(4.2rem, 1fr));
+    gap: 0.55rem;
+}
+
+.project-structure-signal-tile {
+    display: grid;
+    gap: 0.38rem;
+    justify-items: center;
+    min-height: 4.45rem;
+    padding: 0.58rem 0.36rem 0.48rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.86);
+    color: #0f172a;
+    transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.project-structure-signal-tile:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(15, 23, 42, 0.1);
+}
+
+.project-structure-signal-tile.is-active {
+    border-color: rgba(37, 99, 235, 0.26);
+    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.18);
+}
+
+.project-structure-signal-tile__badge {
+    display: inline-grid;
+    place-items: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.1);
+}
+
+.project-structure-signal-tile__label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+}
+
+.project-structure-signal-tile.tone-sky .project-structure-signal-tile__badge {
+    background: rgba(224, 242, 254, 0.98);
+    color: #0369a1;
+}
+
+.project-structure-signal-tile.tone-accent .project-structure-signal-tile__badge {
+    background: rgba(237, 233, 254, 0.98);
+    color: #6d28d9;
+}
+
+.project-structure-signal-tile.tone-mint .project-structure-signal-tile__badge {
+    background: rgba(209, 250, 229, 0.98);
+    color: #047857;
+}
+
+.project-structure-signal-tile.tone-warn .project-structure-signal-tile__badge {
+    background: rgba(255, 237, 213, 0.98);
+    color: #c2410c;
+}
+
+.project-structure-signal-tile.tone-danger .project-structure-signal-tile__badge {
+    background: rgba(255, 228, 230, 0.98);
+    color: #be123c;
+}
+
+.project-structure-signal-tile.tone-primary .project-structure-signal-tile__badge {
+    background: rgba(226, 232, 240, 0.98);
+    color: #0f172a;
+}
+
+.project-structure-signal-tile.tone-ghost .project-structure-signal-tile__badge,
+.project-structure-signal-tile.tone-neutral .project-structure-signal-tile__badge {
+    background: rgba(241, 245, 249, 0.98);
+    color: #334155;
+}

@@ -1,0 +1,29 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<div @attributes='BuildAttributes("cda-metric-card")'>
+    @if (!string.IsNullOrWhiteSpace(Label))
+    {
+        <p class="cda-metric-card__label">@Label</p>
+    }
+
+    @if (ValueContent is not null)
+    {
+        <div class="cda-metric-card__value">@ValueContent</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(Value))
+    {
+        <p class="cda-metric-card__value">@Value</p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? Label { get; set; }
+
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public RenderFragment? ValueContent { get; set; }
+}

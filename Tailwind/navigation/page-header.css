@@ -1,0 +1,45 @@
+@layer components {
+  .cda-page-header {
+    @apply flex flex-col gap-2.5 border-b pb-3 lg:flex-row lg:items-end lg:justify-between;
+    border-color: var(--cad-color-border-soft);
+  }
+
+  .cda-page-header--compact {
+    @apply flex flex-col items-start gap-2 border-none pb-0 sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .cda-page-header__copy {
+    @apply space-y-1;
+  }
+
+  .cda-page-header__copy--compact {
+    @apply flex min-w-0 flex-wrap items-center gap-2.5;
+  }
+
+  .cda-page-header__eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.2em];
+    color: var(--cad-color-text-soft);
+  }
+
+  .cda-page-header__eyebrow--compact {
+    @apply text-[10px] tracking-[0.18em];
+  }
+
+  .cda-page-header__title {
+    @apply text-2xl font-semibold tracking-tight xl:text-[2rem];
+    color: var(--cad-color-text-strong);
+  }
+
+  .cda-page-header__title--compact {
+    @apply text-lg xl:text-xl;
+  }
+
+  .cda-page-header__description {
+    @apply max-w-4xl text-sm leading-5;
+    color: var(--cad-color-text-muted);
+  }
+
+  .cda-page-header__actions {
+    @apply flex flex-shrink-0 flex-wrap items-center gap-2;
+  }
+}
