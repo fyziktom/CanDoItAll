@@ -1,4 +1,0 @@
-# Required tests
-
-- `PromptFactory_does_not_use_legacy_background_queue_for_new_work`
-- `Legacy_background_queue_items_are_forwarded_to_durable_runtime_when_legacy_mode_is_enabled`

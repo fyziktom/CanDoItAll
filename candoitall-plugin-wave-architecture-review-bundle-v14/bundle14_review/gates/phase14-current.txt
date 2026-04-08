@@ -1,8 +1,0 @@
-=== Phase14 hidden runtime semantics gate ===
-Repo: C:\repositories\CanDoItAll
-
-No hard-gate failures detected.
-
-Warnings:
-- ADV WARNING: Automation message dispatch still catches Exception broadly around handler execution; verify cancellation is propagated distinctly: src/CanDoItAll.Modules.Automation/AutomationMessagingServices.cs
-- ADV WARNING: Connector command execution still catches Exception broadly around handler execution; verify cancellation is propagated distinctly: src/CanDoItAll.Modules.Workspace/ConnectorOutboxService.cs

@@ -1,5 +1,0 @@
-# Required tests
-
-- `Execution_telemetry_preserves_correlation_and_causation_across_dispatch`
-- `Dead_letter_items_are_visible_to_operators`
-- `Core_runtime_still_functions_when_mqtt_bridge_is_disabled`

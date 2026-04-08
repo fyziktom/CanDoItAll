@@ -1,5 +1,0 @@
-# Required tests
-
-- `Plugin_ingress_inbox_deduplicates_external_envelopes`
-- `Plugin_ingress_cursor_progress_is_persisted_across_runs`
-- `Ingress_envelope_can_remain_unmaterialized_until_explicit_handler_runs`
