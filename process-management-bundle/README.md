@@ -1,6 +1,8 @@
 # CanDoItAll Process Management Bundle
 
-This bundle now represents the executed and validated process-management delivery for `CanDoItAll.Modules.Processes`.
+This bundle originally captured an executed process-management delivery for `CanDoItAll.Modules.Processes`, but the `2026-04-09` post-execution architecture and user-story audit reopened it for remediation.
+
+The initial delivery remains preserved, but the bundle is now active again because the implemented code does not fully cover the promised architecture, user stories, and project-structure canvas parity.
 
 Legacy architect materials remain preserved in:
 
@@ -32,6 +34,8 @@ The legacy architect material remains as supporting evidence, but the current co
 - Expanded the architecture to cover explainability, artifact trust, autonomy governance, forensic reconstruction, operating modes, safe refusal, decision intelligence, capability-gap analysis, economics, and executive surfaces.
 - Added an explicit development and testing seed strategy instead of leaving process data setup to ad hoc manual preparation.
 - Added shared post-phase validation templates, roles, and skill-pack guidance so the future repair bundles are created consistently.
+- Added a post-execution implementation coverage audit with workbook-backed user-story mapping, architecture-note coverage review, and canvas-parity gap tracking.
+- Reopened the bundle with new remediation phases for architecture hardening, reusable process form extraction, and process-canvas UX parity with project structure.
 
 ## Bundle Layout
 
@@ -68,21 +72,30 @@ The legacy architect material remains as supporting evidence, but the current co
 17. `subbundles/17-metrics-economics-capability-gaps-and-decision-intelligence`
 18. `subbundles/18-conformance-learning-and-improvement-loop`
 19. `subbundles/19-post-implementation-bundle-phase04-generation`
+20. `subbundles/20-implemented-architecture-hardening-and-form-componentization`
+21. `subbundles/21-post-implementation-bundle-phase05-generation`
+22. `subbundles/22-process-canvas-context-menu-and-template-aware-create-flows`
+23. `subbundles/23-process-canvas-selection-inspector-and-edit-dialog-parity`
+24. `subbundles/24-post-implementation-bundle-phase06-generation`
 
 ## Dependency And Validation Map
 
 - The operational dependency map, critical subbundles, and phase gates live in `C:\repositories\CanDoItAll\process-management-bundle\plan\01-phase-plan.md`.
 - No later phase may start until the prior phase-specific post-implementation repair bundle has been created, validated, and closed or honestly blocked.
 - UI-heavy subbundles must use `CanDoItAll` shared components first, then Playwright MCP and screenshot review on large-screen desktop viewports before any phase gate may pass.
+- The implementation coverage audit lives in:
+  - `C:\repositories\CanDoItAll\process-management-bundle\reviews\02-implementation-coverage-audit.md`
+  - `C:\repositories\CanDoItAll\process-management-bundle\01-workbooks\01-process-management-execution-grade.xlsx`
+  - `C:\repositories\CanDoItAll\process-management-bundle\01-workbooks\02-process-modeling-canvas-and-runtime.xlsx`
 
 ## Validation Summary
 
-- Bundle preparation status: `Repaired and executed`
-- Bundle readiness gate: `Passed`
-- Execution status: `Completed`
-- Subbundle gate review: `Completed`
-- Final closure gate: `In progress pending completed-stage validator run`
-- Browser validation analytics: `Captured in reviews/01-execution-report.md`
+- Bundle preparation status: `Reopened after implementation coverage audit`
+- Bundle readiness gate: `Pending prepared-stage validator after audit repair`
+- Execution status: `Initial implementation completed, remediation phases 05 and 06 pending`
+- Subbundle gate review: `Reopened`
+- Final closure gate: `Not closed`
+- Browser validation analytics: `Initial implementation proof captured in reviews/01-execution-report.md`
 
 ## Execution Highlights
 
@@ -92,3 +105,5 @@ The legacy architect material remains as supporting evidence, but the current co
 - Closed two execution-time defects before bundle closure:
   - `/processes` initially crashed because read-only computed fields used `InputText` without a binding expression.
   - project-scoped seed creation initially failed on a global slug collision and crashed the Blazor circuit because the seed service threw instead of returning a `Result`.
+- The `2026-04-09` audit found that the code currently covers only `9 / 102` mapped user stories fully, with `65` partial and `28` missing.
+- The same audit found that the additional architecture notes are only partially materialized in code, and that the process canvas still lacks right-click tooling, floating create/edit forms, selection detail windows, and double-click edit flows already present in the project-structure workbench.
