@@ -16,6 +16,9 @@
 - `CanDoItAll.AgentFramework`
   Future runtime adapter:
   execution mechanics, sessions, runtime logs, and external coordination only after they are correlated back to process truth.
+- `CanDoItAll.Mcp.Processes`
+  Local MCP projection owner:
+  exposes process-definition and runtime access through stdio tools over canonical process services, install-time settings, and repo-local configuration only.
 
 ## Canonical Ownership Rules
 
@@ -28,6 +31,7 @@
 | Project scope and project hierarchy | Projects | Processes link through typed references only. |
 | Runtime sessions, logs, metrics | Future AgentFramework bridge + process correlations | Evidence must remain attributable to process context. |
 | Artifact files and evidence payloads | Managed artifact store now, IPFS seam later | Trust state stays in process/domain metadata. |
+| MCP access to process definitions and runs | Processes via `CanDoItAll.Mcp.Processes` projection | MCP must reuse process services and never become a second domain or store. |
 
 ## Process Domain Must Model Now
 
@@ -76,3 +80,11 @@
 - Canvas layout persists independently from canonical process semantics.
 - Live runtime overlays remain projections onto the authored diagram.
 - Large-screen compactness is the primary UI optimization target for the first implementation pass.
+
+## MCP Strategy
+
+- Prefer a local stdio MCP server for process access in this phase.
+- Reuse `ProcessesService` and existing composition/bootstrap logic instead of creating a second remote process API.
+- Keep settings local and restart-friendly:
+  repo-local JSON settings, reinstall-script publication, `.vscode\mcp.json` update, and `~/.codex/config.toml` update.
+- Expose compact read and mutation tools for process definitions and process runtime data, but keep canonical validation and business rules inside the process module.

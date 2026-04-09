@@ -1,6 +1,6 @@
 # CanDoItAll Process Management Bundle
 
-This bundle captured the original process-management delivery, the `2026-04-09` reopen audit, and the follow-on remediation needed to close the architecture, realistic-seed, and process-canvas parity gaps the audit exposed.
+This bundle captured the original process-management delivery, the `2026-04-09` reopen audit, the follow-on remediation needed to close the architecture, realistic-seed, and process-canvas parity gaps, and the completed phase07 delivery for process-definition MCP access.
 
 The legacy architect material remains preserved under `00-context` through `05-manifest`, while the validator-compatible bundle structure and execution evidence now reflect the completed remediation pass.
 
@@ -22,6 +22,7 @@ The legacy architect material remains preserved under `00-context` through `05-m
 - Executed phase05 remediation for reusable process forms, oversized-file reduction, and realistic software-delivery simulation scenarios.
 - Executed phase06 remediation for process-canvas right-click flows, toolbox/create windows, floating selection windows, and definition/runtime action-dialog parity.
 - Generated and validated `C:\repositories\CanDoItAll\post-implementation-bundle-phase05` and `C:\repositories\CanDoItAll\post-implementation-bundle-phase06` as explicit phase-gate artifacts.
+- Implemented `CanDoItAll.Mcp.Processes` as a simple local stdio MCP over canonical process services, then added install wiring, repo skill sync, restart-ready Codex and VS Code config, and the generated `C:\repositories\CanDoItAll\post-implementation-bundle-phase07` closure artifact.
 
 ## Bundle Layout
 
@@ -40,7 +41,8 @@ The legacy architect material remains preserved under `00-context` through `05-m
 ## Recommended Execution Order
 
 - The historical and remediation execution order remains in `C:\repositories\CanDoItAll\process-management-bundle\plan\01-phase-plan.md`.
-- The final remediation sequence was `20 -> 25 -> 21 -> 22 -> 23 -> 24` after the reopen audit.
+- The final completed remediation sequence was `20 -> 25 -> 21 -> 22 -> 23 -> 24` after the reopen audit.
+- The final completed sequence appends `26 -> 27 -> 28`.
 
 ## Dependency And Validation Map
 
@@ -53,12 +55,12 @@ The legacy architect material remains preserved under `00-context` through `05-m
 
 ## Validation Summary
 
-- Bundle preparation status: `Reopened audit repaired and closed`
+- Bundle preparation status: `Completed including phase07 MCP access and closure`
 - Bundle readiness gate: `Passed`
-- Execution status: `Completed with phase05 and phase06 remediation`
-- Subbundle gate review: `Passed`
+- Execution status: `Completed`
+- Subbundle gate review: `Passed through phase07`
 - Final closure gate: `Passed`
-- Browser validation analytics: `Passed and recorded in reviews/01-execution-report.md`
+- Browser validation analytics: `Phase07 is non-visual; prior UI analytics remain recorded in reviews/01-execution-report.md`
 
 ## Execution Highlights
 
@@ -67,4 +69,6 @@ The legacy architect material remains preserved under `00-context` through `05-m
 - Split the largest process-service and workspace logic into clearer partial slices, keeping canvas orchestration and service read/runtime responsibilities separated.
 - Expanded the development seed baseline with realistic software-delivery, hotfix rollout, customer onboarding, and incident-response scenarios, including blocked states, approvals, decisions, artifacts, and capability-gap signals.
 - Added process-canvas context actions, template-aware create flows, toolbox and selection floating windows, and definition/runtime action dialogs aligned with the shared project-structure workbench vocabulary.
-- Validated the reopened work with targeted integration tests, focused Playwright regression, generated phase05/06 repair bundles, and final bundle validation.
+- Added a local process MCP server with typed definition and runtime tools, shared migration bootstrap reuse, focused unit and integration coverage, a dedicated installer, and central reinstall-script registration.
+- Installed the MCP into the standard repo workflow, updated `.vscode\mcp.json`, updated `%USERPROFILE%\.codex\config.toml`, synced `candoitall-processes-mcp`, and recorded the new entrypoint in `.artifacts\mcp-installs\install-manifest.json`.
+- Validated the full reopened work with targeted integration tests, focused Playwright regression, generated phase05/06/07 repair bundles, install-flow proof, and final bundle validation.

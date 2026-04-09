@@ -4,7 +4,7 @@
 
 - Execution state: `Completed`
 - Product validation: `Passed`
-- Bundle closure validator: `Passed`
+- Bundle closure validator: `Passed after phase07 closure`
 
 ## Commands
 
@@ -19,6 +19,20 @@
 - Generated repair-bundle validators:
   `python C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed C:\repositories\CanDoItAll\post-implementation-bundle-phase05`
   `python C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed C:\repositories\CanDoItAll\post-implementation-bundle-phase06`
+- Reopen readiness validator:
+  `python C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage prepared C:\repositories\CanDoItAll\process-management-bundle`
+- Process MCP release build:
+  `dotnet build C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Processes\CanDoItAll.Mcp.Processes.csproj -c Release`
+- Process MCP unit tests:
+  `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Mcp.Processes.Tests\CanDoItAll.Mcp.Processes.Tests.csproj`
+- Process MCP focused integration tests:
+  `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter FullyQualifiedName~ProcessesMcp`
+- Full MCP reinstall proof:
+  `powershell -NoProfile -ExecutionPolicy Bypass -File C:\repositories\CanDoItAll\tools\Reinstall-CanDoItAllMcps.ps1 -RepoRoot C:\repositories\CanDoItAll`
+- Focused process-MCP install proof:
+  `powershell -NoProfile -ExecutionPolicy Bypass -File C:\repositories\CanDoItAll\tools\Install-CanDoItAllProcessesMcp.ps1 -RepoRoot C:\repositories\CanDoItAll`
+- Generated repair-bundle validator:
+  `python C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed C:\repositories\CanDoItAll\post-implementation-bundle-phase07`
 
 ## Browser Artifacts
 
@@ -37,6 +51,7 @@
 - `phase04`: final analytics, conformance, and browser proof pass completed without unresolved process-module defects.
 - `phase05`: generated and validated `C:\repositories\CanDoItAll\post-implementation-bundle-phase05`; all repair lanes were explicitly blocked because the reusable-form, realistic-seed, and large-class remediation closed without new defects.
 - `phase06`: generated and validated `C:\repositories\CanDoItAll\post-implementation-bundle-phase06`; all repair lanes were explicitly blocked because the process-canvas parity work closed without new defects.
+- `phase07`: implemented and validated `C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Processes`, added `C:\repositories\CanDoItAll\tools\Install-CanDoItAllProcessesMcp.ps1`, updated `C:\repositories\CanDoItAll\tools\Reinstall-CanDoItAllMcps.ps1`, synced `candoitall-processes-mcp`, and generated plus validated `C:\repositories\CanDoItAll\post-implementation-bundle-phase07`.
 
 ## Subbundle Gate Results
 
@@ -67,6 +82,9 @@
 | `22-process-canvas-context-menu-and-template-aware-create-flows` | `Passed` | `Passed` | `Passed` | `Passed` | The process canvas now supports right-click actions, toolbox-driven create flows, and template-aware authoring using extracted forms. |
 | `23-process-canvas-selection-inspector-and-edit-dialog-parity` | `Passed` | `Passed` | `Passed` | `Passed` | The process canvas now keeps floating selection windows in sync and surfaces definition/runtime action dialogs with shared workbench vocabulary. |
 | `24-post-implementation-bundle-phase06-generation` | `Passed` | `Passed` | `Passed` | `Passed` | `post-implementation-bundle-phase06` was generated and validated; all repair lanes were honestly blocked because no additional phase06 defect remained. |
+| `26-process-local-mcp-server-and-tool-contracts` | `Passed` | `Passed` | `Passed` | `Passed` | Added `CanDoItAll.Mcp.Processes`, reused canonical process services plus the shared migration bootstrap, and closed with release-build, unit-test, integration-test, and stdio-transport proof. |
+| `27-process-mcp-install-reinstall-config-and-skills` | `Passed` | `Passed` | `Passed` | `Passed` | Added the committed settings file, focused installer, reinstall-script registration, config updates, install-manifest coverage, and synced `candoitall-processes-mcp` into `%USERPROFILE%\.codex\skills`. |
+| `28-post-implementation-bundle-phase07-generation` | `Passed` | `Passed` | `Passed` | `Passed` | Generated and validated `C:\repositories\CanDoItAll\post-implementation-bundle-phase07`, then restored root-bundle closure with explicit restart guidance. |
 
 ## Browser Validation Analytics
 
@@ -79,12 +97,16 @@
 | `25-realistic-software-delivery-simulation-scenarios-and-seed-packs` | `/processes` seeded baseline | `1900x1200` | Focused Playwright regression validated the richer seeded software-delivery baseline that drives the authoring and runtime canvas proof. | `C:\repositories\CanDoItAll\output\playwright\process-management-bundle\01-definition-canvas-toolbar.png`, `C:\repositories\CanDoItAll\output\playwright\process-management-bundle\06-runtime-selection-window.png` | `Passed` |
 | `22-process-canvas-context-menu-and-template-aware-create-flows` | `/processes` | `1900x1200` | Focused Playwright regression opened the toolbox, created a templated QA step, and validated right-click context actions plus floating-window authoring. | `C:\repositories\CanDoItAll\output\playwright\process-management-bundle\02-step-editor-from-toolbox.png` | `Passed` |
 | `23-process-canvas-selection-inspector-and-edit-dialog-parity` | `/processes` | `1900x1200` | Focused Playwright regression validated selection-window sync, definition action-dialog open flow, and runtime selection-window behavior. | `C:\repositories\CanDoItAll\output\playwright\process-management-bundle\03-definition-selection-window.png`, `C:\repositories\CanDoItAll\output\playwright\process-management-bundle\05-definition-double-click-actions.png`, `C:\repositories\CanDoItAll\output\playwright\process-management-bundle\06-runtime-selection-window.png` | `Passed` |
+| `26-process-local-mcp-server-and-tool-contracts` | `N/A` | `N/A` | `Non-visual phase; proof came from release build plus focused unit, integration, and stdio transport tests for the local process MCP.` | `N/A` | `Passed` |
+| `27-process-mcp-install-reinstall-config-and-skills` | `N/A` | `N/A` | `Non-visual phase; proof came from reinstall/install script execution, config-file inspection, install-manifest inspection, and skill-sync inspection.` | `N/A` | `Passed` |
 
 ## Analytics Review
 
 - The process workspace now exposes seeded and live analytics for blocked steps, capability gaps, actual versus estimated cost, work briefs, decision records, conformance observations, and improvement signals.
 - The reopened audit defects were closed by the phase05 and phase06 remediation pass rather than left as historical debt.
 - Browser proof now includes focused process-canvas regression evidence on a large-screen desktop viewport, not only the earlier route-smoke screenshots.
+- Phase07 closed the remaining automation gap by exposing process definitions and runtime flows through a local MCP surface that stays on the canonical process services instead of duplicating domain logic.
+- The current session still cannot use the new `candoitall_processes` tool list until Codex restarts, and that restart requirement is now explicit rather than treated as an implicit side effect.
 
 ## Raw Note Closure
 
@@ -100,8 +122,11 @@
 | `N08` Do not fully integrate AgentFramework now. | `Solved` | Implementation kept convergence at the boundary level only |
 | `N09` Use component-first UI and Playwright proof later. | `Solved` | Shared BaseLib and CanvasLib process workspace with focused Playwright regression and screenshots |
 | `N10` Consider IPFS as a future seam. | `Solved` | Artifact and provenance model preserves the seam without forcing live IPFS coupling in this bundle |
+| `N11` Add a simple MCP server for processes and definitions, similar to project structure. | `Solved` | `CanDoItAll.Mcp.Processes`, focused build/test proof, and shared-service-boundary review |
+| `N12` Update reinstall script, skills, and install the new MCP so restart can unlock validation. | `Solved` | Reinstall/install command proof, `.vscode\mcp.json`, `%USERPROFILE%\.codex\config.toml`, install manifest, synced repo skill, and explicit restart guidance |
 
 ## Residual Risks
 
 - `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\WorkforceProfileIntegrationTests.cs` still emits the pre-existing `xUnit2031` analyzer warning, unrelated to the process-module change set.
 - Full AgentFramework implementation remains intentionally deferred by product scope; only the process-management boundary and ownership rules were closed here.
+- Codex must be restarted before this session can actually call the newly registered `candoitall_processes` MCP server.

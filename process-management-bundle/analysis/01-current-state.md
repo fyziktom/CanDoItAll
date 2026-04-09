@@ -10,8 +10,8 @@
 ## Main Solution Evidence
 
 - Snapshot used: `snap-20260409084912-d225a84b`.
-- `CanDoItAll` currently has 49 source projects and no `CanDoItAll.Modules.Processes` project yet.
-- Existing module and infrastructure patterns already support adding a new module through shared composition, shared `AppDbContext`, and dual SQLite/PostgreSQL migrations.
+- `CanDoItAll` now contains the shipped `CanDoItAll.Modules.Processes` module, process workspace UI, realistic seed service, runtime analytics, and process-canvas remediation from phase05 and phase06.
+- Existing module and infrastructure patterns already support adding a new local MCP server through shared composition, shared `AppDbContext`, and runtime database-profile switching.
 
 ## Canonical Ownership Already Present In The Repo
 
@@ -19,6 +19,14 @@
 - Workspace already owns provider truth through `ProviderProfile` in `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\WorkspaceModels.cs`.
 - Workbench already exposes project-object seeding and structure assembly patterns through `ProjectWorkbenchService` in `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\ProjectWorkbenchModels.cs`.
 - Infrastructure already exposes managed artifact storage and storage-placement seams through `IManagedArtifactStore` and `StoragePlacementService`.
+- Processes already expose the canonical authoring and runtime service surface through `ProcessesService`, including definition listing, editor loading, save/publish/delete, run listing, analytics, artifact recording, and import/export.
+
+## MCP Surface Status
+
+- `CanDoItAll.Mcp.ProjectStructure`, `CanDoItAll.Mcp.Components`, `CanDoItAll.Mcp.CodeAnalytics`, `CanDoItAll.Mcp.DotNetWatch`, and `CanDoItAll.Mcp.SshOps` already define the local MCP installation and Codex config patterns used in this repo.
+- `CanDoItAll.Mcp.ProjectStructure` is remote-HTTP-backed and depends on a project-structure agent API plus tokenized settings.
+- The process module currently has no matching MCP surface, no dedicated local install script, and no reinstall-script wiring.
+- The simplest maintainable fit for the new request is a local stdio MCP over canonical process services and the existing database-profile bootstrap path, not a new remote process-agent API.
 
 ## Cross-Repo Duplication Risk
 
@@ -42,3 +50,4 @@
 - Missing explicit mapping from additional enterprise notes into concrete extension points
 - Missing cross-repo single-source-of-truth inventory
 - Missing mandatory component-first and Playwright-first UI validation rules at the subbundle level
+- Missing process-definition MCP projection, install wiring, and restart-ready Codex configuration

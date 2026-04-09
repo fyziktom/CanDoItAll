@@ -16,6 +16,8 @@
    architecture hardening, realistic simulation scenario expansion, reusable form extraction, and oversized-file repair after the implementation coverage audit
 7. Phase 06:
    process-canvas parity with project structure, including context menu, floating create flows, selection inspector, and edit-dialog behavior
+8. Phase 07:
+   local process MCP server, process-definition tool contracts, install/reinstall wiring, restart-ready skill sync, and post-phase closure
 
 ## Subbundle Dependency Map
 
@@ -46,6 +48,9 @@ flowchart TD
     S22["22 Process canvas context menu and template-aware create flows"]
     S23["23 Process canvas selection inspector and edit-dialog parity"]
     S24["24 post-implementation-bundle-phase06 generation"]
+    S26["26 Process local MCP server and tool contracts"]
+    S27["27 Process MCP install reinstall config and skills"]
+    S28["28 post-implementation-bundle-phase07 generation"]
 
     S01 --> S02 --> S03
     S03 --> S04 --> S05 --> S06 --> S07 --> S08
@@ -54,6 +59,7 @@ flowchart TD
     S16 --> S17 --> S18 --> S19
     S19 --> S20 --> S25 --> S21
     S21 --> S22 --> S23 --> S24
+    S24 --> S26 --> S27 --> S28
     S05 --> S09
     S06 --> S09
     S07 --> S15
@@ -65,6 +71,11 @@ flowchart TD
     S20 --> S23
     S25 --> S22
     S25 --> S23
+    S05 --> S26
+    S09 --> S26
+    S11 --> S26
+    S14 --> S26
+    S26 --> S27
 ```
 
 ## Critical Subbundles
@@ -83,6 +94,8 @@ flowchart TD
 | `25-realistic-software-delivery-simulation-scenarios-and-seed-packs` | UI, analytics, and governance proof become weak if the process module only seeds toy data. | Rich seed data proof, realistic software-delivery scenario walkthroughs, and simulation-oriented regression validation. |
 | `22-process-canvas-context-menu-and-template-aware-create-flows` | The authored process canvas is currently only a rendered surface, not an interactive workbench. | Playwright proof for right-click flows, floating toolbox/create windows, and template-aware authoring. |
 | `23-process-canvas-selection-inspector-and-edit-dialog-parity` | Selection, editing, and runtime inspection must match the project-structure workbench rhythm before the module can claim canvas maturity. | Playwright proof for single-click selection sync, double-click edit modal/actions, and floating inspector parity. |
+| `26-process-local-mcp-server-and-tool-contracts` | External automation and future agent workflows need a process surface, but the repo cannot afford a second process API or duplicated domain logic. | Build proof, focused unit tests, real stdio transport proof, and service-boundary review showing the MCP reuses canonical process services. |
+| `27-process-mcp-install-reinstall-config-and-skills` | A working MCP binary is still useless if reinstall/config/skills do not make it discoverable and restart-ready for Codex and VS Code. | Installer proof, config-file diff review, install-manifest update, and restart guidance. |
 
 ## Phase Gates
 
@@ -100,5 +113,7 @@ flowchart TD
   subbundles `20` and `25` closed with architecture, componentization, realistic-seed, and simulation proof, then `21` must generate and validate `post-implementation-bundle-phase05`.
 - Phase 06 gate:
   subbundles `22` and `23` closed with project-structure parity proof, then `24` must generate and validate `post-implementation-bundle-phase06`.
+- Phase 07 gate:
+  subbundles `26` and `27` closed with MCP transport and install/config proof, then `28` must generate and validate `post-implementation-bundle-phase07`.
 - Universal gate:
   the next phase may not start while the previous post-phase repair bundle still contains `Ready` or `In progress` repair subbundles.

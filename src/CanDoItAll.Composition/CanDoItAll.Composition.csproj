@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />

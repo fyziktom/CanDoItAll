@@ -24,6 +24,7 @@
     <ProjectReference Include="..\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Web\CanDoItAll.Web.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Mcp.Processes\CanDoItAll.Mcp.Processes.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Mcp.ProjectStructure\CanDoItAll.Mcp.ProjectStructure.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />

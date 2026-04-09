@@ -62,3 +62,14 @@
   Add extension points for outcome metrics, capability-gap signals, decision intelligence, economics, relationship-quality analytics, and improvement backlog generation.
 - `REQ-022`
   Add executive and management-ready surfaces for bottlenecks, trust problems, rework, capability gaps, cost, and process health instead of developer-only telemetry.
+
+## MCP Access Requirements
+
+- `REQ-023`
+  Add a simple `CanDoItAll.Mcp.Processes` server that exposes process definitions and process runtime access through MCP tools without introducing a second process truth source.
+- `REQ-024`
+  Keep the process MCP local stdio and backed by canonical process services plus the repo’s active database-profile/runtime bootstrap path.
+- `REQ-025`
+  Update install, reinstall, settings, VS Code MCP config, Codex config, manifest, and repo-managed skill sync so the process MCP is installed and restart-ready.
+- `REQ-026`
+  Validate the process MCP with focused unit tests, integration tests, real stdio transport proof, and installer/config proof before closure.

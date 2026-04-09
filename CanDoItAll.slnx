@@ -12,6 +12,7 @@
     <Project Path="src/CanDoItAll.Mcp.CodeAnalytics/CanDoItAll.Mcp.CodeAnalytics.csproj" />
     <Project Path="src/CanDoItAll.Mcp.DotNetWatch/CanDoItAll.Mcp.DotNetWatch.csproj" />
     <Project Path="src/CanDoItAll.Mcp.LocalRuntime/CanDoItAll.Mcp.LocalRuntime.csproj" />
+    <Project Path="src/CanDoItAll.Mcp.Processes/CanDoItAll.Mcp.Processes.csproj" />
     <Project Path="src/CanDoItAll.Mcp.ProjectStructure/CanDoItAll.Mcp.ProjectStructure.csproj" />
     <Project Path="src/CanDoItAll.Mcp.SshOps/CanDoItAll.Mcp.SshOps.csproj" />
     <Project Path="src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj" />
@@ -36,6 +37,7 @@
     <Project Path="tests/CanDoItAll.Mcp.Components.Tests/CanDoItAll.Mcp.Components.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.DotNetWatch.Tests/CanDoItAll.Mcp.DotNetWatch.Tests.csproj" />
+    <Project Path="tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.ProjectStructure.Tests/CanDoItAll.Mcp.ProjectStructure.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj" />

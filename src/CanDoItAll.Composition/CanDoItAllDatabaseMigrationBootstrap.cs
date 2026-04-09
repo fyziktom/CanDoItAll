@@ -8,13 +8,13 @@ using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace CanDoItAll.Web.Infrastructure;
+namespace CanDoItAll.Composition;
 
-internal static class LegacySqliteMigrationBootstrap
+public static class CanDoItAllDatabaseMigrationBootstrap
 {
     private const string HistoryTableName = "__EFMigrationsHistory";
 
-    public static async Task PrepareAsync(
+    public static async Task PrepareLegacySqliteAsync(
         AppDbContext dbContext,
         ILogger logger,
         CancellationToken cancellationToken = default)
