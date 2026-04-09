@@ -12,12 +12,14 @@ public sealed class TabsComponentTests : TestContext
         var cut = RenderTabs(parameters => parameters
             .Add(component => component.Class, "custom-shell")
             .Add(component => component.BorderMode, TabsBorderMode.None)
+            .Add(component => component.Tone, TabsTone.Success)
             .Add(component => component.OverflowMode, TabsOverflowMode.Wrap));
 
         var root = cut.Find(".cad-tabs");
 
         Assert.Contains("custom-shell", root.ClassList);
         Assert.Contains("cad-tabs--border-none", root.ClassList);
+        Assert.Contains("cad-tabs--tone-success", root.ClassList);
         Assert.Contains("cad-tabs--overflow-wrap", root.ClassList);
         Assert.DoesNotContain("zy-tabs", cut.Markup, StringComparison.Ordinal);
     }

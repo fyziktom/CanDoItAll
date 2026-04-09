@@ -30,6 +30,16 @@ public enum TabsBorderMode
     None
 }
 
+public enum TabsTone
+{
+    Primary,
+    Secondary,
+    Info,
+    Success,
+    Warning,
+    Danger
+}
+
 public enum TabsOverflowMode
 {
     Auto,

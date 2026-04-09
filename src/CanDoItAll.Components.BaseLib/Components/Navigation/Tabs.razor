@@ -137,6 +137,9 @@
     public TabsBorderMode BorderMode { get; set; } = TabsBorderMode.Auto;
 
     [Parameter]
+    public TabsTone Tone { get; set; } = TabsTone.Primary;
+
+    [Parameter]
     public TabsOverflowMode OverflowMode { get; set; } = TabsOverflowMode.Auto;
 
     [Parameter]
@@ -336,6 +339,7 @@
                 ResolveVariantCssClass(),
                 ResolvePositionCssClass(),
                 ResolveBorderCssClass(),
+                ResolveToneCssClass(),
                 ResolveOverflowCssClass(),
                 IsHorizontal ? "cad-tabs--horizontal" : "cad-tabs--vertical"
             ]);
@@ -378,6 +382,19 @@
             TabsBorderMode.None => "cad-tabs--border-none",
             TabsBorderMode.Soft => "cad-tabs--border-soft",
             _ => "cad-tabs--border-auto"
+        };
+    }
+
+    private string ResolveToneCssClass()
+    {
+        return Tone switch
+        {
+            TabsTone.Secondary => "cad-tabs--tone-secondary",
+            TabsTone.Info => "cad-tabs--tone-info",
+            TabsTone.Success => "cad-tabs--tone-success",
+            TabsTone.Warning => "cad-tabs--tone-warning",
+            TabsTone.Danger => "cad-tabs--tone-danger",
+            _ => "cad-tabs--tone-primary"
         };
     }
 
