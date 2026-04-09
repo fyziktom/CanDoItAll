@@ -143,6 +143,12 @@
     public TabsOverflowMode OverflowMode { get; set; } = TabsOverflowMode.Auto;
 
     [Parameter]
+    public TabsPanelOverflowMode PanelOverflowMode { get; set; } = TabsPanelOverflowMode.Visible;
+
+    [Parameter]
+    public bool FillHeight { get; set; }
+
+    [Parameter]
     public string? AriaLabel { get; set; }
 
     [Parameter]
@@ -340,7 +346,9 @@
                 ResolvePositionCssClass(),
                 ResolveBorderCssClass(),
                 ResolveToneCssClass(),
+                ResolvePanelOverflowCssClass(),
                 ResolveOverflowCssClass(),
+                FillHeight ? "cad-tabs--fill-height" : null,
                 IsHorizontal ? "cad-tabs--horizontal" : "cad-tabs--vertical"
             ]);
     }
@@ -405,6 +413,17 @@
             TabsOverflowMode.Wrap => "cad-tabs--overflow-wrap",
             TabsOverflowMode.Scroll => "cad-tabs--overflow-scroll",
             _ => "cad-tabs--overflow-auto"
+        };
+    }
+
+    private string ResolvePanelOverflowCssClass()
+    {
+        return PanelOverflowMode switch
+        {
+            TabsPanelOverflowMode.Auto => "cad-tabs--panel-overflow-auto",
+            TabsPanelOverflowMode.Scroll => "cad-tabs--panel-overflow-scroll",
+            TabsPanelOverflowMode.Hidden => "cad-tabs--panel-overflow-hidden",
+            _ => "cad-tabs--panel-overflow-visible"
         };
     }
 

@@ -3976,6 +3976,10 @@
   .cad-tabs--horizontal {
     flex-direction: column;
   }
+  .cad-tabs--fill-height {
+    height: 100%;
+    min-height: calc(var(--spacing) * 0);
+  }
   .cad-tabs--position-bottom {
     flex-direction: column-reverse;
   }
@@ -4170,6 +4174,12 @@
     min-width: calc(var(--spacing) * 0);
     flex: 1;
   }
+  .cad-tabs--fill-height .cad-tabs__panels {
+    display: flex;
+    min-height: calc(var(--spacing) * 0);
+    flex: 1;
+    flex-direction: column;
+  }
   .cad-tabs__panel {
     min-width: 0;
     padding: var(--cad-tabs-panel-padding);
@@ -4178,6 +4188,23 @@
     background: var(--cad-tabs-panel-background);
     box-shadow: var(--cad-tabs-panel-shadow);
     color: var(--cad-color-text);
+  }
+  .cad-tabs--fill-height .cad-tabs__panel {
+    display: flex;
+    min-height: calc(var(--spacing) * 0);
+    flex: 1;
+    flex-direction: column;
+  }
+  .cad-tabs--panel-overflow-auto .cad-tabs__panel {
+    overflow: auto;
+    scrollbar-gutter: stable;
+  }
+  .cad-tabs--panel-overflow-scroll .cad-tabs__panel {
+    overflow: scroll;
+    scrollbar-gutter: stable;
+  }
+  .cad-tabs--panel-overflow-hidden .cad-tabs__panel {
+    overflow: hidden;
   }
   .cad-tabs__panel[hidden] {
     display: none !important;
