@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Globalization;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Components.Sandbox;
@@ -35,6 +36,16 @@ public sealed class ComponentCatalogService
             "Owns page-level spacing and max-width conventions through the shared BaseLib output CSS.",
             "Use scaffold slots before introducing page-local wrapper structure."
         ],
+        ["Tabs"] =
+        [
+            "Uses the shared Tailwind-owned `cad-tabs` styles from `_content/CanDoItAll.Components.BaseLib/css/output.css`; it should not depend on legacy `zy-*` selectors.",
+            "Prefer `Variant`, `Tone`, `BorderMode`, and `OverflowMode` before page-local styling, then use the root `Class` parameter only for shell-level atmosphere."
+        ],
+        ["SecondaryTabs"] =
+        [
+            "Secondary tabs stay lighter than full `Tabs` and should read as a compact route or scenario switch instead of a content container.",
+            "Use shared variants and text states first; do not restyle them into a second full tabs system."
+        ],
         ["StatusBadge"] =
         [
             "Maps semantic tones to the shared status surface palette in the generated BaseLib stylesheet.",
@@ -69,6 +80,362 @@ public sealed class ComponentCatalogService
             "CanvasLib components render against the shared workbench stylesheets exposed by `<CanvasLibHeadAssets />`.",
             "Canvas surfaces also use the typed `CanvasThemeTokenPack` so runtime and preview assets stay aligned."
         ]
+    };
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> BaseLibCssSourceFilesByComponent = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Tabs"] = [@"Tailwind\navigation\tabs.css"],
+        ["TabsItem"] = [@"Tailwind\navigation\tabs.css"],
+        ["SecondaryTabs"] = [@"Tailwind\navigation\tabs.css"],
+        ["RibbonTabs"] = [@"Tailwind\navigation\tabs.css"],
+        ["PageHeader"] = [@"Tailwind\navigation\page-header.css"],
+        ["FilterBar"] = [@"Tailwind\navigation\page-header.css"],
+        ["TreeView"] = [@"Tailwind\navigation\treeview.css"],
+        ["TreeViewNodeRow"] = [@"Tailwind\navigation\treeview.css"],
+        ["TagEditor"] = [@"Tailwind\forms\tag-editor.css"],
+        ["Button"] = [@"Tailwind\controls\buttons.css"],
+        ["Badge"] = [@"Tailwind\controls\badges.css"],
+        ["BadgesGroup"] = [@"Tailwind\controls\badges.css"],
+        ["Chip"] = [@"Tailwind\controls\badges.css"],
+        ["ChipRow"] = [@"Tailwind\controls\badges.css"],
+        ["Pill"] = [@"Tailwind\controls\badges.css"],
+        ["PillList"] = [@"Tailwind\controls\badges.css"],
+        ["StatusBadge"] = [@"Tailwind\controls\badges.css"],
+        ["Alert"] = [@"Tailwind\feedback\alerts.css"],
+        ["Callout"] = [@"Tailwind\feedback\alerts.css"],
+        ["EmptyState"] = [@"Tailwind\feedback\alerts.css"],
+        ["LoadingState"] = [@"Tailwind\feedback\alerts.css"],
+        ["Notification"] = [@"Tailwind\feedback\alerts.css"],
+        ["HelpPopover"] = [@"Tailwind\surfaces\overlays.css"],
+        ["Tooltip"] = [@"Tailwind\surfaces\overlays.css"],
+        ["Dialog"] = [@"Tailwind\surfaces\overlays.css"]
+    };
+    private static readonly IReadOnlyDictionary<string, ComponentGuidanceDocument> GuidanceByFamily = new Dictionary<string, ComponentGuidanceDocument>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Badges"] = new(
+            [
+                "Compact status, counts, labels, and short categorical emphasis."
+            ],
+            [
+                "Replacing headings, summaries, or full explanation copy."
+            ],
+            [
+                "Keep badge copy short and scannable.",
+                "Use semantic tone first and avoid turning badges into miniature cards."
+            ]),
+        ["Buttons"] = new(
+            [
+                "Primary, secondary, and inline actions with shared emphasis rules."
+            ],
+            [
+                "Using button styling as generic layout chrome."
+            ],
+            [
+                "Use shared variants and sizes before page-local classes.",
+                "If many actions compete, reduce the set or move secondary actions into lighter navigation."
+            ]),
+        ["Cards"] = new(
+            [
+                "Grouped surfaces for summaries, actions, metrics, and section-level content."
+            ],
+            [
+                "Building very long pages by stacking many cards that users consume one mode at a time."
+            ],
+            [
+                "Use cards when the surface itself is the interaction or grouping unit.",
+                "If adjacent cards represent alternate views of the same object, promote the pattern into tabs or a split shell."
+            ]),
+        ["DataVisualization"] = new(
+            [
+                "Charts, data grids, axes, and quantitative progress display."
+            ],
+            [
+                "Decorative charts that do not help someone operate or decide."
+            ],
+            [
+                "Keep the chart or grid tied to a decision or workflow.",
+                "Prefer shared display components before inventing local chart shells."
+            ]),
+        ["Feedback"] = new(
+            [
+                "Alerts, empty states, loading surfaces, notifications, and contextual help."
+            ],
+            [
+                "Primary page structure or decorative marketing copy."
+            ],
+            [
+                "Use feedback components to orient, explain state, and suggest the next step.",
+                "Keep tone calm and utility-first; if the state needs a real workflow branch, switch layout instead of adding louder alert chrome."
+            ]),
+        ["Forms"] = new(
+            [
+                "Data entry, configuration, validation, and small editing workflows."
+            ],
+            [
+                "Hand-built field wrappers when shared field, row, and section components already exist."
+            ],
+            [
+                "Prefer `FormField`, `FormRow`, and shared input parameters before raw input markup.",
+                "Use inline help and validation to reduce scanning friction instead of adding extra layout wrappers."
+            ]),
+        ["Identity"] = new(
+            [
+                "Presence, avatars, icons, and attribution details that improve scanning."
+            ],
+            [
+                "Decorative icon usage with no orientation value."
+            ],
+            [
+                "Use identity components to help recognition and hierarchy.",
+                "If an icon does not improve scanning, remove it."
+            ]),
+        ["Layout"] = new(
+            [
+                "Page structure, responsive regions, spacing rhythm, and workspace composition."
+            ],
+            [
+                "Using layout primitives to simulate semantic components that already exist."
+            ],
+            [
+                "Start with layout intent, not wrappers.",
+                "If content splits into modes, use tabs, list-detail, or rails before accepting a long single-column page."
+            ]),
+        ["Lists"] = new(
+            [
+                "Rows, grouped metadata, list/detail workspaces, and selection-driven review surfaces."
+            ],
+            [
+                "Using list shells when the user is not actually selecting between records or views."
+            ],
+            [
+                "Keep list density readable and let the detail area stay focused.",
+                "When the detail area becomes tall and mode-heavy, segment it with tabs instead of stacking more sections."
+            ]),
+        ["Modals"] = new(
+            [
+                "Dialogs and transient overlays that keep the user in context."
+            ],
+            [
+                "Permanent page structure or long-form navigation."
+            ],
+            [
+                "Use overlays for focused interruption, not as a substitute for page composition.",
+                "Keep modal flows short and explicit."
+            ]),
+        ["Navigation"] = new(
+            [
+                "Tabs, headers, trees, steps, toolbars, and route-level orientation."
+            ],
+            [
+                "Passive content layout that should live in cards, lists, or scaffold regions instead."
+            ],
+            [
+                "Choose the lightest navigation that still makes state obvious.",
+                "Use tabs aggressively when it reduces vertical sprawl and keeps one focused working surface visible."
+            ]),
+        ["Storage"] = new(
+            [
+                "Storage-oriented summaries, badges, and capacity surfaces."
+            ],
+            [
+                "General-purpose layout or status surfaces outside storage workflows."
+            ],
+            [
+                "Keep storage displays quantitative and utility-first.",
+                "Reuse shared summary surfaces before introducing storage-specific local wrappers."
+            ]),
+        ["Typography"] = new(
+            [
+                "Heading rhythm, copy hierarchy, captions, dividers, and text emphasis."
+            ],
+            [
+                "Replacing semantic structure with arbitrary font-size utility classes."
+            ],
+            [
+                "Use typography components to keep scanning and hierarchy consistent.",
+                "Prefer shared text styles before page-local text tuning."
+            ]),
+        ["Calendar"] = new(
+            [
+                "Calendar-specific runtime surfaces, editors, and selection workflows."
+            ],
+            [
+                "Generic app layout that should stay in BaseLib."
+            ],
+            [
+                "Keep calendar interactions tied to the shared canvas model and workbench surfaces."
+            ]),
+        ["Core"] = new(
+            [
+                "Canvas runtime infrastructure such as floating windows and accessibility layers."
+            ],
+            [
+                "General product UI outside the workbench runtime."
+            ],
+            [
+                "Treat core canvas components as runtime infrastructure, not page-level decoration."
+            ]),
+        ["Diagnostics"] = new(
+            [
+                "Canvas diagnostics and runtime debugging overlays."
+            ],
+            [
+                "Routine operator surfaces that should stay calm and minimal."
+            ],
+            [
+                "Keep diagnostics discoverable but secondary to the main work surface."
+            ]),
+        ["Graph"] = new(
+            [
+                "Canvas graph composition, overlays, interaction, and primitives."
+            ],
+            [
+                "General layout outside graph or scene authoring flows."
+            ],
+            [
+                "Align graph surfaces with the shared canvas contract and interaction model."
+            ]),
+        ["Workbench"] = new(
+            [
+                "Canvas workbench shells and stage-level runtime surfaces."
+            ],
+            [
+                "Lightweight page regions that should use BaseLib layout."
+            ],
+            [
+                "Use workbench components when the page is truly a canvas workspace, not just a dense form."
+            ])
+    };
+    private static readonly IReadOnlyDictionary<string, string> SummaryByComponent = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Tabs"] = "Shared BaseLib tabs for segmenting dense content into focused panels so workspace pages do not become one long scroll.",
+        ["TabsItem"] = "Child panel definition for `Tabs` that supplies the tab label, optional icon or badge, and the pane content for the selected view.",
+        ["SecondaryTabs"] = "Shared BaseLib secondary tab strip for lighter scenario switches, route toggles, and inline subnavigation.",
+        ["Steps"] = "Shared BaseLib sequential progress navigation for wizard-like flows where order matters more than free switching.",
+        ["PageHeader"] = "Shared BaseLib page-header component for titles, lead copy, and action context at the top of a workspace.",
+        ["Toolbar"] = "Shared BaseLib toolbar component for dense inline actions, filters, and control clusters around a working surface.",
+        ["TreeView"] = "Shared BaseLib tree navigation component for hierarchical exploration and selection.",
+        ["EmptyState"] = "Shared BaseLib empty-state component for zero-data, no-selection, and first-run orientation surfaces.",
+        ["LoadingState"] = "Shared BaseLib loading-state component for progress and transition surfaces that should feel intentional instead of blank.",
+        ["Alert"] = "Shared BaseLib alert component for actionable status and inline system feedback.",
+        ["FormField"] = "Shared BaseLib form-field wrapper for label, helper, validation, and control alignment.",
+        ["TextBox"] = "Shared BaseLib text input component for standard single-line entry flows.",
+        ["DropDown"] = "Shared BaseLib selection input component for shared option picking flows.",
+        ["SectionCard"] = "Shared BaseLib section surface for grouped content blocks, often inside a scaffold, grid, or tabs panel.",
+        ["PageScaffold"] = "Shared BaseLib page shell that coordinates header, lead, and workspace regions so dense pages can use width intentionally.",
+        ["ListDetailShell"] = "Shared BaseLib master-detail shell for selection-driven workspaces with a stable list region and a focused detail region.",
+        ["CanvasWorkbench"] = "Shared CanvasLib workbench surface for graph-based authoring, tool windows, and dense desktop-first runtime composition.",
+        ["CanvasCalendar"] = "Shared CanvasLib calendar surface for schedule navigation, selection, and event-oriented workspace views.",
+        ["CanvasFloatingWindow"] = "Shared CanvasLib floating window surface for movable auxiliary panels inside the workbench runtime.",
+        ["EmptyStateOverlay"] = "Shared CanvasLib empty-state overlay for graph and canvas surfaces with no active content."
+    };
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> TagsByComponent = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Tabs"] =
+        [
+            "progressive-disclosure",
+            "reduce-scroll",
+            "segmented-workspace",
+            "panel-switching",
+            "settings-rail",
+            "overflow"
+        ],
+        ["TabsItem"] =
+        [
+            "tab-panel",
+            "panel-content",
+            "badge"
+        ],
+        ["SecondaryTabs"] =
+        [
+            "subnavigation",
+            "filters",
+            "scenario-switch"
+        ],
+        ["Steps"] =
+        [
+            "wizard",
+            "progress",
+            "sequential-navigation"
+        ],
+        ["PageScaffold"] =
+        [
+            "page-shell",
+            "layout",
+            "workspace"
+        ],
+        ["SectionCard"] =
+        [
+            "panel",
+            "surface",
+            "section"
+        ],
+        ["ListDetailShell"] =
+        [
+            "master-detail",
+            "detail-pane",
+            "split-view"
+        ]
+    };
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> AdditionalDependenciesByComponent = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Tabs"] = ["TabsItem"],
+        ["Steps"] = ["StepsItem"]
+    };
+    private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> ParameterDescriptionsByComponent = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Tabs"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["AriaLabel"] = "Accessible label announced for the whole tab list when the surrounding heading is not enough.",
+            ["BorderMode"] = "Controls whether the tab buttons render with the default border, a softer border treatment, or no border at all.",
+            ["Change"] = "Raised after a user-initiated tab switch so flows can react to the new selected panel.",
+            ["ChildContent"] = "Optional fallback child content path when the tab items are declared directly instead of inside `TabItems`.",
+            ["Class"] = "Adds extra Tailwind classes to the tabs root for shell-level atmosphere without replacing the shared internal structure.",
+            ["OverflowMode"] = "Chooses whether long tab strips auto-decide, wrap into multiple rows, or stay single-row and scroll horizontally.",
+            ["RenderMode"] = "Chooses server rendering of only the active panel or client rendering of every panel for faster instant switches.",
+            ["SelectedIndex"] = "Zero-based selected tab index among the visible tabs.",
+            ["SelectedIndexChanged"] = "Two-way binding callback for the selected tab index.",
+            ["Style"] = "Appends inline styles to the tabs root when a one-off shell tweak is unavoidable.",
+            ["TabItems"] = "Slot that contains the `TabsItem` children defining labels and panel content.",
+            ["TabPosition"] = "Moves the tab strip to the top, bottom, left, or right of the panel surface.",
+            ["Tone"] = "Advanced accent color for the selected state. Use it to shift emphasis, not to rescue readability.",
+            ["Variant"] = "Shared shape and density preset for the tabs surface, such as workspace, modal, or workstation styling."
+        },
+        ["TabsItem"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["AdditionalAttributes"] = "Passes extra attributes and classes to the rendered tab button.",
+            ["BadgeText"] = "Optional supporting badge shown inside the tab button for counts or short status markers.",
+            ["ChildContent"] = "Panel content rendered when the tab becomes active.",
+            ["Disabled"] = "Keeps the tab visible but unavailable for selection.",
+            ["Icon"] = "Optional icon token rendered before the tab text.",
+            ["Text"] = "Primary tab label. If omitted, the component falls back to a stable generic title.",
+            ["Visible"] = "Removes the tab from the rendered strip when false."
+        },
+        ["SecondaryTabs"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Header"] = "Optional content rendered above the secondary tab strip for local orientation.",
+            ["Items"] = "Collection of lightweight tab items used for compact scenario switching or route toggles.",
+            ["SelectedKey"] = "Currently selected item key.",
+            ["SelectedKeyChanged"] = "Two-way binding callback for the selected item key."
+        },
+        ["SectionCard"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Description"] = "Supporting copy for the section header.",
+            ["Title"] = "Section heading rendered by the shared panel shell."
+        },
+        ["PageScaffold"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ChildContent"] = "Main page body region where tabs, split views, grids, and sections should live.",
+            ["Header"] = "Top page header region for orientation and primary actions.",
+            ["Lead"] = "Optional lead content that introduces the workspace before the main body.",
+            ["SecondaryRail"] = "Optional side rail for supporting context, shortcuts, or meta information."
+        }
+    };
+    private static readonly IReadOnlyDictionary<string, string> DefaultParameterDescriptionsByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["AdditionalAttributes"] = "Passes unmatched HTML attributes through to the rendered element.",
+        ["ChildContent"] = "Slot for the component body content.",
+        ["Class"] = "Adds extra Tailwind classes to the component root without replacing the shared structure.",
+        ["Style"] = "Appends inline styles to the component root."
     };
     private static readonly IReadOnlyDictionary<string, ComponentGuidanceDocument> GuidanceByComponent = new Dictionary<string, ComponentGuidanceDocument>(StringComparer.OrdinalIgnoreCase)
     {
@@ -136,6 +503,92 @@ public sealed class ComponentCatalogService
                 "Use `FormRow` for common field pairings before creating a custom form wrapper.",
                 "Combine `FormRow` with `FormField` so label, helper text, and control spacing stay inside BaseLib."
             ]),
+        ["Tabs"] = new(
+            [
+                "Workspace pages whose sections are mutually exclusive and would otherwise become a long vertical scroll.",
+                "Settings, review, and case-management flows that need progressive disclosure inside one stable shell.",
+                "Horizontal or vertical panel switching where one selected pane should dominate the viewport."
+            ],
+            [
+                "Short inline toggles or route chips where `SecondaryTabs` is the lighter fit.",
+                "Strictly sequential flows where `Steps` should communicate order and progress.",
+                "Comparison layouts where users need multiple panes visible at the same time."
+            ],
+            [
+                "Prefer `Tabs` before stacking several `SectionCard` blocks that users read one at a time.",
+                "Start with the readable default surface; use `Tone` as an advanced accent and keep shell customization on the root `Class` only.",
+                "Use `OverflowMode.Wrap` or `OverflowMode.Scroll` intentionally for longer label sets, and move to `TabPosition.Left` for settings rails.",
+                "Keep the strip focused. If the labels stop scanning quickly, split the workflow instead of adding more tabs."
+            ]),
+        ["TabsItem"] = new(
+            [
+                "A focused pane inside `Tabs` with a task-oriented label and one coherent content region."
+            ],
+            [
+                "Standalone section surfaces that should just be cards or layout blocks.",
+                "Decorative labels with no associated panel content."
+            ],
+            [
+                "Keep labels short and specific, then use `BadgeText` sparingly for counts or short status hints.",
+                "If a pane needs a unique shell, customize the parent `Tabs` root instead of rebuilding the inner tab button structure."
+            ]),
+        ["SecondaryTabs"] = new(
+            [
+                "Compact scenario switches, route segments, and inline mode changes.",
+                "Lightweight navigation where the surrounding page or panel already owns the content shell."
+            ],
+            [
+                "Dense content panels that need a visible selected seam and a shared panel surface; use `Tabs` there instead.",
+                "Sequential progress indicators that should use `Steps`."
+            ],
+            [
+                "Reach for `SecondaryTabs` when users are changing context inside an already established shell.",
+                "If switching the tab also switches a substantial content panel and reduces page scroll, promote the pattern to `Tabs`."
+            ]),
+        ["Steps"] = new(
+            [
+                "Wizard-like flows, checklists, and ordered progress where completion state matters.",
+                "Navigation that should teach the user what comes next."
+            ],
+            [
+                "Free workspace switching between independent panels where tabs would be clearer."
+            ],
+            [
+                "Use `Steps` when sequence is the message. If users need to hop between peer sections, use `Tabs` instead."
+            ]),
+        ["PageScaffold"] = new(
+            [
+                "Full-page shells that need a stable header and a deliberate content region.",
+                "Dense pages that should use width intentionally instead of defaulting to a narrow single-column stack."
+            ],
+            [
+                "Tiny inline content regions where a local `SectionCard`, `Grid`, or `Stack` is enough."
+            ],
+            [
+                "Use tabs, split views, or grid-based regions inside the scaffold body when content naturally breaks into modes or panes.",
+                "Avoid turning the scaffold body into a long stack of unrelated cards when navigation or segmentation would scan better."
+            ]),
+        ["SectionCard"] = new(
+            [
+                "Grouped content blocks inside a page, grid cell, or tabs panel."
+            ],
+            [
+                "Using many stacked cards to simulate navigation between mutually exclusive content modes."
+            ],
+            [
+                "If several section cards represent alternate views of the same object, promote them into `Tabs` so the page does not grow vertically without limit."
+            ]),
+        ["ListDetailShell"] = new(
+            [
+                "Selection-driven workspaces with a stable list region and a detail pane.",
+                "Review flows where the detail pane should stay focused while the selected record changes."
+            ],
+            [
+                "Simple pages without a persistent selection model."
+            ],
+            [
+                "When the detail pane starts stacking multiple dense regions, place `Tabs` inside the detail pane instead of growing one very tall view."
+            ]),
         ["SectionHead"] = new(
             [
                 "Section titles, lead copy, and compact header blocks above a panel."
@@ -170,6 +623,7 @@ public sealed class ComponentCatalogService
             ],
             [
                 "Prefer component parameters, variants, and layout primitives before custom structural classes.",
+                "When content naturally breaks into modes or stages, use tabs, split layouts, or list-detail shells before stacking one long page.",
                 "Use sandbox and product examples to mirror established composition patterns."
             ]),
         ["CanvasLib"] = new(
@@ -306,8 +760,19 @@ public sealed class ComponentCatalogService
             "CanvasLib" => CanvasLibStylesheets,
             _ => new[] { "_content/CanDoItAll.Components.BaseLib/css/output.css" }
         };
+        var sourceFiles = ResolveCssSourceFiles(resolvedComponent);
 
-        return new ComponentCssTokensData(resolvedComponent.Name, resolvedComponent.Library, stylesheets, resolvedComponent.CssNotes);
+        return new ComponentCssTokensData(resolvedComponent.Name, resolvedComponent.Library, stylesheets, sourceFiles, resolvedComponent.CssNotes);
+    }
+
+    private IReadOnlyList<string> ResolveCssSourceFiles(ComponentDocument component)
+    {
+        return ResolveCssSourceFileHints(component.Library, component.Name, component.SourcePath)
+            .Select(path => Path.GetFullPath(Path.Combine(options.Server.WorkspaceRoot, path)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(File.Exists)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     public CanvasContractsData GetCanvasContracts(string? query)
@@ -486,17 +951,11 @@ public sealed class ComponentCatalogService
             .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        var tags = relatedExamples
-            .SelectMany(example => example.Tags)
-            .Concat(groupKeys)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
+        var tags = BuildTags(componentName, relatedExamples, groupKeys);
         var dependencyNames = DiscoverDependencies(sourceText, componentNames, componentName);
-        var (parameters, events) = BuildParameterDocuments(type);
-        var cssNotes = BuildCssNotes(componentName, library.Name);
-        var guidance = BuildGuidance(componentName, library.Name);
+        var (parameters, events) = BuildParameterDocuments(componentName, type);
+        var cssNotes = BuildCssNotes(componentName, library.Name, sourcePath);
+        var guidance = BuildGuidance(componentName, library.Name, sourcePath);
         var usageExamples = usageExamplesByComponent.TryGetValue(componentName, out var matches)
             ? matches
             : [];
@@ -506,7 +965,7 @@ public sealed class ComponentCatalogService
             type.FullName ?? componentName,
             type.Namespace ?? string.Empty,
             library.Name,
-            BuildSummary(componentName, library.Name, groupKeys, groupLookup, relatedExamples),
+            BuildSummary(componentName, library.Name, sourcePath, groupKeys, groupLookup, relatedExamples),
             sourcePath,
             tags,
             groupKeys,
@@ -545,8 +1004,9 @@ public sealed class ComponentCatalogService
             .ToArray();
     }
 
-    private static (IReadOnlyList<ComponentParameterDocument> Parameters, IReadOnlyList<ComponentEventDocument> Events) BuildParameterDocuments(Type type)
+    private static (IReadOnlyList<ComponentParameterDocument> Parameters, IReadOnlyList<ComponentEventDocument> Events) BuildParameterDocuments(string componentName, Type type)
     {
+        var defaultInstance = TryCreateDefaultInstance(type);
         var parameterProperties = type
             .GetProperties(BindingFlags.Instance | BindingFlags.Public)
             .Where(property =>
@@ -562,7 +1022,10 @@ public sealed class ComponentCatalogService
                 FormatTypeName(property.PropertyType),
                 property.GetCustomAttribute<EditorRequiredAttribute>() is not null,
                 property.GetCustomAttribute<CascadingParameterAttribute>() is not null,
-                IsChildContent(property.PropertyType)))
+                IsChildContent(property.PropertyType),
+                BuildParameterSummary(componentName, property.Name),
+                ResolveDefaultValue(property, defaultInstance),
+                ResolveAllowedValues(property.PropertyType)))
             .ToArray();
 
         var events = parameterProperties
@@ -575,16 +1038,28 @@ public sealed class ComponentCatalogService
 
     private static IReadOnlyList<string> DiscoverDependencies(string sourceText, IReadOnlySet<string> componentNames, string componentName)
     {
-        if (string.IsNullOrWhiteSpace(sourceText))
+        var dependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(sourceText))
         {
-            return [];
+            foreach (var dependency in ComponentReferenceRegex
+                         .Matches(sourceText)
+                         .Select(match => match.Groups["name"].Value)
+                         .Where(name => componentNames.Contains(name) && !string.Equals(name, componentName, StringComparison.OrdinalIgnoreCase)))
+            {
+                dependencies.Add(dependency);
+            }
         }
 
-        return ComponentReferenceRegex
-            .Matches(sourceText)
-            .Select(match => match.Groups["name"].Value)
-            .Where(name => componentNames.Contains(name) && !string.Equals(name, componentName, StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        if (AdditionalDependenciesByComponent.TryGetValue(componentName, out var additionalDependencies))
+        {
+            foreach (var dependency in additionalDependencies.Where(componentNames.Contains))
+            {
+                dependencies.Add(dependency);
+            }
+        }
+
+        return dependencies
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
@@ -592,14 +1067,61 @@ public sealed class ComponentCatalogService
     private static string BuildSummary(
         string componentName,
         string library,
+        string sourcePath,
         IReadOnlyList<string> groupKeys,
         IReadOnlyDictionary<string, ComponentGroupDocument> groupLookup,
         IReadOnlyList<ComponentExampleDocument> examples)
     {
+        if (SummaryByComponent.TryGetValue(componentName, out var summary))
+        {
+            return summary;
+        }
+
+        var family = ResolveComponentFamily(library, sourcePath);
+
+        if (string.Equals(library, "BaseLib", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(family))
+        {
+            var displayName = HumanizeComponentName(componentName);
+            return family switch
+            {
+                "Badges" => $"Shared BaseLib {displayName} component for compact status, counts, and categorical emphasis.",
+                "Buttons" => $"Shared BaseLib {displayName} component for primary, secondary, and inline actions.",
+                "Cards" => $"Shared BaseLib {displayName} surface for grouped content, summaries, metrics, or action clusters.",
+                "DataVisualization" => $"Shared BaseLib {displayName} component for charts, data grids, axes, or quantitative readouts.",
+                "Feedback" => $"Shared BaseLib {displayName} component for alerts, loading, empty, notification, or contextual-help states.",
+                "Forms" => $"Shared BaseLib {displayName} component for data entry, configuration, and field-level workflows.",
+                "Identity" => $"Shared BaseLib {displayName} component for identity, presence, icons, and attribution details.",
+                "Layout" => $"Shared BaseLib {displayName} component for responsive structure, spacing rhythm, and workspace composition.",
+                "Lists" => $"Shared BaseLib {displayName} component for list, metadata, and selection-driven detail flows.",
+                "Modals" => $"Shared BaseLib {displayName} component for modal, dialog, or transient overlay interactions.",
+                "Navigation" => $"Shared BaseLib {displayName} component for navigation, orientation, and dense workspace movement.",
+                "Storage" => $"Shared BaseLib {displayName} component for storage-oriented summaries, status, and capacity display.",
+                "Typography" => $"Shared BaseLib {displayName} component for consistent text hierarchy, rhythm, and emphasis.",
+                _ => $"Shared BaseLib {displayName} component for reusable app UI composition."
+            };
+        }
+
+        if (string.Equals(library, "CanvasLib", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(family))
+        {
+            var displayName = HumanizeComponentName(componentName);
+            return family switch
+            {
+                "Calendar" => $"Shared CanvasLib {displayName} component for calendar-specific runtime, editing, and selection surfaces.",
+                "Core" => $"Shared CanvasLib {displayName} component for core workbench runtime infrastructure.",
+                "Diagnostics" => $"Shared CanvasLib {displayName} component for diagnostics and runtime debugging overlays.",
+                "Graph" => $"Shared CanvasLib {displayName} component for graph composition, interaction, overlays, or primitives.",
+                "Shared" => $"Shared CanvasLib {displayName} component for reusable canvas runtime assets and shared support surfaces.",
+                "Workbench" => $"Shared CanvasLib {displayName} component for workbench shells, stages, and desktop-first canvas workflows.",
+                _ => $"Shared CanvasLib {displayName} component for reusable canvas runtime composition."
+            };
+        }
+
         if (groupKeys.Count > 0)
         {
             var primaryGroup = groupLookup[groupKeys[0]];
-            return $"Shared {library} component used in the sandbox {primaryGroup.Title} group. {primaryGroup.Summary}";
+            return $"Shared {library} component commonly used in the sandbox {primaryGroup.Title} group. {primaryGroup.Summary}";
         }
 
         if (componentName.Contains("Calendar", StringComparison.Ordinal))
@@ -620,28 +1142,71 @@ public sealed class ComponentCatalogService
         return $"Shared {library} component in the extracted component libraries.";
     }
 
-    private static IReadOnlyList<string> BuildCssNotes(string componentName, string library)
+    private static IReadOnlyList<string> BuildCssNotes(string componentName, string library, string sourcePath)
     {
+        var noteSet = new List<string>();
+
         if (CssNotesByComponent.TryGetValue(componentName, out var notes))
         {
-            return notes;
+            noteSet.AddRange(notes);
+        }
+        else if (DefaultCssNotesByLibrary.TryGetValue(library, out var defaultNotes))
+        {
+            noteSet.AddRange(defaultNotes);
         }
 
-        return DefaultCssNotesByLibrary.TryGetValue(library, out var defaultNotes)
-            ? defaultNotes
-            : [];
+        var sourceFiles = ResolveCssSourceFileHints(library, componentName, sourcePath);
+        if (sourceFiles.Count > 0)
+        {
+            noteSet.Add($"Relevant source styling files: {string.Join(", ", sourceFiles.Select(path => $"`{path}`"))}.");
+        }
+        else if (string.Equals(library, "BaseLib", StringComparison.OrdinalIgnoreCase))
+        {
+            noteSet.Add("This component currently relies mostly on inline Tailwind utility classes inside the Razor source, so inspect the component source path when no dedicated Tailwind source file is listed.");
+        }
+
+        return noteSet
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
-    private static ComponentGuidanceDocument BuildGuidance(string componentName, string library)
+    private static ComponentGuidanceDocument BuildGuidance(string componentName, string library, string sourcePath)
     {
         if (GuidanceByComponent.TryGetValue(componentName, out var guidance))
         {
             return guidance;
         }
 
+        var family = ResolveComponentFamily(library, sourcePath);
+        if (!string.IsNullOrWhiteSpace(family) && GuidanceByFamily.TryGetValue(family, out var familyGuidance))
+        {
+            return familyGuidance;
+        }
+
         return DefaultGuidanceByLibrary.TryGetValue(library, out var defaultGuidance)
             ? defaultGuidance
             : new ComponentGuidanceDocument([], [], []);
+    }
+
+    private static IReadOnlyList<string> BuildTags(
+        string componentName,
+        IReadOnlyList<ComponentExampleDocument> relatedExamples,
+        IReadOnlyList<string> groupKeys)
+    {
+        var tags = relatedExamples
+            .SelectMany(example => example.Tags)
+            .Concat(groupKeys)
+            .ToList();
+
+        if (TagsByComponent.TryGetValue(componentName, out var componentTags))
+        {
+            tags.AddRange(componentTags);
+        }
+
+        return tags
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<ComponentUsageExampleDocument>> BuildConsumerUsageExamples(
@@ -713,7 +1278,20 @@ public sealed class ComponentCatalogService
 
     private static string ResolveSourcePath(string sourceRoot, string componentName)
     {
-        return Path.Combine(sourceRoot, "Components", $"{componentName}.razor");
+        var componentsRoot = Path.Combine(sourceRoot, "Components");
+        var directPath = Path.Combine(componentsRoot, $"{componentName}.razor");
+        if (File.Exists(directPath) || !Directory.Exists(componentsRoot))
+        {
+            return directPath;
+        }
+
+        var candidates = Directory.EnumerateFiles(componentsRoot, $"{componentName}.razor", SearchOption.AllDirectories)
+            .Where(path => !IsGeneratedPath(path))
+            .OrderBy(path => path.Contains($"{Path.DirectorySeparatorChar}Compatibility{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ? 1 : 0)
+            .ThenBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return candidates.FirstOrDefault() ?? directPath;
     }
 
     private static string GetComponentName(Type type)
@@ -780,6 +1358,11 @@ public sealed class ComponentCatalogService
 
     private static string FormatTypeName(Type type)
     {
+        if (Nullable.GetUnderlyingType(type) is { } nullableType)
+        {
+            return $"{FormatTypeName(nullableType)}?";
+        }
+
         if (type == typeof(string))
         {
             return "string";
@@ -848,7 +1431,10 @@ public sealed class ComponentCatalogService
         foreach (var parameter in component.Parameters)
         {
             var parameterScore = ScoreText(parameter.Name, query, exactBoost: 40, containsBoost: 25, tokenBoost: 8) +
-                                 ScoreText(parameter.Type, query, exactBoost: 15, containsBoost: 10, tokenBoost: 4);
+                                 ScoreText(parameter.Type, query, exactBoost: 15, containsBoost: 10, tokenBoost: 4) +
+                                 ScoreText(parameter.Summary ?? string.Empty, query, exactBoost: 12, containsBoost: 10, tokenBoost: 4) +
+                                 ScoreText(parameter.DefaultValue ?? string.Empty, query, exactBoost: 12, containsBoost: 8, tokenBoost: 3) +
+                                 ScoreText(string.Join(' ', parameter.AllowedValues), query, exactBoost: 18, containsBoost: 12, tokenBoost: 4);
             if (parameterScore > 0)
             {
                 matchedParameters.Add(parameter.Name);
@@ -869,6 +1455,8 @@ public sealed class ComponentCatalogService
                 score += ScoreText(group.Summary, query, exactBoost: 8, containsBoost: 6, tokenBoost: 2);
             }
         }
+
+        score += ScoreText(string.Join(' ', component.CssNotes), query, exactBoost: 10, containsBoost: 8, tokenBoost: 3);
 
         return new SearchScore(score, matchedParameters.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToArray());
     }
@@ -1009,6 +1597,202 @@ public sealed class ComponentCatalogService
     {
         return filePath.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
                filePath.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ResolveComponentFamily(string library, string sourcePath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return null;
+        }
+
+        var directoryPath = Path.GetDirectoryName(sourcePath);
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            return null;
+        }
+
+        var directory = new DirectoryInfo(directoryPath);
+        if (string.Equals(directory.Name, "Compatibility", StringComparison.OrdinalIgnoreCase) &&
+            directory.Parent is not null)
+        {
+            directory = directory.Parent;
+        }
+
+        if (string.Equals(library, "CanvasLib", StringComparison.OrdinalIgnoreCase) &&
+            (string.Equals(directory.Name, "Composition", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(directory.Name, "Interaction", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(directory.Name, "Overlays", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(directory.Name, "Primitives", StringComparison.OrdinalIgnoreCase)))
+        {
+            return "Graph";
+        }
+
+        return directory.Name;
+    }
+
+    private static string HumanizeComponentName(string componentName)
+    {
+        return Regex.Replace(componentName, "(?<!^)([A-Z])", " $1").ToLowerInvariant();
+    }
+
+    private static IReadOnlyList<string> ResolveCssSourceFileHints(string library, string componentName, string sourcePath)
+    {
+        if (string.Equals(library, "CanvasLib", StringComparison.OrdinalIgnoreCase))
+        {
+            return CanvasLibStylesheets
+                .Select(path => $@"src\CanDoItAll.Components.CanvasLib\wwwroot\{path.Replace("_content/CanDoItAll.Components.CanvasLib/", string.Empty).Replace('/', Path.DirectorySeparatorChar)}")
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        if (!string.Equals(library, "BaseLib", StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+
+        if (BaseLibCssSourceFilesByComponent.TryGetValue(componentName, out var explicitFiles))
+        {
+            return explicitFiles;
+        }
+
+        var family = ResolveComponentFamily(library, sourcePath);
+        if (string.IsNullOrWhiteSpace(family))
+        {
+            return [];
+        }
+
+        return family switch
+        {
+            "Badges" => [@"Tailwind\controls\badges.css"],
+            "Buttons" => [@"Tailwind\controls\buttons.css"],
+            "Cards" => componentName.Contains("Stat", StringComparison.OrdinalIgnoreCase) ||
+                       componentName.Contains("Summary", StringComparison.OrdinalIgnoreCase)
+                ? [@"Tailwind\surfaces\cards.css", @"Tailwind\layout\stats.css"]
+                : [@"Tailwind\surfaces\cards.css"],
+            "DataVisualization" => [@"Tailwind\foundation\radzen-layout.css"],
+            "Feedback" => componentName.Contains("Popover", StringComparison.OrdinalIgnoreCase) ||
+                          componentName.Contains("Tooltip", StringComparison.OrdinalIgnoreCase)
+                ? [@"Tailwind\surfaces\overlays.css"]
+                : [@"Tailwind\feedback\alerts.css"],
+            "Forms" => [@"Tailwind\forms\fields.css"],
+            "Identity" => [@"Tailwind\typography\text.css"],
+            "Layout" => componentName.Contains("Stat", StringComparison.OrdinalIgnoreCase)
+                ? [@"Tailwind\layout\stats.css"]
+                : [@"Tailwind\layout\stacks.css", @"Tailwind\layout\sheets.css"],
+            "Lists" => [@"Tailwind\layout\sheets.css", @"Tailwind\surfaces\cards.css"],
+            "Modals" => [@"Tailwind\surfaces\overlays.css"],
+            "Navigation" => componentName.Contains("Tree", StringComparison.OrdinalIgnoreCase)
+                ? [@"Tailwind\navigation\treeview.css"]
+                : componentName.Contains("Tab", StringComparison.OrdinalIgnoreCase)
+                    ? [@"Tailwind\navigation\tabs.css"]
+                    : componentName.Contains("Header", StringComparison.OrdinalIgnoreCase) ||
+                      componentName.Contains("Toolbar", StringComparison.OrdinalIgnoreCase) ||
+                      componentName.Contains("Filter", StringComparison.OrdinalIgnoreCase) ||
+                      componentName.Contains("Toc", StringComparison.OrdinalIgnoreCase)
+                        ? [@"Tailwind\navigation\page-header.css"]
+                        : [],
+            "Storage" => [@"Tailwind\surfaces\cards.css", @"Tailwind\controls\badges.css"],
+            "Typography" => [@"Tailwind\typography\text.css"],
+            _ => []
+        };
+    }
+
+    private static string? BuildParameterSummary(string componentName, string parameterName)
+    {
+        if (ParameterDescriptionsByComponent.TryGetValue(componentName, out var componentDescriptions) &&
+            componentDescriptions.TryGetValue(parameterName, out var parameterSummary))
+        {
+            return parameterSummary;
+        }
+
+        return DefaultParameterDescriptionsByName.TryGetValue(parameterName, out var defaultSummary)
+            ? defaultSummary
+            : null;
+    }
+
+    private static object? TryCreateDefaultInstance(Type type)
+    {
+        try
+        {
+            return Activator.CreateInstance(type);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? ResolveDefaultValue(PropertyInfo property, object? defaultInstance)
+    {
+        if (defaultInstance is null ||
+            property.GetMethod is null ||
+            property.GetIndexParameters().Length > 0 ||
+            property.PropertyType == typeof(RenderFragment) ||
+            (property.PropertyType.IsGenericType && string.Equals(property.PropertyType.GetGenericTypeDefinition().Name, "RenderFragment`1", StringComparison.Ordinal)) ||
+            typeof(Delegate).IsAssignableFrom(property.PropertyType))
+        {
+            return null;
+        }
+
+        try
+        {
+            var value = property.GetValue(defaultInstance);
+            return FormatDefaultValue(value, property.PropertyType);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? FormatDefaultValue(object? value, Type propertyType)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        var normalizedType = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+
+        if (normalizedType == typeof(string))
+        {
+            return $"\"{value}\"";
+        }
+
+        if (normalizedType == typeof(bool))
+        {
+            return (bool)value ? "true" : "false";
+        }
+
+        if (normalizedType.IsEnum)
+        {
+            return Enum.GetName(normalizedType, value);
+        }
+
+        if (normalizedType == typeof(int) ||
+            normalizedType == typeof(long) ||
+            normalizedType == typeof(double) ||
+            normalizedType == typeof(float) ||
+            normalizedType == typeof(decimal))
+        {
+            return Convert.ToString(value, CultureInfo.InvariantCulture);
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<string> ResolveAllowedValues(Type type)
+    {
+        var normalizedType = Nullable.GetUnderlyingType(type) ?? type;
+        if (!normalizedType.IsEnum)
+        {
+            return [];
+        }
+
+        return Enum.GetNames(normalizedType)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static string TruncateSnippet(string snippet)
