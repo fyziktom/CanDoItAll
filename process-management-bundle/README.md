@@ -1,52 +1,85 @@
-# CanDoItAll process-management execution-grade bundle
+# CanDoItAll Process Management Bundle
 
-This bundle is the **process-first** delivery package for adding `CanDoItAll.Modules.Processes` directly into CanDoItAll before the intelligence lake.
+This bundle repairs the architect-prepared `process-management-bundle` into the current execution-workflow format without starting implementation.
 
-Compared with the previous pass, this revision was rechecked against the uploaded **CanDoItAll** repo and the uploaded **CanDoItAll.AgentFramework** repo. It now hardens the package around:
+Legacy architect materials remain preserved in:
 
-- process as the **canonical collaboration and handoff graph**
-- normalized **work briefs** and persisted **baton handoffs**
-- governed **triage/routing** inside the process rather than hidden direct agent wiring
-- live process supervision on the same canvas as a **projection**
-- explicit canonical ownership for **CRM-HR**, **Workspace**, **Projects**, and future **AgentFramework** seams
+- `C:\repositories\CanDoItAll\process-management-bundle\00-context`
+- `C:\repositories\CanDoItAll\process-management-bundle\01-workbooks`
+- `C:\repositories\CanDoItAll\process-management-bundle\02-architecture`
+- `C:\repositories\CanDoItAll\process-management-bundle\03-subbundles`
+- `C:\repositories\CanDoItAll\process-management-bundle\04-codex`
+- `C:\repositories\CanDoItAll\process-management-bundle\05-manifest`
 
-## What is inside
+Future implementation must follow the new validator-compatible sections first and treat the legacy material as detailed supporting evidence.
 
-- `00-context/` review notes, coverage mapping, and repo-fit analysis
-- `01-workbooks/` execution-grade spreadsheets and rendered previews
-- `02-architecture/` implementation architecture, operating model, and convergence guidance
-- `03-subbundles/` feature-level Codex-ready implementation packs
-- `04-codex/` execution order, prompts, and review checklist
-- `05-manifest/` machine-readable manifests for features, stories, risks, traceability, and review output
+## Profile
 
-## Main conclusions
+- `initiative`
 
-1. `CanDoItAll.Modules.Processes` must remain the canonical owner of process definitions, orchestration, work briefs, baton handoffs, and journals.
-2. CRM-HR remains the durable owner of human/AI identities and reusable role/agent templates.
-3. Workspace remains the durable owner of provider/model profile truth.
-4. Projects remain the owner of project scope and context; processes link to project objects through typed references instead of copying hierarchy.
-5. Live execution on canvas is valuable, but it must stay a **projection**, never the source of truth.
-6. Future AgentFramework integration should happen only through a later bridge/adapter that correlates runtime evidence back to `ProcessRun` and `ProcessStepRun`.
+## Mission
 
-## Current bundle counts
+- Add `CanDoItAll.Modules.Processes` as the canonical process-management module inside `CanDoItAll` without executing the implementation now.
+- Keep roles first and concrete executors second so a process remains valid even when the assigned human, supplier, or agent changes.
+- Prevent long-term duplication across `CanDoItAll`, `CanDoItAll.AgentFramework`, and future IPFS-backed evidence storage.
+- Force every implementation phase to stop for architecture, canonical-model, helper-isolation, component-first UI, and large-class review before the next phase may start.
 
-- Features: 24
-- User stories: 102
-- Risks: 28
-- Decisions: 26
-- Entities: 44
-- Integrations: 15
-- Repo touchpoints: 104
-- Subbundles: 24
+## Key Repairs
 
-## Recommended first read
+- Added the current bundle-workflow root sections required by the latest validator.
+- Reframed execution into explicit phases with multiple related subbundles and mandatory post-phase repair-bundle generation gates.
+- Added source-of-truth convergence planning for CRM-HR, Workspace, Projects, Processes, AgentFramework, and IPFS evidence seams.
+- Expanded the architecture to cover explainability, artifact trust, autonomy governance, forensic reconstruction, operating modes, safe refusal, decision intelligence, capability-gap analysis, economics, and executive surfaces.
+- Added an explicit development and testing seed strategy instead of leaving process data setup to ad hoc manual preparation.
+- Added shared post-phase validation templates, roles, and skill-pack guidance so the future repair bundles are created consistently.
 
-1. `00-context/coverage-checklist.md`
-2. `00-context/10-cross-repo-convergence-review.md`
-3. `00-context/11-senior-csharp-architect-review.md`
-4. `00-context/09-final-readiness-review.md`
-5. `01-workbooks/01-process-management-execution-grade.xlsx`
-6. `01-workbooks/02-process-modeling-canvas-and-runtime.xlsx`
-7. `02-architecture/12-process-native-orchestration-and-baton-handoffs.md`
-8. `02-architecture/13-cross-repo-convergence-processes-projects-and-agentframework.md`
-9. `04-codex/IMPLEMENTATION_ORDER.md`
+## Bundle Layout
+
+- `inputs/` raw request, artifacts, and normalized source capture
+- `analysis/` repo-fit analysis, assumptions, and risks
+- `requirements/` normalized execution and architecture requirements
+- `architecture/` target solution, ownership rules, extension points, and phase architecture
+- `plan/` phase order, dependency map, critical subbundles, and phase gates
+- `traceability/` raw-note and requirement coverage
+- `shared-prompts/` reusable prompts for implementation, QA, and post-phase repair generation
+- `subbundles/` execution-ready workstreams for the future implementation pass
+- `reviews/` bundle readiness review and execution-report skeleton
+- `inventories/` feature mapping, cross-repo ownership inventory, and seed-plan details
+- `templates/` shared post-phase validation roles, skill pack, and repair-bundle template
+
+## Recommended Execution Order
+
+1. `subbundles/01-canonical-ownership-and-cross-repo-convergence`
+2. `subbundles/02-development-seed-packs-and-scenario-baseline`
+3. `subbundles/03-post-implementation-bundle-phase00-generation`
+4. `subbundles/04-process-module-shell-and-storage-foundation`
+5. `subbundles/05-process-definition-lifecycle-and-governance-model`
+6. `subbundles/06-role-templates-contracts-and-staffing-authoring`
+7. `subbundles/07-canvas-authoring-and-component-first-ui-foundation`
+8. `subbundles/08-post-implementation-bundle-phase01-generation`
+9. `subbundles/09-runtime-state-machine-approvals-and-decision-rights`
+10. `subbundles/10-work-briefs-decision-records-and-artifact-trust`
+11. `subbundles/11-journal-forensics-operating-modes-and-import-export`
+12. `subbundles/12-post-implementation-bundle-phase02-generation`
+13. `subbundles/13-project-activity-validation-and-process-projections`
+14. `subbundles/14-agentframework-bridge-and-registry-convergence`
+15. `subbundles/15-live-runtime-canvas-and-management-governance-ux`
+16. `subbundles/16-post-implementation-bundle-phase03-generation`
+17. `subbundles/17-metrics-economics-capability-gaps-and-decision-intelligence`
+18. `subbundles/18-conformance-learning-and-improvement-loop`
+19. `subbundles/19-post-implementation-bundle-phase04-generation`
+
+## Dependency And Validation Map
+
+- The operational dependency map, critical subbundles, and phase gates live in `C:\repositories\CanDoItAll\process-management-bundle\plan\01-phase-plan.md`.
+- No later phase may start until the prior phase-specific post-implementation repair bundle has been created, validated, and closed or honestly blocked.
+- UI-heavy subbundles must use `CanDoItAll` shared components first, then Playwright MCP and screenshot review on large-screen desktop viewports before any phase gate may pass.
+
+## Validation Summary
+
+- Bundle preparation status: `Repaired`
+- Bundle readiness gate: `Passed`
+- Execution status: `Not started`
+- Subbundle gate review: `Planned per phase`
+- Final closure gate: `Not started`
+- Browser validation analytics: `Planned in reviews/01-execution-report.md`
