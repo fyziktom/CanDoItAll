@@ -42,7 +42,8 @@ public sealed class ComponentsToolsTests
         Assert.Equal(9, groups.Data!.Count);
 
         Assert.True(css.Ok);
-        Assert.Contains(css.Data!.Stylesheets, stylesheet => stylesheet.Contains("canvas-workbench.css", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(css.Data!.Stylesheets, stylesheet => stylesheet.Contains("css/workbench/", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(css.Data!.SourceFiles, file => file.EndsWith(Path.Combine("wwwroot", "css", "workbench", "shell", "01-layout-and-shell.css"), StringComparison.OrdinalIgnoreCase));
 
         Assert.True(contracts.Ok);
         Assert.Contains(contracts.Data!.Contracts, contract => string.Equals(contract.Name, "CanvasCalendarSurface", StringComparison.OrdinalIgnoreCase));

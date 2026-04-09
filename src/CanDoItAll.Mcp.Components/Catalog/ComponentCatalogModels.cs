@@ -34,7 +34,10 @@ public sealed record ComponentParameterDocument(
     string Type,
     bool Required,
     bool IsCascading,
-    bool IsChildContent);
+    bool IsChildContent,
+    string? Summary,
+    string? DefaultValue,
+    IReadOnlyList<string> AllowedValues);
 
 public sealed record ComponentEventDocument(
     string Name,
@@ -106,6 +109,7 @@ public sealed record ComponentCssTokensData(
     string ComponentName,
     string Library,
     IReadOnlyList<string> Stylesheets,
+    IReadOnlyList<string> SourceFiles,
     IReadOnlyList<string> Notes);
 
 public sealed record CanvasContractsData(

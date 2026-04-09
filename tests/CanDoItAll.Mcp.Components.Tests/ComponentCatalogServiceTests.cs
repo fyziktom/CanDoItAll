@@ -39,6 +39,16 @@ public sealed class ComponentCatalogServiceTests
     }
 
     [Fact]
+    public void Search_Finds_Tabs_When_Querying_Long_Scroll_Relief()
+    {
+        var service = CreateService();
+
+        var result = service.Search("long scroll");
+
+        Assert.Contains(result.Components, component => string.Equals(component.Name, "Tabs", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Component_Get_Returns_Workbench_Surface_Parameter_And_Examples()
     {
         var service = CreateService();
@@ -58,7 +68,8 @@ public sealed class ComponentCatalogServiceTests
 
         var result = service.GetCssTokens("CanvasWorkbench");
 
-        Assert.Contains(result.Stylesheets, stylesheet => stylesheet.Contains("canvas-workbench.css", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Stylesheets, stylesheet => stylesheet.Contains("css/workbench/", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.SourceFiles, file => file.EndsWith(Path.Combine("wwwroot", "css", "workbench", "shell", "01-layout-and-shell.css"), StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.Notes, note => note.Contains("CanvasThemeTokenPack", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -83,6 +94,64 @@ public sealed class ComponentCatalogServiceTests
         Assert.Equal(9, groups.Count);
         Assert.Contains(groups, group => string.Equals(group.Key, "canvas", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(groups, group => string.Equals(group.Key, "foundations", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Component_Get_Returns_Richer_Tabs_Metadata_And_Sandbox_Examples()
+    {
+        var service = CreateService();
+
+        var component = service.GetComponent("Tabs");
+        var usageExamples = service.GetUsageExamples("Tabs", limit: 20);
+        var css = service.GetCssTokens("Tabs");
+
+        Assert.Equal("BaseLib", component.Library);
+        Assert.EndsWith(Path.Combine("Components", "Navigation", "Tabs.razor"), component.SourcePath, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(component.DependencyNames, dependency => string.Equals(dependency, "TabsItem", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(component.CssNotes, note => note.Contains("Tailwind-owned", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(component.Guidance.CompositionRules, rule => rule.Contains("SectionCard", StringComparison.OrdinalIgnoreCase));
+
+        var toneParameter = Assert.Single(component.Parameters, parameter => string.Equals(parameter.Name, "Tone", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("Primary", toneParameter.DefaultValue);
+        Assert.Contains("Info", toneParameter.AllowedValues);
+        Assert.Contains("accent", toneParameter.Summary ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+
+        var classParameter = Assert.Single(component.Parameters, parameter => string.Equals(parameter.Name, "Class", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("Tailwind", classParameter.Summary ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(css.SourceFiles, file => file.EndsWith(Path.Combine("Tailwind", "navigation", "tabs.css"), StringComparison.OrdinalIgnoreCase));
+        Assert.True(usageExamples.TotalMatches >= 2);
+        Assert.Contains(usageExamples.UsageExamples, example => example.FilePath.EndsWith("NavigationTabs.razor", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void All_Discovered_Components_Resolve_To_Existing_Source_Paths()
+    {
+        var service = CreateService();
+        var components = service.GetIndex().Components;
+
+        Assert.All(components, component => Assert.True(File.Exists(component.SourcePath), $"Missing source path for {component.Name}: {component.SourcePath}"));
+    }
+
+    [Fact]
+    public void Component_Summaries_Avoid_Generic_And_Sandbox_Derived_Fallbacks()
+    {
+        var service = CreateService();
+        var components = service.GetIndex().Components;
+
+        Assert.DoesNotContain(components, component => component.Summary.Contains("extracted component libraries", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(components, component => component.Summary.Contains("used in the sandbox", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Feedback_Component_Summaries_Describe_Their_Actual_Role()
+    {
+        var service = CreateService();
+
+        var component = service.GetComponent("EmptyState");
+
+        Assert.Contains("zero-data", component.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Actions group", component.Summary, StringComparison.OrdinalIgnoreCase);
     }
 
     private static ComponentCatalogService CreateService()

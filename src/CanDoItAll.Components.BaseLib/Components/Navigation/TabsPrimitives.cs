@@ -23,6 +23,30 @@ public enum TabsVariant
     Workstation
 }
 
+public enum TabsBorderMode
+{
+    Auto,
+    Soft,
+    None
+}
+
+public enum TabsTone
+{
+    Primary,
+    Secondary,
+    Info,
+    Success,
+    Warning,
+    Danger
+}
+
+public enum TabsOverflowMode
+{
+    Auto,
+    Wrap,
+    Scroll
+}
+
 public enum StepsNavigationPosition
 {
     None,
