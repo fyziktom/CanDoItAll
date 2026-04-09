@@ -1,0 +1,626 @@
+[
+  {
+    "path": "src/CanDoItAll.Web/Program.cs",
+    "action": "Modify",
+    "reason": "Register AddProcessesModule() alongside existing module registrations.",
+    "feature_ids": "PRM-F01"
+  },
+  {
+    "path": "src/CanDoItAll.Web/Composition/ShellNavigation.cs",
+    "action": "Modify",
+    "reason": "Add top-level Processes navigation item.",
+    "feature_ids": "PRM-F01"
+  },
+  {
+    "path": "src/CanDoItAll.Composition/CanDoItAll.Composition.csproj",
+    "action": "Modify",
+    "reason": "Reference the new Processes module project.",
+    "feature_ids": "PRM-F01"
+  },
+  {
+    "path": "src/CanDoItAll.Composition/ModuleAssemblies.cs",
+    "action": "Modify",
+    "reason": "Include ProcessesModuleAssemblyMarker so EF configurations are discovered.",
+    "feature_ids": "PRM-F01"
+  },
+  {
+    "path": "src/CanDoItAll.Infrastructure/Persistence/AppDbContext.cs",
+    "action": "Reuse/Verify",
+    "reason": "No new pattern; process configurations should participate through ModuleAssemblies.",
+    "feature_ids": "PRM-F01,PRM-F15"
+  },
+  {
+    "path": "src/CanDoItAll.Migrations.Sqlite/*",
+    "action": "Modify",
+    "reason": "Add process tables and indexes to SQLite migrations.",
+    "feature_ids": "PRM-F01,PRM-F15"
+  },
+  {
+    "path": "src/CanDoItAll.Migrations.PostgreSql/*",
+    "action": "Modify",
+    "reason": "Add matching PostgreSQL migrations.",
+    "feature_ids": "PRM-F01,PRM-F15"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj",
+    "action": "Create",
+    "reason": "New canonical process-management module.",
+    "feature_ids": "PRM-F01"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessesModuleServiceCollectionExtensions.cs",
+    "action": "Create",
+    "reason": "DI and module assembly marker.",
+    "feature_ids": "PRM-F01"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessesPage.razor",
+    "action": "Create",
+    "reason": "Workspace-level process catalog.",
+    "feature_ids": "PRM-F01,PRM-F02"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor",
+    "action": "Create",
+    "reason": "Project-scoped process catalog and entry point.",
+    "feature_ids": "PRM-F01,PRM-F10"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessDomain.cs",
+    "action": "Create",
+    "reason": "Core entities, enums, and EF configurations for definitions/versions/nodes/transitions.",
+    "feature_ids": "PRM-F02"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessServices.cs",
+    "action": "Create",
+    "reason": "Definition, versioning, and query application services.",
+    "feature_ids": "PRM-F02"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Unit/*Process*.cs",
+    "action": "Create",
+    "reason": "Domain rules and state-machine coverage.",
+    "feature_ids": "PRM-F02,PRM-F05,PRM-F07,PRM-F08,PRM-F13"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessActorServices.cs",
+    "action": "Create",
+    "reason": "Role/binding management and CRM-HR bridge orchestration.",
+    "feature_ids": "PRM-F03"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs",
+    "action": "Modify",
+    "reason": "Expose actor-binding-friendly projections if necessary.",
+    "feature_ids": "PRM-F03"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor",
+    "action": "Modify lightly",
+    "reason": "Optional navigation/info about process usage of AI agents.",
+    "feature_ids": "PRM-F03,PRM-F13"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessActorServices.cs",
+    "action": "Modify",
+    "reason": "Persist template references, eligibility rules, staffing-gap signals, and fallback metadata.",
+    "feature_ids": "PRM-F16,PRM-F03,PRM-F07"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs",
+    "action": "Modify",
+    "reason": "Add reusable role/agent template entities or links that align with staffing requests, workforce, and AI-agent profiles.",
+    "feature_ids": "PRM-F16"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs",
+    "action": "Modify",
+    "reason": "Expose template catalog, staffing-brief creation, candidate/agent matching, and process-linked staffing projections.",
+    "feature_ids": "PRM-F16"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.CrmHr/CrmHrRecruitingServices.cs",
+    "action": "Modify",
+    "reason": "Carry process-linked role-template metadata into recruiting workflows and conversions.",
+    "feature_ids": "PRM-F16"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.CrmHr/Pages/CrmHrAssignmentsPage.razor",
+    "action": "Modify",
+    "reason": "Surface process-linked staffing briefs, unresolved role gaps, and template-driven fulfillment actions.",
+    "feature_ids": "PRM-F16"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.CrmHr/Pages/CrmHrWorkforcePage.razor",
+    "action": "Modify",
+    "reason": "Show skill/capacity fit against role templates and candidate pool suggestions.",
+    "feature_ids": "PRM-F16"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor",
+    "action": "Modify",
+    "reason": "Expose AI-agent template fulfillment, validation, human owner, and process-usage summary.",
+    "feature_ids": "PRM-F16,PRM-F13"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.CrmHr/Pages/CrmHrRoleTemplatesPage.razor",
+    "action": "Create",
+    "reason": "Dedicated manager/HR catalog for reusable role and agent templates.",
+    "feature_ids": "PRM-F16"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessActorTemplateBridge.cs",
+    "action": "Create",
+    "reason": "Query and snapshot CRM-HR role templates from process authoring and runtime flows.",
+    "feature_ids": "PRM-F16"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessDesignerPage.razor",
+    "action": "Modify",
+    "reason": "Add role-template picker, staffing-status badges, and policy warnings to the designer experience.",
+    "feature_ids": "PRM-F16,PRM-F09"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Integration/ProcessesStaffingTemplateIntegrationTests.cs",
+    "action": "Create",
+    "reason": "Cover role-template selection, staffing-request linking, snapshotting, and fallback behavior.",
+    "feature_ids": "PRM-F16"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessContractServices.cs",
+    "action": "Create",
+    "reason": "Step contract and artifact contract services.",
+    "feature_ids": "PRM-F04"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessGovernanceModels.cs",
+    "action": "Create",
+    "reason": "Store process owner, customer, criticality, and strategy metadata.",
+    "feature_ids": "PRM-F17"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessPortfolioServices.cs",
+    "action": "Create",
+    "reason": "Manage portfolio classification, criticality, and catalog queries.",
+    "feature_ids": "PRM-F17,PRM-F20"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessInterfaceServices.cs",
+    "action": "Create",
+    "reason": "Persist and validate upstream/downstream interface contracts.",
+    "feature_ids": "PRM-F17"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessGovernancePage.razor",
+    "action": "Create",
+    "reason": "Edit owner, customer, interface, and criticality metadata.",
+    "feature_ids": "PRM-F17,PRM-F20"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessDesignerPage.razor",
+    "action": "Modify",
+    "reason": "Expose owner/customer/interface side panels without collapsing into org-chart design.",
+    "feature_ids": "PRM-F17"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs",
+    "action": "Reuse/Bridge",
+    "reason": "Resolve owner and steward bindings through CRM-HR parties.",
+    "feature_ids": "PRM-F17"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Integration/ProcessOwnershipIntegrationTests.cs",
+    "action": "Create",
+    "reason": "Verify publish guardrails for owner/customer/criticality/interface completeness.",
+    "feature_ids": "PRM-F17"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/CanvasAdapters/ProcessCanvasGraphAdapter.cs",
+    "action": "Create",
+    "reason": "Map canonical process graph into CanvasLib surface.",
+    "feature_ids": "PRM-F09"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessDesignerPage.razor",
+    "action": "Create",
+    "reason": "Interactive process modeler.",
+    "feature_ids": "PRM-F09"
+  },
+  {
+    "path": "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchSurface.cs",
+    "action": "Modify cautiously",
+    "reason": "Potential minimal link-label or lane support if adapter metadata is insufficient.",
+    "feature_ids": "PRM-F09"
+  },
+  {
+    "path": "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchNode.cs",
+    "action": "Reuse / maybe extend",
+    "reason": "Process node rendering likely fits existing node fields.",
+    "feature_ids": "PRM-F09"
+  },
+  {
+    "path": "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchEvents.cs",
+    "action": "Modify cautiously",
+    "reason": "Potential process-specific edit requests or create palette metadata.",
+    "feature_ids": "PRM-F09"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Factory/CanvasAdapters/*",
+    "action": "Reference only",
+    "reason": "Pattern source for graph adapter/editor structure.",
+    "feature_ids": "PRM-F09,PRM-F12"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Components/*Process*.cs",
+    "action": "Create",
+    "reason": "Designer/editor component coverage.",
+    "feature_ids": "PRM-F09,PRM-F10"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Playwright/*Process*.cs",
+    "action": "Create",
+    "reason": "End-to-end flows for modeling and runtime.",
+    "feature_ids": "PRM-F09,PRM-F07,PRM-F11"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessTransitionServices.cs",
+    "action": "Create",
+    "reason": "Transition validation and handoff semantics.",
+    "feature_ids": "PRM-F05"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessApprovalServices.cs",
+    "action": "Create",
+    "reason": "Approval and escalation rules.",
+    "feature_ids": "PRM-F06"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessRuntimeServices.cs",
+    "action": "Create",
+    "reason": "Runs, steps, claims, and state-machine execution.",
+    "feature_ids": "PRM-F07"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessRunPage.razor",
+    "action": "Create",
+    "reason": "Runtime execution and audit view.",
+    "feature_ids": "PRM-F07,PRM-F08"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessEventJournal.cs",
+    "action": "Create",
+    "reason": "Append-only journal and replay helpers.",
+    "feature_ids": "PRM-F08"
+  },
+  {
+    "path": "src/CanDoItAll.SharedKernel/ActivityStream.cs",
+    "action": "Reuse",
+    "reason": "Journal/activity boundary contract.",
+    "feature_ids": "PRM-F08,PRM-F11"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessInputQualityModels.cs",
+    "action": "Create",
+    "reason": "Represent mandatory inputs, completeness checks, and rejection reasons.",
+    "feature_ids": "PRM-F18"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessExceptionServices.cs",
+    "action": "Create",
+    "reason": "Execute and validate exception playbooks and approved variants.",
+    "feature_ids": "PRM-F18"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessDecisionRightsService.cs",
+    "action": "Create",
+    "reason": "Resolve who may decide what and under which thresholds.",
+    "feature_ids": "PRM-F18"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessPolicyModels.cs",
+    "action": "Modify",
+    "reason": "Add risk-tiered control metadata and explicit decision-right references.",
+    "feature_ids": "PRM-F18"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Validation/*",
+    "action": "Reuse/Bridge",
+    "reason": "Use validation surfaces for input-quality rule feedback.",
+    "feature_ids": "PRM-F18,PRM-F04"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Security/SecurityModels.cs",
+    "action": "Reuse/Bridge",
+    "reason": "Restrict sensitive exception/override visibility where needed.",
+    "feature_ids": "PRM-F18,PRM-F21"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Integration/ProcessDecisionRightsIntegrationTests.cs",
+    "action": "Create",
+    "reason": "Verify authority limits, overrides, and exception journaling.",
+    "feature_ids": "PRM-F18"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Workbench/*",
+    "action": "Modify cautiously",
+    "reason": "Projection-only integration, navigation, or import/export reuse; avoid canonical storage.",
+    "feature_ids": "PRM-F10,PRM-F12"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Projects/Pages/Components/ProjectModalHost.razor",
+    "action": "Modify",
+    "reason": "Expose Open processes action near structure/calendar.",
+    "feature_ids": "PRM-F10"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Projects/Pages/Components/ProjectsBoard.razor",
+    "action": "Modify",
+    "reason": "Add processes CTA on project cards/board.",
+    "feature_ids": "PRM-F10"
+  },
+  {
+    "path": "src/CanDoItAll.SharedKernel/ProjectObjectContracts.cs",
+    "action": "Modify cautiously",
+    "reason": "Only if Workbench projection requires explicit Process/ProcessRun object types.",
+    "feature_ids": "PRM-F10"
+  },
+  {
+    "path": "src/CanDoItAll.SharedKernel/AutomationSignals.cs",
+    "action": "Reuse",
+    "reason": "Overdue/blocker signal publishing.",
+    "feature_ids": "PRM-F11"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessChangeGovernanceModels.cs",
+    "action": "Create",
+    "reason": "Persist change requests, impact analysis, and approvals.",
+    "feature_ids": "PRM-F20"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessChangeGovernanceService.cs",
+    "action": "Create",
+    "reason": "Run change-governance and prioritization workflows.",
+    "feature_ids": "PRM-F20"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessGovernancePage.razor",
+    "action": "Create/Modify",
+    "reason": "Provide governance board and communication surfaces.",
+    "feature_ids": "PRM-F20,PRM-F17"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Activity/*",
+    "action": "Reuse/Bridge",
+    "reason": "Emit communication and acknowledgement events for governed changes.",
+    "feature_ids": "PRM-F20"
+  },
+  {
+    "path": "src/CanDoItAll.Components.BaseLib/Components/*",
+    "action": "Reuse/Bridge",
+    "reason": "Host glossary/help and role-specific guidance panels.",
+    "feature_ids": "PRM-F20"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Playwright/ProcessGovernanceFlowTests.cs",
+    "action": "Create",
+    "reason": "Verify submit -> review -> communicate -> acknowledge flow.",
+    "feature_ids": "PRM-F20"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessTelemetryModels.cs",
+    "action": "Create",
+    "reason": "Persist wait reasons, rework cycles, and metric snapshots.",
+    "feature_ids": "PRM-F19"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessMetricsService.cs",
+    "action": "Create",
+    "reason": "Compute lead/touch/queue time, rework, bottlenecks, and SLA attainment.",
+    "feature_ids": "PRM-F19"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessMetricsPage.razor",
+    "action": "Create",
+    "reason": "Expose outcome-focused dashboards and segmentation.",
+    "feature_ids": "PRM-F19"
+  },
+  {
+    "path": "src/CanDoItAll.SharedKernel/ActivityStream.cs",
+    "action": "Reuse/Bridge",
+    "reason": "Source timeline events for telemetry computation.",
+    "feature_ids": "PRM-F19,PRM-F08"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs",
+    "action": "Reuse/Bridge",
+    "reason": "Use workforce capacity signals for bottleneck analysis.",
+    "feature_ids": "PRM-F19"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Integration/ProcessMetricsIntegrationTests.cs",
+    "action": "Create",
+    "reason": "Verify queue/work time split and outcome metrics.",
+    "feature_ids": "PRM-F19"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessInsightsService.cs",
+    "action": "Create",
+    "reason": "Turn telemetry and deviations into governed improvement candidates.",
+    "feature_ids": "PRM-F14,PRM-F19,PRM-F21"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessImprovementModels.cs",
+    "action": "Create",
+    "reason": "Persist improvement requests and training markers separately from live runs.",
+    "feature_ids": "PRM-F14"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Integration/ProcessInsightsIntegrationTests.cs",
+    "action": "Create",
+    "reason": "Verify improvement suggestions and training markers from telemetry inputs.",
+    "feature_ids": "PRM-F14,PRM-F19,PRM-F21"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessConformanceModels.cs",
+    "action": "Create",
+    "reason": "Store observations, deviations, and approval outcomes for reality reviews.",
+    "feature_ids": "PRM-F21"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessConformanceService.cs",
+    "action": "Create",
+    "reason": "Compare journal evidence with modeled paths and cluster deviations.",
+    "feature_ids": "PRM-F21"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessConformancePage.razor",
+    "action": "Create",
+    "reason": "Review paper-versus-reality deltas and route improvements.",
+    "feature_ids": "PRM-F21"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Security/SecurityModels.cs",
+    "action": "Reuse/Bridge",
+    "reason": "Apply restricted visibility to sensitive observations.",
+    "feature_ids": "PRM-F21"
+  },
+  {
+    "path": "src/CanDoItAll.SharedKernel/ActivityStream.cs",
+    "action": "Reuse/Bridge",
+    "reason": "Source observed execution signals for conformance analytics.",
+    "feature_ids": "PRM-F21,PRM-F08"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Integration/ProcessConformanceIntegrationTests.cs",
+    "action": "Create",
+    "reason": "Verify deviation capture, clustering, and privacy-safe access.",
+    "feature_ids": "PRM-F21"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessWorkBriefModels.cs",
+    "action": "Create",
+    "reason": "Define normalized work-brief and baton snapshot entities.",
+    "feature_ids": "PRM-F22"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessWorkBriefService.cs",
+    "action": "Create",
+    "reason": "Materialize work briefs from step contracts, templates, and governance context.",
+    "feature_ids": "PRM-F22"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessTriageService.cs",
+    "action": "Create",
+    "reason": "Persist governed triage and routing decisions.",
+    "feature_ids": "PRM-F22"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessRunPage.razor",
+    "action": "Create",
+    "reason": "Host runtime execution, baton inspection, and later live overlay navigation.",
+    "feature_ids": "PRM-F22,PRM-F24"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Integration/ProcessWorkBriefIntegrationTests.cs",
+    "action": "Create",
+    "reason": "Cover work-brief generation, baton snapshots, and replay fidelity.",
+    "feature_ids": "PRM-F22"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Integration/ProcessTriageRoutingIntegrationTests.cs",
+    "action": "Create",
+    "reason": "Cover governed triage decisions and override journaling.",
+    "feature_ids": "PRM-F22"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessRuntimeOverlayService.cs",
+    "action": "Create",
+    "reason": "Project live process run state onto the authored canvas without becoming canonical state.",
+    "feature_ids": "PRM-F24"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/CanvasAdapters/ProcessCanvasGraphAdapter.cs",
+    "action": "Modify",
+    "reason": "Expose runtime overlay badges, wait/approval cues, and baton visibility on the process canvas.",
+    "feature_ids": "PRM-F24"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessDesignerPage.razor",
+    "action": "Modify",
+    "reason": "Render live overlay chrome and navigate between modeled process and active run context.",
+    "feature_ids": "PRM-F24"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Component/ProcessRuntimeOverlayTests.cs",
+    "action": "Create",
+    "reason": "Verify overlay projection boundaries and visual cues.",
+    "feature_ids": "PRM-F24"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Playwright/ProcessRunCanvasOverlayFlowTests.cs",
+    "action": "Create",
+    "reason": "Exercise live run canvas overlays and baton inspection end-to-end.",
+    "feature_ids": "PRM-F24"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessExecutionBridgeContracts.cs",
+    "action": "Create",
+    "reason": "Define future external-executor correlation contracts and registry ownership rules.",
+    "feature_ids": "PRM-F23"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessPermissionsMapping.cs",
+    "action": "Create",
+    "reason": "Map process step governance to future external executor permission envelopes.",
+    "feature_ids": "PRM-F23"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessExternalExecutionLinkModels.cs",
+    "action": "Create",
+    "reason": "Store process-bound correlation identifiers for future AgentFramework sessions, logs, and metrics.",
+    "feature_ids": "PRM-F23"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs",
+    "action": "Reuse/Verify",
+    "reason": "Reuse shared provider profile ownership instead of inventing a second registry in the process bridge.",
+    "feature_ids": "PRM-F23"
+  },
+  {
+    "path": "CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Models/AgentModels.cs",
+    "action": "Reference seam",
+    "reason": "Review template fields and permission policy for future convergence, not direct dependency.",
+    "feature_ids": "PRM-F23"
+  },
+  {
+    "path": "CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Models/ConversationModels.cs",
+    "action": "Reference seam",
+    "reason": "Review session, log, and metric shapes for process-bound correlation planning.",
+    "feature_ids": "PRM-F23"
+  },
+  {
+    "path": "CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Core/AgentFrameworkWorkspaceService.Chat.cs",
+    "action": "Reference seam",
+    "reason": "Review chat-session persistence and runtime progress flow for future process correlation.",
+    "feature_ids": "PRM-F23"
+  },
+  {
+    "path": "tests/CanDoItAll.Tests.Unit/ProcessExecutionBridgeMappingTests.cs",
+    "action": "Create",
+    "reason": "Verify registry ownership and permission mapping rules without direct AgentFramework dependency.",
+    "feature_ids": "PRM-F23"
+  },
+  {
+    "path": "src/CanDoItAll.Modules.Processes/ProcessContextReferenceModels.cs",
+    "action": "Create",
+    "reason": "Store typed links from process definitions, runs, or steps to project/work items and other business context anchors.",
+    "feature_ids": "PRM-F22,PRM-F10"
+  },
+  {
+    "path": "src/CanDoItAll.SharedKernel/ProjectObjectContracts.cs",
+    "action": "Modify",
+    "reason": "Add or verify typed process object references for process-run/step context links.",
+    "feature_ids": "PRM-F10,PRM-F22"
+  }
+]

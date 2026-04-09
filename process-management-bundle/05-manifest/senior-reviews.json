@@ -1,0 +1,65 @@
+[
+  {
+    "reviewer": "Senior process manager",
+    "checkpoint": "Role templates and staffing chain",
+    "finding": "Manager -> HR -> sourcing pattern needed to be first-class and version-safe.",
+    "action_taken": "Already addressed in PRM-F16, staffing model sheet, and governance docs.",
+    "status": "Closed"
+  },
+  {
+    "reviewer": "Senior process manager",
+    "checkpoint": "Operational ownership and end-to-end value flow",
+    "finding": "Earlier bundle underweighted process owner, customer, interfaces, and strategy linkage.",
+    "action_taken": "Added PRM-F17, ADR-PROC-015/016, new governance models, and operational coverage matrix.",
+    "status": "Closed"
+  },
+  {
+    "reviewer": "Senior process manager",
+    "checkpoint": "Real-world deviations",
+    "finding": "Happy-path modeling alone would not survive large-enterprise exceptions and boundary handoffs.",
+    "action_taken": "Added PRM-F18 and PRM-F21 with exception, conformance, and deviation handling.",
+    "status": "Closed"
+  },
+  {
+    "reviewer": "Senior quality inspector",
+    "checkpoint": "Measurement model",
+    "finding": "Original bundle had KPI language but needed harder separation between activity counts and outcome metrics.",
+    "action_taken": "Added PRM-F19 and ADR-PROC-018 with wait/work/rework/customer outcome telemetry.",
+    "status": "Closed"
+  },
+  {
+    "reviewer": "Senior quality inspector",
+    "checkpoint": "Change governance and adoption",
+    "finding": "Versioning without impact analysis and communication would permit unofficial live variants.",
+    "action_taken": "Added PRM-F20 and ADR-PROC-019 with change requests, acknowledgements, and prioritization.",
+    "status": "Closed"
+  },
+  {
+    "reviewer": "Senior quality inspector",
+    "checkpoint": "Observation privacy and governance",
+    "finding": "Reality-review tooling must not become a rumor database about people.",
+    "action_taken": "Added privacy-safe observation model, Security integration, ADR-PROC-020, and explicit non-goals.",
+    "status": "Closed"
+  },
+  {
+    "reviewer": "Senior process manager",
+    "checkpoint": "Process-native orchestration and baton handoffs",
+    "finding": "Earlier bundle still allowed too much ambiguity around whether future agent collaboration could be wired outside the modeled process.",
+    "action_taken": "Added PRM-F22, ADR-PROC-021, new work-brief and triage entities, and explicit coverage for process-native baton routing.",
+    "status": "Closed"
+  },
+  {
+    "reviewer": "Senior quality inspector",
+    "checkpoint": "Projection boundaries and runtime traceability",
+    "finding": "Live supervision on canvas is valuable, but the overlay must not become canonical state and future AI sessions must remain traceable to business context.",
+    "action_taken": "Added PRM-F24, PRM-F23, ADR-PROC-023/025, overlay entities, and new risk controls for orphaned runtime context and projection misuse.",
+    "status": "Closed"
+  },
+  {
+    "reviewer": "Senior C# architect",
+    "checkpoint": "Cross-repo convergence and module boundaries",
+    "finding": "The first bundle needed a harder stance on shared registries, future adapter placement, and process vs project model separation before AgentFramework integration begins.",
+    "action_taken": "Added ADR-PROC-022/024/026, Workspace integration, stronger AgentFramework seam guidance, and explicit no-dual-registry/no-second-scheduling-language guardrails.",
+    "status": "Closed"
+  }
+]

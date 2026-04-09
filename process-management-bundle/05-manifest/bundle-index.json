@@ -1,0 +1,61 @@
+{
+  "bundle_name": "candoitall-process-management-execution-grade-bundle",
+  "focus": "Process management for direct integration into CanDoItAll before intelligence-lake implementation, hardened around process-native orchestration and future AgentFramework convergence",
+  "generated_from": [
+    "CanDoItAll-development.zip",
+    "CanDoItAll.AgentFramework-main.zip",
+    "candoitall-process-management-execution-grade-bundle-final-pass2.zip",
+    "Conversation thread requirements and final process/quality/C# architecture review passes"
+  ],
+  "review_revision": "senior-process-manager-quality-inspector-and-csharp-architect-pass-4",
+  "counts": {
+    "features": 24,
+    "user_stories": 102,
+    "risks": 28,
+    "decisions": 26,
+    "entities": 44,
+    "integrations": 15,
+    "canvas_gaps": 19,
+    "process_language_entries": 31,
+    "actor_model_entries": 23,
+    "staffing_model_entries": 22,
+    "runtime_state_entries": 46,
+    "ui_flows": 17,
+    "process_orchestration_entries": 14,
+    "repo_touchpoints": 104,
+    "delivery_waves": 6,
+    "subbundles": 24,
+    "critical_features": 10,
+    "operational_coverage_points": 22,
+    "senior_review_findings": 9
+  },
+  "directories": {
+    "context": "00-context",
+    "workbooks": "01-workbooks",
+    "architecture": "02-architecture",
+    "subbundles": "03-subbundles",
+    "codex": "04-codex",
+    "manifest": "05-manifest"
+  },
+  "recommended_reading_order": [
+    "00-context/coverage-checklist.md",
+    "00-context/10-cross-repo-convergence-review.md",
+    "00-context/11-senior-csharp-architect-review.md",
+    "00-context/09-final-readiness-review.md",
+    "01-workbooks/01-process-management-execution-grade.xlsx",
+    "01-workbooks/02-process-modeling-canvas-and-runtime.xlsx",
+    "02-architecture/01-overview-and-principles.md",
+    "02-architecture/05-runtime-handoffs-and-governance.md",
+    "02-architecture/12-process-native-orchestration-and-baton-handoffs.md",
+    "02-architecture/13-cross-repo-convergence-processes-projects-and-agentframework.md",
+    "04-codex/IMPLEMENTATION_ORDER.md"
+  ],
+  "notes": [
+    "Processes is the canonical owner of process definitions, orchestration, work briefs, baton handoffs, journals, and runtime state.",
+    "CRM-HR owns durable human/AI business identity and reusable role/agent templates.",
+    "Workspace owns provider/model profile truth.",
+    "Projects owns project scope and context; Processes links to it through typed references rather than copying hierarchy.",
+    "Live canvas supervision is a projection over canonical definition + runtime evidence, not mutable source of truth.",
+    "Future AgentFramework integration remains a later adapter seam using process-bound correlation and policy mapping."
+  ]
+}

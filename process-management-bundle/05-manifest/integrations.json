@@ -1,0 +1,137 @@
+[
+  {
+    "module": "Projects",
+    "current_asset": "Project models, hierarchy, project UX, project modal/board",
+    "integration": "Project-scoped processes, shared-project navigation, explicit process ownership for shared libraries/projects, and typed links from process definitions/runs/steps into project context without replacing project hierarchy.",
+    "direction": "Processes -> Projects (reference ProjectId and context links); Projects UX -> Processes navigation",
+    "wave": "Wave 1/3",
+    "mandatory": "Yes",
+    "sources": "src/CanDoItAll.Modules.Projects/ProjectModels.cs; ProjectModalHost.razor; ProjectsBoard.razor"
+  },
+  {
+    "module": "CRM-HR",
+    "current_asset": "Party directory, AI-agent profiles, project assignments, workforce/staffing primitives",
+    "integration": "Actor role binding, owner/steward binding, manager-owned role and agent templates, durable AI identities, approvers, supervisory parties, staffing fulfillment, and future AI-executor mapping.",
+    "direction": "Processes -> CRM-HR via bridge; CRM-HR owns identities, staffing templates, and AI business profiles",
+    "wave": "Wave 1/2",
+    "mandatory": "Yes",
+    "sources": "src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs; CrmHrServices.cs; Pages/CrmHrAgentsPage.razor; Pages/CrmHrAssignmentsPage.razor"
+  },
+  {
+    "module": "CRM-HR Workforce / Recruiting / Assignments",
+    "current_asset": "Staffing requests, workforce profiles, recruiting pipelines, onboarding tasks, capacity dashboard",
+    "integration": "Manager-defined role templates, staffing briefs from process gaps, candidate/agent sourcing, capacity-aware suggestions, fallback handoffs, and capacity signals used by process telemetry.",
+    "direction": "Processes <-> CRM-HR staffing bridges",
+    "wave": "Wave 1/2",
+    "mandatory": "Yes",
+    "sources": "src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs; CrmHrServices.cs; CrmHrRecruitingServices.cs; Pages/CrmHrAssignmentsPage.razor; Pages/CrmHrRecruitingPage.razor; Pages/CrmHrWorkforcePage.razor"
+  },
+  {
+    "module": "Workspace",
+    "current_asset": "Shared provider profiles, neutral provider contract, provider execution service, settings surface",
+    "integration": "Future AI executor bindings and CRM-HR agent profiles must resolve through shared Workspace provider profiles instead of inventing a second permanent provider registry.",
+    "direction": "Processes -> Workspace provider/profile references; CRM-HR and future AF bridge reuse Workspace truth",
+    "wave": "Wave 1/3",
+    "mandatory": "Yes",
+    "sources": "src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs; ProviderExecution.cs; Pages/SettingsPage.razor"
+  },
+  {
+    "module": "Workbench",
+    "current_asset": "Project structure surface, projection/bindings, leases, Mermaid import",
+    "integration": "Optional process summary projections and navigation; import/export heuristics as reference only.",
+    "direction": "Processes -> Workbench projection; never canonical reverse",
+    "wave": "Wave 3",
+    "mandatory": "No",
+    "sources": "architecture/adrs/ADR-0002*; ADR-0004*; ProjectStructureImportService.cs; ProjectStructureLeaseService.cs"
+  },
+  {
+    "module": "CanvasLib",
+    "current_asset": "Interactive workbench-style canvas foundation",
+    "integration": "Dedicated process designer surface, diagram layout, quick-create, minimap, grouping, possible link-label extension.",
+    "direction": "Processes -> CanvasLib adapter",
+    "wave": "Wave 1",
+    "mandatory": "Yes",
+    "sources": "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/*"
+  },
+  {
+    "module": "Factory",
+    "current_asset": "Prompt Flow templates and graph/canvas adapters",
+    "integration": "Reference pattern for graph editor UX and optional starter template seeding from prompt-flow patterns.",
+    "direction": "Processes <- Factory patterns / seeds",
+    "wave": "Wave 1/2",
+    "mandatory": "No",
+    "sources": "src/CanDoItAll.Modules.Factory/FactoryDomain.cs; CanvasAdapters/*; output/prompt-library/factory-prompt-flow-templates.seed.json"
+  },
+  {
+    "module": "Activity",
+    "current_asset": "Shared activity timeline",
+    "integration": "Record high-level run events, change-governance communications, and conformance review signals.",
+    "direction": "Processes -> Activity via IActivityStream",
+    "wave": "Wave 2/3/4",
+    "mandatory": "Yes",
+    "sources": "src/CanDoItAll.SharedKernel/ActivityStream.cs; src/CanDoItAll.Modules.Activity/ActivityModels.cs"
+  },
+  {
+    "module": "Automation",
+    "current_asset": "Background runtime and automation signals",
+    "integration": "Overdue/blocker signals, governed change notifications, and later scheduled transitions or telemetry extraction jobs.",
+    "direction": "Processes -> Automation signals",
+    "wave": "Wave 3/4",
+    "mandatory": "No",
+    "sources": "src/CanDoItAll.SharedKernel/AutomationSignals.cs; src/CanDoItAll.Modules.Automation/*"
+  },
+  {
+    "module": "Validation",
+    "current_asset": "Validation center and review artifacts",
+    "integration": "Attach validation gates, reviews, input-quality requirements, and evidence requirements to steps.",
+    "direction": "Processes <-> Validation references",
+    "wave": "Wave 3",
+    "mandatory": "No",
+    "sources": "src/CanDoItAll.Modules.Validation/*"
+  },
+  {
+    "module": "TestLab",
+    "current_asset": "Test plans and evidence",
+    "integration": "Attach test plans/evidence to steps and completion gates.",
+    "direction": "Processes <-> TestLab references",
+    "wave": "Wave 3",
+    "mandatory": "No",
+    "sources": "src/CanDoItAll.Modules.TestLab/*"
+  },
+  {
+    "module": "SharedKernel",
+    "current_asset": "Cross-module contracts, project object types, activity and automation contracts",
+    "integration": "Introduce process bridge contracts, process portfolio object types, and shared activity/automation contracts for telemetry and governance.",
+    "direction": "Processes -> SharedKernel contracts",
+    "wave": "Wave 1/3",
+    "mandatory": "Yes",
+    "sources": "src/CanDoItAll.SharedKernel/ProjectObjectContracts.cs; ActivityStream.cs; AutomationSignals.cs"
+  },
+  {
+    "module": "Composition / Web",
+    "current_asset": "Module registration and shell navigation",
+    "integration": "Register new module and routes.",
+    "direction": "Processes -> Composition/Web",
+    "wave": "Wave 1",
+    "mandatory": "Yes",
+    "sources": "src/CanDoItAll.Web/Program.cs; src/CanDoItAll.Web/Composition/ShellNavigation.cs; src/CanDoItAll.Composition/*"
+  },
+  {
+    "module": "Security",
+    "current_asset": "Module-level security models and secret-aware infrastructure seams",
+    "integration": "Access control for governance notes, conformance observations, restricted deviation reviews, and decision-right visibility boundaries.",
+    "direction": "Processes -> Security policy bindings; Security enforces sensitive observation access",
+    "wave": "Wave 3/4",
+    "mandatory": "Yes",
+    "sources": "src/CanDoItAll.Modules.Security/SecurityModels.cs; SecurityModuleServiceCollectionExtensions.cs"
+  },
+  {
+    "module": "AgentFramework overlay",
+    "current_asset": "Research runtime, temporary template/provider/capability/session stores, rights model, sessions, execution logs, metrics",
+    "integration": "Future AI-execution bridge, process-bound correlation, permission mapping, and registry convergence; business templates and durable identities stay outside the overlay.",
+    "direction": "Future adapter only; Processes remains canonical for orchestration, CRM-HR/Workspace remain canonical for identities/templates/providers",
+    "wave": "Wave 3+",
+    "mandatory": "No",
+    "sources": "CanDoItAll.AgentFramework-main/integration-map/01-candoitall-seams.md; integration-map/02-data-rights-and-persistence.md; src/CanDoItAll.AgentFramework.Models/AgentModels.cs; src/CanDoItAll.AgentFramework.Models/ConversationModels.cs; src/CanDoItAll.AgentFramework.Core/AgentFrameworkWorkspaceService.Chat.cs"
+  }
+]

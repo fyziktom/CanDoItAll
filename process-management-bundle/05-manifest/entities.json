@@ -1,0 +1,310 @@
+[
+  {
+    "entity": "ProcessDefinition",
+    "kind": "Canonical root",
+    "summary": "Stable identity for a process family; owns scope, ownership, and version lineage.",
+    "tables": "Processes_Definitions",
+    "notes": "ProjectId nullable for workspace templates."
+  },
+  {
+    "entity": "ProcessDefinitionVersion",
+    "kind": "Canonical version",
+    "summary": "Immutable published or mutable draft version of a definition.",
+    "tables": "Processes_DefinitionVersions",
+    "notes": "One published version max per definition."
+  },
+  {
+    "entity": "ProcessNode",
+    "kind": "Canonical graph node",
+    "summary": "Start, step, decision, approval, handoff, wait, subprocess, or end node.",
+    "tables": "Processes_Nodes",
+    "notes": "Node kind drives validation rules."
+  },
+  {
+    "entity": "ProcessTransition",
+    "kind": "Canonical graph edge",
+    "summary": "Directed edge with branch semantics, labels, and default/conditional flags.",
+    "tables": "Processes_Transitions",
+    "notes": "Separate from diagram styling."
+  },
+  {
+    "entity": "ProcessActorRole",
+    "kind": "Canonical role",
+    "summary": "Named responsibility role used across one definition version.",
+    "tables": "Processes_ActorRoles",
+    "notes": "Examples: Triage, Architect, Reviewer."
+  },
+  {
+    "entity": "ProcessActorBinding",
+    "kind": "Canonical binding",
+    "summary": "Maps a role to CRM-HR party / AI-agent profile / fallback owner metadata.",
+    "tables": "Processes_ActorBindings",
+    "notes": "Binding changes are versioned/audited."
+  },
+  {
+    "entity": "ProcessStepContract",
+    "kind": "Canonical contract",
+    "summary": "Entry/exit criteria, instructions, evidence requirements, and SLO for a step node.",
+    "tables": "Processes_StepContracts",
+    "notes": "One contract per executable step node."
+  },
+  {
+    "entity": "ProcessArtifactContract",
+    "kind": "Canonical contract child",
+    "summary": "Typed input/output/evidence artifact expectation for a step.",
+    "tables": "Processes_ArtifactContracts",
+    "notes": "Tracks direction, type, required flag, notes."
+  },
+  {
+    "entity": "ProcessApprovalPolicy",
+    "kind": "Canonical policy",
+    "summary": "Approval requirements attached to a node or transition.",
+    "tables": "Processes_ApprovalPolicies",
+    "notes": "Supports pause/resume and approver routing."
+  },
+  {
+    "entity": "ProcessEscalationPolicy",
+    "kind": "Canonical policy",
+    "summary": "Escalation targets and timeout rules for blocked or failed work.",
+    "tables": "Processes_EscalationPolicies",
+    "notes": "Can target party or supervisory role."
+  },
+  {
+    "entity": "ProcessDiagramLayout",
+    "kind": "Projection/layout",
+    "summary": "Persisted diagram positions and editor UI state for one version.",
+    "tables": "Processes_DiagramLayouts",
+    "notes": "Never canonical semantic truth."
+  },
+  {
+    "entity": "ProcessDiagramLane",
+    "kind": "Projection/layout",
+    "summary": "Phase/lane/group representation for diagram organization.",
+    "tables": "Processes_DiagramLanes",
+    "notes": "May map to group frames initially."
+  },
+  {
+    "entity": "ProcessRun",
+    "kind": "Runtime root",
+    "summary": "One execution instance bound to a published process version and project context.",
+    "tables": "Processes_Runs",
+    "notes": "Version reference is immutable for the run."
+  },
+  {
+    "entity": "ProcessRunStep",
+    "kind": "Runtime step",
+    "summary": "Runtime state of one node during one run.",
+    "tables": "Processes_RunSteps",
+    "notes": "Tracks state, assignee, start/end, result."
+  },
+  {
+    "entity": "ProcessRunAssignment",
+    "kind": "Runtime assignment",
+    "summary": "Current or historical claim/assignment for a runtime step.",
+    "tables": "Processes_RunAssignments",
+    "notes": "Supports rebinding and claim history."
+  },
+  {
+    "entity": "ProcessRunHandoff",
+    "kind": "Runtime handoff",
+    "summary": "Responsibility transfer event between runtime steps/actors.",
+    "tables": "Processes_RunHandoffs",
+    "notes": "Records payload summary and completion reason."
+  },
+  {
+    "entity": "ProcessRunEvent",
+    "kind": "Runtime journal",
+    "summary": "Append-only journal entry for state changes and decisions.",
+    "tables": "Processes_RunEvents",
+    "notes": "Primary source for replay."
+  },
+  {
+    "entity": "ProcessRunArtifactLink",
+    "kind": "Runtime reference",
+    "summary": "Links runtime steps to validation, test, prompt, file, or other artifact references.",
+    "tables": "Processes_RunArtifactLinks",
+    "notes": "Cross-module references remain typed."
+  },
+  {
+    "entity": "ProcessImprovementRequest",
+    "kind": "Governance/insights",
+    "summary": "Structured improvement proposal raised from repeated friction or KPI findings.",
+    "tables": "Processes_ImprovementRequests",
+    "notes": "Separated from live execution state."
+  },
+  {
+    "entity": "ProcessMetricSnapshot",
+    "kind": "Analytics snapshot",
+    "summary": "Persisted KPI aggregates for process versions or runs.",
+    "tables": "Processes_MetricSnapshots",
+    "notes": "Useful for dashboards and trend views later."
+  },
+  {
+    "entity": "StaffingRoleTemplate",
+    "kind": "CRM-HR canonical template",
+    "summary": "Manager-governed reusable human/AI/hybrid staffing archetype with responsibility, modality, skills/capabilities, allocation intent, and governance hints.",
+    "tables": "CrmHr_StaffingRoleTemplates",
+    "notes": "Owned by CRM-HR; referenced by Processes."
+  },
+  {
+    "entity": "StaffingRoleTemplateVersion",
+    "kind": "CRM-HR canonical version",
+    "summary": "Immutable approved template version used for process snapshots, sourcing history, and later improvement.",
+    "tables": "CrmHr_StaffingRoleTemplateVersions",
+    "notes": "Lets templates improve without rewriting prior use."
+  },
+  {
+    "entity": "ProcessActorRoleTemplateReference",
+    "kind": "Canonical process link",
+    "summary": "Reference from a process role to the selected CRM-HR role-template/version plus captured requirement summary.",
+    "tables": "Processes_ActorRoleTemplates",
+    "notes": "Snapshotted on publish; optional only for deliberate ad-hoc exceptions."
+  },
+  {
+    "entity": "ProcessActorEligibilityRule",
+    "kind": "Canonical rule",
+    "summary": "Optional pool/filter rules, capacity threshold, validation requirement, and fallback semantics used to resolve a role into an assignee or claimable pool.",
+    "tables": "Processes_ActorEligibilityRules",
+    "notes": "Bridges to CRM-HR availability and validation."
+  },
+  {
+    "entity": "ProcessStaffingGap",
+    "kind": "Runtime/insight entity",
+    "summary": "Marks a required role that is unresolved, under-filled, or blocked on staffing for a definition version or live run.",
+    "tables": "Processes_StaffingGaps",
+    "notes": "Drives readiness and HR queues."
+  },
+  {
+    "entity": "ProcessStaffingRequestLink",
+    "kind": "Cross-module link",
+    "summary": "Connects a process role or staffing gap to CRM-HR staffing requests, recruiting applications, or AI sourcing actions.",
+    "tables": "Processes_StaffingRequestLinks",
+    "notes": "Avoids duplicating sourcing workflow inside Processes."
+  },
+  {
+    "entity": "ProcessGovernanceProfile",
+    "kind": "Governance aggregate",
+    "summary": "Owner, sponsor, customer, criticality, strategy link, stewardship, and policy tier for a process definition/version.",
+    "tables": "Processes_GovernanceProfiles",
+    "notes": "Snapshot into published versions."
+  },
+  {
+    "entity": "ProcessInterfaceContract",
+    "kind": "Boundary contract",
+    "summary": "Upstream/downstream interface definition including sender, receiver, required inputs, outputs, done definition, and expectation metadata.",
+    "tables": "Processes_InterfaceContracts",
+    "notes": "May reference another process or external boundary."
+  },
+  {
+    "entity": "ProcessDecisionRightRule",
+    "kind": "Authority rule",
+    "summary": "Declares who can decide, thresholds, evidence, and override route for a decision or approval.",
+    "tables": "Processes_DecisionRights",
+    "notes": "Can attach to node, transition, or policy gate."
+  },
+  {
+    "entity": "ProcessInputQualityRule",
+    "kind": "Input rule",
+    "summary": "Completeness, classification, and quality criteria that must be satisfied before work continues.",
+    "tables": "Processes_InputQualityRules",
+    "notes": "Pairs with validation and rework reasons."
+  },
+  {
+    "entity": "ProcessVariantDefinition",
+    "kind": "Controlled variant",
+    "summary": "Approved variation from the normal path with declared trigger, owner, and control expectations.",
+    "tables": "Processes_Variants",
+    "notes": "Separate from runtime incident exceptions."
+  },
+  {
+    "entity": "ProcessExceptionPlaybook",
+    "kind": "Exception model",
+    "summary": "Structured exception handling rule with escalation, override, and evidence requirements.",
+    "tables": "Processes_ExceptionPlaybooks",
+    "notes": "Used by runtime when work deviates from happy path."
+  },
+  {
+    "entity": "ProcessTelemetrySnapshot",
+    "kind": "Operational metric",
+    "summary": "Computed or stored runtime metrics such as lead time, touch time, queue time, rework, and SLA attainment.",
+    "tables": "Processes_TelemetrySnapshots",
+    "notes": "May be materialized from journals."
+  },
+  {
+    "entity": "ProcessCapacitySignal",
+    "kind": "Capacity metric",
+    "summary": "Capacity, queue, wait reason, or bottleneck signal linked to process, step, or interface.",
+    "tables": "Processes_CapacitySignals",
+    "notes": "Can integrate CRM-HR availability context."
+  },
+  {
+    "entity": "ProcessChangeRequest",
+    "kind": "Governance workflow",
+    "summary": "Proposed process change with reason, impact, rollout plan, and approval state.",
+    "tables": "Processes_ChangeRequests",
+    "notes": "Separate from definition drafts."
+  },
+  {
+    "entity": "ProcessChangeCommunication",
+    "kind": "Governance evidence",
+    "summary": "Communication and acknowledgement records for affected stakeholders when governed changes are published.",
+    "tables": "Processes_ChangeCommunications",
+    "notes": "Supports literacy/adoption evidence."
+  },
+  {
+    "entity": "ProcessConformanceObservation",
+    "kind": "Reality-check record",
+    "summary": "Structured field observation or audit note linked to a process/run/version with access controls.",
+    "tables": "Processes_ConformanceObservations",
+    "notes": "Must remain privacy-safe and evidence-oriented."
+  },
+  {
+    "entity": "ProcessDeviationCluster",
+    "kind": "Improvement signal",
+    "summary": "Repeated bypass, unofficial loop, or shadow-work pattern clustered from journals and observations.",
+    "tables": "Processes_DeviationClusters",
+    "notes": "Feeds improvement backlog rather than runtime pathing directly."
+  },
+  {
+    "entity": "ProcessContextReference",
+    "kind": "Context link",
+    "summary": "Typed link from definition, run, or step to project objects, work items, accounts, or other business context anchors.",
+    "tables": "Processes_ContextReferences",
+    "notes": "Supports process/project alignment without merging the two models."
+  },
+  {
+    "entity": "ProcessWorkBriefTemplate",
+    "kind": "Canonical orchestration template",
+    "summary": "Normalized execution packet definition derived from step contract, actor template, interface metadata, and governance policy.",
+    "tables": "Processes_WorkBriefTemplates",
+    "notes": "Definition-time artifact; snapshotted at publish."
+  },
+  {
+    "entity": "ProcessWorkBriefSnapshot",
+    "kind": "Runtime snapshot",
+    "summary": "Immutable baton packet attached to a step activation or handoff, carrying the exact brief the executor received.",
+    "tables": "Processes_WorkBriefSnapshots",
+    "notes": "Supports replay, supervision, and future training."
+  },
+  {
+    "entity": "ProcessTriageDecisionRecord",
+    "kind": "Governed routing record",
+    "summary": "Persisted decision showing how triage or dispatch selected the next role, pool, or path for a work brief.",
+    "tables": "Processes_TriageDecisions",
+    "notes": "Avoids hidden routing logic."
+  },
+  {
+    "entity": "ProcessExecutorCorrelation",
+    "kind": "External runtime link",
+    "summary": "Correlation record linking process runs and steps to external executor session, log, approval, or metric identifiers.",
+    "tables": "Processes_ExecutorCorrelations",
+    "notes": "Required for future AgentFramework adapter observability."
+  },
+  {
+    "entity": "ProcessRuntimeOverlayProjection",
+    "kind": "Projection model",
+    "summary": "Read-only projection describing current run state on the authored diagram, including active nodes, waits, approvals, and baton visibility.",
+    "tables": "Query projection / optional cache",
+    "notes": "Never canonical runtime truth."
+  }
+]

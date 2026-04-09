@@ -1,0 +1,1705 @@
+[
+  {
+    "feature_id": "PRM-F01",
+    "title": "Process module foundation and shell integration",
+    "priority": "Critical",
+    "wave": "Wave 1",
+    "dependencies": [],
+    "user_story_ids": [
+      "US-PRM-001",
+      "US-PRM-002",
+      "US-PRM-003",
+      "US-PRM-004"
+    ],
+    "risk_ids": [
+      "R-PRM-01"
+    ],
+    "decision_ids": [
+      "ADR-PROC-001",
+      "ADR-PROC-002"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Web/Program.cs",
+        "action": "Modify",
+        "reason": "Register AddProcessesModule() alongside existing module registrations.",
+        "feature_ids": "PRM-F01"
+      },
+      {
+        "path": "src/CanDoItAll.Web/Composition/ShellNavigation.cs",
+        "action": "Modify",
+        "reason": "Add top-level Processes navigation item.",
+        "feature_ids": "PRM-F01"
+      },
+      {
+        "path": "src/CanDoItAll.Composition/CanDoItAll.Composition.csproj",
+        "action": "Modify",
+        "reason": "Reference the new Processes module project.",
+        "feature_ids": "PRM-F01"
+      },
+      {
+        "path": "src/CanDoItAll.Composition/ModuleAssemblies.cs",
+        "action": "Modify",
+        "reason": "Include ProcessesModuleAssemblyMarker so EF configurations are discovered.",
+        "feature_ids": "PRM-F01"
+      },
+      {
+        "path": "src/CanDoItAll.Infrastructure/Persistence/AppDbContext.cs",
+        "action": "Reuse/Verify",
+        "reason": "No new pattern; process configurations should participate through ModuleAssemblies.",
+        "feature_ids": "PRM-F01,PRM-F15"
+      },
+      {
+        "path": "src/CanDoItAll.Migrations.Sqlite/*",
+        "action": "Modify",
+        "reason": "Add process tables and indexes to SQLite migrations.",
+        "feature_ids": "PRM-F01,PRM-F15"
+      },
+      {
+        "path": "src/CanDoItAll.Migrations.PostgreSql/*",
+        "action": "Modify",
+        "reason": "Add matching PostgreSQL migrations.",
+        "feature_ids": "PRM-F01,PRM-F15"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj",
+        "action": "Create",
+        "reason": "New canonical process-management module.",
+        "feature_ids": "PRM-F01"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessesModuleServiceCollectionExtensions.cs",
+        "action": "Create",
+        "reason": "DI and module assembly marker.",
+        "feature_ids": "PRM-F01"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessesPage.razor",
+        "action": "Create",
+        "reason": "Workspace-level process catalog.",
+        "feature_ids": "PRM-F01,PRM-F02"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor",
+        "action": "Create",
+        "reason": "Project-scoped process catalog and entry point.",
+        "feature_ids": "PRM-F01,PRM-F10"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F01-process-module-foundation-and-shell-integration",
+    "non_goals": [
+      "Do not add process semantics into Workbench nodes or metadata.",
+      "Do not introduce a separate process database in the first wave.",
+      "Do not create AgentFramework runtime dependencies."
+    ],
+    "acceptance": [
+      "A top-level /processes route exists and renders without breaking current shell navigation.",
+      "A project-scoped route exists for process work and can be opened from project UX.",
+      "The module is registered through the same composition pattern as existing CanDoItAll modules.",
+      "SQLite and PostgreSQL migrations compile with the new module present."
+    ]
+  },
+  {
+    "feature_id": "PRM-F02",
+    "title": "Process definition language and versioning",
+    "priority": "Critical",
+    "wave": "Wave 1",
+    "dependencies": [
+      "PRM-F01"
+    ],
+    "user_story_ids": [
+      "US-PRM-005",
+      "US-PRM-006",
+      "US-PRM-007",
+      "US-PRM-008"
+    ],
+    "risk_ids": [
+      "R-PRM-03",
+      "R-PRM-14"
+    ],
+    "decision_ids": [
+      "ADR-PROC-007",
+      "ADR-PROC-013"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessDomain.cs",
+        "action": "Create",
+        "reason": "Core entities, enums, and EF configurations for definitions/versions/nodes/transitions.",
+        "feature_ids": "PRM-F02"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessServices.cs",
+        "action": "Create",
+        "reason": "Definition, versioning, and query application services.",
+        "feature_ids": "PRM-F02"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessesPage.razor",
+        "action": "Create",
+        "reason": "Workspace-level process catalog.",
+        "feature_ids": "PRM-F01,PRM-F02"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Unit/*Process*.cs",
+        "action": "Create",
+        "reason": "Domain rules and state-machine coverage.",
+        "feature_ids": "PRM-F02,PRM-F05,PRM-F07,PRM-F08,PRM-F13"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F02-process-definition-language-and-versioning",
+    "non_goals": [
+      "Do not hide process graph semantics in JSON blobs if they need cross-entity querying.",
+      "Do not allow published versions to be edited in place."
+    ],
+    "acceptance": [
+      "Process definitions support draft, published, and archived versions.",
+      "Published versions are immutable and draft edits produce a new working version.",
+      "Definitions can be scoped as workspace templates or project-owned processes.",
+      "The canonical graph is stored outside Workbench metadata."
+    ]
+  },
+  {
+    "feature_id": "PRM-F03",
+    "title": "Actor roles, responsibilities, and CRM-HR bindings",
+    "priority": "Critical",
+    "wave": "Wave 1",
+    "dependencies": [
+      "PRM-F01",
+      "PRM-F02"
+    ],
+    "user_story_ids": [
+      "US-PRM-009",
+      "US-PRM-010",
+      "US-PRM-011",
+      "US-PRM-012"
+    ],
+    "risk_ids": [
+      "R-PRM-04",
+      "R-PRM-12",
+      "R-PRM-15"
+    ],
+    "decision_ids": [
+      "ADR-PROC-003",
+      "ADR-PROC-012"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessActorServices.cs",
+        "action": "Create",
+        "reason": "Role/binding management and CRM-HR bridge orchestration.",
+        "feature_ids": "PRM-F03"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs",
+        "action": "Modify",
+        "reason": "Expose actor-binding-friendly projections if necessary.",
+        "feature_ids": "PRM-F03"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor",
+        "action": "Modify lightly",
+        "reason": "Optional navigation/info about process usage of AI agents.",
+        "feature_ids": "PRM-F03,PRM-F13"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessActorServices.cs",
+        "action": "Modify",
+        "reason": "Persist template references, eligibility rules, staffing-gap signals, and fallback metadata.",
+        "feature_ids": "PRM-F16,PRM-F03,PRM-F07"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F03-actor-roles-responsibilities-and-crmhr-bindings",
+    "non_goals": [
+      "Do not create a second durable agent directory in the process module.",
+      "Do not make process actors depend on the AgentFramework repo."
+    ],
+    "acceptance": [
+      "A process step can reference responsible, consulted, approver, and observer roles.",
+      "Roles can bind to CRM-HR parties and AI-agent profiles without duplicating durable identity.",
+      "Actor rebinding preserves auditability of earlier runs.",
+      "Future AI execution metadata can be attached without introducing a runtime dependency on AgentFramework."
+    ]
+  },
+  {
+    "feature_id": "PRM-F16",
+    "title": "Role and agent templates, staffing briefs, and sourcing handoffs",
+    "priority": "Critical",
+    "wave": "Wave 1",
+    "dependencies": [
+      "PRM-F03"
+    ],
+    "user_story_ids": [
+      "US-PRM-061",
+      "US-PRM-062",
+      "US-PRM-063",
+      "US-PRM-064",
+      "US-PRM-065",
+      "US-PRM-066",
+      "US-PRM-067"
+    ],
+    "risk_ids": [
+      "R-PRM-15",
+      "R-PRM-17",
+      "R-PRM-24"
+    ],
+    "decision_ids": [
+      "ADR-PROC-012",
+      "ADR-PROC-013",
+      "ADR-PROC-014",
+      "ADR-PROC-022"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/CrmHrBusinessModels.cs",
+        "action": "Modify",
+        "reason": "Add reusable role/agent template entities or links that align with staffing requests, workforce, and AI-agent profiles.",
+        "feature_ids": "PRM-F16"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs",
+        "action": "Modify",
+        "reason": "Expose template catalog, staffing-brief creation, candidate/agent matching, and process-linked staffing projections.",
+        "feature_ids": "PRM-F16"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/CrmHrRecruitingServices.cs",
+        "action": "Modify",
+        "reason": "Carry process-linked role-template metadata into recruiting workflows and conversions.",
+        "feature_ids": "PRM-F16"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/Pages/CrmHrAssignmentsPage.razor",
+        "action": "Modify",
+        "reason": "Surface process-linked staffing briefs, unresolved role gaps, and template-driven fulfillment actions.",
+        "feature_ids": "PRM-F16"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/Pages/CrmHrWorkforcePage.razor",
+        "action": "Modify",
+        "reason": "Show skill/capacity fit against role templates and candidate pool suggestions.",
+        "feature_ids": "PRM-F16"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor",
+        "action": "Modify",
+        "reason": "Expose AI-agent template fulfillment, validation, human owner, and process-usage summary.",
+        "feature_ids": "PRM-F16,PRM-F13"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/Pages/CrmHrRoleTemplatesPage.razor",
+        "action": "Create",
+        "reason": "Dedicated manager/HR catalog for reusable role and agent templates.",
+        "feature_ids": "PRM-F16"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessActorTemplateBridge.cs",
+        "action": "Create",
+        "reason": "Query and snapshot CRM-HR role templates from process authoring and runtime flows.",
+        "feature_ids": "PRM-F16"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessActorServices.cs",
+        "action": "Modify",
+        "reason": "Persist template references, eligibility rules, staffing-gap signals, and fallback metadata.",
+        "feature_ids": "PRM-F16,PRM-F03,PRM-F07"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessDesignerPage.razor",
+        "action": "Modify",
+        "reason": "Add role-template picker, staffing-status badges, and policy warnings to the designer experience.",
+        "feature_ids": "PRM-F16,PRM-F09"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Integration/ProcessesStaffingTemplateIntegrationTests.cs",
+        "action": "Create",
+        "reason": "Cover role-template selection, staffing-request linking, snapshotting, and fallback behavior.",
+        "feature_ids": "PRM-F16"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F16-role-and-agent-templates-staffing-briefs-and-sourcing-handoffs",
+    "non_goals": [
+      "Do not create a second staffing/recruiting system inside Processes.",
+      "Do not make AgentFramework templates a compile-time dependency for role templates.",
+      "Do not let template edits rewrite published process history or prior runs."
+    ],
+    "acceptance": [
+      "A process actor role can optionally reference a reusable manager-approved role/agent template instead of free-text only.",
+      "Templates capture modality, required skills/capabilities, allocation intent, and fallback/supervisory expectations.",
+      "HR can open staffing, recruiting, or AI-agent sourcing work from unresolved process role gaps without losing process context.",
+      "Role/agent templates support governed lifecycle states (draft/active/retired) without rewriting history.",
+      "Published process versions snapshot the selected template version and key requirement summary.",
+      "Runs snapshot the resolved assignee, eligible pool/fallback metadata, and rebind reasons.",
+      "AI-oriented templates still resolve through CRM-HR identities and future execution bridges rather than direct runtime coupling."
+    ]
+  },
+  {
+    "feature_id": "PRM-F04",
+    "title": "Step contracts, inputs, outputs, and evidence",
+    "priority": "High",
+    "wave": "Wave 1",
+    "dependencies": [
+      "PRM-F02",
+      "PRM-F03"
+    ],
+    "user_story_ids": [
+      "US-PRM-013",
+      "US-PRM-014",
+      "US-PRM-015",
+      "US-PRM-016"
+    ],
+    "risk_ids": [],
+    "decision_ids": [],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessContractServices.cs",
+        "action": "Create",
+        "reason": "Step contract and artifact contract services.",
+        "feature_ids": "PRM-F04"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F04-step-contracts-inputs-outputs-and-evidence",
+    "non_goals": [
+      "Do not rely on free-text notes alone when a structured contract field is needed."
+    ],
+    "acceptance": [
+      "Each step can declare entry criteria, exit criteria, expected artifacts, and evidence requirements.",
+      "Steps can declare reusable input and output contracts with type, cardinality, and notes.",
+      "Reviewers can see required evidence before completion is allowed.",
+      "Contract data is queryable separately from the diagram layout."
+    ]
+  },
+  {
+    "feature_id": "PRM-F17",
+    "title": "Process ownership, interfaces, customer, and value alignment",
+    "priority": "Critical",
+    "wave": "Wave 1",
+    "dependencies": [
+      "PRM-F02",
+      "PRM-F03",
+      "PRM-F04"
+    ],
+    "user_story_ids": [
+      "US-PRM-071",
+      "US-PRM-072",
+      "US-PRM-073",
+      "US-PRM-074"
+    ],
+    "risk_ids": [
+      "R-PRM-18"
+    ],
+    "decision_ids": [
+      "ADR-PROC-015",
+      "ADR-PROC-016"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessGovernanceModels.cs",
+        "action": "Create",
+        "reason": "Store process owner, customer, criticality, and strategy metadata.",
+        "feature_ids": "PRM-F17"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessPortfolioServices.cs",
+        "action": "Create",
+        "reason": "Manage portfolio classification, criticality, and catalog queries.",
+        "feature_ids": "PRM-F17,PRM-F20"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessInterfaceServices.cs",
+        "action": "Create",
+        "reason": "Persist and validate upstream/downstream interface contracts.",
+        "feature_ids": "PRM-F17"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessGovernancePage.razor",
+        "action": "Create",
+        "reason": "Edit owner, customer, interface, and criticality metadata.",
+        "feature_ids": "PRM-F17,PRM-F20"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessDesignerPage.razor",
+        "action": "Modify",
+        "reason": "Expose owner/customer/interface side panels without collapsing into org-chart design.",
+        "feature_ids": "PRM-F17"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs",
+        "action": "Reuse/Bridge",
+        "reason": "Resolve owner and steward bindings through CRM-HR parties.",
+        "feature_ids": "PRM-F17"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Integration/ProcessOwnershipIntegrationTests.cs",
+        "action": "Create",
+        "reason": "Verify publish guardrails for owner/customer/criticality/interface completeness.",
+        "feature_ids": "PRM-F17"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F17-process-ownership-interfaces-and-value-alignment",
+    "non_goals": [
+      "Do not force the process graph to mirror the org chart.",
+      "Do not allow publish of critical processes without explicit owner/customer metadata."
+    ],
+    "acceptance": [
+      "A process definition cannot be published without a process owner, primary customer, criticality tier, and value statement.",
+      "Process definitions can declare sponsor, stewarding managers, strategic objective links, and upstream/downstream interface contracts.",
+      "Interface contracts capture sender, receiver, required inputs/outputs, definition of done, and handoff expectation metadata.",
+      "Actor assignments remain separate from org hierarchy; the model does not force the process graph to mirror reporting lines.",
+      "Shared-project or shared-library processes preserve explicit ownership instead of being duplicated as shadow copies."
+    ]
+  },
+  {
+    "feature_id": "PRM-F09",
+    "title": "Canvas modeler and interactive diagrams",
+    "priority": "Critical",
+    "wave": "Wave 1",
+    "dependencies": [
+      "PRM-F01",
+      "PRM-F02",
+      "PRM-F03"
+    ],
+    "user_story_ids": [
+      "US-PRM-033",
+      "US-PRM-034",
+      "US-PRM-035",
+      "US-PRM-036"
+    ],
+    "risk_ids": [
+      "R-PRM-02",
+      "R-PRM-08"
+    ],
+    "decision_ids": [
+      "ADR-PROC-005",
+      "ADR-PROC-007",
+      "ADR-PROC-014"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/CanvasAdapters/ProcessCanvasGraphAdapter.cs",
+        "action": "Create",
+        "reason": "Map canonical process graph into CanvasLib surface.",
+        "feature_ids": "PRM-F09"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessDesignerPage.razor",
+        "action": "Create",
+        "reason": "Interactive process modeler.",
+        "feature_ids": "PRM-F09"
+      },
+      {
+        "path": "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchSurface.cs",
+        "action": "Modify cautiously",
+        "reason": "Potential minimal link-label or lane support if adapter metadata is insufficient.",
+        "feature_ids": "PRM-F09"
+      },
+      {
+        "path": "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchNode.cs",
+        "action": "Reuse / maybe extend",
+        "reason": "Process node rendering likely fits existing node fields.",
+        "feature_ids": "PRM-F09"
+      },
+      {
+        "path": "src/CanDoItAll.Components.CanvasLib/Canvas/Workbench/CanvasWorkbenchEvents.cs",
+        "action": "Modify cautiously",
+        "reason": "Potential process-specific edit requests or create palette metadata.",
+        "feature_ids": "PRM-F09"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Factory/CanvasAdapters/*",
+        "action": "Reference only",
+        "reason": "Pattern source for graph adapter/editor structure.",
+        "feature_ids": "PRM-F09,PRM-F12"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Components/*Process*.cs",
+        "action": "Create",
+        "reason": "Designer/editor component coverage.",
+        "feature_ids": "PRM-F09,PRM-F10"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Playwright/*Process*.cs",
+        "action": "Create",
+        "reason": "End-to-end flows for modeling and runtime.",
+        "feature_ids": "PRM-F09,PRM-F07,PRM-F11"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessDesignerPage.razor",
+        "action": "Modify",
+        "reason": "Add role-template picker, staffing-status badges, and policy warnings to the designer experience.",
+        "feature_ids": "PRM-F16,PRM-F09"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F09-canvas-modeler-and-interactive-diagrams",
+    "non_goals": [
+      "Do not fork a separate canvas technology stack.",
+      "Do not make diagram layout canonical."
+    ],
+    "acceptance": [
+      "Users can create and edit process nodes and transitions from an interactive canvas surface.",
+      "Diagram layout persists independently from the canonical graph semantics.",
+      "Phase grouping and actor grouping can be represented without forcing Workbench to be the source of truth.",
+      "Wave 1 designer delivery is not blocked by later handoff-label chrome; handoff visuals can deepen in Wave 2.",
+      "The design leaves room for labeled transitions and swimlane extensions where CanvasLib needs them."
+    ]
+  },
+  {
+    "feature_id": "PRM-F15",
+    "title": "Storage, migrations, and performance hardening",
+    "priority": "Critical",
+    "wave": "Cross-cutting",
+    "dependencies": [
+      "PRM-F01",
+      "PRM-F02",
+      "PRM-F07",
+      "PRM-F08"
+    ],
+    "user_story_ids": [
+      "US-PRM-057",
+      "US-PRM-058",
+      "US-PRM-059",
+      "US-PRM-060"
+    ],
+    "risk_ids": [
+      "R-PRM-05"
+    ],
+    "decision_ids": [
+      "ADR-PROC-002"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Infrastructure/Persistence/AppDbContext.cs",
+        "action": "Reuse/Verify",
+        "reason": "No new pattern; process configurations should participate through ModuleAssemblies.",
+        "feature_ids": "PRM-F01,PRM-F15"
+      },
+      {
+        "path": "src/CanDoItAll.Migrations.Sqlite/*",
+        "action": "Modify",
+        "reason": "Add process tables and indexes to SQLite migrations.",
+        "feature_ids": "PRM-F01,PRM-F15"
+      },
+      {
+        "path": "src/CanDoItAll.Migrations.PostgreSql/*",
+        "action": "Modify",
+        "reason": "Add matching PostgreSQL migrations.",
+        "feature_ids": "PRM-F01,PRM-F15"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F15-storage-migrations-and-performance-hardening",
+    "non_goals": [
+      "Do not optimize prematurely by extracting storage before the process model is proven.",
+      "Do not let SQLite and PostgreSQL drift."
+    ],
+    "acceptance": [
+      "Process tables live in the main app database with consistent naming and indexing conventions.",
+      "SQLite remains supported for local users without extra setup.",
+      "PostgreSQL migrations exist and stay in lockstep with SQLite.",
+      "The journal and runtime tables have a defined retention/extraction seam for future scale."
+    ]
+  },
+  {
+    "feature_id": "PRM-F05",
+    "title": "Transition rules, decisions, and explicit handoffs",
+    "priority": "Critical",
+    "wave": "Wave 2",
+    "dependencies": [
+      "PRM-F02",
+      "PRM-F03",
+      "PRM-F04"
+    ],
+    "user_story_ids": [
+      "US-PRM-017",
+      "US-PRM-018",
+      "US-PRM-019",
+      "US-PRM-020"
+    ],
+    "risk_ids": [
+      "R-PRM-06",
+      "R-PRM-13"
+    ],
+    "decision_ids": [
+      "ADR-PROC-011",
+      "ADR-PROC-014"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessTransitionServices.cs",
+        "action": "Create",
+        "reason": "Transition validation and handoff semantics.",
+        "feature_ids": "PRM-F05"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Unit/*Process*.cs",
+        "action": "Create",
+        "reason": "Domain rules and state-machine coverage.",
+        "feature_ids": "PRM-F02,PRM-F05,PRM-F07,PRM-F08,PRM-F13"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F05-transition-rules-decisions-and-explicit-handoffs",
+    "non_goals": [
+      "Do not introduce advanced parallel orchestration in the first handoff release."
+    ],
+    "acceptance": [
+      "Decision paths can carry condition text, default-path markers, and branch priority.",
+      "Handoffs record source actor, target actor, payload summary, and completion reason.",
+      "The engine rejects invalid graphs such as unreachable end states or orphaned transitions.",
+      "Sequential specialized handoffs are first-class even before AgentFramework runtime integration."
+    ]
+  },
+  {
+    "feature_id": "PRM-F06",
+    "title": "Approval policies, escalations, and governance gates",
+    "priority": "High",
+    "wave": "Wave 2",
+    "dependencies": [
+      "PRM-F03",
+      "PRM-F04",
+      "PRM-F05"
+    ],
+    "user_story_ids": [
+      "US-PRM-021",
+      "US-PRM-022",
+      "US-PRM-023",
+      "US-PRM-024",
+      "US-PRM-068"
+    ],
+    "risk_ids": [
+      "R-PRM-07",
+      "R-PRM-16"
+    ],
+    "decision_ids": [],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessApprovalServices.cs",
+        "action": "Create",
+        "reason": "Approval and escalation rules.",
+        "feature_ids": "PRM-F06"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F06-approval-policies-escalations-and-governance-gates",
+    "non_goals": [
+      "Do not embed approval state inside ad-hoc step notes.",
+      "Do not bypass audit when an approval decision changes runtime flow."
+    ],
+    "acceptance": [
+      "A process run can pause awaiting approval and resume with an auditable decision.",
+      "Escalation routes can target a human party or supervisory role.",
+      "Policy metadata is explicit and not hidden inside runtime-only configuration.",
+      "Approval policies can prevent self-approval or conflicting role combinations unless an explicit override path is configured.",
+      "The model can later map to agent external-call approvals and collaboration rights."
+    ]
+  },
+  {
+    "feature_id": "PRM-F07",
+    "title": "Runtime execution state machine and assignments",
+    "priority": "Critical",
+    "wave": "Wave 2",
+    "dependencies": [
+      "PRM-F02",
+      "PRM-F03",
+      "PRM-F04",
+      "PRM-F05",
+      "PRM-F06"
+    ],
+    "user_story_ids": [
+      "US-PRM-025",
+      "US-PRM-026",
+      "US-PRM-027",
+      "US-PRM-028",
+      "US-PRM-069",
+      "US-PRM-070"
+    ],
+    "risk_ids": [
+      "R-PRM-03",
+      "R-PRM-11",
+      "R-PRM-13",
+      "R-PRM-16",
+      "R-PRM-17"
+    ],
+    "decision_ids": [
+      "ADR-PROC-006",
+      "ADR-PROC-011",
+      "ADR-PROC-013"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessRuntimeServices.cs",
+        "action": "Create",
+        "reason": "Runs, steps, claims, and state-machine execution.",
+        "feature_ids": "PRM-F07"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessRunPage.razor",
+        "action": "Create",
+        "reason": "Runtime execution and audit view.",
+        "feature_ids": "PRM-F07,PRM-F08"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Unit/*Process*.cs",
+        "action": "Create",
+        "reason": "Domain rules and state-machine coverage.",
+        "feature_ids": "PRM-F02,PRM-F05,PRM-F07,PRM-F08,PRM-F13"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Playwright/*Process*.cs",
+        "action": "Create",
+        "reason": "End-to-end flows for modeling and runtime.",
+        "feature_ids": "PRM-F09,PRM-F07,PRM-F11"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessActorServices.cs",
+        "action": "Modify",
+        "reason": "Persist template references, eligibility rules, staffing-gap signals, and fallback metadata.",
+        "feature_ids": "PRM-F16,PRM-F03,PRM-F07"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F07-runtime-execution-state-machine-and-assignments",
+    "non_goals": [
+      "Do not rely on UI state as the authoritative runtime state machine.",
+      "Do not allow conflicting claims without deterministic rejection."
+    ],
+    "acceptance": [
+      "A process run can start from a published definition version and keep that version immutable for the run lifetime.",
+      "Only valid state transitions are allowed for runs and steps.",
+      "Conflicting claims and double completions are rejected deterministically.",
+      "Assignment resolution can consider eligible pools, capacity/validation state, and fallback routes before work is claimed or rebound.",
+      "Manual, human-approved, and AI-backed executors all fit the same state machine."
+    ]
+  },
+  {
+    "feature_id": "PRM-F08",
+    "title": "Execution timeline, audit journal, and replay",
+    "priority": "High",
+    "wave": "Wave 2",
+    "dependencies": [
+      "PRM-F07"
+    ],
+    "user_story_ids": [
+      "US-PRM-029",
+      "US-PRM-030",
+      "US-PRM-031",
+      "US-PRM-032"
+    ],
+    "risk_ids": [
+      "R-PRM-05",
+      "R-PRM-10"
+    ],
+    "decision_ids": [
+      "ADR-PROC-008"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessEventJournal.cs",
+        "action": "Create",
+        "reason": "Append-only journal and replay helpers.",
+        "feature_ids": "PRM-F08"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessRunPage.razor",
+        "action": "Create",
+        "reason": "Runtime execution and audit view.",
+        "feature_ids": "PRM-F07,PRM-F08"
+      },
+      {
+        "path": "src/CanDoItAll.SharedKernel/ActivityStream.cs",
+        "action": "Reuse",
+        "reason": "Journal/activity boundary contract.",
+        "feature_ids": "PRM-F08,PRM-F11"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Unit/*Process*.cs",
+        "action": "Create",
+        "reason": "Domain rules and state-machine coverage.",
+        "feature_ids": "PRM-F02,PRM-F05,PRM-F07,PRM-F08,PRM-F13"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F08-execution-timeline-audit-journal-and-replay",
+    "non_goals": [
+      "Do not infer replay only from mutable current-state rows."
+    ],
+    "acceptance": [
+      "Every run change emits a durable process event with actor and reason metadata.",
+      "High-level process events appear on the shared activity stream.",
+      "A replay API can reconstruct step order and handoff decisions from journaled events.",
+      "Journal writes are separated from mutable current-state rows."
+    ]
+  },
+  {
+    "feature_id": "PRM-F18",
+    "title": "Variants, exceptions, input quality, and decision rights",
+    "priority": "High",
+    "wave": "Wave 2",
+    "dependencies": [
+      "PRM-F04",
+      "PRM-F05",
+      "PRM-F06",
+      "PRM-F07",
+      "PRM-F17"
+    ],
+    "user_story_ids": [
+      "US-PRM-075",
+      "US-PRM-076",
+      "US-PRM-077",
+      "US-PRM-078"
+    ],
+    "risk_ids": [
+      "R-PRM-20",
+      "R-PRM-22"
+    ],
+    "decision_ids": [
+      "ADR-PROC-017"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessInputQualityModels.cs",
+        "action": "Create",
+        "reason": "Represent mandatory inputs, completeness checks, and rejection reasons.",
+        "feature_ids": "PRM-F18"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessExceptionServices.cs",
+        "action": "Create",
+        "reason": "Execute and validate exception playbooks and approved variants.",
+        "feature_ids": "PRM-F18"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessDecisionRightsService.cs",
+        "action": "Create",
+        "reason": "Resolve who may decide what and under which thresholds.",
+        "feature_ids": "PRM-F18"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessPolicyModels.cs",
+        "action": "Modify",
+        "reason": "Add risk-tiered control metadata and explicit decision-right references.",
+        "feature_ids": "PRM-F18"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Validation/*",
+        "action": "Reuse/Bridge",
+        "reason": "Use validation surfaces for input-quality rule feedback.",
+        "feature_ids": "PRM-F18,PRM-F04"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Security/SecurityModels.cs",
+        "action": "Reuse/Bridge",
+        "reason": "Restrict sensitive exception/override visibility where needed.",
+        "feature_ids": "PRM-F18,PRM-F21"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Integration/ProcessDecisionRightsIntegrationTests.cs",
+        "action": "Create",
+        "reason": "Verify authority limits, overrides, and exception journaling.",
+        "feature_ids": "PRM-F18"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F18-variants-exceptions-input-quality-and-decision-rights",
+    "non_goals": [
+      "Do not turn every low-risk step into an approval gate.",
+      "Do not hide decision-right rules inside free-text notes."
+    ],
+    "acceptance": [
+      "Steps can define mandatory inputs, completeness checks, and structured rejection/rework reasons before execution continues.",
+      "The model distinguishes normal path, approved variant, and exception path metadata with escalation or override requirements.",
+      "Decision rights are explicit: who can decide, under what threshold or rule, with what evidence, and through which override route.",
+      "Controls can be tagged as mandatory, conditional, or optional based on risk tier so low-risk work is not over-approved.",
+      "Runtime journals capture exception reasons, overrides, and input-quality failures separately from generic failure states."
+    ]
+  },
+  {
+    "feature_id": "PRM-F22",
+    "title": "Process-native work briefs, baton handoffs, and governed triage routing",
+    "priority": "Critical",
+    "wave": "Wave 2",
+    "dependencies": [
+      "PRM-F04",
+      "PRM-F05",
+      "PRM-F07",
+      "PRM-F16",
+      "PRM-F17"
+    ],
+    "user_story_ids": [
+      "US-PRM-091",
+      "US-PRM-092",
+      "US-PRM-093",
+      "US-PRM-094"
+    ],
+    "risk_ids": [
+      "R-PRM-25",
+      "R-PRM-03",
+      "R-PRM-10"
+    ],
+    "decision_ids": [
+      "ADR-PROC-021",
+      "ADR-PROC-023",
+      "ADR-PROC-026"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessWorkBriefModels.cs",
+        "action": "Create",
+        "reason": "Define normalized work-brief and baton snapshot entities.",
+        "feature_ids": "PRM-F22"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessWorkBriefService.cs",
+        "action": "Create",
+        "reason": "Materialize work briefs from step contracts, templates, and governance context.",
+        "feature_ids": "PRM-F22"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessTriageService.cs",
+        "action": "Create",
+        "reason": "Persist governed triage and routing decisions.",
+        "feature_ids": "PRM-F22"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessRunPage.razor",
+        "action": "Create",
+        "reason": "Host runtime execution, baton inspection, and later live overlay navigation.",
+        "feature_ids": "PRM-F22,PRM-F24"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Integration/ProcessWorkBriefIntegrationTests.cs",
+        "action": "Create",
+        "reason": "Cover work-brief generation, baton snapshots, and replay fidelity.",
+        "feature_ids": "PRM-F22"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Integration/ProcessTriageRoutingIntegrationTests.cs",
+        "action": "Create",
+        "reason": "Cover governed triage decisions and override journaling.",
+        "feature_ids": "PRM-F22"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessContextReferenceModels.cs",
+        "action": "Create",
+        "reason": "Store typed links from process definitions, runs, or steps to project/work items and other business context anchors.",
+        "feature_ids": "PRM-F22,PRM-F10"
+      },
+      {
+        "path": "src/CanDoItAll.SharedKernel/ProjectObjectContracts.cs",
+        "action": "Modify",
+        "reason": "Add or verify typed process object references for process-run/step context links.",
+        "feature_ids": "PRM-F10,PRM-F22"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F22-process-native-work-briefs-baton-handoffs-and-governed-triage",
+    "non_goals": [
+      "Do not let triage or baton routing live only inside opaque runtime prompts.",
+      "Do not bypass modeled process boundaries with direct production agent-to-agent shortcuts.",
+      "Do not require AgentFramework packages to implement process-native baton semantics."
+    ],
+    "acceptance": [
+      "Each executable step can materialize a normalized work brief from process, step, template, customer, and governance context.",
+      "Baton handoffs are persisted as first-class runtime artifacts with source role, target role, brief snapshot, and completion context.",
+      "Triage or dispatcher behavior is modeled as a process role, step, or governed routing decision record rather than hidden out-of-band agent topology.",
+      "Direct production agent-to-agent wiring outside the process requires an explicit override path with journal evidence."
+    ]
+  },
+  {
+    "feature_id": "PRM-F12",
+    "title": "Import/export, templates, Mermaid, and prompt-flow seeding",
+    "priority": "Medium",
+    "wave": "Wave 2",
+    "dependencies": [
+      "PRM-F02",
+      "PRM-F09"
+    ],
+    "user_story_ids": [
+      "US-PRM-045",
+      "US-PRM-046",
+      "US-PRM-047",
+      "US-PRM-048"
+    ],
+    "risk_ids": [
+      "R-PRM-09",
+      "R-PRM-14"
+    ],
+    "decision_ids": [
+      "ADR-PROC-009"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Workbench/*",
+        "action": "Modify cautiously",
+        "reason": "Projection-only integration, navigation, or import/export reuse; avoid canonical storage.",
+        "feature_ids": "PRM-F10,PRM-F12"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Factory/CanvasAdapters/*",
+        "action": "Reference only",
+        "reason": "Pattern source for graph adapter/editor structure.",
+        "feature_ids": "PRM-F09,PRM-F12"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F12-import-export-templates-mermaid-and-promptflow-seeding",
+    "non_goals": [
+      "Do not claim Mermaid round-tripping is lossless when semantics are richer than Mermaid can carry."
+    ],
+    "acceptance": [
+      "Mermaid mindmap and flowchart can be imported into a draft process with explicit limitations recorded.",
+      "Published processes can be exported as Mermaid and JSON packages.",
+      "Starter templates can reference prompt-flow patterns without making Prompt Factory the canonical process store.",
+      "Import warnings are explicit whenever semantics do not round-trip perfectly."
+    ]
+  },
+  {
+    "feature_id": "PRM-F10",
+    "title": "Project, Workbench, and shell projections",
+    "priority": "High",
+    "wave": "Wave 3",
+    "dependencies": [
+      "PRM-F01",
+      "PRM-F02",
+      "PRM-F07",
+      "PRM-F09"
+    ],
+    "user_story_ids": [
+      "US-PRM-037",
+      "US-PRM-038",
+      "US-PRM-039",
+      "US-PRM-040"
+    ],
+    "risk_ids": [
+      "R-PRM-01",
+      "R-PRM-12",
+      "R-PRM-14",
+      "R-PRM-03"
+    ],
+    "decision_ids": [
+      "ADR-PROC-001",
+      "ADR-PROC-004",
+      "ADR-PROC-026"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor",
+        "action": "Create",
+        "reason": "Project-scoped process catalog and entry point.",
+        "feature_ids": "PRM-F01,PRM-F10"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Projects/Pages/Components/ProjectModalHost.razor",
+        "action": "Modify",
+        "reason": "Expose Open processes action near structure/calendar.",
+        "feature_ids": "PRM-F10"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Projects/Pages/Components/ProjectsBoard.razor",
+        "action": "Modify",
+        "reason": "Add processes CTA on project cards/board.",
+        "feature_ids": "PRM-F10"
+      },
+      {
+        "path": "src/CanDoItAll.SharedKernel/ProjectObjectContracts.cs",
+        "action": "Modify cautiously",
+        "reason": "Only if Workbench projection requires explicit Process/ProcessRun object types.",
+        "feature_ids": "PRM-F10"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Workbench/*",
+        "action": "Modify cautiously",
+        "reason": "Projection-only integration, navigation, or import/export reuse; avoid canonical storage.",
+        "feature_ids": "PRM-F10,PRM-F12"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Components/*Process*.cs",
+        "action": "Create",
+        "reason": "Designer/editor component coverage.",
+        "feature_ids": "PRM-F09,PRM-F10"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessContextReferenceModels.cs",
+        "action": "Create",
+        "reason": "Store typed links from process definitions, runs, or steps to project/work items and other business context anchors.",
+        "feature_ids": "PRM-F22,PRM-F10"
+      },
+      {
+        "path": "src/CanDoItAll.SharedKernel/ProjectObjectContracts.cs",
+        "action": "Modify",
+        "reason": "Add or verify typed process object references for process-run/step context links.",
+        "feature_ids": "PRM-F10,PRM-F22"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F10-project-workbench-and-shell-projections",
+    "non_goals": [
+      "Do not turn project UX into a second full process editor.",
+      "Do not make Workbench the only route to process data."
+    ],
+    "acceptance": [
+      "Project surfaces expose a clear entry point into processes.",
+      "If Workbench projection is enabled, it shows references and summaries rather than acting as the canonical store.",
+      "Process-related project object types and routes remain explicit and typed.",
+      "Shared-project processes are navigated through project ownership rather than duplicated shadow copies."
+    ]
+  },
+  {
+    "feature_id": "PRM-F11",
+    "title": "Activity, Automation, Validation, and TestLab hooks",
+    "priority": "High",
+    "wave": "Wave 3",
+    "dependencies": [
+      "PRM-F04",
+      "PRM-F06",
+      "PRM-F07",
+      "PRM-F08"
+    ],
+    "user_story_ids": [
+      "US-PRM-041",
+      "US-PRM-042",
+      "US-PRM-043",
+      "US-PRM-044"
+    ],
+    "risk_ids": [
+      "R-PRM-12"
+    ],
+    "decision_ids": [],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.SharedKernel/ActivityStream.cs",
+        "action": "Reuse",
+        "reason": "Journal/activity boundary contract.",
+        "feature_ids": "PRM-F08,PRM-F11"
+      },
+      {
+        "path": "src/CanDoItAll.SharedKernel/AutomationSignals.cs",
+        "action": "Reuse",
+        "reason": "Overdue/blocker signal publishing.",
+        "feature_ids": "PRM-F11"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Playwright/*Process*.cs",
+        "action": "Create",
+        "reason": "End-to-end flows for modeling and runtime.",
+        "feature_ids": "PRM-F09,PRM-F07,PRM-F11"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F11-activity-automation-validation-and-testlab-hooks",
+    "non_goals": [
+      "Do not couple Processes directly to Activity/Automation/Validation/TestLab internals beyond existing contracts or narrow bridges."
+    ],
+    "acceptance": [
+      "Runs can emit activity entries and automation signals without tight module coupling.",
+      "Validation and TestLab references can be attached to steps and gates.",
+      "Overdue steps and blocked approvals become visible in automation/operations surfaces.",
+      "The hook design does not require the intelligence lake to exist first."
+    ]
+  },
+  {
+    "feature_id": "PRM-F13",
+    "title": "Future AgentFramework adapter and AI executor seam",
+    "priority": "High",
+    "wave": "Wave 3",
+    "dependencies": [
+      "PRM-F03",
+      "PRM-F05",
+      "PRM-F06",
+      "PRM-F07"
+    ],
+    "user_story_ids": [
+      "US-PRM-049",
+      "US-PRM-050",
+      "US-PRM-051",
+      "US-PRM-052"
+    ],
+    "risk_ids": [
+      "R-PRM-03",
+      "R-PRM-04",
+      "R-PRM-07",
+      "R-PRM-11",
+      "R-PRM-26",
+      "R-PRM-27"
+    ],
+    "decision_ids": [
+      "ADR-PROC-003",
+      "ADR-PROC-006",
+      "ADR-PROC-012",
+      "ADR-PROC-022",
+      "ADR-PROC-023",
+      "ADR-PROC-024"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor",
+        "action": "Modify lightly",
+        "reason": "Optional navigation/info about process usage of AI agents.",
+        "feature_ids": "PRM-F03,PRM-F13"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Unit/*Process*.cs",
+        "action": "Create",
+        "reason": "Domain rules and state-machine coverage.",
+        "feature_ids": "PRM-F02,PRM-F05,PRM-F07,PRM-F08,PRM-F13"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor",
+        "action": "Modify",
+        "reason": "Expose AI-agent template fulfillment, validation, human owner, and process-usage summary.",
+        "feature_ids": "PRM-F16,PRM-F13"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F13-future-agentframework-adapter-and-ai-executor-seam",
+    "non_goals": [
+      "Do not reference AgentFramework projects from the first core process module build.",
+      "Do not let runtime-specific details leak into the canonical process definition model."
+    ],
+    "acceptance": [
+      "The process runtime can distinguish manual, AI, and hybrid executor modes.",
+      "The process module compiles and works without referencing AgentFramework projects.",
+      "A bridge contract exists for future AI execution and handoff orchestration adapters.",
+      "CRM-HR remains the durable owner of AI agent identity and staffing."
+    ]
+  },
+  {
+    "feature_id": "PRM-F24",
+    "title": "Live process execution canvas overlays and baton visibility",
+    "priority": "High",
+    "wave": "Wave 3",
+    "dependencies": [
+      "PRM-F07",
+      "PRM-F08",
+      "PRM-F09",
+      "PRM-F22"
+    ],
+    "user_story_ids": [
+      "US-PRM-095",
+      "US-PRM-096",
+      "US-PRM-097",
+      "US-PRM-098"
+    ],
+    "risk_ids": [
+      "R-PRM-28",
+      "R-PRM-08",
+      "R-PRM-02"
+    ],
+    "decision_ids": [
+      "ADR-PROC-005",
+      "ADR-PROC-025"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessRunPage.razor",
+        "action": "Create",
+        "reason": "Host runtime execution, baton inspection, and later live overlay navigation.",
+        "feature_ids": "PRM-F22,PRM-F24"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessRuntimeOverlayService.cs",
+        "action": "Create",
+        "reason": "Project live process run state onto the authored canvas without becoming canonical state.",
+        "feature_ids": "PRM-F24"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/CanvasAdapters/ProcessCanvasGraphAdapter.cs",
+        "action": "Modify",
+        "reason": "Expose runtime overlay badges, wait/approval cues, and baton visibility on the process canvas.",
+        "feature_ids": "PRM-F24"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessDesignerPage.razor",
+        "action": "Modify",
+        "reason": "Render live overlay chrome and navigate between modeled process and active run context.",
+        "feature_ids": "PRM-F24"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Component/ProcessRuntimeOverlayTests.cs",
+        "action": "Create",
+        "reason": "Verify overlay projection boundaries and visual cues.",
+        "feature_ids": "PRM-F24"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Playwright/ProcessRunCanvasOverlayFlowTests.cs",
+        "action": "Create",
+        "reason": "Exercise live run canvas overlays and baton inspection end-to-end.",
+        "feature_ids": "PRM-F24"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F24-live-process-execution-canvas-overlays-and-baton-visibility",
+    "non_goals": [
+      "Do not make live canvas overlays the canonical runtime state store.",
+      "Do not block runtime supervision on advanced BPMN-style chrome.",
+      "Do not fork a second visualization stack for live execution."
+    ],
+    "acceptance": [
+      "A live run can be viewed on the authored process canvas with active, waiting, blocked, and completed step overlays.",
+      "Canvas overlays show current assignee or executor, wait reason, approval state, and last baton movement where relevant.",
+      "Timeline and canvas views link to the same underlying run and journal without duplicate state mutation paths.",
+      "Runtime overlay projection is explicitly separated from canonical definition data and mutable runtime state."
+    ]
+  },
+  {
+    "feature_id": "PRM-F23",
+    "title": "AgentFramework convergence: process-bound context, rights, and shared registries",
+    "priority": "High",
+    "wave": "Wave 3",
+    "dependencies": [
+      "PRM-F13",
+      "PRM-F16",
+      "PRM-F22"
+    ],
+    "user_story_ids": [
+      "US-PRM-099",
+      "US-PRM-100",
+      "US-PRM-101",
+      "US-PRM-102"
+    ],
+    "risk_ids": [
+      "R-PRM-24",
+      "R-PRM-26",
+      "R-PRM-27",
+      "R-PRM-03"
+    ],
+    "decision_ids": [
+      "ADR-PROC-006",
+      "ADR-PROC-022",
+      "ADR-PROC-023",
+      "ADR-PROC-024",
+      "ADR-PROC-026"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessExecutionBridgeContracts.cs",
+        "action": "Create",
+        "reason": "Define future external-executor correlation contracts and registry ownership rules.",
+        "feature_ids": "PRM-F23"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessPermissionsMapping.cs",
+        "action": "Create",
+        "reason": "Map process step governance to future external executor permission envelopes.",
+        "feature_ids": "PRM-F23"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessExternalExecutionLinkModels.cs",
+        "action": "Create",
+        "reason": "Store process-bound correlation identifiers for future AgentFramework sessions, logs, and metrics.",
+        "feature_ids": "PRM-F23"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Workspace/WorkspaceModels.cs",
+        "action": "Reuse/Verify",
+        "reason": "Reuse shared provider profile ownership instead of inventing a second registry in the process bridge.",
+        "feature_ids": "PRM-F23"
+      },
+      {
+        "path": "CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Models/AgentModels.cs",
+        "action": "Reference seam",
+        "reason": "Review template fields and permission policy for future convergence, not direct dependency.",
+        "feature_ids": "PRM-F23"
+      },
+      {
+        "path": "CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Models/ConversationModels.cs",
+        "action": "Reference seam",
+        "reason": "Review session, log, and metric shapes for process-bound correlation planning.",
+        "feature_ids": "PRM-F23"
+      },
+      {
+        "path": "CanDoItAll.AgentFramework-main/src/CanDoItAll.AgentFramework.Core/AgentFrameworkWorkspaceService.Chat.cs",
+        "action": "Reference seam",
+        "reason": "Review chat-session persistence and runtime progress flow for future process correlation.",
+        "feature_ids": "PRM-F23"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Unit/ProcessExecutionBridgeMappingTests.cs",
+        "action": "Create",
+        "reason": "Verify registry ownership and permission mapping rules without direct AgentFramework dependency.",
+        "feature_ids": "PRM-F23"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F23-agentframework-convergence-process-bound-context-and-shared-registries",
+    "non_goals": [
+      "Do not move durable business identity ownership out of CRM-HR.",
+      "Do not create a second permanent provider or capability registry in the process bridge.",
+      "Do not take a compile-time dependency on the external AgentFramework repo in the first process-module merge."
+    ],
+    "acceptance": [
+      "Future external executor correlations can link ProcessRun, ProcessStepRun, and assignment records to runtime session, log, and metric identifiers.",
+      "CRM-HR remains canonical for business role and agent templates plus durable AI identities even if runtime-level templates exist elsewhere.",
+      "Shared provider and capability ownership is explicitly converged so the process bridge does not introduce a second canonical registry.",
+      "Process step governance can narrow or require approvals for future AgentFramework permissions and external-call behavior."
+    ]
+  },
+  {
+    "feature_id": "PRM-F20",
+    "title": "Change governance, prioritization, literacy, and management adoption",
+    "priority": "High",
+    "wave": "Wave 3",
+    "dependencies": [
+      "PRM-F02",
+      "PRM-F06",
+      "PRM-F10",
+      "PRM-F17"
+    ],
+    "user_story_ids": [
+      "US-PRM-083",
+      "US-PRM-084",
+      "US-PRM-085",
+      "US-PRM-086"
+    ],
+    "risk_ids": [
+      "R-PRM-18",
+      "R-PRM-21",
+      "R-PRM-22"
+    ],
+    "decision_ids": [
+      "ADR-PROC-019"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessChangeGovernanceModels.cs",
+        "action": "Create",
+        "reason": "Persist change requests, impact analysis, and approvals.",
+        "feature_ids": "PRM-F20"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessChangeGovernanceService.cs",
+        "action": "Create",
+        "reason": "Run change-governance and prioritization workflows.",
+        "feature_ids": "PRM-F20"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessGovernancePage.razor",
+        "action": "Create/Modify",
+        "reason": "Provide governance board and communication surfaces.",
+        "feature_ids": "PRM-F20,PRM-F17"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Activity/*",
+        "action": "Reuse/Bridge",
+        "reason": "Emit communication and acknowledgement events for governed changes.",
+        "feature_ids": "PRM-F20"
+      },
+      {
+        "path": "src/CanDoItAll.Components.BaseLib/Components/*",
+        "action": "Reuse/Bridge",
+        "reason": "Host glossary/help and role-specific guidance panels.",
+        "feature_ids": "PRM-F20"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Playwright/ProcessGovernanceFlowTests.cs",
+        "action": "Create",
+        "reason": "Verify submit -> review -> communicate -> acknowledge flow.",
+        "feature_ids": "PRM-F20"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F20-change-governance-prioritization-literacy-and-management-adoption",
+    "non_goals": [
+      "Do not force identical governance depth on every low-impact process.",
+      "Do not treat immutable version storage as sufficient change governance by itself."
+    ],
+    "acceptance": [
+      "Change proposals capture reason, impacted processes and roles, expected outcomes, risk, and rollout plan.",
+      "Publish, retire, and critical-change operations can require governance approval based on criticality and impact.",
+      "Affected owners, stewards, approvers, and participants receive communication and acknowledgement tasks when governed versions change.",
+      "The process portfolio can classify criticality and prioritization tiers so not every process is modeled to the same depth.",
+      "UI surfaces provide role-based guidance and glossary/help so middle management and operators can understand the process model."
+    ]
+  },
+  {
+    "feature_id": "PRM-F19",
+    "title": "Outcome metrics, capacity, wait-state telemetry, and customer-value measures",
+    "priority": "High",
+    "wave": "Wave 4",
+    "dependencies": [
+      "PRM-F07",
+      "PRM-F08",
+      "PRM-F11",
+      "PRM-F17",
+      "PRM-F18"
+    ],
+    "user_story_ids": [
+      "US-PRM-079",
+      "US-PRM-080",
+      "US-PRM-081",
+      "US-PRM-082"
+    ],
+    "risk_ids": [
+      "R-PRM-19"
+    ],
+    "decision_ids": [
+      "ADR-PROC-018"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessTelemetryModels.cs",
+        "action": "Create",
+        "reason": "Persist wait reasons, rework cycles, and metric snapshots.",
+        "feature_ids": "PRM-F19"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessMetricsService.cs",
+        "action": "Create",
+        "reason": "Compute lead/touch/queue time, rework, bottlenecks, and SLA attainment.",
+        "feature_ids": "PRM-F19"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessMetricsPage.razor",
+        "action": "Create",
+        "reason": "Expose outcome-focused dashboards and segmentation.",
+        "feature_ids": "PRM-F19"
+      },
+      {
+        "path": "src/CanDoItAll.SharedKernel/ActivityStream.cs",
+        "action": "Reuse/Bridge",
+        "reason": "Source timeline events for telemetry computation.",
+        "feature_ids": "PRM-F19,PRM-F08"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.CrmHr/CrmHrServices.cs",
+        "action": "Reuse/Bridge",
+        "reason": "Use workforce capacity signals for bottleneck analysis.",
+        "feature_ids": "PRM-F19"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Integration/ProcessMetricsIntegrationTests.cs",
+        "action": "Create",
+        "reason": "Verify queue/work time split and outcome metrics.",
+        "feature_ids": "PRM-F19"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F19-outcome-metrics-capacity-and-wait-state-telemetry",
+    "non_goals": [
+      "Do not present raw activity counts as the primary KPI.",
+      "Do not block runtime delivery on a perfect BI platform."
+    ],
+    "acceptance": [
+      "The runtime distinguishes active work time, waiting time, approval wait, blocked time, and rework loops.",
+      "Metrics include lead time, touch time, queue time, first-time-right, rework rate, bottleneck steps, capacity load, and SLA attainment.",
+      "Dashboards can segment by process, owner, customer, project, interface, and criticality tier.",
+      "Raw activity counters are not presented as success KPIs without outcome context.",
+      "Customer or internal-customer feedback signals can be attached to completed runs or outputs."
+    ]
+  },
+  {
+    "feature_id": "PRM-F14",
+    "title": "Operational intelligence, improvement backlog, and training-opportunity loop",
+    "priority": "Medium",
+    "wave": "Wave 4",
+    "dependencies": [
+      "PRM-F08",
+      "PRM-F19",
+      "PRM-F21"
+    ],
+    "user_story_ids": [
+      "US-PRM-053",
+      "US-PRM-054",
+      "US-PRM-055",
+      "US-PRM-056"
+    ],
+    "risk_ids": [
+      "R-PRM-10"
+    ],
+    "decision_ids": [
+      "ADR-PROC-008",
+      "ADR-PROC-010"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessInsightsService.cs",
+        "action": "Create",
+        "reason": "Turn telemetry and deviations into governed improvement candidates.",
+        "feature_ids": "PRM-F14,PRM-F19,PRM-F21"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessImprovementModels.cs",
+        "action": "Create",
+        "reason": "Persist improvement requests and training markers separately from live runs.",
+        "feature_ids": "PRM-F14"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Integration/ProcessInsightsIntegrationTests.cs",
+        "action": "Create",
+        "reason": "Verify improvement suggestions and training markers from telemetry inputs.",
+        "feature_ids": "PRM-F14,PRM-F19,PRM-F21"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F14-kpis-improvement-backlog-and-training-opportunity-loop",
+    "non_goals": [
+      "Do not block operational process delivery on the intelligence lake.",
+      "Do not let training markers pollute normal live execution queries."
+    ],
+    "acceptance": [
+      "The module can turn outcome telemetry and conformance signals into process-level improvement candidates.",
+      "Improvement requests are separated from live execution state and can be routed to owner/governance review.",
+      "Training-opportunity markers can be generated without contaminating normal execution queries.",
+      "The design remains compatible with a later intelligence-lake layer."
+    ]
+  },
+  {
+    "feature_id": "PRM-F21",
+    "title": "Conformance, field observation, and reality-alignment reviews",
+    "priority": "High",
+    "wave": "Wave 4",
+    "dependencies": [
+      "PRM-F08",
+      "PRM-F11",
+      "PRM-F19",
+      "PRM-F20"
+    ],
+    "user_story_ids": [
+      "US-PRM-087",
+      "US-PRM-088",
+      "US-PRM-089",
+      "US-PRM-090"
+    ],
+    "risk_ids": [
+      "R-PRM-20",
+      "R-PRM-23"
+    ],
+    "decision_ids": [
+      "ADR-PROC-020"
+    ],
+    "repo_touchpoints": [
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessConformanceModels.cs",
+        "action": "Create",
+        "reason": "Store observations, deviations, and approval outcomes for reality reviews.",
+        "feature_ids": "PRM-F21"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/ProcessConformanceService.cs",
+        "action": "Create",
+        "reason": "Compare journal evidence with modeled paths and cluster deviations.",
+        "feature_ids": "PRM-F21"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Processes/Pages/ProcessConformancePage.razor",
+        "action": "Create",
+        "reason": "Review paper-versus-reality deltas and route improvements.",
+        "feature_ids": "PRM-F21"
+      },
+      {
+        "path": "src/CanDoItAll.Modules.Security/SecurityModels.cs",
+        "action": "Reuse/Bridge",
+        "reason": "Apply restricted visibility to sensitive observations.",
+        "feature_ids": "PRM-F21"
+      },
+      {
+        "path": "src/CanDoItAll.SharedKernel/ActivityStream.cs",
+        "action": "Reuse/Bridge",
+        "reason": "Source observed execution signals for conformance analytics.",
+        "feature_ids": "PRM-F21,PRM-F08"
+      },
+      {
+        "path": "tests/CanDoItAll.Tests.Integration/ProcessConformanceIntegrationTests.cs",
+        "action": "Create",
+        "reason": "Verify deviation capture, clustering, and privacy-safe access.",
+        "feature_ids": "PRM-F21"
+      }
+    ],
+    "subbundle_path": "03-subbundles/PRM-F21-conformance-field-observation-and-reality-alignment",
+    "non_goals": [
+      "Do not create an unmanaged gossip log about individuals.",
+      "Do not assume the official diagram is always the truth."
+    ],
+    "acceptance": [
+      "Reviewers can record conformance observations against runs or process versions with structured deviation reasons.",
+      "The system can cluster repeated unofficial loops, extra handoffs, and bypass patterns from journals for owner review.",
+      "Observation notes support restricted visibility and privacy-safe governance handling; there is no unmanaged rumor registry.",
+      "Process owners can convert deviation clusters into approved variants, fixes, or policy-breach investigations.",
+      "Conformance reporting can show paper-versus-reality deltas by step, interface, owner, customer segment, or project."
+    ]
+  }
+]

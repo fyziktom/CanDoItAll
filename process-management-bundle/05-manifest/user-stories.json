@@ -1,0 +1,920 @@
+[
+  {
+    "id": "US-PRM-001",
+    "feature": "PRM-F01",
+    "actor": "Workspace operator",
+    "story": "As a workspace operator, I want a top-level Processes surface in the CanDoItAll shell so that process management becomes a first-class module instead of hidden inside another area.",
+    "benefit": "discoverability",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-002",
+    "feature": "PRM-F01",
+    "actor": "Project member",
+    "story": "As a project member, I want to open project-scoped processes from project UX so that process work stays anchored to the owning project.",
+    "benefit": "project anchoring",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-003",
+    "feature": "PRM-F01",
+    "actor": "Developer",
+    "story": "As a developer, I want the new module to follow existing module registration patterns so that composition, DI, and migrations remain predictable.",
+    "benefit": "maintainability",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-004",
+    "feature": "PRM-F01",
+    "actor": "Architect",
+    "story": "As an architect, I want process management isolated as a canonical module so that Workbench does not absorb yet another business-owned truth model.",
+    "benefit": "model integrity",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-005",
+    "feature": "PRM-F02",
+    "actor": "Process designer",
+    "story": "As a process designer, I want to create a draft process definition with name, purpose, scope, and owner so that I can iteratively model delivery flows before publishing them.",
+    "benefit": "drafting",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-006",
+    "feature": "PRM-F02",
+    "actor": "Process designer",
+    "story": "As a process designer, I want published versions to become immutable so that process runs always reference a stable definition snapshot.",
+    "benefit": "reproducibility",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-007",
+    "feature": "PRM-F02",
+    "actor": "Delivery lead",
+    "story": "As a delivery lead, I want to clone a reusable workspace template into a project so that recurring process patterns can be reused without manual recreation.",
+    "benefit": "reuse",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-008",
+    "feature": "PRM-F02",
+    "actor": "Reviewer",
+    "story": "As a reviewer, I want obsolete process versions archived rather than silently overwritten so that governance and audit history remain visible.",
+    "benefit": "governance",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-009",
+    "feature": "PRM-F03",
+    "actor": "CRM-HR administrator",
+    "story": "As a CRM-HR administrator, I want process actor roles to bind to existing parties and AI-agent profiles so that durable identity stays in CRM-HR.",
+    "benefit": "identity consistency",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-010",
+    "feature": "PRM-F03",
+    "actor": "Process designer",
+    "story": "As a process designer, I want to assign responsible, consulted, approver, and observer roles to steps so that accountability is explicit.",
+    "benefit": "responsibility clarity",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-011",
+    "feature": "PRM-F03",
+    "actor": "Project lead",
+    "story": "As a project lead, I want to rebind a process role when a human or agent changes so that the process survives staffing changes without losing history.",
+    "benefit": "operational continuity",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-012",
+    "feature": "PRM-F03",
+    "actor": "Compliance viewer",
+    "story": "As a compliance viewer, I want to inspect the provenance of actor bindings and their governance notes so that I can understand who or what was allowed to act.",
+    "benefit": "auditability",
+    "priority": "Medium",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-013",
+    "feature": "PRM-F04",
+    "actor": "Process designer",
+    "story": "As a process designer, I want to define what inputs a step requires so that downstream actors know exactly what they must receive before starting work.",
+    "benefit": "handoff quality",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-014",
+    "feature": "PRM-F04",
+    "actor": "Reviewer",
+    "story": "As a reviewer, I want steps to declare expected outputs and evidence so that completion is validated against explicit expectations.",
+    "benefit": "quality control",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-015",
+    "feature": "PRM-F04",
+    "actor": "Assigned actor",
+    "story": "As an assigned actor, I want to see entry criteria, exit criteria, and expected artifacts for my step so that I do not guess what good completion means.",
+    "benefit": "execution clarity",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-016",
+    "feature": "PRM-F04",
+    "actor": "Process owner",
+    "story": "As a process owner, I want to capture rework guidance and contract notes on a step so that reviewers can send work back with structured expectations.",
+    "benefit": "rework control",
+    "priority": "Medium",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-017",
+    "feature": "PRM-F05",
+    "actor": "Process designer",
+    "story": "As a process designer, I want to model an explicit handoff from triage to a specialist actor so that responsibility transfer is deterministic and visible.",
+    "benefit": "deterministic orchestration",
+    "priority": "Critical",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-018",
+    "feature": "PRM-F05",
+    "actor": "Process designer",
+    "story": "As a process designer, I want to define conditional branches on decision nodes so that alternate flows are encoded instead of improvised at runtime.",
+    "benefit": "branch control",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-019",
+    "feature": "PRM-F05",
+    "actor": "Operator",
+    "story": "As an operator, I want the chosen branch and its reason recorded on a run so that I can later understand why work moved the way it did.",
+    "benefit": "traceability",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-020",
+    "feature": "PRM-F05",
+    "actor": "Architect",
+    "story": "As an architect, I want ordered responsibilities and handoffs to exist independently of any specific runtime framework so that the process language stays stable.",
+    "benefit": "runtime independence",
+    "priority": "Critical",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-021",
+    "feature": "PRM-F06",
+    "actor": "Manager",
+    "story": "As a manager, I want approval gates before sensitive or externalized work continues so that governance decisions are explicit.",
+    "benefit": "control",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-022",
+    "feature": "PRM-F06",
+    "actor": "Operator",
+    "story": "As an operator, I want a run to pause awaiting approval and resume after a decision so that policy-sensitive work stays coordinated.",
+    "benefit": "operational safety",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-023",
+    "feature": "PRM-F06",
+    "actor": "Process owner",
+    "story": "As a process owner, I want blocked or exceptional situations escalated to a human owner so that the process can recover instead of silently stalling.",
+    "benefit": "resilience",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-024",
+    "feature": "PRM-F06",
+    "actor": "Architect",
+    "story": "As an architect, I want process governance metadata to map conceptually to future agent rights so that later integration does not require redesigning approvals.",
+    "benefit": "future compatibility",
+    "priority": "Medium",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-025",
+    "feature": "PRM-F07",
+    "actor": "Project operator",
+    "story": "As a project operator, I want to start a process run from a published process definition so that delivery work can follow an approved flow.",
+    "benefit": "operationalization",
+    "priority": "Critical",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-026",
+    "feature": "PRM-F07",
+    "actor": "Assignee",
+    "story": "As an assignee, I want to claim my step and update its state so that ownership and status are visible to other actors.",
+    "benefit": "ownership visibility",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-027",
+    "feature": "PRM-F07",
+    "actor": "Orchestrator",
+    "story": "As an orchestrator, I want handoff completion to activate the next eligible step so that the run progresses without hidden side effects.",
+    "benefit": "flow continuity",
+    "priority": "Critical",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-028",
+    "feature": "PRM-F07",
+    "actor": "Architect",
+    "story": "As an architect, I want invalid state transitions and conflicting claims rejected so that the runtime cannot drift into ambiguous states.",
+    "benefit": "consistency",
+    "priority": "Critical",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-029",
+    "feature": "PRM-F08",
+    "actor": "Manager",
+    "story": "As a manager, I want to inspect the full timeline of a process run so that I can see who did what, when, and why.",
+    "benefit": "supervision",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-030",
+    "feature": "PRM-F08",
+    "actor": "Architect",
+    "story": "As an architect, I want to replay a problematic run from durable events so that I can debug handoff and state-machine failures.",
+    "benefit": "debuggability",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-031",
+    "feature": "PRM-F08",
+    "actor": "Training evaluator",
+    "story": "As a training evaluator, I want run history to preserve step order and key decisions so that later evaluation can reason about what happened.",
+    "benefit": "evaluation substrate",
+    "priority": "Medium",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-032",
+    "feature": "PRM-F08",
+    "actor": "Workspace user",
+    "story": "As a workspace user, I want major process events to appear in the shared activity stream so that process work is not operationally invisible.",
+    "benefit": "operational awareness",
+    "priority": "Medium",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-033",
+    "feature": "PRM-F09",
+    "actor": "Process designer",
+    "story": "As a process designer, I want an interactive canvas to model processes so that I can define flows visually instead of editing only forms or JSON.",
+    "benefit": "modeling speed",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-034",
+    "feature": "PRM-F09",
+    "actor": "Process designer",
+    "story": "As a process designer, I want mindmap-like grouping and flowchart-like linking so that phases, lanes, and ordered steps are legible.",
+    "benefit": "diagram clarity",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-035",
+    "feature": "PRM-F09",
+    "actor": "Process reviewer",
+    "story": "As a process reviewer, I want transitions to display labels and actor context so that I can understand handoffs directly from the diagram.",
+    "benefit": "review efficiency",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-036",
+    "feature": "PRM-F09",
+    "actor": "Process designer",
+    "story": "As a process designer, I want saved canvas layout to reopen predictably without layout becoming the source of semantic truth so that editing stays ergonomic and safe.",
+    "benefit": "safe persistence",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-037",
+    "feature": "PRM-F10",
+    "actor": "Project user",
+    "story": "As a project user, I want to jump into processes from the project modal and project board so that process work lives with other project surfaces.",
+    "benefit": "navigation continuity",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-038",
+    "feature": "PRM-F10",
+    "actor": "Workbench user",
+    "story": "As a Workbench user, I want process references and summaries projected into Workbench without moving canonical ownership there so that structure remains helpful but not authoritative.",
+    "benefit": "projection utility",
+    "priority": "Medium",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-039",
+    "feature": "PRM-F10",
+    "actor": "Architect",
+    "story": "As an architect, I want process projections to honor Workbench guardrails so that the universal node does not become a hidden canonical store.",
+    "benefit": "architectural hygiene",
+    "priority": "Critical",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-040",
+    "feature": "PRM-F10",
+    "actor": "Project lead",
+    "story": "As a project lead, I want shared-project processes discoverable by navigation rather than duplicated copies so that shared projects keep ownership of their process knowledge.",
+    "benefit": "shared ownership",
+    "priority": "Medium",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-041",
+    "feature": "PRM-F11",
+    "actor": "Validation owner",
+    "story": "As a validation owner, I want validation gates linked to process steps so that compliance and review checkpoints can block or approve progress.",
+    "benefit": "quality gating",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-042",
+    "feature": "PRM-F11",
+    "actor": "Test owner",
+    "story": "As a test owner, I want test plans and evidence attached to process steps so that process completion can reference actual proof.",
+    "benefit": "evidence linkage",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-043",
+    "feature": "PRM-F11",
+    "actor": "Operations user",
+    "story": "As an operations user, I want overdue or blocked process work to appear as automation signals so that operational follow-up becomes visible.",
+    "benefit": "ops visibility",
+    "priority": "Medium",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-044",
+    "feature": "PRM-F11",
+    "actor": "Activity user",
+    "story": "As an activity user, I want process events searchable in the activity module so that I can trace process work from the shared timeline.",
+    "benefit": "cross-module searchability",
+    "priority": "Medium",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-045",
+    "feature": "PRM-F12",
+    "actor": "Process designer",
+    "story": "As a process designer, I want to import Mermaid mindmap and flowchart drafts so that existing sketches can be promoted into canonical processes.",
+    "benefit": "bootstrap speed",
+    "priority": "Medium",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-046",
+    "feature": "PRM-F12",
+    "actor": "Process designer",
+    "story": "As a process designer, I want to export process definitions as Mermaid and JSON packages so that they can be reviewed, shared, or versioned outside the UI.",
+    "benefit": "portability",
+    "priority": "Medium",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-047",
+    "feature": "PRM-F12",
+    "actor": "Delivery lead",
+    "story": "As a delivery lead, I want starter process templates seeded from existing prompt-flow patterns where appropriate so that current multi-step practices are not lost.",
+    "benefit": "seed reuse",
+    "priority": "Medium",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-048",
+    "feature": "PRM-F12",
+    "actor": "Template librarian",
+    "story": "As a template librarian, I want reusable workspace process templates managed separately from project-owned variants so that reuse does not erase local specialization.",
+    "benefit": "template governance",
+    "priority": "Medium",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-049",
+    "feature": "PRM-F13",
+    "actor": "Architect",
+    "story": "As an architect, I want a clean AI-executor seam so that later AgentFramework integration does not require redesigning the core process module.",
+    "benefit": "extensibility",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-050",
+    "feature": "PRM-F13",
+    "actor": "Runtime designer",
+    "story": "As a runtime designer, I want the process engine to distinguish manual, AI, and hybrid executor modes so that execution policy remains explicit.",
+    "benefit": "runtime flexibility",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-051",
+    "feature": "PRM-F13",
+    "actor": "Process designer",
+    "story": "As a process designer, I want to model AI handoffs today even before the AgentFramework runtime is embedded so that process language is not blocked by integration timing.",
+    "benefit": "delivery decoupling",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-052",
+    "feature": "PRM-F13",
+    "actor": "CRM-HR admin",
+    "story": "As a CRM-HR admin, I want AI bindings to resolve through CRM-HR and only later into an execution bridge so that identity and runtime concerns stay separated.",
+    "benefit": "separation of concerns",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-053",
+    "feature": "PRM-F14",
+    "actor": "Manager",
+    "story": "As a manager, I want to see bottleneck steps, approval latency, and stalled handoffs so that I can target process improvements.",
+    "benefit": "performance improvement",
+    "priority": "Medium",
+    "wave": "Wave 4"
+  },
+  {
+    "id": "US-PRM-054",
+    "feature": "PRM-F14",
+    "actor": "Curator",
+    "story": "As a curator, I want repeated pain points turned into structured improvement requests so that process quality can improve intentionally.",
+    "benefit": "continuous improvement",
+    "priority": "Medium",
+    "wave": "Wave 4"
+  },
+  {
+    "id": "US-PRM-055",
+    "feature": "PRM-F14",
+    "actor": "HR-manager combo",
+    "story": "As a combined HR-manager evaluator, I want to mark training opportunities from process run patterns so that later training loops can use grounded signals.",
+    "benefit": "training readiness",
+    "priority": "Medium",
+    "wave": "Wave 4"
+  },
+  {
+    "id": "US-PRM-056",
+    "feature": "PRM-F14",
+    "actor": "Process owner",
+    "story": "As a process owner, I want to promote refined versions after observing real runs so that the best learned process becomes reusable.",
+    "benefit": "template maturation",
+    "priority": "Medium",
+    "wave": "Wave 4"
+  },
+  {
+    "id": "US-PRM-057",
+    "feature": "PRM-F15",
+    "actor": "Local user",
+    "story": "As a local user, I want the first process-management implementation to work on SQLite so that adoption does not require infrastructure setup.",
+    "benefit": "low-friction adoption",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-058",
+    "feature": "PRM-F15",
+    "actor": "Advanced operator",
+    "story": "As an advanced operator, I want PostgreSQL migrations kept in step with SQLite so that larger deployments can scale without schema drift.",
+    "benefit": "deployment flexibility",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-059",
+    "feature": "PRM-F15",
+    "actor": "Architect",
+    "story": "As an architect, I want high-volume journal data isolated behind clean contracts so that storage can later evolve without rewriting the process model.",
+    "benefit": "future scale",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-060",
+    "feature": "PRM-F15",
+    "actor": "Team",
+    "story": "As a team, I want predictable indexing and retention rules so that process queries stay fast as the module grows.",
+    "benefit": "operational performance",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-061",
+    "feature": "PRM-F16",
+    "actor": "Manager",
+    "story": "As a manager, I want to define reusable role templates with modality, purpose, required skills/capabilities, allocation intent, and fallback expectations so that process designers and HR start from a governed staffing archetype.",
+    "benefit": "governed reuse",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-062",
+    "feature": "PRM-F16",
+    "actor": "Process designer",
+    "story": "As a process designer, I want to select a role template when defining a process role so that process models reuse consistent responsibility profiles instead of ad-hoc free text.",
+    "benefit": "consistency",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-063",
+    "feature": "PRM-F16",
+    "actor": "HR partner",
+    "story": "As an HR partner, I want unresolved process roles to open linked staffing briefs or sourcing requests so that I can fulfill them through workforce, recruiting, or AI-agent sourcing without losing process context.",
+    "benefit": "fulfillment continuity",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-064",
+    "feature": "PRM-F16",
+    "actor": "Staffing coordinator",
+    "story": "As a staffing coordinator, I want a role template to suggest eligible internal candidates, candidate pipelines, and AI-agent profiles based on skills, validation, and capacity so that matching starts from grounded signals.",
+    "benefit": "better matching",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-065",
+    "feature": "PRM-F16",
+    "actor": "Process owner",
+    "story": "As a process owner, I want a process role to reference a template, an eligible pool, and an optional fallback route before a concrete assignee exists so that the process can be published without pretending staffing is already solved.",
+    "benefit": "safe publishing",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-066",
+    "feature": "PRM-F16",
+    "actor": "Auditor",
+    "story": "As an auditor, I want published process versions and live runs to snapshot the selected role template version and resolved assignee summary so that later template edits do not rewrite history.",
+    "benefit": "auditability",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-067",
+    "feature": "PRM-F16",
+    "actor": "AI staffing lead",
+    "story": "As an AI staffing lead, I want agent-oriented templates to capture required capabilities, validation status, human owner, and allowed execution mode so that AI staffing follows the same governance shape as human staffing.",
+    "benefit": "human/AI parity",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-068",
+    "feature": "PRM-F06",
+    "actor": "Compliance manager",
+    "story": "As a compliance manager, I want approval policy to prevent self-approval and conflicting role combinations on sensitive steps so that the same actor cannot both produce and approve governed work without an explicit override.",
+    "benefit": "separation of duties",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-069",
+    "feature": "PRM-F07",
+    "actor": "Staffing coordinator",
+    "story": "As a staffing coordinator, I want assignment resolution to respect eligibility, capacity, and validation state so that runs do not hand work to unavailable or unapproved people or agents.",
+    "benefit": "assignment quality",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-070",
+    "feature": "PRM-F07",
+    "actor": "Process owner",
+    "story": "As a process owner, I want critical roles to define backup actors or fallback routes and have rebind reasons journaled so that stalled runs can recover without losing accountability.",
+    "benefit": "resilience",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-071",
+    "feature": "PRM-F17",
+    "actor": "Process sponsor",
+    "story": "As a process sponsor, I want every important process to have an explicit end-to-end owner, customer, and strategic objective so that accountability is not lost between departments.",
+    "benefit": "end-to-end ownership",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-072",
+    "feature": "PRM-F17",
+    "actor": "Process designer",
+    "story": "As a process designer, I want to model upstream and downstream interface contracts with done definitions and required handoff data so that boundaries between processes are explicit.",
+    "benefit": "interface clarity",
+    "priority": "Critical",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-073",
+    "feature": "PRM-F17",
+    "actor": "Middle manager",
+    "story": "As a middle manager, I want stewardship responsibilities separated from org-chart boxes so that value flow can be improved without redrawing the hierarchy.",
+    "benefit": "value-flow design",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-074",
+    "feature": "PRM-F17",
+    "actor": "Portfolio manager",
+    "story": "As a portfolio manager, I want process criticality and customer type attached to each process so that modeling depth and governance can be prioritized sensibly.",
+    "benefit": "portfolio focus",
+    "priority": "High",
+    "wave": "Wave 1"
+  },
+  {
+    "id": "US-PRM-075",
+    "feature": "PRM-F18",
+    "actor": "Triage lead",
+    "story": "As a triage lead, I want steps to validate input completeness and classification before work proceeds so that bad intake does not poison the rest of the process.",
+    "benefit": "input quality",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-076",
+    "feature": "PRM-F18",
+    "actor": "Process owner",
+    "story": "As a process owner, I want approved variants and exception paths captured explicitly so that real-world deviations are handled deliberately instead of through hidden workarounds.",
+    "benefit": "exception control",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-077",
+    "feature": "PRM-F18",
+    "actor": "Governance lead",
+    "story": "As a governance lead, I want decision rights and escalation thresholds modeled explicitly so that the organization knows who may decide what and when.",
+    "benefit": "decision clarity",
+    "priority": "Critical",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-078",
+    "feature": "PRM-F18",
+    "actor": "Operations lead",
+    "story": "As an operations lead, I want controls tagged by risk tier so that low-risk work is not buried under unnecessary approvals.",
+    "benefit": "anti-bureaucracy",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-079",
+    "feature": "PRM-F19",
+    "actor": "Process analyst",
+    "story": "As a process analyst, I want lead time split into touch time, wait time, and blocked time so that optimization targets the real delay instead of just visible work.",
+    "benefit": "true performance insight",
+    "priority": "Critical",
+    "wave": "Wave 4"
+  },
+  {
+    "id": "US-PRM-080",
+    "feature": "PRM-F19",
+    "actor": "Capacity manager",
+    "story": "As a capacity manager, I want bottlenecks and queue reasons correlated with staffing and availability so that I can see where the process really collapses.",
+    "benefit": "capacity insight",
+    "priority": "High",
+    "wave": "Wave 4"
+  },
+  {
+    "id": "US-PRM-081",
+    "feature": "PRM-F19",
+    "actor": "Customer-success lead",
+    "story": "As a customer-success lead, I want outcome metrics such as first-time-right and satisfaction linked to the process so that activity counts do not masquerade as value.",
+    "benefit": "outcome measurement",
+    "priority": "High",
+    "wave": "Wave 4"
+  },
+  {
+    "id": "US-PRM-082",
+    "feature": "PRM-F19",
+    "actor": "Process owner",
+    "story": "As a process owner, I want dashboards segmented by customer, interface, and criticality so that I can focus improvements where business impact is highest.",
+    "benefit": "targeted improvement",
+    "priority": "High",
+    "wave": "Wave 4"
+  },
+  {
+    "id": "US-PRM-083",
+    "feature": "PRM-F20",
+    "actor": "Process governance board member",
+    "story": "As a governance board member, I want governed change requests with impact analysis and rollout plans so that process versions do not fork unofficially.",
+    "benefit": "change control",
+    "priority": "Critical",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-084",
+    "feature": "PRM-F20",
+    "actor": "Middle manager",
+    "story": "As a middle manager, I want clear stewardship tasks and acknowledgment of major process changes so that process adoption does not stop at an executive announcement.",
+    "benefit": "manager adoption",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-085",
+    "feature": "PRM-F20",
+    "actor": "Process librarian",
+    "story": "As a process librarian, I want criticality-based prioritization of which processes deserve deep modeling so that the organization does not over-document everything equally.",
+    "benefit": "prioritization",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-086",
+    "feature": "PRM-F20",
+    "actor": "New participant",
+    "story": "As a new participant, I want role-specific guidance and process literacy aids so that BPM concepts are usable in real work rather than extra bureaucracy.",
+    "benefit": "process literacy",
+    "priority": "Medium",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-087",
+    "feature": "PRM-F21",
+    "actor": "Quality inspector",
+    "story": "As a quality inspector, I want to compare the modeled path with observed execution and recorded deviations so that audits reflect what people actually do.",
+    "benefit": "reality alignment",
+    "priority": "Critical",
+    "wave": "Wave 4"
+  },
+  {
+    "id": "US-PRM-088",
+    "feature": "PRM-F21",
+    "actor": "Process owner",
+    "story": "As a process owner, I want repeated bypasses, shadow steps, and unofficial loops flagged from runtime evidence so that I can distinguish intentional variants from process breakdowns.",
+    "benefit": "conformance insight",
+    "priority": "High",
+    "wave": "Wave 4"
+  },
+  {
+    "id": "US-PRM-089",
+    "feature": "PRM-F21",
+    "actor": "Senior manager",
+    "story": "As a senior manager, I want field observations governed with restricted visibility so that sensitive influence patterns or workaround notes are handled responsibly.",
+    "benefit": "controlled observation",
+    "priority": "High",
+    "wave": "Wave 4"
+  },
+  {
+    "id": "US-PRM-090",
+    "feature": "PRM-F21",
+    "actor": "Improvement lead",
+    "story": "As an improvement lead, I want deviation clusters turned into actionable change or training items so that conformance review feeds continuous improvement instead of static reporting.",
+    "benefit": "closed-loop improvement",
+    "priority": "High",
+    "wave": "Wave 4"
+  },
+  {
+    "id": "US-PRM-091",
+    "feature": "PRM-F22",
+    "actor": "Process designer",
+    "story": "As a process designer, I want executable steps to generate a normalized work brief so every human or agent receives the same scoped objective, inputs, outputs, and governance expectations.",
+    "benefit": "consistent execution packets",
+    "priority": "Critical",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-092",
+    "feature": "PRM-F22",
+    "actor": "Triage owner",
+    "story": "As a triage owner, I want routing choices recorded as modeled process decisions so handoffs are explainable and governed instead of hidden inside runtime chat logic.",
+    "benefit": "governed routing",
+    "priority": "Critical",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-093",
+    "feature": "PRM-F22",
+    "actor": "Runtime operator",
+    "story": "As a runtime operator, I want baton handoffs to be durable and replayable so I can reconstruct who passed what to whom and why.",
+    "benefit": "auditability",
+    "priority": "High",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-094",
+    "feature": "PRM-F22",
+    "actor": "Senior architect",
+    "story": "As a senior architect, I want production agent collaboration to flow through the modeled process unless an explicit override is journaled so the process remains the canonical collaboration graph.",
+    "benefit": "architecture discipline",
+    "priority": "Critical",
+    "wave": "Wave 2"
+  },
+  {
+    "id": "US-PRM-095",
+    "feature": "PRM-F24",
+    "actor": "Process operator",
+    "story": "As a process operator, I want the same canvas to show live run state so I can see active steps, waiting points, and baton movement without stitching together multiple views mentally.",
+    "benefit": "operational visibility",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-096",
+    "feature": "PRM-F24",
+    "actor": "Quality reviewer",
+    "story": "As a quality reviewer, I want runtime overlays to be clearly marked as projections so nobody mistakes canvas chrome for canonical state or edits the wrong layer.",
+    "benefit": "state clarity",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-097",
+    "feature": "PRM-F24",
+    "actor": "Manager",
+    "story": "As a manager, I want the timeline and canvas to stay in sync so I can identify the real blocking step or wait reason quickly.",
+    "benefit": "faster supervisory review",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-098",
+    "feature": "PRM-F24",
+    "actor": "Process designer",
+    "story": "As a process designer, I want published diagram layout reused for runtime overlays so modeled structure and live supervision stay visually aligned.",
+    "benefit": "diagram continuity",
+    "priority": "Medium",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-099",
+    "feature": "PRM-F23",
+    "actor": "Senior C# architect",
+    "story": "As a senior C# architect, I want CRM-HR to remain the canonical business template and identity source even if AgentFramework carries runtime template fields so we do not create dual registries.",
+    "benefit": "single source of truth",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-100",
+    "feature": "PRM-F23",
+    "actor": "Platform owner",
+    "story": "As a platform owner, I want provider and capability registries to converge to CanDoItAll ownership so future AI execution uses shared configuration and proof rules.",
+    "benefit": "registry convergence",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-101",
+    "feature": "PRM-F23",
+    "actor": "QA lead",
+    "story": "As a QA lead, I want external AI sessions, logs, and metrics correlated back to process and step context so audits and performance reviews preserve business traceability.",
+    "benefit": "traceable observability",
+    "priority": "High",
+    "wave": "Wave 3"
+  },
+  {
+    "id": "US-PRM-102",
+    "feature": "PRM-F23",
+    "actor": "Governance owner",
+    "story": "As a governance owner, I want process step policy to constrain future agent permissions and approvals so runtime autonomy never bypasses modeled decision rights.",
+    "benefit": "policy enforcement",
+    "priority": "High",
+    "wave": "Wave 3"
+  }
+]

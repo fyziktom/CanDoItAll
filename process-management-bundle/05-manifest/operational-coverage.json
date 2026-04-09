@@ -1,0 +1,239 @@
+[
+  {
+    "id": "OP-01",
+    "concern": "Jasné vlastnictví procesu",
+    "why": "Bez skutečného end-to-end ownera se problémy přehazují mezi útvary.",
+    "bundle_response": "Publish guardrails pro process owner/customer/value statement + governance profile.",
+    "feature_ids": [
+      "PRM-F17",
+      "PRM-F20"
+    ],
+    "notes": "Owner je povinný pro governed publish; stewardship může být víceúrovňový."
+  },
+  {
+    "id": "OP-02",
+    "concern": "End-to-end pohled místo pohledu oddělení",
+    "why": "Největší ztráty vznikají na předávkách mezi týmy.",
+    "bundle_response": "Interface contracts, upstream/downstream boundaries, done definitions, interface telemetry.",
+    "feature_ids": [
+      "PRM-F17",
+      "PRM-F19"
+    ],
+    "notes": "Rozhraní jsou samostatné artefakty, ne jen poznámka v diagramu."
+  },
+  {
+    "id": "OP-03",
+    "concern": "Rozdíl mezi procesem a organizační strukturou",
+    "why": "Org chart není totéž co tok hodnoty.",
+    "bundle_response": "ADR odděluje value flow od reporting lines; role binding jde přes CRM-HR bez vnucení hierarchie.",
+    "feature_ids": [
+      "PRM-F03",
+      "PRM-F17"
+    ],
+    "notes": "Graf procesu nesmí kopírovat org chart pouze proto, že existuje."
+  },
+  {
+    "id": "OP-04",
+    "concern": "Měření správných metrik",
+    "why": "Aktivita není výsledek.",
+    "bundle_response": "Outcome telemetry: lead/touch/queue time, first-time-right, rework, customer signal.",
+    "feature_ids": [
+      "PRM-F19",
+      "PRM-F14"
+    ],
+    "notes": "Dashboard nesmí vydávat activity counts za hlavní KPI."
+  },
+  {
+    "id": "OP-05",
+    "concern": "Variabilita a výjimky",
+    "why": "Happy path nestačí pro reálný provoz.",
+    "bundle_response": "Approved variants, exception playbooks, override reasons, escalation handling.",
+    "feature_ids": [
+      "PRM-F18",
+      "PRM-F21"
+    ],
+    "notes": "Výjimky jsou modelované, journalované a reviewovatelné."
+  },
+  {
+    "id": "OP-06",
+    "concern": "Kvalita vstupů do procesu",
+    "why": "Garbage in, garbage out.",
+    "bundle_response": "Input-quality rules, completeness checks, triage classification, rework reasons.",
+    "feature_ids": [
+      "PRM-F04",
+      "PRM-F18"
+    ],
+    "notes": "Vstupní kvalita je kontrolovatelná před pokračováním procesu."
+  },
+  {
+    "id": "OP-07",
+    "concern": "Procesní disciplína vs. procesní byrokracie",
+    "why": "Příliš mnoho kontrol vede k obcházení procesu.",
+    "bundle_response": "Risk-tiered controls and rationalization review.",
+    "feature_ids": [
+      "PRM-F18",
+      "PRM-F20"
+    ],
+    "notes": "Nízkoriziková práce nemá být utopená v approvals."
+  },
+  {
+    "id": "OP-08",
+    "concern": "Role středního managementu",
+    "why": "Bez aktivní podpory středního managementu proces formálně žije, ale reálně ne.",
+    "bundle_response": "Stewardship roles, change acknowledgements, management adoption flows.",
+    "feature_ids": [
+      "PRM-F17",
+      "PRM-F20"
+    ],
+    "notes": "Manager není jen approver, ale steward/adoption owner."
+  },
+  {
+    "id": "OP-09",
+    "concern": "Reálná práce vs. proces na papíře",
+    "why": "Oficiální diagram může být fikce.",
+    "bundle_response": "Conformance observations, deviation clustering, paper-vs-reality reviews.",
+    "feature_ids": [
+      "PRM-F21"
+    ],
+    "notes": "Základem je evidence z run journalu a řízené terénní pozorování."
+  },
+  {
+    "id": "OP-10",
+    "concern": "Rozhraní mezi procesy",
+    "why": "Nejasný konec a začátek procesů vytváří chaos.",
+    "bundle_response": "Explicit process interface contracts and done definitions.",
+    "feature_ids": [
+      "PRM-F17"
+    ],
+    "notes": "Styčné plochy mají vstupy, výstupy a převzetí odpovědnosti."
+  },
+  {
+    "id": "OP-11",
+    "concern": "Prioritizace procesů",
+    "why": "Ne vše musí být modelováno stejně hluboko.",
+    "bundle_response": "Criticality tiers and portfolio prioritization.",
+    "feature_ids": [
+      "PRM-F17",
+      "PRM-F20"
+    ],
+    "notes": "Governance hloubka se odvíjí od criticality a business impact."
+  },
+  {
+    "id": "OP-12",
+    "concern": "Proces bez vazby na strategii",
+    "why": "Optimalizace bez byznys vazby může být zbytečná.",
+    "bundle_response": "Strategic objective link on governed processes and change requests.",
+    "feature_ids": [
+      "PRM-F17",
+      "PRM-F20"
+    ],
+    "notes": "Proces má business intent, ne jen existenci."
+  },
+  {
+    "id": "OP-13",
+    "concern": "Záměna standardizace za rigiditu",
+    "why": "Standard musí nechat prostor pro řízené varianty.",
+    "bundle_response": "Mandatory vs conditional controls and approved variants.",
+    "feature_ids": [
+      "PRM-F18"
+    ],
+    "notes": "Co je pevné a co flexibilní se modeluje explicitně."
+  },
+  {
+    "id": "OP-14",
+    "concern": "Nedostatečná procesní gramotnost lidí",
+    "why": "Bez porozumění vzniká jen administrativa navíc.",
+    "bundle_response": "Role-based guidance, glossary/help, communication/acknowledgement.",
+    "feature_ids": [
+      "PRM-F20"
+    ],
+    "notes": "Literacy je součást provozu, ne jen rollout deck."
+  },
+  {
+    "id": "OP-15",
+    "concern": "Chybějící governance změn procesu",
+    "why": "Bez řízení změn vznikají neoficiální varianty.",
+    "bundle_response": "Governed change requests, impact analysis, approvals, rollout communication.",
+    "feature_ids": [
+      "PRM-F20",
+      "PRM-F02"
+    ],
+    "notes": "Immutable versioning samo o sobě nestačí."
+  },
+  {
+    "id": "OP-16",
+    "concern": "Nepřiznané neformální mocenské struktury",
+    "why": "Ignorování neformálních vlivů zkresluje pochopení reality.",
+    "bundle_response": "Restricted operational observations and deviation patterns instead of rumor registry.",
+    "feature_ids": [
+      "PRM-F21"
+    ],
+    "notes": "Pouze privacy-safe evidence-oriented notes, ne „kdo koho zná“ databáze."
+  },
+  {
+    "id": "OP-17",
+    "concern": "Absence decision rights",
+    "why": "Není jasné, kdo může co rozhodnout a v jakém limitu.",
+    "bundle_response": "Canonical decision-right rules with thresholds and override routes.",
+    "feature_ids": [
+      "PRM-F18",
+      "PRM-F06"
+    ],
+    "notes": "Rozhodovací práva nejsou schovaná v textu či kultuře."
+  },
+  {
+    "id": "OP-18",
+    "concern": "Neřešení kapacit a úzkých míst",
+    "why": "Mapa procesu sama neřeší bottlenecky.",
+    "bundle_response": "Capacity signals and bottleneck analysis tied to telemetry and staffing.",
+    "feature_ids": [
+      "PRM-F19",
+      "PRM-F07"
+    ],
+    "notes": "Kapacita a bottlenecky jsou součást metrics vrstvy."
+  },
+  {
+    "id": "OP-19",
+    "concern": "Podcenění času předávek a čekání",
+    "why": "Často se optimalizuje práce, ale ne čekání.",
+    "bundle_response": "Queue/wait-state telemetry and wait-reason reporting.",
+    "feature_ids": [
+      "PRM-F19"
+    ],
+    "notes": "Wait time je první-class metrika."
+  },
+  {
+    "id": "OP-20",
+    "concern": "Nepochopení, pro koho je proces zákazník",
+    "why": "Bez zákazníka se proces řídí podle interní pohodlnosti.",
+    "bundle_response": "Primary customer field + customer-value metrics.",
+    "feature_ids": [
+      "PRM-F17",
+      "PRM-F19"
+    ],
+    "notes": "Zákazník může být interní nebo externí, ale musí být explicitní."
+  },
+  {
+    "id": "OP-21",
+    "concern": "Skryté zavazbení agentů mimo proces",
+    "why": "Když se agenti propojí přímo mimo procesní model, ztratí se odpovědnost, audit i řízení handoffů.",
+    "bundle_response": "Process-native work briefs, baton artifacts, governed triage records, a break-glass override path, and ADR that keeps collaboration topology in the process model.",
+    "feature_ids": [
+      "PRM-F22",
+      "PRM-F24"
+    ],
+    "notes": "Produkční agent collaboration nemá obcházet proces bez výslovného override a journal evidence."
+  },
+  {
+    "id": "OP-22",
+    "concern": "Dvojí registry a osiřelý runtime kontext",
+    "why": "Oddělené registry template/provider/capability a nesvázané runtime sessions vedou k chaosu, neauditovatelnosti a driftu mezi business a runtime vrstvou.",
+    "bundle_response": "CRM-HR/Workspace canonical ownership, external execution correlations, and explicit AgentFramework convergence rules.",
+    "feature_ids": [
+      "PRM-F23",
+      "PRM-F16",
+      "PRM-F13"
+    ],
+    "notes": "Runtime může být externí, ale business truth a correlation zůstávají v CanDoItAll."
+  }
+]
