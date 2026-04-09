@@ -20,6 +20,7 @@
     <Project Path="src/CanDoItAll.Modules.Automation/CanDoItAll.Modules.Automation.csproj" />
     <Project Path="src/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj" />
     <Project Path="src/CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj" />
+    <Project Path="src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj" />
     <Project Path="src/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj" />
     <Project Path="src/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj" />
     <Project Path="src/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj" />

@@ -52,6 +52,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                        OpenProjectPreview="OpenProjectPreviewAsync"
                        OpenHierarchyModal="OpenHierarchyModalAsync"
                        OpenProjectDashboard="OpenProjectDashboard"
+                       OpenProcesses="OpenProcesses"
                        OpenStructure="OpenStructure"
                        OpenCalendar="OpenCalendar"
                        OpenGanttPreview="OpenGanttPreviewAsync" />
@@ -83,6 +84,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                   SaveAndOpenStructure="SaveAndOpenStructureAsync"
                   Delete="DeleteAsync"
                   OpenProjectDashboard="OpenProjectDashboardAsync"
+                  OpenProcesses="OpenProcessesAsync"
                   OpenStructure="OpenStructure"
                   OpenCalendar="OpenCalendar" />
 
@@ -380,6 +382,22 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         if (editor.Id.HasValue)
         {
             OpenProjectDashboard(editor.Id.Value);
+        }
+    }
+
+    private void OpenProcesses(Guid projectId)
+    {
+        if (projectId != Guid.Empty)
+        {
+            Navigation.NavigateTo($"/projects/{projectId}/processes");
+        }
+    }
+
+    private void OpenProcessesAsync()
+    {
+        if (editor.Id.HasValue)
+        {
+            OpenProcesses(editor.Id.Value);
         }
     }
 

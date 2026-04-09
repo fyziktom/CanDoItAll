@@ -1,0 +1,1015 @@
+@namespace CanDoItAll.Modules.Processes
+
+<PageTitle>@PageTitleText</PageTitle>
+
+<PageScaffold>
+    <Header>
+        <PageHeader Eyebrow="@PageEyebrow"
+                    Title="@PageTitleText"
+                    Description="Author role-first process definitions, start governed runs, and keep assignments, evidence, conformance, and improvement signals on the same durable model.">
+            <Actions>
+                <Button Text="New definition"
+                        Click="CreateNewAsync"
+                        data-testid="processes-new-definition-button" />
+                <Button Text="Seed development baseline"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="SeedBaselineAsync"
+                        data-testid="processes-seed-baseline-button" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <SummaryTiles>
+            <SummaryTile Label="Definitions"
+                         Value="@definitions.Count.ToString()"
+                         HelperText="Persisted process definitions." />
+            <SummaryTile Label="Visible"
+                         Value="@FilteredDefinitions.Count.ToString()"
+                         HelperText="Definitions matching the current search."
+                         Tone="info" />
+            <SummaryTile Label="Active runs"
+                         Value="@definitions.Sum(item => item.ActiveRunCount).ToString()"
+                         HelperText="Runs still active across the visible library." />
+            <SummaryTile Label="Improvements"
+                         Value="@analytics.ImprovementCandidateCount.ToString()"
+                         HelperText="Improvement signals linked to the current scope."
+                         Tone="warning" />
+        </SummaryTiles>
+
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <SurfaceCard Soft="true"
+                         data-testid="processes-message-card">
+                <p class="cda-eyebrow">Workspace status</p>
+                <p class="mt-2 text-sm leading-6 @(isError ? "text-rose-700" : "text-slate-700")">@message</p>
+            </SurfaceCard>
+        }
+
+        <ListDetailShell ListPaneWidth="28rem">
+            <ListHeader>
+                <ListPanelHeader Title="Process definitions"
+                                 Description="Keep the process contract, role design, runtime runs, and governance artifacts inside one workspace instead of splitting authoring and execution into different tools."
+                                 Count="@($"{FilteredDefinitions.Count} definition(s)")">
+                    <Filters>
+                        <FilterBar ResultText="@($"{FilteredDefinitions.Count} matching definition(s)")">
+                            <input @bind="definitionSearch"
+                                   @bind:event="oninput"
+                                   class="cda-input min-w-[16rem] flex-1"
+                                   placeholder="Search name, summary, or value statement"
+                                   data-testid="processes-definition-search" />
+                            <Button Text="Clear search"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="@(() => definitionSearch = string.Empty)" />
+                            <Button Text="New"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="CreateNewAsync" />
+                        </FilterBar>
+                    </Filters>
+                </ListPanelHeader>
+            </ListHeader>
+
+            <ListContent>
+                @if (FilteredDefinitions.Count == 0)
+                {
+                    <EmptyState Eyebrow="No definitions"
+                                Title="Create the first process definition"
+                                Description="Role-first process definitions appear here after they have been saved. Use the detail pane to define the contract, roles, steps, runtime expectations, and import-export envelope.">
+                        <Actions>
+                            <Button Text="New definition"
+                                    Click="CreateNewAsync" />
+                            <Button Text="Seed baseline"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="SeedBaselineAsync" />
+                        </Actions>
+                    </EmptyState>
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Medium">
+                        @foreach (var definition in FilteredDefinitions)
+                        {
+                            <SelectionListItem Title="@definition.Name"
+                                               Eyebrow="@(string.IsNullOrWhiteSpace(definition.ProjectName) ? "Global process" : definition.ProjectName)"
+                                               Meta="@BuildDefinitionSummary(definition)"
+                                               Summary="@definition.Summary"
+                                               IsSelected="@(selectedProcessId == definition.Id)"
+                                               OnSelect="@(() => SelectDefinitionAsync(definition.Id))">
+                                <Status>
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <StatusBadge Tone="@ResolveDefinitionStatusTone(definition.Status)"
+                                                     Text="@definition.Status.ToString()" />
+                                        <StatusBadge Tone="info"
+                                                     Text="@($"{definition.ActiveRunCount} active run(s)")" />
+                                    </Cluster>
+                                </Status>
+                            </SelectionListItem>
+                        }
+                    </Stack>
+                }
+            </ListContent>
+
+            <DetailHeader>
+                <Stack GapScale="LayoutGap.Medium">
+                    <SurfaceCard>
+                        <Split Gap="LayoutGap.Medium">
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <p class="cda-eyebrow">Process workspace</p>
+                                <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
+                                <p class="text-sm leading-6 text-slate-600">
+                                    @(selectedProcessId.HasValue
+                                        ? "Change the durable process contract, then validate the same definition through runtime runs, deviations, and captured evidence."
+                                        : "Start with the definition contract first. Roles, steps, runtime runs, and governance artifacts attach to the saved process identity.")
+                                </p>
+                            </Stack>
+                            <Cluster Gap="LayoutGap.Small">
+                                <StatusBadge Tone="@SelectedDefinitionTone" Text="@editor.Status.ToString()" />
+                                <StatusBadge Tone="neutral" Text="@($"{editor.Roles.Count} role(s)")" />
+                                <StatusBadge Tone="info" Text="@($"{editor.Steps.Count} step(s)")" />
+                                @if (SelectedDefinitionSummary is not null)
+                                {
+                                    <StatusBadge Tone="warning" Text="@($"{SelectedDefinitionSummary.UnfilledRoleCount} open assignment(s)")" />
+                                }
+                            </Cluster>
+                        </Split>
+                    </SurfaceCard>
+
+                    <SecondaryTabs Items="DetailTabs"
+                                   SelectedKey="@detailTab"
+                                   SelectedKeyChanged="HandleDetailTabChanged" />
+                </Stack>
+            </DetailHeader>
+
+            <DetailContent>
+                <Stack Class="min-h-full"
+                       GapScale="LayoutGap.XXLarge">
+                    @if (string.Equals(detailTab, "definition", StringComparison.Ordinal))
+                    {
+                        <FormSection Title="Definition identity"
+                                     Description="Anchor the process to the correct scope and write the contract that later runs, assignments, and audit artifacts inherit.">
+                            <Grid Gap="LayoutGap.Large"
+                                  ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Name</label>
+                                    <InputText @bind-Value="editor.Name"
+                                               class="cda-input"
+                                               data-testid="processes-name-input" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Scope</label>
+                                    <TextBox Value="@(ProjectId.HasValue ? projectName : "Global process library")"
+                                             Class="cda-input"
+                                             ReadOnly="true" />
+                                </div>
+                            </Grid>
+
+                            <Grid Gap="LayoutGap.Large"
+                                  ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Customer</label>
+                                    <InputText @bind-Value="editor.CustomerName"
+                                               class="cda-input" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Owner</label>
+                                    <InputText @bind-Value="editor.OwnerName"
+                                               class="cda-input" />
+                                </div>
+                            </Grid>
+
+                            <div>
+                                <label class="cda-field-label">Summary</label>
+                                <InputTextArea @bind-Value="editor.Summary"
+                                               class="cda-input cda-input--textarea min-h-24"
+                                               data-testid="processes-summary-input" />
+                            </div>
+
+                            <div>
+                                <label class="cda-field-label">Value statement</label>
+                                <InputTextArea @bind-Value="editor.ValueStatement"
+                                               class="cda-input cda-input--textarea min-h-24"
+                                               data-testid="processes-value-statement-input" />
+                            </div>
+                        </FormSection>
+
+                        <FormSection Title="Governance and operating model"
+                                     Description="Define the policy and autonomy contract now so runs, refusals, and safe non-actions can be judged against an explicit baseline.">
+                            <Grid Gap="LayoutGap.Large"
+                                  ColumnsMd="3">
+                                <div>
+                                    <label class="cda-field-label">Criticality</label>
+                                    <InputSelect @bind-Value="editor.Criticality"
+                                                 class="cda-input">
+                                        @foreach (var criticality in Enum.GetValues<ProcessCriticality>())
+                                        {
+                                            <option value="@criticality">@criticality</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Autonomy level</label>
+                                    <InputSelect @bind-Value="editor.AutonomyLevel"
+                                                 class="cda-input">
+                                        @foreach (var autonomyLevel in Enum.GetValues<ProcessAutonomyLevel>())
+                                        {
+                                            <option value="@autonomyLevel">@autonomyLevel</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Working status</label>
+                                    <TextBox Value="@editor.Status.ToString()"
+                                             Class="cda-input"
+                                             ReadOnly="true" />
+                                </div>
+                            </Grid>
+
+                            <div>
+                                <label class="cda-field-label">Interface contract summary</label>
+                                <InputTextArea @bind-Value="editor.InterfaceContractSummary"
+                                               class="cda-input cda-input--textarea min-h-24" />
+                            </div>
+
+                            <div>
+                                <label class="cda-field-label">Governance notes</label>
+                                <InputTextArea @bind-Value="editor.GovernanceNotes"
+                                               class="cda-input cda-input--textarea min-h-24" />
+                            </div>
+
+                            <Grid Gap="LayoutGap.Large"
+                                  ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Change summary</label>
+                                    <InputTextArea @bind-Value="editor.ChangeSummary"
+                                                   class="cda-input cda-input--textarea min-h-24" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Governance policy summary</label>
+                                    <InputTextArea @bind-Value="editor.GovernancePolicySummary"
+                                                   class="cda-input cda-input--textarea min-h-24" />
+                                </div>
+                            </Grid>
+
+                            <Grid Gap="LayoutGap.Large"
+                                  ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Constitution rule summary</label>
+                                    <InputTextArea @bind-Value="editor.ConstitutionRuleSummary"
+                                                   class="cda-input cda-input--textarea min-h-24" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Operating mode summary</label>
+                                    <InputTextArea @bind-Value="editor.OperatingModeSummary"
+                                                   class="cda-input cda-input--textarea min-h-24" />
+                                </div>
+                            </Grid>
+
+                            <div>
+                                <label class="cda-field-label">Simulation readiness summary</label>
+                                <InputTextArea @bind-Value="editor.SimulationReadinessSummary"
+                                               class="cda-input cda-input--textarea min-h-24" />
+                            </div>
+
+                            <Cluster Gap="LayoutGap.Small">
+                                <Button Text="Save definition"
+                                        Click="SaveAsync"
+                                        data-testid="processes-save-definition-button" />
+                                <Button Text="Publish"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="PublishAsync"
+                                        data-testid="processes-publish-definition-button" />
+                                <Button Text="Delete"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="DeleteAsync"
+                                        data-testid="processes-delete-definition-button" />
+                            </Cluster>
+                        </FormSection>
+                    }
+                    else if (string.Equals(detailTab, "roles", StringComparison.Ordinal))
+                    {
+                        <FormSection Title="Role requirements"
+                                     Description="Define who the process needs first. Exact person, supplier, or agent binding happens later at runtime without changing the process contract.">
+                            <Actions>
+                                <Button Text="Add role"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="AddRole"
+                                        data-testid="processes-add-role-button" />
+                            </Actions>
+                            <ChildContent>
+                                @if (editor.Roles.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No role requirements"
+                                                Title="Add the first role"
+                                                Description="Role definitions capture purpose, staffing intent, fallback policy, and the expected executor kind before any runtime assignment happens." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Medium">
+                                        @foreach (var role in editor.Roles)
+                                        {
+                                            <SurfaceCard data-testid="processes-role-card">
+                                                <Split Gap="LayoutGap.Medium">
+                                                    <Stack GapScale="LayoutGap.Tiny">
+                                                        <p class="cda-eyebrow">Role requirement</p>
+                                                        <h3 class="text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(role.DisplayName) ? "Unnamed role" : role.DisplayName)</h3>
+                                                        <p class="text-sm leading-6 text-slate-600">The role contract stays stable even when the exact executor changes between project parties, suppliers, or agents.</p>
+                                                    </Stack>
+                                                    <Cluster Gap="LayoutGap.Small">
+                                                        <StatusBadge Tone="neutral" Text="@(role.IsRequired ? "Required" : "Optional")" />
+                                                        <Button Text="Remove"
+                                                                ButtonStyle="ButtonStyle.Light"
+                                                                Click="@(() => RemoveRole(role))" />
+                                                    </Cluster>
+                                                </Split>
+
+                                                <Grid Gap="LayoutGap.Large"
+                                                      ColumnsMd="3"
+                                                      Class="mt-5">
+                                                    <div>
+                                                        <label class="cda-field-label">Key</label>
+                                                        <InputText @bind-Value="role.Key"
+                                                                   class="cda-input" />
+                                                    </div>
+                                                    <div>
+                                                        <label class="cda-field-label">Display name</label>
+                                                        <InputText @bind-Value="role.DisplayName"
+                                                                   class="cda-input" />
+                                                    </div>
+                                                    <div>
+                                                        <label class="cda-field-label">Preferred executor kind</label>
+                                                        <InputText @bind-Value="role.PreferredExecutorKind"
+                                                                   class="cda-input" />
+                                                    </div>
+                                                </Grid>
+
+                                                <Grid Gap="LayoutGap.Large"
+                                                      ColumnsMd="2"
+                                                      Class="mt-5">
+                                                    <div>
+                                                        <label class="cda-field-label">Purpose</label>
+                                                        <InputTextArea @bind-Value="role.Purpose"
+                                                                       class="cda-input cda-input--textarea min-h-24" />
+                                                    </div>
+                                                    <div>
+                                                        <label class="cda-field-label">Staffing intent</label>
+                                                        <InputTextArea @bind-Value="role.StaffingIntent"
+                                                                       class="cda-input cda-input--textarea min-h-24" />
+                                                    </div>
+                                                </Grid>
+                                            </SurfaceCard>
+                                        }
+                                    </Stack>
+                                }
+
+                                <Cluster Gap="LayoutGap.Small">
+                                    <Button Text="Save definition"
+                                            Click="SaveAsync" />
+                                    <Button Text="Publish"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Click="PublishAsync" />
+                                </Cluster>
+                            </ChildContent>
+                        </FormSection>
+                    }
+                    else if (string.Equals(detailTab, "steps", StringComparison.Ordinal))
+                    {
+                        <FormSection Title="Workflow steps"
+                                     Description="Shape the executable path, explicit dependencies, role bindings, and evidence expectations before the first runtime run starts.">
+                            <Actions>
+                                <Button Text="Add step"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="AddStep"
+                                        data-testid="processes-add-step-button" />
+                            </Actions>
+                            <ChildContent>
+                                @if (editor.Steps.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No steps"
+                                                Title="Add the first workflow step"
+                                                Description="Steps define the order, dependency chain, role bindings, and required artifacts for the process definition." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Medium">
+                                        @foreach (var step in editor.Steps)
+                                        {
+                                            <SurfaceCard data-testid="processes-step-card">
+                                                <Split Gap="LayoutGap.Medium">
+                                                    <Stack GapScale="LayoutGap.Tiny">
+                                                        <p class="cda-eyebrow">Step definition</p>
+                                                        <h3 class="text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(step.Title) ? "Untitled step" : step.Title)</h3>
+                                                        <p class="text-sm leading-6 text-slate-600">Use typed contracts for inputs, outputs, evidence, decision rights, and exception policy so runtime deviations can be judged against a real baseline.</p>
+                                                    </Stack>
+                                                    <Cluster Gap="LayoutGap.Small">
+                                                        <StatusBadge Tone="neutral" Text="@step.StepKind.ToString()" />
+                                                        <Button Text="Remove"
+                                                                ButtonStyle="ButtonStyle.Light"
+                                                                Click="@(() => RemoveStep(step))" />
+                                                    </Cluster>
+                                                </Split>
+
+                                                <Grid Gap="LayoutGap.Large"
+                                                      ColumnsMd="3"
+                                                      Class="mt-5">
+                                                    <div>
+                                                        <label class="cda-field-label">Key</label>
+                                                        <InputText @bind-Value="step.Key"
+                                                                   class="cda-input" />
+                                                    </div>
+                                                    <div>
+                                                        <label class="cda-field-label">Title</label>
+                                                        <InputText @bind-Value="step.Title"
+                                                                   class="cda-input" />
+                                                    </div>
+                                                    <div>
+                                                        <label class="cda-field-label">Subtitle</label>
+                                                        <InputText @bind-Value="step.Subtitle"
+                                                                   class="cda-input" />
+                                                    </div>
+                                                </Grid>
+
+                                                <Grid Gap="LayoutGap.Large"
+                                                      ColumnsMd="3"
+                                                      Class="mt-5">
+                                                    <div>
+                                                        <label class="cda-field-label">Step kind</label>
+                                                        <InputSelect @bind-Value="step.StepKind"
+                                                                     class="cda-input">
+                                                            @foreach (var stepKind in Enum.GetValues<ProcessStepKind>())
+                                                            {
+                                                                <option value="@stepKind">@stepKind</option>
+                                                            }
+                                                        </InputSelect>
+                                                    </div>
+                                                    <div>
+                                                        <label class="cda-field-label">Target lead hours</label>
+                                                        <InputNumber @bind-Value="step.TargetLeadHours"
+                                                                     class="cda-input" />
+                                                    </div>
+                                                    <div>
+                                                        <label class="cda-field-label">Depends on</label>
+                                                        <InputSelect @bind-Value="step.DependsOnStepId"
+                                                                     class="cda-input">
+                                                            <option value="">None</option>
+                                                            @foreach (var candidate in editor.Steps.Where(candidate => candidate != step))
+                                                            {
+                                                                <option value="@candidate.Id">@(string.IsNullOrWhiteSpace(candidate.Title) ? "Untitled step" : candidate.Title)</option>
+                                                            }
+                                                        </InputSelect>
+                                                    </div>
+                                                </Grid>
+
+                                                <Cluster Gap="LayoutGap.Medium"
+                                                         Class="mt-5">
+                                                    <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                                        <InputCheckbox @bind-Value="step.AllowsManualSkip" />
+                                                        Allow manual skip
+                                                    </label>
+                                                    <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                                        <InputCheckbox @bind-Value="step.AllowsSafeRefusal" />
+                                                        Allow safe refusal
+                                                    </label>
+                                                    <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                                        <InputCheckbox @bind-Value="step.RequiresApproval" />
+                                                        Requires approval
+                                                    </label>
+                                                    <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                                        <InputCheckbox @bind-Value="step.RequiresDecisionRecord" />
+                                                        Requires decision record
+                                                    </label>
+                                                </Cluster>
+
+                                                <div class="mt-5">
+                                                    <label class="cda-field-label">Notes</label>
+                                                    <InputTextArea @bind-Value="step.Notes"
+                                                                   class="cda-input cda-input--textarea min-h-24" />
+                                                </div>
+                                            </SurfaceCard>
+                                        }
+                                    </Stack>
+                                }
+
+                                <Cluster Gap="LayoutGap.Small">
+                                    <Button Text="Save definition"
+                                            Click="SaveAsync" />
+                                    <Button Text="Publish"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Click="PublishAsync" />
+                                </Cluster>
+                            </ChildContent>
+                        </FormSection>
+
+                        <CanvasWorkbenchStage Eyebrow="Definition canvas"
+                                              Title="Process definition map"
+                                              Description="Review the structural shape of the definition, step ordering, and dependency path on the shared canvas surface.">
+                            <Canvas>
+                                @if (canvasSurface is null)
+                                {
+                                    <SurfaceCard Soft="true">
+                                        <p class="text-sm text-slate-600">The process canvas appears after the workspace surface is prepared.</p>
+                                    </SurfaceCard>
+                                }
+                                else
+                                {
+                                    <CanvasWorkbench Surface="canvasSurface" />
+                                }
+                            </Canvas>
+                        </CanvasWorkbenchStage>
+                    }
+                    else if (string.Equals(detailTab, "runs", StringComparison.Ordinal))
+                    {
+                        <SectionCard Title="Run lifecycle"
+                                     Description="Start process runs from the selected definition, then keep runtime state, assignments, and evidence attached to the same durable process identity.">
+                            @if (!selectedProcessId.HasValue)
+                            {
+                                <EmptyState Eyebrow="Definition required"
+                                            Title="Save a process definition first"
+                                            Description="Runtime execution starts only after the process contract, roles, and steps exist on a durable definition." />
+                            }
+                            else
+                            {
+                                <Grid Gap="LayoutGap.Large"
+                                      ColumnsMd="3">
+                                    <div>
+                                        <label class="cda-field-label">Run name</label>
+                                        <InputText @bind-Value="runNameDraft"
+                                                   class="cda-input"
+                                                   data-testid="processes-run-name-input" />
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Operating mode</label>
+                                        <InputSelect @bind-Value="runOperatingMode"
+                                                     class="cda-input"
+                                                     data-testid="processes-operating-mode-select">
+                                            @foreach (var operatingMode in Enum.GetValues<ProcessOperatingMode>())
+                                            {
+                                                <option value="@operatingMode">@operatingMode</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="flex items-end">
+                                        <Button Text="Start run"
+                                                Click="StartRunAsync"
+                                                data-testid="processes-start-run-button" />
+                                    </div>
+                                </Grid>
+
+                                @if (runs.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No runtime runs"
+                                                Title="Start the first run"
+                                                Description="Runs bring the definition to life and populate assignments, work briefs, decision records, evidence, and conformance observations." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Medium"
+                                           Class="mt-5">
+                                        @foreach (var run in runs)
+                                        {
+                                            <SelectionListItem Title="@run.Name"
+                                                               Eyebrow="@run.OperatingMode.ToString()"
+                                                               Meta="@BuildRunSummary(run)"
+                                                               Summary="@($"{run.EstimatedCost:C} estimated / {run.ActualCost:C} actual")"
+                                                               IsSelected="@(selectedRunId == run.Id)"
+                                                               OnSelect="@(() => SelectRunAsync(run.Id))">
+                                                <Status>
+                                                    <Cluster Gap="LayoutGap.Small">
+                                                        <StatusBadge Tone="@ResolveRunTone(run.Status)"
+                                                                     Text="@run.Status.ToString()" />
+                                                        <StatusBadge Tone="neutral"
+                                                                     Text="@($"{run.BlockedStepCount} blocked")" />
+                                                    </Cluster>
+                                                </Status>
+                                            </SelectionListItem>
+                                        }
+                                    </Stack>
+                                }
+                            }
+                        </SectionCard>
+
+                        @if (SelectedRun is not null)
+                        {
+                            <SummaryTiles>
+                                <SummaryTile Label="Completed steps"
+                                             Value="@SelectedRun.CompletedStepCount.ToString()"
+                                             HelperText="@($"{SelectedRun.TotalStepCount} total steps in this run.")" />
+                                <SummaryTile Label="Blocked steps"
+                                             Value="@SelectedRun.BlockedStepCount.ToString()"
+                                             HelperText="Steps currently blocked in runtime."
+                                             Tone="warning" />
+                                <SummaryTile Label="Capability gaps"
+                                             Value="@SelectedRun.CapabilityGapCount.ToString()"
+                                             HelperText="Assignments or execution gaps detected."
+                                             Tone="danger" />
+                                <SummaryTile Label="Actual cost"
+                                             Value="@SelectedRun.ActualCost.ToString("C")"
+                                             HelperText="@($"{SelectedRun.EstimatedCost:C} estimated for this run.")"
+                                             Tone="info" />
+                            </SummaryTiles>
+
+                            <CanvasWorkbenchStage Eyebrow="Runtime canvas"
+                                                  Title="@SelectedRun.Name"
+                                                  Description="Inspect the live runtime path, current step status, and sequence progression on the shared workbench surface.">
+                                <Canvas>
+                                    @if (canvasSurface is null)
+                                    {
+                                        <SurfaceCard Soft="true">
+                                            <p class="text-sm text-slate-600">Runtime canvas data is loading.</p>
+                                        </SurfaceCard>
+                                    }
+                                    else
+                                    {
+                                        <CanvasWorkbench Surface="canvasSurface" />
+                                    }
+                                </Canvas>
+                            </CanvasWorkbenchStage>
+
+                            <SectionCard Title="Step execution"
+                                         Description="Update runtime state explicitly so blocked work, safe refusals, approvals, and failures become durable evidence instead of disappearing into chat.">
+                                @if (stepRuns.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No step runs"
+                                                Title="No runtime step data yet"
+                                                Description="Step runs populate after the selected run is loaded from storage." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Medium">
+                                        @foreach (var stepRun in stepRuns)
+                                        {
+                                            <SurfaceCard data-testid="processes-step-run-card">
+                                                <Split Gap="LayoutGap.Medium">
+                                                    <Stack GapScale="LayoutGap.Tiny">
+                                                        <p class="cda-eyebrow">Step @(stepRun.Sequence + 1)</p>
+                                                        <h3 class="text-lg font-semibold text-slate-950">@stepRun.Title</h3>
+                                                        <p class="text-sm leading-6 text-slate-600">Executor: @(string.IsNullOrWhiteSpace(stepRun.CurrentExecutorName) ? "Unassigned" : stepRun.CurrentExecutorName)</p>
+                                                    </Stack>
+                                                    <Cluster Gap="LayoutGap.Small">
+                                                        <StatusBadge Tone="@ResolveStepTone(stepRun.Status)"
+                                                                     Text="@stepRun.Status.ToString()" />
+                                                        <StatusBadge Tone="neutral"
+                                                                     Text="@stepRun.StepKind.ToString()" />
+                                                    </Cluster>
+                                                </Split>
+
+                                                <Grid Gap="LayoutGap.Medium"
+                                                      ColumnsMd="4"
+                                                      Class="mt-5">
+                                                    <MetricCard Label="Wait" Value="@($"{stepRun.WaitMinutes}m")" />
+                                                    <MetricCard Label="Touch" Value="@($"{stepRun.TouchMinutes}m")" />
+                                                    <MetricCard Label="Blocked" Value="@($"{stepRun.BlockedMinutes}m")" />
+                                                    <MetricCard Label="Rework" Value="@stepRun.ReworkCount.ToString()" />
+                                                </Grid>
+
+                                                <Cluster Gap="LayoutGap.Small"
+                                                         Class="mt-5">
+                                                    <Button Text="Start"
+                                                            ButtonStyle="ButtonStyle.Light"
+                                                            Click="@(() => ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.InProgress))" />
+                                                    <Button Text="Complete"
+                                                            Click="@(() => ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Completed))" />
+                                                    <Button Text="Block"
+                                                            ButtonStyle="ButtonStyle.Light"
+                                                            Click="@(() => ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Blocked))" />
+                                                    <Button Text="Approval"
+                                                            ButtonStyle="ButtonStyle.Light"
+                                                            Click="@(() => ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.WaitingApproval))" />
+                                                    <Button Text="Refuse"
+                                                            ButtonStyle="ButtonStyle.Light"
+                                                            Click="@(() => ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Refused))" />
+                                                    <Button Text="Fail"
+                                                            ButtonStyle="ButtonStyle.Light"
+                                                            Click="@(() => ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Failed))" />
+                                                </Cluster>
+                                            </SurfaceCard>
+                                        }
+                                    </Stack>
+                                }
+                            </SectionCard>
+
+                            <SectionCard Title="Assignments and executor resolution"
+                                         Description="Role-first runtime assignments can be rebound to project parties, suppliers, or future agents without changing the process definition.">
+                                <Grid Gap="LayoutGap.Large"
+                                      ColumnTemplateLg="minmax(0,0.8fr) minmax(0,1.2fr)">
+                                    <div>
+                                        @if (assignments.Count == 0)
+                                        {
+                                            <EmptyState Eyebrow="No assignments"
+                                                        Title="No runtime assignments yet"
+                                                        Description="Assignments populate when the run snapshots the process role requirements." />
+                                        }
+                                        else
+                                        {
+                                            <Stack GapScale="LayoutGap.Medium">
+                                                @foreach (var assignment in assignments)
+                                                {
+                                                    <SelectionListItem Title="@ResolveRoleName(assignment.RoleRequirementId)"
+                                                                       Eyebrow="@(assignment.StepDefinitionId.HasValue ? "Step-scoped assignment" : "Run-scoped assignment")"
+                                                                       Meta="@assignment.ExecutorKind"
+                                                                       Summary="@(string.IsNullOrWhiteSpace(assignment.DisplayName) ? assignment.BindingReason : $"{assignment.DisplayName} / {assignment.BindingReason}")"
+                                                                       IsSelected="@(selectedAssignmentId == assignment.Id)"
+                                                                       OnSelect="@(() => SelectAssignment(assignment.Id))">
+                                                        <Status>
+                                                            <Cluster Gap="LayoutGap.Small">
+                                                                <StatusBadge Tone="@(assignment.IsCapabilityGap ? "danger" : "neutral")"
+                                                                             Text="@(assignment.IsCapabilityGap ? "Gap" : "Bound")" />
+                                                                <StatusBadge Tone="@(assignment.IsFallback ? "warning" : "info")"
+                                                                             Text="@(assignment.IsFallback ? "Fallback" : "Primary")" />
+                                                            </Cluster>
+                                                        </Status>
+                                                    </SelectionListItem>
+                                                }
+                                            </Stack>
+                                        }
+                                    </div>
+
+                                    <SurfaceCard>
+                                        @if (SelectedAssignment is null)
+                                        {
+                                            <EmptyState Eyebrow="No assignment selected"
+                                                        Title="Choose an assignment to resolve"
+                                                        Description="The selected role binding can be matched to a project party or later executor registry without rewriting the process definition." />
+                                        }
+                                        else
+                                        {
+                                            <Stack GapScale="LayoutGap.Medium">
+                                                <div>
+                                                    <label class="cda-field-label">Project party</label>
+                                                    <InputSelect @bind-Value="assignmentPartyId"
+                                                                 class="cda-input">
+                                                        <option value="">None</option>
+                                                        @foreach (var option in partyOptions)
+                                                        {
+                                                            <option value="@option.PartyId">@option.DisplayName</option>
+                                                        }
+                                                    </InputSelect>
+                                                </div>
+                                                <div>
+                                                    <label class="cda-field-label">Display name</label>
+                                                    <InputText @bind-Value="assignmentDisplayName"
+                                                               class="cda-input" />
+                                                </div>
+                                                <div>
+                                                    <label class="cda-field-label">Executor kind</label>
+                                                    <InputText @bind-Value="assignmentExecutorKind"
+                                                               class="cda-input" />
+                                                </div>
+                                                <div>
+                                                    <label class="cda-field-label">Binding reason</label>
+                                                    <InputTextArea @bind-Value="assignmentBindingReason"
+                                                                   class="cda-input cda-input--textarea min-h-24" />
+                                                </div>
+                                                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                                    <InputCheckbox @bind-Value="assignmentIsFallback" />
+                                                    Treat this as fallback binding
+                                                </label>
+                                                <Button Text="Resolve assignment"
+                                                        Click="ResolveSelectedAssignmentAsync"
+                                                        data-testid="processes-resolve-assignment-button" />
+                                            </Stack>
+                                        }
+                                    </SurfaceCard>
+                                </Grid>
+                            </SectionCard>
+
+                            <SectionCard Title="Artifacts, decisions, and briefs"
+                                         Description="Process runtime proof stays reviewable only if work briefs, decisions, evidence, and conformance observations remain attached to the same run.">
+                                <Grid Gap="LayoutGap.Large"
+                                      ColumnTemplateLg="minmax(0,1.05fr) minmax(0,0.95fr)">
+                                    <Stack GapScale="LayoutGap.Large">
+                                        <SurfaceCard>
+                                            <p class="cda-eyebrow">Record artifact</p>
+                                            <h3 class="mt-1 text-lg font-semibold text-slate-950">Runtime evidence</h3>
+
+                                            <Grid Gap="LayoutGap.Medium"
+                                                  ColumnsMd="2"
+                                                  Class="mt-4">
+                                                <div>
+                                                    <label class="cda-field-label">Step run</label>
+                                                    <InputSelect @bind-Value="artifactStepRunId"
+                                                                 class="cda-input">
+                                                        <option value="">Run level</option>
+                                                        @foreach (var stepRun in stepRuns)
+                                                        {
+                                                            <option value="@stepRun.Id">@stepRun.Title</option>
+                                                        }
+                                                    </InputSelect>
+                                                </div>
+                                                <div>
+                                                    <label class="cda-field-label">Artifact kind</label>
+                                                    <InputSelect @bind-Value="artifactKind"
+                                                                 class="cda-input">
+                                                        @foreach (var artifactKindValue in Enum.GetValues<ProcessArtifactKind>())
+                                                        {
+                                                            <option value="@artifactKindValue">@artifactKindValue</option>
+                                                        }
+                                                    </InputSelect>
+                                                </div>
+                                            </Grid>
+
+                                            <div class="mt-4">
+                                                <label class="cda-field-label">Title</label>
+                                                <InputText @bind-Value="artifactTitle"
+                                                           class="cda-input"
+                                                           data-testid="processes-artifact-title-input" />
+                                            </div>
+
+                                            <Cluster Gap="LayoutGap.Small"
+                                                     Class="mt-4">
+                                                <Button Text="Record artifact"
+                                                        Click="RecordArtifactAsync"
+                                                        data-testid="processes-record-artifact-button" />
+                                            </Cluster>
+                                        </SurfaceCard>
+
+                                        <SurfaceCard>
+                                            <p class="cda-eyebrow">Work briefs</p>
+                                            <h3 class="mt-1 text-lg font-semibold text-slate-950">Executor handoff context</h3>
+                                            @if (workBriefs.Count == 0)
+                                            {
+                                                <EmptyState Eyebrow="No work briefs"
+                                                            Title="No handoff context recorded"
+                                                            Description="Work briefs appear when the run creates executor-facing task packages." />
+                                            }
+                                            else
+                                            {
+                                                <Stack GapScale="LayoutGap.Small"
+                                                       Class="mt-4">
+                                                    @foreach (var brief in workBriefs)
+                                                    {
+                                                        <SurfaceCard Soft="true">
+                                                            <p class="text-sm font-semibold text-slate-950">@brief.Title</p>
+                                                            <p class="mt-2 text-sm leading-6 text-slate-600">@brief.WorkBriefText</p>
+                                                        </SurfaceCard>
+                                                    }
+                                                </Stack>
+                                            }
+                                        </SurfaceCard>
+                                    </Stack>
+
+                                    <Stack GapScale="LayoutGap.Large">
+                                        <SurfaceCard>
+                                            <p class="cda-eyebrow">Decision records</p>
+                                            <h3 class="mt-1 text-lg font-semibold text-slate-950">Durable runtime decisions</h3>
+                                            @if (decisions.Count == 0)
+                                            {
+                                                <EmptyState Eyebrow="No decisions"
+                                                            Title="No decision records stored"
+                                                            Description="Assignment, approval, refusal, and escalation decisions appear here when captured during runtime." />
+                                            }
+                                            else
+                                            {
+                                                <Stack GapScale="LayoutGap.Small"
+                                                       Class="mt-4">
+                                                    @foreach (var decision in decisions)
+                                                    {
+                                                        <SurfaceCard Soft="true">
+                                                            <p class="text-sm font-semibold text-slate-950">@decision.Title</p>
+                                                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@decision.DecisionKind / @decision.Outcome</p>
+                                                            <p class="mt-3 text-sm leading-6 text-slate-600">@decision.Reason</p>
+                                                        </SurfaceCard>
+                                                    }
+                                                </Stack>
+                                            }
+                                        </SurfaceCard>
+
+                                        <SurfaceCard>
+                                            <p class="cda-eyebrow">Conformance observations</p>
+                                            <h3 class="mt-1 text-lg font-semibold text-slate-950">Deviations and safe non-actions</h3>
+                                            @if (conformanceObservations.Count == 0)
+                                            {
+                                                <EmptyState Eyebrow="No observations"
+                                                            Title="No conformance records yet"
+                                                            Description="Observations appear when blocked, refused, or otherwise non-conforming runtime states are recorded." />
+                                            }
+                                            else
+                                            {
+                                                <Stack GapScale="LayoutGap.Small"
+                                                       Class="mt-4">
+                                                    @foreach (var observation in conformanceObservations)
+                                                    {
+                                                        <SurfaceCard Soft="true">
+                                                            <Split Gap="LayoutGap.Medium">
+                                                                <div>
+                                                                    <p class="text-sm font-semibold text-slate-950">@observation.Category</p>
+                                                                    <p class="mt-1 text-sm leading-6 text-slate-600">@observation.Observation</p>
+                                                                </div>
+                                                                <StatusBadge Tone="@ResolveConformanceTone(observation.Severity)"
+                                                                             Text="@observation.Severity.ToString()" />
+                                                            </Split>
+                                                        </SurfaceCard>
+                                                    }
+                                                </Stack>
+                                            }
+                                        </SurfaceCard>
+                                    </Stack>
+                                </Grid>
+                            </SectionCard>
+                        }
+                    }
+                    else if (string.Equals(detailTab, "analytics", StringComparison.Ordinal))
+                    {
+                        <SummaryTiles>
+                            <SummaryTile Label="Runs"
+                                         Value="@analytics.TotalRuns.ToString()"
+                                         HelperText="@($"{analytics.ActiveRuns} active / {analytics.CompletedRuns} completed")" />
+                            <SummaryTile Label="Capability gaps"
+                                         Value="@analytics.CapabilityGapCount.ToString()"
+                                         HelperText="Assignments or execution capacity gaps detected."
+                                         Tone="danger" />
+                            <SummaryTile Label="Conformance"
+                                         Value="@analytics.ConformanceObservationCount.ToString()"
+                                         HelperText="@($"{analytics.SafeNonActionCount} safe non-actions recorded")"
+                                         Tone="warning" />
+                            <SummaryTile Label="Actual cost"
+                                         Value="@analytics.ActualCost.ToString("C")"
+                                         HelperText="@($"{analytics.EstimatedCost:C} estimated in scope")"
+                                         Tone="info" />
+                        </SummaryTiles>
+
+                        <SectionCard Title="Improvement candidates"
+                                     Description="Persist improvement opportunities, training signals, and governance review needs instead of leaving them as loose notes after runtime defects appear.">
+                            @if (improvements.Count == 0)
+                            {
+                                <EmptyState Eyebrow="No improvement candidates"
+                                            Title="Nothing recorded yet"
+                                            Description="Improvement candidates populate when runtime blocking, refusal, or conformance issues reveal process design weaknesses." />
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Medium">
+                                    @foreach (var improvement in improvements)
+                                    {
+                                        <SurfaceCard>
+                                            <Split Gap="LayoutGap.Medium">
+                                                <div>
+                                                    <p class="text-sm font-semibold text-slate-950">@improvement.Title</p>
+                                                    <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@improvement.Category / @improvement.Status</p>
+                                                </div>
+                                                <Cluster Gap="LayoutGap.Small">
+                                                    @if (improvement.IsTrainingOpportunity)
+                                                    {
+                                                        <StatusBadge Tone="info" Text="Training" />
+                                                    }
+                                                    @if (improvement.RequiresGovernanceReview)
+                                                    {
+                                                        <StatusBadge Tone="warning" Text="Governance review" />
+                                                    }
+                                                </Cluster>
+                                            </Split>
+                                            <p class="mt-3 text-sm leading-6 text-slate-600">@improvement.ProblemSummary</p>
+                                        </SurfaceCard>
+                                    }
+                                </Stack>
+                            }
+                        </SectionCard>
+                    }
+                    else
+                    {
+                        <SectionCard Title="Definition exchange"
+                                     Description="Export and import process definition envelopes so architecture can review them, seed them, or move them between environments without copying implementation-only data.">
+                            <Grid Gap="LayoutGap.Large"
+                                  ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                                <SurfaceCard>
+                                    <p class="cda-eyebrow">Export</p>
+                                    <h3 class="mt-1 text-lg font-semibold text-slate-950">Definition envelope</h3>
+                                    <Cluster Gap="LayoutGap.Small"
+                                             Class="mt-4">
+                                        <Button Text="Export current definition"
+                                                Click="ExportAsync"
+                                                data-testid="processes-export-button" />
+                                    </Cluster>
+                                    <div class="mt-4">
+                                        <label class="cda-field-label">Export JSON</label>
+                                        <InputTextArea @bind-Value="exportJson"
+                                                       class="cda-input cda-input--textarea cda-input--mono min-h-72"
+                                                       data-testid="processes-export-json" />
+                                    </div>
+                                </SurfaceCard>
+
+                                <SurfaceCard>
+                                    <p class="cda-eyebrow">Import</p>
+                                    <h3 class="mt-1 text-lg font-semibold text-slate-950">Import envelope</h3>
+                                    <div class="mt-4">
+                                        <label class="cda-field-label">Import JSON</label>
+                                        <InputTextArea @bind-Value="importJson"
+                                                       class="cda-input cda-input--textarea cda-input--mono min-h-72"
+                                                       data-testid="processes-import-json" />
+                                    </div>
+                                    <Cluster Gap="LayoutGap.Small"
+                                             Class="mt-4">
+                                        <Button Text="Import definition"
+                                                Click="ImportAsync"
+                                                data-testid="processes-import-button" />
+                                    </Cluster>
+                                </SurfaceCard>
+                            </Grid>
+                        </SectionCard>
+                    }
+                </Stack>
+            </DetailContent>
+        </ListDetailShell>
+    </ChildContent>
+</PageScaffold>

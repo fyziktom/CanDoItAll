@@ -277,6 +277,13 @@
                                 <Button ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Class="cda-button--quick"
+                                        Icon="hub"
+                                        title="Open processes"
+                                        aria-label="Open processes"
+                                        Click="@(() => OpenProcesses.InvokeAsync(project.Id))" />
+                                <Button ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Class="cda-button--quick"
                                         Icon="calendar_month"
                                         title="Open calendar"
                                         aria-label="Open calendar"
@@ -374,6 +381,9 @@
 
     [Parameter]
     public EventCallback<Guid> OpenStructure { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OpenProcesses { get; set; }
 
     [Parameter]
     public EventCallback<Guid> OpenCalendar { get; set; }

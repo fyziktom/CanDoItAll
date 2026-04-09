@@ -7,6 +7,7 @@ using CanDoItAll.Modules.Automation;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.Security;
@@ -61,6 +62,7 @@ public static class TestApplicationBootstrap
         services.AddResourcesModule();
         services.AddPromptsModule();
         services.AddFactoryModule();
+        services.AddProcessesModule();
         services.AddValidationModule();
         services.AddTestLabModule();
         services.AddActivityModule();
