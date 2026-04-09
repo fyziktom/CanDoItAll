@@ -23,6 +23,8 @@ public enum ProjectObjectType
     PromptFlow,
     PromptSession,
     PromptStep,
+    ProcessDefinition,
+    ProcessRun,
     ValidationRun,
     TestPlan,
     TestEvidence,

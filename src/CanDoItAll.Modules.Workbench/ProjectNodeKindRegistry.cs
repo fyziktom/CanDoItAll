@@ -294,6 +294,23 @@ internal static class ProjectNodeKindRegistry
             Simple(ProjectObjectType.PromptFlow, "Prompt flow", Profile("hex", "#0f766e", "PF", "Prompt", ProjectObjectPaletteKeys.Success)),
             Simple(ProjectObjectType.PromptSession, "Prompt session", Profile("hex", "#0f766e", "PF", "Prompt", ProjectObjectPaletteKeys.Success)),
             Simple(ProjectObjectType.PromptStep, "Prompt step", Profile("pill", "#14b8a6", "ST", "Step", ProjectObjectPaletteKeys.Success)),
+            Simple(ProjectObjectType.ProcessDefinition, "Process definition", Profile("hex", "#0f766e", "PR", "Process", ProjectObjectPaletteKeys.Success)),
+            Simple(
+                ProjectObjectType.ProcessRun,
+                "Process run",
+                Profile("diamond", "#0284c7", "RN", "Run", ProjectObjectPaletteKeys.Info),
+                buildVisualProfile: status => status switch
+                {
+                    var candidate when candidate.Contains("Active", StringComparison.OrdinalIgnoreCase) =>
+                        Profile("diamond", "#0f766e", "RN", "Run", ProjectObjectPaletteKeys.Success),
+                    var candidate when candidate.Contains("Completed", StringComparison.OrdinalIgnoreCase) =>
+                        Profile("diamond", "#16a34a", "RN", "Run", ProjectObjectPaletteKeys.Success),
+                    var candidate when candidate.Contains("Blocked", StringComparison.OrdinalIgnoreCase) ||
+                                       candidate.Contains("Failed", StringComparison.OrdinalIgnoreCase) =>
+                        Profile("diamond", "#dc2626", "RN", "Run", ProjectObjectPaletteKeys.Danger),
+                    _ =>
+                        Profile("diamond", "#0284c7", "RN", "Run", ProjectObjectPaletteKeys.Info)
+                }),
             Simple(
                 ProjectObjectType.ValidationRun,
                 "Validation",

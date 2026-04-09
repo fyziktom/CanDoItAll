@@ -48,5 +48,6 @@
   <Folder Name="/tools/">
     <Project Path="tools/CanDoItAll.Manager/CanDoItAll.Manager.csproj" />
     <Project Path="tools/CanDoItAll.Mcp.DotNetWatch.Tray/CanDoItAll.Mcp.DotNetWatch.Tray.csproj" />
+    <Project Path="tools/CanDoItAll.ScenarioSeeder/CanDoItAll.ScenarioSeeder.csproj" />
   </Folder>
 </Solution>

@@ -3,6 +3,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Resources;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Validation;
 using CanDoItAll.Modules.Workbench;
@@ -88,6 +89,59 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var phaseEvent = Assert.Single(surface.Events);
         Assert.Equal("Execution", phaseEvent.Title);
         Assert.Equal(ProjectObjectType.Phase, phaseEvent.ObjectType);
+    }
+
+    [Fact]
+    public async Task GetStructureAsync_projects_process_definitions_and_runs_into_the_structure_surface()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processes = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var commandService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchCommandService>();
+
+        var projectId = await CreateProjectAsync(projects, "Workbench process projection");
+        var definitionResult = await processes.SaveAsync(BuildProcessDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(definitionResult.IsSuccess);
+        Assert.True((await processes.PublishAsync(definitionResult.Value)).IsSuccess);
+
+        var runResult = await processes.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = definitionResult.Value,
+            ProjectId = projectId,
+            RunName = "Workbench process run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Structure projection validation"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var definitionNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, BuildProcessDefinitionNodeKey(definitionResult.Value), StringComparison.Ordinal));
+        var runNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, BuildProcessRunNodeKey(runResult.Value), StringComparison.Ordinal));
+
+        Assert.Equal(ProjectObjectType.ProcessDefinition, definitionNode.ObjectType);
+        Assert.Equal(ProjectObjectType.ProcessRun, runNode.ObjectType);
+        Assert.Equal($"project:{projectId}", definitionNode.ParentId);
+        Assert.Equal(definitionNode.Id, runNode.ParentId);
+        Assert.Equal($"/projects/{projectId}/processes?processId={definitionResult.Value}", definitionNode.Route);
+        Assert.Equal($"/projects/{projectId}/processes?runId={runResult.Value}", runNode.Route);
+        Assert.Contains(surface.Links, link =>
+            string.Equals(link.SourceId, BuildProjectRootNodeKey(projectId), StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, definitionNode.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.Contains);
+        Assert.Contains(surface.Links, link =>
+            string.Equals(link.SourceId, definitionNode.Id, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, runNode.Id, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.Contains);
+
+        var artifact = await commandService.ExecuteNodeCommandAsync(projectId, runNode.Id, ProjectStructureCommandKind.Open);
+
+        Assert.NotNull(artifact);
+        Assert.Equal($"/projects/{projectId}/processes?runId={runResult.Value}", artifact!.Route);
+        Assert.Equal(WorkbenchTabKinds.Processes, artifact.TabKind);
     }
 
     [Fact]
@@ -236,6 +290,80 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             .SingleAsync(item => item.ProjectId == projectId && item.NodeKey == resourceNode.Id);
         Assert.Equal(movedX, layout.PositionX);
         Assert.Equal(movedY, layout.PositionY);
+    }
+
+    [Fact]
+    public async Task MoveObjectsAsync_retries_when_sqlite_workspace_is_temporarily_busy()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var resourcesService = scope.ServiceProvider.GetRequiredService<ResourcesService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projects, "Workbench Busy Retry");
+        var resourceResult = await resourcesService.SaveAsync(new ResourceEditorModel
+        {
+            ProjectId = projectId,
+            ConnectorPluginKey = "resource.folder",
+            ConfigSchemaVersion = "1.0",
+            Name = "Local folder",
+            Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["folderPath"] = @"C:\repositories\CanDoItAll\src"
+            }),
+            ValidationStatus = ResourceValidationStatus.Valid,
+            Sensitivity = ResourceSensitivity.Normal,
+            SupportsPreview = true,
+            SupportsIndexing = true
+        });
+        Assert.True(resourceResult.IsSuccess);
+
+        var initialSurface = await workbench.GetStructureAsync(projectId);
+        var resourceNode = Assert.Single(initialSurface.Nodes, node => node.Title == "Local folder");
+        var movedX = resourceNode.X + 160d;
+        var movedY = resourceNode.Y + 80d;
+
+        await using var lockContext = await dbContextFactory.CreateDbContextAsync();
+        await lockContext.Database.OpenConnectionAsync();
+
+        var transactionOpen = false;
+        try
+        {
+            await using var beginCommand = lockContext.Database.GetDbConnection().CreateCommand();
+            beginCommand.CommandText = "BEGIN IMMEDIATE TRANSACTION;";
+            await beginCommand.ExecuteNonQueryAsync();
+            transactionOpen = true;
+
+            var moveTask = workbench.MoveObjectsAsync(
+                projectId,
+                [new ProjectNodeMoveRequest(resourceNode.Id, movedX, movedY)]);
+
+            await Task.Delay(110);
+
+            await using var commitCommand = lockContext.Database.GetDbConnection().CreateCommand();
+            commitCommand.CommandText = "COMMIT;";
+            await commitCommand.ExecuteNonQueryAsync();
+            transactionOpen = false;
+
+            var movedNodeIds = await moveTask;
+            Assert.Contains(resourceNode.Id, movedNodeIds);
+        }
+        finally
+        {
+            if (transactionOpen)
+            {
+                await using var rollbackCommand = lockContext.Database.GetDbConnection().CreateCommand();
+                rollbackCommand.CommandText = "ROLLBACK;";
+                await rollbackCommand.ExecuteNonQueryAsync();
+            }
+        }
+
+        var updatedSurface = await workbench.GetStructureAsync(projectId);
+        var updatedNode = Assert.Single(updatedSurface.Nodes, node => node.Id == resourceNode.Id);
+        Assert.Equal(movedX, updatedNode.X);
+        Assert.Equal(movedY, updatedNode.Y);
     }
 
     [Fact]
@@ -2048,6 +2176,100 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         return result.Value;
     }
 
+    private static ProcessDefinitionEditorModel BuildProcessDefinitionEditor(Guid projectId, Guid managerRoleId)
+    {
+        var intakeStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Workbench-visible process",
+            Summary = "Project the process definition into the structure graph.",
+            ValueStatement = "Keep structure and process authoring aligned.",
+            CustomerName = "Workbench validation customer",
+            OwnerName = "Process architecture reviewer",
+            GovernancePolicySummary = "Projected process nodes stay read-only in the structure canvas.",
+            ChangeSummary = "Initial workbench projection test definition.",
+            ConstitutionRuleSummary = "The role contract remains stable while executors change.",
+            OperatingModeSummary = "Assisted execution routed through the project-scoped process workspace.",
+            SimulationReadinessSummary = "Safe for integration validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = managerRoleId,
+                    Key = "delivery-owner",
+                    DisplayName = "Delivery owner",
+                    Purpose = "Own the projected process flow.",
+                    StaffingIntent = "Assigned from the project manager lane.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                    PreferredExecutorKind = "person",
+                    SnapshotSummary = "Delivery owner role snapshot."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = intakeStepId,
+                    Key = "intake",
+                    Title = "Capture integration intake",
+                    StepKind = ProcessStepKind.Start,
+                    InputContractSummary = "Structure-side scope request.",
+                    OutputContractSummary = "Typed intake package.",
+                    EvidenceContractSummary = "Capture the intake context.",
+                    DecisionRightsSummary = "Delivery owner moves the request forward.",
+                    ExceptionPolicySummary = "Escalate missing scope or governance details.",
+                    TargetLeadHours = 2,
+                    CanvasX = 140,
+                    CanvasY = 140,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            RebindPolicySummary = "Rebind to the current delivery owner."
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Key = "review",
+                    Title = "Review delivery readiness",
+                    StepKind = ProcessStepKind.Work,
+                    InputContractSummary = "Typed intake package.",
+                    OutputContractSummary = "Ready-to-execute decision.",
+                    EvidenceContractSummary = "Decision-ready evidence bundle.",
+                    DecisionRightsSummary = "Delivery owner can approve, block, or escalate.",
+                    ExceptionPolicySummary = "Block when evidence or staffing is incomplete.",
+                    TargetLeadHours = 4,
+                    DependsOnStepId = intakeStepId,
+                    CanvasX = 420,
+                    CanvasY = 140,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            RebindPolicySummary = "Delivery owner remains attached."
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            ArtifactKind = ProcessArtifactKind.Evidence,
+                            Title = "Projected structure review evidence",
+                            ValidationRequirementSummary = "Human review remains required."
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
     private static async Task<Guid> CreatePartyAsync(PartyDirectoryService partyDirectoryService, PartyType partyType, string displayName)
     {
         var result = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
@@ -2148,6 +2370,12 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
 
     private static string BuildProjectRootNodeKey(Guid projectId)
         => $"project:{projectId}";
+
+    private static string BuildProcessDefinitionNodeKey(Guid definitionId)
+        => $"process-definition:{definitionId}";
+
+    private static string BuildProcessRunNodeKey(Guid runId)
+        => $"process-run:{runId}";
 
     private sealed class ThrowingProjectPartyIntegrationBridge(
         IProjectPartyIntegrationBridge inner,

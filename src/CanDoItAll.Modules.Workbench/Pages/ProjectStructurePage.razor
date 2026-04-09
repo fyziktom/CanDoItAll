@@ -16,6 +16,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.Modules.Workspace
 @using CanDoItAll.Infrastructure.Storage
 @using CanDoItAll.SharedKernel
+@using Microsoft.EntityFrameworkCore
 @inject ProjectsService ProjectsService
 @inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 @inject ProjectWorkbenchService ProjectWorkbenchService
@@ -518,6 +519,7 @@ else
     private Guid loadedProjectId;
     private string? pendingWorkbenchSelectionId;
     private ProjectWorkbenchUnavailableState? unavailableState;
+    private readonly SemaphoreSlim nodeMoveCommitGate = new(1, 1);
 
     private IReadOnlyList<CanvasWorkbenchStat> stageStats =>
     [
@@ -785,32 +787,51 @@ else
 
     private async Task HandleNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
     {
-        var updatedNodeIds = await ProjectWorkbenchService.MoveObjectsAsync(
-            ProjectId,
-            args.Positions
-                .Select(position => new ProjectNodeMoveRequest(position.NodeId, position.X, position.Y))
-                .ToList());
-        if (updatedNodeIds.Count == 0)
-        {
-            return;
-        }
-
-        var updatedNodeIdSet = updatedNodeIds.ToHashSet(StringComparer.Ordinal);
-        var committedPositions = args.Positions
-            .Where(position => updatedNodeIdSet.Contains(position.NodeId))
+        var requestedPositions = args.Positions
+            .Select(position => new ProjectNodeMoveRequest(position.NodeId, position.X, position.Y))
             .ToList();
-        var requiresReload = surface is null ||
-            committedPositions.Count != updatedNodeIdSet.Count ||
-            committedPositions.Any(position => !surface.Nodes.Any(node => string.Equals(node.Id, position.NodeId, StringComparison.Ordinal)));
-        if (requiresReload)
+        if (requestedPositions.Count == 0)
         {
-            await ReloadSurfaceAsync();
             return;
         }
 
-        TryPatchSurfaceNodePositions(committedPositions);
-        await TryAdoptMovedNodesIntoBordersAsync(new CanvasWorkbenchNodesMovedEventArgs(committedPositions));
-        await InvokeAsync(StateHasChanged);
+        await nodeMoveCommitGate.WaitAsync();
+        try
+        {
+            var updatedNodeIds = await ProjectWorkbenchService.MoveObjectsAsync(ProjectId, requestedPositions);
+            if (updatedNodeIds.Count == 0)
+            {
+                return;
+            }
+
+            var updatedNodeIdSet = updatedNodeIds.ToHashSet(StringComparer.Ordinal);
+            var committedPositions = args.Positions
+                .Where(position => updatedNodeIdSet.Contains(position.NodeId))
+                .ToList();
+            var requiresReload = surface is null ||
+                committedPositions.Count != updatedNodeIdSet.Count ||
+                committedPositions.Any(position => !surface.Nodes.Any(node => string.Equals(node.Id, position.NodeId, StringComparison.Ordinal)));
+            if (requiresReload)
+            {
+                await ReloadSurfaceAsync();
+                return;
+            }
+
+            TryPatchSurfaceNodePositions(committedPositions);
+            await TryAdoptMovedNodesIntoBordersAsync(new CanvasWorkbenchNodesMovedEventArgs(committedPositions));
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (DbUpdateException ex) when (ProjectStructureAssemblyService.IsSqliteBusy(ex))
+        {
+            workflowFeedback = "The structure move could not be saved because the active SQLite workspace is busy. The canvas was reloaded; retry the move after the current write finishes.";
+            workflowFeedbackTone = "warn";
+            await ReloadSurfaceAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+        finally
+        {
+            nodeMoveCommitGate.Release();
+        }
     }
 
     private async Task HandleCanvasStateChangedAsync(string stateJson)
@@ -1944,7 +1965,10 @@ else
         => previewNode = null;
 
     public void Dispose()
-        => CancelPendingCanvasViewStatePersistence();
+    {
+        CancelPendingCanvasViewStatePersistence();
+        nodeMoveCommitGate.Dispose();
+    }
 
 }
 

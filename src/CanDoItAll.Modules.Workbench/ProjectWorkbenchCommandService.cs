@@ -148,6 +148,7 @@ public sealed class ProjectWorkbenchCommandService(
         {
             ProjectObjectType.ProjectRoot => WorkbenchTabKinds.ProjectOverview,
             ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep => WorkbenchTabKinds.PromptWizardSession,
+            ProjectObjectType.ProcessDefinition or ProjectObjectType.ProcessRun => WorkbenchTabKinds.Processes,
             ProjectObjectType.ValidationRun => WorkbenchTabKinds.ValidationRun,
             ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => WorkbenchTabKinds.TestPlan,
             _ when binding.Route.EndsWith("/structure", StringComparison.OrdinalIgnoreCase) => WorkbenchTabKinds.ProjectStructure,

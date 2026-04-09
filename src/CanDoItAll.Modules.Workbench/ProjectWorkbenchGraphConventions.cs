@@ -81,6 +81,8 @@ internal static class ProjectWorkbenchGraphConventions
             ProjectObjectType.Recording or ProjectObjectType.Transcript or ProjectObjectType.Infrastructure => (1320, 100 + (index * 120)),
             ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession => (1080, 100 + (index * 150)),
             ProjectObjectType.PromptStep => (1400, 100 + (index * 120)),
+            ProjectObjectType.ProcessDefinition => (1560, 160 + (index * 180)),
+            ProjectObjectType.ProcessRun => (1880, 180 + (index * 140)),
             ProjectObjectType.ValidationRun => (780, 580 + (index * 120)),
             ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence => (1100, 620 + (index * 140)),
             _ => (420 + ((index % 3) * 220), 820 + ((index / 3) * 140))

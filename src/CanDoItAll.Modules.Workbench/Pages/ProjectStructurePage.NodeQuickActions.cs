@@ -82,6 +82,12 @@ public partial class ProjectStructurePage
                 "prompt",
                 "accent",
                 ProjectStructureCommandKind.Open),
+            ProjectObjectType.ProcessDefinition or ProjectObjectType.ProcessRun => BuildCommandQuickAction(
+                "Open Processes",
+                "Open the process workspace in a separate tab without losing the current graph context.",
+                "open",
+                "primary",
+                ProjectStructureCommandKind.Open),
             ProjectObjectType.Recording when CanCreateTranscript(node) => BuildInspectorQuickAction(
                 "Create Transcript",
                 "Create a transcript beneath this recording and keep the source relationship intact.",

@@ -506,18 +506,30 @@
     }
 
     function syncSceneHoverState(state, event) {
+        if (!state?.host?.isConnected || !state.lookups?.byId || !state.sceneHitRegistry) {
+            clearScenePopoverHover(state);
+            return;
+        }
+
         const hitTarget = getSceneHitAtEvent(state, event);
         const nextNodeId = hitTarget?.nodeId || null;
         if ((state.hoveredNodeId || null) !== nextNodeId) {
             state.hoveredNodeId = nextNodeId;
-            renderConnectorAnchors(state, getProjectedNodes(state, getVisibleNodes(state)));
+            const visibleNodes = getVisibleNodes(state);
+            renderConnectorAnchors(state, Array.isArray(visibleNodes) ? getProjectedNodes(state, visibleNodes) : []);
         }
 
         if (hitTarget?.type === "annotation" && hitTarget.annotation) {
             const annotationKey = `${hitTarget.nodeId}:${hitTarget.annotation.id || hitTarget.annotation.kind || hitTarget.annotation.label || hitTarget.annotationIndex || 0}`;
             if (state.hoveredAnnotationKey !== annotationKey) {
                 state.hoveredAnnotationKey = annotationKey;
-                showPopover(state, resolveAnchorRect(hitTarget.bounds), hitTarget.annotation);
+                const anchorRect = resolveAnchorRect(hitTarget.bounds);
+                if (!anchorRect) {
+                    clearScenePopoverHover(state);
+                    return;
+                }
+
+                showPopover(state, anchorRect, hitTarget.annotation);
             }
             return;
         }
