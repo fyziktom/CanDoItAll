@@ -1,4 +1,5 @@
 @namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
 @using Microsoft.AspNetCore.Components.Web
 
 <CascadingValue Value="this" IsFixed="true">
@@ -22,8 +23,8 @@
 
 @if (visibleItems.Count > 0)
 {
-    <div @attributes="BuildContainerAttributes()">
-        <div class="cad-tabs__list zy-tabs__list"
+    <div @attributes="BuildRootAttributes()">
+        <div class="cad-tabs__list"
              role="tablist"
              aria-label="@ResolveAriaLabel()"
              aria-orientation="@ResolveAriaOrientation()">
@@ -39,10 +40,9 @@
 
                 <button @key="tab"
                         @ref="tab.ButtonReference"
-                        @attributes="tab.AdditionalAttributes"
+                        @attributes="BuildTabAttributes(tab, isSelected)"
                         type="button"
                         id="@tabId"
-                        class="@BuildTabCssClass(isSelected)"
                         role="tab"
                         aria-selected="@(isSelected ? "true" : "false")"
                         aria-controls="@panelId"
@@ -54,26 +54,26 @@
                         @onclick="@(() => SelectTabAsync(visibleIndex, userInitiated: true))">
                     @if (iconName is not null)
                     {
-                        <span class="rz-icon cda-material-icon material-icons cad-tabs__icon zy-tabs__icon" aria-hidden="true">@iconName</span>
+                        <span class="rz-icon cda-material-icon material-icons cad-tabs__icon" aria-hidden="true">@iconName</span>
                     }
                     else if (!string.IsNullOrWhiteSpace(tab.Icon))
                     {
-                        <span class="cad-tabs__icon zy-tabs__icon cad-tabs__icon--fallback zy-tabs__icon--fallback"
+                        <span class="cad-tabs__icon cad-tabs__icon--fallback"
                               title="@($"Unknown icon token: {tab.Icon}")"
                               aria-hidden="true">@tab.Icon</span>
                     }
 
-                    <span class="cad-tabs__tab-text zy-tabs__tab-text">@ResolveTabText(tab)</span>
+                    <span class="cad-tabs__tab-text">@ResolveTabText(tab)</span>
 
                     @if (!string.IsNullOrWhiteSpace(tab.BadgeText))
                     {
-                        <span class="cad-tabs__badge zy-tabs__badge">@tab.BadgeText</span>
+                        <span class="cad-tabs__badge">@tab.BadgeText</span>
                     }
                 </button>
             }
         </div>
 
-        <div class="cad-tabs__panels zy-tabs__panels">
+        <div class="cad-tabs__panels">
             @if (RenderMode == TabRenderMode.Client)
             {
                 @for (var index = 0; index < visibleItems.Count; index++)
@@ -83,7 +83,7 @@
 
                     <div @key="tab"
                          id="@GetPanelId(index)"
-                         class="cad-tabs__panel zy-tabs__panel"
+                         class="cad-tabs__panel"
                          role="tabpanel"
                          aria-labelledby="@GetTabId(index)"
                          aria-hidden="@(!isSelected ? "true" : "false")"
@@ -98,7 +98,7 @@
 
                 <div @key="activeTab"
                      id="@GetPanelId(selectedVisibleIndex)"
-                     class="cad-tabs__panel zy-tabs__panel"
+                     class="cad-tabs__panel"
                      role="tabpanel"
                      aria-labelledby="@GetTabId(selectedVisibleIndex)">
                     @activeTab.ChildContent
@@ -134,6 +134,12 @@
     public TabsVariant Variant { get; set; } = TabsVariant.WorkspacePrimary;
 
     [Parameter]
+    public TabsBorderMode BorderMode { get; set; } = TabsBorderMode.Auto;
+
+    [Parameter]
+    public TabsOverflowMode OverflowMode { get; set; } = TabsOverflowMode.Auto;
+
+    [Parameter]
     public string? AriaLabel { get; set; }
 
     [Parameter]
@@ -141,9 +147,6 @@
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
-
-    [Parameter(CaptureUnmatchedValues = true)]
-    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -314,39 +317,46 @@
         }
     }
 
-    private IReadOnlyDictionary<string, object>? BuildContainerAttributes()
+    private IReadOnlyDictionary<string, object>? BuildRootAttributes()
     {
-        var cssClass = string.Join(
+        return BuildAttributes(BuildRootCssClass());
+    }
+
+    private IReadOnlyDictionary<string, object>? BuildTabAttributes(TabsItem item, bool isSelected)
+    {
+        return item.AdditionalAttributes.WithClass(BuildTabCssClass(isSelected));
+    }
+
+    private string BuildRootCssClass()
+    {
+        return string.Join(
             ' ',
             [
-                "zy-tabs",
                 "cad-tabs",
                 ResolveVariantCssClass(),
                 ResolvePositionCssClass(),
-                IsHorizontal
-                    ? "cad-tabs--horizontal zy-tabs--horizontal"
-                    : "cad-tabs--vertical zy-tabs--vertical"
+                ResolveBorderCssClass(),
+                ResolveOverflowCssClass(),
+                IsHorizontal ? "cad-tabs--horizontal" : "cad-tabs--vertical"
             ]);
-
-        return AdditionalAttributes.WithClass(cssClass);
     }
 
     private string BuildTabCssClass(bool isSelected)
     {
         return isSelected
-            ? "cad-tabs__tab zy-tabs__tab is-active"
-            : "cad-tabs__tab zy-tabs__tab";
+            ? "cad-tabs__tab is-active"
+            : "cad-tabs__tab";
     }
 
     private string ResolveVariantCssClass()
     {
         return Variant switch
         {
-            TabsVariant.WorkspaceSecondary => "cad-tabs--variant-workspace-secondary zy-tabs--variant-workspace-secondary",
-            TabsVariant.WorkspaceTertiary => "cad-tabs--variant-workspace-tertiary zy-tabs--variant-workspace-tertiary",
-            TabsVariant.ModalCompact => "cad-tabs--variant-modal-compact zy-tabs--variant-modal-compact",
-            TabsVariant.Workstation => "cad-tabs--variant-workstation zy-tabs--variant-workstation",
-            _ => "cad-tabs--variant-workspace-primary zy-tabs--variant-workspace-primary"
+            TabsVariant.WorkspaceSecondary => "cad-tabs--variant-workspace-secondary",
+            TabsVariant.WorkspaceTertiary => "cad-tabs--variant-workspace-tertiary",
+            TabsVariant.ModalCompact => "cad-tabs--variant-modal-compact",
+            TabsVariant.Workstation => "cad-tabs--variant-workstation",
+            _ => "cad-tabs--variant-workspace-primary"
         };
     }
 
@@ -354,10 +364,30 @@
     {
         return TabPosition switch
         {
-            TabPosition.Bottom => "cad-tabs--position-bottom zy-tabs--position-bottom",
-            TabPosition.Left => "cad-tabs--position-left zy-tabs--position-left",
-            TabPosition.Right => "cad-tabs--position-right zy-tabs--position-right",
-            _ => "cad-tabs--position-top zy-tabs--position-top"
+            TabPosition.Bottom => "cad-tabs--position-bottom",
+            TabPosition.Left => "cad-tabs--position-left",
+            TabPosition.Right => "cad-tabs--position-right",
+            _ => "cad-tabs--position-top"
+        };
+    }
+
+    private string ResolveBorderCssClass()
+    {
+        return BorderMode switch
+        {
+            TabsBorderMode.None => "cad-tabs--border-none",
+            TabsBorderMode.Soft => "cad-tabs--border-soft",
+            _ => "cad-tabs--border-auto"
+        };
+    }
+
+    private string ResolveOverflowCssClass()
+    {
+        return OverflowMode switch
+        {
+            TabsOverflowMode.Wrap => "cad-tabs--overflow-wrap",
+            TabsOverflowMode.Scroll => "cad-tabs--overflow-scroll",
+            _ => "cad-tabs--overflow-auto"
         };
     }
 
@@ -463,5 +493,3 @@
 
     private bool IsHorizontal => TabPosition is TabPosition.Top or TabPosition.Bottom;
 }
-
-

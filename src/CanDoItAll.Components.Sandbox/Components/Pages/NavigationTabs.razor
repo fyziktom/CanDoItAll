@@ -1,0 +1,292 @@
+@namespace CanDoItAll.Components.Sandbox.Components
+@page "/groups/navigation/tabs"
+@inherits CatalogPageBase
+
+<PageTitle>Tabs Lab</PageTitle>
+
+<CatalogPageFrame Group="@Group"
+                  Scenario="@CurrentScenario"
+                  Frame="@CurrentFrame"
+                  ExampleCount="@Examples.Count"
+                  HeroTitle="Pressure-test tabs before they escape into real pages."
+                  HeroSummary="This dedicated lab keeps the shared Tabs component under stress: border modes, long labels, missing titles, narrow-width overflow, root Class customization, and vertical navigation all stay visible on one route."
+                  DemoTitle="Tabs proof lab"
+                  DemoSummary="Use this page to verify that tabs still look intentional when labels grow, rows get narrow, borders change, and consumers add their own Tailwind classes."
+                  ScenarioChanged="NavigateScenario"
+                  FrameChanged="NavigateFrame">
+    <Notes>
+        <div class="sandbox-proof-list">
+            <p>Use <code>BorderMode</code> to keep the preferred soft border or intentionally remove it.</p>
+            <p>Use <code>OverflowMode</code> to choose between wrapping and horizontal scrolling in narrow layouts.</p>
+            <p>The fallback label for a missing title must stay readable instead of collapsing the row.</p>
+        </div>
+    </Notes>
+
+    <ChildContent>
+        @if (CurrentScenario == SandboxScenarioKey.LoadingState)
+        {
+            <LoadingState Eyebrow="Tabs lab"
+                          Title="Preparing tabs stress scenarios"
+                          Description="The sandbox is rendering the shared tabs examples for visual proof." />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.XLarge">
+                <SectionCard Title="Baseline workspace shell"
+                             Description="Preferred default: soft borders, clear active state, and panels that still feel attached to the selected tab.">
+                    <Tabs data-testid="tabs-lab-baseline"
+                          SelectedIndex="@baselineSelectedIndex"
+                          SelectedIndexChanged="HandleBaselineChanged"
+                          Variant="@(TabsVariant.WorkspacePrimary)"
+                          BorderMode="@(TabsBorderMode.Soft)"
+                          AriaLabel="Baseline workspace tabs">
+                        <TabItems>
+                            <TabsItem Text="Overview" Icon="bars_staggered">
+                                <div class="space-y-3">
+                                    <TextBlock TextStyle="@(TextStyle.Body2)" Value="The default tabs surface should read as a calm workspace shell instead of a loose list of buttons." />
+                                    <div class="flex flex-wrap gap-2">
+                                        <StatusBadge Text="Soft border" Tone="info" />
+                                        <StatusBadge Text="Primary variant" Tone="success" />
+                                    </div>
+                                </div>
+                            </TabsItem>
+
+                            <TabsItem Text="@ActivityTabLabel" Icon="calendar" BadgeText="@ActivityBadgeText" class="tracking-[0.01em]">
+                                <div class="space-y-3">
+                                    <TextBlock TextStyle="@(TextStyle.Body2)" Value="Active state, badge placement, and icon rhythm should hold even when the label grows or the scenario gets denser." />
+                                    <Alert AlertStyle="@(AlertStyle.Info)">
+                                        Keep the tab label readable before adding more decorative chrome.
+                                    </Alert>
+                                </div>
+                            </TabsItem>
+
+                            <TabsItem Text="@EvidenceTabLabel" Icon="circle_info" Disabled="@IsEvidenceDisabled">
+                                @if (CurrentScenario == SandboxScenarioKey.EmptyState)
+                                {
+                                    <EmptyState Eyebrow="Evidence"
+                                                Title="No review notes yet"
+                                                Description="The panel should still feel attached to the selected tab when there is no content to render." />
+                                }
+                                else
+                                {
+                                    <div class="space-y-3">
+                                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="Longer supporting labels should wrap cleanly without losing the active-state border or breaking the panel seam." />
+                                        <StatusBadge Text="Disabled in disabled scenario" Tone="warning" />
+                                    </div>
+                                }
+                            </TabsItem>
+                        </TabItems>
+                    </Tabs>
+                </SectionCard>
+
+                <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                    <SectionCard Title="Consumer customization via Class"
+                                 Description="Enums keep the shared structure consistent, while the root Class still lets consumers add local shells and emphasis.">
+                        <Tabs data-testid="tabs-lab-class"
+                              SelectedIndex="@classSelectedIndex"
+                              SelectedIndexChanged="HandleClassChanged"
+                              Variant="@(TabsVariant.WorkspaceSecondary)"
+                              BorderMode="@(TabsBorderMode.Soft)"
+                              Class="rounded-[1.5rem] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.98)_0%,rgba(241,245,249,0.94)_100%)] p-3 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.38)]"
+                              AriaLabel="Tabs customized with root classes">
+                            <TabItems>
+                                <TabsItem Text="Review queue" Icon="bars_staggered">
+                                    <TextBlock TextStyle="@(TextStyle.Body2)" Value="The root Class can add a consumer shell without replacing the shared cad-tabs structure." />
+                                </TabsItem>
+                                <TabsItem Text="Pinned notes" Icon="calendar" BadgeText="4" class="text-sky-700 dark:text-sky-200">
+                                    <TextBlock TextStyle="@(TextStyle.Body2)" Value="TabsItem can still take extra Tailwind classes for a one-off emphasis treatment." />
+                                </TabsItem>
+                                <TabsItem Text="History" Icon="circle_info">
+                                    <TextBlock TextStyle="@(TextStyle.Body2)" Value="The variant enum still controls density and rhythm, so local classes do not have to re-style the whole component." />
+                                </TabsItem>
+                            </TabItems>
+                        </Tabs>
+                    </SectionCard>
+
+                    <SectionCard Title="Optional borderless chrome"
+                                 Description="Compact modal usage can intentionally remove the button border when the tighter, pill-shaped treatment reads better.">
+                        <Tabs data-testid="tabs-lab-modal"
+                              SelectedIndex="@modalSelectedIndex"
+                              SelectedIndexChanged="HandleModalChanged"
+                              RenderMode="@(TabRenderMode.Client)"
+                              Variant="@(TabsVariant.ModalCompact)"
+                              BorderMode="@(TabsBorderMode.None)"
+                              AriaLabel="Compact borderless tabs">
+                            <TabItems>
+                                <TabsItem Text="Summary">
+                                    <TextBlock TextStyle="@(TextStyle.Body2)" Value="This variant keeps the panel minimal and uses borderless pills for lighter modal chrome." />
+                                </TabsItem>
+                                <TabsItem Text="Warnings" BadgeText="2">
+                                    <Alert AlertStyle="@(AlertStyle.Warning)">
+                                        Borderless tabs should still keep hover, focus, and active state obvious.
+                                    </Alert>
+                                </TabsItem>
+                                <TabsItem Text="Approval path">
+                                    <TextBlock TextStyle="@(TextStyle.Body2)" Value="Client render mode keeps the whole set rendered so the tab switch remains instantaneous." />
+                                </TabsItem>
+                            </TabItems>
+                        </Tabs>
+                    </SectionCard>
+                </div>
+
+                <div class="sandbox-demo-grid sandbox-demo-grid--two">
+                    <SectionCard Title="Wrapping in a narrow column"
+                                 Description="This is the difficult case. Long labels, a missing title fallback, and a constrained width should still feel deliberate.">
+                        <div class="max-w-[21rem]" data-testid="tabs-lab-wrap-shell">
+                            <Tabs data-testid="tabs-lab-wrap"
+                                  SelectedIndex="@wrapSelectedIndex"
+                                  SelectedIndexChanged="HandleWrapChanged"
+                                  Variant="@(TabsVariant.WorkspaceSecondary)"
+                                  BorderMode="@(TabsBorderMode.Soft)"
+                                  OverflowMode="@(TabsOverflowMode.Wrap)"
+                                  AriaLabel="Wrapping tabs in a narrow column">
+                                <TabItems>
+                                    <TabsItem Text="@WrapFirstTabLabel" Icon="bars_staggered">
+                                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="Wrapped tabs should become a tidy multi-row control, not a broken imitation of the single-row seam." />
+                                    </TabsItem>
+                                    <TabsItem Icon="circle_info">
+                                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="This tab intentionally omits Text so the fallback label can prove the row still scans." />
+                                    </TabsItem>
+                                    <TabsItem Text="@WrapThirdTabLabel" BadgeText="beta">
+                                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="Badges and multi-line labels need to remain aligned even when the row wraps." />
+                                    </TabsItem>
+                                </TabItems>
+                            </Tabs>
+                        </div>
+                    </SectionCard>
+
+                    <SectionCard Title="Scrollable strip in the same width"
+                                 Description="When wrapping becomes too noisy, scroll mode should keep the control to one row without clipping labels or breaking focus behavior.">
+                        <div class="max-w-[21rem]" data-testid="tabs-lab-scroll-shell">
+                            <Tabs data-testid="tabs-lab-scroll"
+                                  SelectedIndex="@scrollSelectedIndex"
+                                  SelectedIndexChanged="HandleScrollChanged"
+                                  Variant="@(TabsVariant.WorkspaceSecondary)"
+                                  BorderMode="@(TabsBorderMode.Soft)"
+                                  OverflowMode="@(TabsOverflowMode.Scroll)"
+                                  AriaLabel="Scrollable tabs in a narrow column">
+                                <TabItems>
+                                    <TabsItem Text="Overview">
+                                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="Keep the strip single-line when horizontal movement is easier to understand than wrapping." />
+                                    </TabsItem>
+                                    <TabsItem Text="Automation checkpoints">
+                                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="Long labels should still be fully visible while the row scrolls." />
+                                    </TabsItem>
+                                    <TabsItem Text="Validation questions">
+                                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="Keyboard focus and active state should remain strong even when some tabs start off-screen." />
+                                    </TabsItem>
+                                    <TabsItem Text="Regression notes">
+                                        <TextBlock TextStyle="@(TextStyle.Body2)" Value="The right edge should not clip the final tab or its hover border." />
+                                    </TabsItem>
+                                    @if (CurrentScenario == SandboxScenarioKey.DenseContent)
+                                    {
+                                        <TabsItem Text="Stakeholder sign-off">
+                                            <TextBlock TextStyle="@(TextStyle.Body2)" Value="Dense scenarios add one more tab so the overflow behavior stays obvious." />
+                                        </TabsItem>
+                                    }
+                                </TabItems>
+                            </Tabs>
+                        </div>
+                    </SectionCard>
+                </div>
+
+                <SectionCard Title="Vertical tabs for settings rails"
+                             Description="Left-positioned tabs need the same visual confidence and should collapse back to a sensible mobile stack.">
+                    <Tabs data-testid="tabs-lab-vertical"
+                          SelectedIndex="@verticalSelectedIndex"
+                          SelectedIndexChanged="HandleVerticalChanged"
+                          Variant="@(TabsVariant.WorkspaceTertiary)"
+                          BorderMode="@(TabsBorderMode.Soft)"
+                          TabPosition="@(TabPosition.Left)"
+                          AriaLabel="Vertical settings tabs">
+                        <TabItems>
+                            <TabsItem Text="General">
+                                <TextBlock TextStyle="@(TextStyle.Body2)" Value="Vertical tabs should read like a settings rail instead of an unrelated side list." />
+                            </TabsItem>
+                            <TabsItem Text="@VerticalNotificationsTabLabel" BadgeText="3">
+                                <TextBlock TextStyle="@(TextStyle.Body2)" Value="Longer labels still need to align cleanly and keep the panel seam intact." />
+                            </TabsItem>
+                            <TabsItem Text="Audit trail" Disabled="@(CurrentScenario == SandboxScenarioKey.DisabledState)">
+                                <TextBlock TextStyle="@(TextStyle.Body2)" Value="Disabled items must remain visible while clearly opting out of interaction." />
+                            </TabsItem>
+                        </TabItems>
+                    </Tabs>
+                </SectionCard>
+            </Stack>
+        }
+    </ChildContent>
+</CatalogPageFrame>
+
+@code {
+    private static readonly SandboxGroupDefinition Group = SandboxCatalogRegistry.GetGroup(SandboxGroupKey.Navigation);
+    private static readonly IReadOnlyList<SandboxExampleDefinition> Examples = SandboxCatalogRegistry.GetExamples(SandboxGroupKey.Navigation);
+
+    private int baselineSelectedIndex = 1;
+    private int classSelectedIndex = 1;
+    private int modalSelectedIndex;
+    private int wrapSelectedIndex = 2;
+    private int scrollSelectedIndex = 2;
+    private int verticalSelectedIndex;
+
+    private bool IsEvidenceDisabled => CurrentScenario == SandboxScenarioKey.DisabledState;
+
+    private string ActivityTabLabel => CurrentScenario == SandboxScenarioKey.LongText
+        ? "Operational activity and reviewer context"
+        : "Activity log";
+
+    private string ActivityBadgeText => CurrentScenario == SandboxScenarioKey.DenseContent
+        ? "7"
+        : "2";
+
+    private string EvidenceTabLabel => CurrentScenario == SandboxScenarioKey.LongText
+        ? "Evidence and notes that must wrap cleanly"
+        : "Evidence";
+
+    private string WrapFirstTabLabel => CurrentScenario == SandboxScenarioKey.LongText
+        ? "A very long tab label that should wrap with control"
+        : "Long title that forces a second line";
+
+    private string WrapThirdTabLabel => CurrentScenario == SandboxScenarioKey.LongText
+        ? "Another long label so two wrapped buttons can coexist without chaos"
+        : "Secondary proof notes";
+
+    private string VerticalNotificationsTabLabel => CurrentScenario == SandboxScenarioKey.LongText
+        ? "Notifications and preference routing"
+        : "Notifications";
+
+    private Task HandleBaselineChanged(int value)
+    {
+        baselineSelectedIndex = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleClassChanged(int value)
+    {
+        classSelectedIndex = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleModalChanged(int value)
+    {
+        modalSelectedIndex = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleWrapChanged(int value)
+    {
+        wrapSelectedIndex = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleScrollChanged(int value)
+    {
+        scrollSelectedIndex = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleVerticalChanged(int value)
+    {
+        verticalSelectedIndex = value;
+        return Task.CompletedTask;
+    }
+}

@@ -137,4 +137,293 @@
   .cda-inline-tab__action {
     @apply rounded px-1 py-0.5 opacity-60 transition hover:opacity-100;
   }
+
+  .cad-tabs {
+    --cad-tabs-list-border: color-mix(in srgb, var(--cad-color-border-soft) 85%, transparent);
+    --cad-tabs-tab-border: color-mix(in srgb, var(--cad-color-border-soft) 80%, transparent);
+    --cad-tabs-tab-hover-border: var(--cad-color-border);
+    --cad-tabs-tab-active-border: var(--cad-tone-primary-soft-border);
+    --cad-tabs-tab-color: var(--cad-color-text-muted);
+    --cad-tabs-tab-hover-color: var(--cad-color-text);
+    --cad-tabs-tab-active-color: var(--cad-color-text-strong);
+    --cad-tabs-tab-background: color-mix(in srgb, var(--cad-color-surface-soft) 88%, transparent);
+    --cad-tabs-tab-hover-background: var(--cad-color-surface);
+    --cad-tabs-tab-active-background: var(--cad-color-surface);
+    --cad-tabs-tab-shadow: none;
+    --cad-tabs-tab-active-shadow: var(--cad-shadow-soft);
+    --cad-tabs-tab-font-size: 0.875rem;
+    --cad-tabs-tab-font-weight: 600;
+    --cad-tabs-tab-padding: 0.65rem 1rem;
+    --cad-tabs-tab-min-height: 2.75rem;
+    --cad-tabs-tab-radius: 1rem 1rem 0 0;
+    --cad-tabs-panel-border: color-mix(in srgb, var(--cad-color-border-soft) 88%, transparent);
+    --cad-tabs-panel-background: linear-gradient(180deg, var(--cad-color-surface) 0%, color-mix(in srgb, var(--cad-color-surface-soft) 92%, transparent) 100%);
+    --cad-tabs-panel-shadow: var(--cad-shadow-soft);
+    --cad-tabs-panel-padding: 1rem;
+    --cad-tabs-panel-radius: 0 1.25rem 1.25rem 1.25rem;
+    @apply flex min-w-0 gap-0;
+  }
+
+  .cad-tabs--horizontal {
+    @apply flex-col;
+  }
+
+  .cad-tabs--position-bottom {
+    @apply flex-col-reverse;
+  }
+
+  .cad-tabs--vertical {
+    @apply gap-4;
+  }
+
+  .cad-tabs--position-left.cad-tabs--vertical {
+    @apply flex-row;
+  }
+
+  .cad-tabs--position-right.cad-tabs--vertical {
+    @apply flex-row-reverse;
+  }
+
+  .cad-tabs--border-auto.cad-tabs--variant-modal-compact,
+  .cad-tabs--border-auto.cad-tabs--variant-workstation,
+  .cad-tabs--border-none {
+    --cad-tabs-tab-border: transparent;
+    --cad-tabs-tab-hover-border: transparent;
+  }
+
+  .cad-tabs--border-soft {
+    --cad-tabs-tab-border: color-mix(in srgb, var(--cad-color-border-soft) 80%, transparent);
+    --cad-tabs-tab-hover-border: var(--cad-color-border);
+  }
+
+  .cad-tabs__list {
+    @apply flex min-w-0 items-end gap-2;
+    margin: 0;
+    padding: 0 0.25rem;
+    border-bottom: 1px solid var(--cad-tabs-list-border);
+    scrollbar-width: thin;
+  }
+
+  .cad-tabs--vertical .cad-tabs__list {
+    @apply flex-col items-stretch;
+    flex: 0 0 clamp(12rem, 22vw, 16rem);
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .cad-tabs--position-left.cad-tabs--vertical .cad-tabs__list {
+    padding-right: 1rem;
+    border-right: 1px solid var(--cad-tabs-list-border);
+  }
+
+  .cad-tabs--position-right.cad-tabs--vertical .cad-tabs__list {
+    padding-left: 1rem;
+    border-left: 1px solid var(--cad-tabs-list-border);
+  }
+
+  .cad-tabs--horizontal.cad-tabs--overflow-auto .cad-tabs__list,
+  .cad-tabs--horizontal.cad-tabs--overflow-wrap .cad-tabs__list {
+    flex-wrap: wrap;
+  }
+
+  .cad-tabs--horizontal.cad-tabs--overflow-scroll .cad-tabs__list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .cad-tabs__tab {
+    @apply inline-flex items-center justify-center gap-2 text-left transition;
+    min-height: var(--cad-tabs-tab-min-height);
+    max-width: 100%;
+    padding: var(--cad-tabs-tab-padding);
+    border: 1px solid var(--cad-tabs-tab-border);
+    border-bottom-width: 0;
+    border-radius: var(--cad-tabs-tab-radius);
+    background: var(--cad-tabs-tab-background);
+    color: var(--cad-tabs-tab-color);
+    font-size: var(--cad-tabs-tab-font-size);
+    font-weight: var(--cad-tabs-tab-font-weight);
+    line-height: 1.3;
+    white-space: normal;
+    box-shadow: var(--cad-tabs-tab-shadow);
+  }
+
+  .cad-tabs--horizontal.cad-tabs--overflow-scroll .cad-tabs__tab {
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .cad-tabs--vertical .cad-tabs__tab {
+    @apply w-full justify-start;
+    border-bottom-width: 1px;
+    border-radius: 1rem;
+  }
+
+  .cad-tabs__tab:hover,
+  .cad-tabs__tab:focus-visible {
+    border-color: var(--cad-tabs-tab-hover-border);
+    background: var(--cad-tabs-tab-hover-background);
+    color: var(--cad-tabs-tab-hover-color);
+  }
+
+  .cad-tabs__tab:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--cad-tone-primary-soft-border) 75%, transparent);
+    outline-offset: 2px;
+  }
+
+  .cad-tabs__tab.is-active {
+    color: var(--cad-tabs-tab-active-color);
+    background: var(--cad-tabs-tab-active-background);
+    border-color: var(--cad-tabs-tab-active-border);
+    box-shadow: var(--cad-tabs-tab-active-shadow);
+  }
+
+  .cad-tabs--horizontal.cad-tabs--position-top .cad-tabs__tab.is-active {
+    margin-bottom: -1px;
+  }
+
+  .cad-tabs--horizontal.cad-tabs--position-bottom .cad-tabs__tab.is-active {
+    margin-top: -1px;
+  }
+
+  .cad-tabs__tab:disabled,
+  .cad-tabs__tab[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.5;
+    box-shadow: none;
+  }
+
+  .cad-tabs__icon {
+    @apply inline-flex items-center justify-center;
+    flex: 0 0 auto;
+    font-size: 1em;
+  }
+
+  .cad-tabs__icon--fallback {
+    font-size: 0.75em;
+    font-weight: 700;
+  }
+
+  .cad-tabs__tab-text {
+    min-width: 0;
+  }
+
+  .cad-tabs__badge {
+    @apply inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em];
+    min-width: 1.5rem;
+    border-radius: 9999px;
+    background: var(--cad-tone-primary-soft-bg);
+    color: var(--cad-tone-primary-soft-fg);
+  }
+
+  .cad-tabs__panels {
+    @apply min-w-0 flex-1;
+  }
+
+  .cad-tabs__panel {
+    min-width: 0;
+    padding: var(--cad-tabs-panel-padding);
+    border: 1px solid var(--cad-tabs-panel-border);
+    border-radius: var(--cad-tabs-panel-radius);
+    background: var(--cad-tabs-panel-background);
+    box-shadow: var(--cad-tabs-panel-shadow);
+  }
+
+  .cad-tabs__panel[hidden] {
+    display: none !important;
+  }
+
+  .cad-tabs--horizontal.cad-tabs--position-top .cad-tabs__panel {
+    margin-top: -1px;
+  }
+
+  .cad-tabs--horizontal.cad-tabs--position-bottom .cad-tabs__panel {
+    margin-bottom: -1px;
+  }
+
+  .cad-tabs--position-left.cad-tabs--vertical .cad-tabs__panel {
+    margin-left: -1px;
+    border-top-left-radius: 0;
+  }
+
+  .cad-tabs--position-right.cad-tabs--vertical .cad-tabs__panel {
+    margin-right: -1px;
+    border-top-right-radius: 0;
+  }
+
+  .cad-tabs--variant-workspace-secondary {
+    --cad-tabs-tab-font-size: 0.8125rem;
+    --cad-tabs-tab-padding: 0.55rem 0.9rem;
+    --cad-tabs-tab-min-height: 2.5rem;
+    --cad-tabs-panel-padding: 0.9rem;
+  }
+
+  .cad-tabs--variant-workspace-tertiary {
+    --cad-tabs-tab-font-size: 0.75rem;
+    --cad-tabs-tab-padding: 0.45rem 0.8rem;
+    --cad-tabs-tab-min-height: 2.25rem;
+    --cad-tabs-panel-padding: 0.85rem;
+  }
+
+  .cad-tabs--variant-modal-compact {
+    --cad-tabs-list-border: transparent;
+    --cad-tabs-tab-font-size: 0.8125rem;
+    --cad-tabs-tab-padding: 0.45rem 0.85rem;
+    --cad-tabs-tab-min-height: 2.35rem;
+    --cad-tabs-tab-radius: 9999px;
+    --cad-tabs-tab-background: color-mix(in srgb, var(--cad-color-surface-soft) 70%, transparent);
+    --cad-tabs-tab-active-background: var(--cad-tone-primary-soft-bg);
+    --cad-tabs-tab-active-color: var(--cad-tone-primary-soft-fg);
+    --cad-tabs-panel-border: transparent;
+    --cad-tabs-panel-background: transparent;
+    --cad-tabs-panel-shadow: none;
+    --cad-tabs-panel-padding: 0.85rem 0 0;
+    --cad-tabs-panel-radius: 0;
+  }
+
+  .cad-tabs--variant-workstation {
+    --cad-tabs-list-border: var(--pdmx-border, rgba(157, 194, 186, 0.28));
+    --cad-tabs-tab-border: var(--pdmx-border, rgba(157, 194, 186, 0.24));
+    --cad-tabs-tab-hover-border: var(--pdmx-border, rgba(157, 194, 186, 0.42));
+    --cad-tabs-tab-active-border: rgba(242, 198, 109, 0.48);
+    --cad-tabs-tab-color: var(--pdmx-muted, rgba(211, 224, 220, 0.82));
+    --cad-tabs-tab-hover-color: var(--pdmx-text, #edf3f1);
+    --cad-tabs-tab-active-color: var(--pdmx-text, #edf3f1);
+    --cad-tabs-tab-background: rgba(157, 194, 186, 0.08);
+    --cad-tabs-tab-hover-background: rgba(157, 194, 186, 0.14);
+    --cad-tabs-tab-active-background: rgba(242, 198, 109, 0.16);
+    --cad-tabs-tab-active-shadow: none;
+    --cad-tabs-panel-border: rgba(157, 194, 186, 0.2);
+    --cad-tabs-panel-background: rgba(14, 28, 31, 0.62);
+    --cad-tabs-panel-shadow: none;
+    --cad-tabs-panel-padding: 0.9rem 0 0;
+    --cad-tabs-panel-radius: 0;
+  }
+
+  @media (max-width: 900px) {
+    .cad-tabs--horizontal.cad-tabs--overflow-auto .cad-tabs__list {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 0.25rem;
+    }
+
+    .cad-tabs--horizontal.cad-tabs--overflow-auto .cad-tabs__tab {
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .cad-tabs--vertical {
+      @apply flex-col gap-3;
+    }
+
+    .cad-tabs--vertical .cad-tabs__list {
+      flex: 1 1 auto;
+      border-left: 0;
+      border-right: 0;
+      padding: 0;
+    }
+  }
 }
