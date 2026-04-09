@@ -147,145 +147,11 @@
                        GapScale="LayoutGap.XXLarge">
                     @if (string.Equals(detailTab, "definition", StringComparison.Ordinal))
                     {
-                        <FormSection Title="Definition identity"
-                                     Description="Anchor the process to the correct scope and write the contract that later runs, assignments, and audit artifacts inherit.">
-                            <Grid Gap="LayoutGap.Large"
-                                  ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Name</label>
-                                    <InputText @bind-Value="editor.Name"
-                                               class="cda-input"
-                                               data-testid="processes-name-input" />
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Scope</label>
-                                    <TextBox Value="@(ProjectId.HasValue ? projectName : "Global process library")"
-                                             Class="cda-input"
-                                             ReadOnly="true" />
-                                </div>
-                            </Grid>
-
-                            <Grid Gap="LayoutGap.Large"
-                                  ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Customer</label>
-                                    <InputText @bind-Value="editor.CustomerName"
-                                               class="cda-input" />
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Owner</label>
-                                    <InputText @bind-Value="editor.OwnerName"
-                                               class="cda-input" />
-                                </div>
-                            </Grid>
-
-                            <div>
-                                <label class="cda-field-label">Summary</label>
-                                <InputTextArea @bind-Value="editor.Summary"
-                                               class="cda-input cda-input--textarea min-h-24"
-                                               data-testid="processes-summary-input" />
-                            </div>
-
-                            <div>
-                                <label class="cda-field-label">Value statement</label>
-                                <InputTextArea @bind-Value="editor.ValueStatement"
-                                               class="cda-input cda-input--textarea min-h-24"
-                                               data-testid="processes-value-statement-input" />
-                            </div>
-                        </FormSection>
-
-                        <FormSection Title="Governance and operating model"
-                                     Description="Define the policy and autonomy contract now so runs, refusals, and safe non-actions can be judged against an explicit baseline.">
-                            <Grid Gap="LayoutGap.Large"
-                                  ColumnsMd="3">
-                                <div>
-                                    <label class="cda-field-label">Criticality</label>
-                                    <InputSelect @bind-Value="editor.Criticality"
-                                                 class="cda-input">
-                                        @foreach (var criticality in Enum.GetValues<ProcessCriticality>())
-                                        {
-                                            <option value="@criticality">@criticality</option>
-                                        }
-                                    </InputSelect>
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Autonomy level</label>
-                                    <InputSelect @bind-Value="editor.AutonomyLevel"
-                                                 class="cda-input">
-                                        @foreach (var autonomyLevel in Enum.GetValues<ProcessAutonomyLevel>())
-                                        {
-                                            <option value="@autonomyLevel">@autonomyLevel</option>
-                                        }
-                                    </InputSelect>
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Working status</label>
-                                    <TextBox Value="@editor.Status.ToString()"
-                                             Class="cda-input"
-                                             ReadOnly="true" />
-                                </div>
-                            </Grid>
-
-                            <div>
-                                <label class="cda-field-label">Interface contract summary</label>
-                                <InputTextArea @bind-Value="editor.InterfaceContractSummary"
-                                               class="cda-input cda-input--textarea min-h-24" />
-                            </div>
-
-                            <div>
-                                <label class="cda-field-label">Governance notes</label>
-                                <InputTextArea @bind-Value="editor.GovernanceNotes"
-                                               class="cda-input cda-input--textarea min-h-24" />
-                            </div>
-
-                            <Grid Gap="LayoutGap.Large"
-                                  ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Change summary</label>
-                                    <InputTextArea @bind-Value="editor.ChangeSummary"
-                                                   class="cda-input cda-input--textarea min-h-24" />
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Governance policy summary</label>
-                                    <InputTextArea @bind-Value="editor.GovernancePolicySummary"
-                                                   class="cda-input cda-input--textarea min-h-24" />
-                                </div>
-                            </Grid>
-
-                            <Grid Gap="LayoutGap.Large"
-                                  ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Constitution rule summary</label>
-                                    <InputTextArea @bind-Value="editor.ConstitutionRuleSummary"
-                                                   class="cda-input cda-input--textarea min-h-24" />
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Operating mode summary</label>
-                                    <InputTextArea @bind-Value="editor.OperatingModeSummary"
-                                                   class="cda-input cda-input--textarea min-h-24" />
-                                </div>
-                            </Grid>
-
-                            <div>
-                                <label class="cda-field-label">Simulation readiness summary</label>
-                                <InputTextArea @bind-Value="editor.SimulationReadinessSummary"
-                                               class="cda-input cda-input--textarea min-h-24" />
-                            </div>
-
-                            <Cluster Gap="LayoutGap.Small">
-                                <Button Text="Save definition"
-                                        Click="SaveAsync"
-                                        data-testid="processes-save-definition-button" />
-                                <Button Text="Publish"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Click="PublishAsync"
-                                        data-testid="processes-publish-definition-button" />
-                                <Button Text="Delete"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Click="DeleteAsync"
-                                        data-testid="processes-delete-definition-button" />
-                            </Cluster>
-                        </FormSection>
+                        <ProcessDefinitionForm Model="@editor"
+                                               ScopeLabel="@(ProjectId.HasValue ? projectName : "Global process library")"
+                                               Save="SaveAsync"
+                                               Publish="PublishAsync"
+                                               Delete="DeleteAsync" />
                     }
                     else if (string.Equals(detailTab, "roles", StringComparison.Ordinal))
                     {
@@ -309,56 +175,8 @@
                                     <Stack GapScale="LayoutGap.Medium">
                                         @foreach (var role in editor.Roles)
                                         {
-                                            <SurfaceCard data-testid="processes-role-card">
-                                                <Split Gap="LayoutGap.Medium">
-                                                    <Stack GapScale="LayoutGap.Tiny">
-                                                        <p class="cda-eyebrow">Role requirement</p>
-                                                        <h3 class="text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(role.DisplayName) ? "Unnamed role" : role.DisplayName)</h3>
-                                                        <p class="text-sm leading-6 text-slate-600">The role contract stays stable even when the exact executor changes between project parties, suppliers, or agents.</p>
-                                                    </Stack>
-                                                    <Cluster Gap="LayoutGap.Small">
-                                                        <StatusBadge Tone="neutral" Text="@(role.IsRequired ? "Required" : "Optional")" />
-                                                        <Button Text="Remove"
-                                                                ButtonStyle="ButtonStyle.Light"
-                                                                Click="@(() => RemoveRole(role))" />
-                                                    </Cluster>
-                                                </Split>
-
-                                                <Grid Gap="LayoutGap.Large"
-                                                      ColumnsMd="3"
-                                                      Class="mt-5">
-                                                    <div>
-                                                        <label class="cda-field-label">Key</label>
-                                                        <InputText @bind-Value="role.Key"
-                                                                   class="cda-input" />
-                                                    </div>
-                                                    <div>
-                                                        <label class="cda-field-label">Display name</label>
-                                                        <InputText @bind-Value="role.DisplayName"
-                                                                   class="cda-input" />
-                                                    </div>
-                                                    <div>
-                                                        <label class="cda-field-label">Preferred executor kind</label>
-                                                        <InputText @bind-Value="role.PreferredExecutorKind"
-                                                                   class="cda-input" />
-                                                    </div>
-                                                </Grid>
-
-                                                <Grid Gap="LayoutGap.Large"
-                                                      ColumnsMd="2"
-                                                      Class="mt-5">
-                                                    <div>
-                                                        <label class="cda-field-label">Purpose</label>
-                                                        <InputTextArea @bind-Value="role.Purpose"
-                                                                       class="cda-input cda-input--textarea min-h-24" />
-                                                    </div>
-                                                    <div>
-                                                        <label class="cda-field-label">Staffing intent</label>
-                                                        <InputTextArea @bind-Value="role.StaffingIntent"
-                                                                       class="cda-input cda-input--textarea min-h-24" />
-                                                    </div>
-                                                </Grid>
-                                            </SurfaceCard>
+                                            <ProcessRoleEditorForm Model="@role"
+                                                                   Remove="@(() => RemoveRole(role))" />
                                         }
                                     </Stack>
                                 }
@@ -395,98 +213,14 @@
                                     <Stack GapScale="LayoutGap.Medium">
                                         @foreach (var step in editor.Steps)
                                         {
-                                            <SurfaceCard data-testid="processes-step-card">
-                                                <Split Gap="LayoutGap.Medium">
-                                                    <Stack GapScale="LayoutGap.Tiny">
-                                                        <p class="cda-eyebrow">Step definition</p>
-                                                        <h3 class="text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(step.Title) ? "Untitled step" : step.Title)</h3>
-                                                        <p class="text-sm leading-6 text-slate-600">Use typed contracts for inputs, outputs, evidence, decision rights, and exception policy so runtime deviations can be judged against a real baseline.</p>
-                                                    </Stack>
-                                                    <Cluster Gap="LayoutGap.Small">
-                                                        <StatusBadge Tone="neutral" Text="@step.StepKind.ToString()" />
-                                                        <Button Text="Remove"
-                                                                ButtonStyle="ButtonStyle.Light"
-                                                                Click="@(() => RemoveStep(step))" />
-                                                    </Cluster>
-                                                </Split>
-
-                                                <Grid Gap="LayoutGap.Large"
-                                                      ColumnsMd="3"
-                                                      Class="mt-5">
-                                                    <div>
-                                                        <label class="cda-field-label">Key</label>
-                                                        <InputText @bind-Value="step.Key"
-                                                                   class="cda-input" />
-                                                    </div>
-                                                    <div>
-                                                        <label class="cda-field-label">Title</label>
-                                                        <InputText @bind-Value="step.Title"
-                                                                   class="cda-input" />
-                                                    </div>
-                                                    <div>
-                                                        <label class="cda-field-label">Subtitle</label>
-                                                        <InputText @bind-Value="step.Subtitle"
-                                                                   class="cda-input" />
-                                                    </div>
-                                                </Grid>
-
-                                                <Grid Gap="LayoutGap.Large"
-                                                      ColumnsMd="3"
-                                                      Class="mt-5">
-                                                    <div>
-                                                        <label class="cda-field-label">Step kind</label>
-                                                        <InputSelect @bind-Value="step.StepKind"
-                                                                     class="cda-input">
-                                                            @foreach (var stepKind in Enum.GetValues<ProcessStepKind>())
-                                                            {
-                                                                <option value="@stepKind">@stepKind</option>
-                                                            }
-                                                        </InputSelect>
-                                                    </div>
-                                                    <div>
-                                                        <label class="cda-field-label">Target lead hours</label>
-                                                        <InputNumber @bind-Value="step.TargetLeadHours"
-                                                                     class="cda-input" />
-                                                    </div>
-                                                    <div>
-                                                        <label class="cda-field-label">Depends on</label>
-                                                        <InputSelect @bind-Value="step.DependsOnStepId"
-                                                                     class="cda-input">
-                                                            <option value="">None</option>
-                                                            @foreach (var candidate in editor.Steps.Where(candidate => candidate != step))
-                                                            {
-                                                                <option value="@candidate.Id">@(string.IsNullOrWhiteSpace(candidate.Title) ? "Untitled step" : candidate.Title)</option>
-                                                            }
-                                                        </InputSelect>
-                                                    </div>
-                                                </Grid>
-
-                                                <Cluster Gap="LayoutGap.Medium"
-                                                         Class="mt-5">
-                                                    <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-                                                        <InputCheckbox @bind-Value="step.AllowsManualSkip" />
-                                                        Allow manual skip
-                                                    </label>
-                                                    <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-                                                        <InputCheckbox @bind-Value="step.AllowsSafeRefusal" />
-                                                        Allow safe refusal
-                                                    </label>
-                                                    <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-                                                        <InputCheckbox @bind-Value="step.RequiresApproval" />
-                                                        Requires approval
-                                                    </label>
-                                                    <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-                                                        <InputCheckbox @bind-Value="step.RequiresDecisionRecord" />
-                                                        Requires decision record
-                                                    </label>
-                                                </Cluster>
-
-                                                <div class="mt-5">
-                                                    <label class="cda-field-label">Notes</label>
-                                                    <InputTextArea @bind-Value="step.Notes"
-                                                                   class="cda-input cda-input--textarea min-h-24" />
-                                                </div>
-                                            </SurfaceCard>
+                                            <ProcessStepEditorForm Model="@step"
+                                                                   AvailableRoles="@editor.Roles"
+                                                                   DependencyOptions="@(editor.Steps.Where(candidate => candidate != step).ToList())"
+                                                                   Remove="@(() => RemoveStep(step))"
+                                                                   AddRoleAssignment="@(() => AddRoleAssignment(step))"
+                                                                   RemoveRoleAssignment="@((ProcessStepRoleRequirementEditorModel assignment) => RemoveRoleAssignment(step, assignment))"
+                                                                   AddArtifact="@(() => AddArtifact(step))"
+                                                                   RemoveArtifact="@((ProcessArtifactExpectationEditorModel artifact) => RemoveArtifact(step, artifact))" />
                                         }
                                     </Stack>
                                 }
@@ -503,7 +237,7 @@
 
                         <CanvasWorkbenchStage Eyebrow="Definition canvas"
                                               Title="Process definition map"
-                                              Description="Review the structural shape of the definition, step ordering, and dependency path on the shared canvas surface.">
+                                              Description="Review the structural shape of the definition, right-click into templates, and keep the selection inspector plus authoring windows aligned with the shared canvas workflow.">
                             <Canvas>
                                 @if (canvasSurface is null)
                                 {
@@ -513,7 +247,136 @@
                                 }
                                 else
                                 {
-                                    <CanvasWorkbench Surface="canvasSurface" />
+                                    <CanvasWorkbench Surface="canvasSurface"
+                                                     @ref="workbenchRef"
+                                                     SelectionChanged="HandleCanvasSelectionChangedAsync"
+                                                     NodesMoved="HandleCanvasNodesMovedAsync"
+                                                     ContextActionRequested="HandleCanvasContextActionAsync"
+                                                     CreateActionInvoked="HandleCanvasCreateActionAsync"
+                                                     NodeEdited="HandleCanvasNodeEditedAsync"
+                                                     NodeOpened="HandleCanvasNodeOpenedAsync">
+                                        <ToolbarLeftContent>
+                                            <ProcessCanvasToolbarActions SelectionWindowVisible="@canvasSelectionWindowState.IsVisible"
+                                                                         ToolboxWindowVisible="@canvasToolboxWindowState.IsVisible"
+                                                                         ToggleSelectionWindow="ToggleCanvasSelectionWindowAsync"
+                                                                         ToggleToolboxWindow="ToggleCanvasToolboxWindowAsync" />
+                                        </ToolbarLeftContent>
+                                        <OverlayContent>
+                                            @if (canvasToolboxWindowState.IsVisible)
+                                            {
+                                                <ProcessCanvasToolboxWindow WindowId="@CanvasToolboxWindowId"
+                                                                            TestId="processes-canvas-toolbox-window"
+                                                                            AriaLabel="Process templates toolbox"
+                                                                            Kicker="Process toolbox"
+                                                                            Title="Process components library"
+                                                                            Summary="Open role and step templates without duplicating the form logic outside the canvas workflow."
+                                                                            State="@canvasToolboxWindowState"
+                                                                            StateChanged="HandleCanvasToolboxWindowStateChangedAsync"
+                                                                            Groups="@DefinitionToolboxGroups"
+                                                                            SearchText="@canvasToolboxSearchText"
+                                                                            SearchTextChanged="@((string? value) => canvasToolboxSearchText = value ?? string.Empty)"
+                                                                            OpenAction="@(actionId => ExecuteCanvasActionAsync(actionId, selectedCanvasNodeId, 0, 0))" />
+                                            }
+                                            @if (canvasSelectionWindowState.IsVisible)
+                                            {
+                                                <CanvasFloatingWindow WindowId="@CanvasSelectionWindowId"
+                                                                      TestId="processes-canvas-selection-window"
+                                                                      AriaLabel="Process canvas selection"
+                                                                      Kicker="Selection"
+                                                                      Title="@CanvasSelectionWindowTitle"
+                                                                      Summary="@CanvasSelectionWindowSummary"
+                                                                      DefaultPlacement="top-right"
+                                                                      DefaultWidth="360"
+                                                                      DefaultHeight="360"
+                                                                      MinWidth="320"
+                                                                      MinHeight="220"
+                                                                      MaxWidth="520"
+                                                                      State="@canvasSelectionWindowState"
+                                                                      StateChanged="HandleCanvasSelectionWindowStateChangedAsync">
+                                                    <ProcessCanvasSelectionPanel DefinitionStep="@SelectedCanvasDefinitionStep"
+                                                                                 OpenToolbox="OpenCanvasToolboxAsync"
+                                                                                 ClearSelection="ClearCanvasSelectionAsync"
+                                                                                 EditDefinitionStep="@(async () => { OpenDefinitionStepEditor(); await Task.CompletedTask; })"
+                                                                                 AddDependentStep="@(async () => { OpenCanvasStepEditor(ProcessCanvasActionIds.CreateStepImplementation, SelectedCanvasDefinitionStep, 0, 0); await Task.CompletedTask; })"
+                                                                                 AddRoleBinding="@(async () => { AddRoleBindingToSelectedStep(); await Task.CompletedTask; })"
+                                                                                 AddArtifactExpectation="@(async () => { AddArtifactExpectationToSelectedStep(); await Task.CompletedTask; })"
+                                                                                 OpenActionDialog="OpenCanvasActionDialogAsync" />
+                                                </CanvasFloatingWindow>
+                                            }
+                                            @if (IsCanvasEditorOpen)
+                                            {
+                                                <CanvasFloatingWindow WindowId="@CanvasEditorWindowId"
+                                                                      TestId="processes-canvas-editor-window"
+                                                                      AriaLabel="Process canvas editor"
+                                                                      Kicker="Canvas editor"
+                                                                      Title="@CanvasEditorWindowTitle"
+                                                                      Summary="@CanvasEditorWindowSummary"
+                                                                      DefaultPlacement="bottom-right"
+                                                                      DefaultWidth="540"
+                                                                      DefaultHeight="620"
+                                                                      MinWidth="380"
+                                                                      MinHeight="320"
+                                                                      MaxWidth="760"
+                                                                      State="@canvasEditorWindowState"
+                                                                      StateChanged="HandleCanvasEditorWindowStateChangedAsync">
+                                                    <Stack GapScale="LayoutGap.Large">
+                                                        @if (IsCanvasEditorCreateMode)
+                                                        {
+                                                            <FormField Text="Template">
+                                                                <select class="cda-input"
+                                                                        value="@canvasTemplateActionId"
+                                                                        @onchange="HandleCanvasTemplateChangedAsync"
+                                                                        data-testid="processes-canvas-template-select">
+                                                                    @if (canvasRoleDraft is not null)
+                                                                    {
+                                                                        @foreach (var template in CanvasRoleTemplates)
+                                                                        {
+                                                                            <option value="@template.ActionId">@template.Label</option>
+                                                                        }
+                                                                    }
+                                                                    else if (canvasStepDraft is not null)
+                                                                    {
+                                                                        @foreach (var template in CanvasStepTemplates)
+                                                                        {
+                                                                            <option value="@template.ActionId">@template.Label</option>
+                                                                        }
+                                                                    }
+                                                                </select>
+                                                            </FormField>
+                                                        }
+
+                                                        @if (canvasRoleDraft is not null)
+                                                        {
+                                                            <ProcessRoleEditorForm Model="@canvasRoleDraft"
+                                                                                   ShowRemove="false"
+                                                                                   TestId="processes-canvas-role-editor" />
+                                                        }
+                                                        else if (canvasStepDraft is not null)
+                                                        {
+                                                            <ProcessStepEditorForm Model="@canvasStepDraft"
+                                                                                   AvailableRoles="@editor.Roles"
+                                                                                   DependencyOptions="@CanvasEditorDependencyOptions"
+                                                                                   ShowRemove="false"
+                                                                                   TestId="processes-canvas-step-editor"
+                                                                                   AddRoleAssignment="AddCanvasRoleAssignmentAsync"
+                                                                                   RemoveRoleAssignment="RemoveCanvasRoleAssignmentAsync"
+                                                                                   AddArtifact="AddCanvasArtifactExpectationAsync"
+                                                                                   RemoveArtifact="RemoveCanvasArtifactExpectationAsync" />
+                                                        }
+
+                                                        <Cluster Gap="LayoutGap.Small">
+                                                            <Button Text="Cancel"
+                                                                    ButtonStyle="ButtonStyle.Light"
+                                                                    Click="CloseCanvasEditorAsync" />
+                                                            <Button Text="Apply"
+                                                                    Click="SaveCanvasEditorAsync"
+                                                                    data-testid="processes-canvas-editor-apply" />
+                                                        </Cluster>
+                                                    </Stack>
+                                                </CanvasFloatingWindow>
+                                            }
+                                        </OverlayContent>
+                                    </CanvasWorkbench>
                                 }
                             </Canvas>
                         </CanvasWorkbenchStage>
@@ -611,7 +474,7 @@
 
                             <CanvasWorkbenchStage Eyebrow="Runtime canvas"
                                                   Title="@SelectedRun.Name"
-                                                  Description="Inspect the live runtime path, current step status, and sequence progression on the shared workbench surface.">
+                                                  Description="Inspect the live runtime path, keep the selection detail window in sync, and drive explicit runtime actions from the same canvas rhythm used in structure workbench flows.">
                                 <Canvas>
                                     @if (canvasSurface is null)
                                     {
@@ -621,7 +484,49 @@
                                     }
                                     else
                                     {
-                                        <CanvasWorkbench Surface="canvasSurface" />
+                                        <CanvasWorkbench Surface="canvasSurface"
+                                                         @ref="workbenchRef"
+                                                         SelectionChanged="HandleCanvasSelectionChangedAsync"
+                                                         ContextActionRequested="HandleCanvasContextActionAsync"
+                                                         NodeOpened="HandleCanvasNodeOpenedAsync">
+                                            <ToolbarLeftContent>
+                                                <ProcessCanvasToolbarActions SelectionWindowVisible="@canvasSelectionWindowState.IsVisible"
+                                                                             ShowToolbox="false"
+                                                                             SelectionTestId="processes-runtime-toggle-selection"
+                                                                             ToggleSelectionWindow="ToggleCanvasSelectionWindowAsync" />
+                                            </ToolbarLeftContent>
+                                            <OverlayContent>
+                                                @if (canvasSelectionWindowState.IsVisible)
+                                                {
+                                                    <CanvasFloatingWindow WindowId="@CanvasSelectionWindowId"
+                                                                          TestId="processes-runtime-selection-window"
+                                                                          AriaLabel="Process runtime selection"
+                                                                          Kicker="Runtime selection"
+                                                                          Title="@CanvasSelectionWindowTitle"
+                                                                          Summary="@CanvasSelectionWindowSummary"
+                                                                          DefaultPlacement="top-right"
+                                                                          DefaultWidth="360"
+                                                                          DefaultHeight="360"
+                                                                          MinWidth="320"
+                                                                          MinHeight="220"
+                                                                          MaxWidth="520"
+                                                                          State="@canvasSelectionWindowState"
+                                                                          StateChanged="HandleCanvasSelectionWindowStateChangedAsync">
+                                                        <ProcessCanvasSelectionPanel IsRuntime="true"
+                                                                                     RuntimeStep="@SelectedCanvasRuntimeStep"
+                                                                                     ClearSelection="ClearCanvasSelectionAsync"
+                                                                                     OpenActionDialog="OpenCanvasActionDialogAsync"
+                                                                                     StartRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.InProgress))"
+                                                                                     CompleteRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Completed))"
+                                                                                     BlockRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Blocked))"
+                                                                                     RequestRuntimeApproval="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.WaitingApproval))"
+                                                                                     RefuseRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Refused))"
+                                                                                     FailRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Failed))"
+                                                                                     RecordRuntimeArtifact="@(async () => { PrepareSelectedRuntimeArtifactCapture(); await Task.CompletedTask; })" />
+                                                    </CanvasFloatingWindow>
+                                                }
+                                            </OverlayContent>
+                                        </CanvasWorkbench>
                                     }
                                 </Canvas>
                             </CanvasWorkbenchStage>
@@ -1013,3 +918,59 @@
         </ListDetailShell>
     </ChildContent>
 </PageScaffold>
+
+@if (canvasActionDialog is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Process canvas"
+            Title="@canvasActionDialog.Title"
+            Subtitle="@canvasActionDialog.Summary"
+            Size="ModalSize.Medium"
+            TestId="processes-canvas-action-dialog"
+            OnClose="CloseCanvasActionDialogAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                @if (canvasActionDialog.IsRuntime)
+                {
+                    <Button Text="Start step"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeStart))" />
+                    <Button Text="Complete step"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeComplete))" />
+                    <Button Text="Block step"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeBlock))" />
+                    <Button Text="Wait for approval"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeApproval))" />
+                    <Button Text="Refuse safely"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeRefuse))" />
+                    <Button Text="Mark failed"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeFail))" />
+                    <Button Text="Prepare artifact capture"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeRecordArtifact))" />
+                }
+                else
+                {
+                    <Button Text="Edit step"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.EditDefinitionStep))" />
+                    <Button Text="Add dependent step"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.AddDependentStep))" />
+                    <Button Text="Add role binding"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.AddRoleBinding))" />
+                    <Button Text="Add artifact expectation"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.AddArtifactExpectation))" />
+                    <Button Text="Remove step"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RemoveDefinitionStep))" />
+                }
+            </Stack>
+        </ChildContent>
+    </Dialog>
+}

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -84,3 +84,4 @@
 ```text
 Generate post-implementation-bundle-phase06 from the canvas-parity evidence. Split every remaining right-click, floating-window, selection-sync, edit-dialog, compactness, or Playwright defect into repair subbundles before reopening final closure.
 ```
+

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -105,3 +105,4 @@
 ```text
 Implement only the process-canvas create-flow parity slice. Wire right-click actions, grouped process create flows, and a floating toolbox window on top of shared CanvasLib workbench patterns, reuse the extracted process editor forms, and make role creation template-aware before closing.
 ```
+

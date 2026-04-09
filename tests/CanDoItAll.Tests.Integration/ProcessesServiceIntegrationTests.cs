@@ -146,24 +146,44 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.True(seedResult.IsSuccess);
         Assert.NotNull(seedResult.Value);
-        Assert.True(seedResult.Value!.SeededDefinitionIds.Count >= 2);
-        Assert.True(seedResult.Value.SeededRunIds.Count >= 2);
+        Assert.True(seedResult.Value!.SeededDefinitionIds.Count >= 4);
+        Assert.True(seedResult.Value.SeededRunIds.Count >= 4);
 
         var repeatedSeedResult = await seedService.SeedBaselineAsync(projectId);
 
         Assert.True(repeatedSeedResult.IsSuccess);
 
         var definitions = await processesService.ListDefinitionsAsync(projectId);
-        Assert.Equal(2, definitions.Count);
+        Assert.Equal(4, definitions.Count);
         Assert.Contains(definitions, item => item.Id == seedResult.Value.PrimaryDefinitionId);
         Assert.Contains(definitions, item => item.Id == seedResult.Value.SecondaryDefinitionId);
 
-        var primaryRunId = seedResult.Value.SeededRunIds.First();
-        var stepRuns = await processesService.ListStepRunsAsync(primaryRunId);
-        var conformance = await processesService.ListConformanceObservationsAsync(primaryRunId);
+        var softwareDeliveryDefinition = Assert.Single(definitions, item => item.Name == "Multi-team software delivery and release governance");
+        var hotfixDefinition = Assert.Single(definitions, item => item.Name == "Emergency hotfix rollout with shard-risk governance");
+        Assert.Single(definitions, item => item.Name == "Customer onboarding orchestration");
+        Assert.Single(definitions, item => item.Name == "Incident response and escalation");
 
-        Assert.NotEmpty(stepRuns);
-        Assert.NotEmpty(conformance);
+        var softwareDeliveryRun = Assert.Single(
+            await processesService.ListRunsAsync(softwareDeliveryDefinition.Id, projectId),
+            item => item.Name == "Multi-team software delivery and release governance / Q3 billing capability");
+        var softwareDeliveryStepRuns = await processesService.ListStepRunsAsync(softwareDeliveryRun.Id);
+        var softwareDeliveryArtifacts = await processesService.ListArtifactsAsync(softwareDeliveryRun.Id);
+        var softwareDeliveryConformance = await processesService.ListConformanceObservationsAsync(softwareDeliveryRun.Id);
+
+        Assert.True(softwareDeliveryStepRuns.Count >= 9);
+        Assert.Contains(softwareDeliveryStepRuns, item => item.Sequence == 5 && item.Status == ProcessStepRunStatus.Blocked);
+        Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Open security exception assessment for tenant export capability");
+        Assert.NotEmpty(softwareDeliveryConformance);
+
+        var hotfixRun = Assert.Single(
+            await processesService.ListRunsAsync(hotfixDefinition.Id, projectId),
+            item => item.Name == "Emergency hotfix rollout with shard-risk governance / tenant billing outage");
+        var hotfixStepRuns = await processesService.ListStepRunsAsync(hotfixRun.Id);
+        var hotfixArtifacts = await processesService.ListArtifactsAsync(hotfixRun.Id);
+
+        Assert.True(hotfixStepRuns.Count >= 7);
+        Assert.Contains(hotfixStepRuns, item => item.Sequence == 5 && item.Status == ProcessStepRunStatus.Failed);
+        Assert.Contains(hotfixArtifacts, item => item.Title == "Failed rollout telemetry capture and rollback trigger notes");
 
         var exportEnvelope = await processesService.ExportAsync(seedResult.Value.PrimaryDefinitionId);
         exportEnvelope.Definition.Id = null;

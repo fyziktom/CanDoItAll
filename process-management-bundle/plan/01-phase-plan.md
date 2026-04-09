@@ -13,7 +13,7 @@
 5. Phase 04:
    metrics, economics, decision intelligence, conformance, and improvement loop
 6. Phase 05:
-   architecture hardening, reusable form extraction, and oversized-file repair after the implementation coverage audit
+   architecture hardening, realistic simulation scenario expansion, reusable form extraction, and oversized-file repair after the implementation coverage audit
 7. Phase 06:
    process-canvas parity with project structure, including context menu, floating create flows, selection inspector, and edit-dialog behavior
 
@@ -41,6 +41,7 @@ flowchart TD
     S18["18 Conformance, learning, and improvement loop"]
     S19["19 post-implementation-bundle-phase04 generation"]
     S20["20 Implemented architecture hardening and form componentization"]
+    S25["25 Realistic software-delivery simulation scenarios and seed packs"]
     S21["21 post-implementation-bundle-phase05 generation"]
     S22["22 Process canvas context menu and template-aware create flows"]
     S23["23 Process canvas selection inspector and edit-dialog parity"]
@@ -51,7 +52,7 @@ flowchart TD
     S08 --> S09 --> S10 --> S11 --> S12
     S12 --> S13 --> S14 --> S15 --> S16
     S16 --> S17 --> S18 --> S19
-    S19 --> S20 --> S21
+    S19 --> S20 --> S25 --> S21
     S21 --> S22 --> S23 --> S24
     S05 --> S09
     S06 --> S09
@@ -62,6 +63,8 @@ flowchart TD
     S14 --> S17
     S20 --> S22
     S20 --> S23
+    S25 --> S22
+    S25 --> S23
 ```
 
 ## Critical Subbundles
@@ -77,6 +80,7 @@ flowchart TD
 | `10-work-briefs-decision-records-and-artifact-trust` | Explainability and trust structures must exist before external bridge or analytics work. | Journaled decision records and artifact metadata proof. |
 | `14-agentframework-bridge-and-registry-convergence` | Protects long-term mergeability and prevents duplicate registries. | Explicit bridge contracts, ownership tests, and no compile-time dependency proof. |
 | `20-implemented-architecture-hardening-and-form-componentization` | The current implementation cannot safely absorb new canvas UX until the oversized files are split, reusable forms exist, and missing enterprise placeholders stop collapsing into summary blobs. | File-size reduction proof, component extraction evidence, service-boundary review, and regression coverage. |
+| `25-realistic-software-delivery-simulation-scenarios-and-seed-packs` | UI, analytics, and governance proof become weak if the process module only seeds toy data. | Rich seed data proof, realistic software-delivery scenario walkthroughs, and simulation-oriented regression validation. |
 | `22-process-canvas-context-menu-and-template-aware-create-flows` | The authored process canvas is currently only a rendered surface, not an interactive workbench. | Playwright proof for right-click flows, floating toolbox/create windows, and template-aware authoring. |
 | `23-process-canvas-selection-inspector-and-edit-dialog-parity` | Selection, editing, and runtime inspection must match the project-structure workbench rhythm before the module can claim canvas maturity. | Playwright proof for single-click selection sync, double-click edit modal/actions, and floating inspector parity. |
 
@@ -93,7 +97,7 @@ flowchart TD
 - Phase 04 gate:
   subbundles `17` and `18` closed with analytics and conformance proof, then `19` must generate and validate `post-implementation-bundle-phase04`.
 - Phase 05 gate:
-  subbundle `20` closed with architecture, componentization, and large-file repair proof, then `21` must generate and validate `post-implementation-bundle-phase05`.
+  subbundles `20` and `25` closed with architecture, componentization, realistic-seed, and simulation proof, then `21` must generate and validate `post-implementation-bundle-phase05`.
 - Phase 06 gate:
   subbundles `22` and `23` closed with project-structure parity proof, then `24` must generate and validate `post-implementation-bundle-phase06`.
 - Universal gate:

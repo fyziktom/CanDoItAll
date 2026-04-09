@@ -1,0 +1,83 @@
+@namespace CanDoItAll.Modules.Processes
+
+<PanelCard Soft="true"
+           data-testid="processes-step-artifact-card">
+    <Stack GapScale="LayoutGap.Medium">
+        <Split Gap="LayoutGap.Medium">
+            <Stack GapScale="LayoutGap.Tiny">
+                <p class="cda-eyebrow">Artifact expectation</p>
+                <h4 class="text-base font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(Model.Title) ? "Unnamed artifact" : Model.Title)</h4>
+            </Stack>
+            <Button Text="Remove"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Click="Remove" />
+        </Split>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsMd="3">
+            <FormField Text="Artifact kind">
+                <InputSelect @bind-Value="Model.ArtifactKind"
+                             class="cda-input">
+                    @foreach (var artifactKind in Enum.GetValues<ProcessArtifactKind>())
+                    {
+                        <option value="@artifactKind">@artifactKind</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Trust requirement">
+                <InputSelect @bind-Value="Model.TrustRequirement"
+                             class="cda-input">
+                    @foreach (var trustRequirement in Enum.GetValues<ProcessArtifactTrustRequirement>())
+                    {
+                        <option value="@trustRequirement">@trustRequirement</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Sensitivity level">
+                <InputSelect @bind-Value="Model.SensitivityLevel"
+                             class="cda-input">
+                    @foreach (var sensitivityLevel in Enum.GetValues<ProcessSensitivityLevel>())
+                    {
+                        <option value="@sensitivityLevel">@sensitivityLevel</option>
+                    }
+                </InputSelect>
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsMd="2">
+            <FormField Text="Title">
+                <InputText @bind-Value="Model.Title"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Retention days">
+                <InputNumber @bind-Value="Model.RetentionDays"
+                             class="cda-input" />
+            </FormField>
+        </Grid>
+
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+            <InputCheckbox @bind-Value="Model.IsRequired" />
+            Artifact is required
+        </label>
+
+        <FormField Text="Allowed future usage summary">
+            <InputTextArea @bind-Value="Model.AllowedFutureUsageSummary"
+                           class="cda-input cda-input--textarea min-h-24" />
+        </FormField>
+
+        <FormField Text="Validation requirement summary">
+            <InputTextArea @bind-Value="Model.ValidationRequirementSummary"
+                           class="cda-input cda-input--textarea min-h-24" />
+        </FormField>
+    </Stack>
+</PanelCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessArtifactExpectationEditorModel Model { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback Remove { get; set; }
+}

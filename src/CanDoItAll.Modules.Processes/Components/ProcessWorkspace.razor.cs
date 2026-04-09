@@ -258,20 +258,30 @@ public partial class ProcessWorkspace : ComponentBase
     private void RefreshCanvasSurface()
     {
         canvasSurface = detailTab == "runs" && SelectedRun is not null
-            ? CanvasSurfaceFactory.BuildRunSurface(SelectedRun, stepRuns)
-            : CanvasSurfaceFactory.BuildDefinitionSurface(editor);
+            ? CanvasSurfaceFactory.BuildRunSurface(SelectedRun, stepRuns, selectedCanvasNodeId)
+            : CanvasSurfaceFactory.BuildDefinitionSurface(editor, selectedCanvasNodeId);
+
+        var synchronizedSelection = canvasSurface.UiState.SelectedNodeIds.FirstOrDefault();
+        if (!string.Equals(selectedCanvasNodeId, NoCanvasSelection, StringComparison.Ordinal) &&
+            !string.IsNullOrWhiteSpace(synchronizedSelection))
+        {
+            selectedCanvasNodeId = synchronizedSelection;
+        }
     }
 
     private async Task CreateNewAsync()
     {
         selectedProcessId = null;
         selectedRunId = null;
+        selectedCanvasNodeId = null;
         editor = await ProcessesService.GetEditorAsync(null, ProjectId);
         detailTab = "definition";
         runs = [];
         improvements = [];
         analytics = await ProcessesService.GetAnalyticsAsync(null, ProjectId);
         await LoadRunDetailsAsync();
+        CloseCanvasEditor();
+        canvasActionDialog = null;
         RefreshCanvasSurface();
         ClearMessage();
     }
@@ -280,6 +290,7 @@ public partial class ProcessWorkspace : ComponentBase
     {
         selectedProcessId = definitionId;
         detailTab = "definition";
+        selectedCanvasNodeId = null;
         await LoadWorkspaceAsync();
     }
 
@@ -341,6 +352,7 @@ public partial class ProcessWorkspace : ComponentBase
 
         selectedProcessId = result.Value!.PrimaryDefinitionId;
         selectedRunId = result.Value.SeededRunIds.FirstOrDefault();
+        selectedCanvasNodeId = null;
         detailTab = "runs";
         await LoadWorkspaceAsync();
         SetMessage("Development seed baseline prepared.");
@@ -370,6 +382,7 @@ public partial class ProcessWorkspace : ComponentBase
         }
 
         selectedRunId = result.Value;
+        selectedCanvasNodeId = null;
         detailTab = "runs";
         runNameDraft = string.Empty;
         await LoadWorkspaceAsync();
@@ -379,6 +392,7 @@ public partial class ProcessWorkspace : ComponentBase
     private async Task SelectRunAsync(Guid runId)
     {
         selectedRunId = runId;
+        selectedCanvasNodeId = null;
         await LoadRunDetailsAsync();
         RefreshCanvasSurface();
     }
@@ -541,6 +555,7 @@ public partial class ProcessWorkspace : ComponentBase
     private Task HandleDetailTabChanged(string key)
     {
         detailTab = key;
+        selectedCanvasNodeId = null;
         RefreshCanvasSurface();
         return Task.CompletedTask;
     }

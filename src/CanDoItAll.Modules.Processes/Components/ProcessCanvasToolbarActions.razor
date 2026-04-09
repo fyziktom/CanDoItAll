@@ -1,0 +1,75 @@
+@namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Components.BaseLib
+
+<Cluster Gap="LayoutGap.XSmall">
+    <Button Icon="visibility"
+            aria-label="Selection"
+            title="Selection: show or hide the process selection panel"
+            Variant="Variant.Text"
+            ButtonStyle="ButtonStyle.Base"
+            Style="@ResolveSelectionStyle()"
+            Class="@ResolveButtonCssClass(SelectionWindowVisible)"
+            data-testid="@SelectionTestId"
+            Click="ToggleSelectionWindow" />
+
+    @if (ShowToolbox)
+    {
+        <Button Icon="dashboard_customize"
+                aria-label="Toolbox"
+                title="Toolbox: show or hide the process templates library"
+                Variant="Variant.Text"
+                ButtonStyle="ButtonStyle.Base"
+                Style="@ResolveToolboxStyle()"
+                Class="@ResolveButtonCssClass(ToolboxWindowVisible)"
+                data-testid="@ToolboxTestId"
+                Click="ToggleToolboxWindow" />
+    }
+</Cluster>
+
+@code {
+    private const string ToolbarButtonSizeStyle = "width:2.55rem;min-width:2.55rem;max-width:2.55rem;flex:0 0 auto;padding-inline:0;";
+    private const string ActiveSelectionStyle = "background:rgba(14,165,233,0.14);border-color:rgba(14,165,233,0.28);box-shadow:inset 0 0 0 1px rgba(14,165,233,0.12);";
+    private const string ActiveToolboxStyle = "background:rgba(15,23,42,0.08);border-color:rgba(15,23,42,0.14);box-shadow:inset 0 0 0 1px rgba(15,23,42,0.08);";
+
+    [Parameter]
+    public bool SelectionWindowVisible { get; set; }
+
+    [Parameter]
+    public bool ToolboxWindowVisible { get; set; }
+
+    [Parameter]
+    public bool ShowToolbox { get; set; } = true;
+
+    [Parameter]
+    public string SelectionTestId { get; set; } = "processes-canvas-toggle-selection";
+
+    [Parameter]
+    public string ToolboxTestId { get; set; } = "processes-canvas-toggle-toolbox";
+
+    [Parameter]
+    public EventCallback ToggleSelectionWindow { get; set; }
+
+    [Parameter]
+    public EventCallback ToggleToolboxWindow { get; set; }
+
+    private string ResolveButtonCssClass(bool isActive)
+    {
+        return isActive
+            ? "cw-toolbar-action cw-toolbar-action--icon is-active"
+            : "cw-toolbar-action cw-toolbar-action--icon";
+    }
+
+    private string ResolveSelectionStyle()
+    {
+        return SelectionWindowVisible
+            ? $"{ToolbarButtonSizeStyle}{ActiveSelectionStyle}"
+            : ToolbarButtonSizeStyle;
+    }
+
+    private string ResolveToolboxStyle()
+    {
+        return ToolboxWindowVisible
+            ? $"{ToolbarButtonSizeStyle}{ActiveToolboxStyle}"
+            : ToolbarButtonSizeStyle;
+    }
+}

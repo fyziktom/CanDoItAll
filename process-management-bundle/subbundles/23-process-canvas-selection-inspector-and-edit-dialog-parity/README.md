@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -104,3 +104,4 @@
 ```text
 Implement only the process-canvas selection and edit-parity slice. Add a floating selection inspector, keep it synchronized with canvas node selection, open compact edit/action flows on double click, reuse the extracted process editor forms, and close only after Playwright proves both definition and runtime parity on large screens.
 ```
+

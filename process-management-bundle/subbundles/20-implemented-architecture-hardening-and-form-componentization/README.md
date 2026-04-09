@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -105,3 +105,4 @@
 ```text
 Refactor only the executed process-management architecture slice. Split ProcessWorkspace and ProcessesService into smaller, clearer units, extract reusable process editor forms that can later live in canvas floating windows, add typed seams for the highest-risk architecture-note gaps, and keep all current behavior green before closing.
 ```
+

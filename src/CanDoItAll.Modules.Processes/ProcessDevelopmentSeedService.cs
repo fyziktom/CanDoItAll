@@ -3,7 +3,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Processes;
 
-public sealed class ProcessDevelopmentSeedService(ProcessesService processesService)
+public sealed partial class ProcessDevelopmentSeedService(ProcessesService processesService)
 {
     public async Task<Result<ProcessSeedReport>> SeedBaselineAsync(
         Guid? projectId = null,
@@ -11,36 +11,39 @@ public sealed class ProcessDevelopmentSeedService(ProcessesService processesServ
     {
         var seededDefinitionIds = new List<Guid>();
         var seededRunIds = new List<Guid>();
+        Guid primaryDefinitionId = Guid.Empty;
+        Guid secondaryDefinitionId = Guid.Empty;
 
-        var onboardingScenario = BuildOnboardingScenario();
-        var authoringResult = await EnsureBaselineDefinitionAsync(
-            onboardingScenario,
-            projectId,
-            seededDefinitionIds,
-            seededRunIds,
-            cancellationToken);
-        if (authoringResult.IsFailure)
+        foreach (var scenario in BuildBaselineScenarios())
         {
-            return Result<ProcessSeedReport>.Failure(authoringResult.Errors.ToArray());
-        }
+            var seedResult = await EnsureBaselineDefinitionAsync(
+                scenario,
+                projectId,
+                seededDefinitionIds,
+                seededRunIds,
+                cancellationToken);
+            if (seedResult.IsFailure)
+            {
+                return Result<ProcessSeedReport>.Failure(seedResult.Errors.ToArray());
+            }
 
-        var incidentScenario = BuildIncidentScenario();
-        var supportResult = await EnsureBaselineDefinitionAsync(
-            incidentScenario,
-            projectId,
-            seededDefinitionIds,
-            seededRunIds,
-            cancellationToken);
-        if (supportResult.IsFailure)
-        {
-            return Result<ProcessSeedReport>.Failure(supportResult.Errors.ToArray());
+            if (primaryDefinitionId == Guid.Empty)
+            {
+                primaryDefinitionId = seedResult.Value;
+                continue;
+            }
+
+            if (secondaryDefinitionId == Guid.Empty)
+            {
+                secondaryDefinitionId = seedResult.Value;
+            }
         }
 
         return Result<ProcessSeedReport>.Success(new ProcessSeedReport(
             seededDefinitionIds,
             seededRunIds,
-            authoringResult.Value,
-            supportResult.Value));
+            primaryDefinitionId,
+            secondaryDefinitionId));
     }
 
     private async Task<Result<Guid>> EnsureBaselineDefinitionAsync(
@@ -103,95 +106,38 @@ public sealed class ProcessDevelopmentSeedService(ProcessesService processesServ
 
         var existingRun = (await processesService.ListRunsAsync(definitionId, projectId, cancellationToken))
             .FirstOrDefault(item => string.Equals(item.Name, scenario.RunName, StringComparison.OrdinalIgnoreCase));
+
+        Guid runId;
         if (existingRun is not null)
         {
-            seededRunIds.Add(existingRun.Id);
-            return Result<Guid>.Success(definitionId);
+            runId = existingRun.Id;
+        }
+        else
+        {
+            var runResult = await processesService.StartRunAsync(
+                new ProcessRunStartRequest
+                {
+                    ProcessDefinitionId = definitionId,
+                    ProjectId = projectId,
+                    RunName = scenario.RunName,
+                    OperatingMode = scenario.OperatingMode,
+                    TriggerReason = $"Development seed baseline / {scenario.Key}"
+                },
+                cancellationToken);
+            if (runResult.IsFailure)
+            {
+                return Result<Guid>.Failure(runResult.Errors.ToArray());
+            }
+
+            runId = runResult.Value;
         }
 
-        var runResult = await processesService.StartRunAsync(
-            new ProcessRunStartRequest
-            {
-                ProcessDefinitionId = definitionId,
-                ProjectId = projectId,
-                RunName = scenario.RunName,
-                OperatingMode = ProcessOperatingMode.AssistedExecution,
-                TriggerReason = "Development seed baseline"
-            },
-            cancellationToken);
-        if (runResult.IsFailure)
+        seededRunIds.Add(runId);
+
+        var runtimeResult = await EnsureScenarioRuntimeStateAsync(scenario, runId, cancellationToken);
+        if (runtimeResult.IsFailure)
         {
-            return Result<Guid>.Failure(runResult.Errors.ToArray());
-        }
-
-        seededRunIds.Add(runResult.Value);
-        var stepRuns = await processesService.ListStepRunsAsync(runResult.Value, cancellationToken);
-        if (stepRuns.Count > 0)
-        {
-            var startResult = await processesService.TransitionStepAsync(
-                new ProcessStepTransitionRequest
-                {
-                    StepRunId = stepRuns[0].Id,
-                    TargetStatus = ProcessStepRunStatus.InProgress,
-                    Reason = "Seed flow started.",
-                    DecidedBy = "seed-service"
-                },
-                cancellationToken);
-            if (startResult.IsFailure)
-            {
-                return Result<Guid>.Failure(startResult.Errors.ToArray());
-            }
-
-            var completeResult = await processesService.TransitionStepAsync(
-                new ProcessStepTransitionRequest
-                {
-                    StepRunId = stepRuns[0].Id,
-                    TargetStatus = ProcessStepRunStatus.Completed,
-                    Reason = "Seed flow completed initial intake.",
-                    DecidedBy = "seed-service"
-                },
-                cancellationToken);
-            if (completeResult.IsFailure)
-            {
-                return Result<Guid>.Failure(completeResult.Errors.ToArray());
-            }
-        }
-
-        var refreshedStepRuns = await processesService.ListStepRunsAsync(runResult.Value, cancellationToken);
-        if (refreshedStepRuns.Count > 1)
-        {
-            var blockResult = await processesService.TransitionStepAsync(
-                new ProcessStepTransitionRequest
-                {
-                    StepRunId = refreshedStepRuns[1].Id,
-                    TargetStatus = ProcessStepRunStatus.Blocked,
-                    Reason = "Seeded blocking scenario for validation and analytics coverage.",
-                    DecidedBy = "seed-service"
-                },
-                cancellationToken);
-            if (blockResult.IsFailure)
-            {
-                return Result<Guid>.Failure(blockResult.Errors.ToArray());
-            }
-
-            var artifactResult = await processesService.RecordArtifactAsync(
-                new ProcessArtifactRecordRequest
-                {
-                    ProcessRunId = runResult.Value,
-                    StepRunId = refreshedStepRuns[1].Id,
-                    ArtifactKind = ProcessArtifactKind.Evidence,
-                    Title = $"{scenario.Name} seed evidence",
-                    TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
-                    SensitivityLevel = ProcessSensitivityLevel.Internal,
-                    ProvenanceSummary = "Generated by ProcessDevelopmentSeedService.",
-                    AllowedFutureUsageSummary = "Development and regression validation only.",
-                    ReviewSummary = "Needs manual confirmation before reuse."
-                },
-                cancellationToken);
-            if (artifactResult.IsFailure)
-            {
-                return Result<Guid>.Failure(artifactResult.Errors.ToArray());
-            }
+            return Result<Guid>.Failure(runtimeResult.Errors.ToArray());
         }
 
         return Result<Guid>.Success(definitionId);
@@ -345,6 +291,7 @@ public sealed class ProcessDevelopmentSeedService(ProcessesService processesServ
         };
 
         return new ProcessSeedScenario(
+            ProcessSeedScenarioKeys.CustomerOnboarding,
             "Customer onboarding orchestration",
             "Customer onboarding orchestration / Seed run",
             "Turn approved customer demand into a governed delivery kickoff without losing staffing, approvals, or evidence.",
@@ -358,6 +305,7 @@ public sealed class ProcessDevelopmentSeedService(ProcessesService processesServ
             "Policy decisions stay explicit and reviewable.",
             "Manual and guarded autonomy are both supported depending on step criticality.",
             "Seed pack models the same typed steps used in runtime validation.",
+            ProcessOperatingMode.AssistedExecution,
             roles,
             steps);
     }
@@ -510,6 +458,7 @@ public sealed class ProcessDevelopmentSeedService(ProcessesService processesServ
         };
 
         return new ProcessSeedScenario(
+            ProcessSeedScenarioKeys.IncidentResponse,
             "Incident response and escalation",
             "Incident response and escalation / Seed run",
             "Coordinate first response, diagnosis, escalation, and customer communication with explicit safe-refusal paths.",
@@ -523,6 +472,7 @@ public sealed class ProcessDevelopmentSeedService(ProcessesService processesServ
             "Policy decisions stay explicit and reviewable.",
             "Emergency operating mode is explicitly bounded by governance rules.",
             "Seed pack models refusal, blocking, and artifact trust scenarios.",
+            ProcessOperatingMode.Emergency,
             roles,
             steps);
     }
@@ -535,6 +485,7 @@ public sealed record ProcessSeedReport(
     Guid SecondaryDefinitionId);
 
 internal sealed record ProcessSeedScenario(
+    string Key,
     string Name,
     string RunName,
     string Summary,
@@ -548,5 +499,6 @@ internal sealed record ProcessSeedScenario(
     string ConstitutionRuleSummary,
     string OperatingModeSummary,
     string SimulationReadinessSummary,
+    ProcessOperatingMode OperatingMode,
     List<ProcessRoleEditorModel> Roles,
     List<ProcessStepEditorModel> Steps);

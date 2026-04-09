@@ -1,0 +1,127 @@
+@namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Modules.Projects
+
+<SurfaceCard data-testid="@TestId">
+    <Stack GapScale="LayoutGap.Medium">
+        @if (ShowHeader)
+        {
+            <Split Gap="LayoutGap.Medium">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <p class="cda-eyebrow">@Eyebrow</p>
+                    <h3 class="text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(Model.DisplayName) ? "Unnamed role" : Model.DisplayName)</h3>
+                    <p class="text-sm leading-6 text-slate-600">@Description</p>
+                </Stack>
+                <Cluster Gap="LayoutGap.Small">
+                    <StatusBadge Tone="@(Model.IsRequired ? "neutral" : "info")"
+                                 Text="@(Model.IsRequired ? "Required" : "Optional")" />
+                    @if (ShowRemove)
+                    {
+                        <Button Text="Remove"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="Remove" />
+                    }
+                </Cluster>
+            </Split>
+        }
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="3">
+            <FormField Text="Key">
+                <InputText @bind-Value="Model.Key"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Display name">
+                <InputText @bind-Value="Model.DisplayName"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Preferred executor kind">
+                <InputText @bind-Value="Model.PreferredExecutorKind"
+                           class="cda-input" />
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="2">
+            <FormField Text="Purpose">
+                <InputTextArea @bind-Value="Model.Purpose"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+            <FormField Text="Staffing intent">
+                <InputTextArea @bind-Value="Model.StaffingIntent"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="3">
+            <FormField Text="Project assignment role">
+                <InputSelect @bind-Value="Model.PreferredProjectAssignmentRole"
+                             class="cda-input">
+                    <option value="">No preferred project role</option>
+                    @foreach (var assignmentRole in Enum.GetValues<ProjectPartyAssignmentRole>())
+                    {
+                        <option value="@assignmentRole">@assignmentRole</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Default allocation percent">
+                <InputNumber @bind-Value="Model.DefaultAllocationPercent"
+                             class="cda-input" />
+            </FormField>
+            <FormField Text="Role template source key">
+                <InputText @bind-Value="Model.RoleTemplateSourceKey"
+                           class="cda-input" />
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="2">
+            <FormField Text="Template snapshot name">
+                <InputText @bind-Value="Model.RoleTemplateSnapshotName"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Snapshot summary">
+                <InputTextArea @bind-Value="Model.SnapshotSummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+        </Grid>
+
+        <Cluster Gap="LayoutGap.Medium">
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <InputCheckbox @bind-Value="Model.IsRequired" />
+                Role is required
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <InputCheckbox @bind-Value="Model.AllowsFallback" />
+                Allow fallback binding
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <InputCheckbox @bind-Value="Model.RequiresExplicitApproval" />
+                Requires explicit approval
+            </label>
+        </Cluster>
+    </Stack>
+</SurfaceCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessRoleEditorModel Model { get; set; } = default!;
+
+    [Parameter]
+    public string Eyebrow { get; set; } = "Role requirement";
+
+    [Parameter]
+    public string Description { get; set; } = "The role contract stays stable even when the exact executor changes between project parties, suppliers, or agents.";
+
+    [Parameter]
+    public string TestId { get; set; } = "processes-role-card";
+
+    [Parameter]
+    public bool ShowHeader { get; set; } = true;
+
+    [Parameter]
+    public bool ShowRemove { get; set; } = true;
+
+    [Parameter]
+    public EventCallback Remove { get; set; }
+}

@@ -4,7 +4,7 @@ namespace CanDoItAll.Modules.Processes;
 
 public sealed class ProcessCanvasSurfaceFactory
 {
-    public CanvasWorkbenchSurface BuildDefinitionSurface(ProcessDefinitionEditorModel editor)
+    public CanvasWorkbenchSurface BuildDefinitionSurface(ProcessDefinitionEditorModel editor, string? selectedNodeId = null)
     {
         ArgumentNullException.ThrowIfNull(editor);
 
@@ -27,7 +27,7 @@ public sealed class ProcessCanvasSurfaceFactory
             Links = links,
             UiState = new CanvasWorkbenchUiState
             {
-                SelectedNodeIds = nodes.Count > 0 ? [nodes[0].Id] : [],
+                SelectedNodeIds = ResolveSelectedNodeIds(nodes, selectedNodeId),
                 ActiveInspectorTab = "definition"
             },
             Chrome = BuildDefinitionChrome()
@@ -36,21 +36,23 @@ public sealed class ProcessCanvasSurfaceFactory
 
     public CanvasWorkbenchSurface BuildRunSurface(
         ProcessRunListItem run,
-        IReadOnlyList<ProcessStepRunViewModel> stepRuns)
+        IReadOnlyList<ProcessStepRunViewModel> stepRuns,
+        string? selectedNodeId = null)
     {
         ArgumentNullException.ThrowIfNull(run);
 
-        var nodes = stepRuns
+        var orderedSteps = stepRuns
             .OrderBy(stepRun => stepRun.Sequence)
+            .ToList();
+        var nodes = orderedSteps
             .Select(BuildRunNode)
             .ToList();
-        var links = stepRuns
-            .OrderBy(stepRun => stepRun.Sequence)
+        var links = orderedSteps
             .Skip(1)
-            .Select(stepRun => new CanvasWorkbenchLink
+            .Select((stepRun, index) => new CanvasWorkbenchLink
             {
-                SourceId = $"run-step:{stepRun.Sequence - 1}",
-                TargetId = $"run-step:{stepRun.Sequence}",
+                SourceId = BuildRunNodeId(orderedSteps[index].Id),
+                TargetId = BuildRunNodeId(stepRun.Id),
                 Kind = "flow",
                 IsUserAuthored = false
             })
@@ -65,11 +67,10 @@ public sealed class ProcessCanvasSurfaceFactory
             Links = links,
             UiState = new CanvasWorkbenchUiState
             {
-                SelectedNodeIds = nodes.FirstOrDefault(node => string.Equals(node.Status, "active", StringComparison.Ordinal)) is { } activeNode
-                    ? [activeNode.Id]
-                    : nodes.Count > 0
-                        ? [nodes[0].Id]
-                        : [],
+                SelectedNodeIds = ResolveSelectedNodeIds(
+                    nodes,
+                    selectedNodeId,
+                    nodes.FirstOrDefault(node => string.Equals(node.Status, ProcessStepRunStatus.InProgress.ToString().ToLowerInvariant(), StringComparison.Ordinal))?.Id),
                 ActiveInspectorTab = "runtime"
             },
             Chrome = BuildRunChrome()
@@ -138,11 +139,43 @@ public sealed class ProcessCanvasSurfaceFactory
             [
                 new CanvasWorkbenchAction
                 {
-                    ActionId = $"select-step:{BuildDefinitionNodeId(step)}",
-                    Label = "Select step",
-                    MenuLabel = "Select step",
-                    Icon = "cursor",
+                    ActionId = ProcessCanvasActionIds.EditDefinitionStep,
+                    Label = "Edit step",
+                    MenuLabel = "Edit step",
+                    Icon = "draw",
+                    Tone = "accent"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.AddDependentStep,
+                    Label = "Add dependent step",
+                    MenuLabel = "Add dependent step",
+                    Icon = "add_circle",
+                    Tone = "info"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.AddRoleBinding,
+                    Label = "Add role binding",
+                    MenuLabel = "Add role binding",
+                    Icon = "people",
                     Tone = "neutral"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.AddArtifactExpectation,
+                    Label = "Add artifact expectation",
+                    MenuLabel = "Add artifact expectation",
+                    Icon = "description",
+                    Tone = "neutral"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.RemoveDefinitionStep,
+                    Label = "Remove step",
+                    MenuLabel = "Remove step",
+                    Icon = "delete",
+                    Tone = "danger"
                 }
             ]
         };
@@ -153,7 +186,7 @@ public sealed class ProcessCanvasSurfaceFactory
         var tone = ResolveRunTone(stepRun.Status);
         return new CanvasWorkbenchNode
         {
-            Id = $"run-step:{stepRun.Sequence}",
+            Id = BuildRunNodeId(stepRun.Id),
             Kind = "process-run-step",
             Family = "process-runtime",
             Icon = ResolveStepIcon(stepRun.StepKind),
@@ -200,10 +233,34 @@ public sealed class ProcessCanvasSurfaceFactory
             [
                 new CanvasWorkbenchAction
                 {
-                    ActionId = $"open-step-run:{stepRun.Id:D}",
-                    Label = "Open step run",
-                    MenuLabel = "Open step run",
-                    Icon = "open",
+                    ActionId = ProcessCanvasActionIds.RuntimeStart,
+                    Label = "Start",
+                    MenuLabel = "Start",
+                    Icon = "play",
+                    Tone = "info"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.RuntimeComplete,
+                    Label = "Complete",
+                    MenuLabel = "Complete",
+                    Icon = "check",
+                    Tone = "accent"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.RuntimeBlock,
+                    Label = "Block",
+                    MenuLabel = "Block",
+                    Icon = "block",
+                    Tone = "danger"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.RuntimeRecordArtifact,
+                    Label = "Record artifact",
+                    MenuLabel = "Record artifact",
+                    Icon = "note_add",
                     Tone = "neutral"
                 }
             ]
@@ -248,6 +305,11 @@ public sealed class ProcessCanvasSurfaceFactory
         return $"step:{normalized}";
     }
 
+    private static string BuildRunNodeId(Guid stepRunId)
+    {
+        return $"run-step:{stepRunId:D}";
+    }
+
     private static CanvasWorkbenchChrome BuildDefinitionChrome()
     {
         return new CanvasWorkbenchChrome
@@ -256,25 +318,92 @@ public sealed class ProcessCanvasSurfaceFactory
             EmptyStateKicker = "Process design",
             EmptyStateTitle = "Add or select a process step",
             EmptyStateDescription = "The canvas mirrors the current step sequence, role bindings, and contract shape.",
+            CollapseOnDoubleClick = false,
             QuickCreateActions =
             [
                 new CanvasWorkbenchAction
                 {
-                    ActionId = "create-work-step",
-                    Label = "Work step",
-                    MenuLabel = "Add work step",
-                    Description = "Add a standard typed work step.",
+                    ActionId = ProcessCanvasActionIds.CreateRoleBlank,
+                    Label = "Blank role",
+                    MenuLabel = "Add blank role",
+                    Description = "Add a new role requirement and decide later who can fulfill it.",
+                    Icon = "person_add",
+                    Tone = "neutral"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.CreateStepImplementation,
+                    Label = "Implementation",
+                    MenuLabel = "Add implementation step",
+                    Description = "Add a standard execution step with proof-oriented defaults.",
                     Icon = "plus",
                     Tone = "accent"
                 },
                 new CanvasWorkbenchAction
                 {
-                    ActionId = "create-approval-step",
+                    ActionId = ProcessCanvasActionIds.CreateStepReleaseApproval,
                     Label = "Approval step",
                     MenuLabel = "Add approval step",
                     Description = "Add an explicit approval gate.",
                     Icon = "check",
                     Tone = "warn"
+                }
+            ],
+            GroupContextActions =
+            [
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.OpenDefinitionToolbox,
+                    Label = "Open toolbox",
+                    MenuLabel = "Open toolbox",
+                    Description = "Open the floating process templates toolbox.",
+                    Icon = "inventory_2",
+                    Tone = "neutral"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.CreateRoleBlank,
+                    Label = "Add role",
+                    MenuLabel = "Add role",
+                    Description = "Open the role-first editor and decide whether to start blank or from a template.",
+                    Icon = "person_add",
+                    Tone = "neutral"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.CreateStepImplementation,
+                    Label = "Add step",
+                    MenuLabel = "Add step",
+                    Description = "Open the step editor and choose whether to start from a template or a blank implementation step.",
+                    Icon = "add_circle",
+                    Tone = "accent"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.CreateRoleSolutionArchitect,
+                    Label = "Architect role",
+                    MenuLabel = "Add architect role",
+                    Description = "Add an architecture authority role template.",
+                    Icon = "architecture",
+                    Tone = "neutral"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.CreateStepArchitecture,
+                    Label = "Architecture step",
+                    MenuLabel = "Add architecture step",
+                    Description = "Add a design review step with decision-record defaults.",
+                    Icon = "hub",
+                    Tone = "accent"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.CreateStepQa,
+                    Label = "QA gate",
+                    MenuLabel = "Add QA gate",
+                    Description = "Add a regression and release-confidence step.",
+                    Icon = "fact_check",
+                    Tone = "accent"
                 }
             ]
         };
@@ -288,7 +417,20 @@ public sealed class ProcessCanvasSurfaceFactory
             EmptyStateKicker = "Process runtime",
             EmptyStateTitle = "Choose a run to inspect",
             EmptyStateDescription = "The runtime canvas shows the current step states, capability gaps, and executor assignments.",
-            ShowQuickCreateRail = false
+            CollapseOnDoubleClick = false,
+            ShowQuickCreateRail = false,
+            GroupContextActions =
+            [
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.RuntimeRecordArtifact,
+                    Label = "Record artifact",
+                    MenuLabel = "Record artifact",
+                    Description = "Open runtime evidence capture for the selected step or run.",
+                    Icon = "note_add",
+                    Tone = "neutral"
+                }
+            ]
         };
     }
 
@@ -342,5 +484,30 @@ public sealed class ProcessCanvasSurfaceFactory
             ProcessStepRunStatus.WaitingApproval => "#7c3aed",
             _ => "#475569"
         };
+    }
+
+    private static List<string> ResolveSelectedNodeIds(
+        IReadOnlyList<CanvasWorkbenchNode> nodes,
+        string? selectedNodeId,
+        string? fallbackSelectedNodeId = null)
+    {
+        if (string.Equals(selectedNodeId, "__processes:none__", StringComparison.Ordinal))
+        {
+            return [];
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedNodeId) &&
+            nodes.Any(node => string.Equals(node.Id, selectedNodeId, StringComparison.Ordinal)))
+        {
+            return [selectedNodeId];
+        }
+
+        if (!string.IsNullOrWhiteSpace(fallbackSelectedNodeId) &&
+            nodes.Any(node => string.Equals(node.Id, fallbackSelectedNodeId, StringComparison.Ordinal)))
+        {
+            return [fallbackSelectedNodeId];
+        }
+
+        return nodes.Count > 0 ? [nodes[0].Id] : [];
     }
 }

@@ -1,0 +1,219 @@
+@namespace CanDoItAll.Modules.Processes
+
+<SurfaceCard data-testid="@TestId">
+    <Stack GapScale="LayoutGap.Medium">
+        @if (ShowHeader)
+        {
+            <Split Gap="LayoutGap.Medium">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <p class="cda-eyebrow">@Eyebrow</p>
+                    <h3 class="text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(Model.Title) ? "Untitled step" : Model.Title)</h3>
+                    <p class="text-sm leading-6 text-slate-600">@Description</p>
+                </Stack>
+                <Cluster Gap="LayoutGap.Small">
+                    <StatusBadge Tone="neutral" Text="@Model.StepKind.ToString()" />
+                    @if (ShowRemove)
+                    {
+                        <Button Text="Remove"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="Remove" />
+                    }
+                </Cluster>
+            </Split>
+        }
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="3">
+            <FormField Text="Key">
+                <InputText @bind-Value="Model.Key"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Title">
+                <InputText @bind-Value="Model.Title"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Subtitle">
+                <InputText @bind-Value="Model.Subtitle"
+                           class="cda-input" />
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="3">
+            <FormField Text="Step kind">
+                <InputSelect @bind-Value="Model.StepKind"
+                             class="cda-input">
+                    @foreach (var stepKind in Enum.GetValues<ProcessStepKind>())
+                    {
+                        <option value="@stepKind">@stepKind</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Target lead hours">
+                <InputNumber @bind-Value="Model.TargetLeadHours"
+                             class="cda-input" />
+            </FormField>
+            <FormField Text="Depends on">
+                <InputSelect @bind-Value="Model.DependsOnStepId"
+                             class="cda-input">
+                    <option value="">None</option>
+                    @foreach (var candidate in DependencyOptions)
+                    {
+                        <option value="@candidate.Id">@(string.IsNullOrWhiteSpace(candidate.Title) ? "Untitled step" : candidate.Title)</option>
+                    }
+                </InputSelect>
+            </FormField>
+        </Grid>
+
+        <Cluster Gap="LayoutGap.Medium">
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <InputCheckbox @bind-Value="Model.AllowsManualSkip" />
+                Allow manual skip
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <InputCheckbox @bind-Value="Model.AllowsSafeRefusal" />
+                Allow safe refusal
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <InputCheckbox @bind-Value="Model.RequiresApproval" />
+                Requires approval
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <InputCheckbox @bind-Value="Model.RequiresDecisionRecord" />
+                Requires decision record
+            </label>
+        </Cluster>
+
+        <FormField Text="Notes">
+            <InputTextArea @bind-Value="Model.Notes"
+                           class="cda-input cda-input--textarea min-h-24" />
+        </FormField>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="2">
+            <FormField Text="Input contract summary">
+                <InputTextArea @bind-Value="Model.InputContractSummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+            <FormField Text="Output contract summary">
+                <InputTextArea @bind-Value="Model.OutputContractSummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="2">
+            <FormField Text="Evidence contract summary">
+                <InputTextArea @bind-Value="Model.EvidenceContractSummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+            <FormField Text="Decision rights summary">
+                <InputTextArea @bind-Value="Model.DecisionRightsSummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+        </Grid>
+
+        <FormField Text="Exception policy summary">
+            <InputTextArea @bind-Value="Model.ExceptionPolicySummary"
+                           class="cda-input cda-input--textarea min-h-24" />
+        </FormField>
+
+        <FormSection Title="Role assignments"
+                     Description="Bind the step to explicit role requirements so executor changes do not mutate the process contract.">
+            <Actions>
+                <Button Text="Add role assignment"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="AddRoleAssignment" />
+            </Actions>
+            <ChildContent>
+                @if (Model.RoleAssignments.Count == 0)
+                {
+                    <EmptyState Eyebrow="No role bindings"
+                                Title="Add the first binding"
+                                Description="Each executable step should name who is responsible, reviewing, approving, or backing up the work." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Medium">
+                        @foreach (var assignment in Model.RoleAssignments)
+                        {
+                            <ProcessStepRoleAssignmentEditor Model="@assignment"
+                                                             AvailableRoles="@AvailableRoles"
+                                                             Remove="@(() => RemoveRoleAssignment.InvokeAsync(assignment))" />
+                        }
+                    </Stack>
+                }
+            </ChildContent>
+        </FormSection>
+
+        <FormSection Title="Artifact expectations"
+                     Description="Define the evidence contract now so runtime proof stays durable, reviewable, and safe to reuse.">
+            <Actions>
+                <Button Text="Add artifact expectation"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="AddArtifact" />
+            </Actions>
+            <ChildContent>
+                @if (Model.ArtifactExpectations.Count == 0)
+                {
+                    <EmptyState Eyebrow="No artifact expectations"
+                                Title="Add the first artifact"
+                                Description="Use artifact expectations to capture trust, sensitivity, retention, and future-usage policy before runtime evidence appears." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Medium">
+                        @foreach (var artifact in Model.ArtifactExpectations)
+                        {
+                            <ProcessArtifactExpectationEditor Model="@artifact"
+                                                              Remove="@(() => RemoveArtifact.InvokeAsync(artifact))" />
+                        }
+                    </Stack>
+                }
+            </ChildContent>
+        </FormSection>
+    </Stack>
+</SurfaceCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessStepEditorModel Model { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<ProcessRoleEditorModel> AvailableRoles { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<ProcessStepEditorModel> DependencyOptions { get; set; } = [];
+
+    [Parameter]
+    public string Eyebrow { get; set; } = "Step definition";
+
+    [Parameter]
+    public string Description { get; set; } = "Use typed contracts for inputs, outputs, evidence, decision rights, and exception policy so runtime deviations can be judged against a real baseline.";
+
+    [Parameter]
+    public string TestId { get; set; } = "processes-step-card";
+
+    [Parameter]
+    public bool ShowHeader { get; set; } = true;
+
+    [Parameter]
+    public bool ShowRemove { get; set; } = true;
+
+    [Parameter]
+    public EventCallback Remove { get; set; }
+
+    [Parameter]
+    public EventCallback AddRoleAssignment { get; set; }
+
+    [Parameter]
+    public EventCallback<ProcessStepRoleRequirementEditorModel> RemoveRoleAssignment { get; set; }
+
+    [Parameter]
+    public EventCallback AddArtifact { get; set; }
+
+    [Parameter]
+    public EventCallback<ProcessArtifactExpectationEditorModel> RemoveArtifact { get; set; }
+}

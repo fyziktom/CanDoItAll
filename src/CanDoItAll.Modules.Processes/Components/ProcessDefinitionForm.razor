@@ -1,0 +1,147 @@
+@namespace CanDoItAll.Modules.Processes
+
+<Stack GapScale="LayoutGap.Large">
+    <FormSection Title="Definition identity"
+                 Description="Anchor the process to the correct scope and write the contract that later runs, assignments, and audit artifacts inherit.">
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="2">
+            <FormField Text="Name">
+                <InputText @bind-Value="Model.Name"
+                           class="cda-input"
+                           data-testid="processes-name-input" />
+            </FormField>
+            <FormField Text="Scope">
+                <TextBox Value="@ScopeLabel"
+                         Class="cda-input"
+                         ReadOnly="true" />
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="2">
+            <FormField Text="Customer">
+                <InputText @bind-Value="Model.CustomerName"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Owner">
+                <InputText @bind-Value="Model.OwnerName"
+                           class="cda-input" />
+            </FormField>
+        </Grid>
+
+        <FormField Text="Summary">
+            <InputTextArea @bind-Value="Model.Summary"
+                           class="cda-input cda-input--textarea min-h-24"
+                           data-testid="processes-summary-input" />
+        </FormField>
+
+        <FormField Text="Value statement">
+            <InputTextArea @bind-Value="Model.ValueStatement"
+                           class="cda-input cda-input--textarea min-h-24"
+                           data-testid="processes-value-statement-input" />
+        </FormField>
+    </FormSection>
+
+    <FormSection Title="Governance and operating model"
+                 Description="Define the policy and autonomy contract now so runs, refusals, and safe non-actions can be judged against an explicit baseline.">
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="3">
+            <FormField Text="Criticality">
+                <InputSelect @bind-Value="Model.Criticality"
+                             class="cda-input">
+                    @foreach (var criticality in Enum.GetValues<ProcessCriticality>())
+                    {
+                        <option value="@criticality">@criticality</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Autonomy level">
+                <InputSelect @bind-Value="Model.AutonomyLevel"
+                             class="cda-input">
+                    @foreach (var autonomyLevel in Enum.GetValues<ProcessAutonomyLevel>())
+                    {
+                        <option value="@autonomyLevel">@autonomyLevel</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Working status">
+                <TextBox Value="@Model.Status.ToString()"
+                         Class="cda-input"
+                         ReadOnly="true" />
+            </FormField>
+        </Grid>
+
+        <FormField Text="Interface contract summary">
+            <InputTextArea @bind-Value="Model.InterfaceContractSummary"
+                           class="cda-input cda-input--textarea min-h-24" />
+        </FormField>
+
+        <FormField Text="Governance notes">
+            <InputTextArea @bind-Value="Model.GovernanceNotes"
+                           class="cda-input cda-input--textarea min-h-24" />
+        </FormField>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="2">
+            <FormField Text="Change summary">
+                <InputTextArea @bind-Value="Model.ChangeSummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+            <FormField Text="Governance policy summary">
+                <InputTextArea @bind-Value="Model.GovernancePolicySummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsMd="2">
+            <FormField Text="Constitution rule summary">
+                <InputTextArea @bind-Value="Model.ConstitutionRuleSummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+            <FormField Text="Operating mode summary">
+                <InputTextArea @bind-Value="Model.OperatingModeSummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+        </Grid>
+
+        <FormField Text="Simulation readiness summary">
+            <InputTextArea @bind-Value="Model.SimulationReadinessSummary"
+                           class="cda-input cda-input--textarea min-h-24" />
+        </FormField>
+
+        @if (ShowActions)
+        {
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Save definition"
+                        Click="Save" />
+                <Button Text="Publish"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="Publish" />
+                <Button Text="Delete"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="Delete" />
+            </Cluster>
+        }
+    </FormSection>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessDefinitionEditorModel Model { get; set; } = default!;
+
+    [Parameter]
+    public string ScopeLabel { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool ShowActions { get; set; } = true;
+
+    [Parameter]
+    public EventCallback Save { get; set; }
+
+    [Parameter]
+    public EventCallback Publish { get; set; }
+
+    [Parameter]
+    public EventCallback Delete { get; set; }
+}
