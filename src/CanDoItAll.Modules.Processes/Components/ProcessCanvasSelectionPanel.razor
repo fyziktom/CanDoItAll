@@ -42,6 +42,7 @@ else if (!IsRuntime && DefinitionStep is not null)
                     <StatusBadge Tone="info" Text="@($"{DefinitionStep.TargetLeadHours} h")" />
                     <StatusBadge Tone="warning" Text="@($"{DefinitionStep.RoleAssignments.Count} bindings")" />
                     <StatusBadge Tone="accent" Text="@($"{DefinitionStep.ArtifactExpectations.Count} artifacts")" />
+                    <StatusBadge Tone="accent" Text="@($"{DefinitionStep.BranchOutcomes.Count} branches")" />
                 </Cluster>
             </Stack>
         </SurfaceCard>
@@ -55,6 +56,10 @@ else if (!IsRuntime && DefinitionStep is not null)
                         ButtonStyle="ButtonStyle.Light"
                         Click="AddDependentStep"
                         data-testid="processes-canvas-selection-add-dependent-step" />
+                <Button Text="Add branch outcome"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="AddBranchOutcome"
+                        data-testid="processes-canvas-selection-add-branch-outcome" />
                 <Button Text="Add role binding"
                         ButtonStyle="ButtonStyle.Light"
                         Click="AddRoleBinding"
@@ -69,6 +74,38 @@ else if (!IsRuntime && DefinitionStep is not null)
                         data-testid="processes-canvas-selection-open-actions" />
             </Stack>
         </SurfaceCard>
+
+        @if (DefinitionStep.BranchOutcomes.Count > 0)
+        {
+            <SurfaceCard>
+                <Stack GapScale="LayoutGap.Medium">
+                    <div>
+                        <p class="cda-eyebrow">Branch routing</p>
+                        <h3 class="mt-1 text-lg font-semibold text-slate-950">Outcome paths</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Create routed follow-up steps directly from a specific branch outcome so the dependency path stays explicit on the canvas.</p>
+                    </div>
+
+                    @foreach (var branchOutcome in DefinitionStep.BranchOutcomes)
+                    {
+                        <SurfaceCard Soft="true">
+                            <Split Gap="LayoutGap.Medium">
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    <p class="text-sm font-semibold text-slate-950">@branchOutcome.Title</p>
+                                    @if (!string.IsNullOrWhiteSpace(branchOutcome.Description))
+                                    {
+                                        <p class="text-sm leading-6 text-slate-600">@branchOutcome.Description</p>
+                                    }
+                                </Stack>
+                                <Button Text="Add routed step"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="@(() => AddRoutedStep.InvokeAsync(branchOutcome.Id))"
+                                        data-testid="processes-canvas-selection-add-routed-step" />
+                            </Split>
+                        </SurfaceCard>
+                    }
+                </Stack>
+            </SurfaceCard>
+        }
     </Stack>
 }
 else if (RuntimeStep is not null)
@@ -174,6 +211,12 @@ else if (RuntimeStep is not null)
 
     [Parameter]
     public EventCallback AddDependentStep { get; set; }
+
+    [Parameter]
+    public EventCallback AddBranchOutcome { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> AddRoutedStep { get; set; }
 
     [Parameter]
     public EventCallback AddRoleBinding { get; set; }

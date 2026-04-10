@@ -190,50 +190,6 @@
                         </FormSection>
                         </TabsItem>
                         <TabsItem Text="Steps">
-                        <FormSection Title="Workflow steps"
-                                     Description="Shape the executable path, explicit dependencies, role bindings, and evidence expectations before the first runtime run starts.">
-                            <Actions>
-                                <Button Text="Add step"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Click="AddStep"
-                                        data-testid="processes-add-step-button" />
-                            </Actions>
-                            <ChildContent>
-                                @if (editor.Steps.Count == 0)
-                                {
-                                    <EmptyState Eyebrow="No steps"
-                                                Title="Add the first workflow step"
-                                                Description="Steps define the order, dependency chain, role bindings, and required artifacts for the process definition." />
-                                }
-                                else
-                                {
-                                    <Stack GapScale="LayoutGap.Medium">
-                                        @foreach (var step in editor.Steps)
-                                        {
-                                            <ProcessStepEditorForm Model="@step"
-                                                                   AvailableRoles="@editor.Roles"
-                                                                   DependencyOptions="@(editor.Steps.Where(candidate => candidate != step).ToList())"
-                                                                   Remove="@(() => RemoveStep(step))"
-                                                                   AddBranchOutcome="@(() => AddBranchOutcome(step))"
-                                                                   RemoveBranchOutcome="@((ProcessStepBranchOutcomeEditorModel branchOutcome) => RemoveBranchOutcome(step, branchOutcome))"
-                                                                   AddRoleAssignment="@(() => AddRoleAssignment(step))"
-                                                                   RemoveRoleAssignment="@((ProcessStepRoleRequirementEditorModel assignment) => RemoveRoleAssignment(step, assignment))"
-                                                                   AddArtifact="@(() => AddArtifact(step))"
-                                                                   RemoveArtifact="@((ProcessArtifactExpectationEditorModel artifact) => RemoveArtifact(step, artifact))" />
-                                        }
-                                    </Stack>
-                                }
-
-                                <Cluster Gap="LayoutGap.Small">
-                                    <Button Text="Save definition"
-                                            Click="SaveAsync" />
-                                    <Button Text="Publish"
-                                            ButtonStyle="ButtonStyle.Light"
-                                            Click="PublishAsync" />
-                                </Cluster>
-                            </ChildContent>
-                        </FormSection>
-
                         <CanvasWorkbenchStage Eyebrow="Definition canvas"
                                               Title="Process definition map"
                                               Description="Review the structural shape of the definition, right-click into templates, and keep the selection inspector plus authoring windows aligned with the shared canvas workflow.">
@@ -298,6 +254,8 @@
                                                                                  ClearSelection="ClearCanvasSelectionAsync"
                                                                                  EditDefinitionStep="@(async () => { OpenDefinitionStepEditor(); await Task.CompletedTask; })"
                                                                                  AddDependentStep="@(async () => { OpenCanvasStepEditor(ProcessCanvasActionIds.CreateStepImplementation, SelectedCanvasDefinitionStep, 0, 0); await Task.CompletedTask; })"
+                                                                                 AddBranchOutcome="@(async () => { AddBranchOutcomeToSelectedStep(); await Task.CompletedTask; })"
+                                                                                 AddRoutedStep="AddRoutedStepFromSelectedStepAsync"
                                                                                  AddRoleBinding="@(async () => { AddRoleBindingToSelectedStep(); await Task.CompletedTask; })"
                                                                                  AddArtifactExpectation="@(async () => { AddArtifactExpectationToSelectedStep(); await Task.CompletedTask; })"
                                                                                  OpenActionDialog="OpenCanvasActionDialogAsync" />
@@ -382,8 +340,120 @@
                                 }
                             </Canvas>
                         </CanvasWorkbenchStage>
+
+                        <FormSection Title="Workflow steps"
+                                     Description="Shape the executable path, explicit dependencies, role bindings, and evidence expectations before the first runtime run starts.">
+                            <Actions>
+                                <Button Text="Add step"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="AddStep"
+                                        data-testid="processes-add-step-button" />
+                            </Actions>
+                            <ChildContent>
+                                @if (editor.Steps.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No steps"
+                                                Title="Add the first workflow step"
+                                                Description="Steps define the order, dependency chain, role bindings, and required artifacts for the process definition." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Medium">
+                                        @foreach (var step in editor.Steps)
+                                        {
+                                            <ProcessStepEditorForm Model="@step"
+                                                                   AvailableRoles="@editor.Roles"
+                                                                   DependencyOptions="@(editor.Steps.Where(candidate => candidate != step).ToList())"
+                                                                   Remove="@(() => RemoveStep(step))"
+                                                                   AddBranchOutcome="@(() => AddBranchOutcome(step))"
+                                                                   RemoveBranchOutcome="@((ProcessStepBranchOutcomeEditorModel branchOutcome) => RemoveBranchOutcome(step, branchOutcome))"
+                                                                   AddRoleAssignment="@(() => AddRoleAssignment(step))"
+                                                                   RemoveRoleAssignment="@((ProcessStepRoleRequirementEditorModel assignment) => RemoveRoleAssignment(step, assignment))"
+                                                                   AddArtifact="@(() => AddArtifact(step))"
+                                                                   RemoveArtifact="@((ProcessArtifactExpectationEditorModel artifact) => RemoveArtifact(step, artifact))" />
+                                        }
+                                    </Stack>
+                                }
+
+                                <Cluster Gap="LayoutGap.Small">
+                                    <Button Text="Save definition"
+                                            Click="SaveAsync" />
+                                    <Button Text="Publish"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Click="PublishAsync" />
+                                </Cluster>
+                            </ChildContent>
+                        </FormSection>
                         </TabsItem>
                         <TabsItem Text="Runs">
+                        <CanvasWorkbenchStage Eyebrow="Runtime canvas"
+                                              Title="@(SelectedRun?.Name ?? "Runtime map")"
+                                              Description="Inspect the live runtime path, keep the selection detail window in sync, and drive explicit runtime actions from the same canvas rhythm used in structure workbench flows.">
+                            <Canvas>
+                                @if (SelectedRun is null)
+                                {
+                                    <SurfaceCard Soft="true">
+                                        <p class="text-sm text-slate-600">Select a run to inspect the runtime canvas before updating status, branch outcomes, or runtime evidence.</p>
+                                    </SurfaceCard>
+                                }
+                                else if (canvasSurface is null)
+                                {
+                                    <SurfaceCard Soft="true">
+                                        <p class="text-sm text-slate-600">Runtime canvas data is loading.</p>
+                                    </SurfaceCard>
+                                }
+                                else
+                                {
+                                    <CanvasWorkbench Surface="canvasSurface"
+                                                     @ref="workbenchRef"
+                                                     StateChanged="HandleCanvasStateChangedAsync"
+                                                     SelectionChanged="HandleCanvasSelectionChangedAsync"
+                                                     ContextActionRequested="HandleCanvasContextActionAsync"
+                                                     NodeOpened="HandleCanvasNodeOpenedAsync">
+                                        <ToolbarLeftContent>
+                                            <ProcessCanvasToolbarActions SelectionWindowVisible="@canvasSelectionWindowState.IsVisible"
+                                                                         ShowToolbox="false"
+                                                                         SelectionTestId="processes-runtime-toggle-selection"
+                                                                         ToggleSelectionWindow="ToggleCanvasSelectionWindowAsync" />
+                                        </ToolbarLeftContent>
+                                        <OverlayContent>
+                                            @if (canvasSelectionWindowState.IsVisible)
+                                            {
+                                                <CanvasFloatingWindow WindowId="@CanvasSelectionWindowId"
+                                                                      TestId="processes-runtime-selection-window"
+                                                                      AriaLabel="Process runtime selection"
+                                                                      Kicker="Runtime selection"
+                                                                      Title="@CanvasSelectionWindowTitle"
+                                                                      Summary="@CanvasSelectionWindowSummary"
+                                                                      DefaultPlacement="top-right"
+                                                                      DefaultWidth="360"
+                                                                      DefaultHeight="360"
+                                                                      MinWidth="320"
+                                                                      MinHeight="220"
+                                                                      MaxWidth="520"
+                                                                      State="@canvasSelectionWindowState"
+                                                                      StateChanged="HandleCanvasSelectionWindowStateChangedAsync">
+                                                    <ProcessCanvasSelectionPanel IsRuntime="true"
+                                                                                 RuntimeStep="@SelectedCanvasRuntimeStep"
+                                                                                 SelectedRuntimeBranchOutcomeId="@(SelectedCanvasRuntimeStep is null ? null : ResolveSelectedBranchOutcomeId(SelectedCanvasRuntimeStep.Id))"
+                                                                                 SelectedRuntimeBranchOutcomeIdChanged="@(value => SelectedCanvasRuntimeStep is null ? Task.CompletedTask : UpdateRuntimeBranchOutcomeSelectionAsync(SelectedCanvasRuntimeStep.Id, value))"
+                                                                                 ClearSelection="ClearCanvasSelectionAsync"
+                                                                                 OpenActionDialog="OpenCanvasActionDialogAsync"
+                                                                                 StartRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.InProgress))"
+                                                                                 CompleteRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Completed))"
+                                                                                 BlockRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Blocked))"
+                                                                                 RequestRuntimeApproval="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.WaitingApproval))"
+                                                                                 RefuseRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Refused))"
+                                                                                 FailRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Failed))"
+                                                                                 RecordRuntimeArtifact="@(async () => { PrepareSelectedRuntimeArtifactCapture(); await Task.CompletedTask; })" />
+                                                </CanvasFloatingWindow>
+                                            }
+                                        </OverlayContent>
+                                    </CanvasWorkbench>
+                                }
+                            </Canvas>
+                        </CanvasWorkbenchStage>
+
                         <SectionCard Title="Run lifecycle"
                                      Description="Start process runs from the selected definition, then keep runtime state, assignments, and evidence attached to the same durable process identity.">
                             @if (!selectedProcessId.HasValue)
@@ -472,68 +542,6 @@
                                              HelperText="@($"{SelectedRun.EstimatedCost:C} estimated for this run.")"
                                              Tone="info" />
                             </SummaryTiles>
-
-                            <CanvasWorkbenchStage Eyebrow="Runtime canvas"
-                                                  Title="@SelectedRun.Name"
-                                                  Description="Inspect the live runtime path, keep the selection detail window in sync, and drive explicit runtime actions from the same canvas rhythm used in structure workbench flows.">
-                                <Canvas>
-                                    @if (canvasSurface is null)
-                                    {
-                                        <SurfaceCard Soft="true">
-                                            <p class="text-sm text-slate-600">Runtime canvas data is loading.</p>
-                                        </SurfaceCard>
-                                    }
-                                    else
-                                    {
-                                        <CanvasWorkbench Surface="canvasSurface"
-                                                         @ref="workbenchRef"
-                                                         StateChanged="HandleCanvasStateChangedAsync"
-                                                         SelectionChanged="HandleCanvasSelectionChangedAsync"
-                                                         ContextActionRequested="HandleCanvasContextActionAsync"
-                                                         NodeOpened="HandleCanvasNodeOpenedAsync">
-                                            <ToolbarLeftContent>
-                                                <ProcessCanvasToolbarActions SelectionWindowVisible="@canvasSelectionWindowState.IsVisible"
-                                                                             ShowToolbox="false"
-                                                                             SelectionTestId="processes-runtime-toggle-selection"
-                                                                             ToggleSelectionWindow="ToggleCanvasSelectionWindowAsync" />
-                                            </ToolbarLeftContent>
-                                            <OverlayContent>
-                                                @if (canvasSelectionWindowState.IsVisible)
-                                                {
-                                                    <CanvasFloatingWindow WindowId="@CanvasSelectionWindowId"
-                                                                          TestId="processes-runtime-selection-window"
-                                                                          AriaLabel="Process runtime selection"
-                                                                          Kicker="Runtime selection"
-                                                                          Title="@CanvasSelectionWindowTitle"
-                                                                          Summary="@CanvasSelectionWindowSummary"
-                                                                          DefaultPlacement="top-right"
-                                                                          DefaultWidth="360"
-                                                                          DefaultHeight="360"
-                                                                          MinWidth="320"
-                                                                          MinHeight="220"
-                                                                          MaxWidth="520"
-                                                                          State="@canvasSelectionWindowState"
-                                                                          StateChanged="HandleCanvasSelectionWindowStateChangedAsync">
-                                                        <ProcessCanvasSelectionPanel IsRuntime="true"
-                                                                                     RuntimeStep="@SelectedCanvasRuntimeStep"
-                                                                                     SelectedRuntimeBranchOutcomeId="@(SelectedCanvasRuntimeStep is null ? null : ResolveSelectedBranchOutcomeId(SelectedCanvasRuntimeStep.Id))"
-                                                                                     SelectedRuntimeBranchOutcomeIdChanged="@(value => SelectedCanvasRuntimeStep is null ? Task.CompletedTask : UpdateRuntimeBranchOutcomeSelectionAsync(SelectedCanvasRuntimeStep.Id, value))"
-                                                                                     ClearSelection="ClearCanvasSelectionAsync"
-                                                                                     OpenActionDialog="OpenCanvasActionDialogAsync"
-                                                                                     StartRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.InProgress))"
-                                                                                     CompleteRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Completed))"
-                                                                                     BlockRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Blocked))"
-                                                                                     RequestRuntimeApproval="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.WaitingApproval))"
-                                                                                     RefuseRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Refused))"
-                                                                                     FailRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.Failed))"
-                                                                                     RecordRuntimeArtifact="@(async () => { PrepareSelectedRuntimeArtifactCapture(); await Task.CompletedTask; })" />
-                                                    </CanvasFloatingWindow>
-                                                }
-                                            </OverlayContent>
-                                        </CanvasWorkbench>
-                                    }
-                                </Canvas>
-                            </CanvasWorkbenchStage>
 
                             <SectionCard Title="Step execution"
                                          Description="Update runtime state explicitly so blocked work, safe refusals, approvals, and failures become durable evidence instead of disappearing into chat.">
@@ -993,6 +1001,9 @@
                     <Button Text="Add dependent step"
                             ButtonStyle="ButtonStyle.Light"
                             Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.AddDependentStep))" />
+                    <Button Text="Add branch outcome"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.AddBranchOutcome))" />
                     <Button Text="Add role binding"
                             ButtonStyle="ButtonStyle.Light"
                             Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.AddRoleBinding))" />

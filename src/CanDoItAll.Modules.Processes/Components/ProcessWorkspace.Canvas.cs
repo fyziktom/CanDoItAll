@@ -276,6 +276,9 @@ public partial class ProcessWorkspace
             case ProcessCanvasActionIds.AddDependentStep:
                 OpenCanvasStepEditor(actionId, SelectedCanvasDefinitionStep, x, y);
                 break;
+            case ProcessCanvasActionIds.AddBranchOutcome:
+                AddBranchOutcomeToSelectedStep();
+                break;
             case ProcessCanvasActionIds.AddRoleBinding:
                 AddRoleBindingToSelectedStep();
                 break;
@@ -404,15 +407,18 @@ public partial class ProcessWorkspace
         canvasEditorWindowState.IsMinimized = false;
     }
 
-    private void OpenCanvasStepEditor(string actionId, ProcessStepEditorModel? sourceStep, double x, double y)
+    private void OpenCanvasStepEditor(
+        string actionId,
+        ProcessStepEditorModel? sourceStep,
+        double x,
+        double y,
+        Guid? branchOutcomeId = null)
     {
         var dependencyId = sourceStep?.Id;
+        var defaultY = ResolveCanvasStepEditorY(sourceStep, branchOutcomeId, y);
         var defaultX = x > 0
             ? x
             : sourceStep?.CanvasX + 300 ?? 140 + (editor.Steps.Count * 280);
-        var defaultY = y > 0
-            ? y
-            : sourceStep?.CanvasY ?? 180;
 
         if (!ProcessCanvasTemplateCatalog.TryCreateStepDraft(
                 actionId.StartsWith("process-step.", StringComparison.Ordinal) ? actionId : ProcessCanvasActionIds.CreateStepImplementation,
@@ -425,6 +431,7 @@ public partial class ProcessWorkspace
             return;
         }
 
+        stepDraft.DependsOnBranchOutcomeId = branchOutcomeId;
         canvasRoleDraft = null;
         canvasStepDraft = stepDraft;
         canvasEditedRoleTarget = null;
@@ -435,6 +442,23 @@ public partial class ProcessWorkspace
             : ProcessCanvasActionIds.CreateStepImplementation;
         canvasEditorWindowState.IsVisible = true;
         canvasEditorWindowState.IsMinimized = false;
+    }
+
+    private Task AddRoutedStepFromSelectedStepAsync(Guid? branchOutcomeId)
+    {
+        if (SelectedCanvasDefinitionStep is null)
+        {
+            SetError("Select a definition step before adding a routed step.");
+            return Task.CompletedTask;
+        }
+
+        OpenCanvasStepEditor(
+            ProcessCanvasActionIds.CreateStepImplementation,
+            SelectedCanvasDefinitionStep,
+            0,
+            0,
+            branchOutcomeId);
+        return Task.CompletedTask;
     }
 
     private void OpenDefinitionStepEditor()
@@ -580,6 +604,33 @@ public partial class ProcessWorkspace
 
         AddBranchOutcome(SelectedCanvasDefinitionStep);
         OpenDefinitionStepEditor();
+    }
+
+    private static double ResolveCanvasStepEditorY(ProcessStepEditorModel? sourceStep, Guid? branchOutcomeId, double requestedY)
+    {
+        if (requestedY > 0)
+        {
+            return requestedY;
+        }
+
+        if (sourceStep is null)
+        {
+            return 180;
+        }
+
+        if (!branchOutcomeId.HasValue || sourceStep.BranchOutcomes.Count == 0)
+        {
+            return sourceStep.CanvasY;
+        }
+
+        var branchIndex = sourceStep.BranchOutcomes.FindIndex(outcome => outcome.Id == branchOutcomeId.Value);
+        if (branchIndex < 0)
+        {
+            return sourceStep.CanvasY;
+        }
+
+        var midpoint = (sourceStep.BranchOutcomes.Count - 1) / 2d;
+        return sourceStep.CanvasY + ((branchIndex - midpoint) * 220d);
     }
 
     private void RemoveSelectedDefinitionStep()

@@ -13,6 +13,7 @@ internal static class ProcessCanvasActionIds
     public const string CreateRoleSecurityReviewer = "process-role.security-reviewer";
 
     public const string CreateStepIntake = "process-step.intake";
+    public const string CreateStepDecision = "process-step.decision";
     public const string CreateStepArchitecture = "process-step.architecture";
     public const string CreateStepImplementation = "process-step.implementation";
     public const string CreateStepQa = "process-step.qa";
@@ -23,6 +24,7 @@ internal static class ProcessCanvasActionIds
 
     public const string EditDefinitionStep = "process-definition.edit-step";
     public const string AddDependentStep = "process-definition.add-dependent-step";
+    public const string AddBranchOutcome = "process-definition.add-branch-outcome";
     public const string AddRoleBinding = "process-definition.add-role-binding";
     public const string AddArtifactExpectation = "process-definition.add-artifact-expectation";
     public const string RemoveDefinitionStep = "process-definition.remove-step";
@@ -231,6 +233,53 @@ internal static class ProcessCanvasTemplateCatalog
                 false,
                 8,
                 [])),
+        new(
+            ProcessCanvasActionIds.CreateStepDecision,
+            "Decision and routing",
+            "Add a switch-style decision gate with explicit branch outcomes and a named decision-maker role.",
+            (ordinal, dependsOnStepId, x, y) => BuildStepDraft(
+                ordinal,
+                "decision-and-routing",
+                "Route the next path",
+                "Switch-style branching gate",
+                ProcessStepKind.Decision,
+                dependsOnStepId,
+                x,
+                y,
+                "Decision input, proof, and role context needed to choose the next path.",
+                "Chosen branch outcome with explicit downstream path ownership.",
+                "Decision evidence, supporting analysis, and the selected branch rationale.",
+                "A named decision-maker role must choose the branch instead of letting routing hide inside notes.",
+                "Escalate when no defined outcome safely covers the observed case.",
+                false,
+                true,
+                false,
+                true,
+                4,
+                [
+                    new ProcessArtifactExpectationEditorModel
+                    {
+                        ArtifactKind = ProcessArtifactKind.Decision,
+                        Title = "Branch routing decision record",
+                        TrustRequirement = ProcessArtifactTrustRequirement.HumanApproved,
+                        AllowedFutureUsageSummary = "Reusable for later execution review, audit, and process tuning.",
+                        ValidationRequirementSummary = "Decision record must name the selected outcome and why the other paths were not chosen."
+                    }
+                ],
+                [
+                    new ProcessStepBranchOutcomeEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        Key = "outcome-1",
+                        Title = "Outcome 1"
+                    },
+                    new ProcessStepBranchOutcomeEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        Key = "outcome-2",
+                        Title = "Outcome 2"
+                    }
+                ])),
         new(
             ProcessCanvasActionIds.CreateStepArchitecture,
             "Architecture review",
@@ -483,7 +532,7 @@ internal static class ProcessCanvasTemplateCatalog
                 RoleTemplates
                     .Select(template => new ProcessCanvasToolboxAction(template.ActionId, template.Label, template.Summary, "neutral"))
                     .ToList()),
-            new ProcessCanvasToolboxGroup(
+                new ProcessCanvasToolboxGroup(
                 "step-templates",
                 "Step templates",
                 "Seed explicit process steps with realistic governance, proof, and delivery expectations.",
@@ -544,7 +593,8 @@ internal static class ProcessCanvasTemplateCatalog
         bool requiresApproval,
         bool requiresDecisionRecord,
         int targetLeadHours,
-        List<ProcessArtifactExpectationEditorModel> artifactExpectations)
+        List<ProcessArtifactExpectationEditorModel> artifactExpectations,
+        List<ProcessStepBranchOutcomeEditorModel>? branchOutcomes = null)
     {
         return new ProcessStepEditorModel
         {
@@ -566,7 +616,8 @@ internal static class ProcessCanvasTemplateCatalog
             RequiresApproval = requiresApproval,
             RequiresDecisionRecord = requiresDecisionRecord,
             TargetLeadHours = targetLeadHours,
-            ArtifactExpectations = artifactExpectations
+            ArtifactExpectations = artifactExpectations,
+            BranchOutcomes = branchOutcomes ?? []
         };
     }
 }

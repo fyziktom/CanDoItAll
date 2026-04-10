@@ -154,6 +154,7 @@
 
 .cw-workbench-shell {
     position: relative;
+    container-type: inline-size;
 }
 
 .cw-workbench-shell.is-maximized {

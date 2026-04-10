@@ -8,8 +8,19 @@ public sealed class ProcessCanvasSurfaceFactory
     {
         ArgumentNullException.ThrowIfNull(editor);
 
+        var branchOutcomeTitles = editor.Steps
+            .SelectMany(step => step.BranchOutcomes)
+            .Where(outcome => outcome.Id.HasValue)
+            .ToDictionary(
+                outcome => outcome.Id!.Value,
+                outcome => string.IsNullOrWhiteSpace(outcome.Title) ? "Untitled branch" : outcome.Title);
         var nodes = editor.Steps
-            .Select((step, index) => BuildDefinitionNode(step, index))
+            .Select((step, index) => BuildDefinitionNode(
+                step,
+                index,
+                step.DependsOnBranchOutcomeId.HasValue && branchOutcomeTitles.TryGetValue(step.DependsOnBranchOutcomeId.Value, out var dependencyOutcomeTitle)
+                    ? dependencyOutcomeTitle
+                    : null))
             .ToList();
         var links = editor.Steps
             .Where(step => step.DependsOnStepId.HasValue)
@@ -79,7 +90,7 @@ public sealed class ProcessCanvasSurfaceFactory
         };
     }
 
-    private static CanvasWorkbenchNode BuildDefinitionNode(ProcessStepEditorModel step, int index)
+    private static CanvasWorkbenchNode BuildDefinitionNode(ProcessStepEditorModel step, int index, string? dependencyOutcomeTitle)
     {
         var status = step.RequiresApproval
             ? "approval"
@@ -103,7 +114,7 @@ public sealed class ProcessCanvasSurfaceFactory
             Icon = ResolveStepIcon(step.StepKind),
             Title = step.Title,
             Subtitle = string.IsNullOrWhiteSpace(step.Subtitle) ? step.StepKind.ToString() : step.Subtitle,
-            LeadText = step.OutputContractSummary,
+            LeadText = ResolveDefinitionLeadText(step, dependencyOutcomeTitle),
             Status = status,
             StatusPill = step.StepKind.ToString(),
             PaletteKey = paletteKey,
@@ -129,19 +140,7 @@ public sealed class ProcessCanvasSurfaceFactory
                     Tone = step.BranchOutcomes.Count == 0 ? "neutral" : "accent"
                 }
             ],
-            FooterChips =
-            [
-                new CanvasWorkbenchChip
-                {
-                    Text = status,
-                    Tone = status switch
-                    {
-                        "approval" => "warn",
-                        "review" => "accent",
-                        _ => "neutral"
-                    }
-                }
-            ],
+            FooterChips = BuildDefinitionFooterChips(status, dependencyOutcomeTitle),
             ContextActions =
             [
                 new CanvasWorkbenchAction
@@ -159,6 +158,14 @@ public sealed class ProcessCanvasSurfaceFactory
                     MenuLabel = "Add dependent step",
                     Icon = "add_circle",
                     Tone = "info"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.AddBranchOutcome,
+                    Label = "Add branch outcome",
+                    MenuLabel = "Add branch outcome",
+                    Icon = "call_split",
+                    Tone = "accent"
                 },
                 new CanvasWorkbenchAction
                 {
@@ -350,6 +357,15 @@ public sealed class ProcessCanvasSurfaceFactory
                 },
                 new CanvasWorkbenchAction
                 {
+                    ActionId = ProcessCanvasActionIds.CreateStepDecision,
+                    Label = "Decision step",
+                    MenuLabel = "Add decision step",
+                    Description = "Add a switch-style decision node with explicit branch outcomes.",
+                    Icon = "call_split",
+                    Tone = "accent"
+                },
+                new CanvasWorkbenchAction
+                {
                     ActionId = ProcessCanvasActionIds.CreateStepReleaseApproval,
                     Label = "Approval step",
                     MenuLabel = "Add approval step",
@@ -389,6 +405,15 @@ public sealed class ProcessCanvasSurfaceFactory
                 },
                 new CanvasWorkbenchAction
                 {
+                    ActionId = ProcessCanvasActionIds.CreateStepDecision,
+                    Label = "Decision router",
+                    MenuLabel = "Add decision router",
+                    Description = "Add a branching node and define typed switch outcomes on the canvas.",
+                    Icon = "call_split",
+                    Tone = "accent"
+                },
+                new CanvasWorkbenchAction
+                {
                     ActionId = ProcessCanvasActionIds.CreateRoleSolutionArchitect,
                     Label = "Architect role",
                     MenuLabel = "Add architect role",
@@ -416,6 +441,46 @@ public sealed class ProcessCanvasSurfaceFactory
                 }
             ]
         };
+    }
+
+    private static string ResolveDefinitionLeadText(ProcessStepEditorModel step, string? dependencyOutcomeTitle)
+    {
+        if (!string.IsNullOrWhiteSpace(dependencyOutcomeTitle))
+        {
+            return string.IsNullOrWhiteSpace(step.OutputContractSummary)
+                ? $"Continues when '{dependencyOutcomeTitle}' is selected."
+                : $"{step.OutputContractSummary} Path: {dependencyOutcomeTitle}.";
+        }
+
+        return step.OutputContractSummary;
+    }
+
+    private static List<CanvasWorkbenchChip> BuildDefinitionFooterChips(string status, string? dependencyOutcomeTitle)
+    {
+        var chips = new List<CanvasWorkbenchChip>
+        {
+            new()
+            {
+                Text = status,
+                Tone = status switch
+                {
+                    "approval" => "warn",
+                    "review" => "accent",
+                    _ => "neutral"
+                }
+            }
+        };
+
+        if (!string.IsNullOrWhiteSpace(dependencyOutcomeTitle))
+        {
+            chips.Add(new CanvasWorkbenchChip
+            {
+                Text = dependencyOutcomeTitle,
+                Tone = "accent"
+            });
+        }
+
+        return chips;
     }
 
     private static CanvasWorkbenchChrome BuildRunChrome()

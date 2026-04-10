@@ -437,7 +437,8 @@
         layoutComposer(state);
     }
 
-    function findContainingBlockOverride(state) {
+    function findContainingBlockOverrides(state) {
+        const overrides = [];
         let current = state.shell?.parentElement || null;
         while (current) {
             const style = window.getComputedStyle(current);
@@ -446,13 +447,20 @@
                 style.filter !== "none" ||
                 style.backdropFilter !== "none" ||
                 style.webkitBackdropFilter !== "none") {
-                return current;
+                overrides.push({
+                    element: current,
+                    transform: current.style.transform,
+                    perspective: current.style.perspective,
+                    filter: current.style.filter,
+                    backdropFilter: current.style.backdropFilter,
+                    webkitBackdropFilter: current.style.webkitBackdropFilter
+                });
             }
 
             current = current.parentElement;
         }
 
-        return null;
+        return overrides;
     }
 
     function suspendContainingBlock(state) {
@@ -460,20 +468,19 @@
             return;
         }
 
-        const element = findContainingBlockOverride(state);
-        if (!element) {
+        const overrides = findContainingBlockOverrides(state);
+        if (!overrides.length) {
             return;
         }
 
-        state.containingBlockOverride = {
-            element,
-            filter: element.style.filter,
-            backdropFilter: element.style.backdropFilter,
-            webkitBackdropFilter: element.style.webkitBackdropFilter
-        };
-        element.style.filter = "none";
-        element.style.backdropFilter = "none";
-        element.style.webkitBackdropFilter = "none";
+        state.containingBlockOverride = overrides;
+        for (const override of overrides) {
+            override.element.style.transform = "none";
+            override.element.style.perspective = "none";
+            override.element.style.filter = "none";
+            override.element.style.backdropFilter = "none";
+            override.element.style.webkitBackdropFilter = "none";
+        }
     }
 
     function restoreContainingBlock(state) {
@@ -481,10 +488,17 @@
             return;
         }
 
-        const override = state.containingBlockOverride;
-        override.element.style.filter = override.filter || "";
-        override.element.style.backdropFilter = override.backdropFilter || "";
-        override.element.style.webkitBackdropFilter = override.webkitBackdropFilter || "";
+        const overrides = Array.isArray(state.containingBlockOverride)
+            ? state.containingBlockOverride
+            : [state.containingBlockOverride];
+        for (const override of overrides) {
+            override.element.style.transform = override.transform || "";
+            override.element.style.perspective = override.perspective || "";
+            override.element.style.filter = override.filter || "";
+            override.element.style.backdropFilter = override.backdropFilter || "";
+            override.element.style.webkitBackdropFilter = override.webkitBackdropFilter || "";
+        }
+
         state.containingBlockOverride = null;
     }
 
@@ -1279,5 +1293,5 @@
         }
     }
 
-    Object.assign(shared, { startPan, isMarqueeModifierPressed, startMarquee, ensureSelectedForDrag, startDragForNodeIds, startDrag, startFrameDrag, updateMarquee, legacyApplyMarqueeSelection, updateDrag, updatePan, finishInteraction, isNodeVisibleInViewport, centerNodeElementInViewport, ensureNodeVisible, legacyResize, findContainingBlockOverride, suspendContainingBlock, restoreContainingBlock, setMaximized, fitView, focusNode, normalizeWheelDelta, applyWheelZoom, setZoomPercent, setMenuScalePercent, toggleHelp, isManualDoubleActivation, handleNodeDoubleActivation, requestNodeOpen, legacyAttachEvents, hydrateState, refresh });
+    Object.assign(shared, { startPan, isMarqueeModifierPressed, startMarquee, ensureSelectedForDrag, startDragForNodeIds, startDrag, startFrameDrag, updateMarquee, legacyApplyMarqueeSelection, updateDrag, updatePan, finishInteraction, isNodeVisibleInViewport, centerNodeElementInViewport, ensureNodeVisible, legacyResize, findContainingBlockOverride: findContainingBlockOverrides, findContainingBlockOverrides, suspendContainingBlock, restoreContainingBlock, setMaximized, fitView, focusNode, normalizeWheelDelta, applyWheelZoom, setZoomPercent, setMenuScalePercent, toggleHelp, isManualDoubleActivation, handleNodeDoubleActivation, requestNodeOpen, legacyAttachEvents, hydrateState, refresh });
 })();
