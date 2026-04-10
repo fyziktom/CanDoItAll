@@ -255,7 +255,7 @@
 
 .cw-workbench__popover {
     position: absolute;
-    z-index: 22;
+    z-index: 620;
     display: grid;
     gap: 0.35rem;
     max-width: 15rem;

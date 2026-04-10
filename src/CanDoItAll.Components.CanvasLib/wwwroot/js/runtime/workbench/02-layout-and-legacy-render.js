@@ -1000,24 +1000,36 @@
 
         state.popover.style.display = "none";
         state.popoverAnchor = null;
+        state.hoveredAnnotationKey = "";
     }
 
     function legacyShowPopover(state, anchorElement, annotation) {
-        if (!state?.popover || !anchorElement || !annotation) {
-            return;
+        if (!state?.host?.isConnected ||
+            !state?.popover ||
+            !state.popover.isConnected ||
+            !state.popoverTitle ||
+            !state.popoverBody ||
+            !anchorElement ||
+            !anchorElement.isConnected ||
+            !annotation) {
+            hidePopover(state);
+            return false;
         }
 
         if (state.surface?.chrome?.tooltipPopover?.isEnabled === false) {
-            return;
+            hidePopover(state);
+            return false;
         }
 
+        const anchorRect = anchorElement.getBoundingClientRect();
         state.popover.dataset.kind = annotation.kind || "info";
         state.popover.dataset.tone = annotation.tone || "accent";
         state.popoverTitle.textContent = annotation.label || annotation.kind || "Signal";
         state.popoverBody.textContent = annotation.description || annotation.label || "Shared workbench signal";
         state.popover.style.display = "grid";
         state.popoverAnchor = anchorElement;
-        positionFloatingOverlayWithinHost(state, state.popover, anchorElement.getBoundingClientRect());
+        positionFloatingOverlayWithinHost(state, state.popover, anchorRect);
+        return true;
     }
 
     function invokeAnnotationAction(state, node, annotation) {

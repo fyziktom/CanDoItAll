@@ -1150,6 +1150,7 @@
             hoveredNodeId: null,
             hoveredDeleteNodeId: null,
             hoveredDeleteLinkKey: null,
+            hoveredAnnotationKey: "",
             pointerHostPoint: null,
             renderedLinks: [],
             previewLink: null,
@@ -1200,6 +1201,7 @@
         state.pointerHostPoint = null;
         state.hoveredDeleteNodeId = null;
         state.hoveredDeleteLinkKey = null;
+        state.hoveredAnnotationKey = "";
         state.renderedLinks = [];
         state.previewLink = null;
         syncMenuScaleCss(state);

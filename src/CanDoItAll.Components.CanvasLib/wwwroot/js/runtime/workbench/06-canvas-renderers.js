@@ -389,15 +389,25 @@
         }
 
         if (typeof anchor.getBoundingClientRect === "function") {
-            return anchor.getBoundingClientRect();
+            const rect = anchor.getBoundingClientRect();
+            if (Number.isFinite(rect?.left) &&
+                Number.isFinite(rect?.top) &&
+                Number.isFinite(rect?.width) &&
+                Number.isFinite(rect?.height) &&
+                Number.isFinite(rect?.right) &&
+                Number.isFinite(rect?.bottom)) {
+                return rect;
+            }
+
+            return null;
         }
 
         const left = typeof anchor.left === "number" ? anchor.left : anchor.x;
         const top = typeof anchor.top === "number" ? anchor.top : anchor.y;
-        if (typeof left === "number" &&
-            typeof top === "number" &&
-            typeof anchor.width === "number" &&
-            typeof anchor.height === "number") {
+        if (Number.isFinite(left) &&
+            Number.isFinite(top) &&
+            Number.isFinite(anchor.width) &&
+            Number.isFinite(anchor.height)) {
             return {
                 left,
                 top,
@@ -489,10 +499,40 @@
     }
 
     function clearScenePopoverHover(state) {
-        if (state.hoveredAnnotationKey) {
-            state.hoveredAnnotationKey = "";
-            hidePopover(state);
+        state.hoveredAnnotationKey = "";
+        hidePopover(state);
+    }
+
+    function areAnchorRectsEquivalent(left, right) {
+        if (!left || !right) {
+            return false;
         }
+
+        return round(left.left) === round(right.left) &&
+            round(left.top) === round(right.top) &&
+            round(left.width) === round(right.width) &&
+            round(left.height) === round(right.height);
+    }
+
+    function shouldRefreshScenePopover(state, annotationKey, anchorRect) {
+        if (state.hoveredAnnotationKey !== annotationKey) {
+            return true;
+        }
+
+        if (!state?.popover || !state.popover.isConnected || state.popover.style.display === "none") {
+            return true;
+        }
+
+        return !areAnchorRectsEquivalent(resolveAnchorRect(state.popoverAnchor), anchorRect);
+    }
+
+    function showScenePopover(state, anchorRect, annotation) {
+        const showPopoverFn = shared.showPopover;
+        if (typeof showPopoverFn !== "function") {
+            return false;
+        }
+
+        return showPopoverFn(state, anchorRect, annotation) !== false;
     }
 
     function renderConnectorAnchors(state, visibleNodes) {
@@ -521,15 +561,19 @@
 
         if (hitTarget?.type === "annotation" && hitTarget.annotation) {
             const annotationKey = `${hitTarget.nodeId}:${hitTarget.annotation.id || hitTarget.annotation.kind || hitTarget.annotation.label || hitTarget.annotationIndex || 0}`;
-            if (state.hoveredAnnotationKey !== annotationKey) {
-                state.hoveredAnnotationKey = annotationKey;
-                const anchorRect = resolveAnchorRect(hitTarget.bounds);
-                if (!anchorRect) {
+            const anchorRect = resolveAnchorRect(hitTarget.bounds);
+            if (!anchorRect) {
+                clearScenePopoverHover(state);
+                return;
+            }
+
+            if (shouldRefreshScenePopover(state, annotationKey, anchorRect)) {
+                if (!showScenePopover(state, anchorRect, hitTarget.annotation)) {
                     clearScenePopoverHover(state);
                     return;
                 }
 
-                showPopover(state, anchorRect, hitTarget.annotation);
+                state.hoveredAnnotationKey = annotationKey;
             }
             return;
         }

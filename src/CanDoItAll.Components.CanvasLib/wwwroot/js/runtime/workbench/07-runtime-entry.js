@@ -515,17 +515,26 @@
     }
 
     function showPopover(state, anchor, annotation) {
-        if (!state?.popover || !anchor || !annotation) {
-            return;
+        if (!state?.host?.isConnected ||
+            !state?.popover ||
+            !state.popover.isConnected ||
+            !state.popoverTitle ||
+            !state.popoverBody ||
+            !anchor ||
+            !annotation) {
+            hidePopover(state);
+            return false;
         }
 
         if (state.surface?.chrome?.tooltipPopover?.isEnabled === false) {
-            return;
+            hidePopover(state);
+            return false;
         }
 
         const anchorRect = resolveAnchorRect(anchor);
         if (!anchorRect) {
-            return;
+            hidePopover(state);
+            return false;
         }
 
         state.popover.dataset.kind = annotation.kind || "info";
@@ -535,6 +544,7 @@
         state.popover.style.display = "grid";
         state.popoverAnchor = anchorRect;
         positionFloatingOverlayWithinHost(state, state.popover, anchorRect);
+        return true;
     }
 
     function openNodeMetadataMenu(state, node, actionId, anchor) {
@@ -978,7 +988,7 @@
                 if (hitTarget?.type === "annotation" && event.button === 0) {
                     const node = resolveHitNode(state, hitTarget);
                     if (node) {
-                        hidePopover(state);
+                        clearScenePopoverHover(state);
                         invokeAnnotationAction(state, node, hitTarget.annotation);
                     }
                     return;
@@ -1463,7 +1473,7 @@
                 return false;
             }
 
-            hidePopover(state);
+            clearScenePopoverHover(state);
             invokeAnnotationAction(state, node, hitTarget.annotation);
             return true;
         }

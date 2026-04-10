@@ -1,0 +1,38 @@
+# Phase Plan
+
+## Phase Sequence
+
+1. Prepare and validate the feedback bundle against the current repo and the reported stack trace.
+2. Execute subbundle 01 as the critical foundation for split-file popover access and scene-hover state invariants.
+3. Execute subbundle 02 only after subbundle 01 proves that canvas annotation hover no longer throws and no stale state suppresses follow-on behavior.
+4. Execute subbundle 03 for builds, browser proof, raw-note closure, and final gate review.
+5. End with completed-stage bundle validation and reopen any earlier phase if browser proof contradicts the foundation assumptions.
+
+## Subbundle Dependency Map
+
+```mermaid
+flowchart TD
+    Prep["Prepared bundle and readiness gate"] --> SB01["01 Hover and popover state invariants"]
+    SB01 --> Gate01{"Crash removed and canvas hover state trusted?"}
+    Gate01 -->|Yes| SB02["02 Canvas runtime hardening across node interactions"]
+    Gate01 -->|No| SB01
+    SB02 --> Gate02{"Shared-canvas behavior still preserved across clicks and rerenders?"}
+    Gate02 -->|Yes| SB03["03 Browser proof and closure"]
+    Gate02 -->|No| SB02
+    SB03 --> Close["Completed-stage validator and raw-note closure"]
+```
+
+## Critical Subbundles
+
+- `01-hover-and-popover-state-invariants` is the critical UI foundation. If it is wrong, later browser proof is untrustworthy because the shared popover entry path and annotation hover state can still fail under the same trigger.
+- `02-canvas-runtime-hardening-across-node-interactions` is the dependent runtime sweep. It must confirm that the foundation fix did not leave stale-state regressions in click, refresh, or rerender flows before closure work begins.
+- `03-browser-proof-and-closure` is not allowed to downgrade weak UI proof into prose. If sandbox and workbench results diverge, earlier subbundles reopen.
+
+## Phase Gates
+
+- After preparation: run `validate_bundle.py --stage prepared` and fix every failure before touching runtime code.
+- Before subbundle 01: confirm the current repo still matches the identified split-file defect and stale-state findings.
+- After subbundle 01: require targeted validation plus browser proof that annotation hover no longer throws and the popover can still open.
+- Before subbundle 02: confirm subbundle 01 is complete and trusted, then audit nearby click and refresh paths before editing.
+- After subbundle 02: require browser proof for hover, click, refresh, and open-popover visibility on the shared canvas route.
+- Before closure: run the real build and browser proof, close every raw note, review screenshots, and rerun the bundle validator at completed stage.
