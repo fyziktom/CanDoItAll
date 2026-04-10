@@ -3,6 +3,7 @@ using AngleSharp.Dom;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.Modules.Workbench.Pages;
@@ -513,6 +514,52 @@ public sealed class ProjectStructurePageTests
 
         Assert.Contains("/prompt-factory?sessionId=", route, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(flowNode.ArtifactId!.Value.ToString(), route, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(uriBeforeOpen, navigation.Uri);
+    }
+
+    [Fact]
+    public async Task Double_clicking_projected_process_definition_nodes_opens_the_process_workspace_in_a_new_tab()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Projected processes project");
+        var definitionResult = await processesService.SaveAsync(BuildProcessDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(definitionResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(definitionResult.Value)).IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Workbench-visible process", cut.Markup));
+
+        var uriBeforeOpen = navigation.Uri;
+        await OpenNodeFromCanvasAsync(cut, BuildProcessDefinitionNodeKey(definitionResult.Value));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-node-quick-actions", cut.Markup);
+            Assert.Contains("Open Processes", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-quick-action-primary']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("project-structure-node-quick-actions", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains(
+                harness.Context.JSInterop.Invocations,
+                invocation => string.Equals(invocation.Identifier, "open", StringComparison.Ordinal));
+        });
+
+        var invocation = harness.Context.JSInterop.Invocations
+            .Last(candidate => string.Equals(candidate.Identifier, "open", StringComparison.Ordinal));
+        var route = Assert.IsType<string>(invocation.Arguments[0]);
+
+        Assert.Contains($"/projects/{projectId}/processes?processId={definitionResult.Value}", route, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(uriBeforeOpen, navigation.Uri);
     }
 
@@ -2149,11 +2196,108 @@ public sealed class ProjectStructurePageTests
         return result.Value;
     }
 
+    private static ProcessDefinitionEditorModel BuildProcessDefinitionEditor(Guid projectId, Guid managerRoleId)
+    {
+        var intakeStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Workbench-visible process",
+            Summary = "Project the process definition into the structure graph.",
+            ValueStatement = "Keep structure and process authoring aligned.",
+            CustomerName = "Workbench validation customer",
+            OwnerName = "Process architecture reviewer",
+            GovernancePolicySummary = "Projected process nodes stay read-only in the structure canvas.",
+            ChangeSummary = "Initial workbench projection test definition.",
+            ConstitutionRuleSummary = "The role contract remains stable while executors change.",
+            OperatingModeSummary = "Assisted execution routed through the project-scoped process workspace.",
+            SimulationReadinessSummary = "Safe for component validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = managerRoleId,
+                    Key = "delivery-owner",
+                    DisplayName = "Delivery owner",
+                    Purpose = "Own the projected process flow.",
+                    StaffingIntent = "Assigned from the project manager lane.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                    PreferredExecutorKind = "person",
+                    SnapshotSummary = "Delivery owner role snapshot."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = intakeStepId,
+                    Key = "intake",
+                    Title = "Capture integration intake",
+                    StepKind = ProcessStepKind.Start,
+                    InputContractSummary = "Structure-side scope request.",
+                    OutputContractSummary = "Typed intake package.",
+                    EvidenceContractSummary = "Capture the intake context.",
+                    DecisionRightsSummary = "Delivery owner moves the request forward.",
+                    ExceptionPolicySummary = "Escalate missing scope or governance details.",
+                    TargetLeadHours = 2,
+                    CanvasX = 140,
+                    CanvasY = 140,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            RebindPolicySummary = "Rebind to the current delivery owner."
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Key = "review",
+                    Title = "Review delivery readiness",
+                    StepKind = ProcessStepKind.Work,
+                    InputContractSummary = "Typed intake package.",
+                    OutputContractSummary = "Ready-to-execute decision.",
+                    EvidenceContractSummary = "Decision-ready evidence bundle.",
+                    DecisionRightsSummary = "Delivery owner can approve, block, or escalate.",
+                    ExceptionPolicySummary = "Block when evidence or staffing is incomplete.",
+                    TargetLeadHours = 4,
+                    DependsOnStepId = intakeStepId,
+                    CanvasX = 420,
+                    CanvasY = 140,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            RebindPolicySummary = "Delivery owner remains attached."
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            ArtifactKind = ProcessArtifactKind.Evidence,
+                            Title = "Projected structure review evidence",
+                            ValidationRequirementSummary = "Human review remains required."
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
     private static string BuildProjectRootNodeKey(Guid projectId)
         => $"project:{projectId}";
 
     private static string BuildProjectChildNodeKey(Guid projectId)
         => $"project-child:{projectId}";
+
+    private static string BuildProcessDefinitionNodeKey(Guid definitionId)
+        => $"process-definition:{definitionId}";
 
     private static string ExtractNodeHash(string nodeId)
     {

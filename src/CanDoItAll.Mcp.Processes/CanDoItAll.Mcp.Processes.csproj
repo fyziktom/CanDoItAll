@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>CanDoItAll.Mcp.Processes</AssemblyName>
+    <RootNamespace>CanDoItAll.Mcp.Processes</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.Composition\CanDoItAll.Composition.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+  </ItemGroup>
+
+</Project>

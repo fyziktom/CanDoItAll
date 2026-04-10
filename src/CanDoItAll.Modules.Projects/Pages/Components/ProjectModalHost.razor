@@ -299,6 +299,9 @@
                                 <Button ButtonStyle="ButtonStyle.Light"
                                         Text="Open dashboard tab"
                                         Click="OpenProjectDashboard" />
+                                <Button ButtonStyle="ButtonStyle.Light"
+                                        Text="Open processes"
+                                        Click="OpenProcesses" />
                                 <Button ButtonStyle="ButtonStyle.Danger"
                                         Text="Delete"
                                         Click="Delete" />
@@ -395,6 +398,11 @@
                                         Text="Open structure"
                                         Disabled="@(!Editor.Id.HasValue)"
                                         Click="HandleOpenStructureAsync" />
+                                <Button ButtonStyle="ButtonStyle.Light"
+                                        Class="w-full"
+                                        Text="Open processes"
+                                        Disabled="@(!Editor.Id.HasValue)"
+                                        Click="HandleOpenProcessesAsync" />
                                 <Button ButtonStyle="ButtonStyle.Light"
                                         Class="w-full"
                                         Text="Open calendar"
@@ -582,6 +590,9 @@
     public EventCallback OpenProjectDashboard { get; set; }
 
     [Parameter]
+    public EventCallback OpenProcesses { get; set; }
+
+    [Parameter]
     public EventCallback<Guid> OpenStructure { get; set; }
 
     [Parameter]
@@ -605,6 +616,11 @@
     private Task HandleOpenStructureAsync()
         => Editor.Id.HasValue
             ? OpenStructure.InvokeAsync(Editor.Id.Value)
+            : Task.CompletedTask;
+
+    private Task HandleOpenProcessesAsync()
+        => Editor.Id.HasValue
+            ? OpenProcesses.InvokeAsync()
             : Task.CompletedTask;
 
     private Task HandleOpenCalendarAsync()

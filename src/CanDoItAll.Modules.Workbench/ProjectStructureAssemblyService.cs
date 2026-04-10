@@ -1,10 +1,12 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Factory;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Validation;
 using CanDoItAll.SharedKernel;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -125,6 +127,13 @@ public sealed class ProjectStructureAssemblyService(
     IEnumerable<IProjectStructureProjectionContributor> projectionContributors,
     IClock clock)
 {
+    private static readonly TimeSpan[] SqliteBusyRetryDelays =
+    [
+        TimeSpan.FromMilliseconds(40),
+        TimeSpan.FromMilliseconds(90),
+        TimeSpan.FromMilliseconds(180)
+    ];
+
     private readonly IReadOnlyList<IProjectStructureProjectionContributor> _projectionContributors = projectionContributors.ToList();
 
     public async Task<ProjectStructureAssemblySnapshot> LoadAsync(
@@ -281,10 +290,39 @@ public sealed class ProjectStructureAssemblyService(
 
         if (updatedNodeIds.Count > 0)
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await SaveChangesAsync(dbContext, cancellationToken);
         }
 
         return updatedNodeIds;
+    }
+
+    internal static bool IsSqliteBusy(Exception exception)
+    {
+        return exception switch
+        {
+            SqliteException sqliteException => sqliteException.SqliteErrorCode is 5 or 6,
+            DbUpdateException dbUpdateException when dbUpdateException.InnerException is not null => IsSqliteBusy(dbUpdateException.InnerException),
+            _ when exception.InnerException is not null => IsSqliteBusy(exception.InnerException),
+            _ => false
+        };
+    }
+
+    private static async Task SaveChangesAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            catch (DbUpdateException ex) when (IsSqliteBusy(ex) && attempt < SqliteBusyRetryDelays.Length)
+            {
+                await Task.Delay(SqliteBusyRetryDelays[attempt], cancellationToken);
+            }
+        }
     }
 
     private async Task<HashSet<string>> LoadProjectionNodeKeysAsync(
@@ -898,6 +936,198 @@ internal sealed class PromptFactoryProjectionContributor : IProjectStructureProj
                     : ProjectObjectLinkKind.Contains);
         }
     }
+}
+
+internal sealed class ProcessProjectionContributor : IProjectStructureProjectionContributor
+{
+    public async Task ContributeAsync(ProjectStructureProjectionContext context, CancellationToken cancellationToken)
+    {
+        var definitions = await context.DbContext.Set<ProcessDefinition>()
+            .Where(item => item.ProjectId == context.ProjectId)
+            .OrderBy(item => item.Name)
+            .ToListAsync(cancellationToken);
+        if (definitions.Count == 0)
+        {
+            return;
+        }
+
+        var definitionIds = definitions.Select(item => item.Id).ToArray();
+        var activeVersionIds = definitions
+            .Where(item => item.ActivePublishedVersionId.HasValue)
+            .Select(item => item.ActivePublishedVersionId!.Value)
+            .ToArray();
+        var roleCountsByVersionId = activeVersionIds.Length == 0
+            ? new Dictionary<Guid, int>()
+            : await context.DbContext.Set<ProcessRoleRequirement>()
+                .Where(item => activeVersionIds.Contains(item.ProcessDefinitionVersionId))
+                .GroupBy(item => item.ProcessDefinitionVersionId)
+                .ToDictionaryAsync(group => group.Key, group => group.Count(), cancellationToken);
+        var stepCountsByVersionId = activeVersionIds.Length == 0
+            ? new Dictionary<Guid, int>()
+            : await context.DbContext.Set<ProcessStepDefinition>()
+                .Where(item => activeVersionIds.Contains(item.ProcessDefinitionVersionId))
+                .GroupBy(item => item.ProcessDefinitionVersionId)
+                .ToDictionaryAsync(group => group.Key, group => group.Count(), cancellationToken);
+        var runs = definitionIds.Length == 0
+            ? []
+            : await context.DbContext.Set<ProcessRun>()
+                .Where(item => item.ProjectId == context.ProjectId && definitionIds.Contains(item.ProcessDefinitionId))
+                .OrderBy(item => item.Name)
+                .ToListAsync(cancellationToken);
+        var runIds = runs.Select(item => item.Id).ToArray();
+        var stepRunStatsByRunId = runIds.Length == 0
+            ? new Dictionary<Guid, ProcessRunProjectionStats>()
+            : await context.DbContext.Set<ProcessStepRun>()
+                .Where(item => runIds.Contains(item.ProcessRunId))
+                .GroupBy(item => item.ProcessRunId)
+                .Select(group => new ProcessRunProjectionStats(
+                    group.Key,
+                    group.Count(),
+                    group.Count(item => item.Status == ProcessStepRunStatus.Completed),
+                    group.Count(item => item.Status == ProcessStepRunStatus.Blocked),
+                    group.Count(item => item.Status == ProcessStepRunStatus.WaitingApproval)))
+                .ToDictionaryAsync(item => item.RunId, cancellationToken);
+        var runsByDefinitionId = runs
+            .GroupBy(item => item.ProcessDefinitionId)
+            .ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.UpdatedAtUtc).ToList());
+
+        foreach (var definition in definitions.Select((item, index) => new { Definition = item, Index = index }))
+        {
+            var roleCount = definition.Definition.ActivePublishedVersionId.HasValue &&
+                            roleCountsByVersionId.TryGetValue(definition.Definition.ActivePublishedVersionId.Value, out var resolvedRoleCount)
+                ? resolvedRoleCount
+                : 0;
+            var stepCount = definition.Definition.ActivePublishedVersionId.HasValue &&
+                            stepCountsByVersionId.TryGetValue(definition.Definition.ActivePublishedVersionId.Value, out var resolvedStepCount)
+                ? resolvedStepCount
+                : 0;
+            var definitionNodeKey = BuildProcessDefinitionNodeKey(definition.Definition.Id);
+            var definitionPosition = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.ProcessDefinition, definition.Index);
+
+            context.AddNode(new ProjectObjectRecord
+            {
+                ProjectId = context.ProjectId,
+                NodeKey = definitionNodeKey,
+                ObjectType = ProjectObjectType.ProcessDefinition,
+                Title = definition.Definition.Name,
+                Subtitle = BuildProcessDefinitionSubtitle(definition.Definition, roleCount, stepCount),
+                Status = definition.Definition.Status.ToString(),
+                Notes = BuildProcessDefinitionNotes(definition.Definition, roleCount, stepCount),
+                Binding = ProjectStructureProjectionBindingFactory.Create(
+                    $"/projects/{context.ProjectId}/processes?processId={definition.Definition.Id}",
+                    "process-definition",
+                    definition.Definition.Id),
+                ParentNodeKey = $"project:{context.ProjectId}",
+                PositionX = definitionPosition.X,
+                PositionY = definitionPosition.Y,
+                CreatedAtUtc = definition.Definition.CreatedAtUtc,
+                UpdatedAtUtc = definition.Definition.UpdatedAtUtc
+            });
+            context.AddLink($"project:{context.ProjectId}", definitionNodeKey, ProjectObjectLinkKind.Contains);
+
+            if (!runsByDefinitionId.TryGetValue(definition.Definition.Id, out var definitionRuns))
+            {
+                continue;
+            }
+
+            foreach (var run in definitionRuns.Select((item, index) => new { Run = item, Index = index }))
+            {
+                var stats = stepRunStatsByRunId.GetValueOrDefault(run.Run.Id, new ProcessRunProjectionStats(run.Run.Id, 0, 0, 0, 0));
+                var runNodeKey = BuildProcessRunNodeKey(run.Run.Id);
+                var runPosition = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.ProcessRun, definition.Index + run.Index);
+
+                context.AddNode(new ProjectObjectRecord
+                {
+                    ProjectId = context.ProjectId,
+                    NodeKey = runNodeKey,
+                    ObjectType = ProjectObjectType.ProcessRun,
+                    Title = run.Run.Name,
+                    Subtitle = BuildProcessRunSubtitle(run.Run, stats),
+                    Status = run.Run.Status.ToString(),
+                    Notes = BuildProcessRunNotes(run.Run, stats),
+                    Binding = ProjectStructureProjectionBindingFactory.Create(
+                        $"/projects/{context.ProjectId}/processes?runId={run.Run.Id}",
+                        "process-run",
+                        run.Run.Id),
+                    ParentNodeKey = definitionNodeKey,
+                    PositionX = runPosition.X,
+                    PositionY = definitionPosition.Y + 70 + (run.Index * 120),
+                    CreatedAtUtc = run.Run.CreatedAtUtc,
+                    UpdatedAtUtc = run.Run.UpdatedAtUtc
+                });
+                context.AddLink(definitionNodeKey, runNodeKey, ProjectObjectLinkKind.Contains);
+            }
+        }
+    }
+
+    private static string BuildProcessDefinitionNodeKey(Guid definitionId)
+    {
+        return $"process-definition:{definitionId}";
+    }
+
+    private static string BuildProcessRunNodeKey(Guid runId)
+    {
+        return $"process-run:{runId}";
+    }
+
+    private static string BuildProcessDefinitionSubtitle(ProcessDefinition definition, int roleCount, int stepCount)
+    {
+        return $"{definition.Status} · {roleCount} role(s) · {stepCount} step(s)";
+    }
+
+    private static string BuildProcessDefinitionNotes(ProcessDefinition definition, int roleCount, int stepCount)
+    {
+        return string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                definition.Summary?.Trim(),
+                string.IsNullOrWhiteSpace(definition.ValueStatement) ? null : $"Value: {definition.ValueStatement.Trim()}",
+                string.IsNullOrWhiteSpace(definition.OwnerName) ? null : $"Owner: {definition.OwnerName.Trim()}",
+                string.IsNullOrWhiteSpace(definition.CustomerName) ? null : $"Customer: {definition.CustomerName.Trim()}",
+                $"Role-first contract: {roleCount} role(s), {stepCount} step(s)."
+            }.Where(item => !string.IsNullOrWhiteSpace(item)));
+    }
+
+    private static string BuildProcessRunSubtitle(ProcessRun run, ProcessRunProjectionStats stats)
+    {
+        var subtitleParts = new List<string>
+        {
+            run.OperatingMode.ToString(),
+            $"{stats.CompletedStepCount}/{stats.TotalStepCount} step(s) complete"
+        };
+        if (stats.BlockedStepCount > 0)
+        {
+            subtitleParts.Add($"{stats.BlockedStepCount} blocked");
+        }
+
+        if (stats.WaitingApprovalCount > 0)
+        {
+            subtitleParts.Add($"{stats.WaitingApprovalCount} waiting approval");
+        }
+
+        return string.Join(" · ", subtitleParts);
+    }
+
+    private static string BuildProcessRunNotes(ProcessRun run, ProcessRunProjectionStats stats)
+    {
+        return string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                string.IsNullOrWhiteSpace(run.TriggerReason) ? null : $"Trigger: {run.TriggerReason.Trim()}",
+                string.IsNullOrWhiteSpace(run.ExecutorSnapshotSummary) ? null : $"Executors: {run.ExecutorSnapshotSummary.Trim()}",
+                $"Estimated cost: {run.EstimatedCost:C} | Actual cost: {run.ActualCost:C}",
+                stats.BlockedStepCount > 0 ? $"Blocked step(s): {stats.BlockedStepCount}" : null
+            }.Where(item => !string.IsNullOrWhiteSpace(item)));
+    }
+
+    private sealed record ProcessRunProjectionStats(
+        Guid RunId,
+        int TotalStepCount,
+        int CompletedStepCount,
+        int BlockedStepCount,
+        int WaitingApprovalCount);
 }
 
 internal sealed class ValidationProjectionContributor : IProjectStructureProjectionContributor

@@ -1,3 +1,4 @@
+using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
@@ -41,7 +42,7 @@ public sealed class AppDatabaseBootstrapper(
             return;
         }
 
-        await LegacySqliteMigrationBootstrap.PrepareAsync(dbContext, logger, cancellationToken);
+        await CanDoItAllDatabaseMigrationBootstrap.PrepareLegacySqliteAsync(dbContext, logger, cancellationToken);
         await dbContext.Database.MigrateAsync(cancellationToken);
         await CrmHrSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
     }

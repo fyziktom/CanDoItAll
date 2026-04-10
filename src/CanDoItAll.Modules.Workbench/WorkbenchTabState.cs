@@ -626,6 +626,7 @@ public sealed class WorkbenchStateService(
     {
         WorkbenchTabKinds.ProjectOverview or WorkbenchTabKinds.ProjectStructure or WorkbenchTabKinds.ProjectCalendar => "Projects",
         WorkbenchTabKinds.PromptWizardSession or WorkbenchTabKinds.PromptDetail => "Prompt Sessions",
+        WorkbenchTabKinds.Processes => "Processes",
         WorkbenchTabKinds.ValidationRun => "Validation",
         WorkbenchTabKinds.TestPlan => "Testing",
         WorkbenchTabKinds.Settings => "Settings",

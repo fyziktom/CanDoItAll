@@ -312,12 +312,15 @@ function Update-VsCodeMcpConfig {
         [Parameter(Mandatory = $true)]
         [string]$CodeAnalyticsCommandPath,
         [Parameter(Mandatory = $true)]
-        [string]$ProjectStructureCommandPath
+        [string]$ProjectStructureCommandPath,
+        [Parameter(Mandatory = $true)]
+        [string]$ProcessesCommandPath
     )
 
     $escapedComponentsCommandPath = $ComponentsCommandPath.Replace("\", "\\")
     $escapedCodeAnalyticsCommandPath = $CodeAnalyticsCommandPath.Replace("\", "\\")
     $escapedProjectStructureCommandPath = $ProjectStructureCommandPath.Replace("\", "\\")
+    $escapedProcessesCommandPath = $ProcessesCommandPath.Replace("\", "\\")
     $json = @"
 {
   "servers": {
@@ -375,6 +378,15 @@ function Update-VsCodeMcpConfig {
       ],
       "cwd": "$WorkspaceFolderToken"
     },
+    "candoitall_processes": {
+      "type": "stdio",
+      "command": "$WorkspaceFolderToken\\$escapedProcessesCommandPath",
+      "args": [
+        "--settings",
+        "$WorkspaceFolderToken\\CanDoItAll.Mcp.Processes.settings.json"
+      ],
+      "cwd": "$WorkspaceFolderToken"
+    },
     "playwright": {
       "type": "stdio",
       "command": "npx",
@@ -409,6 +421,8 @@ function Update-CodexConfig {
         [Parameter(Mandatory = $true)]
         [string]$ProjectStructureEntrypoint,
         [Parameter(Mandatory = $true)]
+        [string]$ProcessesEntrypoint,
+        [Parameter(Mandatory = $true)]
         [string]$SharpToolsEntrypoint,
         [Parameter(Mandatory = $true)]
         [string]$SharpToolsWorkingDirectory,
@@ -426,6 +440,7 @@ function Update-CodexConfig {
     $escapedComponentsEntrypoint = $ComponentsEntrypoint.Replace("\", "\\")
     $escapedCodeAnalyticsEntrypoint = $CodeAnalyticsEntrypoint.Replace("\", "\\")
     $escapedProjectStructureEntrypoint = $ProjectStructureEntrypoint.Replace("\", "\\")
+    $escapedProcessesEntrypoint = $ProcessesEntrypoint.Replace("\", "\\")
     $escapedSharpToolsEntrypoint = $SharpToolsEntrypoint.Replace("\", "\\")
     $escapedSharpToolsWorkingDirectory = $SharpToolsWorkingDirectory.Replace("\", "\\")
     $escapedSharpToolsLogDirectory = $SharpToolsLogDirectory.Replace("\", "\\")
@@ -504,6 +519,19 @@ tool_timeout_sec = 1800
 enabled = true
 "@
 
+    $processesSection = @"
+[mcp_servers.candoitall_processes]
+command = "$escapedProcessesEntrypoint"
+cwd = "$escapedRepoRoot"
+args = [
+  "--settings",
+  "$escapedRepoRoot\\CanDoItAll.Mcp.Processes.settings.json"
+]
+startup_timeout_sec = 45
+tool_timeout_sec = 1800
+enabled = true
+"@
+
     $sharpToolsSection = @"
 [mcp_servers.sharptools]
 # Backup only. Keep disabled unless CanDoItAll CodeAnalytics has a real capability gap
@@ -527,6 +555,7 @@ enabled = false
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_components" -SectionContent $componentsSection
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_codeanalytics" -SectionContent $codeAnalyticsSection
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_projectstructure" -SectionContent $projectStructureSection
+    Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_processes" -SectionContent $processesSection
     Set-TomlSection -Path $Path -SectionName "mcp_servers.sharptools" -SectionContent $sharpToolsSection
 }
 
@@ -636,6 +665,31 @@ function Ensure-ProjectStructureSettings {
     Write-Warning "ProjectStructure settings were missing. Seeded '$SettingsPath' from the example file. Replace the placeholder BaseUrl and AgentToken by running tools\\Install-CanDoItAllProjectStructureMcp.ps1 with the generated command from CanDoItAll /settings."
 }
 
+function Ensure-ProcessesSettings {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$SettingsPath
+    )
+
+    if (Test-Path -LiteralPath $SettingsPath) {
+        return
+    }
+
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $SettingsPath) | Out-Null
+    $settings = @"
+{
+  "Server": {
+    "Name": "CanDoItAll.Mcp.Processes",
+    "RepositoryRoot": ".",
+    "EnsureCurrentProfileReadyOnStartup": true
+  }
+}
+"@
+
+    Set-Content -LiteralPath $SettingsPath -Value $settings
+    Write-Warning "Processes MCP settings were missing. Seeded '$SettingsPath' with the default local-stdio configuration."
+}
+
 if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
     $RepoRoot = Resolve-AbsolutePath (Join-Path $PSScriptRoot "..")
 }
@@ -652,6 +706,8 @@ $dotNetWatchSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll
 $projectStructureProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.ProjectStructure\CanDoItAll.Mcp.ProjectStructure.csproj")
 $projectStructureSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.ProjectStructure.settings.local.json")
 $projectStructureExampleSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.ProjectStructure.settings.example.json")
+$processesProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.Processes\CanDoItAll.Mcp.Processes.csproj")
+$processesSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.Processes.settings.json")
 $componentsProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj")
 $componentsSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.Components.settings.json")
 $codeAnalyticsProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj")
@@ -668,6 +724,7 @@ $sharpToolsWorkingDirectory = Resolve-AbsolutePath (Join-Path $repoParentRoot "S
 $sharpToolsLogDirectory = Resolve-AbsolutePath (Join-Path $repoParentRoot "codex-logs\sharptools")
 $installRoot = Resolve-AbsolutePath (Join-Path $RepoRoot ".artifacts\mcp-installs")
 $projectStructureInstallRoot = New-VersionedInstallPath -InstallBasePath (Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.ProjectStructure"))
+$processesInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.Processes\current")
 $componentsInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.Components\current")
 $codeAnalyticsInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.CodeAnalytics\current")
 $sshOpsInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.SshOps\current")
@@ -684,6 +741,8 @@ $installOwnedCompanionProcessNeedles = @(
     "CanDoItAll.Mcp.Components.dll",
     "CanDoItAll.Mcp.CodeAnalytics.exe",
     "CanDoItAll.Mcp.CodeAnalytics.dll",
+    "CanDoItAll.Mcp.Processes.exe",
+    "CanDoItAll.Mcp.Processes.dll",
     "CanDoItAll.Mcp.SshOps.exe",
     "CanDoItAll.Mcp.SshOps.dll",
     "CanDoItAll.Manager.exe",
@@ -732,6 +791,7 @@ if (-not (Test-Path -LiteralPath $shadowManifestPath)) {
 }
 
 Publish-ReleaseArtifact -ProjectPath $projectStructureProjectPath -OutputPath $projectStructureInstallRoot
+Publish-ReleaseArtifact -ProjectPath $processesProjectPath -OutputPath $processesInstallRoot
 Publish-ReleaseArtifact -ProjectPath $componentsProjectPath -OutputPath $componentsInstallRoot
 Publish-ReleaseArtifact -ProjectPath $codeAnalyticsProjectPath -OutputPath $codeAnalyticsInstallRoot
 Publish-ReleaseArtifact -ProjectPath $sshOpsProjectPath -OutputPath $sshOpsInstallRoot
@@ -739,10 +799,13 @@ Publish-ReleaseArtifact -ProjectPath $managerProjectPath -OutputPath $managerIns
 Publish-ReleaseArtifact -ProjectPath $trayProjectPath -OutputPath $trayInstallRoot
 
 Ensure-ProjectStructureSettings -SettingsPath $projectStructureSettingsPath -ExampleSettingsPath $projectStructureExampleSettingsPath
+Ensure-ProcessesSettings -SettingsPath $processesSettingsPath
 
 $shadowManifest = Get-Content -LiteralPath $shadowManifestPath -Raw | ConvertFrom-Json
 $projectStructureEntrypoint = Get-PreferredEntrypoint -DirectoryPath $projectStructureInstallRoot -AssemblyName "CanDoItAll.Mcp.ProjectStructure"
 $projectStructureWorkspaceEntrypoint = Get-RelativePathPortable -BasePath $RepoRoot -TargetPath $projectStructureEntrypoint
+$processesEntrypoint = Get-PreferredEntrypoint -DirectoryPath $processesInstallRoot -AssemblyName "CanDoItAll.Mcp.Processes"
+$processesWorkspaceEntrypoint = Get-RelativePathPortable -BasePath $RepoRoot -TargetPath $processesEntrypoint
 $componentsEntrypoint = Get-PreferredEntrypoint -DirectoryPath $componentsInstallRoot -AssemblyName "CanDoItAll.Mcp.Components"
 $componentsWorkspaceEntrypoint = Get-RelativePathPortable -BasePath $RepoRoot -TargetPath $componentsEntrypoint
 $codeAnalyticsEntrypoint = Get-PreferredEntrypoint -DirectoryPath $codeAnalyticsInstallRoot -AssemblyName "CanDoItAll.Mcp.CodeAnalytics"
@@ -797,6 +860,12 @@ $installManifest = @{
         installRoot = $projectStructureInstallRoot
         entrypointPath = $projectStructureEntrypoint
     }
+    processes = @{
+        configuration = "Release"
+        settingsPath = $processesSettingsPath
+        installRoot = $processesInstallRoot
+        entrypointPath = $processesEntrypoint
+    }
     components = @{
         configuration = "Release"
         settingsPath = $componentsSettingsPath
@@ -843,17 +912,18 @@ Write-Status "Wrote install manifest to $manifestPath"
 
 if (-not $SkipVsCodeConfig.IsPresent) {
     Write-Status "Updating VS Code MCP config"
-    Update-VsCodeMcpConfig -Path $vscodeMcpPath -WorkspaceFolderToken '${workspaceFolder}' -ComponentsCommandPath $componentsWorkspaceEntrypoint -CodeAnalyticsCommandPath $codeAnalyticsWorkspaceEntrypoint -ProjectStructureCommandPath $projectStructureWorkspaceEntrypoint
+    Update-VsCodeMcpConfig -Path $vscodeMcpPath -WorkspaceFolderToken '${workspaceFolder}' -ComponentsCommandPath $componentsWorkspaceEntrypoint -CodeAnalyticsCommandPath $codeAnalyticsWorkspaceEntrypoint -ProjectStructureCommandPath $projectStructureWorkspaceEntrypoint -ProcessesCommandPath $processesWorkspaceEntrypoint
 }
 
 if (-not $SkipUserConfig.IsPresent) {
     Write-Status "Updating Codex config"
-    Update-CodexConfig -Path $UserConfigPath -SshOpsEntrypoint $sshOpsEntrypoint -ComponentsEntrypoint $componentsEntrypoint -CodeAnalyticsEntrypoint $codeAnalyticsEntrypoint -ProjectStructureEntrypoint $projectStructureEntrypoint -SharpToolsEntrypoint $sharpToolsEntrypoint -SharpToolsWorkingDirectory $sharpToolsWorkingDirectory -SharpToolsLogDirectory $sharpToolsLogDirectory
+    Update-CodexConfig -Path $UserConfigPath -SshOpsEntrypoint $sshOpsEntrypoint -ComponentsEntrypoint $componentsEntrypoint -CodeAnalyticsEntrypoint $codeAnalyticsEntrypoint -ProjectStructureEntrypoint $projectStructureEntrypoint -ProcessesEntrypoint $processesEntrypoint -SharpToolsEntrypoint $sharpToolsEntrypoint -SharpToolsWorkingDirectory $sharpToolsWorkingDirectory -SharpToolsLogDirectory $sharpToolsLogDirectory
 }
 
 Write-Status "Resetup completed."
 Write-Status "DotNetWatch shadow DLL: $($shadowManifest.shadowDllPath)"
 Write-Status "ProjectStructure entrypoint: $projectStructureEntrypoint"
+Write-Status "Processes entrypoint: $processesEntrypoint"
 Write-Status "Components entrypoint: $componentsEntrypoint"
 Write-Status "CodeAnalytics entrypoint: $codeAnalyticsEntrypoint"
 Write-Status "SshOps entrypoint: $sshOpsEntrypoint"

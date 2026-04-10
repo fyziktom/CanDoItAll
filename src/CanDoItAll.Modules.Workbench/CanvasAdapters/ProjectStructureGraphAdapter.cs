@@ -134,7 +134,12 @@ public sealed class ProjectStructureGraphAdapter
             LeadText = leadPresentation.LeadText,
             CompactPath = MapCompactPath(leadPresentation.CompactPath),
             Status = node.Status,
-            BranchLabel = node.ObjectType is ProjectObjectType.Phase or ProjectObjectType.PromptSession ? "Branch" : string.Empty,
+            BranchLabel = node.ObjectType switch
+            {
+                ProjectObjectType.Phase or ProjectObjectType.PromptSession => "Branch",
+                ProjectObjectType.ProcessDefinition => "Runs",
+                _ => string.Empty
+            },
             AccentColor = node.VisualProfile.AccentColor,
             PaletteKey = ResolvePalette(node),
             DurationLabel = node.Badges.Contains("Scheduled", StringComparer.Ordinal) ? "Scheduled" : string.Empty,
@@ -153,7 +158,7 @@ public sealed class ProjectStructureGraphAdapter
                 })
                 .ToList(),
             Priority = node.Priority,
-            IsRequired = node.ObjectType is ProjectObjectType.ProjectRoot or ProjectObjectType.Phase or ProjectObjectType.PromptSession,
+            IsRequired = node.ObjectType is ProjectObjectType.ProjectRoot or ProjectObjectType.Phase or ProjectObjectType.PromptSession or ProjectObjectType.ProcessDefinition,
             IsCollapsible = hasChildren,
             IsReadOnly = node.ProjectRole == ProjectStructureProjectRole.AdditionalParentProject,
             IsPreviewOnly = node.ProjectRole == ProjectStructureProjectRole.AdditionalParentProject,
@@ -196,8 +201,8 @@ public sealed class ProjectStructureGraphAdapter
     private static string ResolveFamily(ProjectObjectType objectType) => objectType switch
     {
         ProjectObjectType.ProjectRoot => "root",
-        ProjectObjectType.Phase or ProjectObjectType.PromptSession or ProjectObjectType.PromptFlow or ProjectObjectType.ProjectBlock => "group",
-        ProjectObjectType.ValidationRun or ProjectObjectType.TestPlan or ProjectObjectType.Decision or ProjectObjectType.SecretReference => "special",
+        ProjectObjectType.Phase or ProjectObjectType.PromptSession or ProjectObjectType.PromptFlow or ProjectObjectType.ProjectBlock or ProjectObjectType.ProcessDefinition => "group",
+        ProjectObjectType.ProcessRun or ProjectObjectType.ValidationRun or ProjectObjectType.TestPlan or ProjectObjectType.Decision or ProjectObjectType.SecretReference => "special",
         _ => "item"
     };
 

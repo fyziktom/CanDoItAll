@@ -1,0 +1,8 @@
+@page "/projects/{ProjectId:guid}/processes"
+
+<ProcessWorkspace ProjectId="@ProjectId" />
+
+@code {
+    [Parameter]
+    public Guid ProjectId { get; set; }
+}

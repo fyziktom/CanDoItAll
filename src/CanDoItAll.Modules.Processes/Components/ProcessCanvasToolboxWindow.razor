@@ -1,0 +1,114 @@
+@namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Components.Common
+
+<CanvasFloatingWindow WindowId="@WindowId"
+                      TestId="@TestId"
+                      AriaLabel="@AriaLabel"
+                      Kicker="@Kicker"
+                      Title="@Title"
+                      Summary="@Summary"
+                      DefaultPlacement="top-left"
+                      DefaultWidth="@DefaultWidth"
+                      DefaultHeight="540"
+                      MinWidth="320"
+                      MinHeight="260"
+                      MaxWidth="560"
+                      MaxHeight="640"
+                      State="@State"
+                      StateChanged="StateChanged">
+    <Stack GapScale="LayoutGap.Medium"
+           data-testid="processes-canvas-toolbox">
+        <Stack Orientation="Orientation.Horizontal" Gap="1rem">
+            <Pill Tone="PillTone.Info" Text="Role-first authoring" />
+            <Pill Tone="PillTone.Label" Text="@($"{ActionCount} items")" />
+        </Stack>
+
+        <TextBox Value="@SearchText"
+                 ValueChanged="SearchTextChanged"
+                 Placeholder="Search templates, roles, steps, review, or release"
+                 Immediate="true"
+                 Class="w-full" />
+
+        @if (Groups.Count == 0)
+        {
+            <PanelCard>
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="No templates match the current search." />
+                    <TextBlock TextStyle="TextStyle.Note" Value="Clear the filter to restore the full toolbox." />
+                </Stack>
+            </PanelCard>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium">
+                @foreach (var group in Groups)
+                {
+                    <PanelCard Soft="true">
+                        <Stack GapScale="LayoutGap.Small">
+                            <div>
+                                <p class="cda-eyebrow">@group.Title</p>
+                                <p class="mt-1 text-sm leading-6 text-slate-600">@group.Summary</p>
+                            </div>
+
+                            <Stack GapScale="LayoutGap.Small">
+                                @foreach (var action in group.Actions)
+                                {
+                                    <Button Text="@action.Label"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Click="@(() => OpenAction.InvokeAsync(action.ActionId))"
+                                            data-testid="@($"processes-toolbox-{action.ActionId}")" />
+                                    <TextBlock TextStyle="TextStyle.Note" Value="@action.Summary" />
+                                }
+                            </Stack>
+                        </Stack>
+                    </PanelCard>
+                }
+            </Stack>
+        }
+    </Stack>
+</CanvasFloatingWindow>
+
+@code {
+    [Parameter, EditorRequired]
+    public string WindowId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string TestId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Kicker { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Summary { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public CanvasWorkbenchWindowState State { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<CanvasWorkbenchWindowState> StateChanged { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ProcessCanvasToolboxGroup> Groups { get; set; } = [];
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string?> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public double DefaultWidth { get; set; } = 420;
+
+    [Parameter]
+    public EventCallback<string> OpenAction { get; set; }
+
+    private int ActionCount => Groups.Sum(group => group.Actions.Count);
+}

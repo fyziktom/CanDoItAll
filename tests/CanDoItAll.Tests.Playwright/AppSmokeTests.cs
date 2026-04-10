@@ -1894,6 +1894,34 @@ public sealed partial class AppSmokeTests
         await quickActionDialog.WaitForAsync();
     }
 
+    private static async Task OpenProcessCanvasActionDialogAsync(IPage page, string selector)
+    {
+        await DoubleClickCanvasNodeAsync(page, selector);
+
+        var actionDialog = page.GetByTestId("processes-canvas-action-dialog");
+        if (await WaitForLocatorAsync(actionDialog, 1_500))
+        {
+            return;
+        }
+
+        var targetId = await ResolveCanvasNodeIdAsync(page, selector);
+        Assert.False(string.IsNullOrWhiteSpace(targetId), $"Expected to resolve a canvas node id for '{selector}'.");
+
+        var opened = await page.EvaluateAsync<bool>(
+            @"targetId => {
+                const host = document.querySelector('.cw-canvas-host');
+                const runtime = window.CanDoItAll?.canvasWorkbench;
+                if (!host || !runtime?.openNode || !targetId) {
+                    return false;
+                }
+
+                return runtime.openNode(host, targetId);
+            }",
+            targetId);
+        Assert.True(opened, $"Expected process node action fallback bridge to open '{selector}'.");
+        await actionDialog.WaitForAsync();
+    }
+
     private static async Task EnsureCanvasSelectionAsync(IPage page, string selector)
     {
         await SelectCanvasNodeAsync(page, selector);

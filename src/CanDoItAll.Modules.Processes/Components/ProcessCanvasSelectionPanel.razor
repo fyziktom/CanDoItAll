@@ -1,0 +1,209 @@
+@namespace CanDoItAll.Modules.Processes
+
+@if (!IsRuntime && DefinitionStep is null)
+{
+    <EmptyState Eyebrow="Canvas selection"
+                Title="Select a process step"
+                Description="Click a step to inspect its contract, role bindings, and evidence expectations without leaving the canvas.">
+        <Actions>
+            <Button Text="Open toolbox"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="OpenToolbox" />
+            <Button Text="Clear selection"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="ClearSelection" />
+        </Actions>
+    </EmptyState>
+}
+else if (IsRuntime && RuntimeStep is null)
+{
+    <EmptyState Eyebrow="Runtime selection"
+                Title="Select a run step"
+                Description="Click a runtime node to inspect the executor, status, and step-specific actions.">
+        <Actions>
+            <Button Text="Clear selection"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="ClearSelection" />
+        </Actions>
+    </EmptyState>
+}
+else if (!IsRuntime && DefinitionStep is not null)
+{
+    <Stack GapScale="LayoutGap.Medium">
+        <SurfaceCard Soft="true">
+            <Stack GapScale="LayoutGap.Small">
+                <div>
+                    <p class="cda-eyebrow">Definition step</p>
+                    <h3 class="mt-1 text-lg font-semibold text-slate-950">@DefinitionStep.Title</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">@DefinitionLeadText</p>
+                </div>
+                <Cluster Gap="LayoutGap.Small">
+                    <StatusBadge Tone="neutral" Text="@DefinitionStep.StepKind.ToString()" />
+                    <StatusBadge Tone="info" Text="@($"{DefinitionStep.TargetLeadHours} h")" />
+                    <StatusBadge Tone="warning" Text="@($"{DefinitionStep.RoleAssignments.Count} bindings")" />
+                    <StatusBadge Tone="accent" Text="@($"{DefinitionStep.ArtifactExpectations.Count} artifacts")" />
+                </Cluster>
+            </Stack>
+        </SurfaceCard>
+
+        <SurfaceCard>
+            <Stack GapScale="LayoutGap.Medium">
+                <Button Text="Edit step"
+                        Click="EditDefinitionStep"
+                        data-testid="processes-canvas-selection-edit-step" />
+                <Button Text="Add dependent step"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="AddDependentStep"
+                        data-testid="processes-canvas-selection-add-dependent-step" />
+                <Button Text="Add role binding"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="AddRoleBinding"
+                        data-testid="processes-canvas-selection-add-role-binding" />
+                <Button Text="Add artifact expectation"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="AddArtifactExpectation"
+                        data-testid="processes-canvas-selection-add-artifact" />
+                <Button Text="More actions"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="OpenActionDialog"
+                        data-testid="processes-canvas-selection-open-actions" />
+            </Stack>
+        </SurfaceCard>
+    </Stack>
+}
+else if (RuntimeStep is not null)
+{
+    <Stack GapScale="LayoutGap.Medium">
+        <SurfaceCard Soft="true">
+            <Stack GapScale="LayoutGap.Small">
+                <div>
+                    <p class="cda-eyebrow">Runtime step</p>
+                    <h3 class="mt-1 text-lg font-semibold text-slate-950">@RuntimeStep.Title</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">@RuntimeLeadText</p>
+                </div>
+                <Cluster Gap="LayoutGap.Small">
+                    <StatusBadge Tone="@RuntimeTone" Text="@RuntimeStep.Status.ToString()" />
+                    <StatusBadge Tone="neutral" Text="@RuntimeStep.StepKind.ToString()" />
+                </Cluster>
+                <Grid Gap="LayoutGap.Small"
+                      ColumnsMd="4">
+                    <MetricCard Label="Wait" Value="@($"{RuntimeStep.WaitMinutes}m")" />
+                    <MetricCard Label="Touch" Value="@($"{RuntimeStep.TouchMinutes}m")" />
+                    <MetricCard Label="Blocked" Value="@($"{RuntimeStep.BlockedMinutes}m")" />
+                    <MetricCard Label="Rework" Value="@RuntimeStep.ReworkCount.ToString()" />
+                </Grid>
+            </Stack>
+        </SurfaceCard>
+
+        <SurfaceCard>
+            <Stack GapScale="LayoutGap.Medium">
+                <Button Text="Start"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="StartRuntimeStep" />
+                <Button Text="Complete"
+                        Click="CompleteRuntimeStep" />
+                <Button Text="Block"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="BlockRuntimeStep" />
+                <Button Text="Approval"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="RequestRuntimeApproval" />
+                <Button Text="Refuse"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="RefuseRuntimeStep" />
+                <Button Text="Fail"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="FailRuntimeStep" />
+                <Button Text="Record artifact"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="RecordRuntimeArtifact" />
+                <Button Text="More actions"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="OpenActionDialog" />
+            </Stack>
+        </SurfaceCard>
+    </Stack>
+}
+
+@code {
+    [Parameter]
+    public bool IsRuntime { get; set; }
+
+    [Parameter]
+    public ProcessStepEditorModel? DefinitionStep { get; set; }
+
+    [Parameter]
+    public ProcessStepRunViewModel? RuntimeStep { get; set; }
+
+    [Parameter]
+    public EventCallback OpenToolbox { get; set; }
+
+    [Parameter]
+    public EventCallback ClearSelection { get; set; }
+
+    [Parameter]
+    public EventCallback EditDefinitionStep { get; set; }
+
+    [Parameter]
+    public EventCallback AddDependentStep { get; set; }
+
+    [Parameter]
+    public EventCallback AddRoleBinding { get; set; }
+
+    [Parameter]
+    public EventCallback AddArtifactExpectation { get; set; }
+
+    [Parameter]
+    public EventCallback OpenActionDialog { get; set; }
+
+    [Parameter]
+    public EventCallback StartRuntimeStep { get; set; }
+
+    [Parameter]
+    public EventCallback CompleteRuntimeStep { get; set; }
+
+    [Parameter]
+    public EventCallback BlockRuntimeStep { get; set; }
+
+    [Parameter]
+    public EventCallback RequestRuntimeApproval { get; set; }
+
+    [Parameter]
+    public EventCallback RefuseRuntimeStep { get; set; }
+
+    [Parameter]
+    public EventCallback FailRuntimeStep { get; set; }
+
+    [Parameter]
+    public EventCallback RecordRuntimeArtifact { get; set; }
+
+    private string DefinitionLeadText
+        => DefinitionStep is null
+            ? string.Empty
+            : string.IsNullOrWhiteSpace(DefinitionStep.OutputContractSummary)
+                ? DefinitionStep.Notes
+                : DefinitionStep.OutputContractSummary;
+
+    private string RuntimeLeadText
+        => RuntimeStep is null
+            ? string.Empty
+            : string.IsNullOrWhiteSpace(RuntimeStep.BlockedReason)
+                ? string.IsNullOrWhiteSpace(RuntimeStep.DecisionSummary)
+                    ? string.IsNullOrWhiteSpace(RuntimeStep.CurrentExecutorName)
+                        ? "No executor assigned yet."
+                        : $"Executor: {RuntimeStep.CurrentExecutorName}"
+                    : RuntimeStep.DecisionSummary
+                : RuntimeStep.BlockedReason;
+
+    private string RuntimeTone
+        => RuntimeStep?.Status switch
+        {
+            ProcessStepRunStatus.Completed => "mint",
+            ProcessStepRunStatus.InProgress => "info",
+            ProcessStepRunStatus.Blocked => "danger",
+            ProcessStepRunStatus.Refused => "warning",
+            ProcessStepRunStatus.WaitingApproval => "accent",
+            ProcessStepRunStatus.Failed => "danger",
+            _ => "neutral"
+        };
+}

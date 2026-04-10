@@ -12,6 +12,7 @@
     <Project Path="src/CanDoItAll.Mcp.CodeAnalytics/CanDoItAll.Mcp.CodeAnalytics.csproj" />
     <Project Path="src/CanDoItAll.Mcp.DotNetWatch/CanDoItAll.Mcp.DotNetWatch.csproj" />
     <Project Path="src/CanDoItAll.Mcp.LocalRuntime/CanDoItAll.Mcp.LocalRuntime.csproj" />
+    <Project Path="src/CanDoItAll.Mcp.Processes/CanDoItAll.Mcp.Processes.csproj" />
     <Project Path="src/CanDoItAll.Mcp.ProjectStructure/CanDoItAll.Mcp.ProjectStructure.csproj" />
     <Project Path="src/CanDoItAll.Mcp.SshOps/CanDoItAll.Mcp.SshOps.csproj" />
     <Project Path="src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj" />
@@ -20,6 +21,7 @@
     <Project Path="src/CanDoItAll.Modules.Automation/CanDoItAll.Modules.Automation.csproj" />
     <Project Path="src/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj" />
     <Project Path="src/CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj" />
+    <Project Path="src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj" />
     <Project Path="src/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj" />
     <Project Path="src/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj" />
     <Project Path="src/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj" />
@@ -35,6 +37,7 @@
     <Project Path="tests/CanDoItAll.Mcp.Components.Tests/CanDoItAll.Mcp.Components.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.DotNetWatch.Tests/CanDoItAll.Mcp.DotNetWatch.Tests.csproj" />
+    <Project Path="tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Mcp.ProjectStructure.Tests/CanDoItAll.Mcp.ProjectStructure.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj" />
@@ -45,5 +48,6 @@
   <Folder Name="/tools/">
     <Project Path="tools/CanDoItAll.Manager/CanDoItAll.Manager.csproj" />
     <Project Path="tools/CanDoItAll.Mcp.DotNetWatch.Tray/CanDoItAll.Mcp.DotNetWatch.Tray.csproj" />
+    <Project Path="tools/CanDoItAll.ScenarioSeeder/CanDoItAll.ScenarioSeeder.csproj" />
   </Folder>
 </Solution>
