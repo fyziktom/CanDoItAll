@@ -47,6 +47,14 @@ public enum TabsOverflowMode
     Scroll
 }
 
+public enum TabsPanelOverflowMode
+{
+    Visible,
+    Auto,
+    Scroll,
+    Hidden
+}
+
 public enum StepsNavigationPosition
 {
     None,
