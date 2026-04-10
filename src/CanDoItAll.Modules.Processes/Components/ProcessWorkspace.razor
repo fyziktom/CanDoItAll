@@ -135,26 +135,24 @@
                             </Cluster>
                         </Split>
                     </SurfaceCard>
-
-                    <SecondaryTabs Items="DetailTabs"
-                                   SelectedKey="@detailTab"
-                                   SelectedKeyChanged="HandleDetailTabChanged" />
                 </Stack>
             </DetailHeader>
 
             <DetailContent>
-                <Stack Class="min-h-full"
-                       GapScale="LayoutGap.XXLarge">
-                    @if (string.Equals(detailTab, "definition", StringComparison.Ordinal))
-                    {
+                <Tabs SelectedIndex="@SelectedDetailTabIndex"
+                      SelectedIndexChanged="HandleDetailTabChanged"
+                      Variant="@(TabsVariant.WorkspaceSecondary)"
+                      BorderMode="@(TabsBorderMode.Soft)"
+                      AriaLabel="Process workspace detail panels">
+                    <TabItems>
+                        <TabsItem Text="Definition">
                         <ProcessDefinitionForm Model="@editor"
                                                ScopeLabel="@(ProjectId.HasValue ? projectName : "Global process library")"
                                                Save="SaveAsync"
                                                Publish="PublishAsync"
                                                Delete="DeleteAsync" />
-                    }
-                    else if (string.Equals(detailTab, "roles", StringComparison.Ordinal))
-                    {
+                        </TabsItem>
+                        <TabsItem Text="Roles">
                         <FormSection Title="Role requirements"
                                      Description="Define who the process needs first. Exact person, supplier, or agent binding happens later at runtime without changing the process contract.">
                             <Actions>
@@ -190,9 +188,8 @@
                                 </Cluster>
                             </ChildContent>
                         </FormSection>
-                    }
-                    else if (string.Equals(detailTab, "steps", StringComparison.Ordinal))
-                    {
+                        </TabsItem>
+                        <TabsItem Text="Steps">
                         <FormSection Title="Workflow steps"
                                      Description="Shape the executable path, explicit dependencies, role bindings, and evidence expectations before the first runtime run starts.">
                             <Actions>
@@ -249,6 +246,7 @@
                                 {
                                     <CanvasWorkbench Surface="canvasSurface"
                                                      @ref="workbenchRef"
+                                                     StateChanged="HandleCanvasStateChangedAsync"
                                                      SelectionChanged="HandleCanvasSelectionChangedAsync"
                                                      NodesMoved="HandleCanvasNodesMovedAsync"
                                                      ContextActionRequested="HandleCanvasContextActionAsync"
@@ -380,9 +378,8 @@
                                 }
                             </Canvas>
                         </CanvasWorkbenchStage>
-                    }
-                    else if (string.Equals(detailTab, "runs", StringComparison.Ordinal))
-                    {
+                        </TabsItem>
+                        <TabsItem Text="Runs">
                         <SectionCard Title="Run lifecycle"
                                      Description="Start process runs from the selected definition, then keep runtime state, assignments, and evidence attached to the same durable process identity.">
                             @if (!selectedProcessId.HasValue)
@@ -486,6 +483,7 @@
                                     {
                                         <CanvasWorkbench Surface="canvasSurface"
                                                          @ref="workbenchRef"
+                                                         StateChanged="HandleCanvasStateChangedAsync"
                                                          SelectionChanged="HandleCanvasSelectionChangedAsync"
                                                          ContextActionRequested="HandleCanvasContextActionAsync"
                                                          NodeOpened="HandleCanvasNodeOpenedAsync">
@@ -813,9 +811,8 @@
                                 </Grid>
                             </SectionCard>
                         }
-                    }
-                    else if (string.Equals(detailTab, "analytics", StringComparison.Ordinal))
-                    {
+                        </TabsItem>
+                        <TabsItem Text="Analytics">
                         <SummaryTiles>
                             <SummaryTile Label="Runs"
                                          Value="@analytics.TotalRuns.ToString()"
@@ -870,9 +867,8 @@
                                 </Stack>
                             }
                         </SectionCard>
-                    }
-                    else
-                    {
+                        </TabsItem>
+                        <TabsItem Text="Exchange">
                         <SectionCard Title="Definition exchange"
                                      Description="Export and import process definition envelopes so architecture can review them, seed them, or move them between environments without copying implementation-only data.">
                             <Grid Gap="LayoutGap.Large"
@@ -912,8 +908,9 @@
                                 </SurfaceCard>
                             </Grid>
                         </SectionCard>
-                    }
-                </Stack>
+                        </TabsItem>
+                    </TabItems>
+                </Tabs>
             </DetailContent>
         </ListDetailShell>
     </ChildContent>

@@ -88,12 +88,45 @@ public partial class ProcessWorkspace
 
     private async Task HandleCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
     {
-        selectedCanvasNodeId = args.PrimaryNodeId ?? args.SelectedNodeIds.FirstOrDefault();
+        selectedCanvasNodeId = args.SelectedNodeIds.Count == 0
+            ? NoCanvasSelection
+            : args.PrimaryNodeId ?? args.SelectedNodeIds.FirstOrDefault();
+        var uiState = CloneCanvasUiState(ResolveStoredCanvasUiState());
+        uiState.SelectedNodeIds = args.SelectedNodeIds.Count > 0
+            ? [.. args.SelectedNodeIds]
+            : [];
+        StoreCanvasUiState(uiState);
+        if (canvasSurface is not null)
+        {
+            canvasSurface.UiState = uiState;
+        }
+
         if (!canvasSelectionWindowState.IsVisible)
         {
             canvasSelectionWindowState.IsVisible = true;
         }
 
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleCanvasStateChangedAsync(string stateJson)
+    {
+        if (canvasSurface is null)
+        {
+            return;
+        }
+
+        var uiState = CanvasWorkbenchUiState.Parse(stateJson);
+        if (string.IsNullOrWhiteSpace(uiState.ActiveInspectorTab))
+        {
+            uiState.ActiveInspectorTab = IsRuntimeCanvasActive ? "runtime" : "definition";
+        }
+
+        selectedCanvasNodeId = uiState.SelectedNodeIds.Count == 0
+            ? NoCanvasSelection
+            : uiState.SelectedNodeIds.FirstOrDefault();
+        StoreCanvasUiState(uiState);
+        canvasSurface.UiState = uiState;
         await InvokeAsync(StateHasChanged);
     }
 

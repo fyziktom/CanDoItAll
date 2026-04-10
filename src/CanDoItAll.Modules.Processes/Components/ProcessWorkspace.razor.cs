@@ -60,6 +60,8 @@ public partial class ProcessWorkspace : ComponentBase
     private ProcessAnalyticsSummary analytics = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     private ProcessDefinitionEditorModel editor = new();
     private CanvasWorkbenchSurface? canvasSurface;
+    private CanvasWorkbenchUiState definitionCanvasUiState = CreateDefaultDefinitionCanvasUiState();
+    private CanvasWorkbenchUiState runtimeCanvasUiState = CreateDefaultRuntimeCanvasUiState();
 
     private Guid? selectedProcessId;
     private Guid? selectedRunId;
@@ -133,6 +135,9 @@ public partial class ProcessWorkspace : ComponentBase
     private string SelectedDefinitionTone
         => ResolveDefinitionStatusTone(editor.Status);
 
+    private int SelectedDetailTabIndex
+        => ResolveDetailTabIndex(detailTab);
+
     protected override async Task OnParametersSetAsync()
     {
         if (hasLoadedParameters &&
@@ -163,7 +168,15 @@ public partial class ProcessWorkspace : ComponentBase
         }
 
         definitions = await ProcessesService.ListDefinitionsAsync(ProjectId);
-        selectedProcessId = ResolveSelectedProcessId();
+        var nextSelectedProcessId = ResolveSelectedProcessId();
+        if (nextSelectedProcessId != selectedProcessId)
+        {
+            selectedCanvasNodeId = null;
+            ResetDefinitionCanvasState();
+            ResetRuntimeCanvasState();
+        }
+
+        selectedProcessId = nextSelectedProcessId;
         editor = await ProcessesService.GetEditorAsync(selectedProcessId, ProjectId);
         executorOptions = await ProcessesService.ListExecutorOptionsAsync();
         analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId);
@@ -187,7 +200,14 @@ public partial class ProcessWorkspace : ComponentBase
             runs = [];
         }
 
-        selectedRunId = ResolveSelectedRunId();
+        var nextSelectedRunId = ResolveSelectedRunId();
+        if (nextSelectedRunId != selectedRunId)
+        {
+            selectedCanvasNodeId = null;
+            ResetRuntimeCanvasState();
+        }
+
+        selectedRunId = nextSelectedRunId;
         await LoadRunDetailsAsync();
         RefreshCanvasSurface();
         StateHasChanged();
@@ -264,11 +284,25 @@ public partial class ProcessWorkspace : ComponentBase
             ? CanvasSurfaceFactory.BuildRunSurface(SelectedRun, stepRuns, selectedCanvasNodeId)
             : CanvasSurfaceFactory.BuildDefinitionSurface(editor, selectedCanvasNodeId);
 
-        var synchronizedSelection = canvasSurface.UiState.SelectedNodeIds.FirstOrDefault();
-        if (!string.Equals(selectedCanvasNodeId, NoCanvasSelection, StringComparison.Ordinal) &&
-            !string.IsNullOrWhiteSpace(synchronizedSelection))
+        var uiState = BuildCanvasUiState(canvasSurface, ResolveStoredCanvasUiState());
+        canvasSurface.UiState = uiState;
+        StoreCanvasUiState(uiState);
+
+        if (string.Equals(selectedCanvasNodeId, NoCanvasSelection, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var synchronizedSelection = uiState.SelectedNodeIds.FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(synchronizedSelection))
         {
             selectedCanvasNodeId = synchronizedSelection;
+            return;
+        }
+
+        if (selectedCanvasNodeId is not null)
+        {
+            selectedCanvasNodeId = null;
         }
     }
 
@@ -277,6 +311,8 @@ public partial class ProcessWorkspace : ComponentBase
         selectedProcessId = null;
         selectedRunId = null;
         selectedCanvasNodeId = null;
+        ResetDefinitionCanvasState();
+        ResetRuntimeCanvasState();
         editor = await ProcessesService.GetEditorAsync(null, ProjectId);
         detailTab = "definition";
         runs = [];
@@ -294,6 +330,8 @@ public partial class ProcessWorkspace : ComponentBase
         selectedProcessId = definitionId;
         detailTab = "definition";
         selectedCanvasNodeId = null;
+        ResetDefinitionCanvasState();
+        ResetRuntimeCanvasState();
         await LoadWorkspaceAsync();
     }
 
@@ -340,6 +378,9 @@ public partial class ProcessWorkspace : ComponentBase
         await ProcessesService.DeleteAsync(selectedProcessId.Value);
         selectedProcessId = null;
         selectedRunId = null;
+        selectedCanvasNodeId = null;
+        ResetDefinitionCanvasState();
+        ResetRuntimeCanvasState();
         await LoadWorkspaceAsync();
         SetMessage("Process definition deleted.");
     }
@@ -356,6 +397,8 @@ public partial class ProcessWorkspace : ComponentBase
         selectedProcessId = result.Value!.PrimaryDefinitionId;
         selectedRunId = result.Value.SeededRunIds.FirstOrDefault();
         selectedCanvasNodeId = null;
+        ResetDefinitionCanvasState();
+        ResetRuntimeCanvasState();
         detailTab = "runs";
         await LoadWorkspaceAsync();
         SetMessage("Development seed baseline prepared.");
@@ -386,6 +429,7 @@ public partial class ProcessWorkspace : ComponentBase
 
         selectedRunId = result.Value;
         selectedCanvasNodeId = null;
+        ResetRuntimeCanvasState();
         detailTab = "runs";
         runNameDraft = string.Empty;
         await LoadWorkspaceAsync();
@@ -396,6 +440,7 @@ public partial class ProcessWorkspace : ComponentBase
     {
         selectedRunId = runId;
         selectedCanvasNodeId = null;
+        ResetRuntimeCanvasState();
         await LoadRunDetailsAsync();
         RefreshCanvasSurface();
     }
@@ -467,6 +512,9 @@ public partial class ProcessWorkspace : ComponentBase
         }
 
         selectedProcessId = result.Value;
+        selectedCanvasNodeId = null;
+        ResetDefinitionCanvasState();
+        ResetRuntimeCanvasState();
         await LoadWorkspaceAsync();
         SetMessage("Process definition imported.");
     }
@@ -555,10 +603,9 @@ public partial class ProcessWorkspace : ComponentBase
         RefreshCanvasSurface();
     }
 
-    private Task HandleDetailTabChanged(string key)
+    private Task HandleDetailTabChanged(int index)
     {
-        detailTab = key;
-        selectedCanvasNodeId = null;
+        detailTab = ResolveDetailTabKey(index);
         RefreshCanvasSurface();
         return Task.CompletedTask;
     }
@@ -741,6 +788,114 @@ public partial class ProcessWorkspace : ComponentBase
             ProcessConformanceSeverity.Moderate => "info",
             _ => "neutral"
         };
+    }
+
+    private CanvasWorkbenchUiState ResolveStoredCanvasUiState()
+        => IsRuntimeCanvasActive
+            ? runtimeCanvasUiState
+            : definitionCanvasUiState;
+
+    private void StoreCanvasUiState(CanvasWorkbenchUiState uiState)
+    {
+        var storedState = CloneCanvasUiState(uiState);
+        if (IsRuntimeCanvasActive)
+        {
+            runtimeCanvasUiState = storedState;
+        }
+        else
+        {
+            definitionCanvasUiState = storedState;
+        }
+    }
+
+    private CanvasWorkbenchUiState BuildCanvasUiState(CanvasWorkbenchSurface surface, CanvasWorkbenchUiState storedUiState)
+    {
+        ArgumentNullException.ThrowIfNull(surface);
+        ArgumentNullException.ThrowIfNull(storedUiState);
+
+        var uiState = CloneCanvasUiState(storedUiState);
+        var availableNodeIds = surface.Nodes
+            .Select(node => node.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (string.Equals(selectedCanvasNodeId, NoCanvasSelection, StringComparison.Ordinal))
+        {
+            uiState.SelectedNodeIds = [];
+        }
+        else if (!string.IsNullOrWhiteSpace(selectedCanvasNodeId) && availableNodeIds.Contains(selectedCanvasNodeId))
+        {
+            uiState.SelectedNodeIds = [selectedCanvasNodeId];
+        }
+        else
+        {
+            uiState.SelectedNodeIds = uiState.SelectedNodeIds
+                .Where(availableNodeIds.Contains)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            if (uiState.SelectedNodeIds.Count == 0)
+            {
+                uiState.SelectedNodeIds = surface.UiState.SelectedNodeIds
+                    .Where(availableNodeIds.Contains)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(uiState.ActiveInspectorTab))
+        {
+            uiState.ActiveInspectorTab = surface.UiState.ActiveInspectorTab;
+        }
+
+        return uiState;
+    }
+
+    private void ResetDefinitionCanvasState()
+    {
+        definitionCanvasUiState = CreateDefaultDefinitionCanvasUiState();
+    }
+
+    private void ResetRuntimeCanvasState()
+    {
+        runtimeCanvasUiState = CreateDefaultRuntimeCanvasUiState();
+    }
+
+    private static CanvasWorkbenchUiState CreateDefaultDefinitionCanvasUiState()
+        => new()
+        {
+            ActiveInspectorTab = "definition"
+        };
+
+    private static CanvasWorkbenchUiState CreateDefaultRuntimeCanvasUiState()
+        => new()
+        {
+            ActiveInspectorTab = "runtime"
+        };
+
+    private static CanvasWorkbenchUiState CloneCanvasUiState(CanvasWorkbenchUiState uiState)
+        => CanvasWorkbenchUiState.Parse(uiState.ToJson());
+
+    private static int ResolveDetailTabIndex(string key)
+    {
+        for (var index = 0; index < DetailTabs.Count; index++)
+        {
+            if (string.Equals(DetailTabs[index].Key, key, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return 0;
+    }
+
+    private static string ResolveDetailTabKey(int index)
+    {
+        if (index >= 0 && index < DetailTabs.Count)
+        {
+            return DetailTabs[index].Key;
+        }
+
+        return DetailTabs[0].Key;
     }
 
     private void SetMessage(string value)
