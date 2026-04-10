@@ -199,6 +199,29 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Contains(definitionsAfterImport, item => item.Name == "Imported process clone");
     }
 
+    [Fact]
+    public async Task ListDefinitionsAsync_counts_roles_and_steps_from_the_current_summary_version_only()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process summary counts project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var definitions = await processesService.ListDefinitionsAsync(projectId);
+        var definition = Assert.Single(definitions, item => item.Id == saveResult.Value);
+
+        Assert.Equal(2, definition.LatestVersionNumber);
+        Assert.Equal(1, definition.RoleCount);
+        Assert.Equal(2, definition.StepCount);
+    }
+
     private static ProcessDefinitionEditorModel BuildDefinitionEditor(Guid projectId, Guid managerRoleId)
     {
         var intakeStepId = Guid.NewGuid();

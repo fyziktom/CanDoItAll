@@ -86,6 +86,7 @@ public partial class ProcessWorkspace : ComponentBase
     private string projectName = string.Empty;
     private string message = string.Empty;
     private bool isError;
+    private bool hasLoadedParameters;
     private Guid? loadedProjectId;
     private Guid? loadedProcessQueryId;
     private Guid? loadedRunQueryId;
@@ -134,13 +135,15 @@ public partial class ProcessWorkspace : ComponentBase
 
     protected override async Task OnParametersSetAsync()
     {
-        if (loadedProjectId == ProjectId &&
+        if (hasLoadedParameters &&
+            loadedProjectId == ProjectId &&
             loadedProcessQueryId == ProcessIdQuery &&
             loadedRunQueryId == RunIdQuery)
         {
             return;
         }
 
+        hasLoadedParameters = true;
         loadedProjectId = ProjectId;
         loadedProcessQueryId = ProcessIdQuery;
         loadedRunQueryId = RunIdQuery;

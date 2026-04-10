@@ -34,27 +34,37 @@ public sealed partial class ProcessesService(
         var runs = await dbContext.Set<ProcessRun>().ToListAsync(cancellationToken);
         var assignments = await dbContext.Set<ProcessRunAssignment>().ToListAsync(cancellationToken);
         var projectNames = await LoadProjectNamesAsync(dbContext, cancellationToken);
+        var versionsByDefinitionId = versions
+            .GroupBy(version => version.ProcessDefinitionId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<ProcessDefinitionVersion>)group.ToList());
+        var roleIdsByVersionId = roles
+            .GroupBy(role => role.ProcessDefinitionVersionId)
+            .ToDictionary(group => group.Key, group => group.Select(role => role.Id).ToHashSet());
+        var stepCountByVersionId = steps
+            .GroupBy(step => step.ProcessDefinitionVersionId)
+            .ToDictionary(group => group.Key, group => group.Count());
 
         return definitions
             .OrderByDescending(definition => definition.UpdatedAtUtc)
             .Select(definition => {
-                var definitionVersions = versions.Where(version => version.ProcessDefinitionId == definition.Id).ToList();
-                var latestVersionNumber = definitionVersions.Count == 0 ? 0 : definitionVersions.Max(version => version.VersionNumber);
-                var activeVersionIds = definitionVersions.Select(version => version.Id).ToHashSet();
-                var roleIds = roles
-                    .Where(role => activeVersionIds.Contains(role.ProcessDefinitionVersionId))
-                    .Select(role => role.Id)
-                    .ToHashSet();
+                var definitionVersions = versionsByDefinitionId.GetValueOrDefault(definition.Id) ?? Array.Empty<ProcessDefinitionVersion>();
+                var summaryVersion = ResolveDefinitionSummaryVersion(definitionVersions);
+                var summaryVersionId = summaryVersion?.Id;
+                var roleIds = summaryVersionId.HasValue && roleIdsByVersionId.TryGetValue(summaryVersionId.Value, out var summaryRoleIds)
+                    ? summaryRoleIds
+                    : new HashSet<Guid>();
                 var definitionRuns = runs.Where(run => run.ProcessDefinitionId == definition.Id).ToList();
                 return new ProcessDefinitionListItem(
                     definition.Id,
                     definition.ProjectId,
                     definition.Name,
                     definition.Status,
-                    latestVersionNumber,
+                    summaryVersion?.VersionNumber ?? 0,
                     definition.ActivePublishedVersionId.HasValue,
-                    roles.Count(role => activeVersionIds.Contains(role.ProcessDefinitionVersionId)),
-                    steps.Count(step => activeVersionIds.Contains(step.ProcessDefinitionVersionId)),
+                    roleIds.Count,
+                    summaryVersionId.HasValue && stepCountByVersionId.TryGetValue(summaryVersionId.Value, out var stepCount)
+                        ? stepCount
+                        : 0,
                     definitionRuns.Count(run => run.Status == ProcessRunStatus.Active || run.Status == ProcessRunStatus.Blocked),
                     assignments.Count(assignment =>
                         definitionRuns.Any(run => run.Id == assignment.ProcessRunId) &&
@@ -971,6 +981,13 @@ public sealed partial class ProcessesService(
         CancellationToken cancellationToken) {
         return await dbContext.Set<Project>()
             .ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
+    }
+
+    private static ProcessDefinitionVersion? ResolveDefinitionSummaryVersion(IReadOnlyList<ProcessDefinitionVersion> versions) {
+        return versions
+            .OrderBy(version => version.Status == ProcessVersionStatus.Draft ? 0 : 1)
+            .ThenByDescending(version => version.VersionNumber)
+            .FirstOrDefault();
     }
 }
 
