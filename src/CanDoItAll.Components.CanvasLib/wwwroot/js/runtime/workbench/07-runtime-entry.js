@@ -597,8 +597,55 @@
         });
     }
 
+    function resolveWorkbenchState(host, options) {
+        if (!host || typeof host !== "object") {
+            return null;
+        }
+
+        const state = host.__canvasWorkbenchState || null;
+        if (!state) {
+            return null;
+        }
+
+        if (options?.requireConnected === false) {
+            return state;
+        }
+
+        return state.host?.isConnected ? state : null;
+    }
+
+    function applyRequestedSelection(state, nodeIds, primaryNodeId) {
+        const normalizedNodeIds = Array.isArray(nodeIds) ? nodeIds : [];
+        const normalized = selectionModel.replace(
+            normalizedNodeIds,
+            primaryNodeId || (normalizedNodeIds[0] || null));
+        workbenchInternals.stateStore.applySelection(state, normalized.selectedNodeIds, normalized.primaryNodeId);
+    }
+
+    function applyRenderOptions(state, options) {
+        if (!state || !options) {
+            return;
+        }
+
+        if (typeof options.isMaximized === "boolean") {
+            workbenchInternals.runtime.setMaximized(state, options.isMaximized);
+        }
+
+        if (options.fitView === true) {
+            workbenchInternals.sceneLayout.fitView(state);
+        }
+
+        if (Array.isArray(options.selectedNodeIds) && options.selectedNodeIds.length > 0) {
+            applyRequestedSelection(state, options.selectedNodeIds, options.primaryNodeId || options.selectedNodeIds[0]);
+        }
+    }
+
     root.canvasWorkbench = {
-        create(host, dotNetRef, surface, selectionDispatchSeed, stateDispatchSeed) {
+        create(host, dotNetRef, surface, selectionDispatchSeed, stateDispatchSeed, options) {
+            if (!host) {
+                return false;
+            }
+
             const state = workbenchInternals.runtime.hydrateState(
                 host,
                 dotNetRef,
@@ -621,18 +668,22 @@
             }
 
             host.__canvasWorkbenchState = state;
+            applyRenderOptions(state, options);
             render(state);
+            return true;
         },
-        update(host, surface) {
-            const state = host.__canvasWorkbenchState;
+        update(host, surface, options) {
+            const state = resolveWorkbenchState(host);
             if (!state) {
-                return;
+                return false;
             }
 
             workbenchInternals.runtime.refresh(state, surface);
+            applyRenderOptions(state, options);
+            return true;
         },
         fitView(host) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return;
             }
@@ -640,7 +691,7 @@
             workbenchInternals.sceneLayout.fitView(state);
         },
         focusNode(host, nodeId) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return;
             }
@@ -648,7 +699,7 @@
             workbenchInternals.sceneLayout.focusNode(state, nodeId);
         },
         async openNode(host, nodeId) {
-            const state = host?.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return false;
             }
@@ -656,7 +707,7 @@
             return await requestNodeOpen(state, nodeId);
         },
         openContextSubmenu(host, actionId) {
-            const state = host?.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return false;
             }
@@ -664,7 +715,7 @@
             return openContextSubmenuByActionId(state, actionId || "");
         },
         setZoomPercent(host, zoomPercent) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return;
             }
@@ -672,7 +723,7 @@
             workbenchInternals.sceneLayout.setZoomPercent(state, zoomPercent);
         },
         setMenuScalePercent(host, menuScalePercent) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return;
             }
@@ -680,7 +731,7 @@
             workbenchInternals.sceneLayout.setMenuScalePercent(state, menuScalePercent);
         },
         openCreateComposer(host, action, request) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state || !action) {
                 return;
             }
@@ -688,7 +739,7 @@
             openCreateComposer(state, action, request || {});
         },
         openQuickCreateMenu(host, anchorElement) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state || !anchorElement) {
                 return;
             }
@@ -705,7 +756,7 @@
             });
         },
         toggleMinimap(host) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return;
             }
@@ -713,7 +764,7 @@
             toggleMinimap(state);
         },
         toggleDiagnostics(host) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return;
             }
@@ -721,11 +772,11 @@
             toggleDiagnostics(state);
         },
         getState(host) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host, { requireConnected: false });
             return state ? workbenchInternals.stateStore.serializeState(state) : JSON.stringify({});
         },
         activateHotZone(host, request) {
-            const state = host?.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return false;
             }
@@ -733,7 +784,7 @@
             return activateHotZone(state, request || {});
         },
         getDiagnostics(host) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host, { requireConnected: false });
             return state
                 ? workbenchInternals.instrumentation.buildDiagnosticsSnapshot(state, workbenchInternals.sceneLayout.getSceneBounds(state))
                 : null;
@@ -745,16 +796,15 @@
             };
         },
         selectNodes(host, nodeIds, primaryNodeId) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return;
             }
 
-            const normalized = selectionModel.replace(nodeIds, primaryNodeId || (Array.isArray(nodeIds) ? nodeIds[0] : null));
-            workbenchInternals.stateStore.applySelection(state, normalized.selectedNodeIds, normalized.primaryNodeId);
+            applyRequestedSelection(state, nodeIds, primaryNodeId);
         },
         setMaximized(host, isMaximized) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return;
             }
@@ -762,7 +812,7 @@
             workbenchInternals.runtime.setMaximized(state, isMaximized);
         },
         resize(host) {
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return;
             }
@@ -774,7 +824,7 @@
             return workbenchInternals.runtime.exportImageData(host);
         },
         simulateDrag(host, request) {
-            const state = host?.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return false;
             }
@@ -782,7 +832,7 @@
             return simulatePointerDrag(state, request || {});
         },
         finishInteraction(host) {
-            const state = host?.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host);
             if (!state) {
                 return false;
             }
@@ -794,7 +844,7 @@
                 return;
             }
 
-            const state = host.__canvasWorkbenchState;
+            const state = resolveWorkbenchState(host, { requireConnected: false });
             if (!state) {
                 return;
             }
@@ -804,12 +854,12 @@
     };
 
     root.canvasWorkbench.getSceneSnapshot = function (host) {
-        const state = host?.__canvasWorkbenchState;
+        const state = resolveWorkbenchState(host, { requireConnected: false });
         return state ? collectSceneSnapshot(state) : null;
     };
 
     root.canvasWorkbench.getHotZoneCenter = function (host, request) {
-        const state = host?.__canvasWorkbenchState;
+        const state = resolveWorkbenchState(host, { requireConnected: false });
         return state ? findSceneHotZoneCenter(state, request || {}) : null;
     };
     shared.workbenchInternals = createWorkbenchInternals();

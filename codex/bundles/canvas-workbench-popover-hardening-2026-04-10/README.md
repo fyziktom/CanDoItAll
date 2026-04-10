@@ -10,6 +10,7 @@ This bundle coordinates the repair and hardening of the shared `CanvasWorkbench`
 
 - Repair the shared workbench-canvas annotation hover and popover path so annotation hover never throws, stays consistent after node clicks and surface refreshes, remains safe when popover chrome is missing or disconnected, and preserves the existing annotation action, overlay, and node-interaction behavior across all shared `CanvasWorkbench` consumers.
 - Extend the same bundle with a behavior-preserving JS-organization pass that inventories long CanvasLib JS hotspots, selects the highest-value workbench runtime seams, and splits them into smaller ordered files with shared helpers where duplication or fragile cross-file coupling is proven.
+- Reopen the bundle for lifecycle-safe workbench interop after a real app failure in the Processes Run tab, then re-prove the reachable CanDoItAll app canvas routes and record non-canvas blockers honestly.
 
 ## Bundle Layout
 
@@ -31,6 +32,8 @@ This bundle coordinates the repair and hardening of the shared `CanvasWorkbench`
 4. `subbundles/04-js-hotspot-inventory-and-boundaries`
 5. `subbundles/05-canvas-renderer-scene-split`
 6. `subbundles/06-runtime-entry-splitting-and-regression-proof`
+7. `subbundles/07-workbench-interop-lifecycle-hardening`
+8. `subbundles/08-cross-canvas-app-proof-and-blockers`
 
 ## Dependency And Validation Map
 

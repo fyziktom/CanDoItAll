@@ -13,6 +13,9 @@
 - `R009` The largest verified workbench-runtime hotspots must be split into smaller ordered feature-slice files without changing the external `canvasWorkbench` API or the shared `CanvasWorkbenchSurface` contract.
 - `R010` Where the current runtime contains exact cleanup or helper duplication inside the targeted files, the refactor should consolidate that logic instead of copying it into the new slices.
 - `R011` Final closure proof for the organization pass must demonstrate that the split files still preserve hover, click, context, drag, and runtime-API behavior on the real workbench route.
+- `R012` Exported shared `canvasWorkbench` runtime methods must tolerate null or disconnected hosts during Blazor lifecycle churn instead of throwing and breaking the circuit.
+- `R013` `CanvasWorkbench` after-render synchronization must avoid fragile multi-call JS sequencing when create or update, maximized state, fit-view, and selection sync all depend on the same host element.
+- `R014` Reopened closure proof must cover the reachable CanvasLib surfaces in the CanDoItAll app, and any route that cannot reach its canvas because of a non-canvas failure must be logged explicitly as blocked rather than treated as proved.
 
 ## Non-Goals
 
@@ -20,3 +23,4 @@
 - Changing the C# `CanvasWorkbenchSurface` or consumer-page contracts unless the JS repair proves that unavoidable.
 - Reworking unrelated canvas systems such as context menus, minimap, or floating windows beyond the directly adjacent hover and popover mechanism.
 - Launching a separate calendar-runtime refactor without a comparable proof surface in this same turn.
+- Fixing unrelated non-canvas route failures such as missing Prompt Factory manifest assets inside this bundle unless the canvas refactor is proven to have caused them.
