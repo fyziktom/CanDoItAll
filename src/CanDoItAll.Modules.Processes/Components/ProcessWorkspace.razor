@@ -214,6 +214,8 @@
                                                                    AvailableRoles="@editor.Roles"
                                                                    DependencyOptions="@(editor.Steps.Where(candidate => candidate != step).ToList())"
                                                                    Remove="@(() => RemoveStep(step))"
+                                                                   AddBranchOutcome="@(() => AddBranchOutcome(step))"
+                                                                   RemoveBranchOutcome="@((ProcessStepBranchOutcomeEditorModel branchOutcome) => RemoveBranchOutcome(step, branchOutcome))"
                                                                    AddRoleAssignment="@(() => AddRoleAssignment(step))"
                                                                    RemoveRoleAssignment="@((ProcessStepRoleRequirementEditorModel assignment) => RemoveRoleAssignment(step, assignment))"
                                                                    AddArtifact="@(() => AddArtifact(step))"
@@ -356,6 +358,8 @@
                                                                                    DependencyOptions="@CanvasEditorDependencyOptions"
                                                                                    ShowRemove="false"
                                                                                    TestId="processes-canvas-step-editor"
+                                                                                   AddBranchOutcome="AddCanvasBranchOutcomeAsync"
+                                                                                   RemoveBranchOutcome="RemoveCanvasBranchOutcomeAsync"
                                                                                    AddRoleAssignment="AddCanvasRoleAssignmentAsync"
                                                                                    RemoveRoleAssignment="RemoveCanvasRoleAssignmentAsync"
                                                                                    AddArtifact="AddCanvasArtifactExpectationAsync"
@@ -512,6 +516,8 @@
                                                                           StateChanged="HandleCanvasSelectionWindowStateChangedAsync">
                                                         <ProcessCanvasSelectionPanel IsRuntime="true"
                                                                                      RuntimeStep="@SelectedCanvasRuntimeStep"
+                                                                                     SelectedRuntimeBranchOutcomeId="@(SelectedCanvasRuntimeStep is null ? null : ResolveSelectedBranchOutcomeId(SelectedCanvasRuntimeStep.Id))"
+                                                                                     SelectedRuntimeBranchOutcomeIdChanged="@(value => SelectedCanvasRuntimeStep is null ? Task.CompletedTask : UpdateRuntimeBranchOutcomeSelectionAsync(SelectedCanvasRuntimeStep.Id, value))"
                                                                                      ClearSelection="ClearCanvasSelectionAsync"
                                                                                      OpenActionDialog="OpenCanvasActionDialogAsync"
                                                                                      StartRuntimeStep="@(async () => await ApplySelectedRuntimeStatusAsync(ProcessStepRunStatus.InProgress))"
@@ -566,24 +572,48 @@
                                                     <MetricCard Label="Rework" Value="@stepRun.ReworkCount.ToString()" />
                                                 </Grid>
 
+                                                @if (stepRun.AvailableBranchOutcomes.Count > 0)
+                                                {
+                                                    <div class="mt-5">
+                                                        <label class="cda-field-label">Branch outcome</label>
+                                                        <InputSelect TValue="Guid?"
+                                                                     Value="@(ResolveSelectedBranchOutcomeId(stepRun.Id))"
+                                                                     ValueChanged="@(value => UpdateRuntimeBranchOutcomeSelectionAsync(stepRun.Id, value))"
+                                                                     class="cda-input"
+                                                                     data-testid="processes-branch-outcome-select">
+                                                            <option value="">Select outcome</option>
+                                                            @foreach (var outcome in stepRun.AvailableBranchOutcomes)
+                                                            {
+                                                                <option value="@outcome.Id">@outcome.Title</option>
+                                                            }
+                                                        </InputSelect>
+                                                    </div>
+                                                }
+
                                                 <Cluster Gap="LayoutGap.Small"
                                                          Class="mt-5">
                                                     <Button Text="Start"
                                                             ButtonStyle="ButtonStyle.Light"
+                                                            Disabled="@(!CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.InProgress))"
                                                             Click="@(() => ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.InProgress))" />
                                                     <Button Text="Complete"
+                                                            Disabled="@(!CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.Completed))"
                                                             Click="@(() => ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Completed))" />
                                                     <Button Text="Block"
                                                             ButtonStyle="ButtonStyle.Light"
+                                                            Disabled="@(!CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.Blocked))"
                                                             Click="@(() => ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Blocked))" />
                                                     <Button Text="Approval"
                                                             ButtonStyle="ButtonStyle.Light"
+                                                            Disabled="@(!CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.WaitingApproval))"
                                                             Click="@(() => ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.WaitingApproval))" />
                                                     <Button Text="Refuse"
                                                             ButtonStyle="ButtonStyle.Light"
+                                                            Disabled="@(!CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.Refused))"
                                                             Click="@(() => ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Refused))" />
                                                     <Button Text="Fail"
                                                             ButtonStyle="ButtonStyle.Light"
+                                                            Disabled="@(!CanApplyRuntimeStatus(stepRun, ProcessStepRunStatus.Failed))"
                                                             Click="@(() => ApplyStepStatusAsync(stepRun.Id, ProcessStepRunStatus.Failed))" />
                                                 </Cluster>
                                             </SurfaceCard>
@@ -931,20 +961,26 @@
                 {
                     <Button Text="Start step"
                             ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(!CanApplyRuntimeStatus(SelectedCanvasRuntimeStep, ProcessStepRunStatus.InProgress))"
                             Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeStart))" />
                     <Button Text="Complete step"
+                            Disabled="@(!CanApplyRuntimeStatus(SelectedCanvasRuntimeStep, ProcessStepRunStatus.Completed))"
                             Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeComplete))" />
                     <Button Text="Block step"
                             ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(!CanApplyRuntimeStatus(SelectedCanvasRuntimeStep, ProcessStepRunStatus.Blocked))"
                             Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeBlock))" />
                     <Button Text="Wait for approval"
                             ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(!CanApplyRuntimeStatus(SelectedCanvasRuntimeStep, ProcessStepRunStatus.WaitingApproval))"
                             Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeApproval))" />
                     <Button Text="Refuse safely"
                             ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(!CanApplyRuntimeStatus(SelectedCanvasRuntimeStep, ProcessStepRunStatus.Refused))"
                             Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeRefuse))" />
                     <Button Text="Mark failed"
                             ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(!CanApplyRuntimeStatus(SelectedCanvasRuntimeStep, ProcessStepRunStatus.Failed))"
                             Click="@(() => ExecuteCanvasDialogActionAsync(ProcessCanvasActionIds.RuntimeFail))" />
                     <Button Text="Prepare artifact capture"
                             ButtonStyle="ButtonStyle.Light"

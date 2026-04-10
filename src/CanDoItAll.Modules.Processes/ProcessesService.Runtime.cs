@@ -105,6 +105,13 @@ public sealed partial class ProcessesService {
             .Where(assignment => assignment.IsCapabilityGap)
             .Select(assignment => assignment.RoleRequirementId)
             .ToHashSet();
+        var rootStepIds = steps
+            .Where(step => !step.DependsOnStepId.HasValue)
+            .Select(step => step.Id)
+            .ToHashSet();
+        if (rootStepIds.Count == 0 && steps.Count > 0) {
+            rootStepIds.Add(steps[0].Id);
+        }
 
         for (var index = 0; index < steps.Count; index++) {
             var step = steps[index];
@@ -114,7 +121,7 @@ public sealed partial class ProcessesService {
                 .Distinct()
                 .ToHashSet();
             var hasCapabilityGap = stepRoleIds.Count > 0 && stepRoleIds.Any(unresolvedRoleIds.Contains);
-            var status = index == 0
+            var status = rootStepIds.Contains(step.Id)
                 ? (step.RequiresApproval ? ProcessStepRunStatus.WaitingApproval : ProcessStepRunStatus.Ready)
                 : ProcessStepRunStatus.Pending;
             var currentAssignment = stepRoleRequirements
@@ -203,6 +210,24 @@ public sealed partial class ProcessesService {
                 "processes.invalid-step-transition"));
         }
 
+        if (request.SelectedBranchOutcomeId.HasValue && request.TargetStatus != ProcessStepRunStatus.Completed) {
+            return Result.Failure(Error.Validation(
+                "Branch outcomes can only be selected when completing a step.",
+                "processes.branch-outcome-invalid-transition"));
+        }
+
+        var stepDefinitions = await dbContext.Set<ProcessStepDefinition>()
+            .Where(item => item.ProcessDefinitionVersionId == run.ProcessDefinitionVersionId)
+            .ToListAsync(cancellationToken);
+        var currentStepDefinition = stepDefinitions.Single(item => item.Id == stepRun.StepDefinitionId);
+        var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
+            .Where(item => stepDefinitions.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var branchOutcomesByStepId = branchOutcomes
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
+        var stepDefinitionsById = stepDefinitions.ToDictionary(item => item.Id);
+
         var now = clock.GetUtcNow();
         if (request.TargetStatus == ProcessStepRunStatus.InProgress) {
             stepRun.StartedAtUtc ??= now;
@@ -233,31 +258,88 @@ public sealed partial class ProcessesService {
             stepRun.ReworkCount += 1;
         }
 
-        stepRun.Status = request.TargetStatus;
-
+        ProcessStepBranchOutcomeDefinition? selectedBranchOutcome = null;
         if (request.TargetStatus == ProcessStepRunStatus.Completed) {
-            var nextStep = await dbContext.Set<ProcessStepRun>()
-                .Where(item => item.ProcessRunId == run.Id && item.Sequence > stepRun.Sequence)
-                .OrderBy(item => item.Sequence)
-                .FirstOrDefaultAsync(cancellationToken);
-            if (nextStep is not null && nextStep.Status == ProcessStepRunStatus.Pending) {
-                nextStep.Status = nextStep.StepKind == ProcessStepKind.Approval
-                    ? ProcessStepRunStatus.WaitingApproval
-                    : ProcessStepRunStatus.Ready;
-                nextStep.ReadyAtUtc = now;
+            var availableBranchOutcomes = branchOutcomesByStepId.GetValueOrDefault(stepRun.StepDefinitionId) ?? [];
+            var hasConditionalDependents = stepDefinitions.Any(item =>
+                item.DependsOnStepId == currentStepDefinition.Id &&
+                item.DependsOnBranchOutcomeId.HasValue);
+            if (hasConditionalDependents && !request.SelectedBranchOutcomeId.HasValue) {
+                return Result.Failure(Error.Validation(
+                    "Completing this step requires selecting a branch outcome.",
+                    "processes.branch-outcome-required"));
+            }
+
+            if (request.SelectedBranchOutcomeId.HasValue) {
+                selectedBranchOutcome = availableBranchOutcomes.SingleOrDefault(item => item.Id == request.SelectedBranchOutcomeId.Value);
+                if (selectedBranchOutcome is null) {
+                    return Result.Failure(Error.Validation(
+                        "Selected branch outcome is not valid for this step.",
+                        "processes.branch-outcome-invalid"));
+                }
+
+                stepRun.SelectedBranchOutcomeId = selectedBranchOutcome.Id;
+                stepRun.SelectedBranchOutcomeTitle = selectedBranchOutcome.Title;
+                stepRun.DecisionSummary = $"Selected branch outcome: {selectedBranchOutcome.Title}.";
             }
         }
 
-        run.UpdatedAtUtc = now;
+        if (request.TargetStatus == ProcessStepRunStatus.Skipped) {
+            stepRun.DecisionSummary = string.IsNullOrWhiteSpace(request.Reason)
+                ? "Skipped."
+                : request.Reason.Trim();
+        }
+
+        stepRun.Status = request.TargetStatus;
+
         var persistedStepRuns = await dbContext.Set<ProcessStepRun>()
             .Where(item => item.ProcessRunId == run.Id)
             .ToListAsync(cancellationToken);
+        var stepRunsByDefinitionId = persistedStepRuns.ToDictionary(item => item.StepDefinitionId);
+        stepRunsByDefinitionId[stepRun.StepDefinitionId] = stepRun;
+
+        if (request.TargetStatus == ProcessStepRunStatus.Completed) {
+            foreach (var dependentStep in stepDefinitions
+                         .Where(item => item.DependsOnStepId == currentStepDefinition.Id)
+                         .OrderBy(item => item.OrderIndex)) {
+                if (!stepRunsByDefinitionId.TryGetValue(dependentStep.Id, out var dependentStepRun)) {
+                    continue;
+                }
+
+                if (dependentStep.DependsOnBranchOutcomeId.HasValue &&
+                    dependentStep.DependsOnBranchOutcomeId != selectedBranchOutcome?.Id) {
+                    CascadeSkipStepRun(
+                        dependentStep,
+                        stepDefinitionsById,
+                        stepRunsByDefinitionId,
+                        $"Skipped because branch outcome '{selectedBranchOutcome?.Title ?? "none"}' was selected instead.",
+                        now);
+                    continue;
+                }
+
+                if (dependentStepRun.Status == ProcessStepRunStatus.Pending) {
+                    ActivatePendingStepRun(dependentStepRun, dependentStep, now);
+                }
+            }
+        }
+
+        if (request.TargetStatus == ProcessStepRunStatus.Skipped) {
+            CascadeSkipDependents(
+                currentStepDefinition,
+                stepDefinitionsById,
+                stepRunsByDefinitionId,
+                $"Skipped because upstream step '{stepRun.Title}' was skipped.",
+                now);
+        }
+
+        run.UpdatedAtUtc = now;
         run.Status = ResolveRunStatus(persistedStepRuns, stepRun);
         if (run.Status is ProcessRunStatus.Completed or ProcessRunStatus.Failed or ProcessRunStatus.Cancelled) {
             run.CompletedAtUtc = now;
         }
 
         var decisionKind = request.TargetStatus switch {
+            ProcessStepRunStatus.Completed when selectedBranchOutcome is not null => ProcessDecisionKind.Variant,
             ProcessStepRunStatus.WaitingApproval => ProcessDecisionKind.Approval,
             ProcessStepRunStatus.Blocked => ProcessDecisionKind.Escalation,
             ProcessStepRunStatus.Refused => ProcessDecisionKind.Refusal,
@@ -278,9 +360,13 @@ public sealed partial class ProcessesService {
                 StepRunId = stepRun.Id,
                 DecisionKind = decisionKind,
                 Outcome = decisionOutcome,
-                Title = $"{stepRun.Title} -> {request.TargetStatus}",
+                Title = selectedBranchOutcome is null
+                    ? $"{stepRun.Title} -> {request.TargetStatus}"
+                    : $"{stepRun.Title} -> {request.TargetStatus} / {selectedBranchOutcome.Title}",
                 Reason = request.Reason.Trim(),
                 PolicyEvaluation = stepRun.DecisionSummary,
+                BranchOutcomeId = selectedBranchOutcome?.Id,
+                BranchOutcomeTitle = selectedBranchOutcome?.Title ?? string.Empty,
                 DecidedBy = string.IsNullOrWhiteSpace(request.DecidedBy) ? DefaultActor : request.DecidedBy.Trim(),
                 OperatingMode = run.OperatingMode,
                 CreatedAtUtc = now
@@ -292,7 +378,7 @@ public sealed partial class ProcessesService {
                 stepRun.Id,
                 $"step-{request.TargetStatus.ToString().ToLowerInvariant()}",
                 $"Step {request.TargetStatus}",
-                $"{stepRun.Title} moved to {request.TargetStatus}. {request.Reason}".Trim(),
+                BuildTransitionJournalDescription(stepRun.Title, request.TargetStatus, request.Reason, selectedBranchOutcome?.Title),
                 run.OperatingMode,
                 $"definition-version:{run.ProcessDefinitionVersionId:D}",
                 request.Reason),
@@ -474,6 +560,65 @@ public sealed partial class ProcessesService {
 
     public async Task<IReadOnlyList<ProcessExecutorRegistryOption>> ListExecutorOptionsAsync(CancellationToken cancellationToken = default) {
         return await executorRegistryBridge.ListOptionsAsync(cancellationToken);
+    }
+
+    private static void ActivatePendingStepRun(ProcessStepRun stepRun, ProcessStepDefinition stepDefinition, DateTimeOffset now) {
+        if (stepRun.Status != ProcessStepRunStatus.Pending) {
+            return;
+        }
+
+        stepRun.Status = stepDefinition.RequiresApproval || stepDefinition.StepKind == ProcessStepKind.Approval
+            ? ProcessStepRunStatus.WaitingApproval
+            : ProcessStepRunStatus.Ready;
+        stepRun.ReadyAtUtc = now;
+    }
+
+    private static void CascadeSkipStepRun(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
+        IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        string reason,
+        DateTimeOffset now) {
+        if (!stepRunsByDefinitionId.TryGetValue(stepDefinition.Id, out var stepRun) ||
+            stepRun.Status != ProcessStepRunStatus.Pending) {
+            return;
+        }
+
+        stepRun.Status = ProcessStepRunStatus.Skipped;
+        stepRun.CompletedAtUtc = now;
+        stepRun.DecisionSummary = reason;
+
+        CascadeSkipDependents(stepDefinition, stepDefinitionsById, stepRunsByDefinitionId, reason, now);
+    }
+
+    private static void CascadeSkipDependents(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
+        IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        string reason,
+        DateTimeOffset now) {
+        foreach (var dependentStep in stepDefinitionsById.Values
+                     .Where(item => item.DependsOnStepId == stepDefinition.Id)
+                     .OrderBy(item => item.OrderIndex)) {
+            CascadeSkipStepRun(dependentStep, stepDefinitionsById, stepRunsByDefinitionId, reason, now);
+        }
+    }
+
+    private static string BuildTransitionJournalDescription(
+        string stepTitle,
+        ProcessStepRunStatus targetStatus,
+        string reason,
+        string? selectedBranchOutcomeTitle) {
+        var description = $"{stepTitle} moved to {targetStatus}.";
+        if (!string.IsNullOrWhiteSpace(selectedBranchOutcomeTitle)) {
+            description += $" Selected branch outcome: {selectedBranchOutcomeTitle}.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(reason)) {
+            description += $" {reason.Trim()}";
+        }
+
+        return description.Trim();
     }
 }
 

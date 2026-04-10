@@ -47,11 +47,13 @@ public sealed class ProcessCanvasSurfaceFactory
         var nodes = orderedSteps
             .Select(BuildRunNode)
             .ToList();
+        var runNodesByDefinitionId = orderedSteps.ToDictionary(stepRun => stepRun.StepDefinitionId);
         var links = orderedSteps
-            .Skip(1)
-            .Select((stepRun, index) => new CanvasWorkbenchLink
+            .Where(stepRun => stepRun.DependsOnStepDefinitionId.HasValue &&
+                runNodesByDefinitionId.ContainsKey(stepRun.DependsOnStepDefinitionId.Value))
+            .Select(stepRun => new CanvasWorkbenchLink
             {
-                SourceId = BuildRunNodeId(orderedSteps[index].Id),
+                SourceId = BuildRunNodeId(runNodesByDefinitionId[stepRun.DependsOnStepDefinitionId!.Value].Id),
                 TargetId = BuildRunNodeId(stepRun.Id),
                 Kind = "flow",
                 IsUserAuthored = false
@@ -120,6 +122,11 @@ public sealed class ProcessCanvasSurfaceFactory
                 {
                     Text = $"{step.ArtifactExpectations.Count} artifacts",
                     Tone = step.ArtifactExpectations.Count == 0 ? "neutral" : "info"
+                },
+                new CanvasWorkbenchChip
+                {
+                    Text = $"{step.BranchOutcomes.Count} branches",
+                    Tone = step.BranchOutcomes.Count == 0 ? "neutral" : "accent"
                 }
             ],
             FooterChips =
@@ -198,6 +205,8 @@ public sealed class ProcessCanvasSurfaceFactory
                 ? stepRun.BlockedReason
                 : !string.IsNullOrWhiteSpace(stepRun.RefusalReason)
                     ? stepRun.RefusalReason
+                    : !string.IsNullOrWhiteSpace(stepRun.SelectedBranchOutcomeTitle)
+                        ? $"Selected branch: {stepRun.SelectedBranchOutcomeTitle}"
                     : stepRun.DecisionSummary,
             Status = stepRun.Status.ToString().ToLowerInvariant(),
             StatusPill = stepRun.Status.ToString(),

@@ -225,9 +225,27 @@ public sealed class ProcessStepDefinition {
 
     public Guid? DependsOnStepId { get; set; }
 
+    public Guid? DependsOnBranchOutcomeId { get; set; }
+
+    public Guid? DecisionRoleRequirementId { get; set; }
+
     public double CanvasX { get; set; }
 
     public double CanvasY { get; set; }
+}
+
+public sealed class ProcessStepBranchOutcomeDefinition {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid StepDefinitionId { get; set; }
+
+    public string Key { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
+
+    public int DisplayOrder { get; set; }
 }
 
 public sealed class ProcessStepRoleAssignmentRequirement {
@@ -350,6 +368,20 @@ internal sealed class ProcessStepDefinitionConfiguration : IEntityTypeConfigurat
         builder.HasIndex(step => new { step.ProcessDefinitionVersionId, step.OrderIndex });
         builder.HasIndex(step => new { step.ProcessDefinitionVersionId, step.Key }).IsUnique();
         builder.HasIndex(step => step.DependsOnStepId);
+        builder.HasIndex(step => step.DependsOnBranchOutcomeId);
+        builder.HasIndex(step => step.DecisionRoleRequirementId);
+    }
+}
+
+internal sealed class ProcessStepBranchOutcomeDefinitionConfiguration : IEntityTypeConfiguration<ProcessStepBranchOutcomeDefinition> {
+    public void Configure(EntityTypeBuilder<ProcessStepBranchOutcomeDefinition> builder) {
+        builder.ToTable("Processes_StepBranchOutcomes");
+        builder.HasKey(outcome => outcome.Id);
+        builder.Property(outcome => outcome.Key).HasMaxLength(120).IsRequired();
+        builder.Property(outcome => outcome.Title).HasMaxLength(200).IsRequired();
+        builder.Property(outcome => outcome.Description).HasColumnType("TEXT");
+        builder.HasIndex(outcome => new { outcome.StepDefinitionId, outcome.Key }).IsUnique();
+        builder.HasIndex(outcome => new { outcome.StepDefinitionId, outcome.DisplayOrder });
     }
 }
 
@@ -514,13 +546,29 @@ public sealed class ProcessStepEditorModel {
 
     public Guid? DependsOnStepId { get; set; }
 
+    public Guid? DependsOnBranchOutcomeId { get; set; }
+
+    public Guid? DecisionRoleRequirementId { get; set; }
+
     public double CanvasX { get; set; }
 
     public double CanvasY { get; set; }
 
+    public List<ProcessStepBranchOutcomeEditorModel> BranchOutcomes { get; set; } = [];
+
     public List<ProcessStepRoleRequirementEditorModel> RoleAssignments { get; set; } = [];
 
     public List<ProcessArtifactExpectationEditorModel> ArtifactExpectations { get; set; } = [];
+}
+
+public sealed class ProcessStepBranchOutcomeEditorModel {
+    public Guid? Id { get; set; }
+
+    public string Key { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
 }
 
 public sealed class ProcessStepRoleRequirementEditorModel {

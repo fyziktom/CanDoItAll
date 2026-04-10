@@ -97,22 +97,44 @@ else if (RuntimeStep is not null)
 
         <SurfaceCard>
             <Stack GapScale="LayoutGap.Medium">
+                @if (RuntimeStep.AvailableBranchOutcomes.Count > 0)
+                {
+                    <div>
+                        <label class="cda-field-label">Branch outcome</label>
+                        <InputSelect TValue="Guid?"
+                                     Value="SelectedRuntimeBranchOutcomeId"
+                                     ValueChanged="HandleSelectedRuntimeBranchOutcomeChanged"
+                                     class="cda-input">
+                            <option value="">Select outcome</option>
+                            @foreach (var outcome in RuntimeStep.AvailableBranchOutcomes)
+                            {
+                                <option value="@outcome.Id">@outcome.Title</option>
+                            }
+                        </InputSelect>
+                    </div>
+                }
                 <Button Text="Start"
                         ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(!CanApplyRuntimeStatus(ProcessStepRunStatus.InProgress))"
                         Click="StartRuntimeStep" />
                 <Button Text="Complete"
+                        Disabled="@(!CanApplyRuntimeStatus(ProcessStepRunStatus.Completed))"
                         Click="CompleteRuntimeStep" />
                 <Button Text="Block"
                         ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(!CanApplyRuntimeStatus(ProcessStepRunStatus.Blocked))"
                         Click="BlockRuntimeStep" />
                 <Button Text="Approval"
                         ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(!CanApplyRuntimeStatus(ProcessStepRunStatus.WaitingApproval))"
                         Click="RequestRuntimeApproval" />
                 <Button Text="Refuse"
                         ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(!CanApplyRuntimeStatus(ProcessStepRunStatus.Refused))"
                         Click="RefuseRuntimeStep" />
                 <Button Text="Fail"
                         ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(!CanApplyRuntimeStatus(ProcessStepRunStatus.Failed))"
                         Click="FailRuntimeStep" />
                 <Button Text="Record artifact"
                         ButtonStyle="ButtonStyle.Light"
@@ -134,6 +156,12 @@ else if (RuntimeStep is not null)
 
     [Parameter]
     public ProcessStepRunViewModel? RuntimeStep { get; set; }
+
+    [Parameter]
+    public Guid? SelectedRuntimeBranchOutcomeId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> SelectedRuntimeBranchOutcomeIdChanged { get; set; }
 
     [Parameter]
     public EventCallback OpenToolbox { get; set; }
@@ -189,7 +217,9 @@ else if (RuntimeStep is not null)
             ? string.Empty
             : string.IsNullOrWhiteSpace(RuntimeStep.BlockedReason)
                 ? string.IsNullOrWhiteSpace(RuntimeStep.DecisionSummary)
-                    ? string.IsNullOrWhiteSpace(RuntimeStep.CurrentExecutorName)
+                    ? !string.IsNullOrWhiteSpace(RuntimeStep.SelectedBranchOutcomeTitle)
+                        ? $"Selected branch outcome: {RuntimeStep.SelectedBranchOutcomeTitle}"
+                        : string.IsNullOrWhiteSpace(RuntimeStep.CurrentExecutorName)
                         ? "No executor assigned yet."
                         : $"Executor: {RuntimeStep.CurrentExecutorName}"
                     : RuntimeStep.DecisionSummary
@@ -206,4 +236,16 @@ else if (RuntimeStep is not null)
             ProcessStepRunStatus.Failed => "danger",
             _ => "neutral"
         };
+
+    private Task HandleSelectedRuntimeBranchOutcomeChanged(Guid? branchOutcomeId)
+    {
+        return SelectedRuntimeBranchOutcomeIdChanged.InvokeAsync(branchOutcomeId);
+    }
+
+    private bool CanApplyRuntimeStatus(ProcessStepRunStatus targetStatus)
+    {
+        return RuntimeStep is not null &&
+            RuntimeStep.Status != targetStatus &&
+            ProcessStepRunTransitions.IsAllowed(RuntimeStep.Status, targetStatus);
+    }
 }

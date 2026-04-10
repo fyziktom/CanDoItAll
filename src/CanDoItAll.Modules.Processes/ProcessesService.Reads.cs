@@ -52,26 +52,54 @@ public sealed partial class ProcessesService {
 
     public async Task<IReadOnlyList<ProcessStepRunViewModel>> ListStepRunsAsync(Guid runId, CancellationToken cancellationToken = default) {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await dbContext.Set<ProcessStepRun>()
+        var stepRuns = await dbContext.Set<ProcessStepRun>()
             .Where(item => item.ProcessRunId == runId)
             .OrderBy(item => item.Sequence)
-            .Select(item => new ProcessStepRunViewModel(
-                item.Id,
-                item.StepDefinitionId,
-                item.Sequence,
-                item.Title,
-                item.StepKind,
-                item.Status,
-                item.CurrentExecutorName,
-                item.DecisionSummary,
-                item.BlockedReason,
-                item.RefusalReason,
-                item.WaitMinutes,
-                item.TouchMinutes,
-                item.BlockedMinutes,
-                item.ReworkCount,
-                item.CapabilityGapSeverity))
             .ToListAsync(cancellationToken);
+        var stepDefinitionIds = stepRuns.Select(item => item.StepDefinitionId).Distinct().ToList();
+        var stepDefinitions = await dbContext.Set<ProcessStepDefinition>()
+            .Where(item => stepDefinitionIds.Contains(item.Id))
+            .ToListAsync(cancellationToken);
+        var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
+            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var branchOutcomesByStepId = branchOutcomes
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<ProcessStepBranchOutcomeOptionViewModel>)group
+                    .OrderBy(item => item.DisplayOrder)
+                    .Select(item => new ProcessStepBranchOutcomeOptionViewModel(item.Id, item.Title, item.Description))
+                    .ToList());
+        var stepDefinitionsById = stepDefinitions.ToDictionary(item => item.Id);
+
+        return stepRuns
+            .Select(item => {
+                stepDefinitionsById.TryGetValue(item.StepDefinitionId, out var stepDefinition);
+                return new ProcessStepRunViewModel(
+                    item.Id,
+                    item.StepDefinitionId,
+                    stepDefinition?.DependsOnStepId,
+                    stepDefinition?.DependsOnBranchOutcomeId,
+                    stepDefinition?.DecisionRoleRequirementId,
+                    item.Sequence,
+                    item.Title,
+                    item.StepKind,
+                    item.Status,
+                    item.CurrentExecutorName,
+                    item.DecisionSummary,
+                    item.BlockedReason,
+                    item.RefusalReason,
+                    item.SelectedBranchOutcomeId,
+                    item.SelectedBranchOutcomeTitle,
+                    item.WaitMinutes,
+                    item.TouchMinutes,
+                    item.BlockedMinutes,
+                    item.ReworkCount,
+                    item.CapabilityGapSeverity,
+                    branchOutcomesByStepId.GetValueOrDefault(item.StepDefinitionId) ?? []);
+            })
+            .ToList();
     }
 
     public async Task<IReadOnlyList<ProcessDecisionViewModel>> ListDecisionRecordsAsync(Guid runId, CancellationToken cancellationToken = default) {
@@ -84,6 +112,7 @@ public sealed partial class ProcessesService {
                 item.Outcome,
                 item.Title,
                 item.Reason,
+                item.BranchOutcomeTitle,
                 item.DecidedBy,
                 item.CreatedAtUtc))
             .ToListAsync(cancellationToken);

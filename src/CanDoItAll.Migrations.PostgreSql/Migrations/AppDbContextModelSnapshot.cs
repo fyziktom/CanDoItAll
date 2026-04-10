@@ -2519,6 +2519,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("BranchOutcomeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BranchOutcomeTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -2562,6 +2570,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BranchOutcomeId");
 
                     b.HasIndex("StepRunId");
 
@@ -3084,6 +3094,42 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Processes_RunAssignments", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("StepDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StepDefinitionId", "DisplayOrder");
+
+                    b.HasIndex("StepDefinitionId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("Processes_StepBranchOutcomes", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3105,6 +3151,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<string>("DecisionRightsSummary")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("DecisionRoleRequirementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DependsOnBranchOutcomeId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("DependsOnStepId")
                         .HasColumnType("uuid");
@@ -3165,6 +3217,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DecisionRoleRequirementId");
+
+                    b.HasIndex("DependsOnBranchOutcomeId");
 
                     b.HasIndex("DependsOnStepId");
 
@@ -3269,6 +3325,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("SelectedBranchOutcomeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SelectedBranchOutcomeTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<int>("Sequence")
                         .HasColumnType("integer");
 
@@ -3300,6 +3364,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SelectedBranchOutcomeId");
 
                     b.HasIndex("StepDefinitionId");
 

@@ -83,6 +83,7 @@ public partial class ProcessWorkspace : ComponentBase
     private string assignmentExecutorKind = "person";
     private string assignmentBindingReason = string.Empty;
     private bool assignmentIsFallback;
+    private Dictionary<Guid, Guid?> runtimeBranchOutcomeSelections = [];
     private string exportJson = string.Empty;
     private string importJson = string.Empty;
     private string projectName = string.Empty;
@@ -234,6 +235,18 @@ public partial class ProcessWorkspace : ComponentBase
         assignments = await ProcessesService.ListAssignmentsAsync(selectedRunId.Value);
         workBriefs = await ProcessesService.ListWorkBriefsAsync(selectedRunId.Value);
         conformanceObservations = await ProcessesService.ListConformanceObservationsAsync(selectedRunId.Value);
+        var refreshedRuntimeBranchSelections = new Dictionary<Guid, Guid?>();
+        foreach (var stepRun in stepRuns) {
+            runtimeBranchOutcomeSelections.TryGetValue(stepRun.Id, out var selectedBranchOutcomeId);
+            if (selectedBranchOutcomeId.HasValue &&
+                stepRun.AvailableBranchOutcomes.All(item => item.Id != selectedBranchOutcomeId.Value)) {
+                selectedBranchOutcomeId = null;
+            }
+
+            refreshedRuntimeBranchSelections[stepRun.Id] = selectedBranchOutcomeId ?? stepRun.SelectedBranchOutcomeId;
+        }
+
+        runtimeBranchOutcomeSelections = refreshedRuntimeBranchSelections;
 
         if (!selectedAssignmentId.HasValue || assignments.All(item => item.Id != selectedAssignmentId.Value))
         {
@@ -447,12 +460,16 @@ public partial class ProcessWorkspace : ComponentBase
 
     private async Task ApplyStepStatusAsync(Guid stepRunId, ProcessStepRunStatus targetStatus)
     {
+        var selectedBranchOutcomeId = targetStatus == ProcessStepRunStatus.Completed
+            ? ResolveSelectedBranchOutcomeId(stepRunId)
+            : null;
         var result = await ProcessesService.TransitionStepAsync(
             new ProcessStepTransitionRequest
             {
                 StepRunId = stepRunId,
                 TargetStatus = targetStatus,
-                Reason = BuildTransitionReason(targetStatus),
+                Reason = BuildTransitionReason(targetStatus, stepRunId, selectedBranchOutcomeId),
+                SelectedBranchOutcomeId = selectedBranchOutcomeId,
                 DecidedBy = "process-workspace"
             });
         if (result.IsFailure)
@@ -563,6 +580,35 @@ public partial class ProcessWorkspace : ComponentBase
         foreach (var candidate in editor.Steps.Where(candidate => candidate.DependsOnStepId == step.Id))
         {
             candidate.DependsOnStepId = null;
+            candidate.DependsOnBranchOutcomeId = null;
+        }
+
+        RefreshCanvasSurface();
+    }
+
+    private void AddBranchOutcome(ProcessStepEditorModel step)
+    {
+        step.BranchOutcomes.Add(new ProcessStepBranchOutcomeEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Key = $"outcome-{step.BranchOutcomes.Count + 1}",
+            Title = $"Outcome {step.BranchOutcomes.Count + 1}"
+        });
+        RefreshCanvasSurface();
+    }
+
+    private void RemoveBranchOutcome(ProcessStepEditorModel step, ProcessStepBranchOutcomeEditorModel branchOutcome)
+    {
+        step.BranchOutcomes.Remove(branchOutcome);
+        if (!branchOutcome.Id.HasValue)
+        {
+            RefreshCanvasSurface();
+            return;
+        }
+
+        foreach (var candidate in editor.Steps.Where(candidate => candidate.DependsOnBranchOutcomeId == branchOutcome.Id.Value))
+        {
+            candidate.DependsOnBranchOutcomeId = null;
         }
 
         RefreshCanvasSurface();
@@ -717,11 +763,19 @@ public partial class ProcessWorkspace : ComponentBase
         return $"{run.Status} / {run.CompletedStepCount} of {run.TotalStepCount} steps / {run.CapabilityGapCount} gaps";
     }
 
-    private string BuildTransitionReason(ProcessStepRunStatus status)
+    private string BuildTransitionReason(ProcessStepRunStatus status, Guid stepRunId, Guid? selectedBranchOutcomeId)
     {
+        var branchOutcomeTitle = selectedBranchOutcomeId.HasValue
+            ? stepRuns
+                .FirstOrDefault(item => item.Id == stepRunId)?
+                .AvailableBranchOutcomes
+                .FirstOrDefault(item => item.Id == selectedBranchOutcomeId.Value)?
+                .Title
+            : null;
         return status switch
         {
             ProcessStepRunStatus.InProgress => "Work started from the runtime workspace.",
+            ProcessStepRunStatus.Completed when !string.IsNullOrWhiteSpace(branchOutcomeTitle) => $"Work completed from the runtime workspace with branch outcome '{branchOutcomeTitle}'.",
             ProcessStepRunStatus.Completed => "Work completed from the runtime workspace.",
             ProcessStepRunStatus.Blocked => "Blocked from the runtime workspace for review.",
             ProcessStepRunStatus.Refused => "Executor recorded a safe refusal from the runtime workspace.",
@@ -730,6 +784,32 @@ public partial class ProcessWorkspace : ComponentBase
             ProcessStepRunStatus.Skipped => "Step was skipped from the runtime workspace.",
             _ => "State updated from the runtime workspace."
         };
+    }
+
+    private Guid? ResolveSelectedBranchOutcomeId(Guid stepRunId)
+    {
+        return runtimeBranchOutcomeSelections.TryGetValue(stepRunId, out var selectedBranchOutcomeId)
+            ? selectedBranchOutcomeId
+            : stepRuns.FirstOrDefault(item => item.Id == stepRunId)?.SelectedBranchOutcomeId;
+    }
+
+    private Task UpdateRuntimeBranchOutcomeSelectionAsync(Guid stepRunId, Guid? branchOutcomeId)
+    {
+        runtimeBranchOutcomeSelections[stepRunId] = branchOutcomeId;
+        return Task.CompletedTask;
+    }
+
+    private IReadOnlyList<ProcessStepBranchOutcomeEditorModel> GetDependencyOutcomeOptions(ProcessStepEditorModel step)
+    {
+        if (!step.DependsOnStepId.HasValue)
+        {
+            return [];
+        }
+
+        return editor.Steps
+            .FirstOrDefault(candidate => candidate.Id == step.DependsOnStepId.Value)?
+            .BranchOutcomes
+            ?? [];
     }
 
     private string ResolveRoleName(Guid? roleId)
@@ -763,6 +843,13 @@ public partial class ProcessWorkspace : ComponentBase
             ProcessRunStatus.Cancelled => "neutral",
             _ => "neutral"
         };
+    }
+
+    private static bool CanApplyRuntimeStatus(ProcessStepRunViewModel? stepRun, ProcessStepRunStatus targetStatus)
+    {
+        return stepRun is not null &&
+            stepRun.Status != targetStatus &&
+            ProcessStepRunTransitions.IsAllowed(stepRun.Status, targetStatus);
     }
 
     private static string ResolveStepTone(ProcessStepRunStatus status)

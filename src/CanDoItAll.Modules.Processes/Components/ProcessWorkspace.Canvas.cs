@@ -570,6 +570,18 @@ public partial class ProcessWorkspace
         OpenDefinitionStepEditor();
     }
 
+    private void AddBranchOutcomeToSelectedStep()
+    {
+        if (SelectedCanvasDefinitionStep is null)
+        {
+            SetError("Select a definition step before adding a branch outcome.");
+            return;
+        }
+
+        AddBranchOutcome(SelectedCanvasDefinitionStep);
+        OpenDefinitionStepEditor();
+    }
+
     private void RemoveSelectedDefinitionStep()
     {
         if (SelectedCanvasDefinitionStep is null)
@@ -593,6 +605,23 @@ public partial class ProcessWorkspace
         }
 
         AddRoleAssignment(canvasStepDraft);
+        return Task.CompletedTask;
+    }
+
+    private Task AddCanvasBranchOutcomeAsync()
+    {
+        if (canvasStepDraft is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        AddBranchOutcome(canvasStepDraft);
+        return Task.CompletedTask;
+    }
+
+    private Task RemoveCanvasBranchOutcomeAsync(ProcessStepBranchOutcomeEditorModel branchOutcome)
+    {
+        canvasStepDraft?.BranchOutcomes.Remove(branchOutcome);
         return Task.CompletedTask;
     }
 
@@ -725,8 +754,19 @@ public partial class ProcessWorkspace
             ExceptionPolicySummary = source.ExceptionPolicySummary,
             TargetLeadHours = source.TargetLeadHours,
             DependsOnStepId = source.DependsOnStepId,
+            DependsOnBranchOutcomeId = source.DependsOnBranchOutcomeId,
+            DecisionRoleRequirementId = source.DecisionRoleRequirementId,
             CanvasX = source.CanvasX,
             CanvasY = source.CanvasY,
+            BranchOutcomes = source.BranchOutcomes
+                .Select(outcome => new ProcessStepBranchOutcomeEditorModel
+                {
+                    Id = outcome.Id,
+                    Key = outcome.Key,
+                    Title = outcome.Title,
+                    Description = outcome.Description
+                })
+                .ToList(),
             RoleAssignments = source.RoleAssignments
                 .Select(assignment => new ProcessStepRoleRequirementEditorModel
                 {
@@ -774,8 +814,11 @@ public partial class ProcessWorkspace
         target.ExceptionPolicySummary = source.ExceptionPolicySummary;
         target.TargetLeadHours = source.TargetLeadHours;
         target.DependsOnStepId = source.DependsOnStepId;
+        target.DependsOnBranchOutcomeId = source.DependsOnBranchOutcomeId;
+        target.DecisionRoleRequirementId = source.DecisionRoleRequirementId;
         target.CanvasX = source.CanvasX;
         target.CanvasY = source.CanvasY;
+        target.BranchOutcomes = CloneStep(source).BranchOutcomes;
         target.RoleAssignments = CloneStep(source).RoleAssignments;
         target.ArtifactExpectations = CloneStep(source).ArtifactExpectations;
     }

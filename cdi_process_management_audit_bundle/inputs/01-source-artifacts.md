@@ -1,0 +1,35 @@
+# Source Artifacts
+
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\01-executive-summary.md`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\02-bundle-intent-and-target-direction.md`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\03-current-implementation-audit.md`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\04-detailed-findings.md`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\05-agent-orchestration-readiness.md`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\06-code-quality-and-refactor-plan.md`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\07-remediation-backlog.md`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\08-codex-execution-plan.md`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\09-analysis-method.md`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\artifacts\CanDoItAll-process-management-audit.xlsx`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\artifacts\evidence-map.csv`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\artifacts\feature-status.json`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\artifacts\large-files.csv`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\codex\TASKS.json`
+- `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\codex\REVIEW_CHECKLIST.md`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessRuntimeModels.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Runtime.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Reads.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessStepEditorForm.razor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.razor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.razor.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.Canvas.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessCanvasSelectionPanel.razor`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessCanvasSurfaceFactory.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessCanvasTemplateCatalog.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Processes\ProcessesCoordinator.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Processes\ProcessesTools.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Processes\ProcessToolModels.cs`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\ProcessWorkspaceTests.cs`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Mcp.Processes.Tests\ProcessesToolsTests.cs`

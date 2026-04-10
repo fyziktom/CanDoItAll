@@ -156,6 +156,10 @@ public sealed class ProcessStepRun {
 
     public string InputQualitySummary { get; set; } = string.Empty;
 
+    public Guid? SelectedBranchOutcomeId { get; set; }
+
+    public string SelectedBranchOutcomeTitle { get; set; } = string.Empty;
+
     public DateTimeOffset? ReadyAtUtc { get; set; }
 
     public DateTimeOffset? StartedAtUtc { get; set; }
@@ -237,6 +241,10 @@ public sealed class ProcessDecisionRecord {
     public string Reason { get; set; } = string.Empty;
 
     public string PolicyEvaluation { get; set; } = string.Empty;
+
+    public Guid? BranchOutcomeId { get; set; }
+
+    public string BranchOutcomeTitle { get; set; } = string.Empty;
 
     public string DecidedBy { get; set; } = string.Empty;
 
@@ -379,10 +387,12 @@ internal sealed class ProcessStepRunConfiguration : IEntityTypeConfiguration<Pro
         builder.Property(step => step.RefusalReason).HasColumnType("TEXT");
         builder.Property(step => step.ExceptionSummary).HasColumnType("TEXT");
         builder.Property(step => step.InputQualitySummary).HasColumnType("TEXT");
+        builder.Property(step => step.SelectedBranchOutcomeTitle).HasMaxLength(200);
         builder.Property(step => step.CapabilityGapSeverity).HasConversion<string>().HasMaxLength(48);
         builder.HasIndex(step => new { step.ProcessRunId, step.Sequence }).IsUnique();
         builder.HasIndex(step => new { step.ProcessRunId, step.Status });
         builder.HasIndex(step => step.StepDefinitionId);
+        builder.HasIndex(step => step.SelectedBranchOutcomeId);
     }
 }
 
@@ -424,10 +434,12 @@ internal sealed class ProcessDecisionRecordConfiguration : IEntityTypeConfigurat
         builder.Property(record => record.Title).HasMaxLength(200).IsRequired();
         builder.Property(record => record.Reason).HasColumnType("TEXT");
         builder.Property(record => record.PolicyEvaluation).HasColumnType("TEXT");
+        builder.Property(record => record.BranchOutcomeTitle).HasMaxLength(200);
         builder.Property(record => record.DecidedBy).HasMaxLength(160);
         builder.Property(record => record.OperatingMode).HasConversion<string>().HasMaxLength(48);
         builder.HasIndex(record => new { record.ProcessRunId, record.CreatedAtUtc });
         builder.HasIndex(record => record.StepRunId);
+        builder.HasIndex(record => record.BranchOutcomeId);
     }
 }
 
@@ -510,9 +522,17 @@ public sealed record ProcessRunListItem(
     decimal ActualCost,
     DateTimeOffset UpdatedAtUtc);
 
+public sealed record ProcessStepBranchOutcomeOptionViewModel(
+    Guid Id,
+    string Title,
+    string Description);
+
 public sealed record ProcessStepRunViewModel(
     Guid Id,
     Guid StepDefinitionId,
+    Guid? DependsOnStepDefinitionId,
+    Guid? DependsOnBranchOutcomeId,
+    Guid? DecisionRoleRequirementId,
     int Sequence,
     string Title,
     ProcessStepKind StepKind,
@@ -521,11 +541,14 @@ public sealed record ProcessStepRunViewModel(
     string DecisionSummary,
     string BlockedReason,
     string RefusalReason,
+    Guid? SelectedBranchOutcomeId,
+    string SelectedBranchOutcomeTitle,
     int WaitMinutes,
     int TouchMinutes,
     int BlockedMinutes,
     int ReworkCount,
-    ProcessCapabilityGapSeverity CapabilityGapSeverity);
+    ProcessCapabilityGapSeverity CapabilityGapSeverity,
+    IReadOnlyList<ProcessStepBranchOutcomeOptionViewModel> AvailableBranchOutcomes);
 
 public sealed record ProcessDecisionViewModel(
     Guid Id,
@@ -533,6 +556,7 @@ public sealed record ProcessDecisionViewModel(
     ProcessDecisionOutcome Outcome,
     string Title,
     string Reason,
+    string BranchOutcomeTitle,
     string DecidedBy,
     DateTimeOffset CreatedAtUtc);
 
@@ -623,6 +647,8 @@ public sealed class ProcessStepTransitionRequest {
     public ProcessStepRunStatus TargetStatus { get; set; } = ProcessStepRunStatus.InProgress;
 
     public string Reason { get; set; } = string.Empty;
+
+    public Guid? SelectedBranchOutcomeId { get; set; }
 
     public string DecidedBy { get; set; } = string.Empty;
 }
