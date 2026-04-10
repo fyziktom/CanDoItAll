@@ -1,7 +1,7 @@
 @namespace CanDoItAll.Components.BaseLib
 @inherits StyledComponentBase
 
-<div @attributes='BuildAttributes(BuildClass("rz-form-field cda-form-field", ContainerClass))'>
+<div @attributes='BuildAttributes(BuildClass("cda-form-field", ContainerClass))'>
     @if (!string.IsNullOrWhiteSpace(Text))
     {
         <label id="@ResolvedLabelId" class="@BuildClass("cda-form-field__label", LabelClass)">@Text</label>
@@ -10,14 +10,14 @@
         <div class="@BuildClass("cda-form-field__content", ContentClass)">
             @if (Start is not null)
             {
-                <div class="rz-form-field-start">@Start</div>
+                <div class="">@Start</div>
             }
             <div class="flex-1">
                 @ChildContent
             </div>
             @if (End is not null)
             {
-                <div class="rz-form-field-end">@End</div>
+                <div class="">@End</div>
             }
         </div>
     </CascadingValue>

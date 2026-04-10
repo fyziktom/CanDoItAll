@@ -3030,12 +3030,16 @@
 @layer components {
   .cda-form-field {
     display: flex;
+    width: 100% !important;
+    max-width: 100% !important;
     flex-direction: column;
     gap: calc(var(--spacing) * 2);
   }
   .cda-prefixed-field {
     position: relative;
     display: block;
+    width: 100%;
+    max-width: 100%;
     min-width: calc(var(--spacing) * 0);
     flex: 1;
   }
@@ -3094,6 +3098,7 @@
     color: var(--cad-color-text-soft);
   }
   .cda-form-field__label {
+    width: 100%;
     font-size: var(--text-xs);
     line-height: var(--tw-leading, var(--text-xs--line-height));
     --tw-font-weight: var(--font-weight-semibold);
@@ -3105,12 +3110,15 @@
   }
   .cda-form-field__content {
     display: flex;
+    width: 100%;
+    max-width: 100%;
     align-items: center;
     gap: calc(var(--spacing) * 2);
   }
   .cda-field-label {
     margin-bottom: calc(var(--spacing) * 1);
     display: block;
+    width: 100%;
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
     --tw-font-weight: var(--font-weight-medium);
@@ -3119,6 +3127,7 @@
   }
   .cda-input {
     width: 100%;
+    max-width: 100%;
     min-width: calc(var(--spacing) * 0);
     border-style: var(--tw-border-style);
     border-width: 1px;
