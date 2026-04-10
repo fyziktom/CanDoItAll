@@ -1,6 +1,6 @@
-# Canvas Workbench Popover Hardening
+# Canvas Workbench Popover Hardening And JS Organization
 
-This bundle coordinates the repair and hardening of the shared `CanvasWorkbench` hover and popover path used by workbench canvases. The mission is to remove the `showPopover` crash, make annotation hover state resilient across clicks and rerenders, audit nearby canvas-JS anti-patterns in the same mechanism, and prove the behavior on shared-canvas and real workbench surfaces without changing the C# surface contract.
+This bundle coordinates the repair and hardening of the shared `CanvasWorkbench` hover and popover path used by workbench canvases, then extends that work with a focused JS-organization pass on the largest verified workbench-runtime hotspots. The mission is to remove the `showPopover` crash, make annotation hover state resilient across clicks and rerenders, audit nearby canvas-JS anti-patterns in the same mechanism, split the highest-risk long runtime files into ordered feature slices, and prove the behavior on real workbench surfaces without changing the C# surface contract.
 
 ## Profile
 
@@ -9,6 +9,7 @@ This bundle coordinates the repair and hardening of the shared `CanvasWorkbench`
 ## Mission
 
 - Repair the shared workbench-canvas annotation hover and popover path so annotation hover never throws, stays consistent after node clicks and surface refreshes, remains safe when popover chrome is missing or disconnected, and preserves the existing annotation action, overlay, and node-interaction behavior across all shared `CanvasWorkbench` consumers.
+- Extend the same bundle with a behavior-preserving JS-organization pass that inventories long CanvasLib JS hotspots, selects the highest-value workbench runtime seams, and splits them into smaller ordered files with shared helpers where duplication or fragile cross-file coupling is proven.
 
 ## Bundle Layout
 
@@ -27,6 +28,9 @@ This bundle coordinates the repair and hardening of the shared `CanvasWorkbench`
 1. `subbundles/01-hover-and-popover-state-invariants`
 2. `subbundles/02-canvas-runtime-hardening-across-node-interactions`
 3. `subbundles/03-browser-proof-and-closure`
+4. `subbundles/04-js-hotspot-inventory-and-boundaries`
+5. `subbundles/05-canvas-renderer-scene-split`
+6. `subbundles/06-runtime-entry-splitting-and-regression-proof`
 
 ## Dependency And Validation Map
 
@@ -34,7 +38,7 @@ This bundle coordinates the repair and hardening of the shared `CanvasWorkbench`
 
 ## Validation Summary
 
-- Bundle preparation status: `Prepared`
+- Bundle preparation status: `Prepared and extended`
 - Bundle readiness gate: `Passed`
 - Execution status: `Completed`
 - Subbundle gate review: `Passed`

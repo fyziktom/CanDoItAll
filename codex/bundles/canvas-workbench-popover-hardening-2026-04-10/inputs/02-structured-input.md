@@ -3,6 +3,7 @@
 ## Core Objective
 
 - Repair the shared canvas-workbench annotation popover path so workbench canvases stop throwing inside `syncSceneHoverState`, remain stable around node clicks and refreshes, and close this report with explicit browser proof instead of speculative reasoning.
+- Extend the same verified runtime area with a maintainability pass that analyzes CanvasLib JS hotspots, splits the biggest workbench files into smaller feature slices, introduces shared helpers only where they remove real duplication or fragile cross-file coupling, and preserves every current behavior.
 
 ## Hard Constraints
 
@@ -21,6 +22,7 @@
 
 - The raw note explicitly names `showPopover`, workbench canvases, repeated failures, node-click correlation, robustness across all nodes and situations, nearby JS anti-patterns, and preservation of functionality.
 - None of those signals can be collapsed into “fix one crash” without losing scope.
+- The follow-up explicitly asks for a search across CanvasLib JS files, identification of files that are too long, bundle expansion with new subbundles, execution of those subbundles, and working verification after the refactor.
 
 ## Dependency And Sequencing Signals
 
@@ -33,6 +35,8 @@
 - Run targeted .NET validation after the JS changes land.
 - Use real browser proof for annotation hover and click behavior.
 - Update raw-note closure and gate rows from actual results.
+- Re-run the bundle validator after the organization subbundles land.
+- Prove that the workbench route still loads, hovers, clicks, and exports the same runtime API after the file splits.
 
 ## UI Validation Strategy
 
@@ -46,6 +50,8 @@
 - Subbundle 01 logs the shared-canvas hover fix with route, viewport, actions, and one open-popover screenshot.
 - Subbundle 02 logs repeated hover and click sequences across multiple annotation-bearing nodes and routes.
 - Subbundle 03 logs final regression results, screenshots, and raw-note closure evidence.
+- Subbundle 05 logs the first workbench smoke after the `06` split.
+- Subbundle 06 logs the final workbench regression pass after the `07` split.
 
 ## Working Assumptions
 
@@ -58,3 +64,5 @@
 - Fixing only the direct `showPopover` call while leaving stale hover state intact would leave intermittent failures behind.
 - Consumer-specific proof could diverge from sandbox proof if the workbench route exercises additional rerender flows.
 - Browser caches can hide the true JS result unless the runtime is rebuilt and reloaded cleanly.
+- Splitting the wrong file boundary could create new shared-module load-order failures that are harder to diagnose than the original crash.
+- Widening from workbench-runtime seams into unrelated calendar files would weaken proof quality and bundle focus.
