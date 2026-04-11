@@ -23,6 +23,7 @@ internal static class ProcessCanvasActionIds
     public const string CreateStepRetrospective = "process-step.retrospective";
 
     public const string EditDefinitionStep = "process-definition.edit-step";
+    public const string EditDefinitionRole = "process-definition.edit-role";
     public const string AddDependentStep = "process-definition.add-dependent-step";
     public const string AddBranchOutcome = "process-definition.add-branch-outcome";
     public const string AddRoleBinding = "process-definition.add-role-binding";

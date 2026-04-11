@@ -146,19 +146,20 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.True(seedResult.IsSuccess);
         Assert.NotNull(seedResult.Value);
-        Assert.True(seedResult.Value!.SeededDefinitionIds.Count >= 4);
-        Assert.True(seedResult.Value.SeededRunIds.Count >= 4);
+        Assert.True(seedResult.Value!.SeededDefinitionIds.Count >= 5);
+        Assert.True(seedResult.Value.SeededRunIds.Count >= 5);
 
         var repeatedSeedResult = await seedService.SeedBaselineAsync(projectId);
 
         Assert.True(repeatedSeedResult.IsSuccess);
 
         var definitions = await processesService.ListDefinitionsAsync(projectId);
-        Assert.Equal(4, definitions.Count);
+        Assert.Equal(5, definitions.Count);
         Assert.Contains(definitions, item => item.Id == seedResult.Value.PrimaryDefinitionId);
         Assert.Contains(definitions, item => item.Id == seedResult.Value.SecondaryDefinitionId);
 
         var softwareDeliveryDefinition = Assert.Single(definitions, item => item.Name == "Multi-team software delivery and release governance");
+        var branchingDefinition = Assert.Single(definitions, item => item.Name == "Branching code review and merge governance");
         var hotfixDefinition = Assert.Single(definitions, item => item.Name == "Emergency hotfix rollout with shard-risk governance");
         Assert.Single(definitions, item => item.Name == "Customer onboarding orchestration");
         Assert.Single(definitions, item => item.Name == "Incident response and escalation");
@@ -184,6 +185,16 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.True(hotfixStepRuns.Count >= 7);
         Assert.Contains(hotfixStepRuns, item => item.Sequence == 5 && item.Status == ProcessStepRunStatus.Failed);
         Assert.Contains(hotfixArtifacts, item => item.Title == "Failed rollout telemetry capture and rollback trigger notes");
+
+        var branchingRun = Assert.Single(
+            await processesService.ListRunsAsync(branchingDefinition.Id, projectId),
+            item => item.Name == "Branching code review and merge governance / pull request routing rehearsal");
+        var branchingStepRuns = await processesService.ListStepRunsAsync(branchingRun.Id);
+
+        Assert.True(branchingStepRuns.Count >= 8);
+        Assert.Contains(branchingStepRuns, item => item.Title == "Route code review disposition");
+        Assert.Contains(branchingStepRuns, item => item.Title == "Normalize unclassified review disposition");
+        Assert.Contains(branchingStepRuns, item => item.Title == "Escalate review workflow failure");
 
         var exportEnvelope = await processesService.ExportAsync(seedResult.Value.PrimaryDefinitionId);
         exportEnvelope.Definition.Id = null;

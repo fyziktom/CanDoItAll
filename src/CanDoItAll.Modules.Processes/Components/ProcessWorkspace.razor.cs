@@ -293,6 +293,7 @@ public partial class ProcessWorkspace : ComponentBase
 
     private void RefreshCanvasSurface()
     {
+        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
         canvasSurface = detailTab == "runs" && SelectedRun is not null
             ? CanvasSurfaceFactory.BuildRunSurface(SelectedRun, stepRuns, selectedCanvasNodeId)
             : CanvasSurfaceFactory.BuildDefinitionSurface(editor, selectedCanvasNodeId);
@@ -350,6 +351,7 @@ public partial class ProcessWorkspace : ComponentBase
 
     private async Task SaveAsync()
     {
+        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
         var result = await ProcessesService.SaveAsync(editor);
         if (result.IsFailure)
         {
@@ -588,20 +590,45 @@ public partial class ProcessWorkspace : ComponentBase
 
     private void AddBranchOutcome(ProcessStepEditorModel step)
     {
+        if (editor.Steps.Contains(step))
+        {
+            ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+        }
+        else
+        {
+            ProcessCanvasBranching.NormalizeStepDraft(step);
+        }
+
+        var customOutcomeCount = ProcessCanvasBranching.GetCustomBranchOutcomes(step).Count;
         step.BranchOutcomes.Add(new ProcessStepBranchOutcomeEditorModel
         {
             Id = Guid.NewGuid(),
-            Key = $"outcome-{step.BranchOutcomes.Count + 1}",
-            Title = $"Outcome {step.BranchOutcomes.Count + 1}"
+            Key = $"outcome-{customOutcomeCount + 1}",
+            Title = $"Outcome {customOutcomeCount + 1}"
         });
+        if (editor.Steps.Contains(step))
+        {
+            ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+        }
+        else
+        {
+            ProcessCanvasBranching.NormalizeStepDraft(step);
+        }
+
         RefreshCanvasSurface();
     }
 
     private void RemoveBranchOutcome(ProcessStepEditorModel step, ProcessStepBranchOutcomeEditorModel branchOutcome)
     {
+        if (ProcessCanvasBranching.IsSystemOutcome(branchOutcome))
+        {
+            return;
+        }
+
         step.BranchOutcomes.Remove(branchOutcome);
         if (!branchOutcome.Id.HasValue)
         {
+            ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
             RefreshCanvasSurface();
             return;
         }
@@ -611,6 +638,7 @@ public partial class ProcessWorkspace : ComponentBase
             candidate.DependsOnBranchOutcomeId = null;
         }
 
+        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
         RefreshCanvasSurface();
     }
 

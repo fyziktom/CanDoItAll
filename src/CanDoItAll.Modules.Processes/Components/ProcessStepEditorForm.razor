@@ -139,7 +139,7 @@
         </FormField>
 
         <FormSection Title="Branch outcomes"
-                     Description="Define the typed routing outcomes this step can emit when it decides which path continues next.">
+                     Description="Define the typed routing outcomes this step can emit when it decides which path continues next. Default and Error routes are added automatically when routing is enabled.">
             <Actions>
                 <Button Text="Add branch outcome"
                         ButtonStyle="ButtonStyle.Light"
@@ -147,7 +147,15 @@
                         Click="AddBranchOutcome" />
             </Actions>
             <ChildContent>
-                @if (Model.BranchOutcomes.Count == 0)
+                @if (HasSystemBranchOutcomes)
+                {
+                    <Cluster Gap="LayoutGap.Small">
+                        <StatusBadge Tone="neutral" Text="Default route" />
+                        <StatusBadge Tone="danger" Text="Error route" />
+                    </Cluster>
+                }
+
+                @if (VisibleBranchOutcomes.Count == 0)
                 {
                     <EmptyState Eyebrow="No branch outcomes"
                                 Title="Add the first outcome"
@@ -156,7 +164,7 @@
                 else
                 {
                     <Stack GapScale="LayoutGap.Medium">
-                        @foreach (var branchOutcome in Model.BranchOutcomes)
+                        @foreach (var branchOutcome in VisibleBranchOutcomes)
                         {
                             <ProcessStepBranchOutcomeEditor Model="@branchOutcome"
                                                             Remove="@(() => RemoveBranchOutcome.InvokeAsync(branchOutcome))" />
@@ -273,4 +281,12 @@
 
     private IReadOnlyList<ProcessStepBranchOutcomeEditorModel> SelectedDependencyBranchOutcomes
         => DependencyOptions.FirstOrDefault(candidate => candidate.Id == Model.DependsOnStepId)?.BranchOutcomes ?? [];
+
+    private IReadOnlyList<ProcessStepBranchOutcomeEditorModel> VisibleBranchOutcomes
+        => Model.BranchOutcomes
+            .Where(outcome => !ProcessCanvasBranching.IsSystemOutcome(outcome))
+            .ToList();
+
+    private bool HasSystemBranchOutcomes
+        => Model.BranchOutcomes.Any(ProcessCanvasBranching.IsSystemOutcome);
 }

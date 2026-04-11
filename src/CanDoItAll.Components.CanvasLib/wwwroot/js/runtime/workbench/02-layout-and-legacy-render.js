@@ -68,7 +68,70 @@
             ? buildDiagnosticsSnapshotFn(state, bounds)
             : legacyBuildDiagnosticsSnapshot(state, bounds);
     }
-    function getLinkAnchorPoint(state, node, side) {
+
+    function getNodePortCollection(node, direction) {
+        if (direction === "input") {
+            return Array.isArray(node?.inputPorts) ? node.inputPorts : [];
+        }
+
+        if (direction === "output") {
+            return Array.isArray(node?.outputPorts) ? node.outputPorts : [];
+        }
+
+        return [];
+    }
+
+    function resolveNodePortSide(port, fallbackSide) {
+        const side = (port?.side || fallbackSide || "").toString().trim().toLowerCase();
+        if (side === "left" || side === "right" || side === "top" || side === "bottom") {
+            return side;
+        }
+
+        return fallbackSide || "right";
+    }
+
+    function resolvePortAnchorY(position, size, index, totalCount) {
+        const portTop = position.y - (size.height / 2) + Math.min(86, size.height * 0.34);
+        const portBottom = position.y + (size.height / 2) - Math.min(24, size.height * 0.12);
+        if (totalCount <= 1) {
+            return position.y;
+        }
+
+        return portTop + ((portBottom - portTop) * index / Math.max(1, totalCount - 1));
+    }
+
+    function buildPortAnchorPoint(state, node, port, index, totalCount, fallbackSide) {
+        const position = getNodePosition(state, node);
+        const size = getNodeSize(state, node);
+        const horizontalInset = Math.min(28, size.width * 0.11);
+        const verticalInset = Math.min(22, size.height * 0.18);
+        const side = resolveNodePortSide(port, fallbackSide);
+        return {
+            x: side === "right"
+                ? position.x + (size.width / 2) - horizontalInset
+                : side === "left"
+                    ? position.x - (size.width / 2) + horizontalInset
+                    : position.x,
+            y: side === "top"
+                ? position.y - (size.height / 2) + verticalInset
+                : side === "bottom"
+                    ? position.y + (size.height / 2) - verticalInset
+                    : resolvePortAnchorY(position, size, index, totalCount),
+            side,
+            portId: port?.id || "",
+            label: port?.label || ""
+        };
+    }
+
+    function getLinkAnchorPoint(state, node, side, portId, direction) {
+        const ports = getNodePortCollection(node, direction);
+        if (portId && ports.length > 0) {
+            const portIndex = ports.findIndex(port => port?.id === portId);
+            if (portIndex >= 0) {
+                return buildPortAnchorPoint(state, node, ports[portIndex], portIndex, ports.length, side);
+            }
+        }
+
         const position = getNodePosition(state, node);
         const size = getNodeSize(state, node);
         const inset = Math.min(28, size.width * 0.11);
@@ -76,7 +139,8 @@
             x: side === "right"
                 ? position.x + (size.width / 2) - inset
                 : position.x - (size.width / 2) + inset,
-            y: position.y
+            y: position.y,
+            side
         };
     }
 
@@ -162,25 +226,27 @@
     }
 
     function getLinkRetainedKey(link, index) {
-        if (link?.sourceId || link?.targetId || link?.kind) {
-            return `${link?.sourceId || ""}|${link?.targetId || ""}|${link?.kind || ""}|${link?.isUserAuthored ? "1" : "0"}`;
+        if (link?.sourceId || link?.targetId || link?.kind || link?.sourcePortId || link?.targetPortId) {
+            return `${link?.sourceId || ""}|${link?.sourcePortId || ""}|${link?.targetId || ""}|${link?.targetPortId || ""}|${link?.kind || ""}|${link?.isUserAuthored ? "1" : "0"}`;
         }
 
         return `link:${index}`;
     }
 
-    function getLinkPathData(state, source, target) {
+    function getLinkPathData(state, source, target, link) {
         const sourcePosition = getNodePosition(state, source);
         const targetPosition = getNodePosition(state, target);
         const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
         const targetSide = sourceSide === "right" ? "left" : "right";
-        const sourceAnchor = getLinkAnchorPoint(state, source, sourceSide);
-        const targetAnchor = getLinkAnchorPoint(state, target, targetSide);
+        const sourceAnchor = getLinkAnchorPoint(state, source, sourceSide, link?.sourcePortId, "output");
+        const targetAnchor = getLinkAnchorPoint(state, target, targetSide, link?.targetPortId, "input");
+        const sourceAnchorSide = sourceAnchor.side || sourceSide;
+        const targetAnchorSide = targetAnchor.side || targetSide;
         const controlOffset = Math.max(92, Math.abs(targetAnchor.x - sourceAnchor.x) * 0.38);
         return [
             `M ${sourceAnchor.x} ${sourceAnchor.y}`,
-            `C ${sourceAnchor.x + (sourceSide === "right" ? controlOffset : -controlOffset)} ${sourceAnchor.y}`,
-            `${targetAnchor.x + (targetSide === "right" ? controlOffset : -controlOffset)} ${targetAnchor.y}`,
+            `C ${sourceAnchor.x + (sourceAnchorSide === "right" ? controlOffset : -controlOffset)} ${sourceAnchor.y}`,
+            `${targetAnchor.x + (targetAnchorSide === "right" ? controlOffset : -controlOffset)} ${targetAnchor.y}`,
             `${targetAnchor.x} ${targetAnchor.y}`
         ].join(" ");
     }
@@ -1087,6 +1153,15 @@
     }
 
     function getConnectorAnchorPoints(state, node, placementMode) {
+        const inputPorts = Array.isArray(node?.inputPorts) ? node.inputPorts : [];
+        const outputPorts = Array.isArray(node?.outputPorts) ? node.outputPorts : [];
+        if (inputPorts.length > 0 || outputPorts.length > 0) {
+            return [
+                ...inputPorts.map((port, index) => buildPortAnchorPoint(state, node, port, index, inputPorts.length, "left")),
+                ...outputPorts.map((port, index) => buildPortAnchorPoint(state, node, port, index, outputPorts.length, "right"))
+            ];
+        }
+
         const position = getNodePosition(state, node);
         const size = getNodeSize(state, node);
         const horizontalInset = Math.min(28, size.width * 0.11);
@@ -1446,7 +1521,10 @@
                 const targetPosition = getNodePosition(state, target);
                 const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
                 const targetSide = sourceSide === "right" ? "left" : "right";
-                for (const point of [getLinkAnchorPoint(state, source, sourceSide), getLinkAnchorPoint(state, target, targetSide)]) {
+                for (const point of [
+                    getLinkAnchorPoint(state, source, sourceSide, link.sourcePortId, "output"),
+                    getLinkAnchorPoint(state, target, targetSide, link.targetPortId, "input")
+                ]) {
                     const dot = createElement(state.document, "div", "cw-debug-anchor");
                     dot.style.left = `${round(point.x)}px`;
                     dot.style.top = `${round(point.y)}px`;

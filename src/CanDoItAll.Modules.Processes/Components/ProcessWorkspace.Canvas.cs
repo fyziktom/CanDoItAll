@@ -34,6 +34,8 @@ public partial class ProcessWorkspace
 
     private ProcessStepEditorModel? SelectedCanvasDefinitionStep => ResolveDefinitionStep(selectedCanvasNodeId);
 
+    private ProcessRoleEditorModel? SelectedCanvasDefinitionRole => ResolveDefinitionRole(selectedCanvasNodeId);
+
     private ProcessStepRunViewModel? SelectedCanvasRuntimeStep => ResolveRuntimeStep(selectedCanvasNodeId);
 
     private IReadOnlyList<ProcessCanvasToolboxGroup> DefinitionToolboxGroups
@@ -63,12 +65,16 @@ public partial class ProcessWorkspace
     private string CanvasSelectionWindowTitle
         => IsRuntimeCanvasActive
             ? SelectedCanvasRuntimeStep?.Title ?? "Runtime selection"
-            : SelectedCanvasDefinitionStep?.Title ?? "Definition selection";
+            : SelectedCanvasDefinitionRole?.DisplayName ??
+              SelectedCanvasDefinitionStep?.Title ??
+              "Definition selection";
 
     private string CanvasSelectionWindowSummary
         => IsRuntimeCanvasActive
             ? "Track runtime status, executor context, and proof-oriented next actions."
-            : "Inspect the selected step and keep role bindings plus artifact expectations close to the canvas.";
+            : SelectedCanvasDefinitionRole is not null
+                ? "Inspect the selected role contract and the routing authority it contributes to the canvas."
+                : "Inspect the selected step and keep role bindings plus artifact expectations close to the canvas.";
 
     private string CanvasEditorWindowTitle
         => canvasRoleDraft is not null
@@ -197,6 +203,13 @@ public partial class ProcessWorkspace
     private async Task HandleCanvasNodeOpenedAsync(string nodeId)
     {
         selectedCanvasNodeId = nodeId;
+        if (IsDefinitionCanvasActive && SelectedCanvasDefinitionRole is not null)
+        {
+            OpenDefinitionRoleEditor();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
         await OpenCanvasActionDialogAsync();
     }
 
@@ -220,18 +233,35 @@ public partial class ProcessWorkspace
             return Task.CompletedTask;
         }
 
+        var uiState = CloneCanvasUiState(ResolveStoredCanvasUiState());
         foreach (var position in args.Positions)
         {
-            var step = ResolveDefinitionStep(position.NodeId);
-            if (step is null)
+            if (position.NodeId.StartsWith(ProcessCanvasBranching.DefinitionStepNodePrefix, StringComparison.Ordinal))
             {
+                var step = ResolveDefinitionStep(position.NodeId);
+                if (step is null)
+                {
+                    continue;
+                }
+
+                step.CanvasX = position.X;
+                step.CanvasY = position.Y;
+                uiState.ManualPositions.Remove(position.NodeId);
                 continue;
             }
 
-            step.CanvasX = position.X;
-            step.CanvasY = position.Y;
+            if (position.NodeId.StartsWith(ProcessCanvasBranching.DefinitionBranchNodePrefix, StringComparison.Ordinal) ||
+                position.NodeId.StartsWith(ProcessCanvasBranching.DefinitionRoleNodePrefix, StringComparison.Ordinal))
+            {
+                uiState.ManualPositions[position.NodeId] = new CanvasWorkbenchPoint
+                {
+                    X = position.X,
+                    Y = position.Y
+                };
+            }
         }
 
+        StoreCanvasUiState(uiState);
         RefreshCanvasSurface();
         return Task.CompletedTask;
     }
@@ -269,6 +299,9 @@ public partial class ProcessWorkspace
         {
             case ProcessCanvasActionIds.OpenDefinitionToolbox:
                 await OpenCanvasToolboxAsync();
+                break;
+            case ProcessCanvasActionIds.EditDefinitionRole:
+                OpenDefinitionRoleEditor();
                 break;
             case ProcessCanvasActionIds.EditDefinitionStep:
                 OpenDefinitionStepEditor();
@@ -416,9 +449,7 @@ public partial class ProcessWorkspace
     {
         var dependencyId = sourceStep?.Id;
         var defaultY = ResolveCanvasStepEditorY(sourceStep, branchOutcomeId, y);
-        var defaultX = x > 0
-            ? x
-            : sourceStep?.CanvasX + 300 ?? 140 + (editor.Steps.Count * 280);
+        var defaultX = ResolveCanvasStepEditorX(sourceStep, branchOutcomeId, x);
 
         if (!ProcessCanvasTemplateCatalog.TryCreateStepDraft(
                 actionId.StartsWith("process-step.", StringComparison.Ordinal) ? actionId : ProcessCanvasActionIds.CreateStepImplementation,
@@ -431,7 +462,10 @@ public partial class ProcessWorkspace
             return;
         }
 
-        stepDraft.DependsOnBranchOutcomeId = branchOutcomeId;
+        stepDraft.DependsOnBranchOutcomeId = branchOutcomeId ??
+            (sourceStep is not null && ProcessCanvasBranching.ShouldRenderBranchRouter(sourceStep)
+                ? ProcessCanvasBranching.GetDefaultOutcomeId(sourceStep)
+                : null);
         canvasRoleDraft = null;
         canvasStepDraft = stepDraft;
         canvasEditedRoleTarget = null;
@@ -440,6 +474,23 @@ public partial class ProcessWorkspace
         canvasTemplateActionId = actionId.StartsWith("process-step.", StringComparison.Ordinal)
             ? actionId
             : ProcessCanvasActionIds.CreateStepImplementation;
+        canvasEditorWindowState.IsVisible = true;
+        canvasEditorWindowState.IsMinimized = false;
+    }
+
+    private void OpenDefinitionRoleEditor()
+    {
+        if (SelectedCanvasDefinitionRole is null)
+        {
+            return;
+        }
+
+        canvasRoleDraft = CloneRole(SelectedCanvasDefinitionRole);
+        canvasStepDraft = null;
+        canvasEditedRoleTarget = SelectedCanvasDefinitionRole;
+        canvasEditedStepTarget = null;
+        canvasInsertAfterStepId = null;
+        canvasTemplateActionId = string.Empty;
         canvasEditorWindowState.IsVisible = true;
         canvasEditorWindowState.IsMinimized = false;
     }
@@ -603,7 +654,30 @@ public partial class ProcessWorkspace
         }
 
         AddBranchOutcome(SelectedCanvasDefinitionStep);
-        OpenDefinitionStepEditor();
+        selectedCanvasNodeId = ProcessCanvasBranching.BuildDefinitionBranchNodeId(SelectedCanvasDefinitionStep);
+        SetMessage("Branch route added to the canvas.");
+        RefreshCanvasSurface();
+    }
+
+    private double ResolveCanvasStepEditorX(ProcessStepEditorModel? sourceStep, Guid? branchOutcomeId, double requestedX)
+    {
+        if (requestedX > 0)
+        {
+            return requestedX;
+        }
+
+        if (sourceStep is null)
+        {
+            return 140 + (editor.Steps.Count * 280);
+        }
+
+        var sourceIndex = editor.Steps.IndexOf(sourceStep);
+        var sourceX = sourceStep.CanvasX != 0
+            ? sourceStep.CanvasX
+            : 140 + (Math.Max(0, sourceIndex) * 280);
+        return branchOutcomeId.HasValue || ProcessCanvasBranching.ShouldRenderBranchRouter(sourceStep)
+            ? sourceX + 640d
+            : sourceX + 300d;
     }
 
     private static double ResolveCanvasStepEditorY(ProcessStepEditorModel? sourceStep, Guid? branchOutcomeId, double requestedY)
@@ -672,7 +746,12 @@ public partial class ProcessWorkspace
 
     private Task RemoveCanvasBranchOutcomeAsync(ProcessStepBranchOutcomeEditorModel branchOutcome)
     {
-        canvasStepDraft?.BranchOutcomes.Remove(branchOutcome);
+        if (canvasStepDraft is null || ProcessCanvasBranching.IsSystemOutcome(branchOutcome))
+        {
+            return Task.CompletedTask;
+        }
+
+        canvasStepDraft.BranchOutcomes.Remove(branchOutcome);
         return Task.CompletedTask;
     }
 
@@ -701,12 +780,11 @@ public partial class ProcessWorkspace
 
     private ProcessStepEditorModel? ResolveDefinitionStep(string? nodeId)
     {
-        if (string.IsNullOrWhiteSpace(nodeId) || !nodeId.StartsWith("step:", StringComparison.Ordinal))
+        if (!ProcessCanvasBranching.TryResolveDefinitionStepToken(nodeId, out var rawId))
         {
             return null;
         }
 
-        var rawId = nodeId[5..];
         if (Guid.TryParse(rawId, out var stepId))
         {
             return editor.Steps.FirstOrDefault(step => step.Id == stepId);
@@ -717,6 +795,23 @@ public partial class ProcessWorkspace
             string.Equals(step.Title.Replace(' ', '-'), rawId, StringComparison.OrdinalIgnoreCase));
     }
 
+    private ProcessRoleEditorModel? ResolveDefinitionRole(string? nodeId)
+    {
+        if (!ProcessCanvasBranching.TryResolveDefinitionRoleToken(nodeId, out var rawId))
+        {
+            return null;
+        }
+
+        if (Guid.TryParse(rawId, out var roleId))
+        {
+            return editor.Roles.FirstOrDefault(role => role.Id == roleId);
+        }
+
+        return editor.Roles.FirstOrDefault(role =>
+            string.Equals(role.Key, rawId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(role.DisplayName.Replace(' ', '-'), rawId, StringComparison.OrdinalIgnoreCase));
+    }
+
     private ProcessStepEditorModel? ResolveDefinitionStep(Guid? stepId)
         => stepId.HasValue
             ? editor.Steps.FirstOrDefault(step => step.Id == stepId.Value)
@@ -724,24 +819,19 @@ public partial class ProcessWorkspace
 
     private ProcessStepRunViewModel? ResolveRuntimeStep(string? nodeId)
     {
-        if (string.IsNullOrWhiteSpace(nodeId) || !nodeId.StartsWith("run-step:", StringComparison.Ordinal))
+        if (!ProcessCanvasBranching.TryResolveRuntimeStepId(nodeId, out var stepRunId))
         {
             return null;
         }
 
-        var rawId = nodeId[9..];
-        return Guid.TryParse(rawId, out var stepRunId)
-            ? stepRuns.FirstOrDefault(stepRun => stepRun.Id == stepRunId)
-            : null;
+        return stepRuns.FirstOrDefault(stepRun => stepRun.Id == stepRunId);
     }
 
     private static string BuildDefinitionNodeId(ProcessStepEditorModel step)
-        => step.Id.HasValue
-            ? $"step:{step.Id.Value:D}"
-            : $"step:{step.Key}";
+        => ProcessCanvasBranching.BuildDefinitionStepNodeId(step);
 
     private static string BuildRunNodeId(Guid stepRunId)
-        => $"run-step:{stepRunId:D}";
+        => ProcessCanvasBranching.BuildRuntimeStepNodeId(stepRunId);
 
     private static ProcessRoleEditorModel CloneRole(ProcessRoleEditorModel source)
     {

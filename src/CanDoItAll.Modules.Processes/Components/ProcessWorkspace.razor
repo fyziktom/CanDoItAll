@@ -250,9 +250,11 @@
                                                                       State="@canvasSelectionWindowState"
                                                                       StateChanged="HandleCanvasSelectionWindowStateChangedAsync">
                                                     <ProcessCanvasSelectionPanel DefinitionStep="@SelectedCanvasDefinitionStep"
+                                                                                 DefinitionRole="@SelectedCanvasDefinitionRole"
                                                                                  OpenToolbox="OpenCanvasToolboxAsync"
                                                                                  ClearSelection="ClearCanvasSelectionAsync"
                                                                                  EditDefinitionStep="@(async () => { OpenDefinitionStepEditor(); await Task.CompletedTask; })"
+                                                                                 EditDefinitionRole="@(async () => { OpenDefinitionRoleEditor(); await Task.CompletedTask; })"
                                                                                  AddDependentStep="@(async () => { OpenCanvasStepEditor(ProcessCanvasActionIds.CreateStepImplementation, SelectedCanvasDefinitionStep, 0, 0); await Task.CompletedTask; })"
                                                                                  AddBranchOutcome="@(async () => { AddBranchOutcomeToSelectedStep(); await Task.CompletedTask; })"
                                                                                  AddRoutedStep="AddRoutedStepFromSelectedStepAsync"

@@ -70,6 +70,34 @@ public sealed class ProcessCanvasSelectionPanelTests
     }
 
     [Fact]
+    public void Definition_role_selection_exposes_edit_role_action()
+    {
+        using var context = new TestContext();
+        var receiver = new object();
+        var roleEdits = 0;
+        var definitionRole = new ProcessRoleEditorModel
+        {
+            DisplayName = "Review lead",
+            Purpose = "Own the explicit routing decision for review outcomes.",
+            PreferredExecutorKind = "person",
+            DefaultAllocationPercent = 40,
+            IsRequired = true
+        };
+
+        var cut = context.RenderComponent<ProcessCanvasSelectionPanel>(
+            parameters => parameters
+                .Add(component => component.DefinitionRole, definitionRole)
+                .Add(component => component.EditDefinitionRole, EventCallback.Factory.Create(receiver, () => roleEdits++)));
+
+        Assert.Contains("Role definition", cut.Markup);
+        Assert.Contains("Review lead", cut.Markup);
+
+        cut.Find("[data-testid='processes-canvas-selection-edit-role']").Click();
+
+        Assert.Equal(1, roleEdits);
+    }
+
+    [Fact]
     public void Runtime_actions_disable_invalid_transitions_for_ready_steps()
     {
         using var context = new TestContext();

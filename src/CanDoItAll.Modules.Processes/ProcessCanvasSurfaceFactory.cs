@@ -8,13 +8,18 @@ public sealed class ProcessCanvasSurfaceFactory
     {
         ArgumentNullException.ThrowIfNull(editor);
 
+        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+
         var branchOutcomeTitles = editor.Steps
-            .SelectMany(step => step.BranchOutcomes)
+            .SelectMany(ProcessCanvasBranching.GetOrderedBranchOutcomes)
             .Where(outcome => outcome.Id.HasValue)
             .ToDictionary(
                 outcome => outcome.Id!.Value,
                 outcome => string.IsNullOrWhiteSpace(outcome.Title) ? "Untitled branch" : outcome.Title);
-        var nodes = editor.Steps
+        var rolesById = editor.Roles
+            .Where(role => role.Id.HasValue)
+            .ToDictionary(role => role.Id!.Value);
+        var stepNodes = editor.Steps
             .Select((step, index) => BuildDefinitionNode(
                 step,
                 index,
@@ -22,12 +27,18 @@ public sealed class ProcessCanvasSurfaceFactory
                     ? dependencyOutcomeTitle
                     : null))
             .ToList();
-        var links = editor.Steps
-            .Where(step => step.DependsOnStepId.HasValue)
-            .Select(step => BuildLink(step))
-            .Where(link => link is not null)
-            .Cast<CanvasWorkbenchLink>()
+        var branchNodes = editor.Steps
+            .Where(ProcessCanvasBranching.ShouldRenderBranchRouter)
+            .Select(step => BuildDefinitionBranchNode(step, editor.Steps, rolesById))
             .ToList();
+        var roleNodes = editor.Roles
+            .Select((role, index) => BuildDefinitionRoleNode(role, index, editor))
+            .ToList();
+        var nodes = new List<CanvasWorkbenchNode>(stepNodes.Count + branchNodes.Count + roleNodes.Count);
+        nodes.AddRange(stepNodes);
+        nodes.AddRange(branchNodes);
+        nodes.AddRange(roleNodes);
+        var links = BuildDefinitionLinks(editor.Steps, rolesById);
 
         return new CanvasWorkbenchSurface
         {
@@ -55,21 +66,17 @@ public sealed class ProcessCanvasSurfaceFactory
         var orderedSteps = stepRuns
             .OrderBy(stepRun => stepRun.Sequence)
             .ToList();
-        var nodes = orderedSteps
+        var stepNodes = orderedSteps
             .Select(BuildRunNode)
             .ToList();
-        var runNodesByDefinitionId = orderedSteps.ToDictionary(stepRun => stepRun.StepDefinitionId);
-        var links = orderedSteps
-            .Where(stepRun => stepRun.DependsOnStepDefinitionId.HasValue &&
-                runNodesByDefinitionId.ContainsKey(stepRun.DependsOnStepDefinitionId.Value))
-            .Select(stepRun => new CanvasWorkbenchLink
-            {
-                SourceId = BuildRunNodeId(runNodesByDefinitionId[stepRun.DependsOnStepDefinitionId!.Value].Id),
-                TargetId = BuildRunNodeId(stepRun.Id),
-                Kind = "flow",
-                IsUserAuthored = false
-            })
+        var branchNodes = orderedSteps
+            .Where(ProcessCanvasBranching.ShouldRenderBranchRouter)
+            .Select(stepRun => BuildRunBranchNode(stepRun, orderedSteps))
             .ToList();
+        var nodes = new List<CanvasWorkbenchNode>(stepNodes.Count + branchNodes.Count);
+        nodes.AddRange(stepNodes);
+        nodes.AddRange(branchNodes);
+        var links = BuildRunLinks(orderedSteps);
 
         return new CanvasWorkbenchSurface
         {
@@ -195,6 +202,170 @@ public sealed class ProcessCanvasSurfaceFactory
         };
     }
 
+    private static CanvasWorkbenchNode BuildDefinitionBranchNode(
+        ProcessStepEditorModel step,
+        IReadOnlyList<ProcessStepEditorModel> allSteps,
+        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById)
+    {
+        var outcomes = ProcessCanvasBranching.GetOrderedBranchOutcomes(step);
+        var decisionRoleTitle = step.DecisionRoleRequirementId.HasValue &&
+            rolesById.TryGetValue(step.DecisionRoleRequirementId.Value, out var decisionRole)
+                ? decisionRole.DisplayName
+                : string.Empty;
+        var routedDependents = allSteps.Count(candidate => candidate.DependsOnStepId == step.Id);
+
+        return new CanvasWorkbenchNode
+        {
+            Id = BuildDefinitionBranchNodeId(step),
+            Kind = "process-branch-router",
+            Family = "special",
+            Icon = "branch",
+            Title = string.IsNullOrWhiteSpace(step.Title)
+                ? "Route process outcomes"
+                : $"{step.Title} routing",
+            Subtitle = string.IsNullOrWhiteSpace(decisionRoleTitle)
+                ? "Explicit branch router"
+                : $"Decision maker: {decisionRoleTitle}",
+            LeadText = string.IsNullOrWhiteSpace(step.DecisionRightsSummary)
+                ? step.OutputContractSummary
+                : step.DecisionRightsSummary,
+            Status = "routing",
+            StatusPill = "Routing",
+            PaletteKey = "accent",
+            AccentColor = ResolveAccentColor(ProcessStepKind.Decision),
+            DurationLabel = $"{outcomes.Count} routes",
+            X = ResolveDefinitionBranchNodeX(step, allSteps),
+            Y = ResolveDefinitionBranchNodeY(step, allSteps),
+            Chips =
+            [
+                new CanvasWorkbenchChip
+                {
+                    Text = $"{outcomes.Count} outputs",
+                    Tone = "accent"
+                },
+                new CanvasWorkbenchChip
+                {
+                    Text = $"{routedDependents} downstream",
+                    Tone = routedDependents == 0 ? "neutral" : "info"
+                }
+            ],
+            FooterChips = string.IsNullOrWhiteSpace(decisionRoleTitle)
+                ? []
+                : [new CanvasWorkbenchChip { Text = decisionRoleTitle, Tone = "info" }],
+            ContextActions =
+            [
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.EditDefinitionStep,
+                    Label = "Edit route",
+                    MenuLabel = "Edit route",
+                    Icon = "draw",
+                    Tone = "accent"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.AddDependentStep,
+                    Label = "Add default path",
+                    MenuLabel = "Add default path",
+                    Icon = "add_circle",
+                    Tone = "info"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.AddBranchOutcome,
+                    Label = "Add branch outcome",
+                    MenuLabel = "Add branch outcome",
+                    Icon = "call_split",
+                    Tone = "accent"
+                },
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.RemoveDefinitionStep,
+                    Label = "Remove route",
+                    MenuLabel = "Remove route",
+                    Icon = "delete",
+                    Tone = "danger"
+                }
+            ],
+            InputPorts = BuildDefinitionBranchInputPorts(decisionRoleTitle),
+            OutputPorts = outcomes.Select(BuildDefinitionBranchOutputPort).ToList()
+        };
+    }
+
+    private static CanvasWorkbenchNode BuildDefinitionRoleNode(
+        ProcessRoleEditorModel role,
+        int index,
+        ProcessDefinitionEditorModel editor)
+    {
+        var assignmentCount = editor.Steps.Sum(step => step.RoleAssignments.Count(assignment => assignment.RoleRequirementId == role.Id));
+        var decisionCount = editor.Steps.Count(step => step.DecisionRoleRequirementId == role.Id);
+
+        return new CanvasWorkbenchNode
+        {
+            Id = BuildDefinitionRoleNodeId(role),
+            Kind = "process-role",
+            Family = "group",
+            Icon = "people",
+            Title = string.IsNullOrWhiteSpace(role.DisplayName) ? $"Role {index + 1}" : role.DisplayName,
+            Subtitle = string.IsNullOrWhiteSpace(role.PreferredExecutorKind)
+                ? "Role contract"
+                : role.PreferredExecutorKind,
+            LeadText = string.IsNullOrWhiteSpace(role.Purpose)
+                ? role.StaffingIntent
+                : role.Purpose,
+            Status = role.IsRequired ? "required" : "optional",
+            StatusPill = role.IsRequired ? "Required" : "Optional",
+            PaletteKey = "neutral",
+            AccentColor = "#0f766e",
+            DurationLabel = $"{role.DefaultAllocationPercent}%",
+            X = ResolveDefinitionRoleNodeX(editor),
+            Y = ResolveDefinitionRoleNodeY(index),
+            Chips =
+            [
+                new CanvasWorkbenchChip
+                {
+                    Text = $"{assignmentCount} bindings",
+                    Tone = assignmentCount == 0 ? "neutral" : "info"
+                },
+                new CanvasWorkbenchChip
+                {
+                    Text = $"{decisionCount} decisions",
+                    Tone = decisionCount == 0 ? "neutral" : "accent"
+                }
+            ],
+            FooterChips =
+            [
+                new CanvasWorkbenchChip
+                {
+                    Text = string.IsNullOrWhiteSpace(role.PreferredExecutorKind) ? "person" : role.PreferredExecutorKind,
+                    Tone = "neutral"
+                }
+            ],
+            ContextActions =
+            [
+                new CanvasWorkbenchAction
+                {
+                    ActionId = ProcessCanvasActionIds.EditDefinitionRole,
+                    Label = "Edit role",
+                    MenuLabel = "Edit role",
+                    Icon = "draw",
+                    Tone = "accent"
+                }
+            ],
+            OutputPorts =
+            [
+                new CanvasWorkbenchPort
+                {
+                    Id = ProcessCanvasBranching.RoleDecisionOutputPortId,
+                    Label = "Decision authority",
+                    Side = "right",
+                    Tone = "info",
+                    Kind = "decision"
+                }
+            ]
+        };
+    }
+
     private static CanvasWorkbenchNode BuildRunNode(ProcessStepRunViewModel stepRun)
     {
         var tone = ResolveRunTone(stepRun.Status);
@@ -283,47 +454,383 @@ public sealed class ProcessCanvasSurfaceFactory
         };
     }
 
-    private static CanvasWorkbenchLink? BuildLink(ProcessStepEditorModel step)
+    private static CanvasWorkbenchNode BuildRunBranchNode(
+        ProcessStepRunViewModel stepRun,
+        IReadOnlyList<ProcessStepRunViewModel> allSteps)
     {
-        if (!step.DependsOnStepId.HasValue)
+        var routedDependents = allSteps.Count(candidate => candidate.DependsOnStepDefinitionId == stepRun.StepDefinitionId);
+
+        return new CanvasWorkbenchNode
         {
-            return null;
+            Id = BuildRunBranchNodeId(stepRun.Id),
+            Kind = "process-run-branch-router",
+            Family = "special",
+            Icon = "branch",
+            Title = string.IsNullOrWhiteSpace(stepRun.Title)
+                ? "Runtime routing"
+                : $"{stepRun.Title} routing",
+            Subtitle = string.IsNullOrWhiteSpace(stepRun.SelectedBranchOutcomeTitle)
+                ? "Pending branch selection"
+                : $"Selected: {stepRun.SelectedBranchOutcomeTitle}",
+            LeadText = string.IsNullOrWhiteSpace(stepRun.DecisionSummary)
+                ? "Runtime branch routing remains explicit."
+                : stepRun.DecisionSummary,
+            Status = stepRun.Status.ToString().ToLowerInvariant(),
+            StatusPill = "Routing",
+            PaletteKey = "accent",
+            AccentColor = ResolveRunAccentColor(stepRun.Status),
+            DurationLabel = $"{stepRun.AvailableBranchOutcomes.Count} routes",
+            X = ResolveRunBranchNodeX(stepRun, allSteps),
+            Y = ResolveRunBranchNodeY(stepRun, allSteps),
+            Chips =
+            [
+                new CanvasWorkbenchChip
+                {
+                    Text = $"{stepRun.AvailableBranchOutcomes.Count} outputs",
+                    Tone = "accent"
+                },
+                new CanvasWorkbenchChip
+                {
+                    Text = $"{routedDependents} downstream",
+                    Tone = routedDependents == 0 ? "neutral" : "info"
+                }
+            ],
+            InputPorts =
+            [
+                new CanvasWorkbenchPort
+                {
+                    Id = ProcessCanvasBranching.StepInputPortId,
+                    Label = "From step",
+                    Side = "left",
+                    Tone = "neutral",
+                    Kind = "source"
+                }
+            ],
+            OutputPorts = stepRun.AvailableBranchOutcomes
+                .Select(BuildRunBranchOutputPort)
+                .ToList()
+        };
+    }
+
+    private static List<CanvasWorkbenchLink> BuildDefinitionLinks(
+        IReadOnlyList<ProcessStepEditorModel> steps,
+        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById)
+    {
+        var stepsById = steps
+            .Where(step => step.Id.HasValue)
+            .ToDictionary(step => step.Id!.Value);
+        var links = new List<CanvasWorkbenchLink>();
+
+        foreach (var step in steps.Where(ProcessCanvasBranching.ShouldRenderBranchRouter))
+        {
+            links.Add(new CanvasWorkbenchLink
+            {
+                SourceId = BuildDefinitionNodeId(step),
+                TargetId = BuildDefinitionBranchNodeId(step),
+                TargetPortId = ProcessCanvasBranching.StepInputPortId,
+                Kind = "flow",
+                IsUserAuthored = true
+            });
+
+            if (step.DecisionRoleRequirementId.HasValue &&
+                rolesById.ContainsKey(step.DecisionRoleRequirementId.Value))
+            {
+                links.Add(new CanvasWorkbenchLink
+                {
+                    SourceId = BuildDefinitionRoleNodeId(rolesById[step.DecisionRoleRequirementId.Value]),
+                    SourcePortId = ProcessCanvasBranching.RoleDecisionOutputPortId,
+                    TargetId = BuildDefinitionBranchNodeId(step),
+                    TargetPortId = ProcessCanvasBranching.DecisionRoleInputPortId,
+                    Kind = "decision-role",
+                    IsUserAuthored = true
+                });
+            }
         }
 
-        return new CanvasWorkbenchLink
+        foreach (var step in steps.Where(step => step.DependsOnStepId.HasValue &&
+            stepsById.ContainsKey(step.DependsOnStepId.Value)))
         {
-            SourceId = BuildDefinitionNodeId(step.DependsOnStepId.Value),
-            TargetId = BuildDefinitionNodeId(step),
-            Kind = "flow",
-            IsUserAuthored = true
-        };
+            var sourceStep = stepsById[step.DependsOnStepId!.Value];
+            if (ProcessCanvasBranching.ShouldRenderBranchRouter(sourceStep))
+            {
+                links.Add(new CanvasWorkbenchLink
+                {
+                    SourceId = BuildDefinitionBranchNodeId(sourceStep),
+                    SourcePortId = ProcessCanvasBranching.ResolveOutcomePortId(sourceStep, step.DependsOnBranchOutcomeId),
+                    TargetId = BuildDefinitionNodeId(step),
+                    Kind = "flow",
+                    IsUserAuthored = true
+                });
+                continue;
+            }
+
+            links.Add(new CanvasWorkbenchLink
+            {
+                SourceId = BuildDefinitionNodeId(sourceStep),
+                TargetId = BuildDefinitionNodeId(step),
+                Kind = "flow",
+                IsUserAuthored = true
+            });
+        }
+
+        return links;
+    }
+
+    private static List<CanvasWorkbenchLink> BuildRunLinks(IReadOnlyList<ProcessStepRunViewModel> stepRuns)
+    {
+        var runsByDefinitionId = stepRuns.ToDictionary(stepRun => stepRun.StepDefinitionId);
+        var links = new List<CanvasWorkbenchLink>();
+
+        foreach (var stepRun in stepRuns.Where(ProcessCanvasBranching.ShouldRenderBranchRouter))
+        {
+            links.Add(new CanvasWorkbenchLink
+            {
+                SourceId = BuildRunNodeId(stepRun.Id),
+                TargetId = BuildRunBranchNodeId(stepRun.Id),
+                TargetPortId = ProcessCanvasBranching.StepInputPortId,
+                Kind = "flow",
+                IsUserAuthored = false
+            });
+        }
+
+        foreach (var stepRun in stepRuns.Where(stepRun => stepRun.DependsOnStepDefinitionId.HasValue &&
+            runsByDefinitionId.ContainsKey(stepRun.DependsOnStepDefinitionId.Value)))
+        {
+            var sourceStepRun = runsByDefinitionId[stepRun.DependsOnStepDefinitionId!.Value];
+            if (ProcessCanvasBranching.ShouldRenderBranchRouter(sourceStepRun))
+            {
+                links.Add(new CanvasWorkbenchLink
+                {
+                    SourceId = BuildRunBranchNodeId(sourceStepRun.Id),
+                    SourcePortId = ProcessCanvasBranching.ResolveOutcomePortId(sourceStepRun, stepRun.DependsOnBranchOutcomeId),
+                    TargetId = BuildRunNodeId(stepRun.Id),
+                    Kind = "flow",
+                    IsUserAuthored = false
+                });
+                continue;
+            }
+
+            links.Add(new CanvasWorkbenchLink
+            {
+                SourceId = BuildRunNodeId(sourceStepRun.Id),
+                TargetId = BuildRunNodeId(stepRun.Id),
+                Kind = "flow",
+                IsUserAuthored = false
+            });
+        }
+
+        return links;
     }
 
     private static string BuildDefinitionNodeId(ProcessStepEditorModel step)
     {
-        return BuildDefinitionNodeId(step.Id ?? Guid.Empty, step.Key, step.Title);
+        return ProcessCanvasBranching.BuildDefinitionStepNodeId(step);
     }
 
     private static string BuildDefinitionNodeId(Guid stepId)
     {
-        return $"step:{stepId:D}";
+        return $"{ProcessCanvasBranching.DefinitionStepNodePrefix}{stepId:D}";
     }
 
-    private static string BuildDefinitionNodeId(Guid stepId, string key, string title)
+    private static string BuildDefinitionBranchNodeId(ProcessStepEditorModel step)
     {
-        if (stepId != Guid.Empty)
-        {
-            return BuildDefinitionNodeId(stepId);
-        }
+        return ProcessCanvasBranching.BuildDefinitionBranchNodeId(step);
+    }
 
-        var normalized = string.IsNullOrWhiteSpace(key) ? title : key;
-        normalized = normalized.Trim().ToLowerInvariant().Replace(' ', '-');
-        return $"step:{normalized}";
+    private static string BuildDefinitionRoleNodeId(ProcessRoleEditorModel role)
+    {
+        return ProcessCanvasBranching.BuildDefinitionRoleNodeId(role);
     }
 
     private static string BuildRunNodeId(Guid stepRunId)
     {
-        return $"run-step:{stepRunId:D}";
+        return ProcessCanvasBranching.BuildRuntimeStepNodeId(stepRunId);
+    }
+
+    private static string BuildRunBranchNodeId(Guid stepRunId)
+    {
+        return ProcessCanvasBranching.BuildRuntimeBranchNodeId(stepRunId);
+    }
+
+    private static List<CanvasWorkbenchPort> BuildDefinitionBranchInputPorts(string decisionRoleTitle)
+    {
+        var ports = new List<CanvasWorkbenchPort>
+        {
+            new()
+            {
+                Id = ProcessCanvasBranching.StepInputPortId,
+                Label = "From step",
+                Side = "left",
+                Tone = "neutral",
+                Kind = "source"
+            }
+        };
+        if (!string.IsNullOrWhiteSpace(decisionRoleTitle))
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasBranching.DecisionRoleInputPortId,
+                Label = decisionRoleTitle,
+                Side = "left",
+                Tone = "info",
+                Kind = "decision-role",
+                IsRequired = true
+            });
+        }
+
+        return ports;
+    }
+
+    private static CanvasWorkbenchPort BuildDefinitionBranchOutputPort(ProcessStepBranchOutcomeEditorModel outcome)
+    {
+        return new CanvasWorkbenchPort
+        {
+            Id = ProcessCanvasBranching.BuildOutcomePortId(outcome),
+            Label = string.IsNullOrWhiteSpace(outcome.Title) ? "Untitled route" : outcome.Title,
+            Side = "right",
+            Tone = ProcessCanvasBranching.IsErrorOutcome(outcome)
+                ? "danger"
+                : ProcessCanvasBranching.IsDefaultOutcome(outcome)
+                    ? "neutral"
+                    : "accent",
+            Kind = outcome.Key
+        };
+    }
+
+    private static CanvasWorkbenchPort BuildRunBranchOutputPort(ProcessStepBranchOutcomeOptionViewModel outcome)
+    {
+        var tone = string.Equals(outcome.Title, ProcessCanvasBranching.ErrorRouteTitle, StringComparison.OrdinalIgnoreCase)
+            ? "danger"
+            : string.Equals(outcome.Title, ProcessCanvasBranching.DefaultRouteTitle, StringComparison.OrdinalIgnoreCase)
+                ? "neutral"
+                : "accent";
+
+        return new CanvasWorkbenchPort
+        {
+            Id = ProcessCanvasBranching.BuildOutcomePortId(outcome),
+            Label = string.IsNullOrWhiteSpace(outcome.Title) ? "Untitled route" : outcome.Title,
+            Side = "right",
+            Tone = tone,
+            Kind = "route"
+        };
+    }
+
+    private static double ResolveDefinitionBranchNodeX(
+        ProcessStepEditorModel step,
+        IReadOnlyList<ProcessStepEditorModel> allSteps)
+    {
+        var stepX = ResolveDefinitionStepX(step, allSteps);
+        var directDependents = allSteps
+            .Where(candidate => candidate.DependsOnStepId == step.Id)
+            .Select(candidate => ResolveDefinitionStepX(candidate, allSteps))
+            .ToList();
+        if (directDependents.Count == 0)
+        {
+            return stepX + 320d;
+        }
+
+        var closestDependentX = directDependents.Min();
+        return closestDependentX - stepX < 420d
+            ? stepX + 320d
+            : stepX + ((closestDependentX - stepX) / 2d);
+    }
+
+    private static double ResolveDefinitionBranchNodeY(
+        ProcessStepEditorModel step,
+        IReadOnlyList<ProcessStepEditorModel> allSteps)
+    {
+        var stepY = ResolveDefinitionStepY(step);
+        var directDependents = allSteps
+            .Where(candidate => candidate.DependsOnStepId == step.Id)
+            .ToList();
+        if (directDependents.Count == 0)
+        {
+            return stepY;
+        }
+
+        return directDependents.All(candidate => Math.Abs(ResolveDefinitionStepY(candidate) - stepY) < 90d)
+            ? stepY + 220d
+            : directDependents.Average(ResolveDefinitionStepY);
+    }
+
+    private static double ResolveDefinitionRoleNodeX(ProcessDefinitionEditorModel editor)
+    {
+        if (editor.Steps.Count == 0)
+        {
+            return -180d;
+        }
+
+        var leftMostStepX = editor.Steps
+            .Select(step => step.CanvasX != 0 ? step.CanvasX : 140d)
+            .Min();
+        return leftMostStepX - 360d;
+    }
+
+    private static double ResolveDefinitionRoleNodeY(int index)
+    {
+        return 120d + (index * 210d);
+    }
+
+    private static double ResolveDefinitionStepX(ProcessStepEditorModel step, IReadOnlyList<ProcessStepEditorModel> allSteps)
+    {
+        var index = 0;
+        for (var candidateIndex = 0; candidateIndex < allSteps.Count; candidateIndex++)
+        {
+            if (ReferenceEquals(allSteps[candidateIndex], step))
+            {
+                index = candidateIndex;
+                break;
+            }
+        }
+
+        return step.CanvasX != 0
+            ? step.CanvasX
+            : 140d + (index * 280d);
+    }
+
+    private static double ResolveDefinitionStepY(ProcessStepEditorModel step)
+    {
+        return step.CanvasY != 0
+            ? step.CanvasY
+            : 180d;
+    }
+
+    private static double ResolveRunBranchNodeX(
+        ProcessStepRunViewModel stepRun,
+        IReadOnlyList<ProcessStepRunViewModel> allSteps)
+    {
+        var directDependents = allSteps
+            .Where(candidate => candidate.DependsOnStepDefinitionId == stepRun.StepDefinitionId)
+            .Select(candidate => 140d + ((candidate.Sequence - 1) * 280d))
+            .ToList();
+        var stepX = 140d + ((stepRun.Sequence - 1) * 280d);
+        if (directDependents.Count == 0)
+        {
+            return stepX + 320d;
+        }
+
+        var closestDependentX = directDependents.Min();
+        return closestDependentX - stepX < 420d
+            ? stepX + 320d
+            : stepX + ((closestDependentX - stepX) / 2d);
+    }
+
+    private static double ResolveRunBranchNodeY(
+        ProcessStepRunViewModel stepRun,
+        IReadOnlyList<ProcessStepRunViewModel> allSteps)
+    {
+        var directDependents = allSteps
+            .Where(candidate => candidate.DependsOnStepDefinitionId == stepRun.StepDefinitionId)
+            .ToList();
+        var stepY = stepRun.Status == ProcessStepRunStatus.Blocked ? 260d : 180d;
+        if (directDependents.Count == 0)
+        {
+            return stepY;
+        }
+
+        return directDependents.All(candidate => candidate.Status != ProcessStepRunStatus.Blocked)
+            ? stepY + 220d
+            : 260d;
     }
 
     private static CanvasWorkbenchChrome BuildDefinitionChrome()

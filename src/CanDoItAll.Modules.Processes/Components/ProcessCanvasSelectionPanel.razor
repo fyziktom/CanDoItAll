@@ -1,6 +1,6 @@
 @namespace CanDoItAll.Modules.Processes
 
-@if (!IsRuntime && DefinitionStep is null)
+@if (!IsRuntime && DefinitionStep is null && DefinitionRole is null)
 {
     <EmptyState Eyebrow="Canvas selection"
                 Title="Select a process step"
@@ -26,6 +26,39 @@ else if (IsRuntime && RuntimeStep is null)
                     Click="ClearSelection" />
         </Actions>
     </EmptyState>
+}
+else if (!IsRuntime && DefinitionRole is not null)
+{
+    <Stack GapScale="LayoutGap.Medium">
+        <SurfaceCard Soft="true">
+            <Stack GapScale="LayoutGap.Small">
+                <div>
+                    <p class="cda-eyebrow">Role definition</p>
+                    <h3 class="mt-1 text-lg font-semibold text-slate-950">@DefinitionRole.DisplayName</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">@DefinitionRoleLeadText</p>
+                </div>
+                <Cluster Gap="LayoutGap.Small">
+                    <StatusBadge Tone="neutral" Text="@(DefinitionRole.IsRequired ? "Required" : "Optional")" />
+                    <StatusBadge Tone="info" Text="@DefinitionRole.DefaultAllocationPercent.ToString()" />
+                    <StatusBadge Tone="accent" Text="@(string.IsNullOrWhiteSpace(DefinitionRole.PreferredExecutorKind) ? "person" : DefinitionRole.PreferredExecutorKind)" />
+                </Cluster>
+            </Stack>
+        </SurfaceCard>
+
+        <SurfaceCard>
+            <Stack GapScale="LayoutGap.Medium">
+                <Button Text="Edit role"
+                        Click="EditDefinitionRole"
+                        data-testid="processes-canvas-selection-edit-role" />
+                <Button Text="Open toolbox"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="OpenToolbox" />
+                <Button Text="Clear selection"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="ClearSelection" />
+            </Stack>
+        </SurfaceCard>
+    </Stack>
 }
 else if (!IsRuntime && DefinitionStep is not null)
 {
@@ -192,6 +225,9 @@ else if (RuntimeStep is not null)
     public ProcessStepEditorModel? DefinitionStep { get; set; }
 
     [Parameter]
+    public ProcessRoleEditorModel? DefinitionRole { get; set; }
+
+    [Parameter]
     public ProcessStepRunViewModel? RuntimeStep { get; set; }
 
     [Parameter]
@@ -208,6 +244,9 @@ else if (RuntimeStep is not null)
 
     [Parameter]
     public EventCallback EditDefinitionStep { get; set; }
+
+    [Parameter]
+    public EventCallback EditDefinitionRole { get; set; }
 
     [Parameter]
     public EventCallback AddDependentStep { get; set; }
@@ -254,6 +293,13 @@ else if (RuntimeStep is not null)
             : string.IsNullOrWhiteSpace(DefinitionStep.OutputContractSummary)
                 ? DefinitionStep.Notes
                 : DefinitionStep.OutputContractSummary;
+
+    private string DefinitionRoleLeadText
+        => DefinitionRole is null
+            ? string.Empty
+            : string.IsNullOrWhiteSpace(DefinitionRole.Purpose)
+                ? DefinitionRole.StaffingIntent
+                : DefinitionRole.Purpose;
 
     private string RuntimeLeadText
         => RuntimeStep is null
