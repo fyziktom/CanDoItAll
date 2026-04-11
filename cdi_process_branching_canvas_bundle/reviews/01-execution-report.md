@@ -14,6 +14,7 @@
 - `dotnet ef migrations add AddProcessCanvasPositionsAndStepDependencies --project C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj --startup-project C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj --context AppDbContext --output-dir Migrations` -> `Passed`
 - `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~ProcessWorkspaceTests|FullyQualifiedName~ProcessCanvasSurfaceFactoryTests|FullyQualifiedName~ProcessStepEditorFormTests"` -> `Passed (10 tests)`
 - `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessesServiceIntegrationTests" -m:1` -> `Passed (7 tests)`
+- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter "FullyQualifiedName~ProcessWorkspaceTests|FullyQualifiedName~ProcessCanvasSurfaceFactoryTests"` -> `Passed (9 tests)`
 
 ## Browser Artifacts
 
@@ -26,6 +27,9 @@
 - `C:\repositories\CanDoItAll\cdi_process_branching_canvas_bundle\proof\screenshots\processes-steps-maximized-viewport-followup.png`
 - `C:\repositories\CanDoItAll\cdi_process_branching_canvas_bundle\proof\screenshots\router-selected-anchors-followup.png`
 - `C:\repositories\CanDoItAll\cdi_process_branching_canvas_bundle\proof\screenshots\router-draft-target-anchor-visible-followup.png`
+- `C:\repositories\CanDoItAll\cdi_process_branching_canvas_bundle\proof\screenshots\processes-router-zoom-75-anchor-lock.png`
+- `C:\repositories\CanDoItAll\cdi_process_branching_canvas_bundle\proof\screenshots\processes-router-zoom-100-anchor-lock.png`
+- `C:\repositories\CanDoItAll\cdi_process_branching_canvas_bundle\proof\screenshots\processes-router-zoom-140-anchor-lock.png`
 - Playwright console review: `0` browser errors on `/processes`
 
 ## Reopen Scope
@@ -42,6 +46,7 @@
 - Fixed advanced-node anchor placement so circles align with the actual badge rows instead of a collapsed port-count grid. Live router proof now shows both router inputs (`From step` and `Review lead`) and all seven outputs aligned to their pills, including the previously missing `Review lead` circle.
 - Extended persistence from transient UI state to canonical definition storage by adding role position fields, branch-router position fields, and dedicated step-dependency rows. Publish cloning, save/get-editor roundtrip, and wait-for-all runtime activation are now covered by focused integration tests.
 - Corrected publish validation so synthetic `Default` and `Error` routes are available for router semantics without being mandatory to wire.
+- Reworked advanced-port anchor projection so connector circles and curve endpoints are derived from the same host-space badge geometry the router pills use, then converted back to scene space. This removes zoom-specific drift and keeps the circles locked to their badge rows through zoom in and zoom out.
 
 ## Subbundle Gate Results
 
@@ -63,12 +68,18 @@
 | `04-software-development-branching-examples-and-regression-coverage` | `/processes` | `1600x1100`, `1280x800` | `Verified seeded branching code-review scenario appears in live definitions list and remains readable after fit-to-view at narrower width` | `branching-canvas-maximized.png`, `branching-canvas-1280x800-no-selection.png` | `Passed` |
 | `05-browser-proof-and-final-closure` | `/processes` | `1600x1100`, `1280x800` | `Final screenshot review, accessibility-mirror inspection, selection-window text inspection, console-error review` | `branching-canvas-maximized.png`, `branch-router-detail.png`, `branching-canvas-1280x800-no-selection.png` | `Passed` |
 | `05-browser-proof-and-final-closure` | `/processes` | `1600x1100` | `Validated follow-up modal stacking, left-click draft start, target-anchor reveal during draft hover, aligned router ports, and delete-mode node removal` | `processes-canvas-modal-zindex-followup.png`, `router-selected-anchors-followup.png`, `router-draft-target-anchor-visible-followup.png`, `processes-canvas-delete-mode-node-removed.png` | `Passed` |
+| `05-browser-proof-and-final-closure` | `/processes` | `1600x1100` | `Validated router-port zoom locking at 75%, 100%, and 140% using live screenshots plus DOM-to-badge delta measurement for every router input/output anchor` | `processes-router-zoom-75-anchor-lock.png`, `processes-router-zoom-100-anchor-lock.png`, `processes-router-zoom-140-anchor-lock.png` | `Passed` |
 
 ## Analytics Review
 
 - The managed watch session stayed healthy during the final browser-proof pass after the restart.
 - Playwright console review returned `0` browser errors on `/processes`.
 - Follow-up Playwright review on the current navigation also returned `0` current-page browser errors after the left-click connector-authoring, port-alignment, and delete-mode changes. Historical console noise from an earlier dead session on `127.0.0.1:5503` was excluded from the final proof.
+- Focused follow-up test rerun completed with `9` passing component tests after the zoom-lock fix.
+- Live router-anchor drift measurement on `/processes` stayed within rounding noise at every validated zoom level:
+  - `75%`: max absolute anchor delta `0.01px`
+  - `100%`: max absolute anchor delta `0.00px`
+  - `140%`: max absolute anchor delta `0.01px`
 - The canvas accessibility mirror reported `1 selected nodes across 16 canvas nodes` for the seeded branching example during closure review.
 - Selection-window proof confirmed the new role-node selection path by showing `Review lead` as a role definition with the expected edit action.
 - Focused integration proof now covers `7` process-service tests, including save/get-editor roundtrip for role and branch positions and runtime wait-for-all activation for a multi-dependency join.
@@ -81,6 +92,9 @@
   - `processes-steps-maximized-viewport-followup.png`: the maximized definition canvas stayed usable while the selection window floated above it.
   - `router-selected-anchors-followup.png`: the router shows both aligned left-side input circles and all output circles on their pill badges, including the previously missing `Review lead` input.
   - `router-draft-target-anchor-visible-followup.png`: left-clicking a router output starts a draft, reveals the target node input circle on hover, and shows the live draft line toward the target.
+  - `processes-router-zoom-75-anchor-lock.png`: at `75%` zoom the router circles remain centered on the badge rows rather than drifting above or below them.
+  - `processes-router-zoom-100-anchor-lock.png`: at `100%` zoom the router still matches the badge geometry exactly, providing the baseline proof image.
+  - `processes-router-zoom-140-anchor-lock.png`: at `140%` zoom the same router keeps its input/output circles locked to the pill rows, confirming the fix is not tied to one specific zoom ratio.
 
 ## Raw Note Closure
 

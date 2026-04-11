@@ -100,6 +100,16 @@
         return portTop + ((portBottom - portTop) * index / Math.max(1, totalCount - 1));
     }
 
+    function resolvePortAnchorHostY(hostBounds, index, totalCount) {
+        const portTop = hostBounds.top + Math.min(86, hostBounds.height * 0.34);
+        const portBottom = hostBounds.bottom - Math.min(24, hostBounds.height * 0.12);
+        if (totalCount <= 1) {
+            return hostBounds.top + (hostBounds.height / 2);
+        }
+
+        return portTop + ((portBottom - portTop) * index / Math.max(1, totalCount - 1));
+    }
+
     function resolveAnchorDirection(side, fallbackDirection) {
         if (fallbackDirection === "input" || fallbackDirection === "output") {
             return fallbackDirection;
@@ -132,12 +142,24 @@
         const outputPorts = getNodePortCollection(node, "output");
         if ((inputPorts.length > 0 || outputPorts.length > 0) &&
             (side === "left" || side === "right")) {
-            const zoom = state?.ui?.zoom || 1;
-            const hostLeft = position.x - (size.width / 2);
-            const hostRight = position.x + (size.width / 2);
-            const hostTop = position.y - (size.height / 2);
+            const zoom = Math.max(state?.ui?.zoom || 1, 0.01);
+            const hostCenter = worldToHostPoint(state, position);
+            const hostWidth = size.width * zoom;
+            const hostHeight = size.height * zoom;
+            const hostLeft = hostCenter.x - (hostWidth / 2);
+            const hostRight = hostCenter.x + (hostWidth / 2);
+            const hostTop = hostCenter.y - (hostHeight / 2);
+            const hostBottom = hostCenter.y + (hostHeight / 2);
+            const hostBounds = {
+                left: hostLeft,
+                top: hostTop,
+                right: hostRight,
+                bottom: hostBottom,
+                width: hostWidth,
+                height: hostHeight
+            };
             const padding = Math.max(12, 18 * zoom);
-            const contentWidth = Math.max(48, size.width - (padding * 2));
+            const contentWidth = Math.max(48, hostWidth - (padding * 2));
             const columnGap = Math.max(12, 16 * zoom);
             const hasBothSides = inputPorts.length > 0 && outputPorts.length > 0;
             const columnWidth = hasBothSides
@@ -149,12 +171,16 @@
                 : inputColumnLeft;
             const anchorInset = Math.max(10, 12 * zoom);
             const rowCount = Math.max(inputPorts.length, outputPorts.length, totalCount || 0, 1);
-            const anchorY = resolvePortAnchorY(position, size, index, rowCount);
-            return {
+            const anchorHostPoint = {
                 x: side === "right"
                     ? outputColumnLeft + columnWidth - anchorInset
                     : inputColumnLeft + anchorInset,
-                y: anchorY,
+                y: resolvePortAnchorHostY(hostBounds, index, rowCount)
+            };
+            const anchorWorldPoint = hostToWorldPoint(state, anchorHostPoint);
+            return {
+                x: anchorWorldPoint.x,
+                y: anchorWorldPoint.y,
                 side,
                 portId: port?.id || "",
                 label: port?.label || "",
@@ -1941,6 +1967,25 @@
         return {
             x: (point.x * state.ui.zoom) + state.ui.panX,
             y: (point.y * state.ui.zoom) + state.ui.panY
+        };
+    }
+
+    function hostToWorldPoint(state, point) {
+        const zoom = Math.max(state?.ui?.zoom || 1, 0.01);
+        const viewportController = getViewportControllerService();
+        if (viewportController?.hostToScene) {
+            return viewportController.hostToScene({
+                pointX: point.x,
+                pointY: point.y,
+                panX: state.ui.panX,
+                panY: state.ui.panY,
+                zoom
+            });
+        }
+
+        return {
+            x: (point.x - state.ui.panX) / zoom,
+            y: (point.y - state.ui.panY) / zoom
         };
     }
 
