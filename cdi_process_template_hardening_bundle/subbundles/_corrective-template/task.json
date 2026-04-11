@@ -1,0 +1,13 @@
+{
+  "Key": "_corrective-template",
+  "Title": "Corrective subbundle template",
+  "Purpose": "Template for any required corrective loop when a gate fails.",
+  "MandatorySections": [
+    "Root cause",
+    "Files changed",
+    "Validation reruns",
+    "Residual risk",
+    "Closure evidence"
+  ],
+  "StrictStopRule": "No downstream subbundle may proceed until the corrective subbundle is complete."
+}

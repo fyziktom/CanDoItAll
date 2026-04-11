@@ -1,0 +1,27 @@
+{
+  "Key": "09-workspace-decomposition",
+  "Title": "Workspace decomposition",
+  "Purpose": "Split the large ProcessWorkspace component code-behind and canvas partial into smaller units so selection, commands, editors, runtime actions, links, and layout concerns stop accumulating in one place.",
+  "DependsOn": [
+    "08-surface-factory-decomposition"
+  ],
+  "Deliverables": [
+    "ProcessWorkspace partial split plan and implementation tasks",
+    "Smaller code-behind files grouped by lifecycle, definition CRUD, runtime operations, and canvas commands",
+    "Regression coverage for canvas and dialog interactions"
+  ],
+  "RepositoryTouchpoints": [
+    "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Canvas.cs",
+    "src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.razor.cs"
+  ],
+  "ValidationCommands": [
+    "dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~ProcessWorkspace"
+  ],
+  "ReviewQuestions": [
+    "Is the UI behavior easier to reason about after the split?",
+    "Did event handling and editor orchestration become more explicit?",
+    "Are selection, command dispatch, and dialog flows still covered by tests?"
+  ],
+  "CorrectiveOnFailure": "Create a workspace corrective subbundle and stop until the UI regression risk is back under control.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-template"
+}

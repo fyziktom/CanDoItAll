@@ -1,0 +1,45 @@
+{
+  "BundleKey": "cdi-process-template-completion-and-architecture-hardening",
+  "Version": "3.0.0-completion-hardening",
+  "GeneratedAtUtc": "2026-04-11T22:19:11Z",
+  "SourceRepositoryZip": "CanDoItAll-process-manag-modul (2).zip",
+  "PriorBundleZip": "cdi_process_template_execution_bundle_current_architecture.zip",
+  "Counts": {
+    "OverlayFileCount": 483,
+    "PackFileCount": 477,
+    "ProcessCount": 9,
+    "StepCount": 54,
+    "DependencyCount": 52,
+    "ArtifactInputCount": 20,
+    "BaselineScenarioCount": 5,
+    "OldManifestMissingCountInCurrentRepo": 477,
+    "SourceDriftCount": 5,
+    "SubbundleCount": 13
+  },
+  "Sections": [
+    {
+      "Path": "repo-overlay/output/process-template-pack",
+      "Purpose": "Actual file-driven process-template folders and sidecars"
+    },
+    {
+      "Path": "artifacts/process-template-catalog.xlsx",
+      "Purpose": "Workbook catalog"
+    },
+    {
+      "Path": "analysis",
+      "Purpose": "Architecture, SQLite, completeness, drift, and refactor reviews"
+    },
+    {
+      "Path": "subbundles",
+      "Purpose": "Execution-grade phased plan with review gates"
+    },
+    {
+      "Path": "repo-overlay/tests",
+      "Purpose": "Focused regression tests"
+    },
+    {
+      "Path": "tools",
+      "Purpose": "Validation, audit, and long-file scan helpers"
+    }
+  ]
+}

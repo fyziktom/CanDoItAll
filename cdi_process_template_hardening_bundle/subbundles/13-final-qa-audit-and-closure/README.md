@@ -1,0 +1,30 @@
+# Final QA audit and closure
+
+## Purpose
+Perform the strict final QA inspection, prove the bundle contents are honest and complete, and only then package the final ZIP for delivery.
+
+## Depends on
+12-architecture-review-gate-c
+
+## Deliverables
+- Final QA memo with honest execution boundaries
+- Validation result and evidence inventory
+- Final ZIP package
+
+## Repository touchpoints
+- `VALIDATION_REPORT.md`
+- `bundle-index.json`
+- `artifacts/process-template-catalog.xlsx`
+- `artifacts/process-template-pack-tree.txt`
+
+## Validation commands or checks
+- `python cdi_process_template_completion_and_architecture_hardening_bundle/tools/validate_process_template_pack.py repo-overlay/output/process-template-pack`
+- `python cdi_process_template_completion_and_architecture_hardening_bundle/tools/audit_bundle_application.py . cdi_process_templates_bundle/apply-manifest.json`
+
+## Senior review questions
+- Does the bundle state clearly what was validated here versus what still requires execution in a dotnet-capable environment?
+- Does the ZIP actually contain the process template folders the user expected?
+- Is every skipped or deferred item explicit rather than implied away?
+
+## Strict corrective rule
+Create one last corrective subbundle and repeat the final QA audit. Delivery is blocked until the closure memo is honest and complete.

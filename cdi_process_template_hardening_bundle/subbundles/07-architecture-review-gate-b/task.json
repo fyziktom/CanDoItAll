@@ -1,0 +1,29 @@
+{
+  "Key": "07-architecture-review-gate-b",
+  "Title": "Architecture review gate B",
+  "Purpose": "Stop again after loader/DI and SQLite review work so architectural drift is caught before the codebase is split into smaller files.",
+  "DependsOn": [
+    "05-loader-di-and-path-hardening",
+    "06-sqlite-write-path-hardening"
+  ],
+  "Deliverables": [
+    "Architecture review memo B",
+    "Decision on unresolved DI or transaction debt",
+    "Updated traceability to remaining refactor tasks"
+  ],
+  "RepositoryTouchpoints": [
+    "analysis/architecture-weak-spots.md",
+    "analysis/sqlite-hardening-review.md",
+    "TRACEABILITY_MATRIX.md"
+  ],
+  "ValidationCommands": [
+    "Review architectural findings and ensure unresolved issues are visible, owned, and sequenced"
+  ],
+  "ReviewQuestions": [
+    "Did the design get more explicit and testable, or did new hidden coupling appear?",
+    "Are the remaining long-file refactors still worth doing after the prior hardening work?",
+    "Should the run proceed, branch corrective work, or stop?"
+  ],
+  "CorrectiveOnFailure": "Create a corrective subbundle and rerun gate B before any file decomposition begins.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-template"
+}

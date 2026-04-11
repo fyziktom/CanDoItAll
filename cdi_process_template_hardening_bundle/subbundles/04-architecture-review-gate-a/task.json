@@ -1,0 +1,30 @@
+{
+  "Key": "04-architecture-review-gate-a",
+  "Title": "Architecture review gate A",
+  "Purpose": "Stop after the baseline audit and materialization work, then perform the first strict senior-architect review before the run invests in deeper refactors.",
+  "DependsOn": [
+    "01-apply-manifest-audit-and-gap-baseline",
+    "02-template-pack-materialization",
+    "03-process-template-completeness-and-sidecars"
+  ],
+  "Deliverables": [
+    "Architecture review memo A",
+    "Gap register with severity and owner",
+    "Explicit go/no-go decision"
+  ],
+  "RepositoryTouchpoints": [
+    "analysis/bundle-application-audit.md",
+    "analysis/architecture-weak-spots.md",
+    "analysis/process-template-completeness-review.md"
+  ],
+  "ValidationCommands": [
+    "Review generated audit artifacts and confirm no hidden hardcoded template assumptions remain"
+  ],
+  "ReviewQuestions": [
+    "Is the repository finally aligned with the previous bundle\u2019s claimed file-driven design?",
+    "Did the run avoid regressing current repo fixes while closing the missing-pack gap?",
+    "Is it safe to proceed into code-hardening and SQLite-focused changes?"
+  ],
+  "CorrectiveOnFailure": "Create a corrective subbundle, block the queue, and rerun gate A after the correction lands.",
+  "CorrectiveTemplatePath": "subbundles/_corrective-template"
+}

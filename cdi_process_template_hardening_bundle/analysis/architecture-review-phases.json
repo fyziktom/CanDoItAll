@@ -1,0 +1,38 @@
+[
+  {
+    "GateKey": "A",
+    "GateName": "Post-materialization architecture review",
+    "TriggerAfterSubbundles": "01, 02, 03",
+    "PrimaryFocus": "Bundle-application truth, template-pack materialization, and process completeness",
+    "MustStopOn": "Any missing template-pack folders, misleading validation claims, or architecture simplifications still driven by old module limits",
+    "MandatoryOutputs": "Architecture review memo A, gap register, go/no-go decision",
+    "CorrectiveRule": "Add a corrective subbundle before continuing."
+  },
+  {
+    "GateKey": "B",
+    "GateName": "Hardening review",
+    "TriggerAfterSubbundles": "05, 06",
+    "PrimaryFocus": "DI explicitness, pack-root resolution, SQLite-safe write paths, and hidden coupling",
+    "MustStopOn": "Hidden static loading, non-atomic write chains, or unresolved provider-specific risks",
+    "MandatoryOutputs": "Architecture review memo B, owned corrective actions, updated traceability",
+    "CorrectiveRule": "Add a corrective subbundle before continuing."
+  },
+  {
+    "GateKey": "C",
+    "GateName": "Post-decomposition review",
+    "TriggerAfterSubbundles": "08, 09, 10, 11",
+    "PrimaryFocus": "Maintainability after file splits, regression-net strength, and absence of behavior drift",
+    "MustStopOn": "Refactors that only moved complexity, missing regression coverage, or unresolved high-severity debt",
+    "MandatoryOutputs": "Architecture review memo C, residual-risk statement, final go/no-go decision",
+    "CorrectiveRule": "Add a corrective subbundle before continuing."
+  },
+  {
+    "GateKey": "Final",
+    "GateName": "Final QA closure review",
+    "TriggerAfterSubbundles": "13",
+    "PrimaryFocus": "Honest validation boundary, ZIP completeness, and delivery quality",
+    "MustStopOn": "Missing process-template folders in the bundle, inaccurate validation claims, or undocumented residual debt",
+    "MandatoryOutputs": "Final QA memo, validation result, final ZIP",
+    "CorrectiveRule": "Add a corrective subbundle before delivery."
+  }
+]
