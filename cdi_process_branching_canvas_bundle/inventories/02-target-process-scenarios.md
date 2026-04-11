@@ -29,7 +29,24 @@
   - `Needs security fixes` routes to security or implementation work.
   - `Needs more QA` routes back to QA.
 
+## Scenario D: Review Evidence Aggregation
+
+- Multiple upstream review lanes produce artifacts for one downstream decision or router input.
+- Example sources:
+  - Security review emits risk findings.
+  - Architecture review emits design findings.
+  - QA emits validation evidence.
+- The downstream review-disposition or merge-readiness decision consumes the combined inputs instead of overwriting one earlier dependency.
+
+## Scenario E: Layout Persistence Round Trip
+
+- A role node and a router node are moved on the canvas.
+- A later interaction such as double-click editor open, selection change, or canvas rebuild occurs.
+- The moved positions remain stable after that interaction and after a reload or reread of the persisted state.
+
 ## Purpose
 
 - These scenarios make the user’s requested loops concrete before implementation.
-- Later browser proof should show at least one of these scenarios rendered with visible branch nodes and readable loop edges.
+- Later browser proof should show at least one of these scenarios rendered with visible branch nodes and readable loop or join edges.
+- Scenario D exists to force an honest answer on many-to-many join semantics instead of leaving them implicit.
+- Scenario E exists to force an honest answer on canonical layout persistence instead of trusting transient canvas movement.

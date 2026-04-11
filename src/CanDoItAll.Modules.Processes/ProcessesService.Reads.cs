@@ -60,6 +60,10 @@ public sealed partial class ProcessesService {
         var stepDefinitions = await dbContext.Set<ProcessStepDefinition>()
             .Where(item => stepDefinitionIds.Contains(item.Id))
             .ToListAsync(cancellationToken);
+        var stepDependencies = await dbContext.Set<ProcessStepDependencyDefinition>()
+            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
+            .OrderBy(item => item.DisplayOrder)
+            .ToListAsync(cancellationToken);
         var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
             .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
             .ToListAsync(cancellationToken);
@@ -72,15 +76,21 @@ public sealed partial class ProcessesService {
                     .Select(item => new ProcessStepBranchOutcomeOptionViewModel(item.Id, item.Title, item.Description))
                     .ToList());
         var stepDefinitionsById = stepDefinitions.ToDictionary(item => item.Id);
+        var stepDependenciesByStepId = stepDependencies
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
 
         return stepRuns
             .Select(item => {
                 stepDefinitionsById.TryGetValue(item.StepDefinitionId, out var stepDefinition);
+                var dependencies = stepDefinition is null
+                    ? []
+                    : BuildRuntimeDependencies(stepDefinition, stepDependenciesByStepId);
                 return new ProcessStepRunViewModel(
                     item.Id,
                     item.StepDefinitionId,
-                    stepDefinition?.DependsOnStepId,
-                    stepDefinition?.DependsOnBranchOutcomeId,
+                    dependencies.FirstOrDefault()?.DependsOnStepDefinitionId,
+                    dependencies.FirstOrDefault()?.DependsOnBranchOutcomeId,
                     stepDefinition?.DecisionRoleRequirementId,
                     item.Sequence,
                     item.Title,
@@ -97,7 +107,10 @@ public sealed partial class ProcessesService {
                     item.BlockedMinutes,
                     item.ReworkCount,
                     item.CapabilityGapSeverity,
-                    branchOutcomesByStepId.GetValueOrDefault(item.StepDefinitionId) ?? []);
+                    branchOutcomesByStepId.GetValueOrDefault(item.StepDefinitionId) ?? [])
+                {
+                    Dependencies = dependencies
+                };
             })
             .ToList();
     }
@@ -265,6 +278,25 @@ public sealed partial class ProcessesService {
 
     public async Task<IReadOnlyList<ProjectPartyOption>> ListPartyOptionsAsync(Guid projectId, CancellationToken cancellationToken = default) {
         return await projectPartyIntegrationBridge.ListPartyOptionsAsync(projectId, cancellationToken);
+    }
+
+    private static IReadOnlyList<ProcessStepDependencyViewModel> BuildRuntimeDependencies(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> dependenciesByStepId) {
+        if (dependenciesByStepId.TryGetValue(stepDefinition.Id, out var dependencies) && dependencies.Count > 0) {
+            return dependencies
+                .Select(item => new ProcessStepDependencyViewModel(item.DependsOnStepId, item.DependsOnBranchOutcomeId))
+                .ToList();
+        }
+
+        if (!stepDefinition.DependsOnStepId.HasValue) {
+            return [];
+        }
+
+        return
+        [
+            new ProcessStepDependencyViewModel(stepDefinition.DependsOnStepId.Value, stepDefinition.DependsOnBranchOutcomeId)
+        ];
     }
 }
 

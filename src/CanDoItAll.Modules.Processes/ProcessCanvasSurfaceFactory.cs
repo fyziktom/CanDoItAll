@@ -23,12 +23,17 @@ public sealed class ProcessCanvasSurfaceFactory
             .Where(role => role.Id.HasValue)
             .ToDictionary(role => role.Id!.Value);
         var stepNodes = editor.Steps
-            .Select((step, index) => BuildDefinitionNode(
-                step,
-                index,
-                step.DependsOnBranchOutcomeId.HasValue && branchOutcomeTitles.TryGetValue(step.DependsOnBranchOutcomeId.Value, out var dependencyOutcomeTitle)
-                    ? dependencyOutcomeTitle
-                    : null))
+            .Select((step, index) =>
+            {
+                var primaryDependency = ProcessCanvasBranching.GetOrderedDependencies(step).FirstOrDefault();
+                return BuildDefinitionNode(
+                    step,
+                    index,
+                    primaryDependency?.DependsOnBranchOutcomeId.HasValue == true &&
+                    branchOutcomeTitles.TryGetValue(primaryDependency.DependsOnBranchOutcomeId.Value, out var dependencyOutcomeTitle)
+                        ? dependencyOutcomeTitle
+                        : null);
+            })
             .ToList();
         var branchNodes = editor.Steps
             .Where(ProcessCanvasBranching.ShouldRenderBranchRouter)
@@ -217,7 +222,9 @@ public sealed class ProcessCanvasSurfaceFactory
             rolesById.TryGetValue(step.DecisionRoleRequirementId.Value, out var decisionRole)
                 ? decisionRole.DisplayName
                 : string.Empty;
-        var routedDependents = allSteps.Count(candidate => candidate.DependsOnStepId == step.Id);
+        var routedDependents = allSteps.Count(candidate =>
+            ProcessCanvasBranching.GetOrderedDependencies(candidate)
+                .Any(dependency => dependency.DependsOnStepId == step.Id));
 
         return new CanvasWorkbenchNode
         {
@@ -323,8 +330,8 @@ public sealed class ProcessCanvasSurfaceFactory
             PaletteKey = "neutral",
             AccentColor = "#0f766e",
             DurationLabel = $"{role.DefaultAllocationPercent}%",
-            X = ResolveDefinitionRoleNodeX(editor),
-            Y = ResolveDefinitionRoleNodeY(index),
+            X = ResolveDefinitionRoleNodeX(role, editor),
+            Y = ResolveDefinitionRoleNodeY(role, index),
             Chips =
             [
                 new CanvasWorkbenchChip
@@ -463,7 +470,8 @@ public sealed class ProcessCanvasSurfaceFactory
         ProcessStepRunViewModel stepRun,
         IReadOnlyList<ProcessStepRunViewModel> allSteps)
     {
-        var routedDependents = allSteps.Count(candidate => candidate.DependsOnStepDefinitionId == stepRun.StepDefinitionId);
+        var routedDependents = allSteps.Count(candidate =>
+            candidate.Dependencies.Any(dependency => dependency.DependsOnStepDefinitionId == stepRun.StepDefinitionId));
 
         return new CanvasWorkbenchNode
         {
@@ -552,30 +560,34 @@ public sealed class ProcessCanvasSurfaceFactory
             }
         }
 
-        foreach (var step in steps.Where(step => step.DependsOnStepId.HasValue &&
-            stepsById.ContainsKey(step.DependsOnStepId.Value)))
+        foreach (var step in steps)
         {
-            var sourceStep = stepsById[step.DependsOnStepId!.Value];
-            if (ProcessCanvasBranching.ShouldRenderBranchRouter(sourceStep))
+            foreach (var dependency in ProcessCanvasBranching.GetOrderedDependencies(step)
+                         .Where(dependency => dependency.DependsOnStepId.HasValue &&
+                             stepsById.ContainsKey(dependency.DependsOnStepId.Value)))
             {
+                var sourceStep = stepsById[dependency.DependsOnStepId!.Value];
+                if (ProcessCanvasBranching.ShouldRenderBranchRouter(sourceStep))
+                {
+                    links.Add(new CanvasWorkbenchLink
+                    {
+                        SourceId = BuildDefinitionBranchNodeId(sourceStep),
+                        SourcePortId = ProcessCanvasBranching.ResolveOutcomePortId(sourceStep, dependency.DependsOnBranchOutcomeId),
+                        TargetId = BuildDefinitionNodeId(step),
+                        Kind = "flow",
+                        IsUserAuthored = true
+                    });
+                    continue;
+                }
+
                 links.Add(new CanvasWorkbenchLink
                 {
-                    SourceId = BuildDefinitionBranchNodeId(sourceStep),
-                    SourcePortId = ProcessCanvasBranching.ResolveOutcomePortId(sourceStep, step.DependsOnBranchOutcomeId),
+                    SourceId = BuildDefinitionNodeId(sourceStep),
                     TargetId = BuildDefinitionNodeId(step),
                     Kind = "flow",
                     IsUserAuthored = true
                 });
-                continue;
             }
-
-            links.Add(new CanvasWorkbenchLink
-            {
-                SourceId = BuildDefinitionNodeId(sourceStep),
-                TargetId = BuildDefinitionNodeId(step),
-                Kind = "flow",
-                IsUserAuthored = true
-            });
         }
 
         return links;
@@ -598,30 +610,33 @@ public sealed class ProcessCanvasSurfaceFactory
             });
         }
 
-        foreach (var stepRun in stepRuns.Where(stepRun => stepRun.DependsOnStepDefinitionId.HasValue &&
-            runsByDefinitionId.ContainsKey(stepRun.DependsOnStepDefinitionId.Value)))
+        foreach (var stepRun in stepRuns)
         {
-            var sourceStepRun = runsByDefinitionId[stepRun.DependsOnStepDefinitionId!.Value];
-            if (ProcessCanvasBranching.ShouldRenderBranchRouter(sourceStepRun))
+            foreach (var dependency in stepRun.Dependencies
+                         .Where(dependency => runsByDefinitionId.ContainsKey(dependency.DependsOnStepDefinitionId)))
             {
+                var sourceStepRun = runsByDefinitionId[dependency.DependsOnStepDefinitionId];
+                if (ProcessCanvasBranching.ShouldRenderBranchRouter(sourceStepRun))
+                {
+                    links.Add(new CanvasWorkbenchLink
+                    {
+                        SourceId = BuildRunBranchNodeId(sourceStepRun.Id),
+                        SourcePortId = ProcessCanvasBranching.ResolveOutcomePortId(sourceStepRun, dependency.DependsOnBranchOutcomeId),
+                        TargetId = BuildRunNodeId(stepRun.Id),
+                        Kind = "flow",
+                        IsUserAuthored = false
+                    });
+                    continue;
+                }
+
                 links.Add(new CanvasWorkbenchLink
                 {
-                    SourceId = BuildRunBranchNodeId(sourceStepRun.Id),
-                    SourcePortId = ProcessCanvasBranching.ResolveOutcomePortId(sourceStepRun, stepRun.DependsOnBranchOutcomeId),
+                    SourceId = BuildRunNodeId(sourceStepRun.Id),
                     TargetId = BuildRunNodeId(stepRun.Id),
                     Kind = "flow",
                     IsUserAuthored = false
                 });
-                continue;
             }
-
-            links.Add(new CanvasWorkbenchLink
-            {
-                SourceId = BuildRunNodeId(sourceStepRun.Id),
-                TargetId = BuildRunNodeId(stepRun.Id),
-                Kind = "flow",
-                IsUserAuthored = false
-            });
         }
 
         return links;
@@ -723,9 +738,15 @@ public sealed class ProcessCanvasSurfaceFactory
         ProcessStepEditorModel step,
         IReadOnlyList<ProcessStepEditorModel> allSteps)
     {
+        if (step.BranchCanvasX != 0)
+        {
+            return step.BranchCanvasX;
+        }
+
         var stepX = ResolveDefinitionStepX(step, allSteps);
         var directDependents = allSteps
-            .Where(candidate => candidate.DependsOnStepId == step.Id)
+            .Where(candidate => ProcessCanvasBranching.GetOrderedDependencies(candidate)
+                .Any(dependency => dependency.DependsOnStepId == step.Id))
             .Select(candidate => ResolveDefinitionStepX(candidate, allSteps))
             .ToList();
         if (directDependents.Count == 0)
@@ -743,9 +764,15 @@ public sealed class ProcessCanvasSurfaceFactory
         ProcessStepEditorModel step,
         IReadOnlyList<ProcessStepEditorModel> allSteps)
     {
+        if (step.BranchCanvasY != 0)
+        {
+            return step.BranchCanvasY;
+        }
+
         var stepY = ResolveDefinitionStepY(step);
         var directDependents = allSteps
-            .Where(candidate => candidate.DependsOnStepId == step.Id)
+            .Where(candidate => ProcessCanvasBranching.GetOrderedDependencies(candidate)
+                .Any(dependency => dependency.DependsOnStepId == step.Id))
             .ToList();
         if (directDependents.Count == 0)
         {
@@ -757,8 +784,13 @@ public sealed class ProcessCanvasSurfaceFactory
             : directDependents.Average(ResolveDefinitionStepY);
     }
 
-    private static double ResolveDefinitionRoleNodeX(ProcessDefinitionEditorModel editor)
+    private static double ResolveDefinitionRoleNodeX(ProcessRoleEditorModel role, ProcessDefinitionEditorModel editor)
     {
+        if (role.CanvasX != 0)
+        {
+            return role.CanvasX;
+        }
+
         if (editor.Steps.Count == 0)
         {
             return -180d;
@@ -770,8 +802,13 @@ public sealed class ProcessCanvasSurfaceFactory
         return leftMostStepX - 360d;
     }
 
-    private static double ResolveDefinitionRoleNodeY(int index)
+    private static double ResolveDefinitionRoleNodeY(ProcessRoleEditorModel role, int index)
     {
+        if (role.CanvasY != 0)
+        {
+            return role.CanvasY;
+        }
+
         return 120d + (index * 210d);
     }
 
@@ -804,7 +841,7 @@ public sealed class ProcessCanvasSurfaceFactory
         IReadOnlyList<ProcessStepRunViewModel> allSteps)
     {
         var directDependents = allSteps
-            .Where(candidate => candidate.DependsOnStepDefinitionId == stepRun.StepDefinitionId)
+            .Where(candidate => candidate.Dependencies.Any(dependency => dependency.DependsOnStepDefinitionId == stepRun.StepDefinitionId))
             .Select(candidate => 140d + ((candidate.Sequence - 1) * 280d))
             .ToList();
         var stepX = 140d + ((stepRun.Sequence - 1) * 280d);
@@ -824,7 +861,7 @@ public sealed class ProcessCanvasSurfaceFactory
         IReadOnlyList<ProcessStepRunViewModel> allSteps)
     {
         var directDependents = allSteps
-            .Where(candidate => candidate.DependsOnStepDefinitionId == stepRun.StepDefinitionId)
+            .Where(candidate => candidate.Dependencies.Any(dependency => dependency.DependsOnStepDefinitionId == stepRun.StepDefinitionId))
             .ToList();
         var stepY = stepRun.Status == ProcessStepRunStatus.Blocked ? 260d : 180d;
         if (directDependents.Count == 0)

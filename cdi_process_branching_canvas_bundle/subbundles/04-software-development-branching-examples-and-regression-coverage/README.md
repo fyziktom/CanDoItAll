@@ -2,16 +2,17 @@
 
 ## Status
 
-- `Completed`
+- `Ready`
 
 ## Objective
 
-- Seed and prove realistic software-development branching scenarios that exercise the new branch-node model, including repair loops, QA loops, and final merge readiness.
+- Seed and prove realistic software-development branching scenarios that exercise the refined branch-node model, including review repair loops, QA loops, join-style evidence aggregation, and layout-persistence round trips.
 
 ## Covered Inputs
 
 - `N009` Proper branching examples around software development.
-- `N010` Architecture troubles must remain visible as scenarios expose missing pieces.
+- `N013` Many-to-many routing semantics must be supported or blocked honestly.
+- `N014` Moved derived nodes must persist and not snap back after later interactions.
 
 ## Prerequisites
 
@@ -24,19 +25,19 @@
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDevelopmentSeedService.Scenarios.cs`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Runtime.cs`
-- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs`
 - `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\ProcessWorkspaceTests.cs`
+- `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs`
 
 ## Deliverables
 
-- At least one seeded software-development process that visibly demonstrates branch loops around code review, repair, QA, and merge readiness.
-- Regression tests that prove branch routing still behaves correctly under realistic example data.
-- Any newly discovered architecture trouble recorded back into the trouble log.
+- At least one seeded software-development process that visibly demonstrates branch routing, join-style input aggregation or the honest blocker for it, and persisted layout stability.
+- Regression coverage that proves the seeded semantics remain correct.
+- Trouble-log updates if seeded scenarios reveal new canonical gaps.
 
 ## Dependency Impact
 
-- Final browser proof depends on this phase because the user explicitly asked for realistic branching examples, not only infrastructure.
-- Weak proof here would leave the feature technically present but semantically unproven on the requested scenarios.
+- Final browser closure depends on this phase because the user explicitly asked for realistic software-development scenarios, not only infrastructure.
+- Weak proof here would leave the feature technically present but semantically unproven on the requested join and persistence cases.
 
 ## Validation Depth
 
@@ -44,40 +45,35 @@
 
 ## Implementation Steps
 
-1. Implement or update seeded process scenarios to reflect the target inventory from subbundle `01`.
-2. Add or extend integration tests to cover loop routing and approval outcomes on realistic software-development flows.
+1. Update seeded process scenarios to reflect the target inventory from subbundle `01`.
+2. Add or extend tests to cover the refined scenario semantics, especially join-style inputs and persistence round trips when supported.
 3. Ensure the process workspace can load and display the new seeded examples.
-4. Revisit the architecture trouble log if the scenarios reveal missing semantics.
+4. Revisit the architecture trouble log if the scenarios reveal missing semantics or storage gaps.
 5. Validate the seeded scenarios in the browser and capture screenshots.
-
-## Scope Exceptions
-
-- If a scenario cannot be seeded cleanly in the current development environment, record the exact blocker and create a concrete follow-up instead of removing the scenario silently.
 
 ## Do Not Do
 
-- Do not add generic toy examples that avoid repair or QA loops.
-- Do not close this phase with linear scenarios that fail to exercise the new branch-node ports.
+- Do not add generic toy examples that avoid repair loops, joins, or persistence.
+- Do not close this phase with browser-only scenarios that the canonical model still cannot round-trip.
 
 ## Acceptance Checklist
 
 - The seeded examples include at least one repair loop and one QA loop.
-- The seeded examples visibly use branch nodes and branch-node routes.
-- Regression tests cover the new examples or the same semantics they exercise.
+- The seeded examples include at least one join-style input case or explicitly document why the current model blocks it.
+- Regression tests cover the new scenarios or the same semantics they exercise.
 - The architecture trouble log is updated if the examples reveal new gaps.
 
 ## Proof Required
 
-- Focused integration tests for seeded branching semantics.
-- Browser screenshots on `/processes` showing at least one software-development example with visible loop branches.
+- Focused integration or component tests for seeded branching semantics.
+- Browser screenshots on `/processes` showing at least one software-development example with visible loop or join behavior.
 
 ## Browser Validation Logging
 
 - Route: `/processes`
-- Viewports: `1600x900` and `1280x800`
-- Playwright MCP actions: navigate, load the seeded example, inspect branch-node loops, capture screenshots
+- Viewports: `Large-screen desktop` and `1280x800`
+- Playwright MCP actions: navigate, load the seeded example, inspect branch-node loops or joins, capture screenshots
 - Expected evidence path: example-scenario screenshots recorded in `reviews/01-execution-report.md`
-- Screenshot review questions: can the loop paths be followed visually, are review and QA routes distinguishable, and does the canvas remain readable once multiple branch paths are visible
 
 ## Progression Gate
 
@@ -86,11 +82,5 @@
 ## Suggested Agent Prompt
 
 ```text
-Implement this subbundle only. Add realistic software-development branching examples that exercise review, repair, QA, and merge approval loops, back them with regression coverage, and prove at least one seeded scenario visibly in the browser.
+Implement this subbundle only. Update the seeded software-development scenarios so they exercise review routing, QA loops, join-style inputs when canonically supported, and layout persistence expectations, back them with regression coverage, and prove at least one refined scenario visibly in the browser.
 ```
-
-## Closure Notes
-
-- A new seeded scenario, `Branching code review and merge governance`, now exercises review routing, repair, QA, security, architecture escalation, merge approval, default handling, and error handling on one branch-heavy software-development canvas.
-- The baseline-seeding integration test was updated and passed with the new scenario present.
-- The scenario is intentionally branch-heavy rather than truly cyclic, because the current process model still lacks first-class loop-back and multi-parent join semantics. That gap is recorded in the architecture trouble log.

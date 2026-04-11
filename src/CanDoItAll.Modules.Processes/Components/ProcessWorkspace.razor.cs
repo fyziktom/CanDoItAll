@@ -580,9 +580,11 @@ public partial class ProcessWorkspace : ComponentBase
             Title = $"Step {editor.Steps.Count + 1}",
             StepKind = ProcessStepKind.Work,
             TargetLeadHours = 1,
-            DependsOnStepId = previousStep?.Id,
             CanvasX = 140 + (editor.Steps.Count * 280),
-            CanvasY = 180
+            CanvasY = 180,
+            Dependencies = previousStep?.Id.HasValue == true
+                ? [new ProcessStepDependencyEditorModel { Id = Guid.NewGuid(), DependsOnStepId = previousStep.Id }]
+                : []
         });
         RefreshCanvasSurface();
     }
@@ -590,10 +592,12 @@ public partial class ProcessWorkspace : ComponentBase
     private void RemoveStep(ProcessStepEditorModel step, bool refreshSurface = true)
     {
         editor.Steps.Remove(step);
-        foreach (var candidate in editor.Steps.Where(candidate => candidate.DependsOnStepId == step.Id))
+        foreach (var candidate in editor.Steps)
         {
-            candidate.DependsOnStepId = null;
-            candidate.DependsOnBranchOutcomeId = null;
+            SetStepDependencies(
+                candidate,
+                ProcessCanvasBranching.GetOrderedDependencies(candidate)
+                    .Where(dependency => dependency.DependsOnStepId != step.Id));
         }
 
         if (refreshSurface)
@@ -647,9 +651,12 @@ public partial class ProcessWorkspace : ComponentBase
             return;
         }
 
-        foreach (var candidate in editor.Steps.Where(candidate => candidate.DependsOnBranchOutcomeId == branchOutcome.Id.Value))
+        foreach (var candidate in editor.Steps)
         {
-            candidate.DependsOnBranchOutcomeId = null;
+            SetStepDependencies(
+                candidate,
+                ProcessCanvasBranching.GetOrderedDependencies(candidate)
+                    .Where(dependency => dependency.DependsOnBranchOutcomeId != branchOutcome.Id.Value));
         }
 
         ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
@@ -843,15 +850,36 @@ public partial class ProcessWorkspace : ComponentBase
 
     private IReadOnlyList<ProcessStepBranchOutcomeEditorModel> GetDependencyOutcomeOptions(ProcessStepEditorModel step)
     {
-        if (!step.DependsOnStepId.HasValue)
+        var dependencyStepId = ProcessCanvasBranching.GetOrderedDependencies(step)
+            .FirstOrDefault()?.DependsOnStepId;
+        if (!dependencyStepId.HasValue)
         {
             return [];
         }
 
         return editor.Steps
-            .FirstOrDefault(candidate => candidate.Id == step.DependsOnStepId.Value)?
+            .FirstOrDefault(candidate => candidate.Id == dependencyStepId.Value)?
             .BranchOutcomes
             ?? [];
+    }
+
+    private static void SetStepDependencies(
+        ProcessStepEditorModel step,
+        IEnumerable<ProcessStepDependencyEditorModel> dependencies)
+    {
+        var materialized = dependencies
+            .Where(dependency => dependency.DependsOnStepId.HasValue)
+            .Select(dependency => new ProcessStepDependencyEditorModel
+            {
+                Id = dependency.Id ?? Guid.NewGuid(),
+                DependsOnStepId = dependency.DependsOnStepId,
+                DependsOnBranchOutcomeId = dependency.DependsOnBranchOutcomeId
+            })
+            .ToList();
+        step.Dependencies = materialized;
+        var primaryDependency = materialized.FirstOrDefault();
+        step.DependsOnStepId = primaryDependency?.DependsOnStepId;
+        step.DependsOnBranchOutcomeId = primaryDependency?.DependsOnBranchOutcomeId;
     }
 
     private string ResolveRoleName(Guid? roleId)

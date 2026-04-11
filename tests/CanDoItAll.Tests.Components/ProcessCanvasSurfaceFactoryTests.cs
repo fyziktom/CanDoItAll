@@ -252,7 +252,13 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                 0,
                 0,
                 ProcessCapabilityGapSeverity.None,
-                []),
+                [])
+            {
+                Dependencies =
+                [
+                    new ProcessStepDependencyViewModel(stepDefinitionId, repairOutcomeId)
+                ]
+            },
             new(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -275,6 +281,12 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                 0,
                 ProcessCapabilityGapSeverity.None,
                 [])
+            {
+                Dependencies =
+                [
+                    new ProcessStepDependencyViewModel(stepDefinitionId, null)
+                ]
+            }
         };
 
         var factory = new ProcessCanvasSurfaceFactory();

@@ -126,10 +126,44 @@
     function buildPortAnchorPoint(state, node, port, index, totalCount, fallbackSide, fallbackDirection) {
         const position = getNodePosition(state, node);
         const size = getNodeSize(state, node);
-        const horizontalInset = Math.min(28, size.width * 0.11);
-        const verticalInset = Math.min(22, size.height * 0.18);
         const side = resolveNodePortSide(port, fallbackSide);
         const direction = resolveAnchorDirection(side, fallbackDirection);
+        const inputPorts = getNodePortCollection(node, "input");
+        const outputPorts = getNodePortCollection(node, "output");
+        if ((inputPorts.length > 0 || outputPorts.length > 0) &&
+            (side === "left" || side === "right")) {
+            const zoom = state?.ui?.zoom || 1;
+            const hostLeft = position.x - (size.width / 2);
+            const hostRight = position.x + (size.width / 2);
+            const hostTop = position.y - (size.height / 2);
+            const padding = Math.max(12, 18 * zoom);
+            const contentWidth = Math.max(48, size.width - (padding * 2));
+            const columnGap = Math.max(12, 16 * zoom);
+            const hasBothSides = inputPorts.length > 0 && outputPorts.length > 0;
+            const columnWidth = hasBothSides
+                ? Math.max(72, (contentWidth - columnGap) / 2)
+                : contentWidth;
+            const inputColumnLeft = hostLeft + padding;
+            const outputColumnLeft = hasBothSides
+                ? hostRight - padding - columnWidth
+                : inputColumnLeft;
+            const anchorInset = Math.max(10, 12 * zoom);
+            const rowCount = Math.max(inputPorts.length, outputPorts.length, totalCount || 0, 1);
+            const anchorY = resolvePortAnchorY(position, size, index, rowCount);
+            return {
+                x: side === "right"
+                    ? outputColumnLeft + columnWidth - anchorInset
+                    : inputColumnLeft + anchorInset,
+                y: anchorY,
+                side,
+                portId: port?.id || "",
+                label: port?.label || "",
+                direction
+            };
+        }
+
+        const horizontalInset = Math.min(28, size.width * 0.11);
+        const verticalInset = Math.min(22, size.height * 0.18);
         return {
             x: side === "right"
                 ? position.x + (size.width / 2) - horizontalInset

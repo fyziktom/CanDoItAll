@@ -406,27 +406,47 @@
             pointerDown: event => {
                 const sceneHit = getSceneHitAtEvent(state, event);
                 const portHit = resolveConnectionPortHit(state, event, sceneHit);
+                const portDescriptor = buildConnectionDescriptor(portHit);
                 const overlayAnchorHit = resolveConnectorAnchorHit(event);
-                if (state.connectionDraft && (event.button === 0 || event.button === 2)) {
+                if (state.connectionDraft && event.button === 0) {
                     if (event.cancelable) {
                         event.preventDefault();
                     }
 
-                    const targetDescriptor = buildConnectionDescriptor(portHit);
-                    if (targetDescriptor && targetDescriptor.direction === "input" && targetDescriptor.nodeId !== state.connectionDraft.nodeId) {
-                        dispatchConnectionCreate(state, targetDescriptor);
+                    if (portDescriptor && portDescriptor.direction === "input" && portDescriptor.nodeId !== state.connectionDraft.nodeId) {
+                        dispatchConnectionCreate(state, portDescriptor);
                         return;
                     }
 
-                    if (event.button === 2) {
-                        const sourceDescriptor = buildConnectionDescriptor(portHit);
-                        if (sourceDescriptor && sourceDescriptor.direction === "output") {
-                            startConnectionDraft(state, sourceDescriptor);
-                            return;
-                        }
+                    if (portDescriptor && portDescriptor.direction === "output") {
+                        startConnectionDraft(state, portDescriptor);
+                        return;
                     }
 
                     clearConnectionDraft(state);
+                    return;
+                }
+
+                if (supportsConnectionAuthoring(state) &&
+                    event.button === 0 &&
+                    portDescriptor &&
+                    portDescriptor.direction === "output") {
+                    if (event.cancelable) {
+                        event.preventDefault();
+                    }
+
+                    startConnectionDraft(state, portDescriptor);
+                    return;
+                }
+
+                if (supportsConnectionAuthoring(state) &&
+                    event.button === 0 &&
+                    portDescriptor &&
+                    portDescriptor.direction === "input") {
+                    if (event.cancelable) {
+                        event.preventDefault();
+                    }
+
                     return;
                 }
 
@@ -648,31 +668,6 @@
             },
             contextMenu: event => {
                 const sceneHit = getSceneHitAtEvent(state, event);
-                const portHit = resolveConnectionPortHit(state, event, sceneHit);
-                const portDescriptor = buildConnectionDescriptor(portHit);
-                if (supportsConnectionAuthoring(state) && portDescriptor) {
-                    event.preventDefault();
-                    if (state.connectionDraft) {
-                        if (portDescriptor.direction === "input" && portDescriptor.nodeId !== state.connectionDraft.nodeId) {
-                            dispatchConnectionCreate(state, portDescriptor);
-                            return;
-                        }
-
-                        if (portDescriptor.direction === "output") {
-                            startConnectionDraft(state, portDescriptor);
-                            return;
-                        }
-
-                        clearConnectionDraft(state);
-                        return;
-                    }
-
-                    if (portDescriptor.direction === "output") {
-                        startConnectionDraft(state, portDescriptor);
-                        return;
-                    }
-                }
-
                 if (isOverlayTarget(event.target) && !resolveConnectorAnchorHit(event)) {
                     return;
                 }

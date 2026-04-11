@@ -39,7 +39,7 @@
         </Grid>
 
         <Grid Gap="LayoutGap.Large"
-              ColumnsMd="5">
+              ColumnsMd="4">
             <FormField Text="Step kind">
                 <InputSelect @bind-Value="Model.StepKind"
                              class="cda-input">
@@ -53,26 +53,6 @@
                 <InputNumber @bind-Value="Model.TargetLeadHours"
                              class="cda-input" />
             </FormField>
-            <FormField Text="Depends on">
-                <InputSelect @bind-Value="Model.DependsOnStepId"
-                             class="cda-input">
-                    <option value="">None</option>
-                    @foreach (var candidate in DependencyOptions)
-                    {
-                        <option value="@candidate.Id">@(string.IsNullOrWhiteSpace(candidate.Title) ? "Untitled step" : candidate.Title)</option>
-                    }
-                </InputSelect>
-            </FormField>
-            <FormField Text="Depends on outcome">
-                <InputSelect @bind-Value="Model.DependsOnBranchOutcomeId"
-                             class="cda-input">
-                    <option value="">Any dependency outcome</option>
-                    @foreach (var outcome in SelectedDependencyBranchOutcomes)
-                    {
-                        <option value="@outcome.Id">@outcome.Title</option>
-                    }
-                </InputSelect>
-            </FormField>
             <FormField Text="Decision maker role">
                 <InputSelect @bind-Value="Model.DecisionRoleRequirementId"
                              class="cda-input">
@@ -82,6 +62,21 @@
                         <option value="@role.Id">@role.DisplayName</option>
                     }
                 </InputSelect>
+            </FormField>
+            <FormField Text="Canvas-managed dependencies">
+                @if (DependencySummaries.Count == 0)
+                {
+                    <p class="text-sm leading-6 text-slate-600">No upstream inputs. Draw connections on the canvas to add one or more required inputs.</p>
+                }
+                else
+                {
+                    <Cluster Gap="LayoutGap.Small">
+                        @foreach (var dependencySummary in DependencySummaries)
+                        {
+                            <StatusBadge Tone="neutral" Text="@dependencySummary" />
+                        }
+                    </Cluster>
+                }
             </FormField>
         </Grid>
 
@@ -279,8 +274,10 @@
     [Parameter]
     public EventCallback<ProcessArtifactExpectationEditorModel> RemoveArtifact { get; set; }
 
-    private IReadOnlyList<ProcessStepBranchOutcomeEditorModel> SelectedDependencyBranchOutcomes
-        => DependencyOptions.FirstOrDefault(candidate => candidate.Id == Model.DependsOnStepId)?.BranchOutcomes ?? [];
+    private IReadOnlyList<string> DependencySummaries
+        => ProcessCanvasBranching.GetOrderedDependencies(Model)
+            .Select(BuildDependencySummary)
+            .ToList();
 
     private IReadOnlyList<ProcessStepBranchOutcomeEditorModel> VisibleBranchOutcomes
         => Model.BranchOutcomes
@@ -289,4 +286,23 @@
 
     private bool HasSystemBranchOutcomes
         => Model.BranchOutcomes.Any(ProcessCanvasBranching.IsSystemOutcome);
+
+    private string BuildDependencySummary(ProcessStepDependencyEditorModel dependency)
+    {
+        var dependencyStep = DependencyOptions.FirstOrDefault(candidate => candidate.Id == dependency.DependsOnStepId);
+        var dependencyStepTitle = dependencyStep is null || string.IsNullOrWhiteSpace(dependencyStep.Title)
+            ? "Upstream step"
+            : dependencyStep.Title;
+        if (!dependency.DependsOnBranchOutcomeId.HasValue)
+        {
+            return dependencyStepTitle;
+        }
+
+        var branchOutcomeTitle = dependencyStep?.BranchOutcomes
+            .FirstOrDefault(outcome => outcome.Id == dependency.DependsOnBranchOutcomeId.Value)?
+            .Title;
+        return string.IsNullOrWhiteSpace(branchOutcomeTitle)
+            ? dependencyStepTitle
+            : $"{dependencyStepTitle} -> {branchOutcomeTitle}";
+    }
 }

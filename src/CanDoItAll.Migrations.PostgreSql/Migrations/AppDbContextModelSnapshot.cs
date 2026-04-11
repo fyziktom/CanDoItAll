@@ -2860,6 +2860,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<bool>("AllowsFallback")
                         .HasColumnType("boolean");
 
+                    b.Property<double>("CanvasX")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("CanvasY")
+                        .HasColumnType("double precision");
+
                     b.Property<int>("DefaultAllocationPercent")
                         .HasColumnType("integer");
 
@@ -3142,6 +3148,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<bool>("AllowsSafeRefusal")
                         .HasColumnType("boolean");
 
+                    b.Property<double>("BranchCanvasX")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("BranchCanvasY")
+                        .HasColumnType("double precision");
+
                     b.Property<double>("CanvasX")
                         .HasColumnType("double precision");
 
@@ -3230,6 +3242,40 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasIndex("ProcessDefinitionVersionId", "OrderIndex");
 
                     b.ToTable("Processes_StepDefinitions", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DependsOnBranchOutcomeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DependsOnStepId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StepDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DependsOnBranchOutcomeId");
+
+                    b.HasIndex("DependsOnStepId");
+
+                    b.HasIndex("StepDefinitionId");
+
+                    b.HasIndex("StepDefinitionId", "DisplayOrder");
+
+                    b.HasIndex("StepDefinitionId", "DependsOnStepId", "DependsOnBranchOutcomeId")
+                        .IsUnique();
+
+                    b.ToTable("Processes_StepDependencies", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>

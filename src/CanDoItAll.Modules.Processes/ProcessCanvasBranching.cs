@@ -23,28 +23,13 @@ public static class ProcessCanvasBranching
 
         foreach (var step in editor.Steps)
         {
+            NormalizeStepDependencies(step, editor.Steps);
             NormalizeStepBranchOutcomes(step, editor.Steps);
         }
 
-        foreach (var step in editor.Steps.Where(candidate => candidate.DependsOnStepId.HasValue))
+        foreach (var step in editor.Steps)
         {
-            var dependency = editor.Steps.FirstOrDefault(candidate => candidate.Id == step.DependsOnStepId!.Value);
-            if (dependency is null)
-            {
-                continue;
-            }
-
-            if (ShouldRenderBranchRouter(dependency))
-            {
-                step.DependsOnBranchOutcomeId ??= GetDefaultOutcomeId(dependency);
-                continue;
-            }
-
-            if (step.DependsOnBranchOutcomeId.HasValue &&
-                dependency.BranchOutcomes.All(outcome => outcome.Id != step.DependsOnBranchOutcomeId.Value))
-            {
-                step.DependsOnBranchOutcomeId = null;
-            }
+            NormalizeStepDependencies(step, editor.Steps);
         }
     }
 
@@ -52,6 +37,8 @@ public static class ProcessCanvasBranching
     {
         ArgumentNullException.ThrowIfNull(step);
 
+        SyncDependencyCollectionFromLegacy(step);
+        SyncLegacyDependency(step);
         NormalizeStepBranchOutcomes(step, [step]);
     }
 
@@ -85,7 +72,24 @@ public static class ProcessCanvasBranching
         return [.. step.BranchOutcomes];
     }
 
+    public static IReadOnlyList<ProcessStepDependencyEditorModel> GetOrderedDependencies(ProcessStepEditorModel step)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+
+        SyncDependencyCollectionFromLegacy(step);
+        SyncLegacyDependency(step);
+        return [.. step.Dependencies];
+    }
+
     public static bool IsSystemOutcome(ProcessStepBranchOutcomeEditorModel outcome)
+    {
+        ArgumentNullException.ThrowIfNull(outcome);
+
+        return string.Equals(outcome.Key, DefaultRouteKey, StringComparison.Ordinal) ||
+               string.Equals(outcome.Key, ErrorRouteKey, StringComparison.Ordinal);
+    }
+
+    public static bool IsSystemOutcome(ProcessStepBranchOutcomeDefinition outcome)
     {
         ArgumentNullException.ThrowIfNull(outcome);
 
@@ -255,6 +259,8 @@ public static class ProcessCanvasBranching
         ProcessStepEditorModel step,
         IReadOnlyList<ProcessStepEditorModel> allSteps)
     {
+        SyncDependencyCollectionFromLegacy(step);
+
         var systemOutcomes = step.BranchOutcomes
             .Where(IsSystemOutcome)
             .ToList();
@@ -266,9 +272,10 @@ public static class ProcessCanvasBranching
             .Select(outcome => outcome.Id!.Value)
             .ToHashSet();
         var hasSystemDependents = step.Id.HasValue && allSteps.Any(candidate =>
-            candidate.DependsOnStepId == step.Id.Value &&
-            candidate.DependsOnBranchOutcomeId.HasValue &&
-            systemOutcomeIds.Contains(candidate.DependsOnBranchOutcomeId.Value));
+            GetOrderedDependencies(candidate).Any(dependency =>
+                dependency.DependsOnStepId == step.Id.Value &&
+                dependency.DependsOnBranchOutcomeId.HasValue &&
+                systemOutcomeIds.Contains(dependency.DependsOnBranchOutcomeId.Value)));
         var shouldKeepSystemOutcomes = step.StepKind == ProcessStepKind.Decision ||
             step.DecisionRoleRequirementId.HasValue ||
             customOutcomes.Count > 0 ||
@@ -285,6 +292,84 @@ public static class ProcessCanvasBranching
         normalized.Add(ResolveSystemOutcome(systemOutcomes, DefaultRouteKey, DefaultRouteTitle, "Continue when no explicit branch outcome is selected."));
         normalized.Add(ResolveSystemOutcome(systemOutcomes, ErrorRouteKey, ErrorRouteTitle, "Handle exceptions, failed validations, or explicit error escalation."));
         step.BranchOutcomes = normalized;
+    }
+
+    private static void NormalizeStepDependencies(
+        ProcessStepEditorModel step,
+        IReadOnlyList<ProcessStepEditorModel> allSteps)
+    {
+        SyncDependencyCollectionFromLegacy(step);
+
+        var normalized = new List<ProcessStepDependencyEditorModel>(step.Dependencies.Count);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var dependency in step.Dependencies)
+        {
+            if (!dependency.DependsOnStepId.HasValue ||
+                dependency.DependsOnStepId.Value == Guid.Empty ||
+                (step.Id.HasValue && dependency.DependsOnStepId.Value == step.Id.Value))
+            {
+                continue;
+            }
+
+            var sourceStep = allSteps.FirstOrDefault(candidate => candidate.Id == dependency.DependsOnStepId.Value);
+            if (sourceStep is null)
+            {
+                continue;
+            }
+
+            if (ShouldRenderBranchRouter(sourceStep))
+            {
+                dependency.DependsOnBranchOutcomeId ??= GetDefaultOutcomeId(sourceStep);
+            }
+            else if (dependency.DependsOnBranchOutcomeId.HasValue &&
+                sourceStep.BranchOutcomes.All(outcome => outcome.Id != dependency.DependsOnBranchOutcomeId.Value))
+            {
+                dependency.DependsOnBranchOutcomeId = null;
+            }
+
+            var dedupeKey = $"{dependency.DependsOnStepId.Value:D}:{dependency.DependsOnBranchOutcomeId?.ToString("D") ?? string.Empty}";
+            if (!seen.Add(dedupeKey))
+            {
+                continue;
+            }
+
+            dependency.Id ??= Guid.NewGuid();
+            normalized.Add(new ProcessStepDependencyEditorModel
+            {
+                Id = dependency.Id,
+                DependsOnStepId = dependency.DependsOnStepId,
+                DependsOnBranchOutcomeId = dependency.DependsOnBranchOutcomeId
+            });
+        }
+
+        step.Dependencies = normalized;
+        SyncLegacyDependency(step);
+    }
+
+    private static void SyncDependencyCollectionFromLegacy(ProcessStepEditorModel step)
+    {
+        if (step.Dependencies.Count > 0 || !step.DependsOnStepId.HasValue)
+        {
+            return;
+        }
+
+        step.Dependencies =
+        [
+            new ProcessStepDependencyEditorModel
+            {
+                Id = Guid.NewGuid(),
+                DependsOnStepId = step.DependsOnStepId,
+                DependsOnBranchOutcomeId = step.DependsOnBranchOutcomeId
+            }
+        ];
+    }
+
+    private static void SyncLegacyDependency(ProcessStepEditorModel step)
+    {
+        var primaryDependency = step.Dependencies
+            .FirstOrDefault(dependency => dependency.DependsOnStepId.HasValue);
+        step.DependsOnStepId = primaryDependency?.DependsOnStepId;
+        step.DependsOnBranchOutcomeId = primaryDependency?.DependsOnBranchOutcomeId;
     }
 
     private static ProcessStepBranchOutcomeEditorModel ResolveSystemOutcome(

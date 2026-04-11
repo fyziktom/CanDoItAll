@@ -8,7 +8,7 @@ This bundle is the coordination and execution package for `cdi_process_branching
 
 ## Mission
 
-- Add explicit branching nodes to the process canvas with additive multi-port canvas support, keep legacy single-anchor nodes intact, wire role-to-decision and outcome-to-branch routing visibly on the canvas, and close the work only after real browser proof, screenshot review, scenario seeding, and architecture-gap logging.
+- Add explicit branching nodes to the process canvas with additive multi-port canvas support, keep legacy single-anchor nodes intact, wire role-to-decision and outcome-to-branch routing visibly on the canvas, shift connector authoring to left-click badge-aligned circles, assess and implement honest many-to-many routing semantics, fix canonical node-position persistence, and close the work only after real browser proof, screenshot review, scenario seeding, and architecture-gap logging.
 
 ## Bundle Layout
 
@@ -42,7 +42,7 @@ This bundle is the coordination and execution package for `cdi_process_branching
 
 - Bundle preparation status: `Completed`
 - Bundle readiness gate: `Passed`
-- Execution status: `Not started`
-- Subbundle gate review: `Not started`
+- Execution status: `In progress`
+- Subbundle gate review: `In progress`
 - Final closure gate: `Not started`
-- Browser validation analytics: `Not started`
+- Browser validation analytics: `In progress`

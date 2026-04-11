@@ -9,15 +9,21 @@
 
 ## Watch During Execution
 
-- Whether role-definition nodes are already projected cleanly enough to support visible decision-role input routing.
+- Whether left-click connector authoring can coexist with selection and drag without accidental node moves.
+- Whether role-definition nodes and router badges can expose anchor geometry derived from the actual badge rectangles instead of generic edge slots.
 - Whether branch-node identity can remain derived or needs persisted placement metadata.
+- Whether the current process model can be extended to true many-to-many joins without a broader runtime rewrite.
 - Whether multi-port node density requires additive layout rules to stay readable.
 
 ## Confirmed During Execution
 
-- The current process definition model still allows only one `DependsOnStepId` plus one optional `DependsOnBranchOutcomeId` per step. That is enough for explicit fan-out routing, but it is not enough for true cyclic review loops or multi-parent joins. The seeded software-development scenario therefore uses a branch-heavy rehearsal instead of a real loop-back edge into the same decision node.
-- Branch router nodes and role nodes are still derived canvas projections rather than persisted domain entities. The additive UI-state manual-position support keeps them usable for authoring, but it is not yet a canonical shared layout contract across users, exports, or later replay tooling.
+- The process domain was extended with canonical `ProcessStepDependencyDefinition` rows, so many-to-many joins are now first-class and runtime activation can wait for all required inputs. True cyclic review loops back into the same decision path are still not first-class and remain a separate architectural limit.
+- Branch router nodes and role nodes are still derived canvas projections rather than separate persisted domain entities, but their positions are now written through canonical definition fields (`CanvasX`, `CanvasY`, `BranchCanvasX`, `BranchCanvasY`) instead of transient-only component UI state.
 - The additive multi-port renderer stays readable at large-screen width, but `1280x800` is already near the density limit for this branch-heavy scenario. If the process library starts using more than one large router in a single scene, the workspace will need stronger layout or grouping rules instead of relying on fit-to-view alone.
+- Left-click connector authoring now coexists with selection and drag: the canvas starts drafting from the clicked output circle and completes on the clicked target circle without requiring right-click initiation.
+- Advanced-node anchor placement needed a row-grid correction so badge circles line up with the actual badge rows. That fix restored the missing router-side `Review lead` input circle and aligned the visible circles with their pills in live proof.
+- The process workspace snap-back symptom was real. Saving and publishing originally cloned the next draft through transient lookups that lost the newly added step dependency and layout state. The clone path now carries dependency rows and persisted role/router positions forward correctly, with integration proof on save/get-editor roundtrip and publish-to-next-draft cloning.
+- System `Default` and `Error` routes must exist for router semantics, but they should not be mandatory to wire. Publish validation originally rejected valid branching definitions when those synthetic routes were unconnected; that rule was corrected during execution.
 
 ## Update Rule
 

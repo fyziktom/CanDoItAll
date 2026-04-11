@@ -172,6 +172,10 @@ public sealed class ProcessRoleRequirement {
     public string SnapshotSummary { get; set; } = string.Empty;
 
     public int DisplayOrder { get; set; }
+
+    public double CanvasX { get; set; }
+
+    public double CanvasY { get; set; }
 }
 
 public sealed class ProcessRoleSkillRequirement {
@@ -232,6 +236,22 @@ public sealed class ProcessStepDefinition {
     public double CanvasX { get; set; }
 
     public double CanvasY { get; set; }
+
+    public double BranchCanvasX { get; set; }
+
+    public double BranchCanvasY { get; set; }
+}
+
+public sealed class ProcessStepDependencyDefinition {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid StepDefinitionId { get; set; }
+
+    public Guid DependsOnStepId { get; set; }
+
+    public Guid? DependsOnBranchOutcomeId { get; set; }
+
+    public int DisplayOrder { get; set; }
 }
 
 public sealed class ProcessStepBranchOutcomeDefinition {
@@ -373,6 +393,18 @@ internal sealed class ProcessStepDefinitionConfiguration : IEntityTypeConfigurat
     }
 }
 
+internal sealed class ProcessStepDependencyDefinitionConfiguration : IEntityTypeConfiguration<ProcessStepDependencyDefinition> {
+    public void Configure(EntityTypeBuilder<ProcessStepDependencyDefinition> builder) {
+        builder.ToTable("Processes_StepDependencies");
+        builder.HasKey(item => item.Id);
+        builder.HasIndex(item => item.StepDefinitionId);
+        builder.HasIndex(item => item.DependsOnStepId);
+        builder.HasIndex(item => item.DependsOnBranchOutcomeId);
+        builder.HasIndex(item => new { item.StepDefinitionId, item.DependsOnStepId, item.DependsOnBranchOutcomeId }).IsUnique();
+        builder.HasIndex(item => new { item.StepDefinitionId, item.DisplayOrder });
+    }
+}
+
 internal sealed class ProcessStepBranchOutcomeDefinitionConfiguration : IEntityTypeConfiguration<ProcessStepBranchOutcomeDefinition> {
     public void Configure(EntityTypeBuilder<ProcessStepBranchOutcomeDefinition> builder) {
         builder.ToTable("Processes_StepBranchOutcomes");
@@ -509,6 +541,10 @@ public sealed class ProcessRoleEditorModel {
     public string SnapshotSummary { get; set; } = string.Empty;
 
     public List<Guid> RequiredSkillIds { get; set; } = [];
+
+    public double CanvasX { get; set; }
+
+    public double CanvasY { get; set; }
 }
 
 public sealed class ProcessStepEditorModel {
@@ -554,11 +590,25 @@ public sealed class ProcessStepEditorModel {
 
     public double CanvasY { get; set; }
 
+    public double BranchCanvasX { get; set; }
+
+    public double BranchCanvasY { get; set; }
+
     public List<ProcessStepBranchOutcomeEditorModel> BranchOutcomes { get; set; } = [];
+
+    public List<ProcessStepDependencyEditorModel> Dependencies { get; set; } = [];
 
     public List<ProcessStepRoleRequirementEditorModel> RoleAssignments { get; set; } = [];
 
     public List<ProcessArtifactExpectationEditorModel> ArtifactExpectations { get; set; } = [];
+}
+
+public sealed class ProcessStepDependencyEditorModel {
+    public Guid? Id { get; set; }
+
+    public Guid? DependsOnStepId { get; set; }
+
+    public Guid? DependsOnBranchOutcomeId { get; set; }
 }
 
 public sealed class ProcessStepBranchOutcomeEditorModel {

@@ -6,13 +6,15 @@
 
 ## Objective
 
-- Define the target software-development branching scenarios first, reconcile them against the live repository, and write down the architecture troubles that must be solved before shared-canvas implementation starts.
+- Reconcile the latest follow-up notes against the live repository so the bundle is honest about left-click connector authoring, exact badge-anchor geometry, many-to-many join semantics, and canonical layout persistence before more product code changes begin.
 
 ## Covered Inputs
 
-- `N008` Bundle-driven execution with real gates.
 - `N009` Proper branching examples around software development.
 - `N010` Record architecture troubles and start with process definition and gap analysis first.
+- `N013` Many-to-many routing semantics must be supported or blocked honestly.
+- `N014` Moved derived nodes must persist and not snap back after later interactions.
+- `N015` Repair the bundle before implementing the latest follow-up scope.
 
 ## Prerequisites
 
@@ -23,19 +25,21 @@
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessCanvasSurfaceFactory.cs`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDefinitionModels.cs`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessesService.Runtime.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.Canvas.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.razor.cs`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\ProcessDevelopmentSeedService.Scenarios.cs`
 - `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle\README.md`
 
 ## Deliverables
 
-- Target scenario inventory covering at least code review, repair loop, QA rework loop, and merge approval.
-- Live gap reconciliation describing exactly what the current canvas can and cannot represent.
-- Architecture trouble log with concrete missing foundations and reopen triggers.
+- Updated scenario inventory that covers code-review routing, QA loops, join-style input aggregation, and layout-persistence round trips.
+- Updated architecture trouble log that names the current many-to-many and persistence gaps precisely.
+- Repaired bundle docs and prepared-stage validator rerun before downstream implementation starts.
 
 ## Dependency Impact
 
-- Later subbundles depend on this phase to know which branch types must exist and which architecture problems are real rather than guessed.
-- Weak proof here would allow later work to quietly optimize for a simplified flow and miss the user’s requested loop scenarios.
+- Later subbundles depend on this phase to know whether many-to-many routing is a real supported target or an explicit blocker.
+- Weak proof here would allow later UI work to look correct while still relying on non-canonical joins or transient layout state.
 
 ## Validation Depth
 
@@ -43,31 +47,28 @@
 
 ## Implementation Steps
 
-1. Re-read the user request and preserve literal language around each branch path, default, error, and role-definition input.
-2. Inventory the software-development scenarios that the feature must demonstrate.
-3. Reconcile those scenarios against the current process model and canvas surface factory.
-4. Update the architecture trouble log with the missing shared-canvas and process-projection capabilities.
-5. Confirm the owning requirements and downstream dependency gates before starting shared component changes.
-
-## Scope Exceptions
-
-- No feature code is required in this subbundle unless the bundle itself must be repaired for accuracy.
+1. Re-read the initial request and both follow-up requests.
+2. Update the scenario inventory so join-style inputs and persistence round trips are explicit.
+3. Audit the current process model and canvas persistence path for many-to-many and snap-back risks.
+4. Update the architecture trouble log, requirements, and traceability so downstream work has an honest target.
+5. Rerun the prepared-stage validator before continuing.
 
 ## Do Not Do
 
-- Do not start changing CanvasLib or process components yet.
-- Do not narrow the requested branch categories to only currently supported cases.
+- Do not start more CanvasLib or process-component edits before the canonical gaps are documented.
+- Do not treat browser-only movement or drawn curves as proof of canonical support.
 
 ## Acceptance Checklist
 
-- The target scenario inventory explicitly includes rework loops and approval steps.
-- The architecture trouble log names the shared-canvas contract gap and any process-projection gaps.
-- The traceability table maps the raw notes to downstream subbundles without ambiguity.
+- The target scenario inventory explicitly includes a join-style input case and a persistence round-trip case.
+- The architecture trouble log names the current many-to-many and derived-layout persistence gaps.
+- The bundle docs and traceability reflect the latest left-click and badge-geometry scope.
+- The prepared-stage validator is rerun after the bundle repair.
 
 ## Proof Required
 
-- Updated bundle documents in `analysis/03-architecture-troubles-log.md` and `inventories/02-target-process-scenarios.md`.
-- No browser proof required for closure of this documentation-only foundation.
+- Updated bundle documents in `analysis/03-architecture-troubles-log.md`, `inventories/02-target-process-scenarios.md`, and related requirement files.
+- Prepared-stage validator output recorded in `reviews/01-execution-report.md`.
 
 ## Browser Validation Logging
 
@@ -75,10 +76,10 @@
 
 ## Progression Gate
 
-- Downstream subbundles may continue only after the target scenarios and architecture troubles are explicit enough that no later phase needs to rediscover what branching means.
+- Downstream subbundles may continue only after the join-semantics and persistence risks are explicit enough that later phases do not rediscover them mid-implementation.
 
 ## Suggested Agent Prompt
 
 ```text
-Implement this subbundle only. Do not modify product code yet unless the bundle itself needs correction. Define the target branching scenarios, reconcile the live gaps, and update the architecture trouble log so CanvasLib and process-module work can proceed without scope drift.
+Implement this subbundle only. Repair the bundle around the latest follow-up scope, refresh the process scenarios, audit many-to-many and persistence gaps against the live repository, update the trouble log and traceability, and rerun the prepared-stage validator before moving on.
 ```

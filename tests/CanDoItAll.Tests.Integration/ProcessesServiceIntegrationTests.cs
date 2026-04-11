@@ -280,7 +280,10 @@ public sealed class ProcessesServiceIntegrationTests
         var saveResult = await processesService.SaveAsync(BuildBranchingDefinitionEditor(projectId, managerRoleId));
 
         Assert.True(saveResult.IsSuccess);
-        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(
+            publishResult.IsSuccess,
+            string.Join(", ", publishResult.Errors.Select(error => $"{error.Code}:{error.Message}")));
 
         var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
         {
@@ -359,6 +362,146 @@ public sealed class ProcessesServiceIntegrationTests
 
         var decisions = await processesService.ListDecisionRecordsAsync(runResult.Value);
         Assert.Contains(decisions, item => item.BranchOutcomeTitle == "UI architect revision");
+    }
+
+    [Fact]
+    public async Task PublishAsync_preserves_role_and_branch_canvas_positions_in_the_next_draft()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process canvas persistence project");
+        var managerRoleId = Guid.NewGuid();
+        var model = BuildBranchingDefinitionEditor(projectId, managerRoleId);
+        var routingRole = Assert.Single(model.Roles);
+        routingRole.CanvasX = 180;
+        routingRole.CanvasY = 260;
+
+        var decisionStep = Assert.Single(model.Steps, item => item.Title == "Route requested revision");
+        decisionStep.BranchCanvasX = 960;
+        decisionStep.BranchCanvasY = 220;
+
+        var saveResult = await processesService.SaveAsync(model);
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var editor = await processesService.GetEditorAsync(saveResult.Value, projectId);
+        var persistedRole = Assert.Single(editor.Roles, item => item.DisplayName == "Routing owner");
+        var persistedDecisionStep = Assert.Single(editor.Steps, item => item.Title == "Route requested revision");
+
+        Assert.Equal(180, persistedRole.CanvasX);
+        Assert.Equal(260, persistedRole.CanvasY);
+        Assert.Equal(960, persistedDecisionStep.BranchCanvasX);
+        Assert.Equal(220, persistedDecisionStep.BranchCanvasY);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_waits_for_all_dependencies_before_join_step_becomes_ready()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Many-to-many dependency project");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Jordan Delivery Lead");
+        var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(assignmentResult.IsSuccess);
+
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildParallelJoinDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Parallel join validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify wait-for-all dependencies"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        var intakeStep = Assert.Single(stepRuns, item => item.Title == "Capture implementation package");
+
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Start intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Intake completed.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        var qaReviewStep = Assert.Single(stepRuns, item => item.Title == "Validate QA evidence");
+        var securityReviewStep = Assert.Single(stepRuns, item => item.Title == "Validate security posture");
+        var releaseJoinStep = Assert.Single(stepRuns, item => item.Title == "Approve merge readiness");
+
+        Assert.Equal(ProcessStepRunStatus.Ready, qaReviewStep.Status);
+        Assert.Equal(ProcessStepRunStatus.Ready, securityReviewStep.Status);
+        Assert.Equal(ProcessStepRunStatus.Pending, releaseJoinStep.Status);
+
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = qaReviewStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Start QA review.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = qaReviewStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "QA review completed.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        releaseJoinStep = Assert.Single(stepRuns, item => item.Title == "Approve merge readiness");
+        Assert.Equal(ProcessStepRunStatus.Pending, releaseJoinStep.Status);
+
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = securityReviewStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Start security review.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = securityReviewStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Security review completed.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        releaseJoinStep = Assert.Single(stepRuns, item => item.Title == "Approve merge readiness");
+        Assert.Equal(ProcessStepRunStatus.WaitingApproval, releaseJoinStep.Status);
     }
 
     private static ProcessDefinitionEditorModel BuildDefinitionEditor(Guid projectId, Guid managerRoleId)
@@ -667,6 +810,148 @@ public sealed class ProcessesServiceIntegrationTests
                         {
                             RoleRequirementId = managerRoleId,
                             ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildParallelJoinDefinitionEditor(Guid projectId, Guid managerRoleId)
+    {
+        var intakeStepId = Guid.NewGuid();
+        var qaStepId = Guid.NewGuid();
+        var securityStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Parallel dependency delivery process",
+            Summary = "Validates wait-for-all join behavior.",
+            ValueStatement = "Keep multi-input process joins explicit and durable.",
+            CustomerName = "Acme Customer",
+            OwnerName = "Morgan Process Lead",
+            GovernancePolicySummary = "Merge readiness must wait for all required upstream evidence.",
+            ChangeSummary = "Initial parallel dependency definition.",
+            ConstitutionRuleSummary = "Join steps must not activate until every required input has arrived.",
+            OperatingModeSummary = "Assisted execution with explicit evidence gates.",
+            SimulationReadinessSummary = "Safe for integration validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = managerRoleId,
+                    Key = "delivery-owner",
+                    DisplayName = "Delivery owner",
+                    Purpose = "Own the evidence gates for merge readiness.",
+                    StaffingIntent = "Primary delivery authority for the process.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                    PreferredExecutorKind = "person",
+                    SnapshotSummary = "Delivery owner snapshot."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = intakeStepId,
+                    Key = "capture-package",
+                    Title = "Capture implementation package",
+                    StepKind = ProcessStepKind.Start,
+                    TargetLeadHours = 1,
+                    CanvasX = 140,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = qaStepId,
+                    Key = "qa-review",
+                    Title = "Validate QA evidence",
+                    StepKind = ProcessStepKind.Review,
+                    TargetLeadHours = 2,
+                    DependsOnStepId = intakeStepId,
+                    Dependencies =
+                    [
+                        new ProcessStepDependencyEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            DependsOnStepId = intakeStepId
+                        }
+                    ],
+                    CanvasX = 460,
+                    CanvasY = 120,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = securityStepId,
+                    Key = "security-review",
+                    Title = "Validate security posture",
+                    StepKind = ProcessStepKind.Review,
+                    TargetLeadHours = 2,
+                    DependsOnStepId = intakeStepId,
+                    Dependencies =
+                    [
+                        new ProcessStepDependencyEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            DependsOnStepId = intakeStepId
+                        }
+                    ],
+                    CanvasX = 460,
+                    CanvasY = 260,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Key = "merge-readiness",
+                    Title = "Approve merge readiness",
+                    StepKind = ProcessStepKind.Approval,
+                    RequiresApproval = true,
+                    TargetLeadHours = 1,
+                    Dependencies =
+                    [
+                        new ProcessStepDependencyEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            DependsOnStepId = qaStepId
+                        },
+                        new ProcessStepDependencyEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            DependsOnStepId = securityStepId
+                        }
+                    ],
+                    CanvasX = 820,
+                    CanvasY = 190,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Approver
                         }
                     ]
                 }

@@ -173,7 +173,7 @@ public sealed partial class ProcessDevelopmentSeedService
                 DecisionRightsSummary = "Security reviewer owns the sign-off for tenant-data and policy exceptions.",
                 ExceptionPolicySummary = "Block release when data-handling review capacity is missing or exception rationale is incomplete.",
                 TargetLeadHours = 6,
-                DependsOnStepId = qaId,
+                DependsOnStepId = peerReviewId,
                 CanvasX = 1670,
                 CanvasY = 120,
                 RoleAssignments = [BuildRoleAssignment(securityReviewerId, ProcessResponsibilityKind.Approver, "Security approval remains attached to the role even if the reviewer changes.")],
@@ -195,7 +195,19 @@ public sealed partial class ProcessDevelopmentSeedService
                 DecisionRightsSummary = "Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently.",
                 ExceptionPolicySummary = "Reject release when security review, rollback ownership, or support readiness remains incomplete.",
                 TargetLeadHours = 3,
-                DependsOnStepId = securityId,
+                Dependencies =
+                [
+                    new ProcessStepDependencyEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        DependsOnStepId = qaId
+                    },
+                    new ProcessStepDependencyEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        DependsOnStepId = securityId
+                    }
+                ],
                 CanvasX = 1980,
                 CanvasY = 120,
                 RoleAssignments = [BuildRoleAssignment(deliveryManagerId, ProcessResponsibilityKind.Approver, "Release-governance ownership stays attached to the delivery manager role."), BuildRoleAssignment(releaseManagerId, ProcessResponsibilityKind.Reviewer, "Release operations must confirm readiness before approval can be accepted.")],

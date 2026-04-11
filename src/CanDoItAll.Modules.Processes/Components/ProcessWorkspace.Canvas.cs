@@ -290,14 +290,31 @@ public partial class ProcessWorkspace
                 continue;
             }
 
-            if (position.NodeId.StartsWith(ProcessCanvasBranching.DefinitionBranchNodePrefix, StringComparison.Ordinal) ||
-                position.NodeId.StartsWith(ProcessCanvasBranching.DefinitionRoleNodePrefix, StringComparison.Ordinal))
+            if (position.NodeId.StartsWith(ProcessCanvasBranching.DefinitionBranchNodePrefix, StringComparison.Ordinal))
             {
-                uiState.ManualPositions[position.NodeId] = new CanvasWorkbenchPoint
+                var step = ResolveDefinitionStep(position.NodeId);
+                if (step is null)
                 {
-                    X = position.X,
-                    Y = position.Y
-                };
+                    continue;
+                }
+
+                step.BranchCanvasX = position.X;
+                step.BranchCanvasY = position.Y;
+                uiState.ManualPositions.Remove(position.NodeId);
+                continue;
+            }
+
+            if (position.NodeId.StartsWith(ProcessCanvasBranching.DefinitionRoleNodePrefix, StringComparison.Ordinal))
+            {
+                var role = ResolveDefinitionRole(position.NodeId);
+                if (role is null)
+                {
+                    continue;
+                }
+
+                role.CanvasX = position.X;
+                role.CanvasY = position.Y;
+                uiState.ManualPositions.Remove(position.NodeId);
             }
         }
 
@@ -856,8 +873,7 @@ public partial class ProcessWorkspace
     {
         message = string.Empty;
         if (ResolveDefinitionStep(request.LinkSourceId) is not { Id: { } sourceStepId } sourceStep ||
-            ResolveDefinitionStep(request.LinkTargetId) is not { } targetStep ||
-            targetStep.DependsOnStepId != sourceStepId)
+            ResolveDefinitionStep(request.LinkTargetId) is not { } targetStep)
         {
             return false;
         }
@@ -865,24 +881,21 @@ public partial class ProcessWorkspace
         if (IsDefinitionBranchNodeId(request.LinkSourceId))
         {
             if (!TryResolveDefinitionBranchOutcomeByPortId(sourceStep, request.LinkSourcePortId, out var branchOutcome) ||
-                targetStep.DependsOnBranchOutcomeId != branchOutcome.Id)
+                !TryRemoveStepDependency(targetStep, sourceStepId, branchOutcome.Id))
             {
                 return false;
             }
 
-            targetStep.DependsOnStepId = null;
-            targetStep.DependsOnBranchOutcomeId = null;
             message = $"{ResolveStepLabel(targetStep)} no longer waits on the '{ResolveBranchOutcomeLabel(branchOutcome)}' branch from {ResolveStepLabel(sourceStep)}.";
             return true;
         }
 
-        if (!IsDefinitionStepNodeId(request.LinkSourceId))
+        if (!IsDefinitionStepNodeId(request.LinkSourceId) ||
+            !TryRemoveStepDependency(targetStep, sourceStepId, null))
         {
             return false;
         }
 
-        targetStep.DependsOnStepId = null;
-        targetStep.DependsOnBranchOutcomeId = null;
         message = $"{ResolveStepLabel(targetStep)} no longer depends on {ResolveStepLabel(sourceStep)}.";
         return true;
     }
@@ -926,8 +939,7 @@ public partial class ProcessWorkspace
             return false;
         }
 
-        targetStep.DependsOnStepId = sourceStepId;
-        targetStep.DependsOnBranchOutcomeId = branchOutcome.Id;
+        AddStepDependency(targetStep, sourceStepId, branchOutcome.Id);
         message = $"{ResolveStepLabel(targetStep)} now follows the '{ResolveBranchOutcomeLabel(branchOutcome)}' branch from {ResolveStepLabel(sourceStep)}.";
         return true;
     }
@@ -949,8 +961,7 @@ public partial class ProcessWorkspace
             return false;
         }
 
-        targetStep.DependsOnStepId = sourceStepId;
-        targetStep.DependsOnBranchOutcomeId = null;
+        AddStepDependency(targetStep, sourceStepId, null);
         message = $"{ResolveStepLabel(targetStep)} now depends on {ResolveStepLabel(sourceStep)}.";
         return true;
     }
@@ -1155,6 +1166,34 @@ public partial class ProcessWorkspace
             ? "Untitled branch"
             : branchOutcome.Title;
 
+    private static void AddStepDependency(ProcessStepEditorModel step, Guid sourceStepId, Guid? branchOutcomeId)
+    {
+        var dependencies = ProcessCanvasBranching.GetOrderedDependencies(step)
+            .Where(dependency => dependency.DependsOnStepId != sourceStepId || dependency.DependsOnBranchOutcomeId != branchOutcomeId)
+            .Append(new ProcessStepDependencyEditorModel
+            {
+                Id = Guid.NewGuid(),
+                DependsOnStepId = sourceStepId,
+                DependsOnBranchOutcomeId = branchOutcomeId
+            });
+        SetStepDependencies(step, dependencies);
+    }
+
+    private static bool TryRemoveStepDependency(ProcessStepEditorModel step, Guid sourceStepId, Guid? branchOutcomeId)
+    {
+        var dependencies = ProcessCanvasBranching.GetOrderedDependencies(step).ToList();
+        var removed = dependencies.RemoveAll(dependency =>
+            dependency.DependsOnStepId == sourceStepId &&
+            dependency.DependsOnBranchOutcomeId == branchOutcomeId);
+        if (removed == 0)
+        {
+            return false;
+        }
+
+        SetStepDependencies(step, dependencies);
+        return true;
+    }
+
     private static ProcessRoleEditorModel CloneRole(ProcessRoleEditorModel source)
     {
         return new ProcessRoleEditorModel
@@ -1173,7 +1212,9 @@ public partial class ProcessWorkspace
             RoleTemplateSourceKey = source.RoleTemplateSourceKey,
             RoleTemplateSnapshotName = source.RoleTemplateSnapshotName,
             SnapshotSummary = source.SnapshotSummary,
-            RequiredSkillIds = source.RequiredSkillIds.ToList()
+            RequiredSkillIds = source.RequiredSkillIds.ToList(),
+            CanvasX = source.CanvasX,
+            CanvasY = source.CanvasY
         };
     }
 
@@ -1194,6 +1235,8 @@ public partial class ProcessWorkspace
         target.RoleTemplateSnapshotName = source.RoleTemplateSnapshotName;
         target.SnapshotSummary = source.SnapshotSummary;
         target.RequiredSkillIds = source.RequiredSkillIds.ToList();
+        target.CanvasX = source.CanvasX;
+        target.CanvasY = source.CanvasY;
     }
 
     private static ProcessStepEditorModel CloneStep(ProcessStepEditorModel source)
@@ -1221,6 +1264,8 @@ public partial class ProcessWorkspace
             DecisionRoleRequirementId = source.DecisionRoleRequirementId,
             CanvasX = source.CanvasX,
             CanvasY = source.CanvasY,
+            BranchCanvasX = source.BranchCanvasX,
+            BranchCanvasY = source.BranchCanvasY,
             BranchOutcomes = source.BranchOutcomes
                 .Select(outcome => new ProcessStepBranchOutcomeEditorModel
                 {
@@ -1228,6 +1273,14 @@ public partial class ProcessWorkspace
                     Key = outcome.Key,
                     Title = outcome.Title,
                     Description = outcome.Description
+                })
+                .ToList(),
+            Dependencies = source.Dependencies
+                .Select(dependency => new ProcessStepDependencyEditorModel
+                {
+                    Id = dependency.Id,
+                    DependsOnStepId = dependency.DependsOnStepId,
+                    DependsOnBranchOutcomeId = dependency.DependsOnBranchOutcomeId
                 })
                 .ToList(),
             RoleAssignments = source.RoleAssignments
@@ -1281,6 +1334,9 @@ public partial class ProcessWorkspace
         target.DecisionRoleRequirementId = source.DecisionRoleRequirementId;
         target.CanvasX = source.CanvasX;
         target.CanvasY = source.CanvasY;
+        target.BranchCanvasX = source.BranchCanvasX;
+        target.BranchCanvasY = source.BranchCanvasY;
+        target.Dependencies = CloneStep(source).Dependencies;
         target.BranchOutcomes = CloneStep(source).BranchOutcomes;
         target.RoleAssignments = CloneStep(source).RoleAssignments;
         target.ArtifactExpectations = CloneStep(source).ArtifactExpectations;

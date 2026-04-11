@@ -527,6 +527,10 @@ public sealed record ProcessStepBranchOutcomeOptionViewModel(
     string Title,
     string Description);
 
+public sealed record ProcessStepDependencyViewModel(
+    Guid DependsOnStepDefinitionId,
+    Guid? DependsOnBranchOutcomeId);
+
 public sealed record ProcessStepRunViewModel(
     Guid Id,
     Guid StepDefinitionId,
@@ -548,7 +552,10 @@ public sealed record ProcessStepRunViewModel(
     int BlockedMinutes,
     int ReworkCount,
     ProcessCapabilityGapSeverity CapabilityGapSeverity,
-    IReadOnlyList<ProcessStepBranchOutcomeOptionViewModel> AvailableBranchOutcomes);
+    IReadOnlyList<ProcessStepBranchOutcomeOptionViewModel> AvailableBranchOutcomes)
+{
+    public IReadOnlyList<ProcessStepDependencyViewModel> Dependencies { get; init; } = [];
+}
 
 public sealed record ProcessDecisionViewModel(
     Guid Id,

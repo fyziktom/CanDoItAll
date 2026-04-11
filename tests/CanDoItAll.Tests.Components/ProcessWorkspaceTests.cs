@@ -104,8 +104,9 @@ public sealed class ProcessWorkspaceTests
             var currentDecisionStep = Assert.Single(editor.Steps, step => step.Key == process.DecisionStepKey);
             Assert.Equal(role.Id, currentDecisionStep.DecisionRoleRequirementId);
             var currentFixStep = Assert.Single(editor.Steps, step => step.Key == process.FixStepKey);
-            Assert.Equal(currentDecisionStep.Id, currentFixStep.DependsOnStepId);
-            Assert.Equal(repairsOutcome.Id, currentFixStep.DependsOnBranchOutcomeId);
+            var dependency = Assert.Single(ProcessCanvasBranching.GetOrderedDependencies(currentFixStep));
+            Assert.Equal(currentDecisionStep.Id, dependency.DependsOnStepId);
+            Assert.Equal(repairsOutcome.Id, dependency.DependsOnBranchOutcomeId);
         });
 
         await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
@@ -125,8 +126,7 @@ public sealed class ProcessWorkspaceTests
         {
             var editor = GetEditor(cut.Instance);
             var currentFixStep = Assert.Single(editor.Steps, step => step.Key == process.FixStepKey);
-            Assert.Null(currentFixStep.DependsOnStepId);
-            Assert.Null(currentFixStep.DependsOnBranchOutcomeId);
+            Assert.Empty(ProcessCanvasBranching.GetOrderedDependencies(currentFixStep));
         });
 
         await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
@@ -187,8 +187,9 @@ public sealed class ProcessWorkspaceTests
             var editor = GetEditor(cut.Instance);
             var currentDecisionStep = Assert.Single(editor.Steps, step => step.Key == process.DecisionStepKey);
             var currentFixStep = Assert.Single(editor.Steps, step => step.Key == process.FixStepKey);
-            Assert.Equal(currentDecisionStep.Id, currentFixStep.DependsOnStepId);
-            Assert.Equal(repairsOutcome.Id, currentFixStep.DependsOnBranchOutcomeId);
+            var dependency = Assert.Single(ProcessCanvasBranching.GetOrderedDependencies(currentFixStep));
+            Assert.Equal(currentDecisionStep.Id, dependency.DependsOnStepId);
+            Assert.Equal(repairsOutcome.Id, dependency.DependsOnBranchOutcomeId);
         });
 
         await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
@@ -209,8 +210,9 @@ public sealed class ProcessWorkspaceTests
             var editor = GetEditor(cut.Instance);
             var currentImplementationStep = Assert.Single(editor.Steps, step => step.Key == process.ImplementationStepKey);
             var currentMergeStep = Assert.Single(editor.Steps, step => step.Key == process.MergeStepKey);
-            Assert.Equal(currentImplementationStep.Id, currentMergeStep.DependsOnStepId);
-            Assert.Null(currentMergeStep.DependsOnBranchOutcomeId);
+            var dependency = Assert.Single(ProcessCanvasBranching.GetOrderedDependencies(currentMergeStep));
+            Assert.Equal(currentImplementationStep.Id, dependency.DependsOnStepId);
+            Assert.Null(dependency.DependsOnBranchOutcomeId);
         });
 
         await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
@@ -230,10 +232,60 @@ public sealed class ProcessWorkspaceTests
         {
             var editor = GetEditor(cut.Instance);
             var currentMergeStep = Assert.Single(editor.Steps, step => step.Key == process.MergeStepKey);
-            Assert.Null(currentMergeStep.DependsOnStepId);
-            Assert.Null(currentMergeStep.DependsOnBranchOutcomeId);
+            Assert.Empty(ProcessCanvasBranching.GetOrderedDependencies(currentMergeStep));
         });
 
+    }
+
+    [Fact]
+    public async Task Steps_canvas_node_moves_update_role_and_branch_positions_in_editor_state()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var process = BuildCanvasAuthoringDefinition(await CreateProjectAsync(projectsService, "Canvas movement project"));
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>();
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        await ActivateStepsTabAsync(cut);
+
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var initialEditor = GetEditor(cut.Instance);
+        var role = Assert.Single(initialEditor.Roles, item => item.Key == process.RoleKey);
+        var decisionStep = Assert.Single(initialEditor.Steps, step => step.Key == process.DecisionStepKey);
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnNodesMoved(JsonSerializer.Serialize(new[]
+        {
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), 320, 420),
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionBranchNodeId(decisionStep), 940, 260)
+        })));
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            var currentRole = Assert.Single(editor.Roles, item => item.Key == process.RoleKey);
+            var currentDecisionStep = Assert.Single(editor.Steps, step => step.Key == process.DecisionStepKey);
+            Assert.Equal(320, currentRole.CanvasX);
+            Assert.Equal(420, currentRole.CanvasY);
+            Assert.Equal(940, currentDecisionStep.BranchCanvasX);
+            Assert.Equal(260, currentDecisionStep.BranchCanvasY);
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnNodeOpened(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role)));
+
+        cut.WaitForAssertion(() =>
+        {
+            var currentWorkbench = cut.FindComponent<CanvasWorkbench>();
+            var roleNode = Assert.Single(currentWorkbench.Instance.Surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildDefinitionRoleNodeId(role));
+            var branchNode = Assert.Single(currentWorkbench.Instance.Surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildDefinitionBranchNodeId(decisionStep));
+            Assert.Equal(320, roleNode.X);
+            Assert.Equal(420, roleNode.Y);
+            Assert.Equal(940, branchNode.X);
+            Assert.Equal(260, branchNode.Y);
+        });
     }
 
     [Fact]
@@ -285,8 +337,7 @@ public sealed class ProcessWorkspaceTests
             var editor = GetEditor(cut.Instance);
             Assert.DoesNotContain(editor.Steps, step => step.Key == process.DecisionStepKey);
             var currentFixStep = Assert.Single(editor.Steps, step => step.Key == process.FixStepKey);
-            Assert.Null(currentFixStep.DependsOnStepId);
-            Assert.Null(currentFixStep.DependsOnBranchOutcomeId);
+            Assert.Empty(ProcessCanvasBranching.GetOrderedDependencies(currentFixStep));
         });
     }
 

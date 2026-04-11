@@ -35,6 +35,15 @@ public sealed class ProcessStepEditorFormTests
             Title = "Review selected path",
             DependsOnStepId = decisionStepId,
             DependsOnBranchOutcomeId = uiOutcomeId,
+            Dependencies =
+            [
+                new ProcessStepDependencyEditorModel
+                {
+                    Id = Guid.NewGuid(),
+                    DependsOnStepId = decisionStepId,
+                    DependsOnBranchOutcomeId = uiOutcomeId
+                }
+            ],
             DecisionRoleRequirementId = roleId,
             BranchOutcomes =
             [
@@ -64,8 +73,8 @@ public sealed class ProcessStepEditorFormTests
             }));
 
         Assert.Contains("Branch outcomes", cut.Markup);
-        Assert.Contains("Depends on outcome", cut.Markup);
-        Assert.Contains("Any dependency outcome", cut.Markup);
+        Assert.Contains("Canvas-managed dependencies", cut.Markup);
+        Assert.Contains("Route requested revision", cut.Markup);
         Assert.Contains("Decision maker role", cut.Markup);
         Assert.Contains("UI architect revision", cut.Markup);
         Assert.Contains("Human approval required", cut.Markup);

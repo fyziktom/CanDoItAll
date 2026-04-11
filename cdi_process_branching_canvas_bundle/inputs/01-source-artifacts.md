@@ -2,6 +2,7 @@
 
 - `inline user request in Codex thread on 2026-04-10`
 - `inline branch-node reference screenshot in Codex thread on 2026-04-10`
+- `inline follow-up tuning screenshot with red-arrow connector target in Codex thread on 2026-04-10`
 - `C:\repositories\CanDoItAll\cdi_process_management_audit_bundle`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes`
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Components.CanvasLib`

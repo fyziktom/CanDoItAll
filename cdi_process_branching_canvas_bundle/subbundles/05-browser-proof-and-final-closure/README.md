@@ -2,17 +2,21 @@
 
 ## Status
 
-- `Completed`
+- `Ready`
 
 ## Objective
 
-- Close the original request with real browser proof, screenshot review, raw-note closure, validator passes, and final bundle synchronization.
+- Close the reopened request with real browser proof, screenshot review, raw-note closure for the new follow-up notes, validator passes, and final bundle synchronization.
 
 ## Covered Inputs
 
 - `N007` Screenshot-style multi-port visual target.
 - `N008` Real Playwright validation with screenshots.
-- All remaining raw notes as part of the final closure audit.
+- `N011` Left click starts connector authoring and left click confirms it on a target circle.
+- `N012` Connector circles must sit exactly on their badges and none may be missing.
+- `N013` Many-to-many routing semantics must be supported or blocked honestly.
+- `N014` Moved derived nodes must persist and not snap back after later interactions.
+- `N015` Repair the bundle before implementing the latest follow-up scope.
 
 ## Prerequisites
 
@@ -32,12 +36,13 @@
 ## Deliverables
 
 - Final large-screen and narrower-width browser proofs recorded in the execution report.
-- Raw-note closure table updated with `Solved`, `Partially solved`, or `Not solved`.
+- Raw-note closure table updated for the initial request and the latest follow-up notes.
 - Final bundle synchronization and validator passes.
 
 ## Dependency Impact
 
 - This is the closure phase. If proof is weak here, the workflow is not complete.
+- The reopened scope must close with evidence for gesture, geometry, many-to-many truth, and persistence, not only a prettier screenshot.
 
 ## Validation Depth
 
@@ -45,41 +50,40 @@
 
 ## Implementation Steps
 
-1. Reopen the original raw request and the screenshot reference.
+1. Reopen the initial request and both follow-up messages.
 2. Run the final browser walkthrough on `/processes`.
-3. Capture and review screenshots at large and narrower widths.
-4. Update the execution report, raw-note closure table, and validation summary.
-5. Run the completed-stage bundle validator and close only if it passes.
-
-## Scope Exceptions
-
-- If any raw note is only partially solved, create or record the exact follow-up path before leaving this subbundle.
+3. Capture and review screenshots at large and narrower widths, including close-ups of the relevant connector circles.
+4. Verify movement persistence with a rerender-triggering interaction and a reread or refresh.
+5. Update the execution report, raw-note closure table, and validation summary.
+6. Run the completed-stage bundle validator and close only if it passes.
 
 ## Do Not Do
 
 - Do not treat passing tests alone as final closure.
 - Do not mark a note solved without citing browser or code proof when the note is UI-visible.
+- Do not call many-to-many solved unless both the stored data and the reloaded surface preserve the intended joins.
 
 ## Acceptance Checklist
 
 - Final browser screenshots are captured and reviewed.
+- Left-click source and target circle authoring is proven in the browser.
+- Badge-circle alignment and the router-side decision-role circle are visibly correct.
+- Movement persistence is proven after a later interaction and a reread or refresh.
 - The raw-note closure table is complete.
-- The execution report contains final command, analytics, and gate data.
 - The final bundle validator passes.
 
 ## Proof Required
 
-- Playwright walkthrough on `/processes` with screenshots at `1600x900` and `1280x800`.
-- Final test and build commands recorded in `reviews/01-execution-report.md`.
+- Playwright walkthrough on `/processes` with screenshots at large and narrower widths.
+- Final test and validation commands recorded in `reviews/01-execution-report.md`.
 - Completed-stage bundle validator pass recorded in the execution report.
 
 ## Browser Validation Logging
 
 - Route: `/processes`
-- Viewports: `1600x900` and `1280x800`
-- Playwright MCP actions: navigate, open seeded branching example, inspect branch node, review loop routes, capture screenshots
-- Expected evidence path: final desktop and narrower screenshots recorded in `reviews/01-execution-report.md`
-- Screenshot review questions: can all port labels be read, are any lines clipped or colliding, does the branch node hierarchy feel intentional, and does the final screen visibly satisfy the reference direction from the original screenshot
+- Viewports: `Large-screen desktop` and `1280x800`
+- Playwright MCP actions: navigate, perform left-click connector authoring, inspect close-up badge alignment, move nodes, trigger a later interaction, capture screenshots
+- Expected evidence path: final screenshots recorded in `reviews/01-execution-report.md`
 
 ## Progression Gate
 
@@ -88,10 +92,5 @@
 ## Suggested Agent Prompt
 
 ```text
-Implement this subbundle only. Reopen the original request, run the final browser proof on /processes, capture and review screenshots, update the raw-note closure and execution report, and pass the final bundle validator before closing the workflow.
+Implement this subbundle only. Reopen the initial request and both follow-up notes, run the final browser proof on /processes, prove left-click connector authoring, badge alignment, and movement persistence, update the raw-note closure and execution report, and pass the final bundle validator before closing the workflow.
 ```
-
-## Closure Notes
-
-- Large-screen and narrower-width screenshots were captured into `proof/screenshots`.
-- The final execution report now records the test commands, browser proof, raw-note closure, and residual risks.

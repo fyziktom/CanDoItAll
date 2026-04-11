@@ -30,6 +30,10 @@ public sealed partial class ProcessesService {
             .Where(item => item.ProcessDefinitionVersionId == publishedVersion.Id)
             .OrderBy(item => item.OrderIndex)
             .ToListAsync(cancellationToken);
+        var stepDependencies = await dbContext.Set<ProcessStepDependencyDefinition>()
+            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .OrderBy(item => item.DisplayOrder)
+            .ToListAsync(cancellationToken);
         var stepRoleRequirements = await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
             .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
             .ToListAsync(cancellationToken);
@@ -105,8 +109,11 @@ public sealed partial class ProcessesService {
             .Where(assignment => assignment.IsCapabilityGap)
             .Select(assignment => assignment.RoleRequirementId)
             .ToHashSet();
+        var stepDependenciesByStepId = stepDependencies
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
         var rootStepIds = steps
-            .Where(step => !step.DependsOnStepId.HasValue)
+            .Where(step => GetPersistedDependencies(step, stepDependenciesByStepId).Count == 0)
             .Select(step => step.Id)
             .ToHashSet();
         if (rootStepIds.Count == 0 && steps.Count > 0) {
@@ -219,6 +226,10 @@ public sealed partial class ProcessesService {
         var stepDefinitions = await dbContext.Set<ProcessStepDefinition>()
             .Where(item => item.ProcessDefinitionVersionId == run.ProcessDefinitionVersionId)
             .ToListAsync(cancellationToken);
+        var stepDependencies = await dbContext.Set<ProcessStepDependencyDefinition>()
+            .Where(item => stepDefinitions.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .OrderBy(item => item.DisplayOrder)
+            .ToListAsync(cancellationToken);
         var currentStepDefinition = stepDefinitions.Single(item => item.Id == stepRun.StepDefinitionId);
         var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
             .Where(item => stepDefinitions.Select(step => step.Id).Contains(item.StepDefinitionId))
@@ -227,6 +238,9 @@ public sealed partial class ProcessesService {
             .GroupBy(item => item.StepDefinitionId)
             .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
         var stepDefinitionsById = stepDefinitions.ToDictionary(item => item.Id);
+        var stepDependenciesByStepId = stepDependencies
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
 
         var now = clock.GetUtcNow();
         if (request.TargetStatus == ProcessStepRunStatus.InProgress) {
@@ -262,8 +276,9 @@ public sealed partial class ProcessesService {
         if (request.TargetStatus == ProcessStepRunStatus.Completed) {
             var availableBranchOutcomes = branchOutcomesByStepId.GetValueOrDefault(stepRun.StepDefinitionId) ?? [];
             var hasConditionalDependents = stepDefinitions.Any(item =>
-                item.DependsOnStepId == currentStepDefinition.Id &&
-                item.DependsOnBranchOutcomeId.HasValue);
+                GetPersistedDependencies(item, stepDependenciesByStepId)
+                    .Any(dependency => dependency.DependsOnStepId == currentStepDefinition.Id &&
+                        dependency.DependsOnBranchOutcomeId.HasValue));
             if (hasConditionalDependents && !request.SelectedBranchOutcomeId.HasValue) {
                 return Result.Failure(Error.Validation(
                     "Completing this step requires selecting a branch outcome.",
@@ -300,24 +315,31 @@ public sealed partial class ProcessesService {
 
         if (request.TargetStatus == ProcessStepRunStatus.Completed) {
             foreach (var dependentStep in stepDefinitions
-                         .Where(item => item.DependsOnStepId == currentStepDefinition.Id)
+                         .Where(item => GetPersistedDependencies(item, stepDependenciesByStepId)
+                             .Any(dependency => dependency.DependsOnStepId == currentStepDefinition.Id))
                          .OrderBy(item => item.OrderIndex)) {
                 if (!stepRunsByDefinitionId.TryGetValue(dependentStep.Id, out var dependentStepRun)) {
                     continue;
                 }
 
-                if (dependentStep.DependsOnBranchOutcomeId.HasValue &&
-                    dependentStep.DependsOnBranchOutcomeId != selectedBranchOutcome?.Id) {
+                if (TryResolveImpossibleDependencyReason(
+                    dependentStep,
+                    stepDefinitionsById,
+                    stepRunsByDefinitionId,
+                    stepDependenciesByStepId,
+                    out var impossibleReason)) {
                     CascadeSkipStepRun(
                         dependentStep,
                         stepDefinitionsById,
                         stepRunsByDefinitionId,
-                        $"Skipped because branch outcome '{selectedBranchOutcome?.Title ?? "none"}' was selected instead.",
+                        stepDependenciesByStepId,
+                        impossibleReason,
                         now);
                     continue;
                 }
 
-                if (dependentStepRun.Status == ProcessStepRunStatus.Pending) {
+                if (dependentStepRun.Status == ProcessStepRunStatus.Pending &&
+                    AreAllDependenciesSatisfied(dependentStep, stepRunsByDefinitionId, stepDependenciesByStepId)) {
                     ActivatePendingStepRun(dependentStepRun, dependentStep, now);
                 }
             }
@@ -328,6 +350,7 @@ public sealed partial class ProcessesService {
                 currentStepDefinition,
                 stepDefinitionsById,
                 stepRunsByDefinitionId,
+                stepDependenciesByStepId,
                 $"Skipped because upstream step '{stepRun.Title}' was skipped.",
                 now);
         }
@@ -577,6 +600,7 @@ public sealed partial class ProcessesService {
         ProcessStepDefinition stepDefinition,
         IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
         IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId,
         string reason,
         DateTimeOffset now) {
         if (!stepRunsByDefinitionId.TryGetValue(stepDefinition.Id, out var stepRun) ||
@@ -588,20 +612,70 @@ public sealed partial class ProcessesService {
         stepRun.CompletedAtUtc = now;
         stepRun.DecisionSummary = reason;
 
-        CascadeSkipDependents(stepDefinition, stepDefinitionsById, stepRunsByDefinitionId, reason, now);
+        CascadeSkipDependents(stepDefinition, stepDefinitionsById, stepRunsByDefinitionId, stepDependenciesByStepId, reason, now);
     }
 
     private static void CascadeSkipDependents(
         ProcessStepDefinition stepDefinition,
         IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
         IDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId,
         string reason,
         DateTimeOffset now) {
         foreach (var dependentStep in stepDefinitionsById.Values
-                     .Where(item => item.DependsOnStepId == stepDefinition.Id)
+                     .Where(item => GetPersistedDependencies(item, stepDependenciesByStepId)
+                         .Any(dependency => dependency.DependsOnStepId == stepDefinition.Id))
                      .OrderBy(item => item.OrderIndex)) {
-            CascadeSkipStepRun(dependentStep, stepDefinitionsById, stepRunsByDefinitionId, reason, now);
+            CascadeSkipStepRun(dependentStep, stepDefinitionsById, stepRunsByDefinitionId, stepDependenciesByStepId, reason, now);
         }
+    }
+
+    private static bool AreAllDependenciesSatisfied(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId) {
+        foreach (var dependency in GetPersistedDependencies(stepDefinition, stepDependenciesByStepId)) {
+            if (!stepRunsByDefinitionId.TryGetValue(dependency.DependsOnStepId, out var sourceStepRun) ||
+                sourceStepRun.Status != ProcessStepRunStatus.Completed) {
+                return false;
+            }
+
+            if (dependency.DependsOnBranchOutcomeId.HasValue &&
+                sourceStepRun.SelectedBranchOutcomeId != dependency.DependsOnBranchOutcomeId) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryResolveImpossibleDependencyReason(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyDictionary<Guid, ProcessStepDefinition> stepDefinitionsById,
+        IReadOnlyDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId,
+        out string reason) {
+        foreach (var dependency in GetPersistedDependencies(stepDefinition, stepDependenciesByStepId)) {
+            if (!stepRunsByDefinitionId.TryGetValue(dependency.DependsOnStepId, out var sourceStepRun) ||
+                !stepDefinitionsById.TryGetValue(dependency.DependsOnStepId, out var sourceStepDefinition)) {
+                continue;
+            }
+
+            if (sourceStepRun.Status == ProcessStepRunStatus.Skipped) {
+                reason = $"Skipped because upstream step '{sourceStepDefinition.Title}' was skipped.";
+                return true;
+            }
+
+            if (dependency.DependsOnBranchOutcomeId.HasValue &&
+                sourceStepRun.Status == ProcessStepRunStatus.Completed &&
+                sourceStepRun.SelectedBranchOutcomeId != dependency.DependsOnBranchOutcomeId) {
+                reason = $"Skipped because upstream step '{sourceStepDefinition.Title}' selected a different branch outcome.";
+                return true;
+            }
+        }
+
+        reason = string.Empty;
+        return false;
     }
 
     private static string BuildTransitionJournalDescription(
