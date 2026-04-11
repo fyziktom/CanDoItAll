@@ -882,7 +882,7 @@
 
 .cw-canvas-composer {
     position: absolute;
-    z-index: 18;
+    z-index: 660;
     width: min(22rem, calc(100% - 2rem));
 }
 
@@ -1268,20 +1268,20 @@
     position: absolute;
     width: 0.9rem;
     height: 0.9rem;
+    pointer-events: auto;
     border-radius: 999px;
-    border: 2px solid rgba(14, 165, 233, 0.88);
+    border: 2px solid var(--cw-connector-anchor-accent, rgba(14, 165, 233, 0.88));
     background: rgba(255, 255, 255, 0.98);
     transform: translate(-50%, -50%);
     box-shadow:
-        0 0 0 0.2rem rgba(125, 211, 252, 0.16),
-        0 10px 22px rgba(14, 165, 233, 0.18);
+        0 0 0 0.2rem var(--cw-connector-anchor-ring, rgba(125, 211, 252, 0.16)),
+        0 10px 22px var(--cw-connector-anchor-shadow, rgba(14, 165, 233, 0.18));
 }
 
 .cw-connector-anchor.is-primary {
-    border-color: rgba(109, 40, 217, 0.86);
     box-shadow:
-        0 0 0 0.26rem rgba(167, 139, 250, 0.2),
-        0 12px 26px rgba(109, 40, 217, 0.18);
+        0 0 0 0.26rem var(--cw-connector-anchor-ring, rgba(167, 139, 250, 0.2)),
+        0 12px 26px var(--cw-connector-anchor-shadow, rgba(109, 40, 217, 0.18));
 }
 
 .cw-transform-frame {

@@ -84,6 +84,35 @@ public sealed class ProcessesToolsTests
         Assert.Equal("validation_error", result.Status);
     }
 
+    [Fact]
+    public async Task ProcessesStepTransitionAsync_forwards_selected_branch_outcome()
+    {
+        var stepRunId = Guid.NewGuid();
+        var branchOutcomeId = Guid.NewGuid();
+        ProcessStepTransitionRequest? capturedRequest = null;
+        var tools = new ProcessesTools(new StubCoordinator
+        {
+            OnTransitionStep = (request, _) =>
+            {
+                capturedRequest = request;
+                return Task.CompletedTask;
+            }
+        }, NullLogger<ProcessesTools>.Instance);
+
+        var result = await tools.ProcessesStepTransitionAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = stepRunId,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            SelectedBranchOutcomeId = branchOutcomeId,
+            Reason = "Route to UI review."
+        });
+
+        Assert.True(result.Ok);
+        Assert.NotNull(capturedRequest);
+        Assert.Equal(stepRunId, capturedRequest!.StepRunId);
+        Assert.Equal(branchOutcomeId, capturedRequest.SelectedBranchOutcomeId);
+    }
+
     private sealed class StubCoordinator : IProcessesCoordinator
     {
         public Func<Guid?, CancellationToken, Task<IReadOnlyList<ProcessDefinitionListItem>>>? OnListDefinitions { get; init; }

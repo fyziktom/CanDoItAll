@@ -57,6 +57,35 @@ public sealed class ConnectorAnchorOverlayTests
         Assert.Contains("Connector anchors are visible on intent", cut.Markup);
         Assert.Contains("Hover anchors", cut.Markup);
     }
+
+    [Fact]
+    public void Factory_reports_port_metrics_for_advanced_nodes()
+    {
+        var surface = new CanvasWorkbenchSurface
+        {
+            Nodes =
+            [
+                new CanvasWorkbenchNode
+                {
+                    Id = "branch",
+                    Title = "Branch",
+                    InputPorts =
+                    [
+                        new CanvasWorkbenchPort { Id = "decision-role", Label = "Decision role" }
+                    ],
+                    OutputPorts =
+                    [
+                        new CanvasWorkbenchPort { Id = "approved", Label = "Approved" },
+                        new CanvasWorkbenchPort { Id = "default", Label = "Default" }
+                    ]
+                }
+            ]
+        };
+
+        var snapshot = ConnectorAnchorOverlayFactory.CreateForWorkbench(surface, SelectionModel.From(["branch"]));
+
+        Assert.Contains("3 ports", snapshot.Metrics);
+    }
 }
 
 

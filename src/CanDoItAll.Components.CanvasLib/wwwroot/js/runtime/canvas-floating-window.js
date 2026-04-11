@@ -2,7 +2,7 @@
     const root = window.CanDoItAll = window.CanDoItAll || {};
     const windowHosts = new WeakMap();
     const legacyHosts = new WeakMap();
-    let zIndexSeed = 12;
+    let zIndexSeed = 640;
 
     function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));

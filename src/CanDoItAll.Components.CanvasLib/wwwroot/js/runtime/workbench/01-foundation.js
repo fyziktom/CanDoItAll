@@ -377,6 +377,25 @@
         return clamp(round(value), 0.8, 1.4);
     }
 
+    function normalizePortCollection(ports, defaultSide) {
+        if (!Array.isArray(ports)) {
+            return [];
+        }
+
+        return ports
+            .filter(Boolean)
+            .map(port => ({
+                id: (port?.id || port?.label || defaultSide || "port").toString(),
+                label: (port?.label || port?.id || "Port").toString(),
+                side: (port?.side || defaultSide || "").toString().trim().toLowerCase() || defaultSide,
+                tone: (port?.tone || "neutral").toString(),
+                categoryKey: (port?.categoryKey || "").toString(),
+                accentColor: (port?.accentColor || "").toString(),
+                kind: (port?.kind || "").toString(),
+                isRequired: !!port?.isRequired
+            }));
+    }
+
     function normalizeSurface(surface) {
         const normalizedSelection = selectionModel.normalize(
             surface?.uiState?.selectedNodeIds,
@@ -414,9 +433,17 @@
                 markerTone: node?.markerTone || "",
                 markerLabel: node?.markerLabel || "",
                 priority: typeof node?.priority === "number" ? clamp(Math.round(node.priority), 0, 6) : 0,
-                annotations: Array.isArray(node?.annotations) ? node.annotations.map(normalizeAnnotation) : []
+                annotations: Array.isArray(node?.annotations) ? node.annotations.map(normalizeAnnotation) : [],
+                inputPorts: normalizePortCollection(node?.inputPorts, "left"),
+                outputPorts: normalizePortCollection(node?.outputPorts, "right")
             })) : [],
-            links: Array.isArray(surface?.links) ? surface.links : [],
+            links: Array.isArray(surface?.links) ? surface.links.map(link => ({
+                ...link,
+                sourcePortId: link?.sourcePortId || "",
+                targetPortId: link?.targetPortId || "",
+                kind: link?.kind || "",
+                isUserAuthored: !!link?.isUserAuthored
+            })) : [],
             uiState: {
                 version: surface?.uiState?.version || "canvas-workbench.v1",
                 selectedNodeIds: normalizedSelection.selectedNodeIds,
@@ -473,6 +500,16 @@
     function resolveBaseNodeSize(node) {
         if (node.isInlineTextNode) {
             return { width: 228, height: 108 };
+        }
+
+        const inputPorts = Array.isArray(node?.inputPorts) ? node.inputPorts : [];
+        const outputPorts = Array.isArray(node?.outputPorts) ? node.outputPorts : [];
+        const portRows = Math.max(inputPorts.length, outputPorts.length);
+        if (portRows > 0) {
+            return {
+                width: 336,
+                height: Math.max(212, 188 + (Math.max(0, portRows - 1) * 28))
+            };
         }
 
         switch ((node.family || "item").toLowerCase()) {
@@ -544,6 +581,17 @@
                 }
             })
             : null;
+        const inputPorts = Array.isArray(node?.inputPorts) ? node.inputPorts : [];
+        const outputPorts = Array.isArray(node?.outputPorts) ? node.outputPorts : [];
+        const longestInputPort = inputPorts.reduce((longest, port) => Math.max(longest, (port?.label || port?.id || "").length), 0);
+        const longestOutputPort = outputPorts.reduce((longest, port) => Math.max(longest, (port?.label || port?.id || "").length), 0);
+        const portRows = Math.max(inputPorts.length, outputPorts.length);
+        const portWidthBudget = portRows > 0
+            ? Math.min(420, Math.max(baseSize.width, 224 + (longestInputPort + longestOutputPort) * 5.8))
+            : 0;
+        const portHeight = portRows > 0
+            ? Math.max(52, 28 + (portRows * 26))
+            : 0;
         const annotationHeight = Array.isArray(node.annotations) ? Math.ceil(node.annotations.length / 2) * 14 : 0;
         const footerHeight = (Array.isArray(node.chips) && node.chips.length > 0 ? 18 : 0) +
             (Array.isArray(node.footerChips) && node.footerChips.length > 0 ? 18 : 0);
@@ -553,9 +601,11 @@
             (subtitleMeasure ? subtitleMeasure.estimatedHeight + 8 : 0) +
             annotationHeight +
             footerHeight +
-            mediaHeight;
+            mediaHeight +
+            portHeight;
         const estimatedWidth = Math.ceil(Math.max(
             baseSize.width,
+            portWidthBudget,
             Math.min(
                 356,
                 Math.max(

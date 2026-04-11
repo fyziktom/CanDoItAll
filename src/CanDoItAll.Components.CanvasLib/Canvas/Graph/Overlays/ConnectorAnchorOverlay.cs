@@ -45,6 +45,7 @@ public static class ConnectorAnchorOverlayFactory
                 anchors.ShowOnSelection ? "Selection anchors" : "No selection anchors",
                 anchors.ShowOnHover ? "Hover anchors" : "No hover anchors",
                 anchors.PlacementMode,
+                $"{surface.Nodes.Sum(node => node.InputPorts.Count + node.OutputPorts.Count)} ports",
                 $"{surface.Links.Count} links",
                 $"{selection.SelectedNodeIds.Count} selected"
             ]

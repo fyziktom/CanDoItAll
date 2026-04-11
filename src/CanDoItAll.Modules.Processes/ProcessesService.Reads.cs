@@ -52,26 +52,129 @@ public sealed partial class ProcessesService {
 
     public async Task<IReadOnlyList<ProcessStepRunViewModel>> ListStepRunsAsync(Guid runId, CancellationToken cancellationToken = default) {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await dbContext.Set<ProcessStepRun>()
+        var stepRuns = await dbContext.Set<ProcessStepRun>()
             .Where(item => item.ProcessRunId == runId)
             .OrderBy(item => item.Sequence)
-            .Select(item => new ProcessStepRunViewModel(
-                item.Id,
-                item.StepDefinitionId,
-                item.Sequence,
-                item.Title,
-                item.StepKind,
-                item.Status,
-                item.CurrentExecutorName,
-                item.DecisionSummary,
-                item.BlockedReason,
-                item.RefusalReason,
-                item.WaitMinutes,
-                item.TouchMinutes,
-                item.BlockedMinutes,
-                item.ReworkCount,
-                item.CapabilityGapSeverity))
             .ToListAsync(cancellationToken);
+        var stepDefinitionIds = stepRuns.Select(item => item.StepDefinitionId).Distinct().ToList();
+        var stepDefinitions = await dbContext.Set<ProcessStepDefinition>()
+            .Where(item => stepDefinitionIds.Contains(item.Id))
+            .ToListAsync(cancellationToken);
+        var stepDependencies = await dbContext.Set<ProcessStepDependencyDefinition>()
+            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
+            .OrderBy(item => item.DisplayOrder)
+            .ToListAsync(cancellationToken);
+        var stepRoleAssignments = await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
+            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var artifactExpectations = await dbContext.Set<ProcessArtifactExpectation>()
+            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
+            .OrderBy(item => item.ArtifactKind)
+            .ThenBy(item => item.Title)
+            .ThenBy(item => item.Id)
+            .ToListAsync(cancellationToken);
+        var artifactInputs = await dbContext.Set<ProcessStepArtifactInputDefinition>()
+            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
+            .OrderBy(item => item.DisplayOrder)
+            .ToListAsync(cancellationToken);
+        var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
+            .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var roleRequirementIds = stepRoleAssignments
+            .Select(item => item.RoleRequirementId)
+            .Concat(stepDefinitions
+                .Where(item => item.DecisionRoleRequirementId.HasValue)
+                .Select(item => item.DecisionRoleRequirementId!.Value))
+            .Distinct()
+            .ToList();
+        var rolesById = roleRequirementIds.Count == 0
+            ? new Dictionary<Guid, ProcessRoleRequirement>()
+            : await dbContext.Set<ProcessRoleRequirement>()
+                .Where(item => roleRequirementIds.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, cancellationToken);
+        var branchOutcomesByStepId = branchOutcomes
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<ProcessStepBranchOutcomeOptionViewModel>)group
+                    .OrderBy(item => item.DisplayOrder)
+                    .Select(item => new ProcessStepBranchOutcomeOptionViewModel(item.Id, item.Title, item.Description))
+                    .ToList());
+        var stepDefinitionsById = stepDefinitions.ToDictionary(item => item.Id);
+        var stepDependenciesByStepId = stepDependencies
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
+        var stepRoleAssignmentsByStepId = stepRoleAssignments
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderBy(item => item.ResponsibilityKind)
+                    .ThenBy(item => item.FallbackOrder)
+                    .ThenBy(item => item.RoleRequirementId)
+                    .ToList());
+        var artifactOutputsByStepId = artifactExpectations
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<ProcessStepRunArtifactPortViewModel>)group
+                    .Where(item => !string.IsNullOrWhiteSpace(item.Title))
+                    .OrderBy(item => item.ArtifactKind)
+                    .ThenBy(item => item.Title)
+                    .ThenBy(item => item.Id)
+                    .Select(item => new ProcessStepRunArtifactPortViewModel(item.Id, item.Title, item.IsRequired))
+                    .ToList());
+        var artifactInputCountsByStepId = artifactInputs
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        return stepRuns
+            .Select(item => {
+                stepDefinitionsById.TryGetValue(item.StepDefinitionId, out var stepDefinition);
+                var dependencies = stepDefinition is null
+                    ? []
+                    : BuildRuntimeDependencies(stepDefinition, stepDependenciesByStepId);
+                var decisionRoleTitle = stepDefinition?.DecisionRoleRequirementId.HasValue == true &&
+                                        rolesById.TryGetValue(stepDefinition.DecisionRoleRequirementId.Value, out var decisionRole)
+                    ? decisionRole.DisplayName
+                    : string.Empty;
+                return new ProcessStepRunViewModel(
+                    item.Id,
+                    item.StepDefinitionId,
+                    dependencies.FirstOrDefault()?.DependsOnStepDefinitionId,
+                    dependencies.FirstOrDefault()?.DependsOnBranchOutcomeId,
+                    stepDefinition?.DecisionRoleRequirementId,
+                    item.Sequence,
+                    item.Title,
+                    item.StepKind,
+                    item.Status,
+                    item.CurrentExecutorName,
+                    item.DecisionSummary,
+                    item.BlockedReason,
+                    item.RefusalReason,
+                    item.SelectedBranchOutcomeId,
+                    item.SelectedBranchOutcomeTitle,
+                    item.WaitMinutes,
+                    item.TouchMinutes,
+                    item.BlockedMinutes,
+                    item.ReworkCount,
+                    item.CapabilityGapSeverity,
+                    branchOutcomesByStepId.GetValueOrDefault(item.StepDefinitionId) ?? [])
+                {
+                    Dependencies = dependencies,
+                    DecisionRoleTitle = decisionRoleTitle,
+                    ResponsibilityPorts = stepDefinition is null
+                        ? []
+                        : BuildRuntimeResponsibilityPorts(stepDefinition.Id, stepRoleAssignmentsByStepId),
+                    ArtifactInputCount = stepDefinition is null
+                        ? 0
+                        : artifactInputCountsByStepId.GetValueOrDefault(stepDefinition.Id),
+                    ArtifactOutputs = stepDefinition is null
+                        ? []
+                        : artifactOutputsByStepId.GetValueOrDefault(stepDefinition.Id) ?? []
+                };
+            })
+            .ToList();
     }
 
     public async Task<IReadOnlyList<ProcessDecisionViewModel>> ListDecisionRecordsAsync(Guid runId, CancellationToken cancellationToken = default) {
@@ -84,6 +187,7 @@ public sealed partial class ProcessesService {
                 item.Outcome,
                 item.Title,
                 item.Reason,
+                item.BranchOutcomeTitle,
                 item.DecidedBy,
                 item.CreatedAtUtc))
             .ToListAsync(cancellationToken);
@@ -236,6 +340,54 @@ public sealed partial class ProcessesService {
 
     public async Task<IReadOnlyList<ProjectPartyOption>> ListPartyOptionsAsync(Guid projectId, CancellationToken cancellationToken = default) {
         return await projectPartyIntegrationBridge.ListPartyOptionsAsync(projectId, cancellationToken);
+    }
+
+    private static IReadOnlyList<ProcessStepDependencyViewModel> BuildRuntimeDependencies(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> dependenciesByStepId) {
+        if (dependenciesByStepId.TryGetValue(stepDefinition.Id, out var dependencies) && dependencies.Count > 0) {
+            return dependencies
+                .Select(item => new ProcessStepDependencyViewModel(item.DependsOnStepId, item.DependsOnBranchOutcomeId))
+                .ToList();
+        }
+
+        if (!stepDefinition.DependsOnStepId.HasValue) {
+            return [];
+        }
+
+        return
+        [
+            new ProcessStepDependencyViewModel(stepDefinition.DependsOnStepId.Value, stepDefinition.DependsOnBranchOutcomeId)
+        ];
+    }
+
+    private static IReadOnlyList<ProcessStepRunResponsibilityPortViewModel> BuildRuntimeResponsibilityPorts(
+        Guid stepDefinitionId,
+        IReadOnlyDictionary<Guid, List<ProcessStepRoleAssignmentRequirement>> assignmentsByStepId) {
+        if (!assignmentsByStepId.TryGetValue(stepDefinitionId, out var assignments) || assignments.Count == 0) {
+            return [];
+        }
+
+        var orderedKinds = new[]
+        {
+            ProcessResponsibilityKind.Responsible,
+            ProcessResponsibilityKind.Reviewer,
+            ProcessResponsibilityKind.Approver,
+            ProcessResponsibilityKind.Backup
+        };
+
+        return orderedKinds
+            .Select(responsibilityKind => {
+                var matchingAssignments = assignments
+                    .Where(item => item.ResponsibilityKind == responsibilityKind)
+                    .ToList();
+                return new ProcessStepRunResponsibilityPortViewModel(
+                    responsibilityKind,
+                    matchingAssignments.Any(item => item.IsRequired),
+                    matchingAssignments.Count);
+            })
+            .Where(item => item.AssignmentCount > 0)
+            .ToList();
     }
 }
 

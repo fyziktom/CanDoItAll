@@ -80,6 +80,9 @@ public static class ConnectorPathPrimitiveFactory
             return null;
         }
 
+        var sourceAnchor = CanvasWorkbenchPortGeometry.ResolveOutputAnchor(source, link.SourcePortId);
+        var targetAnchor = CanvasWorkbenchPortGeometry.ResolveInputAnchor(target, link.TargetPortId);
+
         return new ConnectorPathPrimitiveSegment
         {
             Label = string.IsNullOrWhiteSpace(link.Kind) ? "Link" : link.Kind,
@@ -90,10 +93,10 @@ public static class ConnectorPathPrimitiveFactory
                 "contains" => "accent",
                 _ => "neutral"
             },
-            StartX = source.X + 48,
-            StartY = source.Y + 28,
-            EndX = target.X + 48,
-            EndY = target.Y + 28
+            StartX = sourceAnchor?.X ?? source.X + 48,
+            StartY = sourceAnchor?.Y ?? source.Y + 28,
+            EndX = targetAnchor?.X ?? target.X + 48,
+            EndY = targetAnchor?.Y ?? target.Y + 28
         };
     }
 }

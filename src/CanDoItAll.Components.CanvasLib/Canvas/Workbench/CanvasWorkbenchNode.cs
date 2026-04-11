@@ -81,6 +81,10 @@ public sealed class CanvasWorkbenchNode
     public List<CanvasWorkbenchAnnotation> Annotations { get; set; } = [];
 
     public List<CanvasWorkbenchAction> ContextActions { get; set; } = [];
+
+    public List<CanvasWorkbenchPort> InputPorts { get; set; } = [];
+
+    public List<CanvasWorkbenchPort> OutputPorts { get; set; } = [];
 }
 
 public sealed class CanvasWorkbenchCompactPath
@@ -125,4 +129,23 @@ public sealed class CanvasWorkbenchMarker
     public string Tone { get; set; } = string.Empty;
 
     public string Label { get; set; } = string.Empty;
+}
+
+public sealed class CanvasWorkbenchPort
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
+
+    public string Side { get; set; } = string.Empty;
+
+    public string Tone { get; set; } = "neutral";
+
+    public string CategoryKey { get; set; } = string.Empty;
+
+    public string AccentColor { get; set; } = string.Empty;
+
+    public string Kind { get; set; } = string.Empty;
+
+    public bool IsRequired { get; set; }
 }

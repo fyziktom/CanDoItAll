@@ -448,21 +448,18 @@
         var bridge = new JsInteropBridge(JsRuntime);
         if (sceneHost.ShouldCreate())
         {
-            await bridge.InvokeVoidAsync(
+            var created = await bridge.InvokeAsync<bool>(
                 "CanDoItAll.canvasWorkbench.create",
                 host,
                 objectReference,
                 Surface,
                 lastSelectionDispatchId,
-                lastStateDispatchId);
-            await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
-            if (ShouldAutoFitInitialView())
+                lastStateDispatchId,
+                BuildRenderOptions(includeAutoFit: true));
+            if (created)
             {
-                await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.fitView", host);
+                MarkSurfaceApplied();
             }
-
-            await SynchronizeSelectionAsync(bridge);
-            MarkSurfaceApplied();
             return;
         }
 
@@ -471,10 +468,15 @@
             return;
         }
 
-        await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.update", host, Surface);
-        await bridge.InvokeVoidAsync("CanDoItAll.canvasWorkbench.setMaximized", host, isMaximized);
-        await SynchronizeSelectionAsync(bridge);
-        MarkSurfaceApplied();
+        var updated = await bridge.InvokeAsync<bool>(
+            "CanDoItAll.canvasWorkbench.update",
+            host,
+            Surface,
+            BuildRenderOptions(includeAutoFit: false));
+        if (updated)
+        {
+            MarkSurfaceApplied();
+        }
     }
 
     [JSInvokable]
@@ -822,19 +824,12 @@
     private void MarkSurfaceApplied()
         => sceneHost.MarkApplied();
 
-    private async Task SynchronizeSelectionAsync(JsInteropBridge bridge)
-    {
-        if (Surface.UiState.SelectedNodeIds.Count == 0)
-        {
-            return;
-        }
-
-        await bridge.InvokeVoidAsync(
-            "CanDoItAll.canvasWorkbench.selectNodes",
-            host,
-            Surface.UiState.SelectedNodeIds,
-            Surface.UiState.SelectedNodeIds[0]);
-    }
+    private CanvasWorkbenchRenderOptions BuildRenderOptions(bool includeAutoFit)
+        => new(
+            isMaximized,
+            includeAutoFit && ShouldAutoFitInitialView(),
+            [.. Surface.UiState.SelectedNodeIds],
+            Surface.UiState.SelectedNodeIds.FirstOrDefault());
 
     private bool ShouldAutoFitInitialView()
     {
@@ -932,6 +927,12 @@
         ContextMenu,
         Keyboard
     }
+
+    private sealed record CanvasWorkbenchRenderOptions(
+        bool IsMaximized,
+        bool FitView,
+        IReadOnlyList<string> SelectedNodeIds,
+        string? PrimaryNodeId);
 }
 
 

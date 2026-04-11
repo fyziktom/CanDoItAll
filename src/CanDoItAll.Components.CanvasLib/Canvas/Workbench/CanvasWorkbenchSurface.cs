@@ -23,6 +23,10 @@ public sealed class CanvasWorkbenchLink
 
     public string TargetId { get; set; } = string.Empty;
 
+    public string SourcePortId { get; set; } = string.Empty;
+
+    public string TargetPortId { get; set; } = string.Empty;
+
     public string Kind { get; set; } = string.Empty;
 
     public bool IsUserAuthored { get; set; }

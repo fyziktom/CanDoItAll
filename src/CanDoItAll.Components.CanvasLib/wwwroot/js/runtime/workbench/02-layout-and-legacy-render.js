@@ -68,7 +68,181 @@
             ? buildDiagnosticsSnapshotFn(state, bounds)
             : legacyBuildDiagnosticsSnapshot(state, bounds);
     }
-    function getLinkAnchorPoint(state, node, side) {
+
+    function getNodePortCollection(node, direction) {
+        if (direction === "input") {
+            return Array.isArray(node?.inputPorts) ? node.inputPorts : [];
+        }
+
+        if (direction === "output") {
+            return Array.isArray(node?.outputPorts) ? node.outputPorts : [];
+        }
+
+        return [];
+    }
+
+    function resolveNodePortSide(port, fallbackSide) {
+        const side = (port?.side || fallbackSide || "").toString().trim().toLowerCase();
+        if (side === "left" || side === "right" || side === "top" || side === "bottom") {
+            return side;
+        }
+
+        return fallbackSide || "right";
+    }
+
+    function resolvePortAnchorY(position, size, index, totalCount) {
+        const portTop = position.y - (size.height / 2) + Math.min(86, size.height * 0.34);
+        const portBottom = position.y + (size.height / 2) - Math.min(24, size.height * 0.12);
+        if (totalCount <= 1) {
+            return position.y;
+        }
+
+        return portTop + ((portBottom - portTop) * index / Math.max(1, totalCount - 1));
+    }
+
+    function resolvePortAnchorHostY(hostBounds, index, totalCount) {
+        const portTop = hostBounds.top + Math.min(86, hostBounds.height * 0.34);
+        const portBottom = hostBounds.bottom - Math.min(24, hostBounds.height * 0.12);
+        if (totalCount <= 1) {
+            return hostBounds.top + (hostBounds.height / 2);
+        }
+
+        return portTop + ((portBottom - portTop) * index / Math.max(1, totalCount - 1));
+    }
+
+    function resolveAnchorDirection(side, fallbackDirection) {
+        if (fallbackDirection === "input" || fallbackDirection === "output") {
+            return fallbackDirection;
+        }
+
+        return side === "left" || side === "top"
+            ? "input"
+            : "output";
+    }
+
+    function resolveStandardAnchorPortId(side) {
+        switch ((side || "").toLowerCase()) {
+            case "left":
+                return "anchor:left";
+            case "top":
+                return "anchor:top";
+            case "bottom":
+                return "anchor:bottom";
+            default:
+                return "anchor:right";
+        }
+    }
+
+    function buildPortAnchorPoint(state, node, port, index, totalCount, fallbackSide, fallbackDirection) {
+        const position = getNodePosition(state, node);
+        const size = getNodeSize(state, node);
+        const side = resolveNodePortSide(port, fallbackSide);
+        const direction = resolveAnchorDirection(side, fallbackDirection);
+        const inputPorts = getNodePortCollection(node, "input");
+        const outputPorts = getNodePortCollection(node, "output");
+        if ((inputPorts.length > 0 || outputPorts.length > 0) &&
+            (side === "left" || side === "right")) {
+            const zoom = Math.max(state?.ui?.zoom || 1, 0.01);
+            const hostCenter = worldToHostPoint(state, position);
+            const hostWidth = size.width * zoom;
+            const hostHeight = size.height * zoom;
+            const hostLeft = hostCenter.x - (hostWidth / 2);
+            const hostRight = hostCenter.x + (hostWidth / 2);
+            const hostTop = hostCenter.y - (hostHeight / 2);
+            const hostBottom = hostCenter.y + (hostHeight / 2);
+            const hostBounds = {
+                left: hostLeft,
+                top: hostTop,
+                right: hostRight,
+                bottom: hostBottom,
+                width: hostWidth,
+                height: hostHeight
+            };
+            const advancedLayout = lateRuntime.getCanvasAdvancedNodePortLayout?.(state, node, hostBounds);
+            let anchorHostPoint = null;
+            if (advancedLayout) {
+                const entries = side === "right"
+                    ? advancedLayout.outputEntries || []
+                    : advancedLayout.inputEntries || [];
+                const matchingEntry = entries.find(entry => entry?.port?.id === (port?.id || "")) || entries[index] || null;
+                if (matchingEntry?.bounds) {
+                    anchorHostPoint = {
+                        x: side === "right"
+                            ? matchingEntry.bounds.right - Math.max(10, 12 * zoom)
+                            : matchingEntry.bounds.left + Math.max(10, 12 * zoom),
+                        y: matchingEntry.bounds.top + (matchingEntry.bounds.height / 2)
+                    };
+                }
+            }
+
+            if (!anchorHostPoint) {
+                const padding = Math.max(12, 18 * zoom);
+                const contentWidth = Math.max(48, hostWidth - (padding * 2));
+                const columnGap = Math.max(12, 16 * zoom);
+                const hasBothSides = inputPorts.length > 0 && outputPorts.length > 0;
+                const columnWidth = hasBothSides
+                    ? Math.max(72, (contentWidth - columnGap) / 2)
+                    : contentWidth;
+                const inputColumnLeft = hostLeft + padding;
+                const outputColumnLeft = hasBothSides
+                    ? hostRight - padding - columnWidth
+                    : inputColumnLeft;
+                const anchorInset = Math.max(10, 12 * zoom);
+                const rowCount = Math.max(inputPorts.length, outputPorts.length, totalCount || 0, 1);
+                anchorHostPoint = {
+                    x: side === "right"
+                        ? outputColumnLeft + columnWidth - anchorInset
+                        : inputColumnLeft + anchorInset,
+                    y: resolvePortAnchorHostY(hostBounds, index, rowCount)
+                };
+            }
+
+            const anchorWorldPoint = hostToWorldPoint(state, anchorHostPoint);
+            return {
+                x: anchorWorldPoint.x,
+                y: anchorWorldPoint.y,
+                side,
+                portId: port?.id || "",
+                label: port?.label || "",
+                direction,
+                tone: port?.tone || "",
+                accentColor: port?.accentColor || "",
+                categoryKey: port?.categoryKey || ""
+            };
+        }
+
+        const horizontalInset = Math.min(28, size.width * 0.11);
+        const verticalInset = Math.min(22, size.height * 0.18);
+        return {
+            x: side === "right"
+                ? position.x + (size.width / 2) - horizontalInset
+                : side === "left"
+                    ? position.x - (size.width / 2) + horizontalInset
+                    : position.x,
+            y: side === "top"
+                ? position.y - (size.height / 2) + verticalInset
+                : side === "bottom"
+                    ? position.y + (size.height / 2) - verticalInset
+                    : resolvePortAnchorY(position, size, index, totalCount),
+            side,
+            portId: port?.id || "",
+            label: port?.label || "",
+            direction,
+            tone: port?.tone || "",
+            accentColor: port?.accentColor || "",
+            categoryKey: port?.categoryKey || ""
+        };
+    }
+
+    function getLinkAnchorPoint(state, node, side, portId, direction) {
+        const ports = getNodePortCollection(node, direction);
+        if (portId && ports.length > 0) {
+            const portIndex = ports.findIndex(port => port?.id === portId);
+            if (portIndex >= 0) {
+                return buildPortAnchorPoint(state, node, ports[portIndex], portIndex, ports.length, side, direction);
+            }
+        }
+
         const position = getNodePosition(state, node);
         const size = getNodeSize(state, node);
         const inset = Math.min(28, size.width * 0.11);
@@ -76,7 +250,8 @@
             x: side === "right"
                 ? position.x + (size.width / 2) - inset
                 : position.x - (size.width / 2) + inset,
-            y: position.y
+            y: position.y,
+            side
         };
     }
 
@@ -162,25 +337,27 @@
     }
 
     function getLinkRetainedKey(link, index) {
-        if (link?.sourceId || link?.targetId || link?.kind) {
-            return `${link?.sourceId || ""}|${link?.targetId || ""}|${link?.kind || ""}|${link?.isUserAuthored ? "1" : "0"}`;
+        if (link?.sourceId || link?.targetId || link?.kind || link?.sourcePortId || link?.targetPortId) {
+            return `${link?.sourceId || ""}|${link?.sourcePortId || ""}|${link?.targetId || ""}|${link?.targetPortId || ""}|${link?.kind || ""}|${link?.isUserAuthored ? "1" : "0"}`;
         }
 
         return `link:${index}`;
     }
 
-    function getLinkPathData(state, source, target) {
+    function getLinkPathData(state, source, target, link) {
         const sourcePosition = getNodePosition(state, source);
         const targetPosition = getNodePosition(state, target);
         const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
         const targetSide = sourceSide === "right" ? "left" : "right";
-        const sourceAnchor = getLinkAnchorPoint(state, source, sourceSide);
-        const targetAnchor = getLinkAnchorPoint(state, target, targetSide);
+        const sourceAnchor = getLinkAnchorPoint(state, source, sourceSide, link?.sourcePortId, "output");
+        const targetAnchor = getLinkAnchorPoint(state, target, targetSide, link?.targetPortId, "input");
+        const sourceAnchorSide = sourceAnchor.side || sourceSide;
+        const targetAnchorSide = targetAnchor.side || targetSide;
         const controlOffset = Math.max(92, Math.abs(targetAnchor.x - sourceAnchor.x) * 0.38);
         return [
             `M ${sourceAnchor.x} ${sourceAnchor.y}`,
-            `C ${sourceAnchor.x + (sourceSide === "right" ? controlOffset : -controlOffset)} ${sourceAnchor.y}`,
-            `${targetAnchor.x + (targetSide === "right" ? controlOffset : -controlOffset)} ${targetAnchor.y}`,
+            `C ${sourceAnchor.x + (sourceAnchorSide === "right" ? controlOffset : -controlOffset)} ${sourceAnchor.y}`,
+            `${targetAnchor.x + (targetAnchorSide === "right" ? controlOffset : -controlOffset)} ${targetAnchor.y}`,
             `${targetAnchor.x} ${targetAnchor.y}`
         ].join(" ");
     }
@@ -1000,24 +1177,36 @@
 
         state.popover.style.display = "none";
         state.popoverAnchor = null;
+        state.hoveredAnnotationKey = "";
     }
 
     function legacyShowPopover(state, anchorElement, annotation) {
-        if (!state?.popover || !anchorElement || !annotation) {
-            return;
+        if (!state?.host?.isConnected ||
+            !state?.popover ||
+            !state.popover.isConnected ||
+            !state.popoverTitle ||
+            !state.popoverBody ||
+            !anchorElement ||
+            !anchorElement.isConnected ||
+            !annotation) {
+            hidePopover(state);
+            return false;
         }
 
         if (state.surface?.chrome?.tooltipPopover?.isEnabled === false) {
-            return;
+            hidePopover(state);
+            return false;
         }
 
+        const anchorRect = anchorElement.getBoundingClientRect();
         state.popover.dataset.kind = annotation.kind || "info";
         state.popover.dataset.tone = annotation.tone || "accent";
         state.popoverTitle.textContent = annotation.label || annotation.kind || "Signal";
         state.popoverBody.textContent = annotation.description || annotation.label || "Shared workbench signal";
         state.popover.style.display = "grid";
         state.popoverAnchor = anchorElement;
-        positionFloatingOverlayWithinHost(state, state.popover, anchorElement.getBoundingClientRect());
+        positionFloatingOverlayWithinHost(state, state.popover, anchorRect);
+        return true;
     }
 
     function invokeAnnotationAction(state, node, annotation) {
@@ -1075,19 +1264,56 @@
     }
 
     function getConnectorAnchorPoints(state, node, placementMode) {
+        const inputPorts = Array.isArray(node?.inputPorts) ? node.inputPorts : [];
+        const outputPorts = Array.isArray(node?.outputPorts) ? node.outputPorts : [];
+        if (inputPorts.length > 0 || outputPorts.length > 0) {
+            return [
+                ...inputPorts.map((port, index) => buildPortAnchorPoint(state, node, port, index, inputPorts.length, "left", "input")),
+                ...outputPorts.map((port, index) => buildPortAnchorPoint(state, node, port, index, outputPorts.length, "right", "output"))
+            ];
+        }
+
         const position = getNodePosition(state, node);
         const size = getNodeSize(state, node);
         const horizontalInset = Math.min(28, size.width * 0.11);
         const verticalInset = Math.min(22, size.height * 0.18);
         const points = [
-            { side: "left", x: position.x - (size.width / 2) + horizontalInset, y: position.y },
-            { side: "right", x: position.x + (size.width / 2) - horizontalInset, y: position.y }
+            {
+                side: "left",
+                x: position.x - (size.width / 2) + horizontalInset,
+                y: position.y,
+                portId: resolveStandardAnchorPortId("left"),
+                direction: "input",
+                label: "Input"
+            },
+            {
+                side: "right",
+                x: position.x + (size.width / 2) - horizontalInset,
+                y: position.y,
+                portId: resolveStandardAnchorPortId("right"),
+                direction: "output",
+                label: "Output"
+            }
         ];
 
         if ((placementMode || "edges") !== "horizontal") {
             points.push(
-                { side: "top", x: position.x, y: position.y - (size.height / 2) + verticalInset },
-                { side: "bottom", x: position.x, y: position.y + (size.height / 2) - verticalInset });
+                {
+                    side: "top",
+                    x: position.x,
+                    y: position.y - (size.height / 2) + verticalInset,
+                    portId: resolveStandardAnchorPortId("top"),
+                    direction: "input",
+                    label: "Input"
+                },
+                {
+                    side: "bottom",
+                    x: position.x,
+                    y: position.y + (size.height / 2) - verticalInset,
+                    portId: resolveStandardAnchorPortId("bottom"),
+                    direction: "output",
+                    label: "Output"
+                });
         }
 
         return points;
@@ -1227,6 +1453,14 @@
                 anchor.title = `${node.title || node.kind || "Node"} ${point.side} anchor`;
                 if (isPrimary) {
                     anchor.classList.add("is-primary");
+                }
+
+                if (point.accentColor) {
+                    const anchorRing = lateRuntime.hexToRgba?.(point.accentColor, 0.2) || "rgba(125, 211, 252, 0.16)";
+                    const anchorShadow = lateRuntime.hexToRgba?.(point.accentColor, 0.18) || "rgba(14, 165, 233, 0.18)";
+                    anchor.style.setProperty("--cw-connector-anchor-accent", point.accentColor);
+                    anchor.style.setProperty("--cw-connector-anchor-ring", anchorRing);
+                    anchor.style.setProperty("--cw-connector-anchor-shadow", anchorShadow);
                 }
 
                 anchor.style.left = `${round(point.x)}px`;
@@ -1434,7 +1668,10 @@
                 const targetPosition = getNodePosition(state, target);
                 const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
                 const targetSide = sourceSide === "right" ? "left" : "right";
-                for (const point of [getLinkAnchorPoint(state, source, sourceSide), getLinkAnchorPoint(state, target, targetSide)]) {
+                for (const point of [
+                    getLinkAnchorPoint(state, source, sourceSide, link.sourcePortId, "output"),
+                    getLinkAnchorPoint(state, target, targetSide, link.targetPortId, "input")
+                ]) {
                     const dot = createElement(state.document, "div", "cw-debug-anchor");
                     dot.style.left = `${round(point.x)}px`;
                     dot.style.top = `${round(point.y)}px`;
@@ -1764,6 +2001,25 @@
         return {
             x: (point.x * state.ui.zoom) + state.ui.panX,
             y: (point.y * state.ui.zoom) + state.ui.panY
+        };
+    }
+
+    function hostToWorldPoint(state, point) {
+        const zoom = Math.max(state?.ui?.zoom || 1, 0.01);
+        const viewportController = getViewportControllerService();
+        if (viewportController?.hostToScene) {
+            return viewportController.hostToScene({
+                pointX: point.x,
+                pointY: point.y,
+                panX: state.ui.panX,
+                panY: state.ui.panY,
+                zoom
+            });
+        }
+
+        return {
+            x: (point.x - state.ui.panX) / zoom,
+            y: (point.y - state.ui.panY) / zoom
         };
     }
 

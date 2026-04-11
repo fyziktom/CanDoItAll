@@ -9,6 +9,9 @@ namespace CanDoItAll.Modules.Processes;
 
 public partial class ProcessWorkspace : ComponentBase
 {
+    private const string DefinitionCanvasSelectTool = "authoring";
+    private const string DefinitionCanvasDeleteTool = "delete";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true
@@ -62,6 +65,7 @@ public partial class ProcessWorkspace : ComponentBase
     private CanvasWorkbenchSurface? canvasSurface;
     private CanvasWorkbenchUiState definitionCanvasUiState = CreateDefaultDefinitionCanvasUiState();
     private CanvasWorkbenchUiState runtimeCanvasUiState = CreateDefaultRuntimeCanvasUiState();
+    private string definitionCanvasTool = DefinitionCanvasSelectTool;
 
     private Guid? selectedProcessId;
     private Guid? selectedRunId;
@@ -83,6 +87,7 @@ public partial class ProcessWorkspace : ComponentBase
     private string assignmentExecutorKind = "person";
     private string assignmentBindingReason = string.Empty;
     private bool assignmentIsFallback;
+    private Dictionary<Guid, Guid?> runtimeBranchOutcomeSelections = [];
     private string exportJson = string.Empty;
     private string importJson = string.Empty;
     private string projectName = string.Empty;
@@ -234,6 +239,18 @@ public partial class ProcessWorkspace : ComponentBase
         assignments = await ProcessesService.ListAssignmentsAsync(selectedRunId.Value);
         workBriefs = await ProcessesService.ListWorkBriefsAsync(selectedRunId.Value);
         conformanceObservations = await ProcessesService.ListConformanceObservationsAsync(selectedRunId.Value);
+        var refreshedRuntimeBranchSelections = new Dictionary<Guid, Guid?>();
+        foreach (var stepRun in stepRuns) {
+            runtimeBranchOutcomeSelections.TryGetValue(stepRun.Id, out var selectedBranchOutcomeId);
+            if (selectedBranchOutcomeId.HasValue &&
+                stepRun.AvailableBranchOutcomes.All(item => item.Id != selectedBranchOutcomeId.Value)) {
+                selectedBranchOutcomeId = null;
+            }
+
+            refreshedRuntimeBranchSelections[stepRun.Id] = selectedBranchOutcomeId ?? stepRun.SelectedBranchOutcomeId;
+        }
+
+        runtimeBranchOutcomeSelections = refreshedRuntimeBranchSelections;
 
         if (!selectedAssignmentId.HasValue || assignments.All(item => item.Id != selectedAssignmentId.Value))
         {
@@ -280,9 +297,10 @@ public partial class ProcessWorkspace : ComponentBase
 
     private void RefreshCanvasSurface()
     {
+        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
         canvasSurface = detailTab == "runs" && SelectedRun is not null
             ? CanvasSurfaceFactory.BuildRunSurface(SelectedRun, stepRuns, selectedCanvasNodeId)
-            : CanvasSurfaceFactory.BuildDefinitionSurface(editor, selectedCanvasNodeId);
+            : CanvasSurfaceFactory.BuildDefinitionSurface(editor, selectedCanvasNodeId, definitionCanvasTool);
 
         var uiState = BuildCanvasUiState(canvasSurface, ResolveStoredCanvasUiState());
         canvasSurface.UiState = uiState;
@@ -337,6 +355,7 @@ public partial class ProcessWorkspace : ComponentBase
 
     private async Task SaveAsync()
     {
+        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
         var result = await ProcessesService.SaveAsync(editor);
         if (result.IsFailure)
         {
@@ -447,12 +466,16 @@ public partial class ProcessWorkspace : ComponentBase
 
     private async Task ApplyStepStatusAsync(Guid stepRunId, ProcessStepRunStatus targetStatus)
     {
+        var selectedBranchOutcomeId = targetStatus == ProcessStepRunStatus.Completed
+            ? ResolveSelectedBranchOutcomeId(stepRunId)
+            : null;
         var result = await ProcessesService.TransitionStepAsync(
             new ProcessStepTransitionRequest
             {
                 StepRunId = stepRunId,
                 TargetStatus = targetStatus,
-                Reason = BuildTransitionReason(targetStatus),
+                Reason = BuildTransitionReason(targetStatus, stepRunId, selectedBranchOutcomeId),
+                SelectedBranchOutcomeId = selectedBranchOutcomeId,
                 DecidedBy = "process-workspace"
             });
         if (result.IsFailure)
@@ -530,15 +553,22 @@ public partial class ProcessWorkspace : ComponentBase
         RefreshCanvasSurface();
     }
 
-    private void RemoveRole(ProcessRoleEditorModel role)
+    private void RemoveRole(ProcessRoleEditorModel role, bool refreshSurface = true)
     {
         editor.Roles.Remove(role);
         foreach (var step in editor.Steps)
         {
             step.RoleAssignments.RemoveAll(item => item.RoleRequirementId == role.Id);
+            if (step.DecisionRoleRequirementId == role.Id)
+            {
+                step.DecisionRoleRequirementId = null;
+            }
         }
 
-        RefreshCanvasSurface();
+        if (refreshSurface)
+        {
+            RefreshCanvasSurface();
+        }
     }
 
     private void AddStep()
@@ -550,21 +580,86 @@ public partial class ProcessWorkspace : ComponentBase
             Title = $"Step {editor.Steps.Count + 1}",
             StepKind = ProcessStepKind.Work,
             TargetLeadHours = 1,
-            DependsOnStepId = previousStep?.Id,
             CanvasX = 140 + (editor.Steps.Count * 280),
-            CanvasY = 180
+            CanvasY = 180,
+            Dependencies = previousStep?.Id.HasValue == true
+                ? [new ProcessStepDependencyEditorModel { Id = Guid.NewGuid(), DependsOnStepId = previousStep.Id }]
+                : []
         });
         RefreshCanvasSurface();
     }
 
-    private void RemoveStep(ProcessStepEditorModel step)
+    private void RemoveStep(ProcessStepEditorModel step, bool refreshSurface = true)
     {
         editor.Steps.Remove(step);
-        foreach (var candidate in editor.Steps.Where(candidate => candidate.DependsOnStepId == step.Id))
+        foreach (var candidate in editor.Steps)
         {
-            candidate.DependsOnStepId = null;
+            SetStepDependencies(
+                candidate,
+                ProcessCanvasBranching.GetOrderedDependencies(candidate)
+                    .Where(dependency => dependency.DependsOnStepId != step.Id));
         }
 
+        if (refreshSurface)
+        {
+            RefreshCanvasSurface();
+        }
+    }
+
+    private void AddBranchOutcome(ProcessStepEditorModel step)
+    {
+        if (editor.Steps.Contains(step))
+        {
+            ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+        }
+        else
+        {
+            ProcessCanvasBranching.NormalizeStepDraft(step);
+        }
+
+        var customOutcomeCount = ProcessCanvasBranching.GetCustomBranchOutcomes(step).Count;
+        step.BranchOutcomes.Add(new ProcessStepBranchOutcomeEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Key = $"outcome-{customOutcomeCount + 1}",
+            Title = $"Outcome {customOutcomeCount + 1}"
+        });
+        if (editor.Steps.Contains(step))
+        {
+            ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+        }
+        else
+        {
+            ProcessCanvasBranching.NormalizeStepDraft(step);
+        }
+
+        RefreshCanvasSurface();
+    }
+
+    private void RemoveBranchOutcome(ProcessStepEditorModel step, ProcessStepBranchOutcomeEditorModel branchOutcome)
+    {
+        if (ProcessCanvasBranching.IsSystemOutcome(branchOutcome))
+        {
+            return;
+        }
+
+        step.BranchOutcomes.Remove(branchOutcome);
+        if (!branchOutcome.Id.HasValue)
+        {
+            ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+            RefreshCanvasSurface();
+            return;
+        }
+
+        foreach (var candidate in editor.Steps)
+        {
+            SetStepDependencies(
+                candidate,
+                ProcessCanvasBranching.GetOrderedDependencies(candidate)
+                    .Where(dependency => dependency.DependsOnBranchOutcomeId != branchOutcome.Id.Value));
+        }
+
+        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
         RefreshCanvasSurface();
     }
 
@@ -717,11 +812,19 @@ public partial class ProcessWorkspace : ComponentBase
         return $"{run.Status} / {run.CompletedStepCount} of {run.TotalStepCount} steps / {run.CapabilityGapCount} gaps";
     }
 
-    private string BuildTransitionReason(ProcessStepRunStatus status)
+    private string BuildTransitionReason(ProcessStepRunStatus status, Guid stepRunId, Guid? selectedBranchOutcomeId)
     {
+        var branchOutcomeTitle = selectedBranchOutcomeId.HasValue
+            ? stepRuns
+                .FirstOrDefault(item => item.Id == stepRunId)?
+                .AvailableBranchOutcomes
+                .FirstOrDefault(item => item.Id == selectedBranchOutcomeId.Value)?
+                .Title
+            : null;
         return status switch
         {
             ProcessStepRunStatus.InProgress => "Work started from the runtime workspace.",
+            ProcessStepRunStatus.Completed when !string.IsNullOrWhiteSpace(branchOutcomeTitle) => $"Work completed from the runtime workspace with branch outcome '{branchOutcomeTitle}'.",
             ProcessStepRunStatus.Completed => "Work completed from the runtime workspace.",
             ProcessStepRunStatus.Blocked => "Blocked from the runtime workspace for review.",
             ProcessStepRunStatus.Refused => "Executor recorded a safe refusal from the runtime workspace.",
@@ -730,6 +833,53 @@ public partial class ProcessWorkspace : ComponentBase
             ProcessStepRunStatus.Skipped => "Step was skipped from the runtime workspace.",
             _ => "State updated from the runtime workspace."
         };
+    }
+
+    private Guid? ResolveSelectedBranchOutcomeId(Guid stepRunId)
+    {
+        return runtimeBranchOutcomeSelections.TryGetValue(stepRunId, out var selectedBranchOutcomeId)
+            ? selectedBranchOutcomeId
+            : stepRuns.FirstOrDefault(item => item.Id == stepRunId)?.SelectedBranchOutcomeId;
+    }
+
+    private Task UpdateRuntimeBranchOutcomeSelectionAsync(Guid stepRunId, Guid? branchOutcomeId)
+    {
+        runtimeBranchOutcomeSelections[stepRunId] = branchOutcomeId;
+        return Task.CompletedTask;
+    }
+
+    private IReadOnlyList<ProcessStepBranchOutcomeEditorModel> GetDependencyOutcomeOptions(ProcessStepEditorModel step)
+    {
+        var dependencyStepId = ProcessCanvasBranching.GetOrderedDependencies(step)
+            .FirstOrDefault()?.DependsOnStepId;
+        if (!dependencyStepId.HasValue)
+        {
+            return [];
+        }
+
+        return editor.Steps
+            .FirstOrDefault(candidate => candidate.Id == dependencyStepId.Value)?
+            .BranchOutcomes
+            ?? [];
+    }
+
+    private static void SetStepDependencies(
+        ProcessStepEditorModel step,
+        IEnumerable<ProcessStepDependencyEditorModel> dependencies)
+    {
+        var materialized = dependencies
+            .Where(dependency => dependency.DependsOnStepId.HasValue)
+            .Select(dependency => new ProcessStepDependencyEditorModel
+            {
+                Id = dependency.Id ?? Guid.NewGuid(),
+                DependsOnStepId = dependency.DependsOnStepId,
+                DependsOnBranchOutcomeId = dependency.DependsOnBranchOutcomeId
+            })
+            .ToList();
+        step.Dependencies = materialized;
+        var primaryDependency = materialized.FirstOrDefault();
+        step.DependsOnStepId = primaryDependency?.DependsOnStepId;
+        step.DependsOnBranchOutcomeId = primaryDependency?.DependsOnBranchOutcomeId;
     }
 
     private string ResolveRoleName(Guid? roleId)
@@ -763,6 +913,13 @@ public partial class ProcessWorkspace : ComponentBase
             ProcessRunStatus.Cancelled => "neutral",
             _ => "neutral"
         };
+    }
+
+    private static bool CanApplyRuntimeStatus(ProcessStepRunViewModel? stepRun, ProcessStepRunStatus targetStatus)
+    {
+        return stepRun is not null &&
+            stepRun.Status != targetStatus &&
+            ProcessStepRunTransitions.IsAllowed(stepRun.Status, targetStatus);
     }
 
     private static string ResolveStepTone(ProcessStepRunStatus status)
@@ -852,6 +1009,7 @@ public partial class ProcessWorkspace : ComponentBase
 
     private void ResetDefinitionCanvasState()
     {
+        definitionCanvasTool = DefinitionCanvasSelectTool;
         definitionCanvasUiState = CreateDefaultDefinitionCanvasUiState();
     }
 
@@ -865,6 +1023,29 @@ public partial class ProcessWorkspace : ComponentBase
         {
             ActiveInspectorTab = "definition"
         };
+
+    private Task SelectDefinitionCanvasToolAsync()
+    {
+        SetDefinitionCanvasTool(DefinitionCanvasSelectTool);
+        return Task.CompletedTask;
+    }
+
+    private Task DeleteDefinitionCanvasToolAsync()
+    {
+        SetDefinitionCanvasTool(DefinitionCanvasDeleteTool);
+        return Task.CompletedTask;
+    }
+
+    private void SetDefinitionCanvasTool(string tool)
+    {
+        definitionCanvasTool = string.Equals(tool, DefinitionCanvasDeleteTool, StringComparison.Ordinal)
+            ? DefinitionCanvasDeleteTool
+            : DefinitionCanvasSelectTool;
+        if (IsDefinitionCanvasActive)
+        {
+            RefreshCanvasSurface();
+        }
+    }
 
     private static CanvasWorkbenchUiState CreateDefaultRuntimeCanvasUiState()
         => new()

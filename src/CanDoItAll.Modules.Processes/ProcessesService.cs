@@ -132,6 +132,17 @@ public sealed partial class ProcessesService(
         var artifactExpectations = await dbContext.Set<ProcessArtifactExpectation>()
             .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
             .ToListAsync(cancellationToken);
+        var artifactInputs = await dbContext.Set<ProcessStepArtifactInputDefinition>()
+            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .OrderBy(item => item.DisplayOrder)
+            .ToListAsync(cancellationToken);
+        var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
+            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var stepDependencies = await dbContext.Set<ProcessStepDependencyDefinition>()
+            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .OrderBy(item => item.DisplayOrder)
+            .ToListAsync(cancellationToken);
 
         return new ProcessDefinitionEditorModel {
             Id = definition.Id,
@@ -168,6 +179,8 @@ public sealed partial class ProcessesService(
                 RoleTemplateSourceKey = role.RoleTemplateSourceKey,
                 RoleTemplateSnapshotName = role.RoleTemplateSnapshotName,
                 SnapshotSummary = role.SnapshotSummary,
+                CanvasX = role.CanvasX,
+                CanvasY = role.CanvasY,
                 RequiredSkillIds = roleSkills
                     .Where(item => item.RoleRequirementId == role.Id)
                     .Select(item => item.SkillId)
@@ -191,8 +204,23 @@ public sealed partial class ProcessesService(
                 ExceptionPolicySummary = step.ExceptionPolicySummary,
                 TargetLeadHours = step.TargetLeadHours,
                 DependsOnStepId = step.DependsOnStepId,
+                DependsOnBranchOutcomeId = step.DependsOnBranchOutcomeId,
+                DecisionRoleRequirementId = step.DecisionRoleRequirementId,
                 CanvasX = step.CanvasX,
                 CanvasY = step.CanvasY,
+                BranchCanvasX = step.BranchCanvasX,
+                BranchCanvasY = step.BranchCanvasY,
+                BranchOutcomes = branchOutcomes
+                    .Where(item => item.StepDefinitionId == step.Id)
+                    .OrderBy(item => item.DisplayOrder)
+                    .Select(item => new ProcessStepBranchOutcomeEditorModel {
+                        Id = item.Id,
+                        Key = item.Key,
+                        Title = item.Title,
+                        Description = item.Description
+                    })
+                    .ToList(),
+                Dependencies = BuildEditorDependencies(step, stepDependencies),
                 RoleAssignments = stepRoleRequirements
                     .Where(item => item.StepDefinitionId == step.Id)
                     .OrderBy(item => item.FallbackOrder)
@@ -219,7 +247,8 @@ public sealed partial class ProcessesService(
                         AllowedFutureUsageSummary = item.AllowedFutureUsageSummary,
                         ValidationRequirementSummary = item.ValidationRequirementSummary
                     })
-                    .ToList()
+                    .ToList(),
+                ArtifactInputs = BuildEditorArtifactInputs(step, artifactInputs)
             }).ToList()
         };
     }
@@ -349,7 +378,19 @@ public sealed partial class ProcessesService(
         var stepRoleRequirements = await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
             .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
             .ToListAsync(cancellationToken);
-        var publishError = ValidatePublish(definition, draftVersion, roles, steps, stepRoleRequirements);
+        var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
+            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var stepDependencies = await dbContext.Set<ProcessStepDependencyDefinition>()
+            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var artifactExpectations = await dbContext.Set<ProcessArtifactExpectation>()
+            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var artifactInputs = await dbContext.Set<ProcessStepArtifactInputDefinition>()
+            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var publishError = ValidatePublish(definition, draftVersion, roles, steps, stepRoleRequirements, branchOutcomes, stepDependencies, artifactExpectations, artifactInputs);
         if (publishError is not null) {
             return Result.Failure(publishError);
         }
@@ -370,7 +411,17 @@ public sealed partial class ProcessesService(
         definition.ActivePublishedVersionId = draftVersion.Id;
         definition.UpdatedAtUtc = clock.GetUtcNow();
 
-        await ClonePublishedVersionIntoNextDraftAsync(dbContext, definitionId, draftVersion, roles, steps, stepRoleRequirements, cancellationToken);
+        await ClonePublishedVersionIntoNextDraftAsync(
+            dbContext,
+            definitionId,
+            draftVersion,
+            roles,
+            steps,
+            stepRoleRequirements,
+            stepDependencies,
+            artifactExpectations,
+            artifactInputs,
+            cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var route = definition.ProjectId.HasValue
@@ -417,8 +468,10 @@ public sealed partial class ProcessesService(
         var runIds = runs.Select(item => item.Id).ToHashSet();
 
         dbContext.RemoveRange(await dbContext.Set<ProcessRoleSkillRequirement>().Where(item => roleIds.Contains(item.RoleRequirementId)).ToListAsync(cancellationToken));
+        dbContext.RemoveRange(await dbContext.Set<ProcessStepDependencyDefinition>().Where(item => stepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessStepRoleAssignmentRequirement>().Where(item => stepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessArtifactExpectation>().Where(item => stepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
+        dbContext.RemoveRange(await dbContext.Set<ProcessStepArtifactInputDefinition>().Where(item => stepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessStepRun>().Where(item => runIds.Contains(item.ProcessRunId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessRunAssignment>().Where(item => runIds.Contains(item.ProcessRunId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessWorkBrief>().Where(item => runIds.Contains(item.ProcessRunId)).ToListAsync(cancellationToken));
@@ -443,6 +496,9 @@ public sealed partial class ProcessesService(
         IReadOnlyList<ProcessRoleRequirement> roles,
         IReadOnlyList<ProcessStepDefinition> steps,
         IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
+        IReadOnlyList<ProcessStepDependencyDefinition> stepDependencies,
+        IReadOnlyList<ProcessArtifactExpectation> artifactExpectations,
+        IReadOnlyList<ProcessStepArtifactInputDefinition> artifactInputs,
         CancellationToken cancellationToken) {
         var nextDraftVersionId = Guid.NewGuid();
         var roleIdMap = roles.ToDictionary(item => item.Id, _ => Guid.NewGuid());
@@ -468,9 +524,15 @@ public sealed partial class ProcessesService(
         var roleSkills = await dbContext.Set<ProcessRoleSkillRequirement>()
             .Where(item => roles.Select(role => role.Id).Contains(item.RoleRequirementId))
             .ToListAsync(cancellationToken);
-        var artifactExpectations = await dbContext.Set<ProcessArtifactExpectation>()
+        var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
             .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
             .ToListAsync(cancellationToken);
+        var branchOutcomeIdMap = branchOutcomes.ToDictionary(item => item.Id, _ => Guid.NewGuid());
+        var artifactExpectationIdMap = artifactExpectations.ToDictionary(item => item.Id, _ => Guid.NewGuid());
+        var stepDependenciesByStepId = stepDependencies
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
+        var clonedStepsById = new Dictionary<Guid, ProcessStepDefinition>();
 
         foreach (var role in roles.OrderBy(item => item.DisplayOrder)) {
             await dbContext.Set<ProcessRoleRequirement>().AddAsync(
@@ -490,7 +552,9 @@ public sealed partial class ProcessesService(
                     RoleTemplateSourceKey = role.RoleTemplateSourceKey,
                     RoleTemplateSnapshotName = role.RoleTemplateSnapshotName,
                     SnapshotSummary = role.SnapshotSummary,
-                    DisplayOrder = role.DisplayOrder
+                    DisplayOrder = role.DisplayOrder,
+                    CanvasX = role.CanvasX,
+                    CanvasY = role.CanvasY
                 },
                 cancellationToken);
         }
@@ -511,29 +575,49 @@ public sealed partial class ProcessesService(
         }
 
         foreach (var step in steps.OrderBy(item => item.OrderIndex)) {
-            await dbContext.Set<ProcessStepDefinition>().AddAsync(
-                new ProcessStepDefinition {
-                    Id = stepIdMap[step.Id],
-                    ProcessDefinitionVersionId = nextDraftVersionId,
-                    Key = step.Key,
-                    Title = step.Title,
-                    Subtitle = step.Subtitle,
-                    Notes = step.Notes,
-                    StepKind = step.StepKind,
-                    AllowsManualSkip = step.AllowsManualSkip,
-                    AllowsSafeRefusal = step.AllowsSafeRefusal,
-                    RequiresApproval = step.RequiresApproval,
-                    RequiresDecisionRecord = step.RequiresDecisionRecord,
-                    InputContractSummary = step.InputContractSummary,
-                    OutputContractSummary = step.OutputContractSummary,
-                    EvidenceContractSummary = step.EvidenceContractSummary,
-                    DecisionRightsSummary = step.DecisionRightsSummary,
-                    ExceptionPolicySummary = step.ExceptionPolicySummary,
-                    TargetLeadHours = step.TargetLeadHours,
-                    OrderIndex = step.OrderIndex,
-                    DependsOnStepId = step.DependsOnStepId.HasValue ? stepIdMap.GetValueOrDefault(step.DependsOnStepId.Value) : null,
-                    CanvasX = step.CanvasX,
-                    CanvasY = step.CanvasY
+            var clonedStep = new ProcessStepDefinition {
+                Id = stepIdMap[step.Id],
+                ProcessDefinitionVersionId = nextDraftVersionId,
+                Key = step.Key,
+                Title = step.Title,
+                Subtitle = step.Subtitle,
+                Notes = step.Notes,
+                StepKind = step.StepKind,
+                AllowsManualSkip = step.AllowsManualSkip,
+                AllowsSafeRefusal = step.AllowsSafeRefusal,
+                RequiresApproval = step.RequiresApproval,
+                RequiresDecisionRecord = step.RequiresDecisionRecord,
+                InputContractSummary = step.InputContractSummary,
+                OutputContractSummary = step.OutputContractSummary,
+                EvidenceContractSummary = step.EvidenceContractSummary,
+                DecisionRightsSummary = step.DecisionRightsSummary,
+                ExceptionPolicySummary = step.ExceptionPolicySummary,
+                TargetLeadHours = step.TargetLeadHours,
+                OrderIndex = step.OrderIndex,
+                DecisionRoleRequirementId = step.DecisionRoleRequirementId.HasValue ? roleIdMap.GetValueOrDefault(step.DecisionRoleRequirementId.Value) : null,
+                CanvasX = step.CanvasX,
+                CanvasY = step.CanvasY,
+                BranchCanvasX = step.BranchCanvasX,
+                BranchCanvasY = step.BranchCanvasY
+            };
+            clonedStepsById[clonedStep.Id] = clonedStep;
+            await dbContext.Set<ProcessStepDefinition>().AddAsync(clonedStep, cancellationToken);
+        }
+
+        foreach (var branchOutcome in branchOutcomes.OrderBy(item => item.DisplayOrder)) {
+            if (!stepIdMap.TryGetValue(branchOutcome.StepDefinitionId, out var nextStepId) ||
+                !branchOutcomeIdMap.TryGetValue(branchOutcome.Id, out var nextOutcomeId)) {
+                continue;
+            }
+
+            await dbContext.Set<ProcessStepBranchOutcomeDefinition>().AddAsync(
+                new ProcessStepBranchOutcomeDefinition {
+                    Id = nextOutcomeId,
+                    StepDefinitionId = nextStepId,
+                    Key = branchOutcome.Key,
+                    Title = branchOutcome.Title,
+                    Description = branchOutcome.Description,
+                    DisplayOrder = branchOutcome.DisplayOrder
                 },
                 cancellationToken);
         }
@@ -556,6 +640,43 @@ public sealed partial class ProcessesService(
                 cancellationToken);
         }
 
+        foreach (var stepDependency in stepDependencies.OrderBy(item => item.DisplayOrder)) {
+            if (!stepIdMap.TryGetValue(stepDependency.StepDefinitionId, out var nextStepId) ||
+                !stepIdMap.TryGetValue(stepDependency.DependsOnStepId, out var nextDependsOnStepId)) {
+                continue;
+            }
+
+            await dbContext.Set<ProcessStepDependencyDefinition>().AddAsync(
+                new ProcessStepDependencyDefinition {
+                    StepDefinitionId = nextStepId,
+                    DependsOnStepId = nextDependsOnStepId,
+                    DependsOnBranchOutcomeId = stepDependency.DependsOnBranchOutcomeId.HasValue
+                        ? branchOutcomeIdMap.GetValueOrDefault(stepDependency.DependsOnBranchOutcomeId.Value)
+                        : null,
+                    DisplayOrder = stepDependency.DisplayOrder
+                },
+                cancellationToken);
+        }
+
+        foreach (var step in steps.OrderBy(item => item.OrderIndex)) {
+            if (!stepIdMap.TryGetValue(step.Id, out var nextStepId)) {
+                continue;
+            }
+
+            var primaryDependency = GetPersistedDependencies(step, stepDependenciesByStepId)
+                .FirstOrDefault();
+            if (!clonedStepsById.TryGetValue(nextStepId, out var clonedStep)) {
+                continue;
+            }
+
+            clonedStep.DependsOnStepId = primaryDependency is null
+                ? null
+                : stepIdMap.GetValueOrDefault(primaryDependency.DependsOnStepId);
+            clonedStep.DependsOnBranchOutcomeId = primaryDependency?.DependsOnBranchOutcomeId.HasValue == true
+                ? branchOutcomeIdMap.GetValueOrDefault(primaryDependency.DependsOnBranchOutcomeId.Value)
+                : null;
+        }
+
         foreach (var artifactExpectation in artifactExpectations) {
             if (!stepIdMap.TryGetValue(artifactExpectation.StepDefinitionId, out var nextStepId)) {
                 continue;
@@ -563,6 +684,7 @@ public sealed partial class ProcessesService(
 
             await dbContext.Set<ProcessArtifactExpectation>().AddAsync(
                 new ProcessArtifactExpectation {
+                    Id = artifactExpectationIdMap[artifactExpectation.Id],
                     StepDefinitionId = nextStepId,
                     ArtifactKind = artifactExpectation.ArtifactKind,
                     Title = artifactExpectation.Title,
@@ -572,6 +694,21 @@ public sealed partial class ProcessesService(
                     RetentionDays = artifactExpectation.RetentionDays,
                     AllowedFutureUsageSummary = artifactExpectation.AllowedFutureUsageSummary,
                     ValidationRequirementSummary = artifactExpectation.ValidationRequirementSummary
+                },
+                cancellationToken);
+        }
+
+        foreach (var artifactInput in artifactInputs.OrderBy(item => item.DisplayOrder)) {
+            if (!stepIdMap.TryGetValue(artifactInput.StepDefinitionId, out var nextStepId) ||
+                !artifactExpectationIdMap.TryGetValue(artifactInput.ArtifactExpectationId, out var nextArtifactExpectationId)) {
+                continue;
+            }
+
+            await dbContext.Set<ProcessStepArtifactInputDefinition>().AddAsync(
+                new ProcessStepArtifactInputDefinition {
+                    StepDefinitionId = nextStepId,
+                    ArtifactExpectationId = nextArtifactExpectationId,
+                    DisplayOrder = artifactInput.DisplayOrder
                 },
                 cancellationToken);
         }
@@ -592,8 +729,11 @@ public sealed partial class ProcessesService(
         var existingStepIds = existingSteps.Select(item => item.Id).ToHashSet();
 
         dbContext.RemoveRange(await dbContext.Set<ProcessRoleSkillRequirement>().Where(item => existingRoleIds.Contains(item.RoleRequirementId)).ToListAsync(cancellationToken));
+        dbContext.RemoveRange(await dbContext.Set<ProcessStepDependencyDefinition>().Where(item => existingStepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessStepRoleAssignmentRequirement>().Where(item => existingStepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessArtifactExpectation>().Where(item => existingStepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
+        dbContext.RemoveRange(await dbContext.Set<ProcessStepArtifactInputDefinition>().Where(item => existingStepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
+        dbContext.RemoveRange(await dbContext.Set<ProcessStepBranchOutcomeDefinition>().Where(item => existingStepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(existingRoles);
         dbContext.RemoveRange(existingSteps);
 
@@ -621,7 +761,9 @@ public sealed partial class ProcessesService(
                     RoleTemplateSourceKey = roleModel.RoleTemplateSourceKey.Trim(),
                     RoleTemplateSnapshotName = roleModel.RoleTemplateSnapshotName.Trim(),
                     SnapshotSummary = roleModel.SnapshotSummary.Trim(),
-                    DisplayOrder = index
+                    DisplayOrder = index,
+                    CanvasX = roleModel.CanvasX,
+                    CanvasY = roleModel.CanvasY
                 },
                 cancellationToken);
 
@@ -641,16 +783,33 @@ public sealed partial class ProcessesService(
         }
 
         var stepIdMap = new Dictionary<Guid, Guid>();
+        var branchOutcomeIdMap = new Dictionary<Guid, Guid>();
+        var artifactExpectationIdMap = new Dictionary<Guid, Guid>();
         var persistedStepIds = new List<Guid>(model.Steps.Count);
-        var tempDependencies = new List<(Guid StepId, Guid? OriginalDependsOnId)>();
+        var tempDependencies = new List<(Guid StepId, List<ProcessStepDependencyEditorModel> Dependencies)>();
+        var tempArtifactInputs = new List<(Guid StepId, List<ProcessStepArtifactInputEditorModel> ArtifactInputs)>();
         for (var index = 0; index < model.Steps.Count; index++) {
             var stepModel = model.Steps[index];
+            var normalizedDependencies = ProcessCanvasBranching.GetOrderedDependencies(stepModel)
+                .Select(dependency => new ProcessStepDependencyEditorModel {
+                    Id = dependency.Id,
+                    DependsOnStepId = dependency.DependsOnStepId,
+                    DependsOnBranchOutcomeId = dependency.DependsOnBranchOutcomeId
+                })
+                .ToList();
             var stepId = Guid.NewGuid();
             persistedStepIds.Add(stepId);
             if (stepModel.Id.HasValue) {
                 stepIdMap[stepModel.Id.Value] = stepId;
             }
-            tempDependencies.Add((stepId, stepModel.DependsOnStepId));
+            tempDependencies.Add((stepId, normalizedDependencies));
+            tempArtifactInputs.Add((stepId, stepModel.ArtifactInputs
+                .Select(item => new ProcessStepArtifactInputEditorModel
+                {
+                    Id = item.Id,
+                    ArtifactExpectationId = item.ArtifactExpectationId
+                })
+                .ToList()));
             await dbContext.Set<ProcessStepDefinition>().AddAsync(
                 new ProcessStepDefinition {
                     Id = stepId,
@@ -671,10 +830,42 @@ public sealed partial class ProcessesService(
                     ExceptionPolicySummary = stepModel.ExceptionPolicySummary.Trim(),
                     TargetLeadHours = Math.Max(0, stepModel.TargetLeadHours),
                     OrderIndex = index,
+                    DecisionRoleRequirementId = stepModel.DecisionRoleRequirementId.HasValue &&
+                        roleIdMap.TryGetValue(stepModel.DecisionRoleRequirementId.Value, out var remappedDecisionRoleId)
+                        ? remappedDecisionRoleId
+                        : stepModel.DecisionRoleRequirementId,
                     CanvasX = stepModel.CanvasX,
-                    CanvasY = stepModel.CanvasY
+                    CanvasY = stepModel.CanvasY,
+                    BranchCanvasX = stepModel.BranchCanvasX,
+                    BranchCanvasY = stepModel.BranchCanvasY
                 },
                 cancellationToken);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        for (var stepIndex = 0; stepIndex < model.Steps.Count; stepIndex++) {
+            var stepModel = model.Steps[stepIndex];
+            var stepId = persistedStepIds[stepIndex];
+
+            for (var outcomeIndex = 0; outcomeIndex < stepModel.BranchOutcomes.Count; outcomeIndex++) {
+                var outcomeModel = stepModel.BranchOutcomes[outcomeIndex];
+                var outcomeId = Guid.NewGuid();
+                if (outcomeModel.Id.HasValue) {
+                    branchOutcomeIdMap[outcomeModel.Id.Value] = outcomeId;
+                }
+
+                await dbContext.Set<ProcessStepBranchOutcomeDefinition>().AddAsync(
+                    new ProcessStepBranchOutcomeDefinition {
+                        Id = outcomeId,
+                        StepDefinitionId = stepId,
+                        Key = string.IsNullOrWhiteSpace(outcomeModel.Key) ? BuildKey(outcomeModel.Title, $"outcome-{outcomeIndex + 1}") : BuildKey(outcomeModel.Key, $"outcome-{outcomeIndex + 1}"),
+                        Title = outcomeModel.Title.Trim(),
+                        Description = outcomeModel.Description.Trim(),
+                        DisplayOrder = outcomeIndex
+                    },
+                    cancellationToken);
+            }
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -684,13 +875,31 @@ public sealed partial class ProcessesService(
             .ToDictionaryAsync(item => item.Id, cancellationToken);
 
         foreach (var dependency in tempDependencies) {
-            if (!dependency.OriginalDependsOnId.HasValue ||
-                !stepIdMap.TryGetValue(dependency.OriginalDependsOnId.Value, out var dependsOnStepId) ||
-                !persistedSteps.TryGetValue(dependency.StepId, out var step)) {
+            if (!persistedSteps.TryGetValue(dependency.StepId, out var step)) {
                 continue;
             }
 
-            step.DependsOnStepId = dependsOnStepId;
+            var remappedDependencies = dependency.Dependencies
+                .Where(item => item.DependsOnStepId.HasValue &&
+                    stepIdMap.ContainsKey(item.DependsOnStepId.Value))
+                .Select((item, index) => new ProcessStepDependencyDefinition {
+                    StepDefinitionId = dependency.StepId,
+                    DependsOnStepId = stepIdMap[item.DependsOnStepId!.Value],
+                    DependsOnBranchOutcomeId = item.DependsOnBranchOutcomeId.HasValue &&
+                        branchOutcomeIdMap.TryGetValue(item.DependsOnBranchOutcomeId.Value, out var remappedOutcomeId)
+                            ? remappedOutcomeId
+                            : null,
+                    DisplayOrder = index
+                })
+                .ToList();
+
+            var primaryDependency = remappedDependencies.FirstOrDefault();
+            step.DependsOnStepId = primaryDependency?.DependsOnStepId;
+            step.DependsOnBranchOutcomeId = primaryDependency?.DependsOnBranchOutcomeId;
+
+            foreach (var remappedDependency in remappedDependencies) {
+                await dbContext.Set<ProcessStepDependencyDefinition>().AddAsync(remappedDependency, cancellationToken);
+            }
         }
 
         for (var stepIndex = 0; stepIndex < model.Steps.Count; stepIndex++) {
@@ -722,8 +931,14 @@ public sealed partial class ProcessesService(
                     continue;
                 }
 
+                var artifactExpectationId = Guid.NewGuid();
+                if (artifactModel.Id.HasValue) {
+                    artifactExpectationIdMap[artifactModel.Id.Value] = artifactExpectationId;
+                }
+
                 await dbContext.Set<ProcessArtifactExpectation>().AddAsync(
                     new ProcessArtifactExpectation {
+                        Id = artifactExpectationId,
                         StepDefinitionId = stepId,
                         ArtifactKind = artifactModel.ArtifactKind,
                         Title = artifactModel.Title.Trim(),
@@ -733,6 +948,25 @@ public sealed partial class ProcessesService(
                         RetentionDays = Math.Max(0, artifactModel.RetentionDays),
                         AllowedFutureUsageSummary = artifactModel.AllowedFutureUsageSummary.Trim(),
                         ValidationRequirementSummary = artifactModel.ValidationRequirementSummary.Trim()
+                    },
+                    cancellationToken);
+            }
+
+            var artifactInputsForStep = tempArtifactInputs
+                .FirstOrDefault(item => item.StepId == stepId)
+                .ArtifactInputs;
+            for (var artifactInputIndex = 0; artifactInputIndex < artifactInputsForStep.Count; artifactInputIndex++) {
+                var artifactInputModel = artifactInputsForStep[artifactInputIndex];
+                if (!artifactInputModel.ArtifactExpectationId.HasValue ||
+                    !artifactExpectationIdMap.TryGetValue(artifactInputModel.ArtifactExpectationId.Value, out var remappedArtifactExpectationId)) {
+                    continue;
+                }
+
+                await dbContext.Set<ProcessStepArtifactInputDefinition>().AddAsync(
+                    new ProcessStepArtifactInputDefinition {
+                        StepDefinitionId = stepId,
+                        ArtifactExpectationId = remappedArtifactExpectationId,
+                        DisplayOrder = artifactInputIndex
                     },
                     cancellationToken);
             }
@@ -751,6 +985,8 @@ public sealed partial class ProcessesService(
     }
 
     private static Error? ValidateDefinitionEditor(ProcessDefinitionEditorModel model) {
+        ProcessCanvasBranching.NormalizeDefinitionEditor(model);
+
         if (string.IsNullOrWhiteSpace(model.Name)) {
             return Error.Validation("Process name is required.", "processes.name-required");
         }
@@ -775,7 +1011,43 @@ public sealed partial class ProcessesService(
             return Error.Validation("Every step requires a title.", "processes.step-title-required");
         }
 
-        return null;
+        var stepsById = model.Steps
+            .Where(step => step.Id.HasValue)
+            .ToDictionary(step => step.Id!.Value);
+        foreach (var step in model.Steps) {
+            if (step.BranchOutcomes.Any(outcome => string.IsNullOrWhiteSpace(outcome.Title))) {
+                return Error.Validation("Every branch outcome requires a title.", "processes.branch-outcome-title-required");
+            }
+
+            if (step.BranchOutcomes.Count > 0 && !step.DecisionRoleRequirementId.HasValue) {
+                return Error.Validation("Branching steps require an explicit decision-maker role.", "processes.branch-decision-role-required");
+            }
+
+            if (step.DecisionRoleRequirementId.HasValue &&
+                model.Roles.All(role => role.Id != step.DecisionRoleRequirementId.Value)) {
+                return Error.Validation("Decision-maker role must reference a process role in the same definition.", "processes.branch-decision-role-invalid");
+            }
+
+            foreach (var dependency in ProcessCanvasBranching.GetOrderedDependencies(step)) {
+                if (!dependency.DependsOnStepId.HasValue) {
+                    return Error.Validation("Every dependency must resolve to an upstream step.", "processes.branch-dependency-step-required");
+                }
+
+                if (!stepsById.TryGetValue(dependency.DependsOnStepId.Value, out var dependencyStep)) {
+                    return Error.Validation("Dependencies must reference a step in the same definition.", "processes.branch-dependency-step-invalid");
+                }
+
+                if (!dependency.DependsOnBranchOutcomeId.HasValue) {
+                    continue;
+                }
+
+                if (dependencyStep.BranchOutcomes.All(outcome => outcome.Id != dependency.DependsOnBranchOutcomeId.Value)) {
+                    return Error.Validation("Dependency outcome must belong to the selected dependency step.", "processes.branch-dependency-outcome-invalid");
+                }
+            }
+        }
+
+        return ValidateArtifactInputs(model);
     }
 
     private static Error? ValidatePublish(
@@ -783,7 +1055,11 @@ public sealed partial class ProcessesService(
         ProcessDefinitionVersion version,
         IReadOnlyList<ProcessRoleRequirement> roles,
         IReadOnlyList<ProcessStepDefinition> steps,
-        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements) {
+        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
+        IReadOnlyList<ProcessStepBranchOutcomeDefinition> branchOutcomes,
+        IReadOnlyList<ProcessStepDependencyDefinition> stepDependencies,
+        IReadOnlyList<ProcessArtifactExpectation> artifactExpectations,
+        IReadOnlyList<ProcessStepArtifactInputDefinition> artifactInputs) {
         if (string.IsNullOrWhiteSpace(definition.OwnerName) ||
             string.IsNullOrWhiteSpace(definition.CustomerName) ||
             string.IsNullOrWhiteSpace(definition.ValueStatement) ||
@@ -801,7 +1077,133 @@ public sealed partial class ProcessesService(
             return Error.Validation("Every step must have at least one explicit role requirement before publication.", "processes.publish-step-role-required");
         }
 
+        var branchOutcomesByStepId = branchOutcomes
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
+        var stepDependenciesByStepId = stepDependencies
+            .GroupBy(item => item.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
+
+        var branchingError = ValidatePublishBranching(definition, roles, steps, branchOutcomesByStepId, stepDependenciesByStepId);
+        if (branchingError is not null) {
+            return branchingError;
+        }
+
+        return ValidatePublishedArtifactInputs(steps, artifactExpectations, artifactInputs, stepDependenciesByStepId);
+    }
+
+    private static Error? ValidatePublishBranching(
+        ProcessDefinition definition,
+        IReadOnlyList<ProcessRoleRequirement> roles,
+        IReadOnlyList<ProcessStepDefinition> steps,
+        IReadOnlyDictionary<Guid, List<ProcessStepBranchOutcomeDefinition>> branchOutcomesByStepId,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId) {
+        var stepsById = steps.ToDictionary(step => step.Id);
+
+        foreach (var step in steps) {
+            branchOutcomesByStepId.TryGetValue(step.Id, out var stepBranchOutcomes);
+            stepBranchOutcomes ??= [];
+
+            if (stepBranchOutcomes.Count > 0 && !step.DecisionRoleRequirementId.HasValue) {
+                return Error.Validation("Publishing requires a decision-maker role for branching steps.", "processes.publish-branch-decision-role-required");
+            }
+
+            if (step.DecisionRoleRequirementId.HasValue && roles.All(role => role.Id != step.DecisionRoleRequirementId.Value)) {
+                return Error.Validation("Branch decision-maker roles must resolve to a published process role.", "processes.publish-branch-decision-role-invalid");
+            }
+
+            foreach (var dependency in GetPersistedDependencies(step, stepDependenciesByStepId)) {
+                if (!stepsById.ContainsKey(dependency.DependsOnStepId)) {
+                    return Error.Validation("Publishing requires each dependency to resolve to a published upstream step.", "processes.publish-branch-dependency-step-required");
+                }
+
+                if (!dependency.DependsOnBranchOutcomeId.HasValue) {
+                    continue;
+                }
+
+                branchOutcomesByStepId.TryGetValue(dependency.DependsOnStepId, out var dependencyOutcomes);
+                dependencyOutcomes ??= [];
+
+                if (dependencyOutcomes.All(outcome => outcome.Id != dependency.DependsOnBranchOutcomeId.Value)) {
+                    return Error.Validation("Dependency outcomes must belong to the selected dependency step before publication.", "processes.publish-branch-dependency-outcome-invalid");
+                }
+            }
+        }
+
+        foreach (var step in steps) {
+            if (!branchOutcomesByStepId.TryGetValue(step.Id, out var stepBranchOutcomes) || stepBranchOutcomes.Count == 0) {
+                continue;
+            }
+
+            foreach (var branchOutcome in stepBranchOutcomes) {
+                if (ProcessCanvasBranching.IsSystemOutcome(branchOutcome)) {
+                    continue;
+                }
+
+                var hasDependent = steps.Any(candidate =>
+                    GetPersistedDependencies(candidate, stepDependenciesByStepId)
+                        .Any(dependency => dependency.DependsOnStepId == step.Id &&
+                            dependency.DependsOnBranchOutcomeId == branchOutcome.Id));
+                if (!hasDependent) {
+                    return Error.Validation(
+                        $"Branch outcome '{branchOutcome.Title}' on process '{definition.Name}' is not routed to any downstream step.",
+                        "processes.publish-branch-outcome-unused");
+                }
+            }
+        }
+
         return null;
+    }
+
+    private static List<ProcessStepDependencyEditorModel> BuildEditorDependencies(
+        ProcessStepDefinition step,
+        IReadOnlyList<ProcessStepDependencyDefinition> allDependencies) {
+        var dependencies = allDependencies
+            .Where(item => item.StepDefinitionId == step.Id)
+            .OrderBy(item => item.DisplayOrder)
+            .Select(item => new ProcessStepDependencyEditorModel {
+                Id = item.Id,
+                DependsOnStepId = item.DependsOnStepId,
+                DependsOnBranchOutcomeId = item.DependsOnBranchOutcomeId
+            })
+            .ToList();
+        if (dependencies.Count > 0) {
+            return dependencies;
+        }
+
+        if (!step.DependsOnStepId.HasValue) {
+            return [];
+        }
+
+        return
+        [
+            new ProcessStepDependencyEditorModel {
+                Id = Guid.NewGuid(),
+                DependsOnStepId = step.DependsOnStepId,
+                DependsOnBranchOutcomeId = step.DependsOnBranchOutcomeId
+            }
+        ];
+    }
+
+    private static IReadOnlyList<ProcessStepDependencyDefinition> GetPersistedDependencies(
+        ProcessStepDefinition step,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> dependenciesByStepId) {
+        if (dependenciesByStepId.TryGetValue(step.Id, out var dependencies) && dependencies.Count > 0) {
+            return dependencies;
+        }
+
+        if (!step.DependsOnStepId.HasValue) {
+            return [];
+        }
+
+        return
+        [
+            new ProcessStepDependencyDefinition {
+                StepDefinitionId = step.Id,
+                DependsOnStepId = step.DependsOnStepId.Value,
+                DependsOnBranchOutcomeId = step.DependsOnBranchOutcomeId
+            }
+        ];
     }
 
     private async Task<int> GetNextVersionNumberAsync(AppDbContext dbContext, Guid definitionId, CancellationToken cancellationToken) {
@@ -832,19 +1234,9 @@ public sealed partial class ProcessesService(
         return ProcessRunStatus.Active;
     }
 
-    private static bool IsTransitionAllowed(ProcessStepRunStatus currentStatus, ProcessStepRunStatus targetStatus) {
-        if (currentStatus == targetStatus) {
-            return true;
-        }
-
-        return currentStatus switch {
-            ProcessStepRunStatus.Pending => targetStatus == ProcessStepRunStatus.Ready,
-            ProcessStepRunStatus.Ready => targetStatus is ProcessStepRunStatus.InProgress or ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Refused or ProcessStepRunStatus.Skipped or ProcessStepRunStatus.WaitingApproval,
-            ProcessStepRunStatus.WaitingApproval => targetStatus is ProcessStepRunStatus.InProgress or ProcessStepRunStatus.Completed or ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Refused,
-            ProcessStepRunStatus.InProgress => targetStatus is ProcessStepRunStatus.Completed or ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Refused or ProcessStepRunStatus.Failed,
-            ProcessStepRunStatus.Blocked => targetStatus is ProcessStepRunStatus.Ready or ProcessStepRunStatus.InProgress or ProcessStepRunStatus.Refused or ProcessStepRunStatus.Failed,
-            _ => false
-        };
+    private static bool IsTransitionAllowed(ProcessStepRunStatus currentStatus, ProcessStepRunStatus targetStatus)
+    {
+        return ProcessStepRunTransitions.IsAllowed(currentStatus, targetStatus);
     }
 
     private static string BuildSlug(string input) {

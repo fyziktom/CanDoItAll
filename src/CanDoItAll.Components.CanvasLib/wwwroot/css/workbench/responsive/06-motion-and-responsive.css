@@ -255,7 +255,7 @@
 
 .cw-workbench__popover {
     position: absolute;
-    z-index: 22;
+    z-index: 620;
     display: grid;
     gap: 0.35rem;
     max-width: 15rem;
@@ -283,7 +283,7 @@
     position: absolute;
     left: 50%;
     bottom: 1.3rem;
-    z-index: 24;
+    z-index: 690;
     transform: translateX(-50%);
     padding: 0.55rem 0.9rem;
     border-radius: 999px;
@@ -769,6 +769,28 @@
     }
 }
 
+@container (max-width: 900px) {
+    .cw-toolbar {
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .cw-toolbar::-webkit-scrollbar,
+    .cw-toolbar-group::-webkit-scrollbar {
+        display: none;
+    }
+
+    .cw-toolbar-group {
+        flex-wrap: nowrap;
+        min-width: fit-content;
+    }
+
+    .cw-toolbar-group--left,
+    .cw-toolbar-group--utility {
+        flex-basis: auto;
+    }
+}
+
 @media (max-width: 720px) {
     .cw-stage-column,
     .cw-inspector-shell,
@@ -777,6 +799,60 @@
         border-radius: 1.5rem;
     }
 
+    .cw-stage-surface,
+    .cw-canvas-host {
+        min-height: 34rem;
+    }
+
+    .cw-toolbar {
+        position: static;
+        display: flex;
+        justify-content: space-between;
+        gap: 0.65rem;
+        margin-bottom: 0.8rem;
+        padding: 0.45rem 0.5rem;
+    }
+
+    .cw-toolbar-group {
+        flex-wrap: wrap;
+        min-width: 0;
+    }
+
+    .cw-help-layout,
+    .cw-help-grid,
+    .cw-form-grid--split {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cw-help-nav {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .cw-help-overlay--settings {
+        padding-top: 1rem;
+    }
+
+    .cw-hint-pill {
+        display: none;
+    }
+
+    .cw-zoom-rail {
+        min-width: 13.25rem;
+    }
+
+    .cw-zoom-slider {
+        width: 5.5rem;
+        min-width: 5.5rem;
+    }
+
+    .cw-floating-window {
+        min-width: 0;
+        max-width: calc(100% - 1rem);
+        max-height: calc(100% - 1rem);
+    }
+}
+
+@container (max-width: 720px) {
     .cw-stage-surface,
     .cw-canvas-host {
         min-height: 34rem;

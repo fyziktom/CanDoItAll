@@ -47,6 +47,56 @@ public sealed class ConnectorPathPrimitiveTests
         Assert.Contains("Relationship paths now have a named connector primitive", cut.Markup);
         Assert.Contains("Contains", cut.Markup);
     }
+
+    [Fact]
+    public void Factory_uses_port_anchors_when_link_ports_are_present()
+    {
+        var surface = new CanvasWorkbenchSurface
+        {
+            Nodes =
+            [
+                new CanvasWorkbenchNode
+                {
+                    Id = "branch",
+                    X = 0,
+                    Y = 0,
+                    OutputPorts =
+                    [
+                        new CanvasWorkbenchPort { Id = "approved", Label = "Approved" },
+                        new CanvasWorkbenchPort { Id = "default", Label = "Default" }
+                    ]
+                },
+                new CanvasWorkbenchNode
+                {
+                    Id = "qa",
+                    X = 320,
+                    Y = 0,
+                    InputPorts =
+                    [
+                        new CanvasWorkbenchPort { Id = "entry", Label = "Entry" }
+                    ]
+                }
+            ],
+            Links =
+            [
+                new CanvasWorkbenchLink
+                {
+                    SourceId = "branch",
+                    SourcePortId = "default",
+                    TargetId = "qa",
+                    TargetPortId = "entry",
+                    Kind = "branch"
+                }
+            ]
+        };
+
+        var snapshot = ConnectorPathPrimitiveFactory.CreateForWorkbench(surface);
+        var segment = Assert.Single(snapshot.Segments);
+
+        Assert.Equal("branch", segment.Label);
+        Assert.True(segment.StartY > 0);
+        Assert.Equal(0, segment.EndY);
+    }
 }
 
 

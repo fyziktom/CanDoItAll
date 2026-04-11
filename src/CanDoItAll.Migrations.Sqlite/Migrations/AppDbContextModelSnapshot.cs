@@ -2514,6 +2514,14 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("BranchOutcomeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BranchOutcomeTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
@@ -2557,6 +2565,8 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BranchOutcomeId");
 
                     b.HasIndex("StepRunId");
 
@@ -2845,6 +2855,12 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<bool>("AllowsFallback")
                         .HasColumnType("INTEGER");
 
+                    b.Property<double>("CanvasX")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("CanvasY")
+                        .HasColumnType("REAL");
+
                     b.Property<int>("DefaultAllocationPercent")
                         .HasColumnType("INTEGER");
 
@@ -3079,6 +3095,71 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.ToTable("Processes_RunAssignments", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ArtifactExpectationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("StepDefinitionId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtifactExpectationId");
+
+                    b.HasIndex("StepDefinitionId");
+
+                    b.HasIndex("StepDefinitionId", "ArtifactExpectationId")
+                        .IsUnique();
+
+                    b.HasIndex("StepDefinitionId", "DisplayOrder");
+
+                    b.ToTable("Processes_StepArtifactInputs", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("StepDefinitionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StepDefinitionId", "DisplayOrder");
+
+                    b.HasIndex("StepDefinitionId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("Processes_StepBranchOutcomes", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDefinition", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3091,6 +3172,12 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<bool>("AllowsSafeRefusal")
                         .HasColumnType("INTEGER");
 
+                    b.Property<double>("BranchCanvasX")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("BranchCanvasY")
+                        .HasColumnType("REAL");
+
                     b.Property<double>("CanvasX")
                         .HasColumnType("REAL");
 
@@ -3099,6 +3186,12 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.Property<string>("DecisionRightsSummary")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("DecisionRoleRequirementId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("DependsOnBranchOutcomeId")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("DependsOnStepId")
@@ -3161,6 +3254,10 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DecisionRoleRequirementId");
+
+                    b.HasIndex("DependsOnBranchOutcomeId");
+
                     b.HasIndex("DependsOnStepId");
 
                     b.HasIndex("ProcessDefinitionVersionId", "Key")
@@ -3169,6 +3266,40 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasIndex("ProcessDefinitionVersionId", "OrderIndex");
 
                     b.ToTable("Processes_StepDefinitions", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepDependencyDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("DependsOnBranchOutcomeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DependsOnStepId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("StepDefinitionId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DependsOnBranchOutcomeId");
+
+                    b.HasIndex("DependsOnStepId");
+
+                    b.HasIndex("StepDefinitionId");
+
+                    b.HasIndex("StepDefinitionId", "DisplayOrder");
+
+                    b.HasIndex("StepDefinitionId", "DependsOnStepId", "DependsOnBranchOutcomeId")
+                        .IsUnique();
+
+                    b.ToTable("Processes_StepDependencies", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepRoleAssignmentRequirement", b =>
@@ -3264,6 +3395,14 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("SelectedBranchOutcomeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SelectedBranchOutcomeTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Sequence")
                         .HasColumnType("INTEGER");
 
@@ -3295,6 +3434,8 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SelectedBranchOutcomeId");
 
                     b.HasIndex("StepDefinitionId");
 
