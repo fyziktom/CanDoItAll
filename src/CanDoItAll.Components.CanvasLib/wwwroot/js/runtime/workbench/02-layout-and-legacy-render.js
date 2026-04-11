@@ -158,25 +158,45 @@
                 width: hostWidth,
                 height: hostHeight
             };
-            const padding = Math.max(12, 18 * zoom);
-            const contentWidth = Math.max(48, hostWidth - (padding * 2));
-            const columnGap = Math.max(12, 16 * zoom);
-            const hasBothSides = inputPorts.length > 0 && outputPorts.length > 0;
-            const columnWidth = hasBothSides
-                ? Math.max(72, (contentWidth - columnGap) / 2)
-                : contentWidth;
-            const inputColumnLeft = hostLeft + padding;
-            const outputColumnLeft = hasBothSides
-                ? hostRight - padding - columnWidth
-                : inputColumnLeft;
-            const anchorInset = Math.max(10, 12 * zoom);
-            const rowCount = Math.max(inputPorts.length, outputPorts.length, totalCount || 0, 1);
-            const anchorHostPoint = {
-                x: side === "right"
-                    ? outputColumnLeft + columnWidth - anchorInset
-                    : inputColumnLeft + anchorInset,
-                y: resolvePortAnchorHostY(hostBounds, index, rowCount)
-            };
+            const advancedLayout = lateRuntime.getCanvasAdvancedNodePortLayout?.(state, node, hostBounds);
+            let anchorHostPoint = null;
+            if (advancedLayout) {
+                const entries = side === "right"
+                    ? advancedLayout.outputEntries || []
+                    : advancedLayout.inputEntries || [];
+                const matchingEntry = entries.find(entry => entry?.port?.id === (port?.id || "")) || entries[index] || null;
+                if (matchingEntry?.bounds) {
+                    anchorHostPoint = {
+                        x: side === "right"
+                            ? matchingEntry.bounds.right - Math.max(10, 12 * zoom)
+                            : matchingEntry.bounds.left + Math.max(10, 12 * zoom),
+                        y: matchingEntry.bounds.top + (matchingEntry.bounds.height / 2)
+                    };
+                }
+            }
+
+            if (!anchorHostPoint) {
+                const padding = Math.max(12, 18 * zoom);
+                const contentWidth = Math.max(48, hostWidth - (padding * 2));
+                const columnGap = Math.max(12, 16 * zoom);
+                const hasBothSides = inputPorts.length > 0 && outputPorts.length > 0;
+                const columnWidth = hasBothSides
+                    ? Math.max(72, (contentWidth - columnGap) / 2)
+                    : contentWidth;
+                const inputColumnLeft = hostLeft + padding;
+                const outputColumnLeft = hasBothSides
+                    ? hostRight - padding - columnWidth
+                    : inputColumnLeft;
+                const anchorInset = Math.max(10, 12 * zoom);
+                const rowCount = Math.max(inputPorts.length, outputPorts.length, totalCount || 0, 1);
+                anchorHostPoint = {
+                    x: side === "right"
+                        ? outputColumnLeft + columnWidth - anchorInset
+                        : inputColumnLeft + anchorInset,
+                    y: resolvePortAnchorHostY(hostBounds, index, rowCount)
+                };
+            }
+
             const anchorWorldPoint = hostToWorldPoint(state, anchorHostPoint);
             return {
                 x: anchorWorldPoint.x,
@@ -184,7 +204,10 @@
                 side,
                 portId: port?.id || "",
                 label: port?.label || "",
-                direction
+                direction,
+                tone: port?.tone || "",
+                accentColor: port?.accentColor || "",
+                categoryKey: port?.categoryKey || ""
             };
         }
 
@@ -204,7 +227,10 @@
             side,
             portId: port?.id || "",
             label: port?.label || "",
-            direction
+            direction,
+            tone: port?.tone || "",
+            accentColor: port?.accentColor || "",
+            categoryKey: port?.categoryKey || ""
         };
     }
 
@@ -1427,6 +1453,14 @@
                 anchor.title = `${node.title || node.kind || "Node"} ${point.side} anchor`;
                 if (isPrimary) {
                     anchor.classList.add("is-primary");
+                }
+
+                if (point.accentColor) {
+                    const anchorRing = lateRuntime.hexToRgba?.(point.accentColor, 0.2) || "rgba(125, 211, 252, 0.16)";
+                    const anchorShadow = lateRuntime.hexToRgba?.(point.accentColor, 0.18) || "rgba(14, 165, 233, 0.18)";
+                    anchor.style.setProperty("--cw-connector-anchor-accent", point.accentColor);
+                    anchor.style.setProperty("--cw-connector-anchor-ring", anchorRing);
+                    anchor.style.setProperty("--cw-connector-anchor-shadow", anchorShadow);
                 }
 
                 anchor.style.left = `${round(point.x)}px`;

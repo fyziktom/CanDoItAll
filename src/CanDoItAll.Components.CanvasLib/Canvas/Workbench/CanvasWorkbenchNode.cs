@@ -141,6 +141,10 @@ public sealed class CanvasWorkbenchPort
 
     public string Tone { get; set; } = "neutral";
 
+    public string CategoryKey { get; set; } = string.Empty;
+
+    public string AccentColor { get; set; } = string.Empty;
+
     public string Kind { get; set; } = string.Empty;
 
     public bool IsRequired { get; set; }

@@ -175,6 +175,20 @@ public static class ProcessCanvasCatalog
         }
     }
 
+    public static class ConnectionCategories
+    {
+        public const string Structural = "process-structural";
+        public const string DecisionAuthority = "process-decision-authority";
+        public const string ResponsibilityResponsible = "process-responsible";
+        public const string ResponsibilityReviewer = "process-reviewer";
+        public const string ResponsibilityApprover = "process-approver";
+        public const string ResponsibilityBackup = "process-backup";
+        public const string Artifact = "process-artifact";
+        public const string BranchRoute = "process-branch-route";
+        public const string BranchDefault = "process-branch-default";
+        public const string BranchError = "process-branch-error";
+    }
+
     public enum PortFamily
     {
         RoleResponsibilityOutput,
@@ -231,6 +245,10 @@ public static class ProcessCanvasCatalog
         PortCardinality Cardinality,
         CanonicalStatus CanonicalStatus,
         bool IsDynamic = false);
+
+    public readonly record struct ConnectionVisual(
+        string CategoryKey,
+        string AccentColor);
 
     public readonly record struct StepKindProfile(
         bool AllowsStructuralInput,
@@ -378,6 +396,54 @@ public static class ProcessCanvasCatalog
         }
 
         return PortFamily.BranchOutcomeOutput;
+    }
+
+    public static ConnectionVisual GetConnectionVisual(PortFamily family)
+    {
+        return family switch
+        {
+            PortFamily.RoleDecisionAuthorityOutput or
+            PortFamily.StepDecisionAuthorityInput or
+            PortFamily.BranchDecisionRoleInput or
+            PortFamily.RunStepDecisionAuthorityInput
+                => new ConnectionVisual(ConnectionCategories.DecisionAuthority, "#8b5cf6"),
+            PortFamily.StepStructuralInput or
+            PortFamily.StepStructuralOutput or
+            PortFamily.BranchStepInput or
+            PortFamily.RunStepStructuralInput or
+            PortFamily.RunStepStructuralOutput or
+            PortFamily.RunBranchStepInput
+                => new ConnectionVisual(ConnectionCategories.Structural, "#2563eb"),
+            PortFamily.StepArtifactInput or
+            PortFamily.StepArtifactOutput or
+            PortFamily.RunStepArtifactInput or
+            PortFamily.RunStepArtifactOutput
+                => new ConnectionVisual(ConnectionCategories.Artifact, "#db2777"),
+            PortFamily.BranchDefaultOutput
+                => new ConnectionVisual(ConnectionCategories.BranchDefault, "#64748b"),
+            PortFamily.BranchErrorOutput
+                => new ConnectionVisual(ConnectionCategories.BranchError, "#dc2626"),
+            PortFamily.BranchOutcomeOutput or
+            PortFamily.RunBranchOutcomeOutput
+                => new ConnectionVisual(ConnectionCategories.BranchRoute, "#7c3aed"),
+            _ => new ConnectionVisual(ConnectionCategories.Structural, "#2563eb")
+        };
+    }
+
+    public static ConnectionVisual GetResponsibilityVisual(ProcessResponsibilityKind responsibilityKind)
+    {
+        return responsibilityKind switch
+        {
+            ProcessResponsibilityKind.Responsible
+                => new ConnectionVisual(ConnectionCategories.ResponsibilityResponsible, "#0ea5e9"),
+            ProcessResponsibilityKind.Reviewer
+                => new ConnectionVisual(ConnectionCategories.ResponsibilityReviewer, "#6366f1"),
+            ProcessResponsibilityKind.Approver
+                => new ConnectionVisual(ConnectionCategories.ResponsibilityApprover, "#16a34a"),
+            ProcessResponsibilityKind.Backup
+                => new ConnectionVisual(ConnectionCategories.ResponsibilityBackup, "#d97706"),
+            _ => throw new ArgumentOutOfRangeException(nameof(responsibilityKind), responsibilityKind, null)
+        };
     }
 
     private static string BuildDynamicPortId(string prefix, Guid? id, string key, string title, string fallbackPrefix)

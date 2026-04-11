@@ -389,6 +389,8 @@
                 label: (port?.label || port?.id || "Port").toString(),
                 side: (port?.side || defaultSide || "").toString().trim().toLowerCase() || defaultSide,
                 tone: (port?.tone || "neutral").toString(),
+                categoryKey: (port?.categoryKey || "").toString(),
+                accentColor: (port?.accentColor || "").toString(),
                 kind: (port?.kind || "").toString(),
                 isRequired: !!port?.isRequired
             }));

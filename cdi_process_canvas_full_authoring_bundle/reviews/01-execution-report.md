@@ -25,6 +25,18 @@
 - `proof/screenshots/definition-canvas-1280.png`
 - `proof/screenshots/branching-process-canvas-v2.png`
 - `proof/screenshots/runtime-canvas-viewport-published-v3.png`
+- `proof/screenshots/process-canvas-zoom-75-badge-spacing-and-colors.png`
+- `proof/screenshots/process-canvas-zoom-100-badge-spacing-and-colors.png`
+- `proof/screenshots/process-canvas-zoom-140-badge-spacing-and-colors.png`
+
+## Follow-up 2026-04-11
+
+- `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~ProcessCanvasSurfaceFactoryTests|FullyQualifiedName~ProcessCanvasCatalogTests"`
+- `Result: Passed (11/11)`
+- `Playwright MCP route: /processes -> Branching code review and merge governance -> Steps -> maximized definition canvas`
+- `Validated live category-colored process pills and matching curves for structural, decision-authority, responsibility, approver, backup, artifact, default-route, and error-route connections.`
+- `Validated zoom packing at 75%, 100%, and 140% with the new advanced-node layout so stacked badges stay compact instead of opening excessive vertical gaps.`
+- `Fresh reload console check after opening the Steps canvas returned 0 error messages on the current document.`
 
 ## Subbundle Gate Results
 

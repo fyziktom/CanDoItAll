@@ -366,6 +366,104 @@
         };
     }
 
+    function resolveCanvasPortVisualStyle(port, paletteStyle) {
+        const accentColor = (port?.accentColor || "").trim();
+        if (accentColor) {
+            return {
+                categoryKey: port?.categoryKey || "",
+                accentColor,
+                fill: hexToRgba(accentColor, 0.16),
+                stroke: hexToRgba(accentColor, 0.44),
+                text: accentColor,
+                anchor: hexToRgba(accentColor, 0.96),
+                halo: hexToRgba(accentColor, 0.2),
+                line: hexToRgba(accentColor, 0.88)
+            };
+        }
+
+        switch ((port?.tone || "").toLowerCase()) {
+            case "accent":
+                return {
+                    categoryKey: port?.categoryKey || "",
+                    accentColor: "#3b82f6",
+                    fill: "rgba(59, 130, 246, 0.18)",
+                    stroke: "rgba(37, 99, 235, 0.48)",
+                    text: "rgba(219, 234, 254, 0.98)",
+                    anchor: "rgba(59, 130, 246, 0.94)",
+                    halo: "rgba(59, 130, 246, 0.18)",
+                    line: "rgba(59, 130, 246, 0.88)"
+                };
+            case "success":
+                return {
+                    categoryKey: port?.categoryKey || "",
+                    accentColor: "#22c55e",
+                    fill: "rgba(34, 197, 94, 0.18)",
+                    stroke: "rgba(22, 163, 74, 0.48)",
+                    text: "rgba(220, 252, 231, 0.98)",
+                    anchor: "rgba(34, 197, 94, 0.92)",
+                    halo: "rgba(34, 197, 94, 0.18)",
+                    line: "rgba(34, 197, 94, 0.86)"
+                };
+            case "warning":
+            case "warn":
+                return {
+                    categoryKey: port?.categoryKey || "",
+                    accentColor: "#f59e0b",
+                    fill: "rgba(245, 158, 11, 0.18)",
+                    stroke: "rgba(217, 119, 6, 0.48)",
+                    text: "rgba(254, 243, 199, 0.98)",
+                    anchor: "rgba(245, 158, 11, 0.92)",
+                    halo: "rgba(245, 158, 11, 0.18)",
+                    line: "rgba(245, 158, 11, 0.88)"
+                };
+            case "danger":
+                return {
+                    categoryKey: port?.categoryKey || "",
+                    accentColor: "#ef4444",
+                    fill: "rgba(239, 68, 68, 0.18)",
+                    stroke: "rgba(220, 38, 38, 0.48)",
+                    text: "rgba(254, 226, 226, 0.98)",
+                    anchor: "rgba(239, 68, 68, 0.92)",
+                    halo: "rgba(239, 68, 68, 0.18)",
+                    line: "rgba(239, 68, 68, 0.88)"
+                };
+            default:
+                return {
+                    categoryKey: port?.categoryKey || "",
+                    accentColor: "",
+                    fill: paletteStyle?.subtleFill || "rgba(255, 255, 255, 0.94)",
+                    stroke: paletteStyle?.subtleStroke || "rgba(148, 163, 184, 0.34)",
+                    text: paletteStyle?.subtleText || "rgba(71, 85, 105, 0.96)",
+                    anchor: paletteStyle?.iconFill || "rgba(71, 85, 105, 0.88)",
+                    halo: "rgba(148, 163, 184, 0.16)",
+                    line: paletteStyle?.iconFill || "rgba(71, 85, 105, 0.82)"
+                };
+        }
+    }
+
+    function findNodePort(node, portId, direction) {
+        if (!node || !portId) {
+            return null;
+        }
+
+        const ports = direction === "input"
+            ? (Array.isArray(node.inputPorts) ? node.inputPorts : [])
+            : (Array.isArray(node.outputPorts) ? node.outputPorts : []);
+        return ports.find(port => port?.id === portId) || null;
+    }
+
+    function resolveCanvasLinkConnectionStyle(sourcePort, targetPort) {
+        if (sourcePort) {
+            return resolveCanvasPortVisualStyle(sourcePort, null);
+        }
+
+        if (targetPort) {
+            return resolveCanvasPortVisualStyle(targetPort, null);
+        }
+
+        return null;
+    }
+
     function resolveCanvasLinkStyle(link, options) {
         if (options?.isHovered) {
             return {
@@ -377,11 +475,29 @@
         }
 
         if (options?.isPreview) {
+            if (options?.connectionStyle) {
+                return {
+                    stroke: options.connectionStyle.line,
+                    arrowFill: options.connectionStyle.anchor,
+                    lineWidth: 3,
+                    lineDash: [10, 6]
+                };
+            }
+
             return {
                 stroke: "rgba(124, 58, 237, 0.92)",
                 arrowFill: "rgba(109, 40, 217, 0.96)",
                 lineWidth: 3,
                 lineDash: [10, 6]
+            };
+        }
+
+        if (options?.connectionStyle) {
+            return {
+                stroke: options.connectionStyle.line,
+                arrowFill: options.connectionStyle.anchor,
+                lineWidth: link?.isUserAuthored ? 3 : 2.4,
+                lineDash: link?.isUserAuthored ? [12, 8] : []
             };
         }
 
@@ -553,12 +669,16 @@
             const targetSide = sourceSide === "right" ? "left" : "right";
             const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, source, sourceSide, link.sourcePortId, "output"));
             const targetAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, target, targetSide, link.targetPortId, "input"));
+            const connectionStyle = resolveCanvasLinkConnectionStyle(
+                findNodePort(source, link.sourcePortId, "output"),
+                findNodePort(target, link.targetPortId, "input"));
             const retainedKey = getLinkRetainedKey(link, index);
             const geometry = drawCanvasLink(surface.context, link, sourceAnchor, targetAnchor, {
                 key: retainedKey,
                 sourceSide: sourceAnchor.side || sourceSide,
                 targetSide: targetAnchor.side || targetSide,
-                isHovered: state.surface?.mode === "delete" && state.hoveredDeleteLinkKey === retainedKey
+                isHovered: state.surface?.mode === "delete" && state.hoveredDeleteLinkKey === retainedKey,
+                connectionStyle
             });
             nextEntries.set(retainedKey, {
                 signature: JSON.stringify({
@@ -615,11 +735,15 @@
                 const targetSide = sourceSide === "right" ? "left" : "right";
                 const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewSource, sourceSide, previewLink.sourcePortId, "output"));
                 const targetAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewTarget, targetSide, previewLink.targetPortId, "input"));
+                const previewConnectionStyle = resolveCanvasLinkConnectionStyle(
+                    findNodePort(previewSource, previewLink.sourcePortId, "output"),
+                    findNodePort(previewTarget, previewLink.targetPortId, "input"));
                 const previewGeometry = drawCanvasLink(surface.context, previewLink, sourceAnchor, targetAnchor, {
                     isPreview: true,
                     sourceSide: sourceAnchor.side || sourceSide,
                     targetSide: targetAnchor.side || targetSide,
-                    forceArrow: true
+                    forceArrow: true,
+                    connectionStyle: previewConnectionStyle
                 });
                 state.previewLink = {
                     sourceId: dependencySourceId,
@@ -638,11 +762,15 @@
                     ? "right"
                     : "left";
                 const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewSource, sourceSide, previewLink.sourcePortId, "output"));
+                const previewConnectionStyle = resolveCanvasLinkConnectionStyle(
+                    findNodePort(previewSource, previewLink.sourcePortId, "output"),
+                    null);
                 const previewGeometry = drawCanvasLink(surface.context, previewLink, sourceAnchor, state.pointerHostPoint, {
                     isPreview: true,
                     sourceSide: sourceAnchor.side || sourceSide,
                     targetSide: "left",
-                    forceArrow: true
+                    forceArrow: true,
+                    connectionStyle: previewConnectionStyle
                 });
                 state.previewLink = {
                     sourceId: dependencySourceId,
@@ -664,6 +792,13 @@
                 : null;
             const previewEndpoint = previewTarget || state.pointerHostPoint;
             if (previewSource && previewEndpoint) {
+                const previewSourceNode = state.lookups.byId.get(state.connectionDraft.nodeId) || null;
+                const previewTargetNode = state.connectionTarget?.nodeId
+                    ? state.lookups.byId.get(state.connectionTarget.nodeId) || null
+                    : null;
+                const previewConnectionStyle = resolveCanvasLinkConnectionStyle(
+                    findNodePort(previewSourceNode, state.connectionDraft.portId || "", "output"),
+                    findNodePort(previewTargetNode, state.connectionTarget?.portId || "", "input"));
                 const previewGeometry = drawCanvasLink(
                     surface.context,
                     {
@@ -680,7 +815,8 @@
                         isPreview: true,
                         sourceSide: previewSource.side || state.connectionDraft.side || "right",
                         targetSide: previewTarget?.side || state.connectionTarget?.side || "left",
-                        forceArrow: true
+                        forceArrow: true,
+                        connectionStyle: previewConnectionStyle
                     });
                 state.previewLink = {
                     sourceId: state.connectionDraft.nodeId,
@@ -1051,54 +1187,139 @@
         });
     }
 
-    function resolveCanvasPortFill(paletteStyle, tone) {
-        switch ((tone || "").toLowerCase()) {
-            case "accent":
-                return {
-                    fill: "rgba(59, 130, 246, 0.18)",
-                    stroke: "rgba(37, 99, 235, 0.48)",
-                    text: "rgba(219, 234, 254, 0.98)",
-                    anchor: "rgba(59, 130, 246, 0.94)"
-                };
-            case "success":
-                return {
-                    fill: "rgba(34, 197, 94, 0.18)",
-                    stroke: "rgba(22, 163, 74, 0.48)",
-                    text: "rgba(220, 252, 231, 0.98)",
-                    anchor: "rgba(34, 197, 94, 0.92)"
-                };
-            case "warning":
-                return {
-                    fill: "rgba(245, 158, 11, 0.18)",
-                    stroke: "rgba(217, 119, 6, 0.48)",
-                    text: "rgba(254, 243, 199, 0.98)",
-                    anchor: "rgba(245, 158, 11, 0.92)"
-                };
-            case "danger":
-                return {
-                    fill: "rgba(239, 68, 68, 0.18)",
-                    stroke: "rgba(220, 38, 38, 0.48)",
-                    text: "rgba(254, 226, 226, 0.98)",
-                    anchor: "rgba(239, 68, 68, 0.92)"
-                };
-            default:
-                return {
-                    fill: paletteStyle.subtleFill,
-                    stroke: paletteStyle.subtleStroke,
-                    text: paletteStyle.subtleText,
-                    anchor: paletteStyle.iconFill
-                };
+    function measureCanvasWrappedLines(text, maxWidth, maxLines, font) {
+        const normalizedText = (text || "").trim();
+        if (!normalizedText) {
+            return [];
         }
+
+        const measureService = getTextMeasureService();
+        if (measureService && typeof measureService.measure === "function") {
+            const result = measureService.measure({
+                text: normalizedText,
+                maxWidth,
+                maxLines,
+                font
+            });
+            if (Array.isArray(result?.lines) && result.lines.length > 0) {
+                return result.lines.map(line => line.text);
+            }
+        }
+
+        return [normalizedText];
     }
 
-    function resolveCanvasPortCenterY(hostBounds, index, totalCount) {
-        const portTop = hostBounds.top + Math.min(86, hostBounds.height * 0.34);
-        const portBottom = hostBounds.bottom - Math.min(24, hostBounds.height * 0.12);
-        if (totalCount <= 1) {
-            return hostBounds.top + (hostBounds.height / 2);
+    function getCanvasAdvancedNodePortLayout(state, node, hostBounds, detailMode) {
+        const zoom = Math.max(state?.ui?.zoom || 1, 0.01);
+        const resolvedDetailMode = detailMode ||
+            (zoom <= 0.3
+                ? "micro"
+                : zoom <= 0.55
+                    ? "compact"
+                    : "full");
+        const padding = Math.max(10, 14 * zoom);
+        const contentLeft = hostBounds.left + padding;
+        const contentWidth = Math.max(48, hostBounds.width - (padding * 2));
+        const inputPorts = Array.isArray(node?.inputPorts) ? node.inputPorts : [];
+        const outputPorts = Array.isArray(node?.outputPorts) ? node.outputPorts : [];
+        const portCount = Math.max(inputPorts.length, outputPorts.length);
+        const hasBothSides = inputPorts.length > 0 && outputPorts.length > 0;
+        const columnGap = Math.max(10, 12 * zoom);
+        const columnWidth = hasBothSides
+            ? Math.max(72, (contentWidth - columnGap) / 2)
+            : contentWidth;
+        const inputColumnLeft = contentLeft;
+        const outputColumnLeft = hasBothSides
+            ? hostBounds.right - padding - columnWidth
+            : contentLeft;
+        const kindBadgeHeight = Math.max(20, 24 * zoom);
+        const titleLineHeight = Math.max(12, 16 * zoom);
+        const supportingLineHeight = Math.max(9, 12 * zoom);
+        const titleGap = Math.max(3, 4 * zoom);
+        const supportingGap = Math.max(5, 6 * zoom);
+        const headerGap = Math.max(5, 6 * zoom);
+        const portSectionGap = Math.max(6, 7 * zoom);
+        const titleLines = measureCanvasWrappedLines(
+            node?.title || "Untitled",
+            contentWidth,
+            resolvedDetailMode === "compact" ? 1 : 2,
+            {
+                family: "\"DM Sans\", \"Segoe UI\", sans-serif",
+                sizePx: Math.max(10, 16 * zoom),
+                weight: 700,
+                lineHeightPx: titleLineHeight
+            });
+        const supportingText = node?.subtitle || node?.leadText || "";
+        const supportingLines = measureCanvasWrappedLines(
+            supportingText,
+            contentWidth,
+            resolvedDetailMode === "compact" ? 1 : 2,
+            {
+                family: "\"DM Sans\", \"Segoe UI\", sans-serif",
+                sizePx: Math.max(8, 11.5 * zoom),
+                weight: 500,
+                lineHeightPx: supportingLineHeight
+            });
+        const titleTop = hostBounds.top + padding + kindBadgeHeight + Math.max(8, 10 * zoom);
+        const supportingTop = titleTop +
+            (titleLines.length * titleLineHeight) +
+            titleGap +
+            Math.max(3, 5 * zoom);
+
+        let cursorY = hostBounds.top + padding;
+        cursorY += kindBadgeHeight;
+        cursorY += (titleLines.length * titleLineHeight) + titleGap;
+        if (supportingLines.length > 0) {
+            cursorY += (supportingLines.length * supportingLineHeight) + supportingGap;
         }
 
-        return portTop + ((portBottom - portTop) * index / Math.max(1, totalCount - 1));
+        const headerBaselineY = cursorY + headerGap;
+        const portAreaTop = headerBaselineY + portSectionGap;
+        const footerHeight = Math.max(18, 20 * zoom);
+        const footerTop = hostBounds.bottom - padding - footerHeight;
+        const minimumRowCount = Math.max(1, portCount);
+        let portHeight = Math.max(18, 20 * zoom);
+        let portGap = Math.max(3, 4.5 * zoom);
+        const availableHeight = Math.max(portHeight, footerTop - portAreaTop);
+        let requiredHeight = (minimumRowCount * portHeight) + (Math.max(0, minimumRowCount - 1) * portGap);
+        if (requiredHeight > availableHeight && minimumRowCount > 1) {
+            portGap = Math.max(1.5 * zoom, (availableHeight - (minimumRowCount * portHeight)) / (minimumRowCount - 1));
+            requiredHeight = (minimumRowCount * portHeight) + (Math.max(0, minimumRowCount - 1) * portGap);
+            if (requiredHeight > availableHeight) {
+                portHeight = Math.max(14, (availableHeight - (Math.max(0, minimumRowCount - 1) * Math.max(1.5 * zoom, portGap))) / minimumRowCount);
+                portGap = Math.max(1.5 * zoom, (availableHeight - (minimumRowCount * portHeight)) / Math.max(1, minimumRowCount - 1));
+            }
+        }
+
+        const buildPortEntries = (ports, side, columnLeft) => ports.map((port, index) => {
+            const top = portAreaTop + (index * (portHeight + portGap));
+            return {
+                port,
+                side,
+                bounds: buildRect(columnLeft, top, columnWidth, portHeight)
+            };
+        });
+
+        return {
+            padding,
+            contentLeft,
+            contentWidth,
+            titleLines,
+            titleLineHeight,
+            supportingLines,
+            supportingLineHeight,
+            kindBadgeHeight,
+            titleTop,
+            supportingTop,
+            inputColumnLeft,
+            outputColumnLeft,
+            columnWidth,
+            headerBaselineY,
+            footerHeight,
+            footerTop,
+            inputEntries: buildPortEntries(inputPorts, "left", inputColumnLeft),
+            outputEntries: buildPortEntries(outputPorts, "right", outputColumnLeft)
+        };
     }
 
     function buildCanvasPortAnchorBounds(bounds, side, zoom) {
@@ -1147,7 +1368,7 @@
     }
 
     function drawCanvasPortPill(context, bounds, port, side, paletteStyle, zoom) {
-        const toneStyle = resolveCanvasPortFill(paletteStyle, port?.tone);
+        const toneStyle = resolveCanvasPortVisualStyle(port, paletteStyle);
         drawRoundedPanel(
             context,
             bounds,
@@ -1184,12 +1405,10 @@
     function renderCanvasAdvancedNode(context, state, node, hostBounds, accent, detailMode, meta) {
         const isSelected = state.selectedIds.has(node.id);
         const paletteStyle = resolveCanvasNodePaletteStyle(node, accent, isSelected);
-        const padding = Math.max(12, 18 * state.ui.zoom);
-        const contentLeft = hostBounds.left + padding;
-        const contentWidth = Math.max(48, hostBounds.width - (padding * 2));
         const inputPorts = Array.isArray(node.inputPorts) ? node.inputPorts : [];
         const outputPorts = Array.isArray(node.outputPorts) ? node.outputPorts : [];
         const portCount = Math.max(inputPorts.length, outputPorts.length);
+        const layout = getCanvasAdvancedNodePortLayout(state, node, hostBounds, detailMode);
 
         drawRoundedPanel(
             context,
@@ -1205,14 +1424,14 @@
         context.fillRect(hostBounds.left + 8, hostBounds.top + 8, Math.max(6, 8 * state.ui.zoom), Math.max(30, hostBounds.height - 16));
         context.restore();
 
-        let cursorY = hostBounds.top + padding;
+        let cursorY = hostBounds.top + layout.padding;
         context.save();
         setCanvasFont(context, 700, Math.max(8, 10.5 * state.ui.zoom));
         context.fillStyle = paletteStyle.labelText;
-        context.fillText(node.kind || node.family || "item", contentLeft + Math.max(20, 26 * state.ui.zoom), cursorY + Math.max(7, 10 * state.ui.zoom));
+        context.fillText(node.kind || node.family || "item", layout.contentLeft + Math.max(20, 26 * state.ui.zoom), cursorY + Math.max(7, 10 * state.ui.zoom));
         drawCanvasBadgePill(
             context,
-            buildRect(contentLeft, cursorY, Math.max(18, 22 * state.ui.zoom), Math.max(18, 22 * state.ui.zoom)),
+            buildRect(layout.contentLeft, cursorY, Math.max(18, 22 * state.ui.zoom), Math.max(18, 22 * state.ui.zoom)),
             (node.icon || node.kind || "n").slice(0, 1).toUpperCase(),
             paletteStyle.iconFill,
             paletteStyle.iconStroke,
@@ -1220,97 +1439,69 @@
             Math.max(8, 9 * state.ui.zoom));
         context.restore();
 
-        cursorY += Math.max(30, 36 * state.ui.zoom);
         context.save();
         setCanvasFont(context, 700, Math.max(10, 16 * state.ui.zoom));
-        const primitives = getCanvasRuntimePrimitives();
-        const titleLines = primitives?.wrapText
-            ? primitives.wrapText(context, node.title || "Untitled", contentWidth, detailMode === "compact" ? 1 : 2)
-            : [node.title || "Untitled"];
         drawCanvasTextLines(
             context,
-            titleLines,
-            contentLeft,
-            cursorY + Math.max(8, 12 * state.ui.zoom),
-            Math.max(12, 18 * state.ui.zoom),
+            layout.titleLines,
+            layout.contentLeft,
+            layout.titleTop,
+            layout.titleLineHeight,
             paletteStyle.titleText);
-        cursorY += (titleLines.length * Math.max(12, 18 * state.ui.zoom)) + Math.max(4, 6 * state.ui.zoom);
         context.restore();
 
-        if (node.subtitle || node.leadText) {
+        if (layout.supportingLines.length > 0) {
             context.save();
             setCanvasFont(context, 500, Math.max(8, 11.5 * state.ui.zoom));
             context.fillStyle = paletteStyle.secondaryText;
-            const supportingText = node.subtitle || node.leadText || "";
-            const supportingLines = primitives?.wrapText
-                ? primitives.wrapText(context, supportingText, contentWidth, detailMode === "compact" ? 1 : 2)
-                : [supportingText];
             drawCanvasTextLines(
                 context,
-                supportingLines,
-                contentLeft,
-                cursorY + Math.max(7, 10 * state.ui.zoom),
-                Math.max(10, 14 * state.ui.zoom),
+                layout.supportingLines,
+                layout.contentLeft,
+                layout.supportingTop,
+                layout.supportingLineHeight,
                 paletteStyle.secondaryText);
-            cursorY += (supportingLines.length * Math.max(10, 14 * state.ui.zoom)) + Math.max(8, 10 * state.ui.zoom);
             context.restore();
         }
-
-        const columnGap = Math.max(12, 16 * state.ui.zoom);
-        const hasBothSides = inputPorts.length > 0 && outputPorts.length > 0;
-        const columnWidth = hasBothSides
-            ? Math.max(72, (contentWidth - columnGap) / 2)
-            : contentWidth;
-        const inputColumnLeft = contentLeft;
-        const outputColumnLeft = hasBothSides
-            ? hostBounds.right - padding - columnWidth
-            : contentLeft;
-        const portHeight = Math.max(20, 24 * state.ui.zoom);
 
         context.save();
         setCanvasFont(context, 700, Math.max(8, 9 * state.ui.zoom));
         context.fillStyle = paletteStyle.labelText;
         if (inputPorts.length > 0) {
             context.textAlign = "left";
-            context.fillText("INPUTS", inputColumnLeft, cursorY + Math.max(6, 8 * state.ui.zoom));
+            context.fillText("INPUTS", layout.inputColumnLeft, layout.headerBaselineY);
         }
 
         if (outputPorts.length > 0) {
             context.textAlign = "right";
-            context.fillText("OUTPUTS", outputColumnLeft + columnWidth, cursorY + Math.max(6, 8 * state.ui.zoom));
+            context.fillText("OUTPUTS", layout.outputColumnLeft + layout.columnWidth, layout.headerBaselineY);
         }
         context.restore();
 
         meta.portCount = portCount;
-        const minimumPortRows = Math.max(1, portCount);
-        for (let index = 0; index < inputPorts.length; index += 1) {
-            const centerY = resolveCanvasPortCenterY(hostBounds, index, minimumPortRows);
-            const portBounds = buildRect(inputColumnLeft, centerY - (portHeight / 2), columnWidth, portHeight);
+        for (const entry of layout.inputEntries) {
             drawCanvasPortPill(
                 context,
-                portBounds,
-                inputPorts[index],
+                entry.bounds,
+                entry.port,
                 "left",
                 paletteStyle,
                 state.ui.zoom);
-            registerCanvasPortHotZone(state, node, portBounds, inputPorts[index], "left", "input");
+            registerCanvasPortHotZone(state, node, entry.bounds, entry.port, "left", "input");
         }
 
-        for (let index = 0; index < outputPorts.length; index += 1) {
-            const centerY = resolveCanvasPortCenterY(hostBounds, index, minimumPortRows);
-            const portBounds = buildRect(outputColumnLeft, centerY - (portHeight / 2), columnWidth, portHeight);
+        for (const entry of layout.outputEntries) {
             drawCanvasPortPill(
                 context,
-                portBounds,
-                outputPorts[index],
+                entry.bounds,
+                entry.port,
                 "right",
                 paletteStyle,
                 state.ui.zoom);
-            registerCanvasPortHotZone(state, node, portBounds, outputPorts[index], "right", "output");
+            registerCanvasPortHotZone(state, node, entry.bounds, entry.port, "right", "output");
         }
 
-        const footerHeight = Math.max(18, 22 * state.ui.zoom);
-        const footerPillBounds = buildRect(contentLeft, hostBounds.bottom - padding - footerHeight, Math.max(74, 88 * state.ui.zoom), footerHeight);
+        const footerPillBounds = buildRect(layout.contentLeft, layout.footerTop, Math.max(74, 88 * state.ui.zoom), layout.footerHeight);
         drawCanvasBadgePill(
             context,
             footerPillBounds,
@@ -1526,5 +1717,5 @@
         drawCanvasCollapseControl(context, state, node, paletteStyle);
     }
 
-    Object.assign(shared, { getCanvasRuntimePrimitives, createFallbackHitRegistry, createCanvasHitRegistry, createCanvasSurfaceHost, destroyCanvasSurfaceHost, hexToRgba, resolveNodeAccentColor, resolveAnchorRect, buildRect, boundsToHitRect, projectSceneBounds, getNodeSceneBounds, clearSceneHotZones, registerSceneHotZone, getSceneHitAtPoint, getSceneHitAtEvent, resolveHitNode, clearScenePopoverHover, syncSceneHoverState, resolveCanvasNodeDetailMode, setCanvasFont, drawCanvasTextLines, drawRoundedPanel, requestSceneImage, buildCanvasSnapshotBounds, reconcileRetainedLayer, drawCanvasFrame, renderGroupFrames, drawCanvasLink, renderLinks, drawCanvasBadgePill, drawCanvasProgressBadge, drawCanvasAnnotationBadges, drawNodeMediaPreview, renderCanvasMicroNode, renderCanvasInlineTextNode, renderCanvasStandardNode, renderCanvasAdvancedNode });
+    Object.assign(shared, { getCanvasRuntimePrimitives, createFallbackHitRegistry, createCanvasHitRegistry, createCanvasSurfaceHost, destroyCanvasSurfaceHost, hexToRgba, resolveNodeAccentColor, resolveAnchorRect, buildRect, boundsToHitRect, projectSceneBounds, getNodeSceneBounds, clearSceneHotZones, registerSceneHotZone, getSceneHitAtPoint, getSceneHitAtEvent, resolveHitNode, clearScenePopoverHover, syncSceneHoverState, resolveCanvasNodeDetailMode, setCanvasFont, drawCanvasTextLines, drawRoundedPanel, requestSceneImage, buildCanvasSnapshotBounds, reconcileRetainedLayer, drawCanvasFrame, renderGroupFrames, drawCanvasLink, renderLinks, drawCanvasBadgePill, drawCanvasProgressBadge, drawCanvasAnnotationBadges, drawNodeMediaPreview, renderCanvasMicroNode, renderCanvasInlineTextNode, getCanvasAdvancedNodePortLayout, renderCanvasStandardNode, renderCanvasAdvancedNode });
 })();

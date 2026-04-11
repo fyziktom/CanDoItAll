@@ -283,6 +283,10 @@ public sealed class ProcessCanvasSurfaceFactoryTests
         Assert.Contains(implementationNode.InputPorts, port =>
             port.Id == ProcessCanvasCatalog.DefinitionPorts.GetStepResponsibilityInputPortId(ProcessResponsibilityKind.Responsible) &&
             port.IsRequired);
+        Assert.Contains(implementationNode.InputPorts, port =>
+            port.Id == ProcessCanvasCatalog.DefinitionPorts.GetStepResponsibilityInputPortId(ProcessResponsibilityKind.Responsible) &&
+            port.CategoryKey == ProcessCanvasCatalog.ConnectionCategories.ResponsibilityResponsible &&
+            port.AccentColor == "#0ea5e9");
 
         var reviewNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildDefinitionStepNodeId(editor.Steps[1]));
         Assert.Contains(reviewNode.InputPorts, port => port.Id == ProcessCanvasCatalog.DefinitionPorts.StepStructuralInput);
@@ -291,11 +295,21 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             port.IsRequired);
         Assert.Contains(reviewNode.InputPorts, port => port.Id == ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs);
         Assert.Contains(reviewNode.InputPorts, port => port.Id == ProcessCanvasCatalog.DefinitionPorts.StepDecisionAuthorityInput);
+        Assert.Contains(reviewNode.InputPorts, port =>
+            port.Id == ProcessCanvasCatalog.DefinitionPorts.StepStructuralInput &&
+            port.CategoryKey == ProcessCanvasCatalog.ConnectionCategories.Structural &&
+            port.AccentColor == "#2563eb");
+        Assert.Contains(reviewNode.InputPorts, port =>
+            port.Id == ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs &&
+            port.CategoryKey == ProcessCanvasCatalog.ConnectionCategories.Artifact &&
+            port.AccentColor == "#db2777");
 
         var reviewerRoleNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildDefinitionRoleNodeId(editor.Roles[0]));
         Assert.Equal(ProcessCanvasCatalog.OrderedResponsibilities.Count + 1, reviewerRoleNode.OutputPorts.Count);
         Assert.Contains(reviewerRoleNode.OutputPorts, port =>
-            port.Id == ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind.Reviewer));
+            port.Id == ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind.Reviewer) &&
+            port.CategoryKey == ProcessCanvasCatalog.ConnectionCategories.ResponsibilityReviewer &&
+            port.AccentColor == "#6366f1");
 
         Assert.Contains(surface.Links, link =>
             link.SourceId == ProcessCanvasBranching.BuildDefinitionRoleNodeId(editor.Roles[1]) &&

@@ -215,8 +215,8 @@ public sealed class ProcessCanvasSurfaceFactory
                     Tone = "danger"
                 }
             ],
-            InputPorts = BuildDefinitionStepInputPorts(step, rolesById, profile),
-            OutputPorts = BuildDefinitionStepOutputPorts(step, profile)
+            InputPorts = DecorateProcessPorts(BuildDefinitionStepInputPorts(step, rolesById, profile)),
+            OutputPorts = DecorateProcessPorts(BuildDefinitionStepOutputPorts(step, profile))
         };
     }
 
@@ -307,8 +307,8 @@ public sealed class ProcessCanvasSurfaceFactory
                     Tone = "danger"
                 }
             ],
-            InputPorts = BuildDefinitionBranchInputPorts(decisionRoleTitle),
-            OutputPorts = outcomes.Select(BuildDefinitionBranchOutputPort).ToList()
+            InputPorts = DecorateProcessPorts(BuildDefinitionBranchInputPorts(decisionRoleTitle)),
+            OutputPorts = DecorateProcessPorts(outcomes.Select(BuildDefinitionBranchOutputPort))
         };
     }
 
@@ -372,7 +372,7 @@ public sealed class ProcessCanvasSurfaceFactory
                     Tone = "accent"
                 }
             ],
-            OutputPorts = BuildDefinitionRoleOutputPorts(role, editor)
+            OutputPorts = DecorateProcessPorts(BuildDefinitionRoleOutputPorts(role, editor))
         };
     }
 
@@ -462,8 +462,8 @@ public sealed class ProcessCanvasSurfaceFactory
                     Tone = "neutral"
                 }
             ],
-            InputPorts = BuildRunStepInputPorts(stepRun, profile),
-            OutputPorts = BuildRunStepOutputPorts(stepRun, profile)
+            InputPorts = DecorateProcessPorts(BuildRunStepInputPorts(stepRun, profile)),
+            OutputPorts = DecorateProcessPorts(BuildRunStepOutputPorts(stepRun, profile))
         };
     }
 
@@ -509,7 +509,7 @@ public sealed class ProcessCanvasSurfaceFactory
                     Tone = routedDependents == 0 ? "neutral" : "info"
                 }
             ],
-            InputPorts =
+            InputPorts = DecorateProcessPorts(
             [
                 new CanvasWorkbenchPort
                 {
@@ -519,10 +519,9 @@ public sealed class ProcessCanvasSurfaceFactory
                     Tone = "neutral",
                     Kind = "source"
                 }
-            ],
-            OutputPorts = stepRun.AvailableBranchOutcomes
-                .Select(BuildRunBranchOutputPort)
-                .ToList()
+            ]),
+            OutputPorts = DecorateProcessPorts(stepRun.AvailableBranchOutcomes
+                .Select(BuildRunBranchOutputPort))
         };
     }
 
@@ -1433,6 +1432,103 @@ public sealed class ProcessCanvasSurfaceFactory
             ProcessStepRunStatus.WaitingApproval => "#7c3aed",
             _ => "#475569"
         };
+    }
+
+    private static List<CanvasWorkbenchPort> DecorateProcessPorts(IEnumerable<CanvasWorkbenchPort> ports)
+    {
+        return ports
+            .Select(DecorateProcessPort)
+            .ToList();
+    }
+
+    private static CanvasWorkbenchPort DecorateProcessPort(CanvasWorkbenchPort port)
+    {
+        ArgumentNullException.ThrowIfNull(port);
+
+        var visual = ResolveProcessPortVisual(port);
+        port.CategoryKey = visual.CategoryKey;
+        port.AccentColor = visual.AccentColor;
+        return port;
+    }
+
+    private static ProcessCanvasCatalog.ConnectionVisual ResolveProcessPortVisual(CanvasWorkbenchPort port)
+    {
+        if (ProcessCanvasCatalog.DefinitionPorts.TryGetRoleResponsibilityKind(port.Id, out var responsibilityKind) ||
+            ProcessCanvasCatalog.DefinitionPorts.TryGetStepResponsibilityKind(port.Id, out responsibilityKind) ||
+            TryResolveRuntimeResponsibilityKind(port.Id, out responsibilityKind))
+        {
+            return ProcessCanvasCatalog.GetResponsibilityVisual(responsibilityKind);
+        }
+
+        if (string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput, StringComparison.Ordinal) ||
+            string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.StepDecisionAuthorityInput, StringComparison.Ordinal) ||
+            string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.BranchDecisionRoleInput, StringComparison.Ordinal) ||
+            string.Equals(port.Id, ProcessCanvasCatalog.RuntimePorts.StepDecisionAuthorityInput, StringComparison.Ordinal))
+        {
+            return ProcessCanvasCatalog.GetConnectionVisual(ProcessCanvasCatalog.PortFamily.StepDecisionAuthorityInput);
+        }
+
+        if (string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.StepStructuralInput, StringComparison.Ordinal) ||
+            string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.StepStructuralOutput, StringComparison.Ordinal) ||
+            string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.BranchStepInput, StringComparison.Ordinal) ||
+            string.Equals(port.Id, ProcessCanvasCatalog.RuntimePorts.StepStructuralInput, StringComparison.Ordinal) ||
+            string.Equals(port.Id, ProcessCanvasCatalog.RuntimePorts.StepStructuralOutput, StringComparison.Ordinal) ||
+            string.Equals(port.Id, ProcessCanvasCatalog.RuntimePorts.BranchStepInput, StringComparison.Ordinal))
+        {
+            return ProcessCanvasCatalog.GetConnectionVisual(ProcessCanvasCatalog.PortFamily.StepStructuralInput);
+        }
+
+        if (string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs, StringComparison.Ordinal) ||
+            port.Id.StartsWith(ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputPrefix, StringComparison.Ordinal) ||
+            port.Id.StartsWith(ProcessCanvasCatalog.DefinitionPorts.StepArtifactOutputPrefix, StringComparison.Ordinal) ||
+            string.Equals(port.Id, ProcessCanvasCatalog.RuntimePorts.StepArtifactInputs, StringComparison.Ordinal) ||
+            port.Id.StartsWith(ProcessCanvasCatalog.RuntimePorts.StepArtifactOutputPrefix, StringComparison.Ordinal))
+        {
+            return ProcessCanvasCatalog.GetConnectionVisual(ProcessCanvasCatalog.PortFamily.StepArtifactInput);
+        }
+
+        if (port.Id.StartsWith(ProcessCanvasCatalog.DefinitionPorts.BranchOutcomeOutputPrefix, StringComparison.Ordinal) ||
+            port.Id.StartsWith(ProcessCanvasCatalog.RuntimePorts.BranchOutcomeOutputPrefix, StringComparison.Ordinal))
+        {
+            return ResolveBranchVisual(port.Label);
+        }
+
+        return ProcessCanvasCatalog.GetConnectionVisual(ProcessCanvasCatalog.PortFamily.StepStructuralInput);
+    }
+
+    private static bool TryResolveRuntimeResponsibilityKind(string? portId, out ProcessResponsibilityKind responsibilityKind)
+    {
+        responsibilityKind = default;
+        if (string.IsNullOrWhiteSpace(portId))
+        {
+            return false;
+        }
+
+        foreach (var candidate in ProcessCanvasCatalog.OrderedResponsibilities)
+        {
+            if (string.Equals(portId, ProcessCanvasCatalog.RuntimePorts.GetStepResponsibilityInputPortId(candidate), StringComparison.Ordinal))
+            {
+                responsibilityKind = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static ProcessCanvasCatalog.ConnectionVisual ResolveBranchVisual(string? label)
+    {
+        if (string.Equals(label, ProcessCanvasBranching.DefaultRouteTitle, StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessCanvasCatalog.GetConnectionVisual(ProcessCanvasCatalog.PortFamily.BranchDefaultOutput);
+        }
+
+        if (string.Equals(label, ProcessCanvasBranching.ErrorRouteTitle, StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessCanvasCatalog.GetConnectionVisual(ProcessCanvasCatalog.PortFamily.BranchErrorOutput);
+        }
+
+        return ProcessCanvasCatalog.GetConnectionVisual(ProcessCanvasCatalog.PortFamily.BranchOutcomeOutput);
     }
 
     private static List<string> ResolveSelectedNodeIds(

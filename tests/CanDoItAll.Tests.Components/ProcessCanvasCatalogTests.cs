@@ -120,4 +120,25 @@ public sealed class ProcessCanvasCatalogTests
         Assert.True(ProcessCanvasCatalog.DefinitionPorts.IsStepStructuralOutputPortId(CanvasWorkbenchAnchorPorts.Right));
         Assert.True(ProcessCanvasCatalog.DefinitionPorts.IsStepStructuralOutputPortId(ProcessCanvasCatalog.DefinitionPorts.StepStructuralOutput));
     }
+
+    [Fact]
+    public void Catalog_exposes_reusable_connection_visuals_for_port_categories()
+    {
+        var structural = ProcessCanvasCatalog.GetConnectionVisual(ProcessCanvasCatalog.PortFamily.StepStructuralInput);
+        var decision = ProcessCanvasCatalog.GetConnectionVisual(ProcessCanvasCatalog.PortFamily.StepDecisionAuthorityInput);
+        var artifact = ProcessCanvasCatalog.GetConnectionVisual(ProcessCanvasCatalog.PortFamily.StepArtifactInput);
+        var approver = ProcessCanvasCatalog.GetResponsibilityVisual(ProcessResponsibilityKind.Approver);
+
+        Assert.Equal(ProcessCanvasCatalog.ConnectionCategories.Structural, structural.CategoryKey);
+        Assert.Equal("#2563eb", structural.AccentColor);
+
+        Assert.Equal(ProcessCanvasCatalog.ConnectionCategories.DecisionAuthority, decision.CategoryKey);
+        Assert.Equal("#8b5cf6", decision.AccentColor);
+
+        Assert.Equal(ProcessCanvasCatalog.ConnectionCategories.Artifact, artifact.CategoryKey);
+        Assert.Equal("#db2777", artifact.AccentColor);
+
+        Assert.Equal(ProcessCanvasCatalog.ConnectionCategories.ResponsibilityApprover, approver.CategoryKey);
+        Assert.Equal("#16a34a", approver.AccentColor);
+    }
 }

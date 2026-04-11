@@ -236,6 +236,12 @@
                     anchor.classList.add("is-primary");
                 }
 
+                if (point.accentColor) {
+                    anchor.style.setProperty("--cw-connector-anchor-accent", point.accentColor);
+                    anchor.style.setProperty("--cw-connector-anchor-ring", hexToRgba(point.accentColor, 0.2));
+                    anchor.style.setProperty("--cw-connector-anchor-shadow", hexToRgba(point.accentColor, 0.18));
+                }
+
                 anchor.style.left = `${round(hostPoint.x)}px`;
                 anchor.style.top = `${round(hostPoint.y)}px`;
                 state.anchorLayer.appendChild(anchor);
