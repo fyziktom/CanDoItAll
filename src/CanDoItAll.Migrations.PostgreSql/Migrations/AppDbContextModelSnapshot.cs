@@ -3100,6 +3100,35 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Processes_RunAssignments", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepArtifactInputDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ArtifactExpectationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StepDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtifactExpectationId");
+
+                    b.HasIndex("StepDefinitionId");
+
+                    b.HasIndex("StepDefinitionId", "ArtifactExpectationId")
+                        .IsUnique();
+
+                    b.HasIndex("StepDefinitionId", "DisplayOrder");
+
+                    b.ToTable("Processes_StepArtifactInputs", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessStepBranchOutcomeDefinition", b =>
                 {
                     b.Property<Guid>("Id")

@@ -48,3 +48,10 @@
 - Do not draw artifact links that the service layer cannot save.
 - Do not silently fall back from typed ports to generic node-body connections when a port should exist.
 - Do not claim the canvas is primary if role assignment, artifact routing, or step routing still require forms for normal use.
+
+## Execution Findings
+
+1. Runtime proof must target the published definition version, not only the mutable editor draft.
+   - Canvas edits persist immediately into the editable definition state.
+   - New runs still materialize from the published definition version.
+   - Validation must publish the canvas-authored graph before starting a fresh run, otherwise runtime parity checks will appear stale even when definition authoring is correct.

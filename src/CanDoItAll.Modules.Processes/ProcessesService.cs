@@ -132,6 +132,10 @@ public sealed partial class ProcessesService(
         var artifactExpectations = await dbContext.Set<ProcessArtifactExpectation>()
             .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
             .ToListAsync(cancellationToken);
+        var artifactInputs = await dbContext.Set<ProcessStepArtifactInputDefinition>()
+            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .OrderBy(item => item.DisplayOrder)
+            .ToListAsync(cancellationToken);
         var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
             .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
             .ToListAsync(cancellationToken);
@@ -243,7 +247,8 @@ public sealed partial class ProcessesService(
                         AllowedFutureUsageSummary = item.AllowedFutureUsageSummary,
                         ValidationRequirementSummary = item.ValidationRequirementSummary
                     })
-                    .ToList()
+                    .ToList(),
+                ArtifactInputs = BuildEditorArtifactInputs(step, artifactInputs)
             }).ToList()
         };
     }
@@ -379,7 +384,13 @@ public sealed partial class ProcessesService(
         var stepDependencies = await dbContext.Set<ProcessStepDependencyDefinition>()
             .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
             .ToListAsync(cancellationToken);
-        var publishError = ValidatePublish(definition, draftVersion, roles, steps, stepRoleRequirements, branchOutcomes, stepDependencies);
+        var artifactExpectations = await dbContext.Set<ProcessArtifactExpectation>()
+            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var artifactInputs = await dbContext.Set<ProcessStepArtifactInputDefinition>()
+            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var publishError = ValidatePublish(definition, draftVersion, roles, steps, stepRoleRequirements, branchOutcomes, stepDependencies, artifactExpectations, artifactInputs);
         if (publishError is not null) {
             return Result.Failure(publishError);
         }
@@ -400,7 +411,17 @@ public sealed partial class ProcessesService(
         definition.ActivePublishedVersionId = draftVersion.Id;
         definition.UpdatedAtUtc = clock.GetUtcNow();
 
-        await ClonePublishedVersionIntoNextDraftAsync(dbContext, definitionId, draftVersion, roles, steps, stepRoleRequirements, stepDependencies, cancellationToken);
+        await ClonePublishedVersionIntoNextDraftAsync(
+            dbContext,
+            definitionId,
+            draftVersion,
+            roles,
+            steps,
+            stepRoleRequirements,
+            stepDependencies,
+            artifactExpectations,
+            artifactInputs,
+            cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var route = definition.ProjectId.HasValue
@@ -450,6 +471,7 @@ public sealed partial class ProcessesService(
         dbContext.RemoveRange(await dbContext.Set<ProcessStepDependencyDefinition>().Where(item => stepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessStepRoleAssignmentRequirement>().Where(item => stepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessArtifactExpectation>().Where(item => stepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
+        dbContext.RemoveRange(await dbContext.Set<ProcessStepArtifactInputDefinition>().Where(item => stepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessStepRun>().Where(item => runIds.Contains(item.ProcessRunId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessRunAssignment>().Where(item => runIds.Contains(item.ProcessRunId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessWorkBrief>().Where(item => runIds.Contains(item.ProcessRunId)).ToListAsync(cancellationToken));
@@ -475,6 +497,8 @@ public sealed partial class ProcessesService(
         IReadOnlyList<ProcessStepDefinition> steps,
         IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
         IReadOnlyList<ProcessStepDependencyDefinition> stepDependencies,
+        IReadOnlyList<ProcessArtifactExpectation> artifactExpectations,
+        IReadOnlyList<ProcessStepArtifactInputDefinition> artifactInputs,
         CancellationToken cancellationToken) {
         var nextDraftVersionId = Guid.NewGuid();
         var roleIdMap = roles.ToDictionary(item => item.Id, _ => Guid.NewGuid());
@@ -500,13 +524,11 @@ public sealed partial class ProcessesService(
         var roleSkills = await dbContext.Set<ProcessRoleSkillRequirement>()
             .Where(item => roles.Select(role => role.Id).Contains(item.RoleRequirementId))
             .ToListAsync(cancellationToken);
-        var artifactExpectations = await dbContext.Set<ProcessArtifactExpectation>()
-            .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
-            .ToListAsync(cancellationToken);
         var branchOutcomes = await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
             .Where(item => steps.Select(step => step.Id).Contains(item.StepDefinitionId))
             .ToListAsync(cancellationToken);
         var branchOutcomeIdMap = branchOutcomes.ToDictionary(item => item.Id, _ => Guid.NewGuid());
+        var artifactExpectationIdMap = artifactExpectations.ToDictionary(item => item.Id, _ => Guid.NewGuid());
         var stepDependenciesByStepId = stepDependencies
             .GroupBy(item => item.StepDefinitionId)
             .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
@@ -662,6 +684,7 @@ public sealed partial class ProcessesService(
 
             await dbContext.Set<ProcessArtifactExpectation>().AddAsync(
                 new ProcessArtifactExpectation {
+                    Id = artifactExpectationIdMap[artifactExpectation.Id],
                     StepDefinitionId = nextStepId,
                     ArtifactKind = artifactExpectation.ArtifactKind,
                     Title = artifactExpectation.Title,
@@ -671,6 +694,21 @@ public sealed partial class ProcessesService(
                     RetentionDays = artifactExpectation.RetentionDays,
                     AllowedFutureUsageSummary = artifactExpectation.AllowedFutureUsageSummary,
                     ValidationRequirementSummary = artifactExpectation.ValidationRequirementSummary
+                },
+                cancellationToken);
+        }
+
+        foreach (var artifactInput in artifactInputs.OrderBy(item => item.DisplayOrder)) {
+            if (!stepIdMap.TryGetValue(artifactInput.StepDefinitionId, out var nextStepId) ||
+                !artifactExpectationIdMap.TryGetValue(artifactInput.ArtifactExpectationId, out var nextArtifactExpectationId)) {
+                continue;
+            }
+
+            await dbContext.Set<ProcessStepArtifactInputDefinition>().AddAsync(
+                new ProcessStepArtifactInputDefinition {
+                    StepDefinitionId = nextStepId,
+                    ArtifactExpectationId = nextArtifactExpectationId,
+                    DisplayOrder = artifactInput.DisplayOrder
                 },
                 cancellationToken);
         }
@@ -694,6 +732,7 @@ public sealed partial class ProcessesService(
         dbContext.RemoveRange(await dbContext.Set<ProcessStepDependencyDefinition>().Where(item => existingStepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessStepRoleAssignmentRequirement>().Where(item => existingStepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessArtifactExpectation>().Where(item => existingStepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
+        dbContext.RemoveRange(await dbContext.Set<ProcessStepArtifactInputDefinition>().Where(item => existingStepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(await dbContext.Set<ProcessStepBranchOutcomeDefinition>().Where(item => existingStepIds.Contains(item.StepDefinitionId)).ToListAsync(cancellationToken));
         dbContext.RemoveRange(existingRoles);
         dbContext.RemoveRange(existingSteps);
@@ -745,8 +784,10 @@ public sealed partial class ProcessesService(
 
         var stepIdMap = new Dictionary<Guid, Guid>();
         var branchOutcomeIdMap = new Dictionary<Guid, Guid>();
+        var artifactExpectationIdMap = new Dictionary<Guid, Guid>();
         var persistedStepIds = new List<Guid>(model.Steps.Count);
         var tempDependencies = new List<(Guid StepId, List<ProcessStepDependencyEditorModel> Dependencies)>();
+        var tempArtifactInputs = new List<(Guid StepId, List<ProcessStepArtifactInputEditorModel> ArtifactInputs)>();
         for (var index = 0; index < model.Steps.Count; index++) {
             var stepModel = model.Steps[index];
             var normalizedDependencies = ProcessCanvasBranching.GetOrderedDependencies(stepModel)
@@ -762,6 +803,13 @@ public sealed partial class ProcessesService(
                 stepIdMap[stepModel.Id.Value] = stepId;
             }
             tempDependencies.Add((stepId, normalizedDependencies));
+            tempArtifactInputs.Add((stepId, stepModel.ArtifactInputs
+                .Select(item => new ProcessStepArtifactInputEditorModel
+                {
+                    Id = item.Id,
+                    ArtifactExpectationId = item.ArtifactExpectationId
+                })
+                .ToList()));
             await dbContext.Set<ProcessStepDefinition>().AddAsync(
                 new ProcessStepDefinition {
                     Id = stepId,
@@ -883,8 +931,14 @@ public sealed partial class ProcessesService(
                     continue;
                 }
 
+                var artifactExpectationId = Guid.NewGuid();
+                if (artifactModel.Id.HasValue) {
+                    artifactExpectationIdMap[artifactModel.Id.Value] = artifactExpectationId;
+                }
+
                 await dbContext.Set<ProcessArtifactExpectation>().AddAsync(
                     new ProcessArtifactExpectation {
+                        Id = artifactExpectationId,
                         StepDefinitionId = stepId,
                         ArtifactKind = artifactModel.ArtifactKind,
                         Title = artifactModel.Title.Trim(),
@@ -894,6 +948,25 @@ public sealed partial class ProcessesService(
                         RetentionDays = Math.Max(0, artifactModel.RetentionDays),
                         AllowedFutureUsageSummary = artifactModel.AllowedFutureUsageSummary.Trim(),
                         ValidationRequirementSummary = artifactModel.ValidationRequirementSummary.Trim()
+                    },
+                    cancellationToken);
+            }
+
+            var artifactInputsForStep = tempArtifactInputs
+                .FirstOrDefault(item => item.StepId == stepId)
+                .ArtifactInputs;
+            for (var artifactInputIndex = 0; artifactInputIndex < artifactInputsForStep.Count; artifactInputIndex++) {
+                var artifactInputModel = artifactInputsForStep[artifactInputIndex];
+                if (!artifactInputModel.ArtifactExpectationId.HasValue ||
+                    !artifactExpectationIdMap.TryGetValue(artifactInputModel.ArtifactExpectationId.Value, out var remappedArtifactExpectationId)) {
+                    continue;
+                }
+
+                await dbContext.Set<ProcessStepArtifactInputDefinition>().AddAsync(
+                    new ProcessStepArtifactInputDefinition {
+                        StepDefinitionId = stepId,
+                        ArtifactExpectationId = remappedArtifactExpectationId,
+                        DisplayOrder = artifactInputIndex
                     },
                     cancellationToken);
             }
@@ -974,7 +1047,7 @@ public sealed partial class ProcessesService(
             }
         }
 
-        return null;
+        return ValidateArtifactInputs(model);
     }
 
     private static Error? ValidatePublish(
@@ -984,7 +1057,9 @@ public sealed partial class ProcessesService(
         IReadOnlyList<ProcessStepDefinition> steps,
         IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
         IReadOnlyList<ProcessStepBranchOutcomeDefinition> branchOutcomes,
-        IReadOnlyList<ProcessStepDependencyDefinition> stepDependencies) {
+        IReadOnlyList<ProcessStepDependencyDefinition> stepDependencies,
+        IReadOnlyList<ProcessArtifactExpectation> artifactExpectations,
+        IReadOnlyList<ProcessStepArtifactInputDefinition> artifactInputs) {
         if (string.IsNullOrWhiteSpace(definition.OwnerName) ||
             string.IsNullOrWhiteSpace(definition.CustomerName) ||
             string.IsNullOrWhiteSpace(definition.ValueStatement) ||
@@ -1009,7 +1084,12 @@ public sealed partial class ProcessesService(
             .GroupBy(item => item.StepDefinitionId)
             .ToDictionary(group => group.Key, group => group.OrderBy(item => item.DisplayOrder).ToList());
 
-        return ValidatePublishBranching(definition, roles, steps, branchOutcomesByStepId, stepDependenciesByStepId);
+        var branchingError = ValidatePublishBranching(definition, roles, steps, branchOutcomesByStepId, stepDependenciesByStepId);
+        if (branchingError is not null) {
+            return branchingError;
+        }
+
+        return ValidatePublishedArtifactInputs(steps, artifactExpectations, artifactInputs, stepDependenciesByStepId);
     }
 
     private static Error? ValidatePublishBranching(

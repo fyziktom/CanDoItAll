@@ -306,6 +306,16 @@ public sealed class ProcessArtifactExpectation {
     public string ValidationRequirementSummary { get; set; } = string.Empty;
 }
 
+public sealed class ProcessStepArtifactInputDefinition {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid StepDefinitionId { get; set; }
+
+    public Guid ArtifactExpectationId { get; set; }
+
+    public int DisplayOrder { get; set; }
+}
+
 internal sealed class ProcessDefinitionConfiguration : IEntityTypeConfiguration<ProcessDefinition> {
     public void Configure(EntityTypeBuilder<ProcessDefinition> builder) {
         builder.ToTable("Processes_Definitions");
@@ -438,6 +448,17 @@ internal sealed class ProcessArtifactExpectationConfiguration : IEntityTypeConfi
         builder.Property(expectation => expectation.AllowedFutureUsageSummary).HasColumnType("TEXT");
         builder.Property(expectation => expectation.ValidationRequirementSummary).HasColumnType("TEXT");
         builder.HasIndex(expectation => expectation.StepDefinitionId);
+    }
+}
+
+internal sealed class ProcessStepArtifactInputDefinitionConfiguration : IEntityTypeConfiguration<ProcessStepArtifactInputDefinition> {
+    public void Configure(EntityTypeBuilder<ProcessStepArtifactInputDefinition> builder) {
+        builder.ToTable("Processes_StepArtifactInputs");
+        builder.HasKey(item => item.Id);
+        builder.HasIndex(item => item.StepDefinitionId);
+        builder.HasIndex(item => item.ArtifactExpectationId);
+        builder.HasIndex(item => new { item.StepDefinitionId, item.ArtifactExpectationId }).IsUnique();
+        builder.HasIndex(item => new { item.StepDefinitionId, item.DisplayOrder });
     }
 }
 
@@ -601,6 +622,8 @@ public sealed class ProcessStepEditorModel {
     public List<ProcessStepRoleRequirementEditorModel> RoleAssignments { get; set; } = [];
 
     public List<ProcessArtifactExpectationEditorModel> ArtifactExpectations { get; set; } = [];
+
+    public List<ProcessStepArtifactInputEditorModel> ArtifactInputs { get; set; } = [];
 }
 
 public sealed class ProcessStepDependencyEditorModel {
@@ -653,4 +676,10 @@ public sealed class ProcessArtifactExpectationEditorModel {
     public string AllowedFutureUsageSummary { get; set; } = string.Empty;
 
     public string ValidationRequirementSummary { get; set; } = string.Empty;
+}
+
+public sealed class ProcessStepArtifactInputEditorModel {
+    public Guid? Id { get; set; }
+
+    public Guid? ArtifactExpectationId { get; set; }
 }

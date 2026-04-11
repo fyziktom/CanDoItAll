@@ -531,6 +531,16 @@ public sealed record ProcessStepDependencyViewModel(
     Guid DependsOnStepDefinitionId,
     Guid? DependsOnBranchOutcomeId);
 
+public sealed record ProcessStepRunResponsibilityPortViewModel(
+    ProcessResponsibilityKind ResponsibilityKind,
+    bool IsRequired,
+    int AssignmentCount);
+
+public sealed record ProcessStepRunArtifactPortViewModel(
+    Guid ArtifactExpectationId,
+    string Title,
+    bool IsRequired);
+
 public sealed record ProcessStepRunViewModel(
     Guid Id,
     Guid StepDefinitionId,
@@ -555,6 +565,14 @@ public sealed record ProcessStepRunViewModel(
     IReadOnlyList<ProcessStepBranchOutcomeOptionViewModel> AvailableBranchOutcomes)
 {
     public IReadOnlyList<ProcessStepDependencyViewModel> Dependencies { get; init; } = [];
+
+    public string DecisionRoleTitle { get; init; } = string.Empty;
+
+    public IReadOnlyList<ProcessStepRunResponsibilityPortViewModel> ResponsibilityPorts { get; init; } = [];
+
+    public int ArtifactInputCount { get; init; }
+
+    public IReadOnlyList<ProcessStepRunArtifactPortViewModel> ArtifactOutputs { get; init; } = [];
 }
 
 public sealed record ProcessDecisionViewModel(

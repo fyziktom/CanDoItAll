@@ -78,6 +78,21 @@
                     </Cluster>
                 }
             </FormField>
+            <FormField Text="Canvas-managed artifact inputs">
+                @if (ArtifactInputSummaries.Count == 0)
+                {
+                    <p class="text-sm leading-6 text-slate-600">No upstream artifact inputs. Draw artifact links on the canvas when this step consumes evidence or deliverables from earlier work.</p>
+                }
+                else
+                {
+                    <Cluster Gap="LayoutGap.Small">
+                        @foreach (var artifactInputSummary in ArtifactInputSummaries)
+                        {
+                            <StatusBadge Tone="info" Text="@artifactInputSummary" />
+                        }
+                    </Cluster>
+                }
+            </FormField>
         </Grid>
 
         <Cluster Gap="LayoutGap.Medium">
@@ -284,6 +299,11 @@
             .Where(outcome => !ProcessCanvasBranching.IsSystemOutcome(outcome))
             .ToList();
 
+    private IReadOnlyList<string> ArtifactInputSummaries
+        => Model.ArtifactInputs
+            .Select(BuildArtifactInputSummary)
+            .ToList();
+
     private bool HasSystemBranchOutcomes
         => Model.BranchOutcomes.Any(ProcessCanvasBranching.IsSystemOutcome);
 
@@ -304,5 +324,32 @@
         return string.IsNullOrWhiteSpace(branchOutcomeTitle)
             ? dependencyStepTitle
             : $"{dependencyStepTitle} -> {branchOutcomeTitle}";
+    }
+
+    private string BuildArtifactInputSummary(ProcessStepArtifactInputEditorModel artifactInput)
+    {
+        if (!artifactInput.ArtifactExpectationId.HasValue)
+        {
+            return "Unbound artifact input";
+        }
+
+        foreach (var dependencyOption in DependencyOptions)
+        {
+            var artifact = dependencyOption.ArtifactExpectations
+                .FirstOrDefault(candidate => candidate.Id == artifactInput.ArtifactExpectationId.Value);
+            if (artifact is null)
+            {
+                continue;
+            }
+
+            var sourceStepTitle = string.IsNullOrWhiteSpace(dependencyOption.Title)
+                ? "Upstream step"
+                : dependencyOption.Title;
+            return string.IsNullOrWhiteSpace(artifact.Title)
+                ? sourceStepTitle
+                : $"{sourceStepTitle} -> {artifact.Title}";
+        }
+
+        return "Upstream artifact";
     }
 }

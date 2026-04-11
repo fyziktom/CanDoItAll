@@ -238,12 +238,192 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Steps_canvas_connection_actions_create_and_delete_role_participation_and_artifact_links_and_persist()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Canvas role artifact project");
+        var process = BuildCanvasAuthoringDefinition(projectId, assignDecisionRole: true, connectFixStep: false);
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>();
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        await ActivateStepsTabAsync(cut);
+
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var initialEditor = GetEditor(cut.Instance);
+        var role = Assert.Single(initialEditor.Roles, item => item.Key == process.RoleKey);
+        var implementationStep = Assert.Single(initialEditor.Steps, step => step.Key == process.ImplementationStepKey);
+        var mergeStep = Assert.Single(initialEditor.Steps, step => step.Key == process.MergeStepKey);
+        var implementationArtifact = Assert.Single(implementationStep.ArtifactExpectations, artifact => artifact.Title == "Implementation package");
+
+        var roleNodeId = ProcessCanvasBranching.BuildDefinitionRoleNodeId(role);
+        var implementationNodeId = ProcessCanvasBranching.BuildDefinitionStepNodeId(implementationStep);
+        var mergeNodeId = ProcessCanvasBranching.BuildDefinitionStepNodeId(mergeStep);
+        var responsibleRolePortId = ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind.Responsible);
+        var responsibleStepPortId = ProcessCanvasCatalog.DefinitionPorts.GetStepResponsibilityInputPortId(ProcessResponsibilityKind.Responsible);
+        var artifactOutputPortId = ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(implementationArtifact);
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                mergeNodeId,
+                "connection:create",
+                0,
+                0,
+                "link",
+                roleNodeId,
+                mergeNodeId,
+                "flow",
+                responsibleRolePortId,
+                responsibleStepPortId))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            var currentMergeStep = Assert.Single(editor.Steps, step => step.Key == process.MergeStepKey);
+            Assert.Contains(currentMergeStep.RoleAssignments, assignment =>
+                assignment.RoleRequirementId == role.Id &&
+                assignment.ResponsibilityKind == ProcessResponsibilityKind.Responsible);
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                mergeNodeId,
+                "connection:create",
+                0,
+                0,
+                "link",
+                implementationNodeId,
+                mergeNodeId,
+                "flow",
+                artifactOutputPortId,
+                ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            var currentImplementationStep = Assert.Single(editor.Steps, step => step.Key == process.ImplementationStepKey);
+            var currentMergeStep = Assert.Single(editor.Steps, step => step.Key == process.MergeStepKey);
+            var currentArtifact = Assert.Single(currentImplementationStep.ArtifactExpectations, artifact => artifact.Title == "Implementation package");
+            Assert.Contains(currentMergeStep.ArtifactInputs, input => input.ArtifactExpectationId == currentArtifact.Id);
+            Assert.Contains(ProcessCanvasBranching.GetOrderedDependencies(currentMergeStep), dependency => dependency.DependsOnStepId == currentImplementationStep.Id);
+        });
+
+        cut.WaitForAssertion(() =>
+        {
+            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
+            var persistedImplementationStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.ImplementationStepKey);
+            var persistedMergeStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.MergeStepKey);
+            var persistedArtifact = Assert.Single(persistedImplementationStep.ArtifactExpectations, artifact => artifact.Title == "Implementation package");
+            Assert.Contains(persistedMergeStep.RoleAssignments, assignment => assignment.ResponsibilityKind == ProcessResponsibilityKind.Responsible);
+            Assert.Contains(persistedMergeStep.ArtifactInputs, input => input.ArtifactExpectationId == persistedArtifact.Id);
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                mergeNodeId,
+                "delete-link",
+                0,
+                0,
+                "link",
+                implementationNodeId,
+                mergeNodeId,
+                "flow",
+                ProcessCanvasCatalog.DefinitionPorts.StepStructuralOutput,
+                ProcessCanvasCatalog.DefinitionPorts.StepStructuralInput))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            var currentImplementationStep = Assert.Single(editor.Steps, step => step.Key == process.ImplementationStepKey);
+            var currentMergeStep = Assert.Single(editor.Steps, step => step.Key == process.MergeStepKey);
+            var currentArtifact = Assert.Single(currentImplementationStep.ArtifactExpectations, artifact => artifact.Title == "Implementation package");
+            Assert.Contains(currentMergeStep.ArtifactInputs, input => input.ArtifactExpectationId == currentArtifact.Id);
+            Assert.Contains(ProcessCanvasBranching.GetOrderedDependencies(currentMergeStep), dependency => dependency.DependsOnStepId == currentImplementationStep.Id);
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                mergeNodeId,
+                "delete-link",
+                0,
+                0,
+                "link",
+                implementationNodeId,
+                mergeNodeId,
+                "flow",
+                artifactOutputPortId,
+                ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            var currentMergeStep = Assert.Single(editor.Steps, step => step.Key == process.MergeStepKey);
+            Assert.Empty(currentMergeStep.ArtifactInputs);
+            Assert.Contains(ProcessCanvasBranching.GetOrderedDependencies(currentMergeStep), dependency => dependency.DependsOnStepId.HasValue);
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                mergeNodeId,
+                "delete-link",
+                0,
+                0,
+                "link",
+                implementationNodeId,
+                mergeNodeId,
+                "flow",
+                ProcessCanvasCatalog.DefinitionPorts.StepStructuralOutput,
+                ProcessCanvasCatalog.DefinitionPorts.StepStructuralInput))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            var currentMergeStep = Assert.Single(editor.Steps, step => step.Key == process.MergeStepKey);
+            Assert.Empty(ProcessCanvasBranching.GetOrderedDependencies(currentMergeStep));
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                mergeNodeId,
+                "delete-link",
+                0,
+                0,
+                "link",
+                roleNodeId,
+                mergeNodeId,
+                "flow",
+                responsibleRolePortId,
+                responsibleStepPortId))));
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            var currentMergeStep = Assert.Single(editor.Steps, step => step.Key == process.MergeStepKey);
+            Assert.Empty(currentMergeStep.RoleAssignments);
+        });
+
+        cut.WaitForAssertion(() =>
+        {
+            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
+            var persistedMergeStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.MergeStepKey);
+            Assert.Empty(persistedMergeStep.RoleAssignments);
+            Assert.Empty(persistedMergeStep.ArtifactInputs);
+            Assert.Empty(ProcessCanvasBranching.GetOrderedDependencies(persistedMergeStep));
+        });
+    }
+
+    [Fact]
     public async Task Steps_canvas_node_moves_update_role_and_branch_positions_in_editor_state()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
-        var process = BuildCanvasAuthoringDefinition(await CreateProjectAsync(projectsService, "Canvas movement project"));
+        var projectId = await CreateProjectAsync(projectsService, "Canvas movement project");
+        var process = BuildCanvasAuthoringDefinition(projectId);
         var saveResult = await processesService.SaveAsync(process.Editor);
 
         Assert.True(saveResult.IsSuccess);
@@ -285,6 +465,17 @@ public sealed class ProcessWorkspaceTests
             Assert.Equal(420, roleNode.Y);
             Assert.Equal(940, branchNode.X);
             Assert.Equal(260, branchNode.Y);
+        });
+
+        cut.WaitForAssertion(() =>
+        {
+            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
+            var persistedRole = Assert.Single(persistedEditor.Roles, item => item.Key == process.RoleKey);
+            var persistedDecisionStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.DecisionStepKey);
+            Assert.Equal(320, persistedRole.CanvasX);
+            Assert.Equal(420, persistedRole.CanvasY);
+            Assert.Equal(940, persistedDecisionStep.BranchCanvasX);
+            Assert.Equal(260, persistedDecisionStep.BranchCanvasY);
         });
     }
 
@@ -508,7 +699,18 @@ public sealed class ProcessWorkspaceTests
                     StepKind = ProcessStepKind.Work,
                     OutputContractSummary = "Ready to merge.",
                     CanvasX = 420,
-                    CanvasY = 360
+                    CanvasY = 360,
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            ArtifactKind = ProcessArtifactKind.Deliverable,
+                            Title = "Implementation package",
+                            IsRequired = true,
+                            ValidationRequirementSummary = "Package must remain reviewable and linked to the merge path."
+                        }
+                    ]
                 },
                 new ProcessStepEditorModel
                 {

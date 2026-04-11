@@ -13,6 +13,7 @@ public sealed class ProcessStepEditorFormTests
         var decisionStepId = Guid.NewGuid();
         var uiOutcomeId = Guid.NewGuid();
         var roleId = Guid.NewGuid();
+        var evidenceArtifactId = Guid.NewGuid();
 
         var dependencyStep = new ProcessStepEditorModel
         {
@@ -26,6 +27,15 @@ public sealed class ProcessStepEditorFormTests
                     Key = "ui-review",
                     Title = "UI architect revision",
                     Description = "Send the change through UI review."
+                }
+            ],
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Id = evidenceArtifactId,
+                    ArtifactKind = ProcessArtifactKind.Evidence,
+                    Title = "Review evidence pack"
                 }
             ]
         };
@@ -54,6 +64,13 @@ public sealed class ProcessStepEditorFormTests
                     Title = "Human approval required",
                     Description = "Escalate the decision to a human approver."
                 }
+            ],
+            ArtifactInputs =
+            [
+                new ProcessStepArtifactInputEditorModel
+                {
+                    ArtifactExpectationId = evidenceArtifactId
+                }
             ]
         };
 
@@ -74,9 +91,11 @@ public sealed class ProcessStepEditorFormTests
 
         Assert.Contains("Branch outcomes", cut.Markup);
         Assert.Contains("Canvas-managed dependencies", cut.Markup);
+        Assert.Contains("Canvas-managed artifact inputs", cut.Markup);
         Assert.Contains("Route requested revision", cut.Markup);
         Assert.Contains("Decision maker role", cut.Markup);
         Assert.Contains("UI architect revision", cut.Markup);
         Assert.Contains("Human approval required", cut.Markup);
+        Assert.Contains("Review evidence pack", cut.Markup);
     }
 }

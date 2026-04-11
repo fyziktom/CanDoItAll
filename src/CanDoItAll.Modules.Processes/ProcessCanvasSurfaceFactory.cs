@@ -29,6 +29,7 @@ public sealed class ProcessCanvasSurfaceFactory
                 return BuildDefinitionNode(
                     step,
                     index,
+                    rolesById,
                     primaryDependency?.DependsOnBranchOutcomeId.HasValue == true &&
                     branchOutcomeTitles.TryGetValue(primaryDependency.DependsOnBranchOutcomeId.Value, out var dependencyOutcomeTitle)
                         ? dependencyOutcomeTitle
@@ -107,13 +108,18 @@ public sealed class ProcessCanvasSurfaceFactory
         };
     }
 
-    private static CanvasWorkbenchNode BuildDefinitionNode(ProcessStepEditorModel step, int index, string? dependencyOutcomeTitle)
+    private static CanvasWorkbenchNode BuildDefinitionNode(
+        ProcessStepEditorModel step,
+        int index,
+        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById,
+        string? dependencyOutcomeTitle)
     {
         var status = step.RequiresApproval
             ? "approval"
             : step.RequiresDecisionRecord
                 ? "review"
                 : "draft";
+        var profile = ProcessCanvasCatalog.GetStepKindProfile(step.StepKind);
         var paletteKey = step.StepKind switch
         {
             ProcessStepKind.Start => "sky",
@@ -126,7 +132,7 @@ public sealed class ProcessCanvasSurfaceFactory
         return new CanvasWorkbenchNode
         {
             Id = BuildDefinitionNodeId(step),
-            Kind = "process-step",
+            Kind = ProcessCanvasCatalog.NodeKinds.DefinitionStep,
             Family = "process-definition",
             Icon = ResolveStepIcon(step.StepKind),
             Title = step.Title,
@@ -208,7 +214,9 @@ public sealed class ProcessCanvasSurfaceFactory
                     Icon = "delete",
                     Tone = "danger"
                 }
-            ]
+            ],
+            InputPorts = BuildDefinitionStepInputPorts(step, rolesById, profile),
+            OutputPorts = BuildDefinitionStepOutputPorts(step, profile)
         };
     }
 
@@ -229,7 +237,7 @@ public sealed class ProcessCanvasSurfaceFactory
         return new CanvasWorkbenchNode
         {
             Id = BuildDefinitionBranchNodeId(step),
-            Kind = "process-branch-router",
+            Kind = ProcessCanvasCatalog.NodeKinds.DefinitionBranchRouter,
             Family = "special",
             Icon = "branch",
             Title = string.IsNullOrWhiteSpace(step.Title)
@@ -315,7 +323,7 @@ public sealed class ProcessCanvasSurfaceFactory
         return new CanvasWorkbenchNode
         {
             Id = BuildDefinitionRoleNodeId(role),
-            Kind = "process-role",
+            Kind = ProcessCanvasCatalog.NodeKinds.DefinitionRole,
             Family = "group",
             Icon = "people",
             Title = string.IsNullOrWhiteSpace(role.DisplayName) ? $"Role {index + 1}" : role.DisplayName,
@@ -364,27 +372,18 @@ public sealed class ProcessCanvasSurfaceFactory
                     Tone = "accent"
                 }
             ],
-            OutputPorts =
-            [
-                new CanvasWorkbenchPort
-                {
-                    Id = ProcessCanvasBranching.RoleDecisionOutputPortId,
-                    Label = "Decision authority",
-                    Side = "right",
-                    Tone = "info",
-                    Kind = "decision"
-                }
-            ]
+            OutputPorts = BuildDefinitionRoleOutputPorts(role, editor)
         };
     }
 
     private static CanvasWorkbenchNode BuildRunNode(ProcessStepRunViewModel stepRun)
     {
         var tone = ResolveRunTone(stepRun.Status);
+        var profile = ProcessCanvasCatalog.GetStepKindProfile(stepRun.StepKind);
         return new CanvasWorkbenchNode
         {
             Id = BuildRunNodeId(stepRun.Id),
-            Kind = "process-run-step",
+            Kind = ProcessCanvasCatalog.NodeKinds.RuntimeStep,
             Family = "process-runtime",
             Icon = ResolveStepIcon(stepRun.StepKind),
             Title = stepRun.Title,
@@ -462,7 +461,9 @@ public sealed class ProcessCanvasSurfaceFactory
                     Icon = "note_add",
                     Tone = "neutral"
                 }
-            ]
+            ],
+            InputPorts = BuildRunStepInputPorts(stepRun, profile),
+            OutputPorts = BuildRunStepOutputPorts(stepRun, profile)
         };
     }
 
@@ -476,7 +477,7 @@ public sealed class ProcessCanvasSurfaceFactory
         return new CanvasWorkbenchNode
         {
             Id = BuildRunBranchNodeId(stepRun.Id),
-            Kind = "process-run-branch-router",
+            Kind = ProcessCanvasCatalog.NodeKinds.RuntimeBranchRouter,
             Family = "special",
             Icon = "branch",
             Title = string.IsNullOrWhiteSpace(stepRun.Title)
@@ -512,7 +513,7 @@ public sealed class ProcessCanvasSurfaceFactory
             [
                 new CanvasWorkbenchPort
                 {
-                    Id = ProcessCanvasBranching.StepInputPortId,
+                    Id = ProcessCanvasCatalog.RuntimePorts.BranchStepInput,
                     Label = "From step",
                     Side = "left",
                     Tone = "neutral",
@@ -532,6 +533,13 @@ public sealed class ProcessCanvasSurfaceFactory
         var stepsById = steps
             .Where(step => step.Id.HasValue)
             .ToDictionary(step => step.Id!.Value);
+        var artifactOwnersById = steps
+            .SelectMany(step => step.ArtifactExpectations
+                .Where(artifact => artifact.Id.HasValue)
+                .Select(artifact => new KeyValuePair<Guid, (ProcessStepEditorModel Step, ProcessArtifactExpectationEditorModel Artifact)>(
+                    artifact.Id!.Value,
+                    (step, artifact))))
+            .ToDictionary(item => item.Key, item => item.Value);
         var links = new List<CanvasWorkbenchLink>();
 
         foreach (var step in steps.Where(ProcessCanvasBranching.ShouldRenderBranchRouter))
@@ -539,8 +547,9 @@ public sealed class ProcessCanvasSurfaceFactory
             links.Add(new CanvasWorkbenchLink
             {
                 SourceId = BuildDefinitionNodeId(step),
+                SourcePortId = ProcessCanvasCatalog.DefinitionPorts.StepStructuralOutput,
                 TargetId = BuildDefinitionBranchNodeId(step),
-                TargetPortId = ProcessCanvasBranching.StepInputPortId,
+                TargetPortId = ProcessCanvasCatalog.DefinitionPorts.BranchStepInput,
                 Kind = "flow",
                 IsUserAuthored = true
             });
@@ -551,10 +560,47 @@ public sealed class ProcessCanvasSurfaceFactory
                 links.Add(new CanvasWorkbenchLink
                 {
                     SourceId = BuildDefinitionRoleNodeId(rolesById[step.DecisionRoleRequirementId.Value]),
-                    SourcePortId = ProcessCanvasBranching.RoleDecisionOutputPortId,
+                    SourcePortId = ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput,
                     TargetId = BuildDefinitionBranchNodeId(step),
-                    TargetPortId = ProcessCanvasBranching.DecisionRoleInputPortId,
+                    TargetPortId = ProcessCanvasCatalog.DefinitionPorts.BranchDecisionRoleInput,
                     Kind = "decision-role",
+                    IsUserAuthored = true
+                });
+            }
+        }
+
+        foreach (var step in steps.Where(step => !ProcessCanvasBranching.ShouldRenderBranchRouter(step) && step.DecisionRoleRequirementId.HasValue))
+        {
+            if (!rolesById.TryGetValue(step.DecisionRoleRequirementId!.Value, out var decisionRole))
+            {
+                continue;
+            }
+
+            links.Add(new CanvasWorkbenchLink
+            {
+                SourceId = BuildDefinitionRoleNodeId(decisionRole),
+                SourcePortId = ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput,
+                TargetId = BuildDefinitionNodeId(step),
+                TargetPortId = ProcessCanvasCatalog.DefinitionPorts.StepDecisionAuthorityInput,
+                Kind = "decision-role",
+                IsUserAuthored = true
+            });
+        }
+
+        foreach (var step in steps)
+        {
+            foreach (var assignment in step.RoleAssignments
+                         .Where(assignment => assignment.RoleRequirementId.HasValue &&
+                             rolesById.ContainsKey(assignment.RoleRequirementId.Value)))
+            {
+                var role = rolesById[assignment.RoleRequirementId!.Value];
+                links.Add(new CanvasWorkbenchLink
+                {
+                    SourceId = BuildDefinitionRoleNodeId(role),
+                    SourcePortId = ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(assignment.ResponsibilityKind),
+                    TargetId = BuildDefinitionNodeId(step),
+                    TargetPortId = ProcessCanvasCatalog.DefinitionPorts.GetStepResponsibilityInputPortId(assignment.ResponsibilityKind),
+                    Kind = "role-binding",
                     IsUserAuthored = true
                 });
             }
@@ -574,6 +620,7 @@ public sealed class ProcessCanvasSurfaceFactory
                         SourceId = BuildDefinitionBranchNodeId(sourceStep),
                         SourcePortId = ProcessCanvasBranching.ResolveOutcomePortId(sourceStep, dependency.DependsOnBranchOutcomeId),
                         TargetId = BuildDefinitionNodeId(step),
+                        TargetPortId = ProcessCanvasCatalog.DefinitionPorts.StepStructuralInput,
                         Kind = "flow",
                         IsUserAuthored = true
                     });
@@ -583,8 +630,28 @@ public sealed class ProcessCanvasSurfaceFactory
                 links.Add(new CanvasWorkbenchLink
                 {
                     SourceId = BuildDefinitionNodeId(sourceStep),
+                    SourcePortId = ProcessCanvasCatalog.DefinitionPorts.StepStructuralOutput,
                     TargetId = BuildDefinitionNodeId(step),
+                    TargetPortId = ProcessCanvasCatalog.DefinitionPorts.StepStructuralInput,
                     Kind = "flow",
+                    IsUserAuthored = true
+                });
+            }
+
+            foreach (var artifactInput in step.ArtifactInputs.Where(item => item.ArtifactExpectationId.HasValue))
+            {
+                if (!artifactOwnersById.TryGetValue(artifactInput.ArtifactExpectationId!.Value, out var artifactOwner))
+                {
+                    continue;
+                }
+
+                links.Add(new CanvasWorkbenchLink
+                {
+                    SourceId = BuildDefinitionNodeId(artifactOwner.Step),
+                    SourcePortId = ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(artifactOwner.Artifact),
+                    TargetId = BuildDefinitionNodeId(step),
+                    TargetPortId = ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs,
+                    Kind = "artifact",
                     IsUserAuthored = true
                 });
             }
@@ -603,8 +670,9 @@ public sealed class ProcessCanvasSurfaceFactory
             links.Add(new CanvasWorkbenchLink
             {
                 SourceId = BuildRunNodeId(stepRun.Id),
+                SourcePortId = ProcessCanvasCatalog.RuntimePorts.StepStructuralOutput,
                 TargetId = BuildRunBranchNodeId(stepRun.Id),
-                TargetPortId = ProcessCanvasBranching.StepInputPortId,
+                TargetPortId = ProcessCanvasCatalog.RuntimePorts.BranchStepInput,
                 Kind = "flow",
                 IsUserAuthored = false
             });
@@ -623,6 +691,7 @@ public sealed class ProcessCanvasSurfaceFactory
                         SourceId = BuildRunBranchNodeId(sourceStepRun.Id),
                         SourcePortId = ProcessCanvasBranching.ResolveOutcomePortId(sourceStepRun, dependency.DependsOnBranchOutcomeId),
                         TargetId = BuildRunNodeId(stepRun.Id),
+                        TargetPortId = ProcessCanvasCatalog.RuntimePorts.StepStructuralInput,
                         Kind = "flow",
                         IsUserAuthored = false
                     });
@@ -632,7 +701,9 @@ public sealed class ProcessCanvasSurfaceFactory
                 links.Add(new CanvasWorkbenchLink
                 {
                     SourceId = BuildRunNodeId(sourceStepRun.Id),
+                    SourcePortId = ProcessCanvasCatalog.RuntimePorts.StepStructuralOutput,
                     TargetId = BuildRunNodeId(stepRun.Id),
+                    TargetPortId = ProcessCanvasCatalog.RuntimePorts.StepStructuralInput,
                     Kind = "flow",
                     IsUserAuthored = false
                 });
@@ -678,7 +749,7 @@ public sealed class ProcessCanvasSurfaceFactory
         {
             new()
             {
-                Id = ProcessCanvasBranching.StepInputPortId,
+                Id = ProcessCanvasCatalog.DefinitionPorts.BranchStepInput,
                 Label = "From step",
                 Side = "left",
                 Tone = "neutral",
@@ -687,7 +758,7 @@ public sealed class ProcessCanvasSurfaceFactory
         };
         ports.Add(new CanvasWorkbenchPort
         {
-            Id = ProcessCanvasBranching.DecisionRoleInputPortId,
+            Id = ProcessCanvasCatalog.DefinitionPorts.BranchDecisionRoleInput,
             Label = string.IsNullOrWhiteSpace(decisionRoleTitle)
                 ? "Decision authority"
                 : decisionRoleTitle,
@@ -732,6 +803,258 @@ public sealed class ProcessCanvasSurfaceFactory
             Tone = tone,
             Kind = "route"
         };
+    }
+
+    private static List<CanvasWorkbenchPort> BuildDefinitionStepInputPorts(
+        ProcessStepEditorModel step,
+        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById,
+        ProcessCanvasCatalog.StepKindProfile profile)
+    {
+        var ports = new List<CanvasWorkbenchPort>();
+        if (profile.AllowsStructuralInput)
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.StepStructuralInput,
+                Label = "Inputs",
+                Side = "left",
+                Tone = ProcessCanvasBranching.GetOrderedDependencies(step).Count == 0 ? "neutral" : "info",
+                Kind = "structural-input",
+                IsRequired = step.StepKind != ProcessStepKind.Start
+            });
+        }
+
+        if (profile.AllowsDecisionAuthorityInput && !ProcessCanvasBranching.ShouldRenderBranchRouter(step))
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.StepDecisionAuthorityInput,
+                Label = ResolveDecisionAuthorityLabel(step.DecisionRoleRequirementId, rolesById),
+                Side = "left",
+                Tone = "info",
+                Kind = "decision-role",
+                IsRequired = step.DecisionRoleRequirementId.HasValue
+            });
+        }
+
+        if (profile.AllowsParticipantInputs)
+        {
+            foreach (var responsibilityKind in ProcessCanvasCatalog.OrderedResponsibilities)
+            {
+                var hasBinding = step.RoleAssignments.Any(assignment => assignment.ResponsibilityKind == responsibilityKind);
+                ports.Add(new CanvasWorkbenchPort
+                {
+                    Id = ProcessCanvasCatalog.DefinitionPorts.GetStepResponsibilityInputPortId(responsibilityKind),
+                    Label = ProcessCanvasCatalog.DefinitionPorts.GetResponsibilityLabel(responsibilityKind),
+                    Side = "left",
+                    Tone = hasBinding ? "info" : "neutral",
+                    Kind = responsibilityKind.ToString().ToLowerInvariant(),
+                    IsRequired = step.RoleAssignments.Any(assignment => assignment.ResponsibilityKind == responsibilityKind && assignment.IsRequired)
+                });
+            }
+        }
+
+        if (profile.AllowsArtifactInputs)
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs,
+                Label = "Artifacts",
+                Side = "left",
+                Tone = step.ArtifactInputs.Count == 0 ? "neutral" : "accent",
+                Kind = "artifact-input",
+                IsRequired = step.ArtifactInputs.Count > 0
+            });
+        }
+
+        return ports;
+    }
+
+    private static List<CanvasWorkbenchPort> BuildDefinitionStepOutputPorts(
+        ProcessStepEditorModel step,
+        ProcessCanvasCatalog.StepKindProfile profile)
+    {
+        var ports = new List<CanvasWorkbenchPort>();
+        if (profile.AllowsStructuralOutput)
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.StepStructuralOutput,
+                Label = ProcessCanvasBranching.ShouldRenderBranchRouter(step) ? "Route" : "Next",
+                Side = "right",
+                Tone = ProcessCanvasBranching.ShouldRenderBranchRouter(step) ? "accent" : "neutral",
+                Kind = "structural-output"
+            });
+        }
+
+        if (profile.AllowsArtifactOutputs)
+        {
+            ports.AddRange(step.ArtifactExpectations
+                .Where(artifact => !string.IsNullOrWhiteSpace(artifact.Title))
+                .Select(artifact => new CanvasWorkbenchPort
+                {
+                    Id = ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(artifact),
+                    Label = artifact.Title,
+                    Side = "right",
+                    Tone = artifact.IsRequired ? "info" : "neutral",
+                    Kind = "artifact-output",
+                    IsRequired = artifact.IsRequired
+                }));
+        }
+
+        return ports;
+    }
+
+    private static List<CanvasWorkbenchPort> BuildDefinitionRoleOutputPorts(
+        ProcessRoleEditorModel role,
+        ProcessDefinitionEditorModel editor)
+    {
+        var ports = new List<CanvasWorkbenchPort>();
+        foreach (var responsibilityKind in ProcessCanvasCatalog.OrderedResponsibilities)
+        {
+            var bindingCount = editor.Steps.Sum(step => step.RoleAssignments.Count(assignment =>
+                assignment.RoleRequirementId == role.Id &&
+                assignment.ResponsibilityKind == responsibilityKind));
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(responsibilityKind),
+                Label = ProcessCanvasCatalog.DefinitionPorts.GetResponsibilityLabel(responsibilityKind),
+                Side = "right",
+                Tone = bindingCount == 0 ? "neutral" : "info",
+                Kind = responsibilityKind.ToString().ToLowerInvariant()
+            });
+        }
+
+        ports.Add(new CanvasWorkbenchPort
+        {
+            Id = ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput,
+            Label = "Decision authority",
+            Side = "right",
+            Tone = "info",
+            Kind = "decision"
+        });
+
+        return ports;
+    }
+
+    private static List<CanvasWorkbenchPort> BuildRunStepInputPorts(
+        ProcessStepRunViewModel stepRun,
+        ProcessCanvasCatalog.StepKindProfile profile)
+    {
+        var ports = new List<CanvasWorkbenchPort>();
+        if (profile.AllowsStructuralInput)
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.RuntimePorts.StepStructuralInput,
+                Label = "Inputs",
+                Side = "left",
+                Tone = stepRun.Dependencies.Count == 0 ? "neutral" : "info",
+                Kind = "structural-input",
+                IsRequired = stepRun.StepKind != ProcessStepKind.Start
+            });
+        }
+
+        if (profile.AllowsDecisionAuthorityInput &&
+            !ProcessCanvasBranching.ShouldRenderBranchRouter(stepRun) &&
+            (stepRun.DecisionRoleRequirementId.HasValue || !string.IsNullOrWhiteSpace(stepRun.DecisionRoleTitle)))
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.RuntimePorts.StepDecisionAuthorityInput,
+                Label = string.IsNullOrWhiteSpace(stepRun.DecisionRoleTitle)
+                    ? "Decision authority"
+                    : stepRun.DecisionRoleTitle,
+                Side = "left",
+                Tone = "info",
+                Kind = "decision-role",
+                IsRequired = stepRun.DecisionRoleRequirementId.HasValue
+            });
+        }
+
+        if (profile.AllowsParticipantInputs)
+        {
+            foreach (var responsibilityPort in stepRun.ResponsibilityPorts)
+            {
+                ports.Add(new CanvasWorkbenchPort
+                {
+                    Id = ProcessCanvasCatalog.RuntimePorts.GetStepResponsibilityInputPortId(responsibilityPort.ResponsibilityKind),
+                    Label = responsibilityPort.AssignmentCount > 1
+                        ? $"{ProcessCanvasCatalog.DefinitionPorts.GetResponsibilityLabel(responsibilityPort.ResponsibilityKind)} ({responsibilityPort.AssignmentCount})"
+                        : ProcessCanvasCatalog.DefinitionPorts.GetResponsibilityLabel(responsibilityPort.ResponsibilityKind),
+                    Side = "left",
+                    Tone = "info",
+                    Kind = responsibilityPort.ResponsibilityKind.ToString().ToLowerInvariant(),
+                    IsRequired = responsibilityPort.IsRequired
+                });
+            }
+        }
+
+        if (profile.AllowsArtifactInputs && stepRun.ArtifactInputCount > 0)
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.RuntimePorts.StepArtifactInputs,
+                Label = stepRun.ArtifactInputCount == 1
+                    ? "Artifact"
+                    : $"Artifacts ({stepRun.ArtifactInputCount})",
+                Side = "left",
+                Tone = "accent",
+                Kind = "artifact-input",
+                IsRequired = true
+            });
+        }
+
+        return ports;
+    }
+
+    private static List<CanvasWorkbenchPort> BuildRunStepOutputPorts(
+        ProcessStepRunViewModel stepRun,
+        ProcessCanvasCatalog.StepKindProfile profile)
+    {
+        var ports = new List<CanvasWorkbenchPort>();
+        if (profile.AllowsStructuralOutput)
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.RuntimePorts.StepStructuralOutput,
+                Label = ProcessCanvasBranching.ShouldRenderBranchRouter(stepRun) ? "Route" : "Next",
+                Side = "right",
+                Tone = ProcessCanvasBranching.ShouldRenderBranchRouter(stepRun) ? "accent" : "neutral",
+                Kind = "structural-output"
+                });
+        }
+
+        if (profile.AllowsArtifactOutputs)
+        {
+            ports.AddRange(stepRun.ArtifactOutputs
+                .Where(artifact => !string.IsNullOrWhiteSpace(artifact.Title))
+                .Select(artifact => new CanvasWorkbenchPort
+                {
+                    Id = $"{ProcessCanvasCatalog.RuntimePorts.StepArtifactOutputPrefix}{artifact.ArtifactExpectationId:D}",
+                    Label = artifact.Title,
+                    Side = "right",
+                    Tone = artifact.IsRequired ? "info" : "neutral",
+                    Kind = "artifact-output",
+                    IsRequired = artifact.IsRequired
+                }));
+        }
+
+        return ports;
+    }
+
+    private static string ResolveDecisionAuthorityLabel(
+        Guid? roleId,
+        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById)
+    {
+        if (!roleId.HasValue || !rolesById.TryGetValue(roleId.Value, out var role))
+        {
+            return "Decision authority";
+        }
+
+        return string.IsNullOrWhiteSpace(role.DisplayName)
+            ? "Decision authority"
+            : role.DisplayName;
     }
 
     private static double ResolveDefinitionBranchNodeX(

@@ -170,31 +170,51 @@ public sealed class ProcessesServiceIntegrationTests
         var softwareDeliveryStepRuns = await processesService.ListStepRunsAsync(softwareDeliveryRun.Id);
         var softwareDeliveryArtifacts = await processesService.ListArtifactsAsync(softwareDeliveryRun.Id);
         var softwareDeliveryConformance = await processesService.ListConformanceObservationsAsync(softwareDeliveryRun.Id);
+        var softwareDeliveryEditor = await processesService.GetEditorAsync(softwareDeliveryDefinition.Id, projectId);
 
         Assert.True(softwareDeliveryStepRuns.Count >= 9);
         Assert.Contains(softwareDeliveryStepRuns, item => item.Sequence == 5 && item.Status == ProcessStepRunStatus.Blocked);
         Assert.Contains(softwareDeliveryArtifacts, item => item.Title == "Open security exception assessment for tenant export capability");
         Assert.NotEmpty(softwareDeliveryConformance);
+        var releaseApprovalStepRun = Assert.Single(softwareDeliveryStepRuns, item => item.Title == "Approve release readiness");
+        Assert.True(releaseApprovalStepRun.Dependencies.Count >= 3);
+        Assert.Equal(3, releaseApprovalStepRun.ArtifactInputCount);
+        Assert.Contains(releaseApprovalStepRun.ResponsibilityPorts, item => item.ResponsibilityKind == ProcessResponsibilityKind.Approver);
+        var releaseApprovalDefinitionStep = Assert.Single(softwareDeliveryEditor.Steps, item => item.Key == "release-approval");
+        Assert.Equal(3, releaseApprovalDefinitionStep.ArtifactInputs.Count);
 
         var hotfixRun = Assert.Single(
             await processesService.ListRunsAsync(hotfixDefinition.Id, projectId),
             item => item.Name == "Emergency hotfix rollout with shard-risk governance / tenant billing outage");
         var hotfixStepRuns = await processesService.ListStepRunsAsync(hotfixRun.Id);
         var hotfixArtifacts = await processesService.ListArtifactsAsync(hotfixRun.Id);
+        var hotfixEditor = await processesService.GetEditorAsync(hotfixDefinition.Id, projectId);
 
         Assert.True(hotfixStepRuns.Count >= 7);
         Assert.Contains(hotfixStepRuns, item => item.Sequence == 5 && item.Status == ProcessStepRunStatus.Failed);
         Assert.Contains(hotfixArtifacts, item => item.Title == "Failed rollout telemetry capture and rollback trigger notes");
+        var emergencyApprovalStepRun = Assert.Single(hotfixStepRuns, item => item.Title == "Approve emergency release window");
+        Assert.True(emergencyApprovalStepRun.Dependencies.Count >= 2);
+        Assert.Equal(2, emergencyApprovalStepRun.ArtifactInputCount);
+        var emergencyApprovalDefinitionStep = Assert.Single(hotfixEditor.Steps, item => item.Key == "approve-emergency-release");
+        Assert.Equal(2, emergencyApprovalDefinitionStep.ArtifactInputs.Count);
 
         var branchingRun = Assert.Single(
             await processesService.ListRunsAsync(branchingDefinition.Id, projectId),
             item => item.Name == "Branching code review and merge governance / pull request routing rehearsal");
         var branchingStepRuns = await processesService.ListStepRunsAsync(branchingRun.Id);
+        var branchingEditor = await processesService.GetEditorAsync(branchingDefinition.Id, projectId);
 
         Assert.True(branchingStepRuns.Count >= 8);
         Assert.Contains(branchingStepRuns, item => item.Title == "Route code review disposition");
         Assert.Contains(branchingStepRuns, item => item.Title == "Normalize unclassified review disposition");
         Assert.Contains(branchingStepRuns, item => item.Title == "Escalate review workflow failure");
+        var branchingDecisionStepRun = Assert.Single(branchingStepRuns, item => item.Title == "Route code review disposition");
+        Assert.Equal("Review lead", branchingDecisionStepRun.DecisionRoleTitle);
+        Assert.Equal(1, branchingDecisionStepRun.ArtifactInputCount);
+        Assert.Single(branchingDecisionStepRun.ArtifactOutputs);
+        var branchingQaDefinitionStep = Assert.Single(branchingEditor.Steps, item => item.Key == "validate-qa-lane");
+        Assert.Single(branchingQaDefinitionStep.ArtifactInputs);
 
         var exportEnvelope = await processesService.ExportAsync(seedResult.Value.PrimaryDefinitionId);
         exportEnvelope.Definition.Id = null;
@@ -396,6 +416,61 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Equal(260, persistedRole.CanvasY);
         Assert.Equal(960, persistedDecisionStep.BranchCanvasX);
         Assert.Equal(220, persistedDecisionStep.BranchCanvasY);
+    }
+
+    [Fact]
+    public async Task GetEditorAsync_and_publish_clone_preserve_artifact_input_links()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process artifact input persistence project");
+        var managerRoleId = Guid.NewGuid();
+        var model = BuildArtifactInputDefinitionEditor(projectId, managerRoleId);
+
+        var saveResult = await processesService.SaveAsync(model);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var savedEditor = await processesService.GetEditorAsync(saveResult.Value, projectId);
+        var savedSourceStep = Assert.Single(savedEditor.Steps, item => item.Key == "capture-package");
+        var savedSourceArtifact = Assert.Single(savedSourceStep.ArtifactExpectations, item => item.Title == "Implementation package");
+        var savedConsumerStep = Assert.Single(savedEditor.Steps, item => item.Key == "qa-review");
+        var savedArtifactInput = Assert.Single(savedConsumerStep.ArtifactInputs);
+
+        Assert.Equal(savedSourceArtifact.Id, savedArtifactInput.ArtifactExpectationId);
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsSuccess);
+
+        var nextDraftEditor = await processesService.GetEditorAsync(saveResult.Value, projectId);
+        var nextDraftSourceStep = Assert.Single(nextDraftEditor.Steps, item => item.Key == "capture-package");
+        var nextDraftSourceArtifact = Assert.Single(nextDraftSourceStep.ArtifactExpectations, item => item.Title == "Implementation package");
+        var nextDraftConsumerStep = Assert.Single(nextDraftEditor.Steps, item => item.Key == "qa-review");
+        var nextDraftArtifactInput = Assert.Single(nextDraftConsumerStep.ArtifactInputs);
+
+        Assert.Equal(nextDraftSourceArtifact.Id, nextDraftArtifactInput.ArtifactExpectationId);
+    }
+
+    [Fact]
+    public async Task SaveAsync_rejects_artifact_inputs_without_matching_structural_dependencies()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process artifact input validation project");
+        var managerRoleId = Guid.NewGuid();
+        var model = BuildArtifactInputDefinitionEditor(projectId, managerRoleId, includeDependency: false);
+
+        var saveResult = await processesService.SaveAsync(model);
+
+        Assert.True(saveResult.IsFailure);
+        Assert.Contains(saveResult.Errors, error => error.Code == "processes.artifact-input-dependency-required");
     }
 
     [Fact]
@@ -810,6 +885,109 @@ public sealed class ProcessesServiceIntegrationTests
                         {
                             RoleRequirementId = managerRoleId,
                             ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildArtifactInputDefinitionEditor(Guid projectId, Guid managerRoleId, bool includeDependency = true)
+    {
+        var captureStepId = Guid.NewGuid();
+        var reviewStepId = Guid.NewGuid();
+        var packageArtifactId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Artifact input delivery process",
+            Summary = "Validates persisted artifact input relations.",
+            ValueStatement = "Keep artifact-consuming steps explicit and durable.",
+            CustomerName = "Acme Customer",
+            OwnerName = "Morgan Process Lead",
+            GovernancePolicySummary = "Artifact-consuming steps must keep explicit upstream structure.",
+            ChangeSummary = "Initial artifact input definition.",
+            ConstitutionRuleSummary = "Artifact inputs must reference explicit upstream evidence.",
+            OperatingModeSummary = "Assisted execution with durable artifact contracts.",
+            SimulationReadinessSummary = "Safe for integration validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = managerRoleId,
+                    Key = "delivery-owner",
+                    DisplayName = "Delivery owner",
+                    Purpose = "Own the implementation package and QA evidence flow.",
+                    StaffingIntent = "Primary delivery authority for evidence routing.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                    PreferredExecutorKind = "person",
+                    SnapshotSummary = "Delivery owner snapshot."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = captureStepId,
+                    Key = "capture-package",
+                    Title = "Capture implementation package",
+                    StepKind = ProcessStepKind.Start,
+                    TargetLeadHours = 1,
+                    CanvasX = 140,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            Id = packageArtifactId,
+                            ArtifactKind = ProcessArtifactKind.Deliverable,
+                            Title = "Implementation package",
+                            ValidationRequirementSummary = "Implementation package must exist before QA review."
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = reviewStepId,
+                    Key = "qa-review",
+                    Title = "Validate QA evidence",
+                    StepKind = ProcessStepKind.Review,
+                    TargetLeadHours = 2,
+                    DependsOnStepId = includeDependency ? captureStepId : null,
+                    Dependencies = includeDependency
+                        ?
+                        [
+                            new ProcessStepDependencyEditorModel
+                            {
+                                Id = Guid.NewGuid(),
+                                DependsOnStepId = captureStepId
+                            }
+                        ]
+                        : [],
+                    CanvasX = 460,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ],
+                    ArtifactInputs =
+                    [
+                        new ProcessStepArtifactInputEditorModel
+                        {
+                            ArtifactExpectationId = packageArtifactId
                         }
                     ]
                 }

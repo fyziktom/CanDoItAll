@@ -184,6 +184,142 @@ public sealed class ProcessCanvasSurfaceFactoryTests
     }
 
     [Fact]
+    public void Definition_surface_projects_step_participant_ports_artifact_ports_and_explicit_links()
+    {
+        var reviewerRoleId = Guid.NewGuid();
+        var responsibleRoleId = Guid.NewGuid();
+        var implementationStepId = Guid.NewGuid();
+        var reviewStepId = Guid.NewGuid();
+        var implementationArtifactId = Guid.NewGuid();
+        var editor = new ProcessDefinitionEditorModel
+        {
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = reviewerRoleId,
+                    Key = "review-lead",
+                    DisplayName = "Review lead"
+                },
+                new ProcessRoleEditorModel
+                {
+                    Id = responsibleRoleId,
+                    Key = "developer",
+                    DisplayName = "Developer"
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = implementationStepId,
+                    Key = "implementation",
+                    Title = "Prepare implementation package",
+                    StepKind = ProcessStepKind.Work,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            RoleRequirementId = responsibleRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            IsRequired = true
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            Id = implementationArtifactId,
+                            ArtifactKind = ProcessArtifactKind.Deliverable,
+                            Title = "Implementation package",
+                            IsRequired = true
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = reviewStepId,
+                    Key = "peer-review",
+                    Title = "Complete peer review",
+                    StepKind = ProcessStepKind.Review,
+                    DependsOnStepId = implementationStepId,
+                    Dependencies =
+                    [
+                        new ProcessStepDependencyEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            DependsOnStepId = implementationStepId
+                        }
+                    ],
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            RoleRequirementId = reviewerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Reviewer,
+                            IsRequired = true
+                        }
+                    ],
+                    ArtifactInputs =
+                    [
+                        new ProcessStepArtifactInputEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            ArtifactExpectationId = implementationArtifactId
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var factory = new ProcessCanvasSurfaceFactory();
+        var surface = factory.BuildDefinitionSurface(editor);
+
+        var implementationNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildDefinitionStepNodeId(editor.Steps[0]));
+        Assert.Contains(implementationNode.OutputPorts, port => port.Id == ProcessCanvasCatalog.DefinitionPorts.StepStructuralOutput);
+        Assert.Contains(implementationNode.OutputPorts, port => port.Label == "Implementation package");
+        Assert.Contains(implementationNode.InputPorts, port =>
+            port.Id == ProcessCanvasCatalog.DefinitionPorts.GetStepResponsibilityInputPortId(ProcessResponsibilityKind.Responsible) &&
+            port.IsRequired);
+
+        var reviewNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildDefinitionStepNodeId(editor.Steps[1]));
+        Assert.Contains(reviewNode.InputPorts, port => port.Id == ProcessCanvasCatalog.DefinitionPorts.StepStructuralInput);
+        Assert.Contains(reviewNode.InputPorts, port =>
+            port.Id == ProcessCanvasCatalog.DefinitionPorts.GetStepResponsibilityInputPortId(ProcessResponsibilityKind.Reviewer) &&
+            port.IsRequired);
+        Assert.Contains(reviewNode.InputPorts, port => port.Id == ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs);
+        Assert.Contains(reviewNode.InputPorts, port => port.Id == ProcessCanvasCatalog.DefinitionPorts.StepDecisionAuthorityInput);
+
+        var reviewerRoleNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildDefinitionRoleNodeId(editor.Roles[0]));
+        Assert.Equal(ProcessCanvasCatalog.OrderedResponsibilities.Count + 1, reviewerRoleNode.OutputPorts.Count);
+        Assert.Contains(reviewerRoleNode.OutputPorts, port =>
+            port.Id == ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind.Reviewer));
+
+        Assert.Contains(surface.Links, link =>
+            link.SourceId == ProcessCanvasBranching.BuildDefinitionRoleNodeId(editor.Roles[1]) &&
+            link.TargetId == implementationNode.Id &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind.Responsible) &&
+            link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.GetStepResponsibilityInputPortId(ProcessResponsibilityKind.Responsible));
+        Assert.Contains(surface.Links, link =>
+            link.SourceId == reviewerRoleNode.Id &&
+            link.TargetId == reviewNode.Id &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind.Reviewer) &&
+            link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.GetStepResponsibilityInputPortId(ProcessResponsibilityKind.Reviewer));
+        Assert.Contains(surface.Links, link =>
+            link.SourceId == implementationNode.Id &&
+            link.TargetId == reviewNode.Id &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.StepStructuralOutput &&
+            link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.StepStructuralInput);
+        Assert.Contains(surface.Links, link =>
+            link.SourceId == implementationNode.Id &&
+            link.TargetId == reviewNode.Id &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(editor.Steps[0].ArtifactExpectations[0]) &&
+            link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs);
+    }
+
+    [Fact]
     public void Runtime_surface_projects_branch_router_for_routed_steps()
     {
         var run = new ProcessRunListItem(
@@ -257,6 +393,16 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                 Dependencies =
                 [
                     new ProcessStepDependencyViewModel(stepDefinitionId, repairOutcomeId)
+                ],
+                ResponsibilityPorts =
+                [
+                    new ProcessStepRunResponsibilityPortViewModel(ProcessResponsibilityKind.Responsible, true, 1),
+                    new ProcessStepRunResponsibilityPortViewModel(ProcessResponsibilityKind.Reviewer, false, 2)
+                ],
+                ArtifactInputCount = 2,
+                ArtifactOutputs =
+                [
+                    new ProcessStepRunArtifactPortViewModel(Guid.NewGuid(), "QA validation evidence pack", true)
                 ]
             },
             new(
@@ -285,7 +431,8 @@ public sealed class ProcessCanvasSurfaceFactoryTests
                 Dependencies =
                 [
                     new ProcessStepDependencyViewModel(stepDefinitionId, null)
-                ]
+                ],
+                DecisionRoleTitle = "Review lead"
             }
         };
 
@@ -294,6 +441,13 @@ public sealed class ProcessCanvasSurfaceFactoryTests
 
         var branchNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildRuntimeBranchNodeId(stepRuns[0].Id));
         Assert.Equal(3, branchNode.OutputPorts.Count);
+        var repairNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildRuntimeStepNodeId(stepRuns[1].Id));
+        Assert.Contains(repairNode.InputPorts, port => port.Id == ProcessCanvasCatalog.RuntimePorts.GetStepResponsibilityInputPortId(ProcessResponsibilityKind.Responsible));
+        Assert.Contains(repairNode.InputPorts, port => port.Id == ProcessCanvasCatalog.RuntimePorts.GetStepResponsibilityInputPortId(ProcessResponsibilityKind.Reviewer));
+        Assert.Contains(repairNode.InputPorts, port => port.Id == ProcessCanvasCatalog.RuntimePorts.StepArtifactInputs);
+        Assert.Contains(repairNode.OutputPorts, port => port.Label == "QA validation evidence pack");
+        var qaNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildRuntimeStepNodeId(stepRuns[2].Id));
+        Assert.Contains(qaNode.InputPorts, port => port.Id == ProcessCanvasCatalog.RuntimePorts.StepDecisionAuthorityInput);
         Assert.Contains(surface.Links, link =>
             link.SourceId == branchNode.Id &&
             link.TargetId == ProcessCanvasBranching.BuildRuntimeStepNodeId(stepRuns[1].Id) &&

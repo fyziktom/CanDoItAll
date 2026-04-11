@@ -2,20 +2,20 @@ namespace CanDoItAll.Modules.Processes;
 
 public static class ProcessCanvasBranching
 {
-    public const string DefinitionStepNodePrefix = "step:";
-    public const string DefinitionBranchNodePrefix = "branch:";
-    public const string DefinitionRoleNodePrefix = "role:";
-    public const string RuntimeStepNodePrefix = "run-step:";
-    public const string RuntimeBranchNodePrefix = "run-branch:";
+    public const string DefinitionStepNodePrefix = ProcessCanvasCatalog.NodePrefixes.DefinitionStep;
+    public const string DefinitionBranchNodePrefix = ProcessCanvasCatalog.NodePrefixes.DefinitionBranchRouter;
+    public const string DefinitionRoleNodePrefix = ProcessCanvasCatalog.NodePrefixes.DefinitionRole;
+    public const string RuntimeStepNodePrefix = ProcessCanvasCatalog.NodePrefixes.RuntimeStep;
+    public const string RuntimeBranchNodePrefix = ProcessCanvasCatalog.NodePrefixes.RuntimeBranchRouter;
 
     public const string DefaultRouteKey = "__default__";
     public const string ErrorRouteKey = "__error__";
     public const string DefaultRouteTitle = "Default";
     public const string ErrorRouteTitle = "Error";
 
-    public const string StepInputPortId = "branch:step-input";
-    public const string DecisionRoleInputPortId = "branch:decision-role";
-    public const string RoleDecisionOutputPortId = "role:decision-authority";
+    public const string StepInputPortId = ProcessCanvasCatalog.DefinitionPorts.BranchStepInput;
+    public const string DecisionRoleInputPortId = ProcessCanvasCatalog.DefinitionPorts.BranchDecisionRoleInput;
+    public const string RoleDecisionOutputPortId = ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput;
 
     public static void NormalizeDefinitionEditor(ProcessDefinitionEditorModel editor)
     {
@@ -160,14 +160,14 @@ public static class ProcessCanvasBranching
     {
         ArgumentNullException.ThrowIfNull(outcome);
 
-        return $"route:{BuildNodeToken(outcome.Id, outcome.Key, outcome.Title, "outcome")}";
+        return ProcessCanvasCatalog.DefinitionPorts.BuildBranchOutcomeOutputPortId(outcome);
     }
 
     public static string BuildOutcomePortId(ProcessStepBranchOutcomeOptionViewModel outcome)
     {
         ArgumentNullException.ThrowIfNull(outcome);
 
-        return $"route:{outcome.Id:D}";
+        return ProcessCanvasCatalog.RuntimePorts.BuildBranchOutcomeOutputPortId(outcome);
     }
 
     public static string ResolveOutcomePortId(ProcessStepEditorModel sourceStep, Guid? branchOutcomeId)

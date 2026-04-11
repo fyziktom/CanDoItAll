@@ -259,7 +259,7 @@
                                                                                  EditDefinitionStep="@(async () => { OpenDefinitionStepEditor(); await Task.CompletedTask; })"
                                                                                  EditDefinitionRole="@(async () => { OpenDefinitionRoleEditor(); await Task.CompletedTask; })"
                                                                                  AddDependentStep="@(async () => { OpenCanvasStepEditor(ProcessCanvasActionIds.CreateStepImplementation, SelectedCanvasDefinitionStep, 0, 0); await Task.CompletedTask; })"
-                                                                                 AddBranchOutcome="@(async () => { AddBranchOutcomeToSelectedStep(); await Task.CompletedTask; })"
+                                                                                 AddBranchOutcome="AddBranchOutcomeToSelectedStepAsync"
                                                                                  AddRoutedStep="AddRoutedStepFromSelectedStepAsync"
                                                                                  AddRoleBinding="@(async () => { AddRoleBindingToSelectedStep(); await Task.CompletedTask; })"
                                                                                  AddArtifactExpectation="@(async () => { AddArtifactExpectationToSelectedStep(); await Task.CompletedTask; })"

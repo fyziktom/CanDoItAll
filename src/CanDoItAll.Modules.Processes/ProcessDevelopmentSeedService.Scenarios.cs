@@ -54,6 +54,12 @@ public sealed partial class ProcessDevelopmentSeedService
         var securityId = Guid.NewGuid();
         var releaseApprovalId = Guid.NewGuid();
         var rolloutId = Guid.NewGuid();
+        var scopeBoundaryPacketArtifactId = Guid.NewGuid();
+        var architectureDecisionArtifactId = Guid.NewGuid();
+        var implementationChangeSetArtifactId = Guid.NewGuid();
+        var rolloutChecklistArtifactId = Guid.NewGuid();
+        var qaEvidenceArtifactId = Guid.NewGuid();
+        var securityAssessmentArtifactId = Guid.NewGuid();
 
         var steps = new List<ProcessStepEditorModel>
         {
@@ -74,7 +80,7 @@ public sealed partial class ProcessDevelopmentSeedService
                 CanvasX = 120,
                 CanvasY = 120,
                 RoleAssignments = [BuildRoleAssignment(productOwnerId, ProcessResponsibilityKind.Responsible, "If the original product owner changes, ownership transfers to the next accountable value owner without changing the process contract."), BuildRoleAssignment(deliveryManagerId, ProcessResponsibilityKind.Reviewer, "Delivery review remains explicit even if staffing changes mid-stream.")],
-                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Brief, "Scope boundary packet", ProcessArtifactTrustRequirement.ReviewRequired, ProcessSensitivityLevel.Internal, 365, "Reusable during architecture review, implementation planning, and future scope-drift analysis.", "Must capture no-go constraints, tenant impact, and acceptance boundary in typed form.")]
+                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Brief, "Scope boundary packet", ProcessArtifactTrustRequirement.ReviewRequired, ProcessSensitivityLevel.Internal, 365, "Reusable during architecture review, implementation planning, and future scope-drift analysis.", "Must capture no-go constraints, tenant impact, and acceptance boundary in typed form.", scopeBoundaryPacketArtifactId)]
             },
             new()
             {
@@ -95,7 +101,7 @@ public sealed partial class ProcessDevelopmentSeedService
                 CanvasX = 430,
                 CanvasY = 120,
                 RoleAssignments = [BuildRoleAssignment(architectId, ProcessResponsibilityKind.Responsible, "Architecture authority may be reassigned between vetted humans or approved architecture agents."), BuildRoleAssignment(leadEngineerId, ProcessResponsibilityKind.Reviewer, "Implementation owner must confirm the design is buildable before approval.")],
-                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Decision, "Architecture decision record", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Internal, 730, "Reusable for implementation, review, and later forensic replay.", "Must capture selected option, rejected options, source-of-truth choice, and migration ownership.")]
+                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Decision, "Architecture decision record", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Internal, 730, "Reusable for implementation, review, and later forensic replay.", "Must capture selected option, rejected options, source-of-truth choice, and migration ownership.", architectureDecisionArtifactId)]
             },
             new()
             {
@@ -116,7 +122,11 @@ public sealed partial class ProcessDevelopmentSeedService
                 CanvasX = 740,
                 CanvasY = 120,
                 RoleAssignments = [BuildRoleAssignment(leadEngineerId, ProcessResponsibilityKind.Responsible, "Engineering ownership moves between qualified engineers without changing the role contract."), BuildRoleAssignment(productOwnerId, ProcessResponsibilityKind.Reviewer, "Value owner reviews only acceptance drift, not technical implementation details.")],
-                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Deliverable, "Implementation change set", ProcessArtifactTrustRequirement.ReviewRequired, ProcessSensitivityLevel.Internal, 365, "Reusable for peer review, release approval, and later defect forensics.", "Must be linked to tests, migration notes, and touched-surface inventory."), BuildArtifactExpectation(ProcessArtifactKind.Checklist, "Migration and rollout preparation checklist", ProcessArtifactTrustRequirement.ReviewRequired, ProcessSensitivityLevel.Internal, 365, "Reusable for release rehearsal and rollback planning.", "Must name data changes, operational preconditions, and rollback steps.")]
+                ArtifactExpectations =
+                [
+                    BuildArtifactExpectation(ProcessArtifactKind.Deliverable, "Implementation change set", ProcessArtifactTrustRequirement.ReviewRequired, ProcessSensitivityLevel.Internal, 365, "Reusable for peer review, release approval, and later defect forensics.", "Must be linked to tests, migration notes, and touched-surface inventory.", implementationChangeSetArtifactId),
+                    BuildArtifactExpectation(ProcessArtifactKind.Checklist, "Migration and rollout preparation checklist", ProcessArtifactTrustRequirement.ReviewRequired, ProcessSensitivityLevel.Internal, 365, "Reusable for release rehearsal and rollback planning.", "Must name data changes, operational preconditions, and rollback steps.", rolloutChecklistArtifactId)
+                ]
             },
             new()
             {
@@ -155,7 +165,7 @@ public sealed partial class ProcessDevelopmentSeedService
                 CanvasX = 1360,
                 CanvasY = 120,
                 RoleAssignments = [BuildRoleAssignment(qaLeadId, ProcessResponsibilityKind.Responsible, "QA ownership remains explicit even if a different quality lead takes the gate."), BuildRoleAssignment(leadEngineerId, ProcessResponsibilityKind.Reviewer, "Implementation owner reviews failures and residual risk before release progression.")],
-                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Evidence, "Regression evidence pack", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Internal, 365, "Reusable for release approval, incident review, and future regression comparison.", "Must name changed flows, assertion scope, screenshots, and unresolved risks.")]
+                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Evidence, "Regression evidence pack", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Internal, 365, "Reusable for release approval, incident review, and future regression comparison.", "Must name changed flows, assertion scope, screenshots, and unresolved risks.", qaEvidenceArtifactId)]
             },
             new()
             {
@@ -177,7 +187,7 @@ public sealed partial class ProcessDevelopmentSeedService
                 CanvasX = 1670,
                 CanvasY = 120,
                 RoleAssignments = [BuildRoleAssignment(securityReviewerId, ProcessResponsibilityKind.Approver, "Security approval remains attached to the role even if the reviewer changes.")],
-                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Decision, "Security exception assessment", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Confidential, 1095, "Reusable for release governance, audit, and post-incident review.", "Must capture controls, residual risk owner, and approval or block rationale.")]
+                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Decision, "Security exception assessment", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Confidential, 1095, "Reusable for release governance, audit, and post-incident review.", "Must capture controls, residual risk owner, and approval or block rationale.", securityAssessmentArtifactId)]
             },
             new()
             {
@@ -200,12 +210,35 @@ public sealed partial class ProcessDevelopmentSeedService
                     new ProcessStepDependencyEditorModel
                     {
                         Id = Guid.NewGuid(),
+                        DependsOnStepId = implementationId
+                    },
+                    new ProcessStepDependencyEditorModel
+                    {
+                        Id = Guid.NewGuid(),
                         DependsOnStepId = qaId
                     },
                     new ProcessStepDependencyEditorModel
                     {
                         Id = Guid.NewGuid(),
                         DependsOnStepId = securityId
+                    }
+                ],
+                ArtifactInputs =
+                [
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = rolloutChecklistArtifactId
+                    },
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = qaEvidenceArtifactId
+                    },
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = securityAssessmentArtifactId
                     }
                 ],
                 CanvasX = 1980,
@@ -301,6 +334,8 @@ public sealed partial class ProcessDevelopmentSeedService
         var architectureReviewOutcomeId = Guid.NewGuid();
         var readyForMergeOutcomeId = Guid.NewGuid();
         var errorOutcomeId = Guid.NewGuid();
+        var pullRequestPacketArtifactId = Guid.NewGuid();
+        var reviewRoutingDecisionArtifactId = Guid.NewGuid();
 
         var steps = new List<ProcessStepEditorModel>
         {
@@ -321,7 +356,7 @@ public sealed partial class ProcessDevelopmentSeedService
                 CanvasX = 120,
                 CanvasY = 220,
                 RoleAssignments = [BuildRoleAssignment(authorId, ProcessResponsibilityKind.Responsible, "Authorship stays attached to the implementation owner even if the engineer changes before review.")],
-                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Deliverable, "Pull request readiness packet", ProcessArtifactTrustRequirement.ReviewRequired, ProcessSensitivityLevel.Internal, 365, "Reusable for code review, QA planning, and release-note preparation.", "Must name touched modules, screenshots, rollback notes, and explicit reviewer asks.")]
+                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Deliverable, "Pull request readiness packet", ProcessArtifactTrustRequirement.ReviewRequired, ProcessSensitivityLevel.Internal, 365, "Reusable for code review, QA planning, and release-note preparation.", "Must name touched modules, screenshots, rollback notes, and explicit reviewer asks.", pullRequestPacketArtifactId)]
             },
             new()
             {
@@ -342,6 +377,14 @@ public sealed partial class ProcessDevelopmentSeedService
                 TargetLeadHours = 4,
                 CanvasX = 520,
                 CanvasY = 220,
+                ArtifactInputs =
+                [
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = pullRequestPacketArtifactId
+                    }
+                ],
                 BranchOutcomes =
                 [
                     new ProcessStepBranchOutcomeEditorModel
@@ -392,7 +435,7 @@ public sealed partial class ProcessDevelopmentSeedService
                     BuildRoleAssignment(reviewLeadId, ProcessResponsibilityKind.Responsible, "The review lead owns the branch-selection decision and its recorded rationale."),
                     BuildRoleAssignment(authorId, ProcessResponsibilityKind.Reviewer, "The author reviews whether requested follow-up work is clear before the route is accepted.")
                 ],
-                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Decision, "Review routing decision record", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Internal, 365, "Reusable for rework analysis, merge audits, and process-tuning retrospectives.", "Must record the selected route, reviewer rationale, and any unresolved risk transferred to the next lane.")]
+                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Decision, "Review routing decision record", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Internal, 365, "Reusable for rework analysis, merge audits, and process-tuning retrospectives.", "Must record the selected route, reviewer rationale, and any unresolved risk transferred to the next lane.", reviewRoutingDecisionArtifactId)]
             },
             new()
             {
@@ -411,6 +454,14 @@ public sealed partial class ProcessDevelopmentSeedService
                 TargetLeadHours = 8,
                 CanvasX = 1240,
                 CanvasY = 20,
+                ArtifactInputs =
+                [
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = reviewRoutingDecisionArtifactId
+                    }
+                ],
                 RoleAssignments = [BuildRoleAssignment(authorId, ProcessResponsibilityKind.Responsible, "Repair ownership remains with the authoring role until the new revision is ready.")],
                 ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Deliverable, "Repair pass summary", ProcessArtifactTrustRequirement.ReviewRequired, ProcessSensitivityLevel.Internal, 180, "Reusable for the next reviewer pass and later rework analysis.", "Must link the repaired areas to the original review comments and updated tests.")]
             },
@@ -431,6 +482,14 @@ public sealed partial class ProcessDevelopmentSeedService
                 TargetLeadHours = 10,
                 CanvasX = 1240,
                 CanvasY = 180,
+                ArtifactInputs =
+                [
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = reviewRoutingDecisionArtifactId
+                    }
+                ],
                 RoleAssignments = [BuildRoleAssignment(qaLeadId, ProcessResponsibilityKind.Responsible, "The QA lead owns the explicit regression gate for the routed change.")],
                 ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Evidence, "QA validation evidence pack", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Internal, 365, "Reusable for merge approval, release-note review, and later regression audits.", "Must capture the changed flows, screenshots, and unresolved defects or risks.")]
             },
@@ -453,6 +512,14 @@ public sealed partial class ProcessDevelopmentSeedService
                 TargetLeadHours = 6,
                 CanvasX = 1240,
                 CanvasY = 340,
+                ArtifactInputs =
+                [
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = reviewRoutingDecisionArtifactId
+                    }
+                ],
                 RoleAssignments = [BuildRoleAssignment(securityReviewerId, ProcessResponsibilityKind.Approver, "Security approval remains explicit and reviewable even when the reviewer pool changes.")],
                 ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Decision, "Security merge assessment", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Confidential, 730, "Reusable for merge audit, release governance, and later security replay.", "Must capture approved controls, blocked concerns, and the residual-risk owner.")]
             },
@@ -474,6 +541,14 @@ public sealed partial class ProcessDevelopmentSeedService
                 TargetLeadHours = 8,
                 CanvasX = 1240,
                 CanvasY = 500,
+                ArtifactInputs =
+                [
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = reviewRoutingDecisionArtifactId
+                    }
+                ],
                 RoleAssignments = [BuildRoleAssignment(architectId, ProcessResponsibilityKind.Responsible, "Architecture escalation stays attached to the solution-architect role even if a different reviewer takes the lane.")],
                 ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Decision, "Architecture escalation record", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Internal, 730, "Reusable for merge review, later refactoring, and forensic replay of design decisions.", "Must name the selected design path, rejected options, and affected module boundaries.")]
             },
@@ -495,6 +570,14 @@ public sealed partial class ProcessDevelopmentSeedService
                 TargetLeadHours = 3,
                 CanvasX = 1240,
                 CanvasY = 660,
+                ArtifactInputs =
+                [
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = reviewRoutingDecisionArtifactId
+                    }
+                ],
                 RoleAssignments = [BuildRoleAssignment(mergeApproverId, ProcessResponsibilityKind.Approver, "The merge gate stays explicit even when release ownership rotates.")],
                 ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Decision, "Merge approval note", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Internal, 365, "Reusable for release audit, incident replay, and merge-governance tuning.", "Must capture the approver, merge timing, and residual-risk owner.")]
             },
@@ -514,6 +597,14 @@ public sealed partial class ProcessDevelopmentSeedService
                 TargetLeadHours = 2,
                 CanvasX = 1240,
                 CanvasY = 820,
+                ArtifactInputs =
+                [
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = reviewRoutingDecisionArtifactId
+                    }
+                ],
                 RoleAssignments = [BuildRoleAssignment(reviewLeadId, ProcessResponsibilityKind.Responsible, "The default lane remains owned by the same review authority that selected the route.")],
                 ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Brief, "Default routing normalization note", ProcessArtifactTrustRequirement.ReviewRequired, ProcessSensitivityLevel.Internal, 180, "Reusable for process tuning and later route-taxonomy cleanup.", "Must describe why the route landed on the default lane and what explicit action should follow.")]
             },
@@ -535,6 +626,14 @@ public sealed partial class ProcessDevelopmentSeedService
                 TargetLeadHours = 2,
                 CanvasX = 1240,
                 CanvasY = 980,
+                ArtifactInputs =
+                [
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = reviewRoutingDecisionArtifactId
+                    }
+                ],
                 RoleAssignments = [BuildRoleAssignment(reviewLeadId, ProcessResponsibilityKind.Responsible, "The same role that owns routing must record routing failures for traceability.")],
                 ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Evidence, "Review workflow failure packet", ProcessArtifactTrustRequirement.ReviewRequired, ProcessSensitivityLevel.Internal, 365, "Reusable for process defect repair, platform follow-up, and architecture trouble logs.", "Must capture the failing state, user-visible symptom, and the recommended recovery path.")]
             }
@@ -585,6 +684,8 @@ public sealed partial class ProcessDevelopmentSeedService
         var validateHotfixId = Guid.NewGuid();
         var approveEmergencyReleaseId = Guid.NewGuid();
         var executeRolloutId = Guid.NewGuid();
+        var blastRadiusArtifactId = Guid.NewGuid();
+        var validationEvidenceArtifactId = Guid.NewGuid();
 
         var steps = new List<ProcessStepEditorModel>
         {
@@ -626,7 +727,7 @@ public sealed partial class ProcessDevelopmentSeedService
                 CanvasX = 430,
                 CanvasY = 360,
                 RoleAssignments = [BuildRoleAssignment(databaseEngineerId, ProcessResponsibilityKind.Responsible, "Database ownership may move to another qualified specialist without invalidating the evidence trail."), BuildRoleAssignment(platformEngineerId, ProcessResponsibilityKind.Reviewer, "Platform engineer reviews blast-radius findings before package assembly.")],
-                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Decision, "Blast-radius and rollback assessment", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Confidential, 1095, "Reusable for emergency release approval, rollback execution, and audit.", "Must capture affected shards, rollback feasibility, and explicitly rejected unsafe remediation paths.")]
+                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Decision, "Blast-radius and rollback assessment", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Confidential, 1095, "Reusable for emergency release approval, rollback execution, and audit.", "Must capture affected shards, rollback feasibility, and explicitly rejected unsafe remediation paths.", blastRadiusArtifactId)]
             },
             new()
             {
@@ -667,7 +768,7 @@ public sealed partial class ProcessDevelopmentSeedService
                 CanvasX = 1050,
                 CanvasY = 360,
                 RoleAssignments = [BuildRoleAssignment(qaResponderId, ProcessResponsibilityKind.Responsible, "Emergency QA ownership may move across the responder rota but the gate remains explicit."), BuildRoleAssignment(platformEngineerId, ProcessResponsibilityKind.Reviewer, "Package owner reviews failures and unsupported coverage before approval.")],
-                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Evidence, "Emergency validation evidence pack", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Internal, 365, "Reusable for emergency release approval and later correction of the emergency checklist.", "Must name validated flows, skipped checks, and residual risk that the approver must accept explicitly.")]
+                ArtifactExpectations = [BuildArtifactExpectation(ProcessArtifactKind.Evidence, "Emergency validation evidence pack", ProcessArtifactTrustRequirement.HumanApproved, ProcessSensitivityLevel.Internal, 365, "Reusable for emergency release approval and later correction of the emergency checklist.", "Must name validated flows, skipped checks, and residual risk that the approver must accept explicitly.", validationEvidenceArtifactId)]
             },
             new()
             {
@@ -685,7 +786,32 @@ public sealed partial class ProcessDevelopmentSeedService
                 DecisionRightsSummary = "Release approver owns the emergency release decision and cannot waive missing evidence or unclear rollback control.",
                 ExceptionPolicySummary = "Reject the rollout when rollback conditions or customer-facing obligations are not explicit.",
                 TargetLeadHours = 1,
-                DependsOnStepId = validateHotfixId,
+                Dependencies =
+                [
+                    new ProcessStepDependencyEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        DependsOnStepId = blastRadiusId
+                    },
+                    new ProcessStepDependencyEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        DependsOnStepId = validateHotfixId
+                    }
+                ],
+                ArtifactInputs =
+                [
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = blastRadiusArtifactId
+                    },
+                    new ProcessStepArtifactInputEditorModel
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactExpectationId = validationEvidenceArtifactId
+                    }
+                ],
                 CanvasX = 1360,
                 CanvasY = 360,
                 RoleAssignments = [BuildRoleAssignment(releaseApproverId, ProcessResponsibilityKind.Approver, "Emergency release approval remains attached to the role, not a specific operator."), BuildRoleAssignment(customerLiaisonId, ProcessResponsibilityKind.Reviewer, "Customer communication owner must review timing and outbound commitments before approval.")],
@@ -811,10 +937,12 @@ public sealed partial class ProcessDevelopmentSeedService
         ProcessSensitivityLevel sensitivityLevel,
         int retentionDays,
         string allowedFutureUsageSummary,
-        string validationRequirementSummary)
+        string validationRequirementSummary,
+        Guid? id = null)
     {
         return new ProcessArtifactExpectationEditorModel
         {
+            Id = id,
             ArtifactKind = artifactKind,
             Title = title,
             TrustRequirement = trustRequirement,
