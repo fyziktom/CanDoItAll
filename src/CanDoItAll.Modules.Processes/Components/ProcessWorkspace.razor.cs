@@ -9,6 +9,9 @@ namespace CanDoItAll.Modules.Processes;
 
 public partial class ProcessWorkspace : ComponentBase
 {
+    private const string DefinitionCanvasSelectTool = "authoring";
+    private const string DefinitionCanvasDeleteTool = "delete";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true
@@ -62,6 +65,7 @@ public partial class ProcessWorkspace : ComponentBase
     private CanvasWorkbenchSurface? canvasSurface;
     private CanvasWorkbenchUiState definitionCanvasUiState = CreateDefaultDefinitionCanvasUiState();
     private CanvasWorkbenchUiState runtimeCanvasUiState = CreateDefaultRuntimeCanvasUiState();
+    private string definitionCanvasTool = DefinitionCanvasSelectTool;
 
     private Guid? selectedProcessId;
     private Guid? selectedRunId;
@@ -296,7 +300,7 @@ public partial class ProcessWorkspace : ComponentBase
         ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
         canvasSurface = detailTab == "runs" && SelectedRun is not null
             ? CanvasSurfaceFactory.BuildRunSurface(SelectedRun, stepRuns, selectedCanvasNodeId)
-            : CanvasSurfaceFactory.BuildDefinitionSurface(editor, selectedCanvasNodeId);
+            : CanvasSurfaceFactory.BuildDefinitionSurface(editor, selectedCanvasNodeId, definitionCanvasTool);
 
         var uiState = BuildCanvasUiState(canvasSurface, ResolveStoredCanvasUiState());
         canvasSurface.UiState = uiState;
@@ -549,15 +553,22 @@ public partial class ProcessWorkspace : ComponentBase
         RefreshCanvasSurface();
     }
 
-    private void RemoveRole(ProcessRoleEditorModel role)
+    private void RemoveRole(ProcessRoleEditorModel role, bool refreshSurface = true)
     {
         editor.Roles.Remove(role);
         foreach (var step in editor.Steps)
         {
             step.RoleAssignments.RemoveAll(item => item.RoleRequirementId == role.Id);
+            if (step.DecisionRoleRequirementId == role.Id)
+            {
+                step.DecisionRoleRequirementId = null;
+            }
         }
 
-        RefreshCanvasSurface();
+        if (refreshSurface)
+        {
+            RefreshCanvasSurface();
+        }
     }
 
     private void AddStep()
@@ -576,7 +587,7 @@ public partial class ProcessWorkspace : ComponentBase
         RefreshCanvasSurface();
     }
 
-    private void RemoveStep(ProcessStepEditorModel step)
+    private void RemoveStep(ProcessStepEditorModel step, bool refreshSurface = true)
     {
         editor.Steps.Remove(step);
         foreach (var candidate in editor.Steps.Where(candidate => candidate.DependsOnStepId == step.Id))
@@ -585,7 +596,10 @@ public partial class ProcessWorkspace : ComponentBase
             candidate.DependsOnBranchOutcomeId = null;
         }
 
-        RefreshCanvasSurface();
+        if (refreshSurface)
+        {
+            RefreshCanvasSurface();
+        }
     }
 
     private void AddBranchOutcome(ProcessStepEditorModel step)
@@ -967,6 +981,7 @@ public partial class ProcessWorkspace : ComponentBase
 
     private void ResetDefinitionCanvasState()
     {
+        definitionCanvasTool = DefinitionCanvasSelectTool;
         definitionCanvasUiState = CreateDefaultDefinitionCanvasUiState();
     }
 
@@ -980,6 +995,29 @@ public partial class ProcessWorkspace : ComponentBase
         {
             ActiveInspectorTab = "definition"
         };
+
+    private Task SelectDefinitionCanvasToolAsync()
+    {
+        SetDefinitionCanvasTool(DefinitionCanvasSelectTool);
+        return Task.CompletedTask;
+    }
+
+    private Task DeleteDefinitionCanvasToolAsync()
+    {
+        SetDefinitionCanvasTool(DefinitionCanvasDeleteTool);
+        return Task.CompletedTask;
+    }
+
+    private void SetDefinitionCanvasTool(string tool)
+    {
+        definitionCanvasTool = string.Equals(tool, DefinitionCanvasDeleteTool, StringComparison.Ordinal)
+            ? DefinitionCanvasDeleteTool
+            : DefinitionCanvasSelectTool;
+        if (IsDefinitionCanvasActive)
+        {
+            RefreshCanvasSurface();
+        }
+    }
 
     private static CanvasWorkbenchUiState CreateDefaultRuntimeCanvasUiState()
         => new()

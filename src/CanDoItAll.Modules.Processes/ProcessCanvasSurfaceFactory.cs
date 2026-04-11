@@ -4,7 +4,10 @@ namespace CanDoItAll.Modules.Processes;
 
 public sealed class ProcessCanvasSurfaceFactory
 {
-    public CanvasWorkbenchSurface BuildDefinitionSurface(ProcessDefinitionEditorModel editor, string? selectedNodeId = null)
+    public CanvasWorkbenchSurface BuildDefinitionSurface(
+        ProcessDefinitionEditorModel editor,
+        string? selectedNodeId = null,
+        string mode = "authoring")
     {
         ArgumentNullException.ThrowIfNull(editor);
 
@@ -43,7 +46,9 @@ public sealed class ProcessCanvasSurfaceFactory
         return new CanvasWorkbenchSurface
         {
             SurfaceId = editor.Id?.ToString("N") ?? "process-definition-draft",
-            Mode = "authoring",
+            Mode = string.Equals(mode, "delete", StringComparison.Ordinal)
+                ? "delete"
+                : "authoring",
             DependencySourceId = editor.WorkingVersionId?.ToString("N") ?? "draft",
             Nodes = nodes,
             Links = links,
@@ -665,18 +670,17 @@ public sealed class ProcessCanvasSurfaceFactory
                 Kind = "source"
             }
         };
-        if (!string.IsNullOrWhiteSpace(decisionRoleTitle))
+        ports.Add(new CanvasWorkbenchPort
         {
-            ports.Add(new CanvasWorkbenchPort
-            {
-                Id = ProcessCanvasBranching.DecisionRoleInputPortId,
-                Label = decisionRoleTitle,
-                Side = "left",
-                Tone = "info",
-                Kind = "decision-role",
-                IsRequired = true
-            });
-        }
+            Id = ProcessCanvasBranching.DecisionRoleInputPortId,
+            Label = string.IsNullOrWhiteSpace(decisionRoleTitle)
+                ? "Decision authority"
+                : decisionRoleTitle,
+            Side = "left",
+            Tone = "info",
+            Kind = "decision-role",
+            IsRequired = !string.IsNullOrWhiteSpace(decisionRoleTitle)
+        });
 
         return ports;
     }
@@ -842,6 +846,10 @@ public sealed class ProcessCanvasSurfaceFactory
             EmptyStateTitle = "Add or select a process step",
             EmptyStateDescription = "The canvas mirrors the current step sequence, role bindings, and contract shape.",
             CollapseOnDoubleClick = false,
+            ConnectorAnchors = new CanvasWorkbenchConnectorAnchorOptions
+            {
+                PlacementMode = "Horizontal"
+            },
             QuickCreateActions =
             [
                 new CanvasWorkbenchAction

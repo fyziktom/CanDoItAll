@@ -9,6 +9,10 @@ public partial class ProcessWorkspace
     private const string CanvasToolboxWindowId = "processes.canvas.toolbox";
     private const string CanvasSelectionWindowId = "processes.canvas.selection";
     private const string CanvasEditorWindowId = "processes.canvas.editor";
+    private const string CanvasToolSelectActionId = "tool-mode:select";
+    private const string CanvasDeleteActionId = "delete";
+    private const string CanvasDeleteLinkActionId = "delete-link";
+    private const string CanvasConnectionCreateActionId = "connection:create";
 
     private CanvasWorkbench? workbenchRef;
     private string? selectedCanvasNodeId;
@@ -192,12 +196,48 @@ public partial class ProcessWorkspace
 
     private async Task HandleCanvasContextActionAsync(CanvasWorkbenchContextActionRequest request)
     {
+        if (!string.IsNullOrWhiteSpace(request.NodeId))
+        {
+            selectedCanvasNodeId = request.NodeId;
+        }
+        else if (!string.IsNullOrWhiteSpace(request.LinkTargetId))
+        {
+            selectedCanvasNodeId = request.LinkTargetId;
+        }
+
+        if (IsDefinitionCanvasActive && HandleDefinitionCanvasWorkbenchAction(request))
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
         await ExecuteCanvasActionAsync(request.ActionId, request.NodeId, request.X, request.Y);
     }
 
     private async Task HandleCanvasCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
     {
         await ExecuteCanvasActionAsync(request.ActionId, request.SourceNodeId, request.X, request.Y);
+    }
+
+    private bool HandleDefinitionCanvasWorkbenchAction(CanvasWorkbenchContextActionRequest request)
+    {
+        switch (request.ActionId)
+        {
+            case CanvasToolSelectActionId:
+                SetDefinitionCanvasTool(DefinitionCanvasSelectTool);
+                return true;
+            case CanvasDeleteActionId:
+                DeleteDefinitionCanvasNode(request.NodeId);
+                return true;
+            case CanvasDeleteLinkActionId:
+                DeleteDefinitionCanvasLink(request);
+                return true;
+            case CanvasConnectionCreateActionId:
+                CreateDefinitionCanvasConnection(request);
+                return true;
+            default:
+                return false;
+        }
     }
 
     private async Task HandleCanvasNodeOpenedAsync(string nodeId)
@@ -659,6 +699,91 @@ public partial class ProcessWorkspace
         RefreshCanvasSurface();
     }
 
+    private void DeleteDefinitionCanvasNode(string? nodeId)
+    {
+        if (ResolveDefinitionRole(nodeId) is { } role)
+        {
+            var roleLabel = ResolveRoleLabel(role);
+            RemoveRole(role, refreshSurface: false);
+            SelectFallbackDefinitionNode();
+            RefreshCanvasSurface();
+            SetMessage($"{roleLabel} was removed from the process definition.");
+            return;
+        }
+
+        if (ResolveDefinitionStep(nodeId) is { } step)
+        {
+            var stepLabel = ResolveStepLabel(step);
+            RemoveStep(step, refreshSurface: false);
+            SelectFallbackDefinitionNode();
+            RefreshCanvasSurface();
+            SetMessage($"{stepLabel} was removed from the process definition.");
+            return;
+        }
+
+        SetError("The selected canvas node could not be resolved.");
+    }
+
+    private void DeleteDefinitionCanvasLink(CanvasWorkbenchContextActionRequest request)
+    {
+        if (string.Equals(request.LinkTargetPortId, ProcessCanvasBranching.StepInputPortId, StringComparison.Ordinal))
+        {
+            SetError("The step-to-branch structural connection is managed by the canvas and cannot be removed manually.");
+            return;
+        }
+
+        if (TryDeleteDecisionAuthorityLink(request, out var message) ||
+            TryDeleteStepDependencyLink(request, out message))
+        {
+            RefreshCanvasSurface();
+            SetMessage(message);
+            return;
+        }
+
+        SetError("The selected canvas connection could not be removed.");
+    }
+
+    private void CreateDefinitionCanvasConnection(CanvasWorkbenchContextActionRequest request)
+    {
+        var sourceStep = ResolveDefinitionStep(request.LinkSourceId);
+        var targetStep = ResolveDefinitionStep(request.LinkTargetId);
+        if (sourceStep?.Id.HasValue == true &&
+            targetStep?.Id.HasValue == true &&
+            sourceStep.Id == targetStep.Id)
+        {
+            SetError("A process step cannot connect to itself.");
+            return;
+        }
+
+        if (string.Equals(request.LinkTargetPortId, ProcessCanvasBranching.StepInputPortId, StringComparison.Ordinal))
+        {
+            SetError("The step-to-branch structural connection is created automatically. Connect downstream work from branch outputs instead.");
+            return;
+        }
+
+        if (IsDefinitionStepNodeId(request.LinkSourceId) &&
+            IsDefinitionStepNodeId(request.LinkTargetId) &&
+            IsStandardOutputPortId(request.LinkSourcePortId) &&
+            IsStandardInputPortId(request.LinkTargetPortId) &&
+            sourceStep is not null &&
+            ProcessCanvasBranching.ShouldRenderBranchRouter(sourceStep))
+        {
+            SetError("This step already routes through a branch node. Connect downstream work from the branch outputs instead of the step body.");
+            return;
+        }
+
+        if (TryAssignDecisionAuthorityConnection(request, out var message) ||
+            TryCreateRoutedStepDependencyConnection(request, out message) ||
+            TryCreateDirectStepDependencyConnection(request, out message))
+        {
+            RefreshCanvasSurface();
+            SetMessage(message);
+            return;
+        }
+
+        SetError("That connection is not valid for the selected process nodes.");
+    }
+
     private double ResolveCanvasStepEditorX(ProcessStepEditorModel? sourceStep, Guid? branchOutcomeId, double requestedX)
     {
         if (requestedX > 0)
@@ -707,6 +832,129 @@ public partial class ProcessWorkspace
         return sourceStep.CanvasY + ((branchIndex - midpoint) * 220d);
     }
 
+    private bool TryDeleteDecisionAuthorityLink(CanvasWorkbenchContextActionRequest request, out string message)
+    {
+        message = string.Empty;
+        if (!string.Equals(request.LinkTargetPortId, ProcessCanvasBranching.DecisionRoleInputPortId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (ResolveDefinitionRole(request.LinkSourceId) is not { Id: { } roleId } role ||
+            ResolveDefinitionStep(request.LinkTargetId) is not { } step ||
+            step.DecisionRoleRequirementId != roleId)
+        {
+            return false;
+        }
+
+        step.DecisionRoleRequirementId = null;
+        message = $"{ResolveRoleLabel(role)} no longer provides decision authority for {ResolveStepLabel(step)}.";
+        return true;
+    }
+
+    private bool TryDeleteStepDependencyLink(CanvasWorkbenchContextActionRequest request, out string message)
+    {
+        message = string.Empty;
+        if (ResolveDefinitionStep(request.LinkSourceId) is not { Id: { } sourceStepId } sourceStep ||
+            ResolveDefinitionStep(request.LinkTargetId) is not { } targetStep ||
+            targetStep.DependsOnStepId != sourceStepId)
+        {
+            return false;
+        }
+
+        if (IsDefinitionBranchNodeId(request.LinkSourceId))
+        {
+            if (!TryResolveDefinitionBranchOutcomeByPortId(sourceStep, request.LinkSourcePortId, out var branchOutcome) ||
+                targetStep.DependsOnBranchOutcomeId != branchOutcome.Id)
+            {
+                return false;
+            }
+
+            targetStep.DependsOnStepId = null;
+            targetStep.DependsOnBranchOutcomeId = null;
+            message = $"{ResolveStepLabel(targetStep)} no longer waits on the '{ResolveBranchOutcomeLabel(branchOutcome)}' branch from {ResolveStepLabel(sourceStep)}.";
+            return true;
+        }
+
+        if (!IsDefinitionStepNodeId(request.LinkSourceId))
+        {
+            return false;
+        }
+
+        targetStep.DependsOnStepId = null;
+        targetStep.DependsOnBranchOutcomeId = null;
+        message = $"{ResolveStepLabel(targetStep)} no longer depends on {ResolveStepLabel(sourceStep)}.";
+        return true;
+    }
+
+    private bool TryAssignDecisionAuthorityConnection(CanvasWorkbenchContextActionRequest request, out string message)
+    {
+        message = string.Empty;
+        if (!IsDefinitionRoleNodeId(request.LinkSourceId) ||
+            !IsDefinitionBranchNodeId(request.LinkTargetId) ||
+            !string.Equals(request.LinkSourcePortId, ProcessCanvasBranching.RoleDecisionOutputPortId, StringComparison.Ordinal) ||
+            !string.Equals(request.LinkTargetPortId, ProcessCanvasBranching.DecisionRoleInputPortId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (ResolveDefinitionRole(request.LinkSourceId) is not { Id: { } roleId } role ||
+            ResolveDefinitionStep(request.LinkTargetId) is not { } step)
+        {
+            return false;
+        }
+
+        step.DecisionRoleRequirementId = roleId;
+        message = $"{ResolveRoleLabel(role)} now provides decision authority for {ResolveStepLabel(step)}.";
+        return true;
+    }
+
+    private bool TryCreateRoutedStepDependencyConnection(CanvasWorkbenchContextActionRequest request, out string message)
+    {
+        message = string.Empty;
+        if (!IsDefinitionBranchNodeId(request.LinkSourceId) ||
+            !IsDefinitionStepNodeId(request.LinkTargetId) ||
+            !IsStandardInputPortId(request.LinkTargetPortId))
+        {
+            return false;
+        }
+
+        if (ResolveDefinitionStep(request.LinkSourceId) is not { Id: { } sourceStepId } sourceStep ||
+            ResolveDefinitionStep(request.LinkTargetId) is not { } targetStep ||
+            !TryResolveDefinitionBranchOutcomeByPortId(sourceStep, request.LinkSourcePortId, out var branchOutcome))
+        {
+            return false;
+        }
+
+        targetStep.DependsOnStepId = sourceStepId;
+        targetStep.DependsOnBranchOutcomeId = branchOutcome.Id;
+        message = $"{ResolveStepLabel(targetStep)} now follows the '{ResolveBranchOutcomeLabel(branchOutcome)}' branch from {ResolveStepLabel(sourceStep)}.";
+        return true;
+    }
+
+    private bool TryCreateDirectStepDependencyConnection(CanvasWorkbenchContextActionRequest request, out string message)
+    {
+        message = string.Empty;
+        if (!IsDefinitionStepNodeId(request.LinkSourceId) ||
+            !IsDefinitionStepNodeId(request.LinkTargetId) ||
+            !IsStandardOutputPortId(request.LinkSourcePortId) ||
+            !IsStandardInputPortId(request.LinkTargetPortId))
+        {
+            return false;
+        }
+
+        if (ResolveDefinitionStep(request.LinkSourceId) is not { Id: { } sourceStepId } sourceStep ||
+            ResolveDefinitionStep(request.LinkTargetId) is not { } targetStep)
+        {
+            return false;
+        }
+
+        targetStep.DependsOnStepId = sourceStepId;
+        targetStep.DependsOnBranchOutcomeId = null;
+        message = $"{ResolveStepLabel(targetStep)} now depends on {ResolveStepLabel(sourceStep)}.";
+        return true;
+    }
+
     private void RemoveSelectedDefinitionStep()
     {
         if (SelectedCanvasDefinitionStep is null)
@@ -720,6 +968,23 @@ public partial class ProcessWorkspace
             ? BuildDefinitionNodeId(nextStep)
             : null;
         SetMessage($"{removedTitle} was removed from the process definition.");
+    }
+
+    private void SelectFallbackDefinitionNode()
+    {
+        if (editor.Steps.FirstOrDefault() is { } nextStep)
+        {
+            selectedCanvasNodeId = BuildDefinitionNodeId(nextStep);
+            return;
+        }
+
+        if (editor.Roles.FirstOrDefault(role => role.Id.HasValue) is { } nextRole)
+        {
+            selectedCanvasNodeId = ProcessCanvasBranching.BuildDefinitionRoleNodeId(nextRole);
+            return;
+        }
+
+        selectedCanvasNodeId = null;
     }
 
     private Task AddCanvasRoleAssignmentAsync()
@@ -817,6 +1082,48 @@ public partial class ProcessWorkspace
             ? editor.Steps.FirstOrDefault(step => step.Id == stepId.Value)
             : null;
 
+    private static bool IsDefinitionStepNodeId(string? nodeId)
+        => !string.IsNullOrWhiteSpace(nodeId) &&
+           nodeId.StartsWith(ProcessCanvasBranching.DefinitionStepNodePrefix, StringComparison.Ordinal);
+
+    private static bool IsDefinitionBranchNodeId(string? nodeId)
+        => !string.IsNullOrWhiteSpace(nodeId) &&
+           nodeId.StartsWith(ProcessCanvasBranching.DefinitionBranchNodePrefix, StringComparison.Ordinal);
+
+    private static bool IsDefinitionRoleNodeId(string? nodeId)
+        => !string.IsNullOrWhiteSpace(nodeId) &&
+           nodeId.StartsWith(ProcessCanvasBranching.DefinitionRoleNodePrefix, StringComparison.Ordinal);
+
+    private static bool IsStandardInputPortId(string? portId)
+        => CanvasWorkbenchAnchorPorts.IsInputPortId(portId);
+
+    private static bool IsStandardOutputPortId(string? portId)
+        => CanvasWorkbenchAnchorPorts.IsOutputPortId(portId);
+
+    private static bool TryResolveDefinitionBranchOutcomeByPortId(
+        ProcessStepEditorModel step,
+        string? portId,
+        out ProcessStepBranchOutcomeEditorModel branchOutcome)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+
+        branchOutcome = default!;
+        if (string.IsNullOrWhiteSpace(portId))
+        {
+            return false;
+        }
+
+        var match = step.BranchOutcomes.FirstOrDefault(candidate =>
+            string.Equals(ProcessCanvasBranching.BuildOutcomePortId(candidate), portId, StringComparison.Ordinal));
+        if (match is null)
+        {
+            return false;
+        }
+
+        branchOutcome = match;
+        return true;
+    }
+
     private ProcessStepRunViewModel? ResolveRuntimeStep(string? nodeId)
     {
         if (!ProcessCanvasBranching.TryResolveRuntimeStepId(nodeId, out var stepRunId))
@@ -832,6 +1139,21 @@ public partial class ProcessWorkspace
 
     private static string BuildRunNodeId(Guid stepRunId)
         => ProcessCanvasBranching.BuildRuntimeStepNodeId(stepRunId);
+
+    private static string ResolveRoleLabel(ProcessRoleEditorModel role)
+        => string.IsNullOrWhiteSpace(role.DisplayName)
+            ? "Role"
+            : role.DisplayName;
+
+    private static string ResolveStepLabel(ProcessStepEditorModel step)
+        => string.IsNullOrWhiteSpace(step.Title)
+            ? "Step"
+            : step.Title;
+
+    private static string ResolveBranchOutcomeLabel(ProcessStepBranchOutcomeEditorModel branchOutcome)
+        => string.IsNullOrWhiteSpace(branchOutcome.Title)
+            ? "Untitled branch"
+            : branchOutcome.Title;
 
     private static ProcessRoleEditorModel CloneRole(ProcessRoleEditorModel source)
     {

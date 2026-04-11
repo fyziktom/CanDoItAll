@@ -252,10 +252,185 @@
         return hitTarget;
     }
 
+    function supportsConnectionAuthoring(state) {
+        return resolveSurfaceMode(state) === "authoring";
+    }
+
+    function resolveConnectorAnchorHit(event) {
+        const anchor = event?.target?.closest?.(".cw-connector-anchor");
+        if (!anchor?.dataset?.nodeId) {
+            return null;
+        }
+
+        return {
+            type: "node-port",
+            nodeId: anchor.dataset.nodeId,
+            portId: anchor.dataset.portId || "",
+            portLabel: anchor.title || "",
+            portDirection: anchor.dataset.direction || "",
+            portSide: anchor.dataset.side || "",
+            bounds: resolveAnchorRect(anchor)
+        };
+    }
+
+    function resolvePortDirection(side, direction) {
+        if (direction === "input" || direction === "output") {
+            return direction;
+        }
+
+        return side === "left" || side === "top"
+            ? "input"
+            : "output";
+    }
+
+    function resolveConnectionPortHit(state, event, sceneHit) {
+        const anchorHit = resolveConnectorAnchorHit(event);
+        if (anchorHit) {
+            return anchorHit;
+        }
+
+        const hitTarget = sceneHit || getSceneHitAtEvent(state, event);
+        return hitTarget?.type === "node-port"
+            ? hitTarget
+            : null;
+    }
+
+    function buildConnectionDescriptor(portHit) {
+        if (!portHit?.nodeId) {
+            return null;
+        }
+
+        const side = portHit.portSide || "right";
+        return {
+            nodeId: portHit.nodeId,
+            portId: portHit.portId || "",
+            label: portHit.portLabel || "",
+            direction: resolvePortDirection(side, portHit.portDirection),
+            side
+        };
+    }
+
+    function isSameConnectionDescriptor(left, right) {
+        if (!left && !right) {
+            return true;
+        }
+
+        if (!left || !right) {
+            return false;
+        }
+
+        return left.nodeId === right.nodeId &&
+            (left.portId || "") === (right.portId || "") &&
+            (left.direction || "") === (right.direction || "") &&
+            (left.side || "") === (right.side || "");
+    }
+
+    function clearConnectionDraft(state, shouldRender = true) {
+        if (!state.connectionDraft && !state.connectionTarget) {
+            return;
+        }
+
+        state.connectionDraft = null;
+        state.connectionTarget = null;
+        if (shouldRender) {
+            render(state);
+        }
+    }
+
+    function startConnectionDraft(state, descriptor) {
+        if (!descriptor || descriptor.direction !== "output") {
+            return false;
+        }
+
+        clearContextMenu(state);
+        clearScenePopoverHover(state);
+        state.connectionDraft = descriptor;
+        state.connectionTarget = null;
+        render(state);
+        ensureHostFocus(state);
+        return true;
+    }
+
+    function updateConnectionDraftTarget(state, event, sceneHit) {
+        if (!state.connectionDraft) {
+            if (!state.connectionTarget) {
+                return false;
+            }
+
+            state.connectionTarget = null;
+            return true;
+        }
+
+        const portHit = resolveConnectionPortHit(state, event, sceneHit);
+        const descriptor = buildConnectionDescriptor(portHit);
+        const nextTarget = descriptor &&
+            descriptor.direction === "input" &&
+            descriptor.nodeId !== state.connectionDraft.nodeId
+            ? descriptor
+            : null;
+        if (isSameConnectionDescriptor(state.connectionTarget, nextTarget)) {
+            return false;
+        }
+
+        state.connectionTarget = nextTarget;
+        return true;
+    }
+
+    function dispatchConnectionCreate(state, targetDescriptor) {
+        if (!state.connectionDraft || !targetDescriptor) {
+            return false;
+        }
+
+        dispatchContextActionRequest(state, {
+            nodeId: targetDescriptor.nodeId,
+            actionId: "connection:create",
+            x: 0,
+            y: 0,
+            targetKind: "link",
+            linkSourceId: state.connectionDraft.nodeId,
+            linkTargetId: targetDescriptor.nodeId,
+            linkKind: "flow",
+            linkSourcePortId: state.connectionDraft.portId || "",
+            linkTargetPortId: targetDescriptor.portId || ""
+        });
+        setSelection(state, [targetDescriptor.nodeId], true);
+        state.connectionDraft = null;
+        state.connectionTarget = null;
+        render(state);
+        ensureHostFocus(state);
+        return true;
+    }
+
     function attachEvents(state) {
         state.handlers = {
             pointerDown: event => {
-                if (isOverlayTarget(event.target)) {
+                const sceneHit = getSceneHitAtEvent(state, event);
+                const portHit = resolveConnectionPortHit(state, event, sceneHit);
+                const overlayAnchorHit = resolveConnectorAnchorHit(event);
+                if (state.connectionDraft && (event.button === 0 || event.button === 2)) {
+                    if (event.cancelable) {
+                        event.preventDefault();
+                    }
+
+                    const targetDescriptor = buildConnectionDescriptor(portHit);
+                    if (targetDescriptor && targetDescriptor.direction === "input" && targetDescriptor.nodeId !== state.connectionDraft.nodeId) {
+                        dispatchConnectionCreate(state, targetDescriptor);
+                        return;
+                    }
+
+                    if (event.button === 2) {
+                        const sourceDescriptor = buildConnectionDescriptor(portHit);
+                        if (sourceDescriptor && sourceDescriptor.direction === "output") {
+                            startConnectionDraft(state, sourceDescriptor);
+                            return;
+                        }
+                    }
+
+                    clearConnectionDraft(state);
+                    return;
+                }
+
+                if (isOverlayTarget(event.target) && !overlayAnchorHit) {
                     return;
                 }
 
@@ -278,7 +453,7 @@
                     return;
                 }
 
-                const hitTarget = getSceneHitAtEvent(state, event);
+                const hitTarget = sceneHit;
                 if (isDeleteMode(state) && event.button === 0) {
                     const deleteTarget = updateDeleteHoverState(state, event);
                     if (deleteTarget?.targetKind === "node") {
@@ -301,7 +476,9 @@
                             targetKind: "link",
                             linkSourceId: deleteTarget.link.sourceId,
                             linkTargetId: deleteTarget.link.targetId,
-                            linkKind: deleteTarget.link.kind
+                            linkKind: deleteTarget.link.kind,
+                            linkSourcePortId: deleteTarget.link.sourcePortId || "",
+                            linkTargetPortId: deleteTarget.link.targetPortId || ""
                         });
                         return;
                     }
@@ -398,7 +575,15 @@
                         return;
                     }
 
-                    if (!isOverlayTarget(event.target)) {
+                    if (state.connectionDraft) {
+                        syncSceneHoverState(state, event);
+                        updateConnectionDraftTarget(state, event);
+                        clearScenePopoverHover(state);
+                        render(state);
+                        return;
+                    }
+
+                    if (!isOverlayTarget(event.target) || resolveConnectorAnchorHit(event)) {
                         syncSceneHoverState(state, event);
                         if (isDependencyMode(state)) {
                             render(state);
@@ -431,6 +616,7 @@
                 state.hoveredDeleteLinkKey = null;
                 state.hoveredNodeId = null;
                 clearScenePopoverHover(state);
+                clearConnectionDraft(state, false);
                 void finishCanvasInteraction(state);
                 render(state);
             },
@@ -461,12 +647,38 @@
                 applyWheelZoom(state, event);
             },
             contextMenu: event => {
-                if (isOverlayTarget(event.target)) {
+                const sceneHit = getSceneHitAtEvent(state, event);
+                const portHit = resolveConnectionPortHit(state, event, sceneHit);
+                const portDescriptor = buildConnectionDescriptor(portHit);
+                if (supportsConnectionAuthoring(state) && portDescriptor) {
+                    event.preventDefault();
+                    if (state.connectionDraft) {
+                        if (portDescriptor.direction === "input" && portDescriptor.nodeId !== state.connectionDraft.nodeId) {
+                            dispatchConnectionCreate(state, portDescriptor);
+                            return;
+                        }
+
+                        if (portDescriptor.direction === "output") {
+                            startConnectionDraft(state, portDescriptor);
+                            return;
+                        }
+
+                        clearConnectionDraft(state);
+                        return;
+                    }
+
+                    if (portDescriptor.direction === "output") {
+                        startConnectionDraft(state, portDescriptor);
+                        return;
+                    }
+                }
+
+                if (isOverlayTarget(event.target) && !resolveConnectorAnchorHit(event)) {
                     return;
                 }
 
                 event.preventDefault();
-                const hitTarget = getSceneHitAtEvent(state, event);
+                const hitTarget = sceneHit;
                 const targetNode = resolveHitNode(state, hitTarget);
                 const isGroupSelection = !!targetNode &&
                     state.selectedIds.size > 1 &&
@@ -497,6 +709,7 @@
                     if (event.key === "Escape") {
                         event.preventDefault();
                         closeComposer(state);
+                        clearConnectionDraft(state, false);
                         if (resolveSurfaceMode(state) !== "authoring") {
                             setWorkbenchToolMode(state, "authoring");
                             dispatchContextActionRequest(state, {
@@ -594,8 +807,10 @@
                             const activeMode = resolveSurfaceMode(state);
                             const hadContextMenu = state.contextMenu?.style.display !== "none";
                             const hadComposer = !!state.composer;
+                            const hadConnectionDraft = !!state.connectionDraft;
                             clearContextMenu(state);
                             closeComposer(state);
+                            clearConnectionDraft(state, false);
                             if (activeMode !== "authoring") {
                                 setWorkbenchToolMode(state, "authoring");
                                 render(state);
@@ -605,8 +820,12 @@
                                     actionId: "tool-mode:select",
                                     x: 0,
                                     y: 0,
-                                    targetKind: "canvas"
-                                });
+                                        targetKind: "canvas"
+                                    });
+                            }
+                            else if (hadConnectionDraft) {
+                                render(state);
+                                ensureHostFocus(state);
                             }
                             else if (!hadContextMenu && !hadComposer) {
                                 setSelection(state, [], true);
@@ -647,6 +866,14 @@
         hitTestRenderedLink,
         resolveDeleteModeHitTarget,
         updateDeleteHoverState,
+        supportsConnectionAuthoring,
+        resolveConnectorAnchorHit,
+        resolveConnectionPortHit,
+        buildConnectionDescriptor,
+        clearConnectionDraft,
+        startConnectionDraft,
+        updateConnectionDraftTarget,
+        dispatchConnectionCreate,
         attachEvents
     });
 })();

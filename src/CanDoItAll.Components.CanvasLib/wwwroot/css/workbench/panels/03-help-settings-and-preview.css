@@ -15,7 +15,7 @@
 .cw-help-overlay {
     position: absolute;
     inset: 0;
-    z-index: 48;
+    z-index: 680;
     display: grid;
     place-items: center;
     overflow-y: auto;

@@ -657,6 +657,46 @@
             }
         }
 
+        if (state.connectionDraft) {
+            const previewSource = resolveConnectionAnchorHostPoint(state, state.connectionDraft, "output");
+            const previewTarget = state.connectionTarget
+                ? resolveConnectionAnchorHostPoint(state, state.connectionTarget, "input")
+                : null;
+            const previewEndpoint = previewTarget || state.pointerHostPoint;
+            if (previewSource && previewEndpoint) {
+                const previewGeometry = drawCanvasLink(
+                    surface.context,
+                    {
+                        sourceId: state.connectionDraft.nodeId,
+                        sourcePortId: state.connectionDraft.portId || "",
+                        targetId: state.connectionTarget?.nodeId || "",
+                        targetPortId: state.connectionTarget?.portId || "",
+                        kind: "flow",
+                        isUserAuthored: true
+                    },
+                    previewSource,
+                    previewEndpoint,
+                    {
+                        isPreview: true,
+                        sourceSide: previewSource.side || state.connectionDraft.side || "right",
+                        targetSide: previewTarget?.side || state.connectionTarget?.side || "left",
+                        forceArrow: true
+                    });
+                state.previewLink = {
+                    sourceId: state.connectionDraft.nodeId,
+                    sourcePortId: state.connectionDraft.portId || "",
+                    targetId: state.connectionTarget?.nodeId || null,
+                    targetPortId: state.connectionTarget?.portId || "",
+                    startPoint: previewGeometry.startPoint,
+                    endPoint: previewGeometry.endPoint,
+                    controlPoint1: previewGeometry.controlPoint1,
+                    controlPoint2: previewGeometry.controlPoint2,
+                    midPoint: previewGeometry.midPoint,
+                    bounds: previewGeometry.bounds
+                };
+            }
+        }
+
         reconcileRetainedLayer(
             state.retainedLinkElements,
             nextEntries,
@@ -1061,6 +1101,51 @@
         return portTop + ((portBottom - portTop) * index / Math.max(1, totalCount - 1));
     }
 
+    function buildCanvasPortAnchorBounds(bounds, side, zoom) {
+        const anchorRadius = Math.max(3, 4 * zoom);
+        const anchorX = side === "right"
+            ? bounds.right - Math.max(10, 12 * zoom)
+            : bounds.left + Math.max(10, 12 * zoom);
+        const anchorY = bounds.top + (bounds.height / 2);
+        const hitRadius = Math.max(anchorRadius + 6, 10 * zoom);
+        return buildRect(anchorX - hitRadius, anchorY - hitRadius, hitRadius * 2, hitRadius * 2);
+    }
+
+    function registerCanvasPortHotZone(state, node, bounds, port, side, direction) {
+        registerSceneHotZone(state, buildCanvasPortAnchorBounds(bounds, side, state.ui.zoom), {
+            type: "node-port",
+            nodeId: node.id,
+            portId: port?.id || "",
+            portLabel: port?.label || "",
+            portDirection: direction,
+            portSide: side
+        });
+    }
+
+    function resolveConnectionAnchorHostPoint(state, descriptor, fallbackDirection) {
+        if (!descriptor?.nodeId || !state.lookups?.byId?.has(descriptor.nodeId)) {
+            return null;
+        }
+
+        const node = state.lookups.byId.get(descriptor.nodeId);
+        const anchorSide = descriptor.side ||
+            (descriptor.direction === "input" ? "left" : "right");
+        const anchorPoint = worldToHostPoint(
+            state,
+            getLinkAnchorPoint(
+                state,
+                node,
+                anchorSide,
+                descriptor.portId || "",
+                descriptor.direction || fallbackDirection || (anchorSide === "left" || anchorSide === "top" ? "input" : "output")));
+
+        return {
+            x: anchorPoint.x,
+            y: anchorPoint.y,
+            side: anchorPoint.side || anchorSide
+        };
+    }
+
     function drawCanvasPortPill(context, bounds, port, side, paletteStyle, zoom) {
         const toneStyle = resolveCanvasPortFill(paletteStyle, port?.tone);
         drawRoundedPanel(
@@ -1200,24 +1285,28 @@
         const minimumPortRows = Math.max(1, portCount);
         for (let index = 0; index < inputPorts.length; index += 1) {
             const centerY = resolveCanvasPortCenterY(hostBounds, index, minimumPortRows);
+            const portBounds = buildRect(inputColumnLeft, centerY - (portHeight / 2), columnWidth, portHeight);
             drawCanvasPortPill(
                 context,
-                buildRect(inputColumnLeft, centerY - (portHeight / 2), columnWidth, portHeight),
+                portBounds,
                 inputPorts[index],
                 "left",
                 paletteStyle,
                 state.ui.zoom);
+            registerCanvasPortHotZone(state, node, portBounds, inputPorts[index], "left", "input");
         }
 
         for (let index = 0; index < outputPorts.length; index += 1) {
             const centerY = resolveCanvasPortCenterY(hostBounds, index, minimumPortRows);
+            const portBounds = buildRect(outputColumnLeft, centerY - (portHeight / 2), columnWidth, portHeight);
             drawCanvasPortPill(
                 context,
-                buildRect(outputColumnLeft, centerY - (portHeight / 2), columnWidth, portHeight),
+                portBounds,
                 outputPorts[index],
                 "right",
                 paletteStyle,
                 state.ui.zoom);
+            registerCanvasPortHotZone(state, node, portBounds, outputPorts[index], "right", "output");
         }
 
         const footerHeight = Math.max(18, 22 * state.ui.zoom);

@@ -199,6 +199,14 @@
             activeIds.add(state.hoveredNodeId);
         }
 
+        if (state.connectionDraft?.nodeId) {
+            activeIds.add(state.connectionDraft.nodeId);
+        }
+
+        if (state.connectionTarget?.nodeId) {
+            activeIds.add(state.connectionTarget.nodeId);
+        }
+
         if (activeIds.size === 0) {
             return;
         }
@@ -219,7 +227,11 @@
                 const anchor = createElement(state.document, "div", `cw-connector-anchor is-${point.side}`);
                 anchor.dataset.nodeId = nodeId;
                 anchor.dataset.side = point.side;
-                anchor.title = `${node.title || node.kind || "Node"} ${point.side} anchor`;
+                anchor.dataset.portId = point.portId || "";
+                anchor.dataset.direction = point.direction || "";
+                anchor.title = point.label
+                    ? `${node.title || node.kind || "Node"} ${point.label}`
+                    : `${node.title || node.kind || "Node"} ${point.side} anchor`;
                 if (isPrimary) {
                     anchor.classList.add("is-primary");
                 }

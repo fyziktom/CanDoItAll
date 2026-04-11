@@ -860,7 +860,7 @@
 
 .cw-context-menu {
     position: absolute;
-    z-index: 40;
+    z-index: 620;
     width: 0;
     height: 0;
     pointer-events: none;

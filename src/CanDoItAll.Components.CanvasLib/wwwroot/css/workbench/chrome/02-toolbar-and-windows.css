@@ -210,7 +210,7 @@
 
 .cw-floating-window {
     position: absolute;
-    z-index: 14;
+    z-index: 640;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     gap: 0.72rem;

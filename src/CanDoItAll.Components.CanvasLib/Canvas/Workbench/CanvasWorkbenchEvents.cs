@@ -12,7 +12,9 @@ public sealed record CanvasWorkbenchContextActionRequest(
     string TargetKind = "node",
     string? LinkSourceId = null,
     string? LinkTargetId = null,
-    string? LinkKind = null);
+    string? LinkKind = null,
+    string? LinkSourcePortId = null,
+    string? LinkTargetPortId = null);
 
 public sealed record CanvasWorkbenchCreateActionRequest(
     string ActionId,

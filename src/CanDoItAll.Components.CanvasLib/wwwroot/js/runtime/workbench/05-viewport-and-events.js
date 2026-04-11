@@ -1166,6 +1166,8 @@
             hoveredDeleteLinkKey: null,
             hoveredAnnotationKey: "",
             pointerHostPoint: null,
+            connectionDraft: null,
+            connectionTarget: null,
             renderedLinks: [],
             previewLink: null,
             popover: null,
@@ -1216,6 +1218,8 @@
         state.hoveredDeleteNodeId = null;
         state.hoveredDeleteLinkKey = null;
         state.hoveredAnnotationKey = "";
+        state.connectionDraft = null;
+        state.connectionTarget = null;
         state.renderedLinks = [];
         state.previewLink = null;
         syncMenuScaleCss(state);

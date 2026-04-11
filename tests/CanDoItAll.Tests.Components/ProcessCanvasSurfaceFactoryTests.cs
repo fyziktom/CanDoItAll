@@ -146,6 +146,44 @@ public sealed class ProcessCanvasSurfaceFactoryTests
     }
 
     [Fact]
+    public void Definition_surface_keeps_decision_role_input_available_without_a_bound_role_and_honors_delete_mode()
+    {
+        var editor = new ProcessDefinitionEditorModel
+        {
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = Guid.NewGuid(),
+                    Key = "route-review",
+                    Title = "Route review",
+                    StepKind = ProcessStepKind.Decision,
+                    BranchOutcomes =
+                    [
+                        new ProcessStepBranchOutcomeEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            Key = "repairs-required",
+                            Title = "Repairs required"
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var factory = new ProcessCanvasSurfaceFactory();
+        var surface = factory.BuildDefinitionSurface(editor, mode: "delete");
+
+        Assert.Equal("delete", surface.Mode);
+
+        var branchNode = Assert.Single(surface.Nodes, node => node.Kind == "process-branch-router");
+        Assert.Contains(branchNode.InputPorts, port => port.Id == ProcessCanvasBranching.StepInputPortId);
+        var decisionRolePort = Assert.Single(branchNode.InputPorts, port => port.Id == ProcessCanvasBranching.DecisionRoleInputPortId);
+        Assert.Equal("Decision authority", decisionRolePort.Label);
+        Assert.False(decisionRolePort.IsRequired);
+    }
+
+    [Fact]
     public void Runtime_surface_projects_branch_router_for_routed_steps()
     {
         var run = new ProcessRunListItem(

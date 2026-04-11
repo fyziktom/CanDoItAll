@@ -213,7 +213,10 @@
                                                      NodeOpened="HandleCanvasNodeOpenedAsync">
                                         <ToolbarLeftContent>
                                             <ProcessCanvasToolbarActions SelectionWindowVisible="@canvasSelectionWindowState.IsVisible"
+                                                                         ActiveTool="@definitionCanvasTool"
                                                                          ToolboxWindowVisible="@canvasToolboxWindowState.IsVisible"
+                                                                         SelectToolClicked="SelectDefinitionCanvasToolAsync"
+                                                                         DeleteToolClicked="DeleteDefinitionCanvasToolAsync"
                                                                          ToggleSelectionWindow="ToggleCanvasSelectionWindowAsync"
                                                                          ToggleToolboxWindow="ToggleCanvasToolboxWindowAsync" />
                                         </ToolbarLeftContent>
@@ -414,6 +417,7 @@
                                                      NodeOpened="HandleCanvasNodeOpenedAsync">
                                         <ToolbarLeftContent>
                                             <ProcessCanvasToolbarActions SelectionWindowVisible="@canvasSelectionWindowState.IsVisible"
+                                                                         ShowAuthoringTools="false"
                                                                          ShowToolbox="false"
                                                                          SelectionTestId="processes-runtime-toggle-selection"
                                                                          ToggleSelectionWindow="ToggleCanvasSelectionWindowAsync" />

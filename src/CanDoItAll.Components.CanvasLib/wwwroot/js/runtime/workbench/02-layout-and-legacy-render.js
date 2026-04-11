@@ -100,12 +100,36 @@
         return portTop + ((portBottom - portTop) * index / Math.max(1, totalCount - 1));
     }
 
-    function buildPortAnchorPoint(state, node, port, index, totalCount, fallbackSide) {
+    function resolveAnchorDirection(side, fallbackDirection) {
+        if (fallbackDirection === "input" || fallbackDirection === "output") {
+            return fallbackDirection;
+        }
+
+        return side === "left" || side === "top"
+            ? "input"
+            : "output";
+    }
+
+    function resolveStandardAnchorPortId(side) {
+        switch ((side || "").toLowerCase()) {
+            case "left":
+                return "anchor:left";
+            case "top":
+                return "anchor:top";
+            case "bottom":
+                return "anchor:bottom";
+            default:
+                return "anchor:right";
+        }
+    }
+
+    function buildPortAnchorPoint(state, node, port, index, totalCount, fallbackSide, fallbackDirection) {
         const position = getNodePosition(state, node);
         const size = getNodeSize(state, node);
         const horizontalInset = Math.min(28, size.width * 0.11);
         const verticalInset = Math.min(22, size.height * 0.18);
         const side = resolveNodePortSide(port, fallbackSide);
+        const direction = resolveAnchorDirection(side, fallbackDirection);
         return {
             x: side === "right"
                 ? position.x + (size.width / 2) - horizontalInset
@@ -119,7 +143,8 @@
                     : resolvePortAnchorY(position, size, index, totalCount),
             side,
             portId: port?.id || "",
-            label: port?.label || ""
+            label: port?.label || "",
+            direction
         };
     }
 
@@ -128,7 +153,7 @@
         if (portId && ports.length > 0) {
             const portIndex = ports.findIndex(port => port?.id === portId);
             if (portIndex >= 0) {
-                return buildPortAnchorPoint(state, node, ports[portIndex], portIndex, ports.length, side);
+                return buildPortAnchorPoint(state, node, ports[portIndex], portIndex, ports.length, side, direction);
             }
         }
 
@@ -1157,8 +1182,8 @@
         const outputPorts = Array.isArray(node?.outputPorts) ? node.outputPorts : [];
         if (inputPorts.length > 0 || outputPorts.length > 0) {
             return [
-                ...inputPorts.map((port, index) => buildPortAnchorPoint(state, node, port, index, inputPorts.length, "left")),
-                ...outputPorts.map((port, index) => buildPortAnchorPoint(state, node, port, index, outputPorts.length, "right"))
+                ...inputPorts.map((port, index) => buildPortAnchorPoint(state, node, port, index, inputPorts.length, "left", "input")),
+                ...outputPorts.map((port, index) => buildPortAnchorPoint(state, node, port, index, outputPorts.length, "right", "output"))
             ];
         }
 
@@ -1167,14 +1192,42 @@
         const horizontalInset = Math.min(28, size.width * 0.11);
         const verticalInset = Math.min(22, size.height * 0.18);
         const points = [
-            { side: "left", x: position.x - (size.width / 2) + horizontalInset, y: position.y },
-            { side: "right", x: position.x + (size.width / 2) - horizontalInset, y: position.y }
+            {
+                side: "left",
+                x: position.x - (size.width / 2) + horizontalInset,
+                y: position.y,
+                portId: resolveStandardAnchorPortId("left"),
+                direction: "input",
+                label: "Input"
+            },
+            {
+                side: "right",
+                x: position.x + (size.width / 2) - horizontalInset,
+                y: position.y,
+                portId: resolveStandardAnchorPortId("right"),
+                direction: "output",
+                label: "Output"
+            }
         ];
 
         if ((placementMode || "edges") !== "horizontal") {
             points.push(
-                { side: "top", x: position.x, y: position.y - (size.height / 2) + verticalInset },
-                { side: "bottom", x: position.x, y: position.y + (size.height / 2) - verticalInset });
+                {
+                    side: "top",
+                    x: position.x,
+                    y: position.y - (size.height / 2) + verticalInset,
+                    portId: resolveStandardAnchorPortId("top"),
+                    direction: "input",
+                    label: "Input"
+                },
+                {
+                    side: "bottom",
+                    x: position.x,
+                    y: position.y + (size.height / 2) - verticalInset,
+                    portId: resolveStandardAnchorPortId("bottom"),
+                    direction: "output",
+                    label: "Output"
+                });
         }
 
         return points;
