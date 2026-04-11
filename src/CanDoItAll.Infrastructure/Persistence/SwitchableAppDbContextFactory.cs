@@ -54,8 +54,10 @@ public static class AppDbContextOptionsConfigurator
                     Directory.CreateDirectory(directory);
                 }
 
+                var sqliteConnectionString = SqliteWriteCoordination.NormalizeConnectionString(profile.ConnectionString);
+                optionsBuilder.AddInterceptors(SqliteWriteCoordination.ConnectionInterceptor);
                 optionsBuilder.UseSqlite(
-                    profile.ConnectionString,
+                    sqliteConnectionString,
                     builder => builder.MigrationsAssembly(AppDbContextMigrationsAssemblyNames.Sqlite));
                 return;
 
@@ -98,7 +100,9 @@ public static class AppDbContextOptionsConfigurator
         var sqliteConnectionString = string.IsNullOrWhiteSpace(databaseOptions.ConnectionString)
             ? $"Data Source={databasePath}"
             : databaseOptions.ConnectionString;
+        sqliteConnectionString = SqliteWriteCoordination.NormalizeConnectionString(sqliteConnectionString);
 
+        optionsBuilder.AddInterceptors(SqliteWriteCoordination.ConnectionInterceptor);
         optionsBuilder.UseSqlite(
             sqliteConnectionString,
             builder => builder.MigrationsAssembly(AppDbContextMigrationsAssemblyNames.Sqlite));

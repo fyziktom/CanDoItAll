@@ -1,0 +1,15 @@
+{
+  "SubbundleKey": "05-runtime-projection-and-import-parity",
+  "Title": "Runtime projection and import parity",
+  "Purpose": "Project current-module import envelopes from the pack and verify parity for dependencies, artifact inputs, and decision roles.",
+  "DependsOn": [
+    "04-mermaid-and-sidecar-driver"
+  ],
+  "Deliverables": [
+    "Current-module import envelopes",
+    "Compatibility reports",
+    "Projection parity tests"
+  ],
+  "ProgressionGate": "Projection compatibility reports must show no blocking issues.",
+  "CorrectiveOnFailure": "Create a projection corrective subbundle before continuing."
+}

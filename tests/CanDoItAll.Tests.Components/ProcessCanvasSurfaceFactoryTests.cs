@@ -4,8 +4,26 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProcessCanvasSurfaceFactoryTests
 {
-    private const string DecisionActionId = "process-step.decision";
     private const string AddBranchOutcomeActionId = "process-definition.add-branch-outcome";
+    private static readonly string[] ExpectedQuickCreateActionIds =
+    [
+        "process-definition.open-toolbox",
+        "process-role.product-owner",
+        "process-role.solution-architect",
+        "process-step.intake",
+        "process-step.architecture",
+        "process-step.implementation",
+        "process-step.qa",
+        "process-step.release-approval"
+    ];
+    private static readonly string[] ExpectedGroupContextActionIds =
+    [
+        "process-definition.edit-step",
+        "process-definition.add-dependent-step",
+        "process-definition.add-role-binding",
+        "process-definition.add-artifact-expectation",
+        "process-definition.remove-step"
+    ];
 
     [Fact]
     public void Definition_surface_exposes_decision_creation_and_branch_dependency_chips()
@@ -46,11 +64,11 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             ]
         };
 
-        var factory = new ProcessCanvasSurfaceFactory();
+        var factory = CreateFactory();
         var surface = factory.BuildDefinitionSurface(editor);
 
-        Assert.Contains(surface.Chrome.QuickCreateActions, action => action.ActionId == DecisionActionId);
-        Assert.Contains(surface.Chrome.GroupContextActions, action => action.ActionId == DecisionActionId);
+        Assert.Equal(ExpectedQuickCreateActionIds, surface.Chrome.QuickCreateActions.Select(action => action.ActionId));
+        Assert.Equal(ExpectedGroupContextActionIds, surface.Chrome.GroupContextActions.Select(action => action.ActionId));
 
         var decisionNode = Assert.Single(surface.Nodes, node => node.Title == "Route change");
         Assert.Contains(decisionNode.ContextActions, action => action.ActionId == AddBranchOutcomeActionId);
@@ -118,7 +136,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             ]
         };
 
-        var factory = new ProcessCanvasSurfaceFactory();
+        var factory = CreateFactory();
         var surface = factory.BuildDefinitionSurface(editor);
 
         var branchNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildDefinitionBranchNodeId(editor.Steps[0]));
@@ -171,7 +189,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             ]
         };
 
-        var factory = new ProcessCanvasSurfaceFactory();
+        var factory = CreateFactory();
         var surface = factory.BuildDefinitionSurface(editor, mode: "delete");
 
         Assert.Equal("delete", surface.Mode);
@@ -274,7 +292,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             ]
         };
 
-        var factory = new ProcessCanvasSurfaceFactory();
+        var factory = CreateFactory();
         var surface = factory.BuildDefinitionSurface(editor);
 
         var implementationNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildDefinitionStepNodeId(editor.Steps[0]));
@@ -450,7 +468,7 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             }
         };
 
-        var factory = new ProcessCanvasSurfaceFactory();
+        var factory = CreateFactory();
         var surface = factory.BuildRunSurface(run, stepRuns);
 
         var branchNode = Assert.Single(surface.Nodes, node => node.Id == ProcessCanvasBranching.BuildRuntimeBranchNodeId(stepRuns[0].Id));
@@ -470,5 +488,12 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             link.SourceId == branchNode.Id &&
             link.TargetId == ProcessCanvasBranching.BuildRuntimeStepNodeId(stepRuns[2].Id) &&
             link.SourcePortId == ProcessCanvasBranching.BuildOutcomePortId(stepRuns[0].AvailableBranchOutcomes[1]));
+    }
+
+    private static ProcessCanvasSurfaceFactory CreateFactory(string? packRoot = null)
+    {
+        return new ProcessCanvasSurfaceFactory(
+            new ProcessCanvasChromeCatalogService(
+                new ProcessTemplatePackLoader(packRoot)));
     }
 }

@@ -1,0 +1,159 @@
+{
+  "Bundle": "CanDoItAll process template execution bundle — current architecture aligned",
+  "ApplyOrder": [
+    "01-schema-and-pack-refresh",
+    "02-baseline-scenario-realignment",
+    "03-process-template-enhancement",
+    "04-mermaid-and-sidecar-driver",
+    "05-runtime-projection-and-import-parity",
+    "06-tests-and-regression-net",
+    "07-architecture-review-gate-a",
+    "08-corrective-canvas-chrome-dehardcode",
+    "09-architecture-review-gate-b",
+    "10-final-qa-audit-and-closure"
+  ],
+  "Tasks": [
+    {
+      "Key": "01-schema-and-pack-refresh",
+      "Goal": "Refresh the template-pack schema so it models role usages, dependencies, artifact inputs, branch coordinates, and shared/local resources explicitly.",
+      "DependsOn": [],
+      "Deliverables": [
+        "Updated definition schema and manifest",
+        "Rebuilt process-template pack folders",
+        "Updated workbook tabs for dependencies and artifact inputs"
+      ],
+      "ProgressionGate": "Must pass architecture review gate A before the next subbundle may begin.",
+      "CorrectiveOnFailure": "Create a corrective subbundle focused on schema mismatches, then rerun gate A."
+    },
+    {
+      "Key": "02-baseline-scenario-realignment",
+      "Goal": "Realign the seeded baseline scenarios to the current five-process repository expectations and current step keys.",
+      "DependsOn": [
+        "01-schema-and-pack-refresh"
+      ],
+      "Deliverables": [
+        "Five current baseline scenarios",
+        "Updated validation assertions for software, branching, and hotfix expectations"
+      ],
+      "ProgressionGate": "Validator must confirm five expected baseline scenarios and exact key process expectations.",
+      "CorrectiveOnFailure": "Create a corrective subbundle for baseline drift, then rerun validation."
+    },
+    {
+      "Key": "03-process-template-enhancement",
+      "Goal": "Revisit all processes and remove earlier simplifications that were only present because the older module lacked current features.",
+      "DependsOn": [
+        "02-baseline-scenario-realignment"
+      ],
+      "Deliverables": [
+        "Nine updated process definitions",
+        "Detailed role sidecars",
+        "Step-level markdown docs"
+      ],
+      "ProgressionGate": "Each process must have detailed roles, artifacts, checklists, validations, prompts, dependencies, and artifact inputs where relevant.",
+      "CorrectiveOnFailure": "Create a process-specific corrective subbundle and do not continue until the process passes review."
+    },
+    {
+      "Key": "04-mermaid-and-sidecar-driver",
+      "Goal": "Ensure every template can export Mermaid flowchart and sequence diagrams plus supporting markdown sidecars.",
+      "DependsOn": [
+        "03-process-template-enhancement"
+      ],
+      "Deliverables": [
+        "Mermaid flowcharts",
+        "Mermaid sequence diagrams",
+        "Supporting sidecar file inventory"
+      ],
+      "ProgressionGate": "Mermaid exporter and supporting file inventory must cover definition docs and resource docs.",
+      "CorrectiveOnFailure": "Create an exporter corrective subbundle and rerun architecture review gate B."
+    },
+    {
+      "Key": "05-runtime-projection-and-import-parity",
+      "Goal": "Project current-module import envelopes from the pack and verify parity for dependencies, artifact inputs, and decision roles.",
+      "DependsOn": [
+        "04-mermaid-and-sidecar-driver"
+      ],
+      "Deliverables": [
+        "Current-module import envelopes",
+        "Compatibility reports",
+        "Projection parity tests"
+      ],
+      "ProgressionGate": "Projection compatibility reports must show no blocking issues.",
+      "CorrectiveOnFailure": "Create a projection corrective subbundle before continuing."
+    },
+    {
+      "Key": "06-tests-and-regression-net",
+      "Goal": "Strengthen unit tests and validation scripts so future process-module changes surface pack regressions immediately.",
+      "DependsOn": [
+        "05-runtime-projection-and-import-parity"
+      ],
+      "Deliverables": [
+        "Updated xUnit tests",
+        "Validation script",
+        "Regression expectations for current architecture"
+      ],
+      "ProgressionGate": "Test inventory must cover loader, projection, exporter, catalog, and current baseline expectations.",
+      "CorrectiveOnFailure": "Create a test-gap corrective subbundle and rerun gate B."
+    },
+    {
+      "Key": "07-architecture-review-gate-a",
+      "Goal": "Stop after the early pack refresh and re-check schema fidelity before more implementation effort is spent.",
+      "DependsOn": [
+        "01-schema-and-pack-refresh",
+        "02-baseline-scenario-realignment",
+        "03-process-template-enhancement"
+      ],
+      "Deliverables": [
+        "Architecture review memo A",
+        "Gap register",
+        "Go/no-go decision"
+      ],
+      "ProgressionGate": "Must pass or produce a corrective subbundle.",
+      "CorrectiveOnFailure": "Open a corrective subbundle immediately and prohibit downstream progress."
+    },
+    {
+      "Key": "08-corrective-canvas-chrome-dehardcode",
+      "Goal": "Address the remaining hardcoded authoring chrome in ProcessCanvasSurfaceFactory so quick-create and group actions become file-driven.",
+      "DependsOn": [
+        "07-architecture-review-gate-a"
+      ],
+      "Deliverables": [
+        "Patch plan and sample patch",
+        "Chrome-actions catalog sidecar",
+        "Acceptance criteria for UI de-hardcoding"
+      ],
+      "ProgressionGate": "Either complete the de-hardcode patch or explicitly accept the debt in the final QA memo.",
+      "CorrectiveOnFailure": "Escalate as architectural debt that must stay visible in the final bundle."
+    },
+    {
+      "Key": "09-architecture-review-gate-b",
+      "Goal": "Stop again after projection, Mermaid, and tests to catch wrong architectural direction before final closure.",
+      "DependsOn": [
+        "04-mermaid-and-sidecar-driver",
+        "05-runtime-projection-and-import-parity",
+        "06-tests-and-regression-net",
+        "08-corrective-canvas-chrome-dehardcode"
+      ],
+      "Deliverables": [
+        "Architecture review memo B",
+        "Corrective action closure evidence",
+        "Updated traceability matrix"
+      ],
+      "ProgressionGate": "Must pass or produce another corrective subbundle.",
+      "CorrectiveOnFailure": "Open a corrective subbundle before any final QA activity."
+    },
+    {
+      "Key": "10-final-qa-audit-and-closure",
+      "Goal": "Perform the strict final QA and senior architect inspection, then package the final ZIP only after all gates are satisfied.",
+      "DependsOn": [
+        "09-architecture-review-gate-b"
+      ],
+      "Deliverables": [
+        "Final QA memo",
+        "Validation result",
+        "Bundle index and final ZIP"
+      ],
+      "ProgressionGate": "Final QA memo must state whether any debt remains and why it is or is not acceptable.",
+      "CorrectiveOnFailure": "Create one more corrective subbundle and repeat the final audit."
+    }
+  ]
+}

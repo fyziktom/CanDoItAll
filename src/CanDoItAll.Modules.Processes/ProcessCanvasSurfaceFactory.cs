@@ -4,6 +4,13 @@ namespace CanDoItAll.Modules.Processes;
 
 public sealed class ProcessCanvasSurfaceFactory
 {
+    private readonly ProcessCanvasChromeCatalogService chromeCatalogService;
+
+    public ProcessCanvasSurfaceFactory(ProcessCanvasChromeCatalogService chromeCatalogService)
+    {
+        this.chromeCatalogService = chromeCatalogService;
+    }
+
     public CanvasWorkbenchSurface BuildDefinitionSurface(
         ProcessDefinitionEditorModel editor,
         string? selectedNodeId = null,
@@ -1196,8 +1203,9 @@ public sealed class ProcessCanvasSurfaceFactory
             : 260d;
     }
 
-    private static CanvasWorkbenchChrome BuildDefinitionChrome()
+    private CanvasWorkbenchChrome BuildDefinitionChrome()
     {
+        var chromeCatalog = chromeCatalogService.GetDefinitionChrome();
         return new CanvasWorkbenchChrome
         {
             HintText = "Select a step to edit, drag nodes to improve the process map, and keep role bindings explicit.",
@@ -1209,111 +1217,8 @@ public sealed class ProcessCanvasSurfaceFactory
             {
                 PlacementMode = "Horizontal"
             },
-            QuickCreateActions =
-            [
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.CreateRoleBlank,
-                    Label = "Blank role",
-                    MenuLabel = "Add blank role",
-                    Description = "Add a new role requirement and decide later who can fulfill it.",
-                    Icon = "person_add",
-                    Tone = "neutral"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.CreateStepImplementation,
-                    Label = "Implementation",
-                    MenuLabel = "Add implementation step",
-                    Description = "Add a standard execution step with proof-oriented defaults.",
-                    Icon = "plus",
-                    Tone = "accent"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.CreateStepDecision,
-                    Label = "Decision step",
-                    MenuLabel = "Add decision step",
-                    Description = "Add a switch-style decision node with explicit branch outcomes.",
-                    Icon = "call_split",
-                    Tone = "accent"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.CreateStepReleaseApproval,
-                    Label = "Approval step",
-                    MenuLabel = "Add approval step",
-                    Description = "Add an explicit approval gate.",
-                    Icon = "check",
-                    Tone = "warn"
-                }
-            ],
-            GroupContextActions =
-            [
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.OpenDefinitionToolbox,
-                    Label = "Open toolbox",
-                    MenuLabel = "Open toolbox",
-                    Description = "Open the floating process templates toolbox.",
-                    Icon = "inventory_2",
-                    Tone = "neutral"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.CreateRoleBlank,
-                    Label = "Add role",
-                    MenuLabel = "Add role",
-                    Description = "Open the role-first editor and decide whether to start blank or from a template.",
-                    Icon = "person_add",
-                    Tone = "neutral"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.CreateStepImplementation,
-                    Label = "Add step",
-                    MenuLabel = "Add step",
-                    Description = "Open the step editor and choose whether to start from a template or a blank implementation step.",
-                    Icon = "add_circle",
-                    Tone = "accent"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.CreateStepDecision,
-                    Label = "Decision router",
-                    MenuLabel = "Add decision router",
-                    Description = "Add a branching node and define typed switch outcomes on the canvas.",
-                    Icon = "call_split",
-                    Tone = "accent"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.CreateRoleSolutionArchitect,
-                    Label = "Architect role",
-                    MenuLabel = "Add architect role",
-                    Description = "Add an architecture authority role template.",
-                    Icon = "architecture",
-                    Tone = "neutral"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.CreateStepArchitecture,
-                    Label = "Architecture step",
-                    MenuLabel = "Add architecture step",
-                    Description = "Add a design review step with decision-record defaults.",
-                    Icon = "hub",
-                    Tone = "accent"
-                },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.CreateStepQa,
-                    Label = "QA gate",
-                    MenuLabel = "Add QA gate",
-                    Description = "Add a regression and release-confidence step.",
-                    Icon = "fact_check",
-                    Tone = "accent"
-                }
-            ]
+            QuickCreateActions = chromeCatalog.DefinitionQuickCreateActions.ToList(),
+            GroupContextActions = chromeCatalog.DefinitionGroupContextActions.ToList()
         };
     }
 

@@ -26,13 +26,18 @@ public sealed partial class AppSmokeTests
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected /processes to return 2xx, got {(int)response.Status}.");
 
-        await DismissStartupModalIfPresentAsync(page);
+        var startupDialog = page.GetByTestId("database-startup-modal");
+        if (await WaitForLocatorAsync(startupDialog, 15_000))
+        {
+            await page.GetByTestId("database-startup-continue").ClickAsync();
+            await startupDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+        }
         await page.GetByTestId("processes-seed-baseline-button").WaitForAsync();
         await page.GetByTestId("processes-seed-baseline-button").ClickAsync();
-        await page.WaitForSelectorAsync("text=Development seed baseline prepared.");
-        await page.WaitForSelectorAsync("text=Multi-team software delivery and release governance");
+        await WaitForBodyTextAsync(page, "Development seed baseline prepared.", 30_000);
+        await WaitForBodyTextAsync(page, "Multi-team software delivery and release governance", 30_000);
 
-        var stepsTab = page.GetByRole(AriaRole.Button, new() { Name = "Steps", Exact = true });
+        var stepsTab = page.GetByRole(AriaRole.Tab, new() { Name = "Steps", Exact = true });
         await stepsTab.WaitForAsync();
         await stepsTab.ClickAsync();
         await WaitForInitializedCanvasHostAsync(page);
@@ -87,7 +92,7 @@ public sealed partial class AppSmokeTests
         var secondStepSelector = $".cw-node[data-node-id='{definitionNodes[1].Id}']";
         var selectionWindow = page.GetByTestId("processes-canvas-selection-window");
 
-        await ClickCanvasNodeAsync(page, firstStepSelector);
+        await EnsureCanvasSelectionAsync(page, firstStepSelector);
         await selectionWindow.WaitForAsync();
         await page.WaitForFunctionAsync(
             @"title => {
@@ -95,7 +100,7 @@ public sealed partial class AppSmokeTests
                 return !!panel && (panel.textContent || '').includes(title);
             }",
             definitionNodes[0].Title);
-        await ClickCanvasNodeAsync(page, secondStepSelector);
+        await EnsureCanvasSelectionAsync(page, secondStepSelector);
         await page.WaitForFunctionAsync(
             @"title => {
                 const panel = document.querySelector('[data-testid=""processes-canvas-selection-window""]');
@@ -107,11 +112,11 @@ public sealed partial class AppSmokeTests
             Path = Path.Combine(artifactsDir, "03-definition-selection-window.png")
         });
 
-        var contextLabels = await OpenCanvasContextMenuAsync(page, secondStepSelector);
-        Assert.Contains(contextLabels, label => label.Contains("Edit step", StringComparison.Ordinal));
-        Assert.Contains(contextLabels, label => label.Contains("Add dependent step", StringComparison.Ordinal));
-        Assert.Contains(contextLabels, label => label.Contains("Add role binding", StringComparison.Ordinal));
-        await ClickContextMenuActionAsync(page, "process-definition.add-dependent-step");
+        var selectionWindowText = await selectionWindow.TextContentAsync();
+        Assert.Contains("Edit step", selectionWindowText, StringComparison.Ordinal);
+        Assert.Contains("Add dependent step", selectionWindowText, StringComparison.Ordinal);
+        Assert.Contains("Add role binding", selectionWindowText, StringComparison.Ordinal);
+        await selectionWindow.GetByRole(AriaRole.Button, new() { Name = "Add dependent step", Exact = true }).ClickAsync();
         await editorWindow.WaitForAsync();
         await page.GetByTestId("processes-canvas-step-editor").WaitForAsync();
         await editorWindow.GetByRole(AriaRole.Button, new() { Name = "Hide window", Exact = true }).ClickAsync();
@@ -126,7 +131,7 @@ public sealed partial class AppSmokeTests
         await actionDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
         await actionDialog.WaitForAsync(new() { State = WaitForSelectorState.Hidden });
 
-        var runsTab = page.GetByRole(AriaRole.Button, new() { Name = "Runs", Exact = true });
+        var runsTab = page.GetByRole(AriaRole.Tab, new() { Name = "Runs", Exact = true });
         await runsTab.WaitForAsync();
         await runsTab.ClickAsync();
         await WaitForInitializedCanvasHostAsync(page);

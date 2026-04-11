@@ -1,0 +1,17 @@
+{
+  "SubbundleKey": "07-architecture-review-gate-a",
+  "Title": "Architecture review gate A",
+  "Purpose": "Stop after the early pack refresh and re-check schema fidelity before more implementation effort is spent.",
+  "DependsOn": [
+    "01-schema-and-pack-refresh",
+    "02-baseline-scenario-realignment",
+    "03-process-template-enhancement"
+  ],
+  "Deliverables": [
+    "Architecture review memo A",
+    "Gap register",
+    "Go/no-go decision"
+  ],
+  "ProgressionGate": "Must pass or produce a corrective subbundle.",
+  "CorrectiveOnFailure": "Open a corrective subbundle immediately and prohibit downstream progress."
+}

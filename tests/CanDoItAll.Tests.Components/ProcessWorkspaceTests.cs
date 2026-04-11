@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using Bunit;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.DependencyInjection;
@@ -476,6 +477,68 @@ public sealed class ProcessWorkspaceTests
             Assert.Equal(420, persistedRole.CanvasY);
             Assert.Equal(940, persistedDecisionStep.BranchCanvasX);
             Assert.Equal(260, persistedDecisionStep.BranchCanvasY);
+        });
+    }
+
+    [Fact]
+    public async Task Steps_canvas_node_moves_coalesce_rapid_updates_into_one_persisted_definition_update()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var activityService = harness.Context.Services.GetRequiredService<ActivityService>();
+        var projectId = await CreateProjectAsync(projectsService, "Canvas movement coalescing project");
+        var process = BuildCanvasAuthoringDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(process.Editor);
+
+        Assert.True(saveResult.IsSuccess);
+
+        var baselineUpdateCount = (await activityService.ListRecentAsync(200))
+            .Count(item =>
+                item.Category == "processes" &&
+                item.Action == "update-definition" &&
+                item.Description == process.Editor.Name);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>();
+        cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        await ActivateStepsTabAsync(cut);
+
+        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var initialEditor = GetEditor(cut.Instance);
+        var role = Assert.Single(initialEditor.Roles, item => item.Key == process.RoleKey);
+        var decisionStep = Assert.Single(initialEditor.Steps, step => step.Key == process.DecisionStepKey);
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnNodesMoved(JsonSerializer.Serialize(new[]
+        {
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), 320, 420),
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionBranchNodeId(decisionStep), 940, 260)
+        })));
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnNodesMoved(JsonSerializer.Serialize(new[]
+        {
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), 360, 460),
+            new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionBranchNodeId(decisionStep), 1000, 300)
+        })));
+
+        cut.WaitForAssertion(() =>
+        {
+            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
+            var persistedRole = Assert.Single(persistedEditor.Roles, item => item.Key == process.RoleKey);
+            var persistedDecisionStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.DecisionStepKey);
+            Assert.Equal(360, persistedRole.CanvasX);
+            Assert.Equal(460, persistedRole.CanvasY);
+            Assert.Equal(1000, persistedDecisionStep.BranchCanvasX);
+            Assert.Equal(300, persistedDecisionStep.BranchCanvasY);
+        });
+
+        cut.WaitForAssertion(() =>
+        {
+            var currentUpdateCount = activityService.ListRecentAsync(200).GetAwaiter().GetResult()
+                .Count(item =>
+                    item.Category == "processes" &&
+                    item.Action == "update-definition" &&
+                    item.Description == process.Editor.Name);
+            Assert.Equal(baselineUpdateCount + 1, currentUpdateCount);
         });
     }
 

@@ -1,0 +1,18 @@
+{
+  "SubbundleKey": "09-architecture-review-gate-b",
+  "Title": "Architecture review gate B",
+  "Purpose": "Stop again after projection, Mermaid, and tests to catch wrong architectural direction before final closure.",
+  "DependsOn": [
+    "04-mermaid-and-sidecar-driver",
+    "05-runtime-projection-and-import-parity",
+    "06-tests-and-regression-net",
+    "08-corrective-canvas-chrome-dehardcode"
+  ],
+  "Deliverables": [
+    "Architecture review memo B",
+    "Corrective action closure evidence",
+    "Updated traceability matrix"
+  ],
+  "ProgressionGate": "Must pass or produce another corrective subbundle.",
+  "CorrectiveOnFailure": "Open a corrective subbundle before any final QA activity."
+}

@@ -1,0 +1,42 @@
+{
+  "BundleName": "CanDoItAll process template execution bundle — current architecture aligned",
+  "GeneratedAtUtc": "2026-04-11T17:32:40Z",
+  "Contents": {
+    "ProcessTemplatePackRoot": "repo-overlay/output/process-template-pack",
+    "Workbook": "artifacts/process-template-catalog.xlsx",
+    "RenderedWorkbookSheets": "artifacts/rendered",
+    "OverlayRoot": "repo-overlay",
+    "ValidationScript": "tools/validate_process_template_pack.py",
+    "SubbundlesRoot": "subbundles",
+    "AnalysisRoot": "analysis",
+    "PatchRoot": "repo-overlay/patches"
+  },
+  "Counts": {
+    "FrameworkSources": 6,
+    "Processes": 9,
+    "SharedRoles": 25,
+    "LocalRoles": 26,
+    "RoleUsages": 54,
+    "SharedArtifacts": 33,
+    "LocalArtifacts": 14,
+    "SharedChecklists": 14,
+    "LocalChecklists": 11,
+    "SharedValidations": 15,
+    "LocalValidations": 11,
+    "SharedPrompts": 16,
+    "LocalPrompts": 11,
+    "BaselineScenarios": 5,
+    "Steps": 54,
+    "Dependencies": 52,
+    "ArtifactInputs": 20
+  },
+  "ExecutionNotes": [
+    "The template pack is the authored source of truth; current-module import envelopes are projections.",
+    "Current architecture expectations for software-delivery, branching-code-review, and hotfix-rollout were encoded into both the pack and the validator.",
+    "Architecture review gates are mandatory checkpoints. Failure must create a corrective subbundle before downstream work continues."
+  ],
+  "EnvironmentLimitations": [
+    "The bundle was authored without a local dotnet SDK in this container, so compile and xUnit execution could not be run here.",
+    "Workbook generation, CSV sheet export, pack validation, import-envelope projection generation, and Mermaid export generation were executed successfully."
+  ]
+}

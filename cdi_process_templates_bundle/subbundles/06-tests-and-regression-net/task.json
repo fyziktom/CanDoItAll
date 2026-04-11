@@ -1,0 +1,15 @@
+{
+  "SubbundleKey": "06-tests-and-regression-net",
+  "Title": "Tests and regression net",
+  "Purpose": "Strengthen unit tests and validation scripts so future process-module changes surface pack regressions immediately.",
+  "DependsOn": [
+    "05-runtime-projection-and-import-parity"
+  ],
+  "Deliverables": [
+    "Updated xUnit tests",
+    "Validation script",
+    "Regression expectations for current architecture"
+  ],
+  "ProgressionGate": "Test inventory must cover loader, projection, exporter, catalog, and current baseline expectations.",
+  "CorrectiveOnFailure": "Create a test-gap corrective subbundle and rerun gate B."
+}

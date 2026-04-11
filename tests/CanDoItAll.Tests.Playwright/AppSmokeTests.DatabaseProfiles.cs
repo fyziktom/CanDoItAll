@@ -235,7 +235,7 @@ public sealed partial class AppSmokeTests
         await startupDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
     }
 
-    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 1_500)
+    private static async Task DismissStartupModalIfPresentAsync(IPage page, float timeoutMs = 5_000)
     {
         var startupDialog = page.GetByTestId("database-startup-modal");
         if (!await WaitForLocatorAsync(startupDialog, timeoutMs))

@@ -1,0 +1,15 @@
+{
+  "SubbundleKey": "08-corrective-canvas-chrome-dehardcode",
+  "Title": "Corrective subbundle — canvas chrome de-hardcode",
+  "Purpose": "Address the remaining hardcoded authoring chrome in ProcessCanvasSurfaceFactory so quick-create and group actions become file-driven.",
+  "DependsOn": [
+    "07-architecture-review-gate-a"
+  ],
+  "Deliverables": [
+    "Patch plan and sample patch",
+    "Chrome-actions catalog sidecar",
+    "Acceptance criteria for UI de-hardcoding"
+  ],
+  "ProgressionGate": "Either complete the de-hardcode patch or explicitly accept the debt in the final QA memo.",
+  "CorrectiveOnFailure": "Escalate as architectural debt that must stay visible in the final bundle."
+}

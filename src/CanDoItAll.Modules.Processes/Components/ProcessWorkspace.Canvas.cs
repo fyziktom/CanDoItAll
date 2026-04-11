@@ -13,6 +13,7 @@ public partial class ProcessWorkspace
     private const string CanvasDeleteActionId = "delete";
     private const string CanvasDeleteLinkActionId = "delete-link";
     private const string CanvasConnectionCreateActionId = "connection:create";
+    private const int DefinitionCanvasPersistDelayMs = 300;
 
     private CanvasWorkbench? workbenchRef;
     private string? selectedCanvasNodeId;
@@ -27,6 +28,8 @@ public partial class ProcessWorkspace
     private Guid? canvasInsertAfterStepId;
     private string canvasTemplateActionId = string.Empty;
     private ProcessCanvasNodeActionDialogState? canvasActionDialog;
+    private readonly SemaphoreSlim definitionCanvasPersistGate = new(1, 1);
+    private CancellationTokenSource? pendingDefinitionCanvasPersistCts;
 
     private bool IsDefinitionCanvasActive => string.Equals(detailTab, "steps", StringComparison.Ordinal);
 
@@ -320,7 +323,8 @@ public partial class ProcessWorkspace
 
         StoreCanvasUiState(uiState);
         RefreshCanvasSurface();
-        await PersistDefinitionCanvasChangesAsync(refreshSurface: false);
+        ScheduleDefinitionCanvasPersistence();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ExecuteCanvasActionAsync(string actionId, string? nodeId, double x, double y)
@@ -1231,37 +1235,128 @@ public partial class ProcessWorkspace
         return Task.CompletedTask;
     }
 
-    private async Task PersistDefinitionCanvasChangesAsync(string? successMessage = null, bool refreshSurface = true)
+    private async Task PersistDefinitionCanvasChangesAsync(
+        string? successMessage = null,
+        bool refreshSurface = true,
+        bool cancelPendingPersistence = true)
     {
-        if (refreshSurface)
+        if (cancelPendingPersistence)
         {
-            RefreshCanvasSurface();
+            CancelPendingDefinitionCanvasPersistence();
         }
 
-        if (!selectedProcessId.HasValue)
+        await definitionCanvasPersistGate.WaitAsync();
+        try
         {
+            if (refreshSurface)
+            {
+                RefreshCanvasSurface();
+            }
+
+            if (!selectedProcessId.HasValue)
+            {
+                if (!string.IsNullOrWhiteSpace(successMessage))
+                {
+                    SetMessage(successMessage);
+                }
+
+                return;
+            }
+
+            ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
+            var result = await ProcessesService.SaveAsync(editor);
+            if (result.IsFailure)
+            {
+                SetError(result.Errors);
+                return;
+            }
+
+            selectedProcessId = result.Value;
+            definitions = await ProcessesService.ListDefinitionsAsync(ProjectId);
             if (!string.IsNullOrWhiteSpace(successMessage))
             {
                 SetMessage(successMessage);
             }
+        }
+        finally
+        {
+            definitionCanvasPersistGate.Release();
+        }
+    }
 
+    private void ScheduleDefinitionCanvasPersistence()
+    {
+        if (!selectedProcessId.HasValue)
+        {
+            CancelPendingDefinitionCanvasPersistence();
             return;
         }
 
-        ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
-        var result = await ProcessesService.SaveAsync(editor);
-        if (result.IsFailure)
+        CancelPendingDefinitionCanvasPersistence();
+        var persistCts = new CancellationTokenSource();
+        pendingDefinitionCanvasPersistCts = persistCts;
+        _ = PersistDefinitionCanvasChangesWhenIdleAsync(persistCts);
+    }
+
+    private async Task PersistDefinitionCanvasChangesWhenIdleAsync(CancellationTokenSource persistCts)
+    {
+        try
         {
-            SetError(result.Errors);
+            await Task.Delay(DefinitionCanvasPersistDelayMs, persistCts.Token);
+            if (persistCts.IsCancellationRequested || !selectedProcessId.HasValue)
+            {
+                return;
+            }
+
+            await PersistDefinitionCanvasChangesAsync(refreshSurface: false, cancelPendingPersistence: false);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() => SetError($"Process canvas changes could not be saved: {ex.Message}"));
+        }
+        finally
+        {
+            if (ReferenceEquals(pendingDefinitionCanvasPersistCts, persistCts))
+            {
+                pendingDefinitionCanvasPersistCts = null;
+            }
+
+            persistCts.Dispose();
+        }
+    }
+
+    private async Task FlushPendingDefinitionCanvasPersistenceAsync()
+    {
+        if (pendingDefinitionCanvasPersistCts is null)
+        {
             return;
         }
 
-        selectedProcessId = result.Value;
-        definitions = await ProcessesService.ListDefinitionsAsync(ProjectId);
-        if (!string.IsNullOrWhiteSpace(successMessage))
+        CancelPendingDefinitionCanvasPersistence();
+        await PersistDefinitionCanvasChangesAsync(refreshSurface: false, cancelPendingPersistence: false);
+    }
+
+    private async Task WaitForDefinitionCanvasPersistenceIdleAsync()
+    {
+        await definitionCanvasPersistGate.WaitAsync();
+        definitionCanvasPersistGate.Release();
+    }
+
+    private void CancelPendingDefinitionCanvasPersistence()
+    {
+        var persistCts = pendingDefinitionCanvasPersistCts;
+        pendingDefinitionCanvasPersistCts = null;
+        if (persistCts is null)
         {
-            SetMessage(successMessage);
+            return;
         }
+
+        persistCts.Cancel();
+        persistCts.Dispose();
     }
 
     private static bool TryResolveDefinitionArtifactByOutputPortId(

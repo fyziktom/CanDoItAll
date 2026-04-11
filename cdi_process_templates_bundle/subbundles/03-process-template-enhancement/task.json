@@ -1,0 +1,15 @@
+{
+  "SubbundleKey": "03-process-template-enhancement",
+  "Title": "Process template enhancement",
+  "Purpose": "Revisit all processes and remove earlier simplifications that were only present because the older module lacked current features.",
+  "DependsOn": [
+    "02-baseline-scenario-realignment"
+  ],
+  "Deliverables": [
+    "Nine updated process definitions",
+    "Detailed role sidecars",
+    "Step-level markdown docs"
+  ],
+  "ProgressionGate": "Each process must have detailed roles, artifacts, checklists, validations, prompts, dependencies, and artifact inputs where relevant.",
+  "CorrectiveOnFailure": "Create a process-specific corrective subbundle and do not continue until the process passes review."
+}

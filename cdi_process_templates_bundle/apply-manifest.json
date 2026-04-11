@@ -1,0 +1,2511 @@
+{
+  "ApplyRoot": "Copy the contents of repo-overlay into the repository root.",
+  "FileCount": 501,
+  "Entries": [
+    {
+      "BundlePath": "repo-overlay/Directory.Build.targets",
+      "TargetPath": "Directory.Build.targets",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/README.md",
+      "TargetPath": "README.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/README.md",
+      "TargetPath": "output/process-template-pack/README.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/framework-sources.json",
+      "TargetPath": "output/process-template-pack/framework-sources.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/framework-sources.md",
+      "TargetPath": "output/process-template-pack/framework-sources.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/manifest.json",
+      "TargetPath": "output/process-template-pack/manifest.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/artifacts/evaluation-benchmark-report.json",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/artifacts/evaluation-benchmark-report.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/artifacts/evaluation-benchmark-report.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/artifacts/evaluation-benchmark-report.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/artifacts/execution-trace-pack.json",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/artifacts/execution-trace-pack.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/artifacts/execution-trace-pack.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/artifacts/execution-trace-pack.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/checklists/agent-delegation-checklist.json",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/checklists/agent-delegation-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/checklists/agent-delegation-checklist.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/checklists/agent-delegation-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/definition.json",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/definition.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/definition.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/definition.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/mermaid/flowchart.mmd",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/mermaid/flowchart.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/mermaid/sequence.mmd",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/mermaid/sequence.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/projection/current-module.compatibility-report.json",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/projection/current-module.compatibility-report.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/projection/current-module.compatibility-report.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/projection/current-module.compatibility-report.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/projection/current-module.import-envelope.json",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/projection/current-module.import-envelope.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/prompts/prompt-ai-risk-brief.json",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/prompts/prompt-ai-risk-brief.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/prompts/prompt-ai-risk-brief.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/prompts/prompt-ai-risk-brief.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/roles/ai-evaluation-lead.json",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/roles/ai-evaluation-lead.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/roles/ai-evaluation-lead.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/roles/ai-evaluation-lead.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/roles/ai-safety-reviewer.json",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/roles/ai-safety-reviewer.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/roles/ai-safety-reviewer.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/roles/ai-safety-reviewer.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/roles/model-risk-approver.json",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/roles/model-risk-approver.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/roles/model-risk-approver.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/roles/model-risk-approver.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/steps/agent-execution.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/steps/agent-execution.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/steps/controlled-merge-and-learning.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/steps/controlled-merge-and-learning.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/steps/delegation-design.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/steps/delegation-design.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/steps/evaluation-and-benchmarking.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/steps/evaluation-and-benchmarking.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/steps/safety-and-security-review.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/steps/safety-and-security-review.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/steps/task-intake.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/steps/task-intake.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/validations/validate-delegation-boundary.json",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/validations/validate-delegation-boundary.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/ai-assisted-change-delivery/validations/validate-delegation-boundary.md",
+      "TargetPath": "output/process-template-pack/processes/ai-assisted-change-delivery/validations/validate-delegation-boundary.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/artifacts/decision-brief.json",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/artifacts/decision-brief.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/artifacts/decision-brief.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/artifacts/decision-brief.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/checklists/decision-readiness-checklist.json",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/checklists/decision-readiness-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/checklists/decision-readiness-checklist.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/checklists/decision-readiness-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/definition.json",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/definition.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/definition.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/definition.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/mermaid/flowchart.mmd",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/mermaid/flowchart.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/mermaid/sequence.mmd",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/mermaid/sequence.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/projection/current-module.compatibility-report.json",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/projection/current-module.compatibility-report.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/projection/current-module.compatibility-report.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/projection/current-module.compatibility-report.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/projection/current-module.import-envelope.json",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/projection/current-module.import-envelope.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/prompts/prompt-adr-question-framing.json",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/prompts/prompt-adr-question-framing.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/prompts/prompt-adr-question-framing.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/prompts/prompt-adr-question-framing.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/roles/domain-owner.json",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/roles/domain-owner.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/roles/domain-owner.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/roles/domain-owner.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/roles/governance-facilitator.json",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/roles/governance-facilitator.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/roles/governance-facilitator.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/roles/governance-facilitator.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/steps/board-decision.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/steps/board-decision.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/steps/context-and-options.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/steps/context-and-options.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/steps/decision-intake.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/steps/decision-intake.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/steps/rollout-guidance.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/steps/rollout-guidance.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/steps/security-compliance-review.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/steps/security-compliance-review.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/validations/validate-domain-owner-coverage.json",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/validations/validate-domain-owner-coverage.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/architecture-decision-governance/validations/validate-domain-owner-coverage.md",
+      "TargetPath": "output/process-template-pack/processes/architecture-decision-governance/validations/validate-domain-owner-coverage.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/artifacts/architecture-escalation-brief.json",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/artifacts/architecture-escalation-brief.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/artifacts/architecture-escalation-brief.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/artifacts/architecture-escalation-brief.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/artifacts/qa-lane-validation-note.json",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/artifacts/qa-lane-validation-note.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/artifacts/qa-lane-validation-note.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/artifacts/qa-lane-validation-note.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/artifacts/repair-brief.json",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/artifacts/repair-brief.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/artifacts/repair-brief.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/artifacts/repair-brief.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/checklists/review-router-safety-checklist.json",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/checklists/review-router-safety-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/checklists/review-router-safety-checklist.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/checklists/review-router-safety-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/definition.json",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/definition.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/definition.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/definition.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/mermaid/flowchart.mmd",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/mermaid/flowchart.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/mermaid/sequence.mmd",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/mermaid/sequence.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/projection/current-module.compatibility-report.json",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/projection/current-module.compatibility-report.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/projection/current-module.compatibility-report.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/projection/current-module.compatibility-report.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/projection/current-module.import-envelope.json",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/projection/current-module.import-envelope.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/prompts/prompt-review-normalization.json",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/prompts/prompt-review-normalization.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/prompts/prompt-review-normalization.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/prompts/prompt-review-normalization.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/roles/author.json",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/roles/author.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/roles/author.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/roles/author.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/roles/merge-approver.json",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/roles/merge-approver.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/roles/merge-approver.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/roles/merge-approver.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/roles/review-lead.json",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/roles/review-lead.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/roles/review-lead.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/roles/review-lead.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/steps/approve-merge.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/steps/approve-merge.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/steps/architecture-escalation.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/steps/architecture-escalation.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/steps/capture-workflow-failure.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/steps/capture-workflow-failure.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/steps/normalize-default-lane.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/steps/normalize-default-lane.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/steps/perform-security-review.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/steps/perform-security-review.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/steps/prepare-pull-request.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/steps/prepare-pull-request.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/steps/repair-pass.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/steps/repair-pass.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/steps/route-review-disposition.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/steps/route-review-disposition.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/steps/validate-qa-lane.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/steps/validate-qa-lane.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/validations/validate-review-router-safe.json",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/validations/validate-review-router-safe.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/branching-code-review/validations/validate-review-router-safe.md",
+      "TargetPath": "output/process-template-pack/processes/branching-code-review/validations/validate-review-router-safe.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/artifacts/configuration-baseline.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/artifacts/configuration-baseline.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/artifacts/configuration-baseline.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/artifacts/configuration-baseline.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/artifacts/customer-onboarding-brief.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/artifacts/customer-onboarding-brief.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/artifacts/customer-onboarding-brief.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/artifacts/customer-onboarding-brief.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/checklists/go-live-readiness-checklist.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/checklists/go-live-readiness-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/checklists/go-live-readiness-checklist.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/checklists/go-live-readiness-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/checklists/staffing-feasibility-checklist.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/checklists/staffing-feasibility-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/checklists/staffing-feasibility-checklist.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/checklists/staffing-feasibility-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/definition.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/definition.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/definition.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/definition.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/mermaid/flowchart.mmd",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/mermaid/flowchart.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/mermaid/sequence.mmd",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/mermaid/sequence.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/projection/current-module.compatibility-report.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/projection/current-module.compatibility-report.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/projection/current-module.compatibility-report.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/projection/current-module.compatibility-report.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/projection/current-module.import-envelope.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/projection/current-module.import-envelope.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/prompts/prompt-fit-gap-summary.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/prompts/prompt-fit-gap-summary.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/prompts/prompt-fit-gap-summary.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/prompts/prompt-fit-gap-summary.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/prompts/prompt-staffing-summary.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/prompts/prompt-staffing-summary.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/prompts/prompt-staffing-summary.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/prompts/prompt-staffing-summary.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/roles/account-owner.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/roles/account-owner.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/roles/account-owner.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/roles/account-owner.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/roles/kickoff-lead.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/roles/kickoff-lead.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/roles/kickoff-lead.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/roles/kickoff-lead.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/roles/onboarding-program-manager.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/roles/onboarding-program-manager.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/roles/onboarding-program-manager.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/roles/onboarding-program-manager.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/roles/solution-consultant.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/roles/solution-consultant.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/roles/solution-consultant.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/roles/solution-consultant.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/roles/staffing-manager.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/roles/staffing-manager.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/roles/staffing-manager.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/roles/staffing-manager.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/steps/intake.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/steps/intake.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/steps/kickoff-approval.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/steps/kickoff-approval.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/steps/staffing-review.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/steps/staffing-review.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/validations/validate-onboarding-go-live-readiness.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/validations/validate-onboarding-go-live-readiness.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/validations/validate-onboarding-go-live-readiness.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/validations/validate-onboarding-go-live-readiness.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/validations/validate-staffing-feasible.json",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/validations/validate-staffing-feasible.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/customer-onboarding/validations/validate-staffing-feasible.md",
+      "TargetPath": "output/process-template-pack/processes/customer-onboarding/validations/validate-staffing-feasible.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/artifacts/rollback-trigger-sheet.json",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/artifacts/rollback-trigger-sheet.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/artifacts/rollback-trigger-sheet.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/artifacts/rollback-trigger-sheet.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/checklists/emergency-window-checklist.json",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/checklists/emergency-window-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/checklists/emergency-window-checklist.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/checklists/emergency-window-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/definition.json",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/definition.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/definition.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/definition.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/mermaid/flowchart.mmd",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/mermaid/flowchart.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/mermaid/sequence.mmd",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/mermaid/sequence.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/projection/current-module.compatibility-report.json",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/projection/current-module.compatibility-report.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/projection/current-module.compatibility-report.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/projection/current-module.compatibility-report.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/projection/current-module.import-envelope.json",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/projection/current-module.import-envelope.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/prompts/prompt-hotfix-commander-brief.json",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/prompts/prompt-hotfix-commander-brief.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/prompts/prompt-hotfix-commander-brief.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/prompts/prompt-hotfix-commander-brief.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/roles/customer-communications-lead.json",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/roles/customer-communications-lead.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/roles/customer-communications-lead.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/roles/customer-communications-lead.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/roles/database-engineer.json",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/roles/database-engineer.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/roles/database-engineer.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/roles/database-engineer.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/steps/activate-emergency-bridge.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/steps/activate-emergency-bridge.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/steps/approve-emergency-release.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/steps/approve-emergency-release.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/steps/assess-blast-radius.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/steps/assess-blast-radius.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/steps/execute-emergency-rollout.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/steps/execute-emergency-rollout.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/steps/package-hotfix.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/steps/package-hotfix.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/steps/post-incident-review.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/steps/post-incident-review.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/steps/validate-hotfix.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/steps/validate-hotfix.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/validations/validate-emergency-change-boundary.json",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/validations/validate-emergency-change-boundary.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/hotfix-rollout/validations/validate-emergency-change-boundary.md",
+      "TargetPath": "output/process-template-pack/processes/hotfix-rollout/validations/validate-emergency-change-boundary.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/artifacts/containment-decision-note.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/artifacts/containment-decision-note.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/artifacts/containment-decision-note.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/artifacts/containment-decision-note.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/artifacts/containment-plan.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/artifacts/containment-plan.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/artifacts/containment-plan.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/artifacts/containment-plan.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/checklists/diagnosis-discipline-checklist.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/checklists/diagnosis-discipline-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/checklists/diagnosis-discipline-checklist.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/checklists/diagnosis-discipline-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/checklists/war-room-discipline-checklist.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/checklists/war-room-discipline-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/checklists/war-room-discipline-checklist.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/checklists/war-room-discipline-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/definition.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/definition.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/definition.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/definition.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/mermaid/flowchart.mmd",
+      "TargetPath": "output/process-template-pack/processes/incident-response/mermaid/flowchart.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/mermaid/sequence.mmd",
+      "TargetPath": "output/process-template-pack/processes/incident-response/mermaid/sequence.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/projection/current-module.compatibility-report.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/projection/current-module.compatibility-report.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/projection/current-module.compatibility-report.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/projection/current-module.compatibility-report.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/projection/current-module.import-envelope.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/projection/current-module.import-envelope.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/prompts/prompt-executive-incident-update.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/prompts/prompt-executive-incident-update.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/prompts/prompt-executive-incident-update.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/prompts/prompt-executive-incident-update.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/prompts/prompt-mitigation-options.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/prompts/prompt-mitigation-options.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/prompts/prompt-mitigation-options.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/prompts/prompt-mitigation-options.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/roles/approver.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/roles/approver.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/roles/approver.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/roles/approver.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/roles/forensics-analyst.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/roles/forensics-analyst.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/roles/forensics-analyst.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/roles/forensics-analyst.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/roles/incident-scribe.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/roles/incident-scribe.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/roles/incident-scribe.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/roles/incident-scribe.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/roles/resolver.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/roles/resolver.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/roles/resolver.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/roles/resolver.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/roles/triage-lead.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/roles/triage-lead.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/roles/triage-lead.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/roles/triage-lead.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/steps/diagnose.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/steps/diagnose.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/steps/escalate.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/steps/escalate.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/steps/respond.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/steps/respond.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/validations/validate-forensic-preservation.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/validations/validate-forensic-preservation.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/validations/validate-forensic-preservation.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/validations/validate-forensic-preservation.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/validations/validate-mitigation-approved.json",
+      "TargetPath": "output/process-template-pack/processes/incident-response/validations/validate-mitigation-approved.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/incident-response/validations/validate-mitigation-approved.md",
+      "TargetPath": "output/process-template-pack/processes/incident-response/validations/validate-mitigation-approved.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/artifacts/license-obligation-matrix.json",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/artifacts/license-obligation-matrix.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/artifacts/license-obligation-matrix.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/artifacts/license-obligation-matrix.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/checklists/component-identity-checklist.json",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/checklists/component-identity-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/checklists/component-identity-checklist.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/checklists/component-identity-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/definition.json",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/definition.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/definition.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/definition.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/mermaid/flowchart.mmd",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/mermaid/flowchart.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/mermaid/sequence.mmd",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/mermaid/sequence.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/projection/current-module.compatibility-report.json",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/projection/current-module.compatibility-report.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/projection/current-module.compatibility-report.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/projection/current-module.compatibility-report.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/projection/current-module.import-envelope.json",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/projection/current-module.import-envelope.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/prompts/prompt-component-approval-note.json",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/prompts/prompt-component-approval-note.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/prompts/prompt-component-approval-note.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/prompts/prompt-component-approval-note.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/roles/license-counsel.json",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/roles/license-counsel.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/roles/license-counsel.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/roles/license-counsel.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/roles/sbom-curator.json",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/roles/sbom-curator.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/roles/sbom-curator.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/roles/sbom-curator.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/steps/approval-and-registration.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/steps/approval-and-registration.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/steps/component-request.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/steps/component-request.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/steps/handoff-and-watch.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/steps/handoff-and-watch.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/steps/identity-and-maintenance.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/steps/identity-and-maintenance.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/steps/license-and-obligations.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/steps/license-and-obligations.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/steps/security-and-provenance.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/steps/security-and-provenance.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/validations/validate-license-obligation-coverage.json",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/validations/validate-license-obligation-coverage.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/oss-intake-supply-chain-governance/validations/validate-license-obligation-coverage.md",
+      "TargetPath": "output/process-template-pack/processes/oss-intake-supply-chain-governance/validations/validate-license-obligation-coverage.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/artifacts/cutover-watch-roster.json",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/artifacts/cutover-watch-roster.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/artifacts/cutover-watch-roster.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/artifacts/cutover-watch-roster.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/checklists/cutover-rehearsal-checklist.json",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/checklists/cutover-rehearsal-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/checklists/cutover-rehearsal-checklist.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/checklists/cutover-rehearsal-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/definition.json",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/definition.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/definition.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/definition.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/mermaid/flowchart.mmd",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/mermaid/flowchart.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/mermaid/sequence.mmd",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/mermaid/sequence.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/projection/current-module.compatibility-report.json",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/projection/current-module.compatibility-report.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/projection/current-module.compatibility-report.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/projection/current-module.compatibility-report.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/projection/current-module.import-envelope.json",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/projection/current-module.import-envelope.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/prompts/prompt-cutover-command-brief.json",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/prompts/prompt-cutover-command-brief.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/prompts/prompt-cutover-command-brief.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/prompts/prompt-cutover-command-brief.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/roles/change-manager.json",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/roles/change-manager.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/roles/change-manager.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/roles/change-manager.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/steps/cutover-rehearsal.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/steps/cutover-rehearsal.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/steps/execute-cutover.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/steps/execute-cutover.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/steps/readiness-synthesis.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/steps/readiness-synthesis.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/steps/scope-freeze.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/steps/scope-freeze.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/steps/security-and-go-no-go.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/steps/security-and-go-no-go.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/steps/stabilize-and-close.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/steps/stabilize-and-close.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/validations/validate-watch-coverage.json",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/validations/validate-watch-coverage.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/release-readiness-and-deployment/validations/validate-watch-coverage.md",
+      "TargetPath": "output/process-template-pack/processes/release-readiness-and-deployment/validations/validate-watch-coverage.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/artifacts/migration-rehearsal-pack.json",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/artifacts/migration-rehearsal-pack.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/artifacts/migration-rehearsal-pack.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/artifacts/migration-rehearsal-pack.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/checklists/delivery-scope-freeze-checklist.json",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/checklists/delivery-scope-freeze-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/checklists/delivery-scope-freeze-checklist.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/checklists/delivery-scope-freeze-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/definition.json",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/definition.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/definition.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/definition.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/mermaid/flowchart.mmd",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/mermaid/flowchart.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/mermaid/sequence.mmd",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/mermaid/sequence.mmd",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/projection/current-module.compatibility-report.json",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/projection/current-module.compatibility-report.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/projection/current-module.compatibility-report.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/projection/current-module.compatibility-report.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/projection/current-module.import-envelope.json",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/projection/current-module.import-envelope.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/prompts/prompt-release-scope-recap.json",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/prompts/prompt-release-scope-recap.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/prompts/prompt-release-scope-recap.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/prompts/prompt-release-scope-recap.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/roles/data-migration-owner.json",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/roles/data-migration-owner.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/roles/data-migration-owner.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/roles/data-migration-owner.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/roles/lead-engineer.json",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/roles/lead-engineer.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/roles/lead-engineer.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/roles/lead-engineer.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/roles/training-readiness-owner.json",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/roles/training-readiness-owner.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/roles/training-readiness-owner.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/roles/training-readiness-owner.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/steps/architecture-review.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/steps/architecture-review.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/steps/execute-release-rollout.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/steps/execute-release-rollout.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/steps/feature-intake.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/steps/feature-intake.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/steps/implementation.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/steps/implementation.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/steps/peer-review.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/steps/peer-review.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/steps/post-release-learning.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/steps/post-release-learning.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/steps/qa-validation.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/steps/qa-validation.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/steps/release-approval.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/steps/release-approval.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/steps/security-review.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/steps/security-review.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/validations/validate-migration-rehearsal.json",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/validations/validate-migration-rehearsal.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/processes/software-delivery/validations/validate-migration-rehearsal.md",
+      "TargetPath": "output/process-template-pack/processes/software-delivery/validations/validate-migration-rehearsal.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/seed-catalog/baseline-scenarios.json",
+      "TargetPath": "output/process-template-pack/seed-catalog/baseline-scenarios.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/acceptance-criteria-pack.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/acceptance-criteria-pack.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/acceptance-criteria-pack.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/acceptance-criteria-pack.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/architecture-decision-record.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/architecture-decision-record.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/architecture-decision-record.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/architecture-decision-record.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/blast-radius-assessment.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/blast-radius-assessment.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/blast-radius-assessment.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/blast-radius-assessment.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/diagnosis-evidence-pack.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/diagnosis-evidence-pack.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/diagnosis-evidence-pack.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/diagnosis-evidence-pack.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/emergency-bridge-log.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/emergency-bridge-log.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/emergency-bridge-log.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/emergency-bridge-log.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/emergency-validation-evidence-pack.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/emergency-validation-evidence-pack.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/emergency-validation-evidence-pack.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/emergency-validation-evidence-pack.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/emergency-window-approval-record.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/emergency-window-approval-record.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/emergency-window-approval-record.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/emergency-window-approval-record.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/hotfix-package.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/hotfix-package.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/hotfix-package.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/hotfix-package.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/implementation-change-set.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/implementation-change-set.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/implementation-change-set.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/implementation-change-set.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/implementation-plan.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/implementation-plan.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/implementation-plan.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/implementation-plan.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/incident-timeline.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/incident-timeline.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/incident-timeline.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/incident-timeline.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/incident-triage-note.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/incident-triage-note.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/incident-triage-note.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/incident-triage-note.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/intake-brief.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/intake-brief.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/intake-brief.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/intake-brief.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/kickoff-packet.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/kickoff-packet.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/kickoff-packet.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/kickoff-packet.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/merge-readiness-note.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/merge-readiness-note.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/merge-readiness-note.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/merge-readiness-note.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/mitigation-approval-record.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/mitigation-approval-record.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/mitigation-approval-record.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/mitigation-approval-record.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/prompt-package.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/prompt-package.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/prompt-package.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/prompt-package.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/provenance-report.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/provenance-report.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/provenance-report.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/provenance-report.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/pull-request-readiness-packet.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/pull-request-readiness-packet.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/pull-request-readiness-packet.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/pull-request-readiness-packet.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/regression-evidence-pack.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/regression-evidence-pack.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/regression-evidence-pack.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/regression-evidence-pack.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/release-approval-record.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/release-approval-record.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/release-approval-record.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/release-approval-record.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/release-readiness-report.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/release-readiness-report.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/release-readiness-report.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/release-readiness-report.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/retrospective-improvement-log.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/retrospective-improvement-log.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/retrospective-improvement-log.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/retrospective-improvement-log.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/review-normalization-note.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/review-normalization-note.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/review-normalization-note.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/review-normalization-note.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/review-routing-decision-record.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/review-routing-decision-record.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/review-routing-decision-record.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/review-routing-decision-record.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/review-workflow-failure-record.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/review-workflow-failure-record.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/review-workflow-failure-record.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/review-workflow-failure-record.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/rollback-plan.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/rollback-plan.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/rollback-plan.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/rollback-plan.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/sbom-manifest.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/sbom-manifest.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/sbom-manifest.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/sbom-manifest.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/scope-boundary-packet.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/scope-boundary-packet.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/scope-boundary-packet.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/scope-boundary-packet.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/security-exception-assessment.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/security-exception-assessment.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/security-exception-assessment.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/security-exception-assessment.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/security-review-note.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/security-review-note.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/security-review-note.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/security-review-note.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/staffing-readiness-note.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/staffing-readiness-note.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/staffing-readiness-note.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/staffing-readiness-note.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/test-evidence-pack.json",
+      "TargetPath": "output/process-template-pack/shared/artifacts/test-evidence-pack.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/artifacts/test-evidence-pack.md",
+      "TargetPath": "output/process-template-pack/shared/artifacts/test-evidence-pack.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/ai-governance-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/ai-governance-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/ai-governance-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/ai-governance-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/architecture-gate-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/architecture-gate-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/architecture-gate-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/architecture-gate-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/customer-handoff-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/customer-handoff-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/customer-handoff-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/customer-handoff-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/emergency-window-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/emergency-window-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/emergency-window-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/emergency-window-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/implementation-readiness-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/implementation-readiness-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/implementation-readiness-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/implementation-readiness-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/incident-stabilization-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/incident-stabilization-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/incident-stabilization-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/incident-stabilization-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/incident-triage-discipline-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/incident-triage-discipline-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/incident-triage-discipline-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/incident-triage-discipline-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/intake-completeness-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/intake-completeness-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/intake-completeness-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/intake-completeness-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/kickoff-alignment-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/kickoff-alignment-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/kickoff-alignment-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/kickoff-alignment-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/oss-intake-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/oss-intake-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/oss-intake-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/oss-intake-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/pull-request-packet-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/pull-request-packet-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/pull-request-packet-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/pull-request-packet-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/qa-evidence-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/qa-evidence-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/qa-evidence-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/qa-evidence-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/release-go-live-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/release-go-live-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/release-go-live-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/release-go-live-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/security-review-checklist.json",
+      "TargetPath": "output/process-template-pack/shared/checklists/security-review-checklist.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/checklists/security-review-checklist.md",
+      "TargetPath": "output/process-template-pack/shared/checklists/security-review-checklist.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-ai-evaluation.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-ai-evaluation.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-ai-evaluation.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-ai-evaluation.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-architecture-review.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-architecture-review.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-architecture-review.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-architecture-review.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-customer-handoff.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-customer-handoff.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-customer-handoff.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-customer-handoff.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-hotfix-commander-brief.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-hotfix-commander-brief.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-hotfix-commander-brief.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-hotfix-commander-brief.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-implementation-brief.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-implementation-brief.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-implementation-brief.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-implementation-brief.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-incident-triage-brief.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-incident-triage-brief.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-incident-triage-brief.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-incident-triage-brief.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-incident-triage.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-incident-triage.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-incident-triage.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-incident-triage.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-intake-structuring.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-intake-structuring.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-intake-structuring.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-intake-structuring.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-intake-summarizer.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-intake-summarizer.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-intake-summarizer.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-intake-summarizer.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-kickoff-agenda.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-kickoff-agenda.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-kickoff-agenda.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-kickoff-agenda.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-oss-evaluation.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-oss-evaluation.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-oss-evaluation.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-oss-evaluation.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-pr-review-packet.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-pr-review-packet.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-pr-review-packet.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-pr-review-packet.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-qa-risk-review.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-qa-risk-review.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-qa-risk-review.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-qa-risk-review.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-qa-test-design.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-qa-test-design.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-qa-test-design.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-qa-test-design.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-release-decision.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-release-decision.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-release-decision.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-release-decision.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-security-review.json",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-security-review.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/prompts/prompt-security-review.md",
+      "TargetPath": "output/process-template-pack/shared/prompts/prompt-security-review.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/account-owner.json",
+      "TargetPath": "output/process-template-pack/shared/roles/account-owner.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/account-owner.md",
+      "TargetPath": "output/process-template-pack/shared/roles/account-owner.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/approver.json",
+      "TargetPath": "output/process-template-pack/shared/roles/approver.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/approver.md",
+      "TargetPath": "output/process-template-pack/shared/roles/approver.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/author.json",
+      "TargetPath": "output/process-template-pack/shared/roles/author.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/author.md",
+      "TargetPath": "output/process-template-pack/shared/roles/author.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/compliance-steward.json",
+      "TargetPath": "output/process-template-pack/shared/roles/compliance-steward.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/compliance-steward.md",
+      "TargetPath": "output/process-template-pack/shared/roles/compliance-steward.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/customer-liaison.json",
+      "TargetPath": "output/process-template-pack/shared/roles/customer-liaison.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/customer-liaison.md",
+      "TargetPath": "output/process-template-pack/shared/roles/customer-liaison.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/customer-success-lead.json",
+      "TargetPath": "output/process-template-pack/shared/roles/customer-success-lead.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/customer-success-lead.md",
+      "TargetPath": "output/process-template-pack/shared/roles/customer-success-lead.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/delivery-manager.json",
+      "TargetPath": "output/process-template-pack/shared/roles/delivery-manager.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/delivery-manager.md",
+      "TargetPath": "output/process-template-pack/shared/roles/delivery-manager.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/incident-commander.json",
+      "TargetPath": "output/process-template-pack/shared/roles/incident-commander.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/incident-commander.md",
+      "TargetPath": "output/process-template-pack/shared/roles/incident-commander.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/kickoff-lead.json",
+      "TargetPath": "output/process-template-pack/shared/roles/kickoff-lead.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/kickoff-lead.md",
+      "TargetPath": "output/process-template-pack/shared/roles/kickoff-lead.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/lead-engineer.json",
+      "TargetPath": "output/process-template-pack/shared/roles/lead-engineer.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/lead-engineer.md",
+      "TargetPath": "output/process-template-pack/shared/roles/lead-engineer.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/merge-approver.json",
+      "TargetPath": "output/process-template-pack/shared/roles/merge-approver.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/merge-approver.md",
+      "TargetPath": "output/process-template-pack/shared/roles/merge-approver.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/platform-engineer.json",
+      "TargetPath": "output/process-template-pack/shared/roles/platform-engineer.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/platform-engineer.md",
+      "TargetPath": "output/process-template-pack/shared/roles/platform-engineer.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/product-owner.json",
+      "TargetPath": "output/process-template-pack/shared/roles/product-owner.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/product-owner.md",
+      "TargetPath": "output/process-template-pack/shared/roles/product-owner.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/qa-lead.json",
+      "TargetPath": "output/process-template-pack/shared/roles/qa-lead.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/qa-lead.md",
+      "TargetPath": "output/process-template-pack/shared/roles/qa-lead.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/release-approver.json",
+      "TargetPath": "output/process-template-pack/shared/roles/release-approver.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/release-approver.md",
+      "TargetPath": "output/process-template-pack/shared/roles/release-approver.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/release-manager.json",
+      "TargetPath": "output/process-template-pack/shared/roles/release-manager.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/release-manager.md",
+      "TargetPath": "output/process-template-pack/shared/roles/release-manager.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/resolver.json",
+      "TargetPath": "output/process-template-pack/shared/roles/resolver.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/resolver.md",
+      "TargetPath": "output/process-template-pack/shared/roles/resolver.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/review-lead.json",
+      "TargetPath": "output/process-template-pack/shared/roles/review-lead.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/review-lead.md",
+      "TargetPath": "output/process-template-pack/shared/roles/review-lead.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/security-reviewer.json",
+      "TargetPath": "output/process-template-pack/shared/roles/security-reviewer.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/security-reviewer.md",
+      "TargetPath": "output/process-template-pack/shared/roles/security-reviewer.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/service-owner.json",
+      "TargetPath": "output/process-template-pack/shared/roles/service-owner.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/service-owner.md",
+      "TargetPath": "output/process-template-pack/shared/roles/service-owner.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/software-engineer.json",
+      "TargetPath": "output/process-template-pack/shared/roles/software-engineer.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/software-engineer.md",
+      "TargetPath": "output/process-template-pack/shared/roles/software-engineer.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/solution-architect.json",
+      "TargetPath": "output/process-template-pack/shared/roles/solution-architect.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/solution-architect.md",
+      "TargetPath": "output/process-template-pack/shared/roles/solution-architect.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/staffing-manager.json",
+      "TargetPath": "output/process-template-pack/shared/roles/staffing-manager.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/staffing-manager.md",
+      "TargetPath": "output/process-template-pack/shared/roles/staffing-manager.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/triage-lead.json",
+      "TargetPath": "output/process-template-pack/shared/roles/triage-lead.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/triage-lead.md",
+      "TargetPath": "output/process-template-pack/shared/roles/triage-lead.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/ux-review-lead.json",
+      "TargetPath": "output/process-template-pack/shared/roles/ux-review-lead.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/roles/ux-review-lead.md",
+      "TargetPath": "output/process-template-pack/shared/roles/ux-review-lead.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validate-architecture-boundaries.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validate-architecture-boundaries.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validate-architecture-boundaries.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validate-architecture-boundaries.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validate-emergency-change-boundary.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validate-emergency-change-boundary.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validate-emergency-change-boundary.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validate-emergency-change-boundary.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-ai-evidence-sufficient.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-ai-evidence-sufficient.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-ai-evidence-sufficient.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-ai-evidence-sufficient.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-architecture-aligned.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-architecture-aligned.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-architecture-aligned.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-architecture-aligned.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-customer-ready.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-customer-ready.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-customer-ready.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-customer-ready.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-incident-contained.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-incident-contained.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-incident-contained.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-incident-contained.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-incident-triage-explicit.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-incident-triage-explicit.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-incident-triage-explicit.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-incident-triage-explicit.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-intake-complete.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-intake-complete.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-intake-complete.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-intake-complete.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-kickoff-ready.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-kickoff-ready.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-kickoff-ready.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-kickoff-ready.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-proof-sufficient.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-proof-sufficient.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-proof-sufficient.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-proof-sufficient.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-release-authorized.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-release-authorized.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-release-authorized.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-release-authorized.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-review-packet-complete.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-review-packet-complete.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-review-packet-complete.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-review-packet-complete.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-rollback-ready.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-rollback-ready.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-rollback-ready.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-rollback-ready.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-sbom-ready.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-sbom-ready.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-sbom-ready.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-sbom-ready.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-security-clear.json",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-security-clear.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/shared/validations/validation-security-clear.md",
+      "TargetPath": "output/process-template-pack/shared/validations/validation-security-clear.md",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/toolbox/chrome-actions.json",
+      "TargetPath": "output/process-template-pack/toolbox/chrome-actions.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/toolbox/role-templates.json",
+      "TargetPath": "output/process-template-pack/toolbox/role-templates.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/output/process-template-pack/toolbox/step-templates.json",
+      "TargetPath": "output/process-template-pack/toolbox/step-templates.json",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/patches/ProcessCanvasSurfaceFactory.current-architecture.patch",
+      "TargetPath": "patches/ProcessCanvasSurfaceFactory.current-architecture.patch",
+      "Mode": "add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Mcp.Processes/ProcessesCoordinator.cs",
+      "TargetPath": "src/CanDoItAll.Mcp.Processes/ProcessesCoordinator.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Mcp.Processes/ProcessesTemplateToolModels.cs",
+      "TargetPath": "src/CanDoItAll.Mcp.Processes/ProcessesTemplateToolModels.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Mcp.Processes/ProcessesTools.cs",
+      "TargetPath": "src/CanDoItAll.Mcp.Processes/ProcessesTools.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Modules.Processes/ProcessCanvasTemplateCatalog.cs",
+      "TargetPath": "src/CanDoItAll.Modules.Processes/ProcessCanvasTemplateCatalog.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Modules.Processes/ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs",
+      "TargetPath": "src/CanDoItAll.Modules.Processes/ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Modules.Processes/ProcessDevelopmentSeedService.RuntimeSeeds.cs",
+      "TargetPath": "src/CanDoItAll.Modules.Processes/ProcessDevelopmentSeedService.RuntimeSeeds.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Modules.Processes/ProcessDevelopmentSeedService.Scenarios.cs",
+      "TargetPath": "src/CanDoItAll.Modules.Processes/ProcessDevelopmentSeedService.Scenarios.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Modules.Processes/ProcessDevelopmentSeedService.cs",
+      "TargetPath": "src/CanDoItAll.Modules.Processes/ProcessDevelopmentSeedService.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Modules.Processes/ProcessTemplateCatalogService.cs",
+      "TargetPath": "src/CanDoItAll.Modules.Processes/ProcessTemplateCatalogService.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Modules.Processes/ProcessTemplateMermaidExporter.cs",
+      "TargetPath": "src/CanDoItAll.Modules.Processes/ProcessTemplateMermaidExporter.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Modules.Processes/ProcessTemplatePackLoader.cs",
+      "TargetPath": "src/CanDoItAll.Modules.Processes/ProcessTemplatePackLoader.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Modules.Processes/ProcessTemplatePackModels.cs",
+      "TargetPath": "src/CanDoItAll.Modules.Processes/ProcessTemplatePackModels.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Modules.Processes/ProcessTemplateProjectionService.cs",
+      "TargetPath": "src/CanDoItAll.Modules.Processes/ProcessTemplateProjectionService.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/src/CanDoItAll.Modules.Processes/ProcessesModuleServiceCollectionExtensions.cs",
+      "TargetPath": "src/CanDoItAll.Modules.Processes/ProcessesModuleServiceCollectionExtensions.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj",
+      "TargetPath": "tests/CanDoItAll.Mcp.Processes.Tests/CanDoItAll.Mcp.Processes.Tests.csproj",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/tests/CanDoItAll.Mcp.Processes.Tests/CurrentArchitectureTemplateParityTests.cs",
+      "TargetPath": "tests/CanDoItAll.Mcp.Processes.Tests/CurrentArchitectureTemplateParityTests.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/tests/CanDoItAll.Mcp.Processes.Tests/ProcessTemplateCatalogServiceTests.cs",
+      "TargetPath": "tests/CanDoItAll.Mcp.Processes.Tests/ProcessTemplateCatalogServiceTests.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/tests/CanDoItAll.Mcp.Processes.Tests/ProcessTemplateMermaidExporterTests.cs",
+      "TargetPath": "tests/CanDoItAll.Mcp.Processes.Tests/ProcessTemplateMermaidExporterTests.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/tests/CanDoItAll.Mcp.Processes.Tests/ProcessTemplatePackLoaderTests.cs",
+      "TargetPath": "tests/CanDoItAll.Mcp.Processes.Tests/ProcessTemplatePackLoaderTests.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/tests/CanDoItAll.Mcp.Processes.Tests/ProcessTemplateProjectionServiceTests.cs",
+      "TargetPath": "tests/CanDoItAll.Mcp.Processes.Tests/ProcessTemplateProjectionServiceTests.cs",
+      "Mode": "replace-or-add"
+    },
+    {
+      "BundlePath": "repo-overlay/tests/CanDoItAll.Mcp.Processes.Tests/ProcessesToolsTests.cs",
+      "TargetPath": "tests/CanDoItAll.Mcp.Processes.Tests/ProcessesToolsTests.cs",
+      "Mode": "replace-or-add"
+    }
+  ]
+}

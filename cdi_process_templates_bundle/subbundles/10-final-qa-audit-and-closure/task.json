@@ -1,0 +1,15 @@
+{
+  "SubbundleKey": "10-final-qa-audit-and-closure",
+  "Title": "Final QA audit and closure",
+  "Purpose": "Perform the strict final QA and senior architect inspection, then package the final ZIP only after all gates are satisfied.",
+  "DependsOn": [
+    "09-architecture-review-gate-b"
+  ],
+  "Deliverables": [
+    "Final QA memo",
+    "Validation result",
+    "Bundle index and final ZIP"
+  ],
+  "ProgressionGate": "Final QA memo must state whether any debt remains and why it is or is not acceptable.",
+  "CorrectiveOnFailure": "Create one more corrective subbundle and repeat the final audit."
+}

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Processes;
 
-public partial class ProcessWorkspace : ComponentBase
+public partial class ProcessWorkspace : ComponentBase, IDisposable
 {
     private const string DefinitionCanvasSelectTool = "authoring";
     private const string DefinitionCanvasDeleteTool = "delete";
@@ -160,6 +160,11 @@ public partial class ProcessWorkspace : ComponentBase
         await LoadWorkspaceAsync();
     }
 
+    public void Dispose()
+    {
+        CancelPendingDefinitionCanvasPersistence();
+    }
+
     private async Task LoadWorkspaceAsync()
     {
         if (ProjectId.HasValue)
@@ -176,6 +181,7 @@ public partial class ProcessWorkspace : ComponentBase
         var nextSelectedProcessId = ResolveSelectedProcessId();
         if (nextSelectedProcessId != selectedProcessId)
         {
+            await FlushPendingDefinitionCanvasPersistenceAsync();
             selectedCanvasNodeId = null;
             ResetDefinitionCanvasState();
             ResetRuntimeCanvasState();
@@ -326,6 +332,7 @@ public partial class ProcessWorkspace : ComponentBase
 
     private async Task CreateNewAsync()
     {
+        await FlushPendingDefinitionCanvasPersistenceAsync();
         selectedProcessId = null;
         selectedRunId = null;
         selectedCanvasNodeId = null;
@@ -345,6 +352,7 @@ public partial class ProcessWorkspace : ComponentBase
 
     private async Task SelectDefinitionAsync(Guid definitionId)
     {
+        await FlushPendingDefinitionCanvasPersistenceAsync();
         selectedProcessId = definitionId;
         detailTab = "definition";
         selectedCanvasNodeId = null;
@@ -355,6 +363,8 @@ public partial class ProcessWorkspace : ComponentBase
 
     private async Task SaveAsync()
     {
+        CancelPendingDefinitionCanvasPersistence();
+        await WaitForDefinitionCanvasPersistenceIdleAsync();
         ProcessCanvasBranching.NormalizeDefinitionEditor(editor);
         var result = await ProcessesService.SaveAsync(editor);
         if (result.IsFailure)
