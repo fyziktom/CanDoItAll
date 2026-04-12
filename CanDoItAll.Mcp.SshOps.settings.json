@@ -54,7 +54,7 @@
   "Targets": [
     {
       "Name": "rpi3-test",
-      "Host": "192.168.0.191",
+      "Host": "192.168.10.191",
       "Port": 22,
       "User": "rpi",
       "Sudo": {
@@ -88,10 +88,10 @@
         "ResolverName": "local-selfsigned"
       },
       "Validation": {
-        "PublicAppHost": "192.168.0.191",
+        "PublicAppHost": "192.168.10.191",
         "DefaultHealthPath": "/health",
         "CertificateDomains": [
-          "192.168.0.191"
+          "192.168.10.191"
         ]
       },
       "Guards": {
